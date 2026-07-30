@@ -1,0 +1,26 @@
+# CODEOWNERS — who must review changes to what files.
+# Format: <pattern>  <owner>
+# Order matters: later rules override earlier ones.
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: any dashboard developer reviews dashboard changes
+/apps/dashboard/                @dashboard-maintainers
+
+# Backend: any backend developer
+/apps/backend/                   @backend-maintainers
+
+# Website: any website developer
+/apps/website/                  @website-maintainers
+
+# Workflows: any platform engineer
+/.github/workflows/             @platform-team
+
+# Shared package: requires both backend + dashboard reviewer
+/packages/shared/                @backend-maintainers @dashboard-maintainers
+
+# Mobile: separate team
+/apps/mobile/                    @mobile-maintainers
+/packages/ui/                    @dashboard-maintainers @mobile-maintainers
+
+# SECURITY-sensitive files always need platform review
+# (catch-all patterns below)

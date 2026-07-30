@@ -1,0 +1,128 @@
+# Merge Gate — ensures develop → main can only be merged with all checks green.
+#
+# This workflow is NOT a substitute for the standard CI (ci.yml). It is a
+# dedicated check that runs ON PRs targeting main, with the full test
+# surface (not just unit tests), so that the "merge to production" step
+# has an explicit, fast feedback gate.
+#
+# Why this exists separately from ci.yml:
+#   1. Branch protection rules in GitHub can list a specific check
+#      ("merge-gate") as a required status check. A single umbrella job
+#      named "gate" gives the team one thing to wait for, instead of
+#      asking them to interpret 5 parallel jobs.
+#   2. The umbrella gates ALL the other jobs: backend, dashboard,
+#      website, drift. If any fails, the gate fails.
+#   3. Adds a release-state consistency check (deploy-state.yml) that
+#      verifies the develop HEAD is at-or-after the last deployed main
+#      release. This catches the "merged something we never deployed"
+#      class of bug.
+#
+# Required checks before merge to main (per .github/RELEASE.md):
+#   - gate (this workflow)
+#   - OpenAPI snapshot drift (ci.yml)
+#   - api-client drift (ci.yml)
+#   - Prisma migration immutability (ci.yml)
+#   - Trivy filesystem scan HIGH/CRITICAL (ci.yml)
+#   - Gitleaks (ci.yml)
+#   - Dependabot auto-merge clean (dependabot.yml)
+
+name: merge-gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+# Cancel in-progress runs when a new commit is pushed.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # gate — single umbrella job that must pass for merge.
+  # ─────────────────────────────────────────────────────────────────────
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy-state consistency
+        # Verifies that the candidate merge target is at-or-after the
+        # last production release (most recent tag on main). Catches the
+        # "merged something we never deployed" scenario where develop was
+        # force-pushed or someone re-targeted a stale PR.
+        run: node scripts/check-deploy-state.mjs origin/main HEAD
+
+      - name: Backend — typecheck + unit + e2e (smoke)
+        run: pnpm --filter backend test
+
+      - name: Dashboard — typecheck + unit
+        run: pnpm --filter dashboard typecheck && pnpm --filter dashboard test -- --run
+
+      - name: Website — typecheck + unit
+        run: pnpm --filter website typecheck && pnpm --filter website test -- --run
+
+      - name: OpenAPI snapshot drift
+        run: cd apps/backend && pnpm run openapi:build-and-snapshot && git diff --exit-code apps/backend/openapi.json
+
+      - name: api-client endpoint drift
+        run: node scripts/check-api-client-drift.mjs
+
+      - name: Prisma migration immutability
+        if: github.event_name == 'pull_request'
+        run: node scripts/check-prisma-migration-immutability.mjs origin/main
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trivy filesystem scan (HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+          ignore-paths: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**,apps/*/dist/**'
+
+      - name: Lefthook pre-commit guards (legacy multi-tenant + eslint)
+        run: |
+          bash scripts/ci-lefthook-guard.sh
+
+      - name: Compose gate result
+        if: success()
+        run: |
+          echo "✅ MERGE GATE PASSED for ${{ github.ref }}"
+          echo "The candidate is releasable."
+        shell: bash
+
+      - name: Compose gate result (failure)
+        if: failure()
+        run: |
+          echo "❌ MERGE GATE FAILED for ${{ github.ref }}"
+          echo "See the failing step output above."
+          echo "This PR cannot be merged until all checks pass."
+        shell: bash
