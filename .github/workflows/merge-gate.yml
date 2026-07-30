@@ -135,9 +135,10 @@ jobs:
           format: 'table'
           exit-code: '0'
           ignore-unfixed: true
+          skip-dirs: 'coverage,dist,node_modules,.next'
+          skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**,apps/*/dist/**'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
-          ignore-paths: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**,apps/*/dist/**'
 
       - name: Lefthook pre-push (eslint + typecheck + multi-tenant guard)
         # Single source of truth: this is the SAME lefthook config that runs

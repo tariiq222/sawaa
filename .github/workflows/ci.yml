@@ -439,13 +439,13 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          format: 'table'
+format: 'table'
           exit-code: '0'
           ignore-unfixed: true
+          skip-dirs: 'coverage,dist,node_modules,.next'
+          skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
-          # Skip generated vendored noise; keep this list narrow.
-          ignore-paths: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**'
 
       - name: Upload Trivy SARIF
         if: always()
