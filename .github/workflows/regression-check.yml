@@ -35,6 +35,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+      JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+      JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+      JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+      JWT_SMS_OTP_SECRET: ci-jwt-sms-otp-secret-32chars-long
+      MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+      SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
+      ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
+      EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
+      AUTHENTICA_API_KEY: ci-authentica-key
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: '9000'
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: sawaa-test
+      MINIO_USE_SSL: 'false'
+
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -106,6 +127,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+      JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+      JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+      JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+      JWT_SMS_OTP_SECRET: ci-jwt-sms-otp-secret-32chars-long
+      MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+      SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
+      ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
+      EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
+      AUTHENTICA_API_KEY: ci-authentica-key
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: '9000'
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: sawaa-test
+      MINIO_USE_SSL: 'false'
+      PW_E2E_PROD: '1'
+
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -160,8 +203,6 @@ jobs:
           pnpm --filter backend db:seed
 
       - name: Build + boot dashboard (Playwright webServer)
-        env:
-          PW_E2E_PROD: 1
         run: pnpm --filter dashboard exec playwright test --project=smoke
 
       - name: Upload Playwright artifacts
