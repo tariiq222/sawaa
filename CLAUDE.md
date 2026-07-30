@@ -130,8 +130,31 @@ Passing tests are necessary but not sufficient. A change is done only after the 
 
 ## Git & deploy rules
 
+### Branch policy (enforced by lefthook pre-push + GitHub branch protection)
+
+| Branch | Purpose | Who can push |
+|--------|---------|--------------|
+| `main` | Production | **No direct push** — only via merged PR from `develop` |
+| `develop` | Default integration | All work lands here |
+| `feature/*` | Per-task work | Direct push OK, then PR to `develop` |
+
+The `pre-push` hook in `lefthook.yml` blocks `git push origin main` locally. GitHub-side branch protection on `main` should require a PR with required checks before merge.
+
+### Workflow
+
+```bash
+git checkout develop && git pull                  # sync integration branch
+git checkout -b feature/<short-name>              # branch from develop
+# ... work ...
+git push -u origin feature/<short-name>           # push feature branch
+# open PR: feature/<short-name> → develop
+# after merge: develop → main via release PR (triggers production deploy)
+```
+
+### Deploy rules
+
 - Commit only when explicitly asked, and scope the commit to the current session's work.
-- Before any deploy: merge `main` locally first (`git pull --ff-only`). Pushing `main` auto-deploys via Dokploy — a push to main IS a production deploy.
+- Before any deploy: merge `develop` into `main` locally first (`git pull --ff-only`). Pushing `main` auto-deploys via Dokploy — a push to main IS a production deploy.
 - After every merge/deploy, verify the backend actually booted: a missing required env var fails startup silently and Docker Swarm keeps serving the old version.
 
 ## Test matrix by change surface

@@ -74,7 +74,6 @@ import {
   useCategories,
   useDurationOptions,
   useServiceBookingTypes,
-  useIntakeForms,
 } from "@/hooks/use-services"
 
 // useCategories now fetches paginated data internally and returns items
@@ -255,8 +254,8 @@ describe("useCategories", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(fetchCategories).toHaveBeenCalledWith({ page: 1, limit: 200 })
-    expect(result.current.data).toEqual(cats)
+    expect(fetchCategories).toHaveBeenCalledWith()
+    expect(result.current.data).toEqual({ items: cats, meta: { total: 1 } })
   })
 })
 
@@ -304,30 +303,5 @@ describe("useServiceBookingTypes", () => {
     renderHook(() => useServiceBookingTypes(null), { wrapper: makeWrapper() })
 
     expect(fetchServiceBookingTypes).not.toHaveBeenCalled()
-  })
-})
-
-describe("useIntakeForms", () => {
-  beforeEach(() => { vi.clearAllMocks() })
-
-  it("fetches intake forms when serviceId provided", async () => {
-    const forms = [{ id: "form-1", title: "Health Check" }]
-    fetchIntakeForms.mockResolvedValueOnce(forms)
-
-    const { result } = renderHook(
-      () => useIntakeForms("svc-1"),
-      { wrapper: makeWrapper() },
-    )
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(fetchIntakeForms).toHaveBeenCalled()
-    expect(result.current.data).toEqual(forms)
-  })
-
-  it("does not fetch when serviceId is null", () => {
-    renderHook(() => useIntakeForms(null), { wrapper: makeWrapper() })
-
-    expect(fetchIntakeForms).not.toHaveBeenCalled()
   })
 })

@@ -22,18 +22,24 @@ import { useLocale } from "@/components/locale-provider"
 import { showApiError } from "@/lib/mutation-helpers"
 import { useState } from "react"
 
-const schema = z
-  .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z.string().min(8, "Must be at least 8 characters"),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-  })
-  .refine((d) => d.newPassword === d.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  })
+// Schema is built lazily inside the component so the messages can be
+// passed through `t()` for the active locale. Defined as a function so
+// both the resolver and the .refine() callback can share the same
+// translated strings.
+function buildSchema(t: (k: string) => string) {
+  return z
+    .object({
+      currentPassword: z.string().min(1, t("changePassword.currentRequired")),
+      newPassword: z.string().min(8, t("changePassword.newTooShort")),
+      confirmPassword: z.string().min(1, t("changePassword.confirmRequired")),
+    })
+    .refine((d) => d.newPassword === d.confirmPassword, {
+      message: t("changePassword.mismatch"),
+      path: ["confirmPassword"],
+    })
+}
 
-type FormData = z.infer<typeof schema>
+type FormData = z.infer<ReturnType<typeof buildSchema>>
 
 interface Props {
   open: boolean
@@ -45,7 +51,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false)
 
   const form = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(buildSchema(t)),
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
   })
 

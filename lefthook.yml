@@ -1,6 +1,10 @@
 # Local git hooks — installed via `pnpm install` (prepare script).
 # Skip once with: LEFTHOOK=0 git commit / LEFTHOOK=0 git push
 # CI never runs these hooks; it invokes lint/typecheck commands directly.
+#
+# Branch policy (enforced locally + on GitHub side):
+#   main    ← production. Pushes blocked locally; only merge via PR from develop.
+#   develop ← default integration branch. All work lands here.
 
 pre-commit:
   parallel: true
@@ -26,6 +30,18 @@ pre-commit:
       run: node scripts/check-legacy-multitenant.js
 
 pre-push:
+  parallel: true
   jobs:
+    - name: block direct push to main
+      run: |
+        while read local_ref local_sha remote_ref remote_sha; do
+          if [ "$remote_ref" = "refs/heads/main" ]; then
+            echo "❌ Direct push to main is blocked."
+            echo "   main is the production branch — only mergeable via PR from develop."
+            echo "   Use: git push origin <feature-branch>  (then open PR to develop)"
+            exit 1
+          fi
+        done
+
     - name: typecheck (turbo cached)
       run: pnpm typecheck

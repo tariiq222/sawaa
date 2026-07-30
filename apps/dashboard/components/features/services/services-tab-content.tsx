@@ -35,6 +35,7 @@ export function ServicesTabContent() {
   const branchId: string | undefined = undefined
   const setBranchId = (_v: string | undefined) => { /* branch filter not supported */ }
   const { data: categories } = useCategories()
+  const categoryItems = Array.isArray(categories) ? categories : (categories?.items ?? [])
   const { branches } = useBranches()
   const { deleteMut } = useServiceMutations()
   const isMultiBranch = true
@@ -64,7 +65,7 @@ export function ServicesTabContent() {
 
   const categoryOptions = [
     { value: "all", label: t("services.filters.allCategories") },
-    ...(categories ?? []).map((c) => ({
+    ...categoryItems.map((c) => ({
       value: c.id,
       label: locale === "ar" ? c.nameAr : (c.nameEn ?? c.nameAr),
     })),

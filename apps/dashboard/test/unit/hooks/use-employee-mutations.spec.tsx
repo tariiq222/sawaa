@@ -283,7 +283,7 @@ describe("useEmployeeServiceMutations", () => {
 describe("useEmployeeServiceMutations — durationsMut invalidation", () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it("invalidates employees.services, services.employees, employees.serviceTypes, employees.practitionerDurations, and services.bookingTypes on success", async () => {
+  it("invalidates employees.services, services.employees, and employees.serviceTypes on success", async () => {
     setEmployeeDurations.mockResolvedValueOnce([])
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -312,14 +312,19 @@ describe("useEmployeeServiceMutations — durationsMut invalidation", () => {
       ([arg]) => (arg as { queryKey: unknown }).queryKey,
     )
 
-    // employees.practitionerDurations(emp-1, svc-1)
+    // employees.services (employee-scoped)
     expect(calledKeys).toContainEqual(
-      expect.arrayContaining(["employees", "emp-1", "practitioner-durations", "svc-1"]),
+      expect.arrayContaining(["employees", "emp-1", "services"]),
     )
 
-    // services.bookingTypes(svc-1)
+    // services.employees (service-scoped)
     expect(calledKeys).toContainEqual(
-      expect.arrayContaining(["services", "svc-1", "booking-types"]),
+      expect.arrayContaining(["services", "svc-1", "employees"]),
+    )
+
+    // employees.serviceTypes(emp-1, svc-1)
+    expect(calledKeys).toContainEqual(
+      expect.arrayContaining(["employees", "emp-1", "service-types", "svc-1"]),
     )
   })
 })

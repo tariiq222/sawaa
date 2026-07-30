@@ -1,0 +1,71 @@
+# CodeQL — static analysis for TypeScript / JavaScript.
+#
+# Scans backend + dashboard + website + shared + ui on every push to
+# develop/main and on a weekly schedule. The mobile app is excluded
+# because it lives outside the pnpm workspace and CodeQL's TS extractor
+# works best on a single coherent workspace root.
+
+name: "CodeQL"
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Weekly on Mondays at 06:00 UTC — catches issues introduced by Dependabot merges.
+    - cron: "0 6 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: typescript
+            paths-ignore: |
+              apps/mobile/**
+              apps/backend/**/node_modules
+              packages/**/node_modules
+              apps/dashboard/**/node_modules
+              apps/website/**/node_modules
+              **/dist/**
+              **/coverage/**
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          paths-ignore: ${{ matrix.paths-ignore }}
+          # Default security-and-quality query suite covers the
+          # common vulnerabilities for our Node/TS stack.
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          # Upload to the Security tab on the GitHub repo.
+          upload: always
+
+      - name: Upload SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif
+          path: "${{ runner.temp }}/codeql-results.sarif"
+          retention-days: 7
+        continue-on-error: true

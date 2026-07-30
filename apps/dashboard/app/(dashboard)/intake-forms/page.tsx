@@ -16,8 +16,17 @@ import { getIntakeFormsColumns } from "@/components/features/intake-forms/intake
 import { useIntakeForms, useIntakeFormMutations } from "@/hooks/use-intake-forms"
 import { mapApiForm } from "@/lib/mappers/intake-form"
 import type { IntakeForm } from "@/lib/types/intake-form"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function IntakeFormsPage() {
+  return (
+    <PermissionGuard module="setting" action="read">
+      <IntakeFormsPageInner />
+    </PermissionGuard>
+  )
+}
+
+function IntakeFormsPageInner() {
   const { locale, t } = useLocale()
   const isAr = locale === "ar"
   const router = useRouter()

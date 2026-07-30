@@ -4,6 +4,7 @@ import { useState } from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 
 import { DataTable } from "@/components/features/data-table"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { Badge } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
@@ -119,7 +120,7 @@ function getColumns(
 
 export function SessionsTab() {
   const { t } = useLocale()
-  const { sessions, loading } = useChatSessions()
+  const { sessions, loading, error, refetch } = useChatSessions()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const columns = getColumns(setSelectedId, t)
@@ -129,6 +130,18 @@ export function SessionsTab() {
       <div className="flex flex-col gap-4 pt-4">
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-4 pt-4">
+        <ErrorBanner
+          message={error}
+          onRetry={refetch}
+          retryLabel={t("common.retry")}
+        />
       </div>
     )
   }

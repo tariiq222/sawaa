@@ -80,7 +80,7 @@ export function AssignedEmployeeRow({
     const prev = customPricing
     setCustomPricing(next)
     try {
-      await pricingModeMut.mutateAsync({ serviceId, useCustomPricing: next })
+      await pricingModeMut.mutateAsync({ serviceId, isCustom: next })
       toast.success(t("services.employees.durations.saved"), { id: toastId })
     } catch {
       // Turning OFF should always succeed; revert on failure.
@@ -172,7 +172,7 @@ export function AssignedEmployeeRow({
           try {
             await durationsMut.mutateAsync({ serviceId, payload })
             if (customPricing && !item.useCustomPricing) {
-              await pricingModeMut.mutateAsync({ serviceId, useCustomPricing: true })
+              await pricingModeMut.mutateAsync({ serviceId, isCustom: true })
             }
             toast.success(t("services.employees.durations.saved"), { id: toastId })
           } catch (err) {

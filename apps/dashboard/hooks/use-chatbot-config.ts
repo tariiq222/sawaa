@@ -17,7 +17,7 @@ export function useKnowledgeBase() {
 
   const filters: KnowledgeBaseQuery = { page, limit: 20, status }
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.chatbot.knowledgeBase.list(filters),
     queryFn: () => fetchKnowledgeBase(filters),
     staleTime: 30 * 1000,
@@ -38,6 +38,7 @@ export function useKnowledgeBase() {
     meta: data?.meta ?? null,
     loading: isLoading,
     error: error?.message ?? null,
+    refetch: () => { void refetch() },
     filters: { status },
     setFilters,
     resetFilters,
@@ -47,7 +48,7 @@ export function useKnowledgeBase() {
 }
 
 export function useChatbotConfig() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.chatbot.config.list(),
     queryFn: () => fetchChatbotConfig(),
     staleTime: 5 * 60 * 1000,
@@ -56,5 +57,6 @@ export function useChatbotConfig() {
     config: data ?? null as ChatbotConfig | null,
     loading: isLoading,
     error: error?.message ?? null,
+    refetch: () => { void refetch() },
   }
 }

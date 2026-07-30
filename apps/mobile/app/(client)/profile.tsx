@@ -4,6 +4,7 @@ import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import {
   Bell,
   ChevronLeft,
@@ -46,6 +47,7 @@ export default function ProfileScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
+  const { t } = useTranslation();
   const [darkMode, setDarkMode] = useState(false);
   const summaryQuery = useSummary();
   const summary = summaryQuery.data ?? null;
@@ -118,7 +120,7 @@ export default function ProfileScreen() {
       >
         <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'حسابي' : 'My Account'}
+            {t('profile.title')}
           </Text>
         </Animated.View>
 
@@ -153,7 +155,7 @@ export default function ProfileScreen() {
               </View>
               <Glass variant="regular" radius={14} onPress={() => router.push('/(client)/settings')} interactive style={styles.editBtn}>
                 <Text style={[styles.editText, { fontFamily: f600, fontWeight: '600' }]}>
-                  {dir.isRTL ? 'تعديل' : 'Edit'}
+                  {t('profile.edit')}
                 </Text>
               </Glass>
             </View>
@@ -229,10 +231,10 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.sosMid}>
                   <Text style={[styles.sosTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? 'دعم الأزمات · ٢٤/٧' : 'Crisis support · 24/7'}
+                    {t('profile.crisisSupport.title')}
                   </Text>
                   <Text style={[styles.sosSub, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? 'اتصال فوري بمختص' : 'Instant expert call'}
+                    {t('profile.crisisSupport.subtitle')}
                   </Text>
                 </View>
                 <Text style={[styles.sosPhone, { fontFamily: f700 }]}>{contactPhone}</Text>
@@ -247,7 +249,7 @@ export default function ProfileScreen() {
             dispatch(logout());
           }} interactive style={styles.logoutBtn}>
             <Text style={[styles.logoutText, { fontFamily: f700 }]}>
-              {dir.isRTL ? 'تسجيل الخروج' : 'Sign out'}
+              {t('profile.signOut')}
             </Text>
           </Glass>
         </Animated.View>

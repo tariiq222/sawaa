@@ -1,0 +1,276 @@
+# Regression Check — runs on every push to develop.
+#
+# This is the "after-merge" companion to merge-gate. PR-time tests
+# (ci.yml) are fast but only cover the touched surface. Once code
+# lands in develop, this workflow runs the full backend E2E + dashboard
+# Playwright flows to surface regressions that the unit tests miss
+# (e.g. cross-cutting features broken by a small change).
+#
+# Unlike the nightly-e2e suite, this runs on every push to develop
+# (not just nightly) so we catch issues the same day.
+#
+# Schedule: 1 hour SLA per push. If it grows, split into:
+#   - regression-backend (fast): unit + e2e backend
+#   - regression-dashboard (slow): playwright flows
+# and parallelize them.
+
+name: regression-check
+
+on:
+  push:
+    branches: [develop]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - ".github/workflows/regression-check.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression-backend:
+    name: regression-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+      JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+      JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+      JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+      JWT_SMS_OTP_SECRET: ci-jwt-sms-otp-secret-32chars-long
+      MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+      SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
+      ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
+      EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
+      AUTHENTICA_API_KEY: ci-authentica-key
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: '9000'
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: sawaa-test
+      MINIO_USE_SSL: 'false'
+      SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
+      SUPER_ADMIN_PASSWORD: SuperAdmin@123456
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter backend prisma:generate
+
+      - name: Build shared packages
+        # Backend Jest tests resolve @sawaa/shared via its built CJS entry.
+        # Without this, e.g. list-permissions.handler.ts fails with
+        # "Cannot find module '@sawaa/shared/constants/permissions-catalog'".
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            quay.io/minio/minio:latest server /data
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:9000/minio/health/live && break
+            sleep 1
+          done
+
+      - name: Run migrations
+        run: pnpm --filter backend prisma:migrate:deploy
+
+      - name: Seed database
+        run: pnpm --filter backend seed
+
+      - name: Backend — full e2e (smoke)
+        run: pnpm --filter backend test:smoke
+
+      - name: Backend — full e2e (network-mocked)
+        run: pnpm --filter backend test:e2e
+
+  regression-dashboard:
+    name: regression-dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+      JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+      JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+      JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+      JWT_SMS_OTP_SECRET: ci-jwt-sms-otp-secret-32chars-long
+      MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+      SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
+      ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
+      EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
+      AUTHENTICA_API_KEY: ci-authentica-key
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: '9000'
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: sawaa-test
+      MINIO_USE_SSL: 'false'
+      PW_E2E_PROD: '1'
+      SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
+      SUPER_ADMIN_PASSWORD: SuperAdmin@123456
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+
+      - name: Generate Prisma Client
+        run: pnpm --filter backend prisma:generate
+
+      - name: Start MinIO
+        # Required by the backend's /api/v1/health check (MinIO indicator).
+        # Without it the health endpoint returns 503 and the backend never
+        # becomes reachable, so Playwright's setup.auth fetches fail with
+        # 'TypeError: fetch failed'.
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            quay.io/minio/minio:latest server /data
+          minio_ready=false
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9000/minio/health/live; then
+              minio_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$minio_ready" != "true" ]; then
+            echo "MinIO did not become healthy after 30 seconds" >&2
+            exit 1
+          fi
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter dashboard exec playwright install --with-deps chromium
+
+      - name: Run migrations + seed
+        run: |
+          pnpm --filter backend prisma:migrate:deploy
+          pnpm --filter backend seed
+
+      - name: Start backend and wait for health
+        # Playwright's webServer only starts the dashboard. The backend
+        # must be booted separately so the smoke tests can reach it.
+        # Mirrors the dashboard-smoke job in ci.yml.
+        run: |
+          pnpm --filter=backend exec nest start > apps/backend/backend-regression.log 2>&1 &
+          echo $! > apps/backend/backend-regression.pid
+
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:5200/api/v1/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          cat apps/backend/backend-regression.log
+          exit 1
+        env:
+          NODE_ENV: test
+          PORT: '5200'
+
+      - name: Build + boot dashboard (Playwright webServer)
+        run: pnpm --filter dashboard exec playwright test --project=smoke
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f apps/backend/backend-regression.pid ]; then
+            kill "$(cat apps/backend/backend-regression.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-smoke-on-develop
+          path: apps/dashboard/playwright-report
+          retention-days: 14

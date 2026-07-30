@@ -43,7 +43,8 @@
     "openapi:build-and-snapshot": "pnpm run build && pnpm run openapi:snapshot",
     "check:openapi-coverage": "tsx scripts/check-openapi-coverage.ts",
     "backfill:counters": "tsx scripts/billing/recompute-all-counters.ts",
-    "rekey:credentials": "tsx scripts/rekey-credentials.ts"
+    "rekey:credentials": "tsx scripts/rekey-credentials.ts",
+    "docs:api": "typedoc --options typedoc.json"
   },
   "dependencies": {
     "@casl/ability": "^6.8.0",

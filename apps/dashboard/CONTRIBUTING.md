@@ -1,7 +1,7 @@
 # CONTRIBUTING — Sawaa Dashboard
 
 > اقرأ هذا الملف أولاً قبل كتابة أي سطر كود.
-> يُكمّل: `CLAUDE.md` (القواعد الكاملة + Layer rules) + `DESIGN-SYSTEM.md` (التصميم) + `tokens.md` (مرجع التوكنز).
+> يُكمّل: `CLAUDE.md` (القواعد الكاملة + Layer rules) + `tokens.md` (مرجع التوكنز) + `@sawaa/ui/CLAUDE.md` (UI primitives).
 
 ---
 
@@ -35,8 +35,8 @@ npm run format
 | الملف | ما ستعرفه |
 |-------|-----------|
 | `CLAUDE.md` | قواعد المشروع الكاملة + Layer rules + i18n + billing + terminology |
-| `DESIGN-SYSTEM.md` | الـ frosted-glass design system، RTL، component patterns |
 | `tokens.md` | مرجع الـ design tokens (الألوان، spacing، shadows…) |
+| `@sawaa/ui/CLAUDE.md` | UI primitives — متى تستخدم `@sawaa/ui` ومتى تضيف wrapper في `components/ui/` |
 
 ---
 
@@ -46,7 +46,7 @@ npm run format
 dashboard/
 ├── app/(dashboard)/          # Pages — orchestration فقط، لا business logic
 │   └── [feature]/
-│       ├── page.tsx          # الصفحة الرئيسية (max 120 سطر)
+│       ├── page.tsx          # الصفحة الرئيسية (max 150 سطر)
 │       ├── [id]/page.tsx     # صفحة التفاصيل
 │       └── create/page.tsx   # صفحة الإنشاء
 │
@@ -110,7 +110,6 @@ import { Button } from "@/components/ui/button"
 □ lib/types/referral.ts              # Type definitions
 □ lib/schemas/referral.schema.ts     # Zod validation schemas
 □ lib/api/referrals.ts               # API calls (max 200 سطر)
-□ lib/query-keys.ts                  # أضف queryKeys.referrals.*
 □ hooks/use-referrals.ts             # Query hooks
 □ hooks/use-referral-mutations.ts    # Mutation hooks
 □ components/features/referrals/     # Feature components
@@ -138,32 +137,38 @@ import { Button } from "@/components/ui/button"
 | النوع | الحد |
 |-------|------|
 | أي ملف | **350 سطر** (مطلق، بلا استثناء) |
-| Page component | 120 سطر |
-| Feature component | 250 سطر |
+| Page component | 150 سطر |
+| Feature component | 300 سطر |
 | API file | 200 سطر |
-| Hook file | 150 سطر |
+| Hook file | 200 سطر |
 | Type file | 250 سطر |
 | Schema file | 150 سطر |
+| Translation | 300 سطر |
 
-إذا اقترب ملف من الحد — قسّمه **الآن** لا بعد الـ PR.
+إذا اقترب ملف من الحد — قسّمه **الآن** لا بعد الـ PR. الاستثناء الوحيد المسموح به: إضافة تعليق `// EXCEPTION: <reason>, approved <date>` في رأس الملف.
 
 ---
 
 ## 8. التحقق قبل الـ PR — Pre-PR Checklist
 
 ```
-□ npm run typecheck  →  0 errors
-□ npm run lint       →  0 errors
+□ npm run typecheck          →  0 errors
+□ npm run lint               →  0 errors
+□ npm run i18n:verify        →  AR/EN parity
 □ لا يوجد ملف يتجاوز 350 سطر
 □ لا cross-feature imports
+□ Primitives imported from @sawaa/ui (not components/ui/)
 □ كل query في use-[feature].ts
 □ كل mutation في use-[feature]-mutations.ts
 □ page.tsx لا يحتوي على business logic
 □ لا hex colors أو text-gray-*
-□ كل RTL spacing صحيح (ps-/pe-)
-□ كل أيقونة من @hugeicons
+□ كل RTL spacing صحيح (ps-/pe-/ms-/me-)
+□ كل أيقونة من @hugeicons فقط
 □ لا inline styles
-□ التوثيق محدَّث (إذا غيّرت أنماطاً عامة)
+□ staleTime مضبوط على أي query جديدة
+□ Feature جديدة مضافة في eslint.config.mjs → FEATURES
+□ لا استخدام جديد لـ useTerminology() — single-tenant، النصوص عبر t()
+□ لا توجد واجهات tenant switching أو subscription أو billing-plan gating
 ```
 
 ---
@@ -197,7 +202,7 @@ docs(arch): update hook ownership rules
 A: إذا feature واحدة → داخلها. إذا featureان → انتظر الثالثة ثم انقل لـ `components/features/` root أو `lib/`.
 
 **Q: هل أستطيع تعديل shadcn primitives؟**
-A: لا. الـ primitives موجودة في `@sawaa/ui` (workspace package). إذا احتجت تعديلاً → عدّلها داخل `packages/ui/src/primitives/` لتظل مشتركة بين dashboard/admin/website. `components/ui/` في الـ dashboard للـ wrappers المحلية فقط (date-picker, nationality-select).
+A: لا. الـ primitives موجودة في `@sawaa/ui` (workspace package). إذا احتجت تعديلاً → عدّلها داخل `packages/ui/src/primitives/` لتظل مشتركة بين أي تطبيقات تستخدمها مستقبلاً. حالياً الـ dashboard هو المستهلك الوحيد. `components/ui/` في الـ dashboard للـ wrappers المحلية فقط (date-picker, nationality-select).
 
 **Q: أين أحفظ constants؟**
 A: في `lib/types/[feature].ts` كـ `const` عادية، أو `lib/utils.ts` إذا كانت عامة.

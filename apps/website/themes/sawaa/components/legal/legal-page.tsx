@@ -102,7 +102,11 @@ const PRIVACY_SECTIONS: LegalSection[] = [
   { heading: 'legal.privacy.retention.title', body: 'legal.privacy.retention.body' },
   { heading: 'legal.privacy.rights.title', body: 'legal.privacy.rights.body' },
   { heading: 'legal.privacy.hosting.title', body: 'legal.privacy.hosting.body' },
+  { heading: 'legal.privacy.cookies.title', body: 'legal.privacy.cookies.body' },
+  { heading: 'legal.privacy.minors.title', body: 'legal.privacy.minors.body' },
+  { heading: 'legal.privacy.changes.title', body: 'legal.privacy.changes.body' },
   { heading: 'legal.privacy.contact.title', body: 'legal.privacy.contact.body' },
+  { heading: 'legal.privacy.complaint.title', body: 'legal.privacy.complaint.body' },
 ];
 
 const TERMS_SECTIONS: LegalSection[] = [

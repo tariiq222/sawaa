@@ -1,0 +1,38 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "./src/main.ts",
+    "../packages/shared/index.ts",
+    "../packages/shared/schemas/index.ts",
+    "../packages/shared/enums/index.ts",
+    "../packages/shared/types/index.ts"
+  ],
+  "entryPointStrategy": "expand",
+  "out": "./docs/api",
+  "name": "Sawa Backend API",
+  "includeVersion": true,
+  "readme": "none",
+  "categorizeByGroup": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/tariiq222/sawaa/tree/develop/apps/backend"
+  },
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "treatWarningsAsErrors": false,
+  "skipErrorChecking": true,
+  "validation": {
+    "notExported": false,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "categorizationStrategy": "by-tag",
+  "openApi": {
+    "title": "Sawa Backend API",
+    "version": "1.0.0"
+  },
+  "excludeInternal": true,
+  "disableSources": false,
+  "gitRemote": "https://github.com/tariiq222/sawaa.git",
+  "sourceLinkTemplate": "https://github.com/tariiq222/sawaa/blob/develop/{path}#L{line}"
+}

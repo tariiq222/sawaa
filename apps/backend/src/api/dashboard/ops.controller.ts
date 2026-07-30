@@ -85,6 +85,7 @@ export class DashboardOpsController {
   }
 
   @Get('activity')
+  @CheckPermissions({ action: 'read', subject: 'Report' })
   @ApiOperation({ summary: 'List activity log entries' })
   @ApiOkResponse({
     description: 'Paginated list of activity log entries',

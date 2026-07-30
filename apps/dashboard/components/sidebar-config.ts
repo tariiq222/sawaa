@@ -38,7 +38,7 @@ export const operationsNav: NavItem[] = [
   { titleKey: "nav.dashboard", href: "/", icon: Home01Icon },
   { titleKey: "nav.bookings", href: "/bookings", icon: Calendar03Icon, permission: "booking:read" },
   { titleKey: "nav.packages", href: "/packages", icon: Package01Icon, permission: "service:read" },
-  { titleKey: "nav.programs", href: "/programs", icon: MentoringIcon, permission: "service:read" },
+  { titleKey: "nav.programs", href: "/programs", icon: MentoringIcon, permission: "booking:read" },
   { titleKey: "nav.clients", href: "/clients", icon: UserMultiple02Icon, permission: "client:read" },
   { titleKey: "nav.payments", href: "/payments", icon: MoneyBag02Icon, permission: "payment:read" },
   { titleKey: "nav.invoices", href: "/invoices", icon: DocumentAttachmentIcon, permission: "payment:read" },
@@ -46,7 +46,7 @@ export const operationsNav: NavItem[] = [
 
 export const practiceNav: NavItem[] = [
   { titleKey: "nav.intakeForms", href: "/intake-forms", icon: DocumentValidationIcon, permission: "service:read" },
-  { titleKey: "nav.ratings", href: "/ratings", icon: StarIcon, permission: "employee:read" },
+  { titleKey: "nav.ratings", href: "/ratings", icon: StarIcon, permission: "booking:read" },
 ]
 
 export const catalogNav: NavItem[] = [
@@ -64,7 +64,7 @@ export const managementNav: NavItem[] = [
 ]
 
 export const communicationNav: NavItem[] = [
-  { titleKey: "nav.notifications", href: "/notifications", icon: Notification03Icon, permission: "setting:read" },
+  { titleKey: "nav.notifications", href: "/notifications", icon: Notification03Icon, permission: "booking:read" },
   { titleKey: "nav.contactMessages", href: "/contact-messages", icon: InboxIcon, permission: "setting:read" },
   { titleKey: "nav.chatbot", href: "/chatbot", icon: AiChat02Icon, permission: "setting:read" },
 ]

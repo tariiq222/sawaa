@@ -11,6 +11,17 @@
 | **Backend** | NestJS 11 + Prisma 7 + PostgreSQL 16 | واجهة برمجة التطبيقات والمنطق التجاري |
 | **Dashboard** | Next.js 15 + React 19 | لوحة تحكم الموظفين والمستشارين |
 | **Website** | Next.js 15 (App Router) | الموقع الإلكتروني للحجز والمعلومات |
+| **Mobile** | Expo SDK 55 + React Native 0.83 | تطبيق العميل والموظف (iOS + Android) |
+
+## الحزم المشتركة (packages/)
+
+| الحزمة | الوصف |
+|--------|-------|
+| `@sawaa/shared` | Types + Zod schemas مشتركة بين كل التطبيقات |
+| `@sawaa/api-client` | HTTP client مكتوب يدوياً (ليس مولّد) — يُستهلك من dashboard + website |
+| `@sawaa/ui` | shadcn primitives — للـ dashboard فقط اليوم |
+| `@sawaa/test-helpers-pw` | Playwright helpers للـ dashboard e2e |
+| `@sawaa/website` | اسم الحزمة الموروث (لا تُعدّل) |
 
 ---
 
@@ -40,10 +51,12 @@ pnpm dev:dashboard  # ← terminal 2
 pnpm dev:website    # ← terminal 3
 ```
 
-الخدمات:
+الخدمات (في وضع التطوير):
 - Backend:   http://localhost:5200
 - Dashboard: http://localhost:5203
 - Website:   http://localhost:5205
+
+في Docker production تُستخدم المنافذ الداخلية `5100/5103/5105` (موثّقة في `docs/DOKPLOY-SETUP.md`).
 
 ---
 
@@ -87,14 +100,19 @@ pnpm dev:website    # ← terminal 3
 
 ```bash
 # توليد Prisma client بعد أي تعديل على المخطط
-cd apps/backend && pnpm prisma:generate
+cd apps/backend && npm run prisma:generate
 
-# إنشاء migration جديد
-cd apps/backend && pnpm prisma:migrate
+# إنشاء migration جديد (يُلتزم به — لا تُعدَّل migrations قديمة)
+cd apps/backend && npm run prisma:migrate
 
-# تصدير OpenAPI spec
+# تصدير OpenAPI snapshot + تجديد الـ dashboard types
 pnpm openapi:sync
 ```
+
+## وثائق إضافية
+
+- [`CLAUDE.md`](./CLAUDE.md) — القواعد الكاملة، single-tenant invariants، security tiers، definition of done
+- [`docs/`](./docs/) — أدلة النشر، ADRs، runbooks، نتائج تدقيق
 
 ---
 

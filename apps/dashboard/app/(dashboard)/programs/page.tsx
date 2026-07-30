@@ -5,9 +5,18 @@ import Link from 'next/link';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { PlusSignIcon } from '@hugeicons/core-free-icons';
 import { useLocale } from '@/components/locale-provider';
+import { PermissionGuard } from '@/components/features/permission-guard';
 import { ProgramsPageContent } from '@/components/features/programs/programs-page-content';
 
 export default function ProgramsPage() {
+  return (
+    <PermissionGuard module="booking" action="read">
+      <ProgramsPageInner />
+    </PermissionGuard>
+  );
+}
+
+function ProgramsPageInner() {
   const { t } = useLocale();
   const [statusFilter, setStatusFilter] = useState<string>('OPEN');
 

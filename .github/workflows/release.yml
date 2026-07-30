@@ -1,0 +1,123 @@
+# Release — runs on merge to main.
+#
+# Tags the merge commit with the next semantic version, and records
+# deploy state so the merge-gate can verify develop is at-or-after
+# the most recent release.
+#
+# The tag is what scripts/check-deploy-state.mjs reads to know the
+# "latest deployed version". A merged main that wasn't tagged here
+# is treated as a regression risk by the merge-gate.
+#
+# Tag format: vYYYY.MM.DD.{N} (e.g. v2026.07.30.2)
+#   - calver-style, sortable
+#   - the N suffix is the Nth release on that day
+#   - matches what docs/CONTRIBUTING.md recommends
+#
+# To skip a release (e.g. merge that only changes CI), include
+# "[skip release]" in the commit subject.
+
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tag:
+    name: tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip if commit subject contains [skip release]
+        id: skip
+        run: |
+          if git log -1 --pretty=%s | grep -q "\[skip release\]"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip release if subject flagged
+        if: steps.skip.outputs.skip == 'true'
+        run: |
+          echo "🟡 [skip release] detected in commit subject — no tag created"
+
+      - name: Compute next tag name (calver: vYYYY.MM.DD.{N})
+        if: steps.skip.outputs.skip == 'false'
+        id: tagname
+        run: |
+          # Today's date in calver format.
+          DATE=$(date -u +%Y.%m.%d)
+          BASE="v${DATE}"
+
+          # Find the highest N for today. Existing tags can be fetched
+          # with `git tag --list` because we did fetch-depth: 0.
+          N=$(git tag --list "${BASE}.*" 2>/dev/null | sed "s/^${BASE}\\.//" | sort -n | tail -1)
+          if [ -z "$N" ]; then
+            N=0
+          fi
+          N=$((N + 1))
+
+          echo "name=${BASE}.${N}" >> "$GITHUB_OUTPUT"
+          echo "Will create tag ${BASE}.${N} for $(git rev-parse --short HEAD)"
+
+      - name: Create annotated tag
+        if: steps.skip.outputs.skip == 'false'
+        env:
+          TAGNAME: ${{ steps.tagname.outputs.name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAGNAME" -m "Release $TAGNAME — $(git log -1 --pretty=%s)"
+          git push origin "$TAGNAME"
+
+      - name: Create GitHub release
+        if: steps.skip.outputs.skip == 'false'
+        env:
+          TAGNAME: ${{ steps.tagname.outputs.name }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAGNAME }}
+          name: ${{ env.TAGNAME }}
+          generate_release_notes: true
+
+      - name: Update deploy-state file
+        if: steps.skip.outputs.skip == 'false'
+        env:
+          TAGNAME: ${{ steps.tagname.outputs.name }}
+        run: |
+          mkdir -p .github
+          cat > .github/DEPLOY_STATE.json <<EOF
+          {
+            "latestRelease": "$TAGNAME",
+            "releasedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "releasedBy": "release workflow"
+          }
+          EOF
+          git add .github/DEPLOY_STATE.json
+          git commit -m "chore(release): record $TAGNAME as latest deployed"
+          git push origin main
+
+      - name: Comment on triggering commit
+        if: steps.skip.outputs.skip == 'false'
+        env:
+          TAGNAME: ${{ steps.tagname.outputs.name }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: release
+          message: |
+            🚢 Tagged as **`${{ env.TAGNAME }}`**.
+            This commit is now considered the "latest deployed" reference
+            for the merge-gate's deploy-state check.

@@ -47,6 +47,10 @@ export interface BlogPost {
   image: string;
   titleEn?: string;
   tagEn?: string;
+  excerpt?: string;
+  excerptEn?: string;
+  content?: string;
+  slug?: string;
 }
 
 export interface Testimonial {

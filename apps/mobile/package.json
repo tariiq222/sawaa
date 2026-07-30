@@ -13,7 +13,15 @@
     "test:watch": "jest --watch"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "coverageThreshold": {
+      "global": {
+        "statements": 75,
+        "branches": 62,
+        "functions": 73,
+        "lines": 79
+      }
+    }
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",

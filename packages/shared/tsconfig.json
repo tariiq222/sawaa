@@ -26,7 +26,8 @@
     "terminology/**/*.ts",
     "money/**/*.ts",
     "schemas/**/*.ts",
-    "catalog/**/*.ts"
+    "catalog/**/*.ts",
+    "validators/**/*.ts"
   ],
   "exclude": ["**/*.test.ts", "**/*.spec.ts", "node_modules", "dist"]
 }

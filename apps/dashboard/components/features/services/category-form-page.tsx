@@ -52,7 +52,8 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
   const pendingAvatarFile = useRef<File | null>(null)
   const [localAvatarPreview, setLocalAvatarPreview] = useState<string | null>(null)
 
-  const { data: allCategories, isLoading: categoriesLoading } = useCategories()
+  const { data: allCategoriesData, isLoading: categoriesLoading } = useCategories()
+  const allCategories = Array.isArray(allCategoriesData) ? allCategoriesData : (allCategoriesData?.items ?? [])
   const { createMut, updateMut } = useCategoryMutations()
   const { options: departmentOptions, isLoading: departmentsLoading } = useDepartmentOptions()
 

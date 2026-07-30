@@ -25,7 +25,7 @@ export function useInvoices() {
   const [search, setSearch] = useState("")
 
   const trimmedSearch = search.trim()
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.invoices.list({ page, search: trimmedSearch }),
     queryFn: () =>
       fetchInvoices({ page, limit: 20, search: trimmedSearch || undefined }),
@@ -39,6 +39,7 @@ export function useInvoices() {
     meta: data?.meta ?? null,
     isLoading,
     error: error?.message ?? null,
+    refetch: () => { void refetch() },
     page,
     setPage,
     search,

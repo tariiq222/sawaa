@@ -1,11 +1,13 @@
 import { View, Text, Pressable, StyleSheet, ImageBackground } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { authService } from '@/services/auth';
 
 export default function SuspendedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
 
   async function handleLogout() {
     await authService.logout();
@@ -20,12 +22,10 @@ export default function SuspendedScreen() {
     >
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.card}>
-          <Text style={styles.title}>الحساب معلق</Text>
-          <Text style={styles.body}>
-            تم تعليق حساب العيادة. تواصل مع مزود الخدمة لمعرفة السبب.
-          </Text>
+          <Text style={styles.title}>{t('suspended.title')}</Text>
+          <Text style={styles.body}>{t('suspended.message')}</Text>
           <Pressable style={styles.button} onPress={handleLogout}>
-            <Text style={styles.buttonText}>تسجيل الخروج</Text>
+            <Text style={styles.buttonText}>{t('suspended.contactAdmin')}</Text>
           </Pressable>
         </View>
       </View>

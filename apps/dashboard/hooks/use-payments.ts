@@ -64,6 +64,10 @@ export function useRecordPaymentMutations() {
       discountReasonId,
     }: { invoiceId: string; discountAmt: number; discountReasonId?: string }) =>
       applyInvoiceDiscount(invoiceId, { discountAmt, discountReasonId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
+    },
   })
 
   const recordMut = useMutation({
@@ -77,9 +81,14 @@ export function useRecordPaymentMutations() {
   })
 
   // Lazily materialise a DRAFT invoice for a booking that has none (pay-at-clinic)
-  // so reception can record an upfront payment against it.
+  // so reception can record an upfront payment against it. The booking
+  // list will stale until refetched otherwise.
   const ensureInvoiceMut = useMutation({
     mutationFn: (bookingId: string) => ensureBookingInvoice(bookingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
+    },
   })
 
   return { applyDiscountMut, recordMut, ensureInvoiceMut }

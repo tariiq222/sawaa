@@ -40,7 +40,7 @@ describe('GetDashboardStatsHandler', () => {
   it('returns zero stats for employee without linked row', async () => {
     prisma.employee.findFirst.mockResolvedValue(null);
     const result = await handler.execute({ userId: 'u1', role: 'EMPLOYEE' });
-    expect(result).toEqual({ todayBookings: 0, confirmedToday: 0, pendingToday: 0, cancelRequests: 0, newClientsToday: 0 });
+    expect(result).toEqual({ todayBookings: 0, confirmedToday: 0, pendingToday: 0, awaitingPaymentToday: 0, cancelRequests: 0, newClientsToday: 0 });
     expect(prisma.booking.groupBy).not.toHaveBeenCalled();
   });
 

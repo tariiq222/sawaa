@@ -8,6 +8,7 @@ import { Label } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { useChatbotConfig, useChatbotMutations } from "@/hooks/use-chatbot"
 import { useLocale } from "@/components/locale-provider"
 import type { UpsertChatbotConfigPayload } from "@/lib/types/chatbot"
@@ -17,7 +18,7 @@ import { showApiError } from "@/lib/mutation-helpers"
 
 export function ConfigTab() {
   const { t } = useLocale()
-  const { config, loading } = useChatbotConfig()
+  const { config, loading, error, refetch } = useChatbotConfig()
   const { updateConfigMut } = useChatbotMutations()
 
   const [systemPromptAr, setSystemPromptAr] = useState("")
@@ -61,6 +62,16 @@ export function ConfigTab() {
           <Skeleton key={`skeleton-${i}`} className="h-40 w-full" />
         ))}
       </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <ErrorBanner
+        message={error}
+        onRetry={refetch}
+        retryLabel={t("common.retry")}
+      />
     )
   }
 

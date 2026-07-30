@@ -7,8 +7,6 @@ import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaColors } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
-import { useTerminology } from '@/hooks/useTerminology';
-import { VERTICAL_SLUG } from '@/constants/config';
 import { useAppSelector } from '@/hooks/use-redux';
 import { getFontName } from '@/theme/fonts';
 import { useHome, useTherapists } from '@/hooks/queries';
@@ -23,7 +21,6 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
-  const { t: termT } = useTerminology(VERTICAL_SLUG);
   const reduceMotion = useReduceMotion();
   const router = useRouter();
   const user = useAppSelector((s) => s.auth.user);
@@ -155,7 +152,7 @@ export default function HomeScreen() {
           style={[styles.sectionHead, { flexDirection: dir.row }]}
         >
           <Text style={[styles.sectionTitle, { fontFamily: f700 }]}>
-            {termT('employee.plural', dir.isRTL ? 'المعالجون' : 'Therapists')}
+            {t('home.featured')}
           </Text>
         </Animated.View>
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(700).duration(800).easing(Easing.out(Easing.cubic))}>

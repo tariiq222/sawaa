@@ -6,8 +6,10 @@ import { toast } from "sonner"
 import { IntakeFormPage } from "@/components/features/intake-forms/intake-form-page"
 import { useIntakeForm, useIntakeFormMutations } from "@/hooks/use-intake-forms"
 import { useLocale } from "@/components/locale-provider"
+import { showApiError } from "@/lib/mutation-helpers"
 import type { IntakeFormDraft } from "@/lib/types/intake-form"
 import type { IntakeFormApi } from "@/lib/types/intake-form-api"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 /* ─── Map API form → draft ─── */
 
@@ -33,6 +35,18 @@ function mapToDraft(form: IntakeFormApi): Partial<IntakeFormDraft> {
 }
 
 export default function EditIntakeFormPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  return (
+    <PermissionGuard module="setting" action="update">
+      <EditIntakeFormPageInner params={params} />
+    </PermissionGuard>
+  )
+}
+
+function EditIntakeFormPageInner({
   params,
 }: {
   params: Promise<{ id: string }>
@@ -71,8 +85,8 @@ export default function EditIntakeFormPage({
 
       toast.success(t("intakeForms.saveSuccess"))
       router.push("/intake-forms")
-    } catch {
-      toast.error(t("intakeForms.saveError"))
+    } catch (err) {
+      showApiError(err, { fallback: t("intakeForms.saveError"), t })
     }
   }
 

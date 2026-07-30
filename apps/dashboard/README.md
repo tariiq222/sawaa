@@ -7,12 +7,12 @@
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router)
-- **UI:** shadcn/ui + Tailwind CSS v4
+- **UI:** shadcn/ui + Tailwind CSS v4 (via `@sawaa/ui` workspace package)
 - **State:** TanStack Query v5
 - **Forms:** React Hook Form + Zod
 - **Icons:** Hugeicons React
 - **Tables:** TanStack Table v8
-- **i18n:** next-intl (Arabic + English, RTL-first)
+- **i18n:** custom runtime (Arabic + English, RTL-first) — `next-intl` installed but unused at runtime
 
 ---
 
@@ -25,11 +25,13 @@ npm run dev
 
 | الأمر | الوظيفة |
 | ----- | ------- |
-| `npm run dev` | بيئة التطوير على port 5103 |
+| `npm run dev` | بيئة التطوير على port **5203** (Turbopack) — Docker production uses 5103 |
 | `npm run build` | بناء production |
 | `npm run typecheck` | فحص TypeScript |
 | `npm run lint` | فحص القواعد المعمارية |
 | `npm run format` | تنسيق الكود |
+| `npm run i18n:verify` | فحص تطابق AR/EN keys |
+| `npm run test` | Vitest |
 
 ---
 
@@ -41,10 +43,8 @@ npm run dev
 | ----- | --------- |
 | **[CLAUDE.md](./CLAUDE.md)** | قواعد التطوير الكاملة (Layer rules, i18n, billing, terminology) |
 | **[CONTRIBUTING.md](./CONTRIBUTING.md)** | أول مرة تعمل على المشروع |
-| **[DESIGN-SYSTEM.md](./DESIGN-SYSTEM.md)** | قبل كتابة أي UI |
-| **[tokens.md](./tokens.md)** | مرجع الـ design tokens |
-| **[CODEOWNERS](./CODEOWNERS)** | لمعرفة من يراجع ماذا |
-| **[docs/refactor-roadmap.md](./docs/refactor-roadmap.md)** | جدول الصيانة الدوري |
+| **[tokens.md](./tokens.md)** | مرجع الـ design tokens (الألوان، spacing، shadows…) |
+| **[@sawaa/ui/CLAUDE.md](../../packages/ui/CLAUDE.md)** | قبل استخدام أو تعديل أي UI primitive |
 
 ---
 
