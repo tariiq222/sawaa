@@ -98,6 +98,12 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter backend prisma:generate
 
+      - name: Build shared packages
+        # Backend Jest tests resolve @sawaa/shared via its built CJS entry.
+        # Without this, e.g. list-permissions.handler.ts fails with
+        # "Cannot find module '@sawaa/shared/constants/permissions-catalog'".
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+
       - name: Start MinIO
         run: |
           docker run -d --name minio \
@@ -202,8 +208,36 @@ jobs:
           pnpm --filter backend prisma:migrate:deploy
           pnpm --filter backend db:seed
 
+      - name: Start backend and wait for health
+        # Playwright's webServer only starts the dashboard. The backend
+        # must be booted separately so the smoke tests can reach it.
+        # Mirrors the dashboard-smoke job in ci.yml.
+        run: |
+          pnpm --filter=backend exec nest start > apps/backend/backend-regression.log 2>&1 &
+          echo $! > apps/backend/backend-regression.pid
+
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:5200/api/v1/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          cat apps/backend/backend-regression.log
+          exit 1
+        env:
+          NODE_ENV: test
+          PORT: '5200'
+
       - name: Build + boot dashboard (Playwright webServer)
         run: pnpm --filter dashboard exec playwright test --project=smoke
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f apps/backend/backend-regression.pid ]; then
+            kill "$(cat apps/backend/backend-regression.pid)" 2>/dev/null || true
+          fi
 
       - name: Upload Playwright artifacts
         if: always()

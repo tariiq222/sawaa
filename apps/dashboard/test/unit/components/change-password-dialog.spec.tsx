@@ -24,6 +24,10 @@ vi.mock("@/components/locale-provider", () => ({
         "changePassword.submitting": "جارٍ الحفظ...",
         "changePassword.success": "تم التغيير",
         "changePassword.error": "فشل التغيير",
+        "changePassword.currentRequired": "كلمة المرور الحالية مطلوبة",
+        "changePassword.newTooShort": "يجب أن تكون 8 أحرف على الأقل",
+        "changePassword.confirmRequired": "يرجى تأكيد كلمة المرور",
+        "changePassword.mismatch": "كلمتا المرور غير متطابقتين",
       }
       return map[k] ?? k
     },
@@ -95,7 +99,7 @@ describe("ChangePasswordDialog", () => {
     await userEvent.click(screen.getByText("حفظ"))
 
     await waitFor(() => {
-      expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument()
+      expect(screen.getByText("كلمتا المرور غير متطابقتين")).toBeInTheDocument()
     })
   })
 
@@ -111,7 +115,7 @@ describe("ChangePasswordDialog", () => {
     await userEvent.click(screen.getByText("حفظ"))
 
     await waitFor(() => {
-      expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument()
+      expect(screen.getByText(/8 أحرف على الأقل/)).toBeInTheDocument()
     })
   })
 
@@ -126,7 +130,7 @@ describe("ChangePasswordDialog", () => {
     await userEvent.click(screen.getByText("حفظ"))
 
     await waitFor(() => {
-      expect(screen.getByText(/Current password is required/i)).toBeInTheDocument()
+      expect(screen.getByText("كلمة المرور الحالية مطلوبة")).toBeInTheDocument()
     })
   })
 })
