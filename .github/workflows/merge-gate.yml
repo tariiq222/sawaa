@@ -139,6 +139,7 @@ jobs:
           skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**,apps/*/dist/**'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
+          version: '0.72.0'
 
       - name: Lefthook pre-push (eslint + typecheck + multi-tenant guard)
         # Single source of truth: this is the SAME lefthook config that runs

@@ -446,6 +446,7 @@ format: 'table'
           skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
+          version: '0.72.0'
 
       - name: Upload Trivy SARIF
         if: always()
