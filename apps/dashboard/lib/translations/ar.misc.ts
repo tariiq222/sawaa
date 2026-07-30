@@ -301,6 +301,11 @@ export const arMisc: Record<string, string> = {
   "changePassword.newTooShort": "يجب أن تكون 8 أحرف على الأقل",
   "changePassword.confirmRequired": "يرجى تأكيد كلمة المرور",
   "changePassword.mismatch": "كلمتا المرور غير متطابقتين",
+  "validation.atLeastOneSupervisor": "يجب إضافة مشرف واحد على الأقل",
+  "validation.minExceedsMax": "الحد الأدنى للمشاركين يجب ألا يتجاوز الحد الأقصى",
+  "validation.depositExceedsPrice": "قيمة العربون يجب ألا تتجاوز سعر البرنامج",
+  "validation.startDateRequired": "تاريخ البدء مطلوب",
+  "validation.cancelReasonRequired": "سبب الإلغاء مطلوب (حرفين على الأقل)",
 
   // — Detail Sheet Labels —
   "detail.client": "المستفيد",
