@@ -148,7 +148,7 @@ jobs:
         # --all-files ensures we lint every changed path, not just the diff.
         # --no-TTY prevents lefthook from blocking on a missing TTY.
         run: |
-          pnpm lefthook run pre-push --all-files --no-TTY
+          pnpm lefthook run pre-push --all-files --no-tty
 
       - name: Compose gate result
         if: success()
