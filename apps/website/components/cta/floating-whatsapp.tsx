@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import { useT, useLocale } from '@/features/locale/locale-provider';
-import { localeDir } from '@/features/locale/locale';
+import { localeDir } from '@/features/locale/dir';
 import { useBranding } from '@/features/branding/public';
 import { hasAnalyticsConsent } from '@/components/consent/cookie-consent-banner';
 import type { MessageKey } from '@/features/locale/dictionary';

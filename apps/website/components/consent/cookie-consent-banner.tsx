@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useT, useLocale } from '@/features/locale/locale-provider';
-import { localeDir } from '@/features/locale/locale';
+import { localeDir } from '@/features/locale/dir';
 import type { MessageKey } from '@/features/locale/dictionary';
 
 type ConsentValue = 'all' | 'essential' | 'declined';
