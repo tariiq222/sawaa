@@ -200,6 +200,30 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter backend prisma:generate
 
+      - name: Start MinIO
+        # Required by the backend's /api/v1/health check (MinIO indicator).
+        # Without it the health endpoint returns 503 and the backend never
+        # becomes reachable, so Playwright's setup.auth fetches fail with
+        # 'TypeError: fetch failed'.
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            quay.io/minio/minio:latest server /data
+          minio_ready=false
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9000/minio/health/live; then
+              minio_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$minio_ready" != "true" ]; then
+            echo "MinIO did not become healthy after 30 seconds" >&2
+            exit 1
+          fi
+
       - name: Install Playwright Chromium
         run: pnpm --filter dashboard exec playwright install --with-deps chromium
 

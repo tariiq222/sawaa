@@ -89,6 +89,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared packages
+        # Dashboard + api-client resolve @sawaa/shared via its built
+        # CJS entry. Without this, typecheck fails with
+        # "Cannot find module '@sawaa/shared/...'" in dashboard,
+        # api-client, and the openapi snapshot step.
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+
       - name: Deploy-state consistency
         # Verifies that the candidate merge target is at-or-after the
         # last production release (most recent tag on main). Catches the
