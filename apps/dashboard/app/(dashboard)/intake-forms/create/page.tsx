@@ -7,8 +7,17 @@ import { useIntakeFormMutations } from "@/hooks/use-intake-forms"
 import { useLocale } from "@/components/locale-provider"
 import { showApiError } from "@/lib/mutation-helpers"
 import type { IntakeFormDraft } from "@/lib/types/intake-form"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function CreateIntakeFormPage() {
+  return (
+    <PermissionGuard module="setting" action="create">
+      <CreateIntakeFormPageInner />
+    </PermissionGuard>
+  )
+}
+
+function CreateIntakeFormPageInner() {
   const router = useRouter()
   const { t } = useLocale()
   const { createAsync, createLoading, setFieldsAsync } = useIntakeFormMutations()

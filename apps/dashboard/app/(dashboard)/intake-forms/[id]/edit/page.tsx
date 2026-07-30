@@ -9,6 +9,7 @@ import { useLocale } from "@/components/locale-provider"
 import { showApiError } from "@/lib/mutation-helpers"
 import type { IntakeFormDraft } from "@/lib/types/intake-form"
 import type { IntakeFormApi } from "@/lib/types/intake-form-api"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 /* ─── Map API form → draft ─── */
 
@@ -34,6 +35,18 @@ function mapToDraft(form: IntakeFormApi): Partial<IntakeFormDraft> {
 }
 
 export default function EditIntakeFormPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  return (
+    <PermissionGuard module="setting" action="update">
+      <EditIntakeFormPageInner params={params} />
+    </PermissionGuard>
+  )
+}
+
+function EditIntakeFormPageInner({
   params,
 }: {
   params: Promise<{ id: string }>
