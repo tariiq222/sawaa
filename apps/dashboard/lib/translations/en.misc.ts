@@ -297,6 +297,10 @@ export const enMisc: Record<string, string> = {
   "changePassword.submitting": "Changing...",
   "changePassword.success": "Password changed successfully",
   "changePassword.error": "Failed to change password",
+  "changePassword.currentRequired": "Current password is required",
+  "changePassword.newTooShort": "Must be at least 8 characters",
+  "changePassword.confirmRequired": "Please confirm your password",
+  "changePassword.mismatch": "Passwords do not match",
 
   // — Detail Sheet Labels —
   "detail.client": "Client",

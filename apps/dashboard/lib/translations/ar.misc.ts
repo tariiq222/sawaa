@@ -297,6 +297,10 @@ export const arMisc: Record<string, string> = {
   "changePassword.submitting": "جارٍ التغيير...",
   "changePassword.success": "تم تغيير كلمة المرور بنجاح",
   "changePassword.error": "فشل تغيير كلمة المرور",
+  "changePassword.currentRequired": "كلمة المرور الحالية مطلوبة",
+  "changePassword.newTooShort": "يجب أن تكون 8 أحرف على الأقل",
+  "changePassword.confirmRequired": "يرجى تأكيد كلمة المرور",
+  "changePassword.mismatch": "كلمتا المرور غير متطابقتين",
 
   // — Detail Sheet Labels —
   "detail.client": "المستفيد",
