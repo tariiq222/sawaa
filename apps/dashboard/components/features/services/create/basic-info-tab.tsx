@@ -16,6 +16,7 @@ import {
 } from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { AlertCircleIcon } from "@hugeicons/core-free-icons"
+import Link from "next/link"
 import {
   Select,
   SelectContent,
@@ -214,12 +215,12 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
               <p className="text-sm text-warning-foreground">
                 {t("services.create.noCategoriesBanner")}
               </p>
-              <a
+              <Link
                 href="/categories"
                 className="shrink-0 rounded-md border border-warning/40 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-warning/20"
               >
                 {t("services.create.noCategoriesCta")}
-              </a>
+              </Link>
             </div>
           )}
 
