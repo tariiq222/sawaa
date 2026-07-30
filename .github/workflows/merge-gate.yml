@@ -108,9 +108,14 @@ jobs:
           severity: 'HIGH,CRITICAL'
           ignore-paths: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**,apps/*/dist/**'
 
-      - name: Lefthook pre-commit guards (legacy multi-tenant + eslint)
+      - name: Lefthook pre-push (eslint + typecheck + multi-tenant guard)
+        # Single source of truth: this is the SAME lefthook config that runs
+        # locally before every `git push`. CI invokes the CLI directly so
+        # there is no risk of the CI and local-hook behaviors drifting apart.
+        # --all-files ensures we lint every changed path, not just the diff.
+        # --no-TTY prevents lefthook from blocking on a missing TTY.
         run: |
-          bash scripts/ci-lefthook-guard.sh
+          pnpm lefthook run pre-push --all-files --no-TTY
 
       - name: Compose gate result
         if: success()
