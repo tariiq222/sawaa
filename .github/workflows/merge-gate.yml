@@ -113,7 +113,7 @@ jobs:
         run: pnpm --filter website typecheck && pnpm --filter website test -- --run
 
       - name: OpenAPI snapshot drift
-        run: cd apps/backend && pnpm run openapi:build-and-snapshot && git diff --exit-code apps/backend/openapi.json
+        run: cd apps/backend && pnpm run openapi:build-and-snapshot && git diff --exit-code -- openapi.json
 
       - name: api-client endpoint drift
         run: node scripts/check-api-client-drift.mjs
