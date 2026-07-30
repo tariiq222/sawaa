@@ -24,7 +24,7 @@ export function SettingsIntegrationsTab() {
         {/* Sidebar */}
         <SettingsTabSidebar
           title={t("settings.tabs.integrations")}
-          items={integrations.map(item => ({ id: item.id, label: item.label }))}
+          items={integrations.map((item) => ({ id: item.id, label: item.label }))}
           activeId={activeId}
           onSelect={(id) => setActiveId(id as IntegrationId)}
           width="w-56"

@@ -17,6 +17,8 @@ const buildPrisma = () => ({
   notification: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
   smsDelivery: { deleteMany: jest.fn().mockResolvedValue({ count: 4 }) },
   notificationDeliveryLog: { deleteMany: jest.fn().mockResolvedValue({ count: 5 }) },
+  whatsappMessage: { deleteMany: jest.fn().mockResolvedValue({ count: 6 }) },
+  whatsappConversation: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
 });
 
 const buildConfig = (overrides: Record<string, string> = {}) => ({
@@ -36,6 +38,8 @@ describe('DataRetentionCron', () => {
     expect(prisma.notification.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.smsDelivery.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.notificationDeliveryLog.deleteMany).toHaveBeenCalledTimes(1);
+    expect(prisma.whatsappMessage.deleteMany).toHaveBeenCalledTimes(1);
+    expect(prisma.whatsappConversation.deleteMany).toHaveBeenCalledTimes(1);
   });
 
   it('keys each table on the correct timestamp field', async () => {
@@ -51,6 +55,7 @@ describe('DataRetentionCron', () => {
     expect(prisma.notificationDeliveryLog.deleteMany.mock.calls[0][0].where).toHaveProperty(
       'createdAt',
     );
+    expect(prisma.whatsappMessage.deleteMany.mock.calls[0][0].where).toHaveProperty('createdAt');
   });
 
   it('computes cutoffs from the default windows (otp=30d, activity=365d, others=90d)', async () => {

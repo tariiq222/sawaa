@@ -34,6 +34,7 @@ const FEATURES = [
   "contact-messages",
   "programs",
   "packages",
+  "whatsapp",
 ]
 
 /**

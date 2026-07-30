@@ -23,6 +23,8 @@ const DEFAULTS = {
   smsDeliveryDays: 90,
   /** NotificationDeliveryLog keyed on createdAt. */
   notificationDeliveryLogDays: 90,
+  /** WhatsApp content and phone-number conversation records. */
+  whatsappDays: 365,
 } as const;
 
 /**
@@ -101,6 +103,28 @@ export class DataRetentionCron {
             );
             return this.prisma.notificationDeliveryLog.deleteMany({
               where: { createdAt: { lt: cutoff } },
+            });
+          },
+        },
+        {
+          table: 'WhatsappMessage',
+          run: () => {
+            const cutoff = new Date(
+              now - this.days('RETENTION_WHATSAPP_DAYS', DEFAULTS.whatsappDays) * DAY_MS,
+            );
+            return this.prisma.whatsappMessage.deleteMany({
+              where: { createdAt: { lt: cutoff } },
+            });
+          },
+        },
+        {
+          table: 'WhatsappConversation',
+          run: () => {
+            const cutoff = new Date(
+              now - this.days('RETENTION_WHATSAPP_DAYS', DEFAULTS.whatsappDays) * DAY_MS,
+            );
+            return this.prisma.whatsappConversation.deleteMany({
+              where: { lastMessageAt: { lt: cutoff } },
             });
           },
         },

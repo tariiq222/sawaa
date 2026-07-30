@@ -115,7 +115,18 @@ export const envValidationSchema = Joi.object({
   ZOOM_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
   // Email provider master key — 32 raw bytes base64-encoded (ASCII length 44).
   EMAIL_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
+  // WhatsApp provider master key — 32 raw bytes base64-encoded (ASCII length 44).
+  // Encrypts Meta Cloud API credentials (accessToken, businessAccountId, phoneNumberId)
+  // and the webhook verify token. Same HKDF + SINGLE_TENANT_CONTEXT_ID pattern as the
+  // other provider keys.
+  WHATSAPP_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
   SMS_WEBHOOK_URL_BASE: Joi.string().uri().allow('').optional(),
+
+  // WhatsApp agent runtime — optional until WhatsApp module is enabled.
+  WHATSAPP_SESSION_DIR: Joi.string().allow('').optional(),
+  WHATSAPP_AI_MAX_HISTORY_MESSAGES: Joi.number().integer().min(0).max(100).default(20),
+  WHATSAPP_MAX_MESSAGE_LENGTH: Joi.number().integer().min(280).default(4000),
+  WHATSAPP_RATE_LIMIT_PER_PHONE_PER_HOUR: Joi.number().integer().min(1).default(60),
 
   // Super-admin bootstrap password. Must be changed before production.
   // Min 16 chars; placeholder values ('Admin@2026', 'admin', 'password') rejected in production.
@@ -227,6 +238,7 @@ export const envValidationSchema = Joi.object({
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
       'MOYASAR_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
+      'WHATSAPP_PROVIDER_ENCRYPTION_KEY',
       'AUTHENTICA_API_KEY',
       'PLATFORM_SETTINGS_KEY',
     ];

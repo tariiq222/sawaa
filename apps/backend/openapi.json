@@ -3577,6 +3577,10 @@
         },
         "type": "object"
       },
+      "Object": {
+        "properties": {},
+        "type": "object"
+      },
       "OnboardEmployeeDto": {
         "properties": {
           "avatarUrl": {
@@ -4797,6 +4801,18 @@
           "port",
           "user",
           "pass"
+        ],
+        "type": "object"
+      },
+      "StaffReplyDto": {
+        "properties": {
+          "message": {
+            "example": "موعدك تأكد — الدفع عند الاستقبال",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
         ],
         "type": "object"
       },
@@ -6424,6 +6440,120 @@
         ],
         "type": "object"
       },
+      "UpsertWhatsappAgentConfigDto": {
+        "properties": {
+          "activeDays": {
+            "description": "0=Sunday..6=Saturday (Saudi week)",
+            "example": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "aiApiKey": {
+            "description": "OpenRouter (or OpenAI-compatible) API key. Empty string clears the stored key.",
+            "example": "sk-or-v1-...",
+            "type": "string"
+          },
+          "aiMaxTokens": {
+            "example": 800,
+            "maximum": 4000,
+            "minimum": 50,
+            "type": "number"
+          },
+          "aiModel": {
+            "example": "anthropic/claude-3.5-haiku",
+            "type": "string"
+          },
+          "aiTemperature": {
+            "example": 0.4,
+            "maximum": 2,
+            "minimum": 0,
+            "type": "number"
+          },
+          "businessHoursOnly": {
+            "default": false,
+            "type": "boolean"
+          },
+          "defaultLanguage": {
+            "enum": [
+              "ar",
+              "en"
+            ],
+            "example": "ar",
+            "type": "string"
+          },
+          "greetingAr": {
+            "example": "أهلاً! كيف أقدر أساعدك؟",
+            "type": "string"
+          },
+          "greetingEn": {
+            "example": "Hi! How can I help?",
+            "type": "string"
+          },
+          "systemPromptAr": {
+            "example": "أنت مساعد سوا...",
+            "type": "string"
+          },
+          "systemPromptEn": {
+            "example": "You are Sawaa assistant...",
+            "type": "string"
+          }
+        },
+        "required": [
+          "aiModel",
+          "aiTemperature",
+          "aiMaxTokens",
+          "systemPromptAr",
+          "systemPromptEn",
+          "defaultLanguage"
+        ],
+        "type": "object"
+      },
+      "UpsertWhatsappConfigDto": {
+        "properties": {
+          "evolutionApiKey": {
+            "description": "Evolution API key (encrypted at rest)",
+            "example": "evo-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "type": "string"
+          },
+          "evolutionBaseUrl": {
+            "description": "Evolution API base URL (no trailing slash)",
+            "example": "https://evolution.example.com",
+            "type": "string"
+          },
+          "evolutionInstanceName": {
+            "example": "sawaa-main",
+            "type": "string"
+          },
+          "isActive": {
+            "default": true,
+            "type": "boolean"
+          },
+          "provider": {
+            "enum": [
+              "META_CLOUD",
+              "EVOLUTION_API"
+            ],
+            "example": "EVOLUTION_API",
+            "type": "string"
+          },
+          "webhookSecret": {
+            "description": "Webhook signature secret (encrypted at rest)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "type": "object"
+      },
       "UpsertZoomConfigDto": {
         "properties": {
           "zoomAccountId": {
@@ -6569,6 +6699,22 @@
           "transferRef": {
             "description": "Bank transfer reference number (required when approving)",
             "example": "TRF-20260501-001",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "type": "object"
+      },
+      "WhatsappControlDto": {
+        "properties": {
+          "action": {
+            "enum": [
+              "start",
+              "stop",
+              "restart"
+            ],
             "type": "string"
           }
         },
@@ -16036,6 +16182,272 @@
         "summary": "Remove a role from a user",
         "tags": [
           "Dashboard / Identity"
+        ]
+      }
+    },
+    "/api/v1/dashboard/integrations/whatsapp": {
+      "delete": {
+        "operationId": "WhatsappIntegrationsController_reset_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Erase WhatsApp credentials and disconnect the agent",
+        "tags": [
+          "Dashboard / WhatsApp Integration"
+        ]
+      },
+      "get": {
+        "operationId": "WhatsappIntegrationsController_get_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get WhatsApp integration status (no secrets returned)",
+        "tags": [
+          "Dashboard / WhatsApp Integration"
+        ]
+      },
+      "put": {
+        "operationId": "WhatsappIntegrationsController_upsert_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertWhatsappConfigDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create or update WhatsApp Cloud API credentials",
+        "tags": [
+          "Dashboard / WhatsApp Integration"
+        ]
+      }
+    },
+    "/api/v1/dashboard/integrations/whatsapp/test": {
+      "post": {
+        "operationId": "WhatsappIntegrationsController_test_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "phoneNumber": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "WhatsApp credential test result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify Evolution API credentials by fetching connection state",
+        "tags": [
+          "Dashboard / WhatsApp Integration"
         ]
       }
     },
@@ -26808,6 +27220,634 @@
         ]
       }
     },
+    "/api/v1/dashboard/whatsapp/agent-config": {
+      "get": {
+        "operationId": "WhatsappAgentController_getAgentConfigEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get WhatsApp AI agent config (model, prompts, defaults)",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      },
+      "patch": {
+        "operationId": "WhatsappAgentController_upsertAgentConfigEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertWhatsappAgentConfigDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update WhatsApp AI agent config",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      }
+    },
+    "/api/v1/dashboard/whatsapp/control": {
+      "post": {
+        "operationId": "WhatsappAgentController_controlEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsappControlDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Start, stop, or restart the WhatsApp agent",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      }
+    },
+    "/api/v1/dashboard/whatsapp/conversations": {
+      "get": {
+        "operationId": "WhatsappAgentController_listConversationsEndpoint_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List WhatsApp conversations (live monitoring)",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      }
+    },
+    "/api/v1/dashboard/whatsapp/conversations/{id}": {
+      "get": {
+        "operationId": "WhatsappAgentController_getConversationEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a WhatsApp conversation with all messages",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      }
+    },
+    "/api/v1/dashboard/whatsapp/conversations/{id}/close": {
+      "post": {
+        "operationId": "WhatsappAgentController_closeConversationEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Close a conversation and release staff takeover",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      }
+    },
+    "/api/v1/dashboard/whatsapp/conversations/{id}/reply": {
+      "post": {
+        "operationId": "WhatsappAgentController_staffReplyEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffReplyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a message as staff (hand takeover)",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      }
+    },
+    "/api/v1/dashboard/whatsapp/qr": {
+      "get": {
+        "operationId": "WhatsappAgentController_getQrEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the current WhatsApp QR code for pairing (Baileys only)",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      }
+    },
+    "/api/v1/dashboard/whatsapp/status": {
+      "get": {
+        "operationId": "WhatsappAgentController_getStatusEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get WhatsApp agent runtime status (connection, uptime, counters)",
+        "tags": [
+          "Dashboard / WhatsApp Agent"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "PublicHealthController_check_v1",
@@ -33394,6 +34434,58 @@
         "summary": "Verify an email-verification token",
         "tags": [
           "Public / Identity"
+        ]
+      }
+    },
+    "/api/v1/public/whatsapp/webhook": {
+      "post": {
+        "operationId": "WhatsappWebhookController_handle_v1",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Missing raw body or invalid payload shape"
+          },
+          "401": {
+            "description": "Signature verification failed or webhook secret not configured"
+          }
+        },
+        "summary": "Receive an authenticated Evolution API message webhook.",
+        "tags": [
+          "Public / WhatsApp Webhook"
         ]
       }
     }

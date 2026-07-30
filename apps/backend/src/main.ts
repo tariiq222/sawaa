@@ -5,7 +5,7 @@ import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
-import * as express from 'express';
+import type * as express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
@@ -30,7 +30,6 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
   app.use(cookieParser());
-  app.use(express.json({ limit: '100kb' }));
 
   // CSRF protection: applied to cookie-based auth endpoints (mobile-client,
   // public with session cookie). Dashboard uses Bearer tokens which are
@@ -41,6 +40,7 @@ async function bootstrap(): Promise<void> {
       req.path.startsWith('/api/v1/auth') ||
       req.path.startsWith('/api/v1/public/sms/webhooks') ||
       req.path.startsWith('/api/v1/public/payment-webhook') ||
+      req.path.startsWith('/api/v1/public/whatsapp') ||
       req.path.startsWith('/api/v1/public/health') ||
       req.path.startsWith('/api/v1/public/metrics')
     ) {
@@ -48,8 +48,6 @@ async function bootstrap(): Promise<void> {
     }
     return csrfMiddleware(req, res, next);
   });
-  app.use(express.urlencoded({ extended: true, limit: '100kb' }));
-
   if (process.env.THROTTLER_DISABLED !== 'true') {
     app.use('/api/v1/auth', rateLimit({
       windowMs: 15 * 60 * 1000,

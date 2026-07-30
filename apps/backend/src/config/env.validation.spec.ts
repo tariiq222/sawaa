@@ -35,6 +35,7 @@ const baseValidEnv = {
   SMS_PROVIDER_ENCRYPTION_KEY: base64_44,
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
   EMAIL_PROVIDER_ENCRYPTION_KEY: base64_44,
+  WHATSAPP_PROVIDER_ENCRYPTION_KEY: base64_44,
   PLATFORM_SETTINGS_KEY: 'a'.repeat(64),
   SUPER_ADMIN_PASSWORD: 'SuperSecurePassword123!',
   THROTTLER_DISABLED: 'false',
@@ -72,6 +73,7 @@ const buildDevEnv = (overrides: Record<string, string | undefined> = {}) => ({
   SMS_PROVIDER_ENCRYPTION_KEY: base64_44,
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
   EMAIL_PROVIDER_ENCRYPTION_KEY: base64_44,
+  WHATSAPP_PROVIDER_ENCRYPTION_KEY: base64_44,
   ...overrides,
 });
 
