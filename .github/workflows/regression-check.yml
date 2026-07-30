@@ -55,6 +55,8 @@ jobs:
       MINIO_SECRET_KEY: minioadmin123
       MINIO_BUCKET: sawaa-test
       MINIO_USE_SSL: 'false'
+      SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
+      SUPER_ADMIN_PASSWORD: SuperAdmin@123456
 
     services:
       postgres:
@@ -120,7 +122,7 @@ jobs:
         run: pnpm --filter backend prisma:migrate:deploy
 
       - name: Seed database
-        run: pnpm --filter backend db:seed
+        run: pnpm --filter backend seed
 
       - name: Backend — full e2e (smoke)
         run: pnpm --filter backend test:smoke
@@ -154,6 +156,8 @@ jobs:
       MINIO_BUCKET: sawaa-test
       MINIO_USE_SSL: 'false'
       PW_E2E_PROD: '1'
+      SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
+      SUPER_ADMIN_PASSWORD: SuperAdmin@123456
 
     services:
       postgres:
@@ -230,7 +234,7 @@ jobs:
       - name: Run migrations + seed
         run: |
           pnpm --filter backend prisma:migrate:deploy
-          pnpm --filter backend db:seed
+          pnpm --filter backend seed
 
       - name: Start backend and wait for health
         # Playwright's webServer only starts the dashboard. The backend
