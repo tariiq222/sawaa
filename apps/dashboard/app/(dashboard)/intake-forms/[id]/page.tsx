@@ -4,10 +4,21 @@ import { useParams, useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { fetchIntakeForm } from "@/lib/api/intake-forms"
+import { PermissionGuard } from "@/components/features/permission-guard"
+import { useLocale } from "@/components/locale-provider"
 
 export default function IntakeFormDetailRoute() {
+  return (
+    <PermissionGuard module="setting" action="read">
+      <IntakeFormDetailInner />
+    </PermissionGuard>
+  )
+}
+
+function IntakeFormDetailInner() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const { t } = useLocale()
   const { data: form, isLoading, error } = useQuery({
     queryKey: ["intake-forms", "detail", id ?? ""],
     queryFn: () => fetchIntakeForm(id!),
@@ -26,9 +37,7 @@ export default function IntakeFormDetailRoute() {
 
   return (
     <div className="p-6">
-      <p className="text-muted-foreground">
-        Detail view not yet implemented for intake-forms. Redirecting to edit…
-      </p>
+      <p className="text-muted-foreground">{t("common.redirectingToEdit")}</p>
     </div>
   )
 }

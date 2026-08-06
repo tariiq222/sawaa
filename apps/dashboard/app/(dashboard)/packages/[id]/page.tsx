@@ -1,14 +1,24 @@
 "use client"
 
-import { useParams } from "next/navigation"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { usePackage } from "@/hooks/use-packages"
+import { PermissionGuard } from "@/components/features/permission-guard"
+import { useLocale } from "@/components/locale-provider"
 
 export default function PackageDetailRoute() {
+  return (
+    <PermissionGuard module="service" action="read">
+      <PackageDetailInner />
+    </PermissionGuard>
+  )
+}
+
+function PackageDetailInner() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { data: pkg, isLoading, error } = usePackage(id)
+  const { t } = useLocale()
+  const { data: pkg, isLoading, error } = usePackage(id ?? "")
 
   useEffect(() => {
     if (!isLoading && !error && pkg) {
@@ -22,9 +32,7 @@ export default function PackageDetailRoute() {
 
   return (
     <div className="p-6">
-      <p className="text-muted-foreground">
-        Detail view not yet implemented for packages. Redirecting to edit…
-      </p>
+      <p className="text-muted-foreground">{t("common.redirectingToEdit")}</p>
     </div>
   )
 }

@@ -464,6 +464,9 @@ export const arMisc: Record<string, string> = {
   // — Error banner —
   "common.retry": "إعادة المحاولة",
 
+  // — Detail redirect stubs —
+  "common.redirectingToEdit": "صفحة التفاصيل غير متاحة بعد. جارٍ تحويلك إلى التعديل…",
+
   // — Header —
   "header.toggleLanguage": "English",
 

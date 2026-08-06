@@ -464,6 +464,9 @@ export const enMisc: Record<string, string> = {
   // — Error banner —
   "common.retry": "Retry",
 
+  // — Detail redirect stubs —
+  "common.redirectingToEdit": "Detail view is not available yet. Redirecting to edit…",
+
   // — Header —
   "header.toggleLanguage": "العربية",
 
