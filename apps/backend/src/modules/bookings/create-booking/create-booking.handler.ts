@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Optional,
   ConflictException,
   BadRequestException,
   NotFoundException,
@@ -38,7 +37,7 @@ export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expir
   bookingType?: string;
   deliveryType?: string;
   /** Booking source channel. Defaults to 'RECEPTION' when omitted. */
-  source?: 'RECEPTION' | 'ONLINE';
+  source?: 'RECEPTION' | 'ONLINE' | 'WHATSAPP';
 };
 
 @Injectable()
@@ -50,7 +49,7 @@ export class CreateBookingHandler {
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly eventBus: EventBusService,
     private readonly couponValidator: ValidateCouponService,
-    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
+    private readonly availabilityHandler: CheckAvailabilityHandler,
   ) {}
 
   async execute(dto: CreateBookingCommand) {
@@ -451,8 +450,6 @@ export class CreateBookingHandler {
     bookingType: string;
     deliveryType: string;
   }) {
-    if (!this.availabilityHandler) return;
-
     // durationOptionId intentionally omitted — durationMins is already the
     // effective duration (including any employee-service override) resolved by
     // PriceResolverService. Passing the catalog option here would make

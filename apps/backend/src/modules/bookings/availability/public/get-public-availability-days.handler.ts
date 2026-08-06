@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import { CheckAvailabilityHandler } from '../../check-availability/check-availability.handler';
+import type { BookingType, DeliveryType } from '@prisma/client';
 
 export interface AvailabilityDay {
   date: string; // YYYY-MM-DD (business TZ)
@@ -15,6 +16,19 @@ export interface GetPublicAvailabilityDaysQuery {
   startDate?: string;
   /** How many consecutive days to check. Defaults to 14, capped at 31. */
   days?: number;
+  /**
+   * The wizard's selected duration option. Forwarded to every per-day probe so
+   * the date strip greys days under the SAME duration context the slot fetch
+   * will use — a day that only has slots for the service default must not
+   * light up for a different option.
+   */
+  durationOptionId?: string;
+  /** Explicit session duration in minutes; overrides the option lookup. */
+  durationMins?: number;
+  /** Delivery channel context (IN_PERSON / ONLINE). */
+  deliveryType?: DeliveryType;
+  /** Booking type context (legacy consumers). */
+  bookingType?: BookingType | string;
 }
 
 /**
@@ -80,6 +94,13 @@ export class GetPublicAvailabilityDaysHandler {
           // Day-strip probe: a missing ServiceBookingConfig must grey the days
           // out, not 400 the whole strip.
           silentOnMissingConfig: true,
+          // Carry the user's selected duration/delivery context so the strip
+          // matches the slot fetch that follows. Undefined values keep the
+          // legacy default (service default option, IN_PERSON) for old callers.
+          durationOptionId: query.durationOptionId,
+          durationMins: query.durationMins,
+          deliveryType: query.deliveryType,
+          bookingType: query.bookingType,
         });
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');

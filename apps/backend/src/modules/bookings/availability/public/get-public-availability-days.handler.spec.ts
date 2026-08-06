@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BookingType, DeliveryType } from '@prisma/client';
 import { GetPublicAvailabilityDaysHandler } from './get-public-availability-days.handler';
 import { PrismaService } from '../../../../infrastructure/database';
 import { CheckAvailabilityHandler } from '../../check-availability/check-availability.handler';
@@ -65,6 +66,42 @@ describe('GetPublicAvailabilityDaysHandler', () => {
         branchId: 'branch-1',
         serviceId: 'svc-1',
         silentOnMissingConfig: true,
+      }),
+    );
+  });
+
+  // The wizard's date strip must probe with the SAME duration/delivery context
+  // as the slot fetch, otherwise a day can light up as bookable for a
+  // delivery/duration the later query has no slots for. Every per-day probe
+  // must therefore carry the user's chosen duration option, resolved duration,
+  // delivery type, and booking type when the caller provided them.
+  it('forwards durationOptionId, durationMins, deliveryType, and bookingType to every per-day probe', async () => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    checkAvailability.execute!.mockResolvedValue([]);
+
+    await handler.execute({
+      employeeId: 'emp-1',
+      branchId: 'branch-1',
+      serviceId: 'svc-1',
+      startDate: '2026-03-10',
+      days: 2,
+      durationOptionId: 'opt-1',
+      durationMins: 45,
+      deliveryType: DeliveryType.ONLINE,
+      bookingType: BookingType.INDIVIDUAL,
+    });
+
+    expect(checkAvailability.execute).toHaveBeenCalledTimes(2);
+    expect(checkAvailability.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        silentOnMissingConfig: true,
+        durationOptionId: 'opt-1',
+        durationMins: 45,
+        deliveryType: DeliveryType.ONLINE,
+        bookingType: BookingType.INDIVIDUAL,
       }),
     );
   });

@@ -1,6 +1,8 @@
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsDateString, IsEnum, IsIn, IsOptional, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingType, DeliveryType } from '@prisma/client';
+import { mapBookingType, PUBLIC_BOOKING_TYPE_ALLOWLIST } from '../../booking-enum-transforms';
 
 export class GetPublicAvailabilityDto {
   @ApiProperty({ description: 'Date to check availability (YYYY-MM-DD)', example: '2026-04-20' })
@@ -29,6 +31,7 @@ export class GetPublicAvailabilityDto {
 
   @ApiPropertyOptional({ description: 'Booking type context', enum: BookingType, enumName: 'BookingType', example: BookingType.INDIVIDUAL })
   @IsOptional()
-  @IsString()
+  @Transform(({ value }) => mapBookingType(value))
+  @IsIn(PUBLIC_BOOKING_TYPE_ALLOWLIST)
   bookingType?: BookingType | 'ONLINE';
 }

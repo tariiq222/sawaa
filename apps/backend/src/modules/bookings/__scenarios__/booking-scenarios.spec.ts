@@ -536,11 +536,20 @@ describe("Scenario 5 — Client reschedules to new time, Zoom updated, notificat
 		prisma.bookingStatusLog.count.mockResolvedValue(1);
 
 		const settings = buildSettings({ maxReschedulesPerBooking: 3 });
+		const availability = {
+			execute: jest.fn().mockImplementation((query: { date: Date; durationMins?: number }) => [
+				{
+					startTime: query.date,
+					endTime: new Date(query.date.getTime() + (query.durationMins ?? 60) * 60_000),
+				},
+			]),
+		};
 		const handler = new RescheduleBookingHandler(
 			prisma as never,
 			buildRlsTransaction(prisma) as never,
 			settings as never,
 			zoomService as never,
+			availability as never,
 		);
 
 		await handler.execute({
@@ -592,11 +601,20 @@ describe("Scenario 6 — Client tries to reschedule to an occupied slot", () => 
 		prisma.bookingStatusLog.count.mockResolvedValue(0);
 
 		const settings = buildSettings({ maxReschedulesPerBooking: 3 });
+		const availability = {
+			execute: jest.fn().mockImplementation((query: { date: Date; durationMins?: number }) => [
+				{
+					startTime: query.date,
+					endTime: new Date(query.date.getTime() + (query.durationMins ?? 60) * 60_000),
+				},
+			]),
+		};
 		const handler = new RescheduleBookingHandler(
 			prisma as never,
 			buildRlsTransaction(prisma) as never,
 			settings as never,
 			zoomService as never,
+			availability as never,
 		);
 
 		await expect(
@@ -633,6 +651,8 @@ describe("Scenario 7 — Client exceeds max reschedules (3)", () => {
 			prisma as never,
 			buildRlsTransaction(prisma) as never,
 			settings as never,
+			buildZoomService() as never,
+			{ execute: jest.fn().mockResolvedValue([{ startTime: futureDate(72) }]) } as never,
 		);
 
 		await expect(

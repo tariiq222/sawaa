@@ -77,4 +77,28 @@ describe('GetPublicAvailabilityDto', () => {
     const errors = await validateDto({ ...valid, bookingType: 12345 });
     expect(errors.some((e) => e.property === 'bookingType')).toBe(true);
   });
+
+  it('rejects an unknown bookingType string', async () => {
+    const errors = await validateDto({ ...valid, bookingType: 'FAMILY' });
+    expect(errors.some((e) => e.property === 'bookingType')).toBe(true);
+  });
+
+  it('accepts the legacy ONLINE delivery alias as bookingType', async () => {
+    const errors = await validateDto({ ...valid, bookingType: 'ONLINE' });
+    expect(errors).toHaveLength(0);
+  });
+
+  it('maps the in_person UI alias to INDIVIDUAL before validation', async () => {
+    const dto = plainToInstance(GetPublicAvailabilityDto, { ...valid, bookingType: 'in_person' });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+    expect(dto.bookingType).toBe('INDIVIDUAL');
+  });
+
+  it('uppercases a lowercase bookingType before validation', async () => {
+    const dto = plainToInstance(GetPublicAvailabilityDto, { ...valid, bookingType: 'walk_in' });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+    expect(dto.bookingType).toBe('WALK_IN');
+  });
 });

@@ -1,9 +1,11 @@
-import { Injectable, BadRequestException, ForbiddenException, ConflictException, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
 import type { DeliveryType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
+import { ZoomMeetingService } from '../zoom-meeting.service';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
 import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 import { updateBookingAtomically, hashToInt32 } from '../booking-lifecycle.helper';
@@ -19,7 +21,8 @@ export class ClientRescheduleBookingHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
-    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
+    private readonly zoomMeetingService: ZoomMeetingService,
+    private readonly availabilityHandler: CheckAvailabilityHandler,
   ) {}
 
   async execute(cmd: ClientRescheduleCommand) {
@@ -134,6 +137,20 @@ export class ClientRescheduleBookingHandler {
       { isolationLevel: 'Serializable' },
     );
 
+    if (booking.zoomMeetingId) {
+      // Parity with reschedule-booking handler: best-effort update of the Zoom
+      // meeting AFTER the DB commit. Provider failure must never fail the
+      // committed reschedule, so the call stays outside the transaction and
+      // its rejection is swallowed.
+      this.zoomMeetingService
+        .updateMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId, {
+          topic: `Booking ${booking.id}`,
+          startTime: newScheduledAt.toISOString(),
+          durationMins,
+        })
+        .catch(() => {});
+    }
+
     return { booking: updated };
   }
 
@@ -148,8 +165,6 @@ export class ClientRescheduleBookingHandler {
     bookingType: string;
     deliveryType: string;
   }) {
-    if (!this.availabilityHandler) return;
-
     const slots = await this.availabilityHandler.execute({
       employeeId: input.employeeId,
       branchId: input.branchId,

@@ -7,6 +7,7 @@ import { PriceResolverService } from '../../org-experience/services/price-resolv
 import { GetBookingSettingsHandler, DEFAULT_BOOKING_SETTINGS } from '../get-booking-settings/get-booking-settings.handler';
 import { EventBusService } from '../../../infrastructure/events';
 import { ValidateCouponService } from '../coupons/validate-coupon.service';
+import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import {
   STAFF_TIME_BLOCKING_BOOKING_STATUSES,
@@ -97,6 +98,17 @@ const buildCouponValidator = () => ({
   validate: jest.fn().mockResolvedValue({ couponId: 'c-1', discount: 20 }),
 });
 
+// Always reports the requested date as an available slot so success-path
+// tests exercise the availability gate without having to know the exact time.
+const buildAvailabilityHandler = () => ({
+  execute: jest.fn().mockImplementation((query: { date: Date; durationMins?: number }) => [
+    {
+      startTime: query.date,
+      endTime: new Date(query.date.getTime() + (query.durationMins ?? 60) * 60_000),
+    },
+  ]),
+});
+
 const baseDto = {
   branchId: 'branch-1',
   clientId: 'client-1',
@@ -113,6 +125,7 @@ describe('CreateBookingHandler', () => {
   let settingsHandler: ReturnType<typeof buildSettingsHandler>;
   let eventBus: ReturnType<typeof buildEventBus>;
   let couponValidator: ReturnType<typeof buildCouponValidator>;
+  let availabilityHandler: ReturnType<typeof buildAvailabilityHandler>;
 
   beforeEach(async () => {
     prisma = buildPrisma();
@@ -120,6 +133,7 @@ describe('CreateBookingHandler', () => {
     settingsHandler = buildSettingsHandler();
     eventBus = buildEventBus();
     couponValidator = buildCouponValidator();
+    availabilityHandler = buildAvailabilityHandler();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -130,6 +144,7 @@ describe('CreateBookingHandler', () => {
         { provide: GetBookingSettingsHandler, useValue: settingsHandler },
         { provide: EventBusService, useValue: eventBus },
         { provide: ValidateCouponService, useValue: couponValidator },
+        { provide: CheckAvailabilityHandler, useValue: availabilityHandler },
       ],
     }).compile();
 
@@ -247,6 +262,44 @@ describe('CreateBookingHandler', () => {
 
     await expect(guardedHandler.execute(baseDto)).rejects.toThrow('Selected booking time is not available');
     expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('runs availability validation before creating the booking', async () => {
+    await handler.execute(baseDto);
+
+    // The availability gate must be consulted with the resolved slot window…
+    expect(availabilityHandler.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: baseDto.scheduledAt,
+        durationMins: 60,
+      }),
+    );
+    // …and it must run BEFORE the booking is written to the DB.
+    expect(availabilityHandler.execute.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.booking.create.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('fails Nest construction when CheckAvailabilityHandler is not provided (no silent bypass)', async () => {
+    // Omit CheckAvailabilityHandler from the providers — the handler must not
+    // be constructible without it, so a misconfigured container fails loudly
+    // instead of silently skipping availability validation.
+    const moduleBuilder = Test.createTestingModule({
+      providers: [
+        CreateBookingHandler,
+        { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: PriceResolverService, useValue: priceResolver },
+        { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        { provide: EventBusService, useValue: eventBus },
+        { provide: ValidateCouponService, useValue: couponValidator },
+      ],
+    });
+
+    await expect(moduleBuilder.compile()).rejects.toThrow(/CheckAvailabilityHandler/);
   });
 
   // ──────────────────────────────────────────────────────────────────────────

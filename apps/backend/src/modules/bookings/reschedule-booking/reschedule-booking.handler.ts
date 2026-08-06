@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException, ForbiddenException, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { ActivityAction, BookingStatus, Prisma, type DeliveryType } from '@prisma/client';
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
@@ -36,7 +36,7 @@ export class RescheduleBookingHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly zoomMeetingService: ZoomMeetingService,
-    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
+    private readonly availabilityHandler: CheckAvailabilityHandler,
   ) {}
 
   async execute(cmd: RescheduleBookingCommand) {
@@ -174,8 +174,6 @@ export class RescheduleBookingHandler {
     bookingType: string;
     deliveryType: string;
   }) {
-    if (!this.availabilityHandler) return;
-
     const slots = await this.availabilityHandler.execute({
       employeeId: input.employeeId,
       branchId: input.branchId,

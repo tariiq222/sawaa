@@ -1,7 +1,12 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { RescheduleBookingHandler } from './reschedule-booking.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
+import { ZoomMeetingService } from '../zoom-meeting.service';
+import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 jest.mock('../booking-lifecycle.helper', () => ({
@@ -20,6 +25,17 @@ const buildSettingsHandler = (overrides = {}) => ({
 
 const buildZoomService = () => ({
   updateMeeting: jest.fn().mockResolvedValue(undefined),
+});
+
+// Always reports the requested date as an available slot so success-path
+// tests exercise the availability gate without having to know the exact time.
+const buildAvailabilityHandler = () => ({
+  execute: jest.fn().mockImplementation((query: { date: Date; durationMins?: number }) => [
+    {
+      startTime: query.date,
+      endTime: new Date(query.date.getTime() + (query.durationMins ?? 60) * 60_000),
+    },
+  ]),
 });
 
 const makeBooking = (overrides = {}) => ({
@@ -47,6 +63,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await expect(
@@ -69,6 +86,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await expect(
@@ -90,6 +108,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await expect(
@@ -111,6 +130,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler({ maxReschedulesPerBooking: 3 }) as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await expect(
@@ -134,6 +154,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await handler.execute({
@@ -165,6 +186,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await handler.execute({
@@ -193,6 +215,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await expect(
@@ -223,6 +246,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await handler.execute({
@@ -247,6 +271,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler({ bufferMinutes: 15 }) as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await handler.execute({
@@ -280,6 +305,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     const result = await handler.execute({
@@ -324,6 +350,7 @@ describe('RescheduleBookingHandler', () => {
       rlsTx as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await expect(
@@ -349,6 +376,7 @@ describe('RescheduleBookingHandler', () => {
       rlsTx as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
+      buildAvailabilityHandler() as never,
     );
 
     await expect(
@@ -374,6 +402,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       zoomService as never,
+      buildAvailabilityHandler() as never,
     );
 
     await expect(
@@ -408,6 +437,7 @@ describe('RescheduleBookingHandler', () => {
       buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       zoomService as never,
+      buildAvailabilityHandler() as never,
     );
 
     await handler.execute({
@@ -417,5 +447,84 @@ describe('RescheduleBookingHandler', () => {
     });
 
     expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+  });
+
+  it('12. runs availability validation before rescheduling (with excludeBookingId)', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());
+    const prisma = buildPrisma();
+    const availability = buildAvailabilityHandler();
+
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      availability as never,
+    );
+
+    await handler.execute({
+      bookingId: 'book-1',
+      newScheduledAt: futureDate,
+      changedBy: 'user-1',
+    });
+
+    // The availability gate must be consulted for the target slot, excluding
+    // the booking being moved (no self-conflict), and BEFORE the DB update.
+    expect(availability.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: futureDate,
+        durationMins: 60,
+        excludeBookingId: 'book-1',
+      }),
+    );
+    expect(availability.execute.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.booking.updateMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('13. rejects when the new time is not in availability slots', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());
+    const prisma = buildPrisma();
+    const availability = {
+      execute: jest.fn().mockResolvedValue([]),
+    };
+
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      availability as never,
+    );
+
+    await expect(
+      handler.execute({
+        bookingId: 'book-1',
+        newScheduledAt: futureDate,
+        changedBy: 'user-1',
+      }),
+    ).rejects.toThrow('Selected booking time is not available');
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('14. fails Nest construction when CheckAvailabilityHandler is not provided (no silent bypass)', async () => {
+    // Omit CheckAvailabilityHandler from the providers — the handler must not
+    // be constructible without it, so a misconfigured container fails loudly
+    // instead of silently skipping availability validation.
+    const prisma = buildPrisma();
+    const moduleBuilder = Test.createTestingModule({
+      providers: [
+        RescheduleBookingHandler,
+        { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: buildRlsTransaction(prisma) },
+        { provide: GetBookingSettingsHandler, useValue: buildSettingsHandler() },
+        { provide: ZoomMeetingService, useValue: buildZoomService() },
+      ],
+    });
+
+    await expect(moduleBuilder.compile()).rejects.toThrow(/CheckAvailabilityHandler/);
   });
 });
