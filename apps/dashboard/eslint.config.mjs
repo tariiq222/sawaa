@@ -180,6 +180,53 @@ const reactCompilerRule = {
   },
 }
 
+/**
+ * Forbidden hardcoded color classes / pixel values.
+ * Patterns caught (any quoted className/class string):
+ *   - bg-[#3a5a78]     text-[#abcdef]   border-[rgb(0,0,0)]
+ *   - bg-[--weird]     text-[hsl(...)]
+ *   - any class inside `[brackets]`
+ *
+ * Goal: every Tailwind class must reference a token defined in
+ * `packages/ui/src/styles/globals.css`. If you find yourself writing
+ * a literal value, add a token there and use the semantic name.
+ *
+ * See: packages/ui/DESIGN_TOKENS.md
+ *      packages/ui/COMPONENTS.md §5
+ */
+const designTokensRules = {
+  files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+  rules: {
+    "no-restricted-syntax": [
+      "error",
+      {
+        // Catch colour/shadow arbitrary values whose class prefix is
+        // one of the colour/shadow utilities. The bracketed payload
+        // may contain a hex / rgb / hsl literal anywhere inside —
+        // this includes shadow tokens like `shadow-[0_4px_12px_#000]`.
+        //
+        // Caught:
+        //   bg-[#3a5a78]   text-[rgb(0,0,0)]   border-[hsl(...)]
+        //   fill-[#fff]    stroke-[#000]       ring-[--weird]
+        //   shadow-[0_4px...]  from-[#fff]    to-[#000]   via-[#abc]
+        //   outline-[#abc]  gradient-...[#abc]
+        //
+        // Allowed (not in colour/shadow prefix list):
+        //   text-[9px]   w-[180px]   h-[200px]
+        //   w-[--radix-popover-trigger-width]
+        //
+        // Pattern: <colour prefix>-[ ...anything containing #/rgb/hsl/--... ]
+        selector:
+          'Literal[value=/\\b(?:bg|text|border|ring|fill|stroke|outline|from|to|via|shadow|placeholder|caret|decoration|accent)-[\\[][^\\]]*(?:#[0-9a-fA-F]|rgb\\(|hsl\\(|--[a-zA-Z])[^\\]]*\\]/]',
+        message:
+          "Tailwind arbitrary colour/shadow value detected (e.g. bg-[#3a5a78], text-[rgb(0,0,0)], shadow-[0_4px_12px_#000]). " +
+          "Add a token to packages/ui/src/styles/globals.css and use its semantic name " +
+          "(bg-primary, text-foreground, etc.). See packages/ui/DESIGN_TOKENS.md.",
+      },
+    ],
+  },
+}
+
 /** Allow `_`-prefixed vars/args to be intentionally unused */
 const unusedVarsRule = {
   rules: {
@@ -205,6 +252,7 @@ const eslintConfig = defineConfig([
   hooksLayerRules,
   iconLibraryRules,
   nativeDateInputRules,
+  designTokensRules,
   unusedVarsRule,
   reactCompilerRule,
 
