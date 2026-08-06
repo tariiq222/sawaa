@@ -13,7 +13,7 @@ function unwrap<T>(json: unknown): T {
 export async function listPublicEmployees(): Promise<PublicEmployee[]> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
+    const timer = setTimeout(() => controller.abort(), 1500);
     const json = await publicFetch<unknown>('/public/employees', {
       next: { revalidate: 60 },
       signal: controller.signal,

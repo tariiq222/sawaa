@@ -113,7 +113,7 @@ describe('branding.api — getPublicBrandingForSsr', () => {
     );
   });
 
-  it('aborts the in-flight fetch after 3000ms via AbortController and falls back to DEFAULT_BRANDING', async () => {
+  it('aborts the in-flight fetch after 1500ms via AbortController and falls back to DEFAULT_BRANDING', async () => {
     let observedSignal: AbortSignal | undefined;
     fetchMock.mockImplementation((_url, init: RequestInit | undefined) => {
       observedSignal = init?.signal ?? undefined;
@@ -125,7 +125,7 @@ describe('branding.api — getPublicBrandingForSsr', () => {
       });
     });
     const promise = getPublicBrandingForSsr();
-    await vi.advanceTimersByTimeAsync(3001);
+    await vi.advanceTimersByTimeAsync(1501);
     const out = await promise;
     expect(observedSignal?.aborted).toBe(true);
     expect(out.organizationNameAr).toBe('منظمتي');

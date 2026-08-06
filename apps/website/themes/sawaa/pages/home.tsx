@@ -48,6 +48,9 @@ export async function SawaaHomePage() {
       safeFetch(() => listPublicTestimonials(6), []),
     ]),
   ]);
+  // NOTE: getPublicCatalog is also called by SawaaLayout for the footer clinics;
+  // the API is wrapped in React.cache so both consumers share one network request
+  // (and one 3s timeout) per render instead of paying it twice.
 
   const hero: HeroContent = resolveHeroContent(locale);
   const intros: HomeSectionIntros = resolveSectionIntros(locale);

@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import type { PublicBranding } from '@sawaa/shared';
 
@@ -23,10 +24,10 @@ const DEFAULT_BRANDING: PublicBranding = {
   contactEmail: null,
 };
 
-export async function getPublicBrandingForSsr(): Promise<PublicBranding> {
+export const getPublicBrandingForSsr = cache(async function getPublicBrandingForSsr(): Promise<PublicBranding> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
+    const timer = setTimeout(() => controller.abort(), 1500);
     const response = await fetch(`${getApiBase()}/public/branding`, {
       next: { revalidate: 60 },
       signal: controller.signal,
@@ -50,4 +51,4 @@ export async function getPublicBrandingForSsr(): Promise<PublicBranding> {
     });
     return DEFAULT_BRANDING;
   }
-}
+});

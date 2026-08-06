@@ -13,7 +13,7 @@ export interface PublicTestimonial {
 export async function listPublicTestimonials(limit = 6): Promise<PublicTestimonial[]> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
+    const timer = setTimeout(() => controller.abort(), 1500);
     const json = await publicFetch<PublicTestimonial[] | { data?: PublicTestimonial[] }>(
       `/public/testimonials?limit=${limit}`,
       { next: { revalidate: 60 }, signal: controller.signal },

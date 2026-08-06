@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import * as Sentry from '@sentry/nextjs';
 
 import { getApiBase } from '@/lib/api-base';
@@ -10,10 +11,10 @@ const EMPTY_CATALOG: PublicCatalog = {
   vatRate: 0,
 };
 
-export async function getPublicCatalog(): Promise<PublicCatalog> {
+export const getPublicCatalog = cache(async function getPublicCatalog(): Promise<PublicCatalog> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
+    const timer = setTimeout(() => controller.abort(), 1500);
     const res = await fetch(`${getApiBase()}/public/services`, {
       next: { revalidate: 60 },
       signal: controller.signal,
@@ -46,4 +47,4 @@ export async function getPublicCatalog(): Promise<PublicCatalog> {
     });
     return EMPTY_CATALOG;
   }
-}
+});
