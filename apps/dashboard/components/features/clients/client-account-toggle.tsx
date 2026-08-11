@@ -83,8 +83,8 @@ export function ClientAccountToggle({ client }: Props) {
           onClick={handleOpen}
           className={
             isActive
-              ? "gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              : "gap-2 border-success/30 text-success hover:bg-success/10 hover:text-success"
+              ? "gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:ring-2 hover:ring-destructive/20 transition-shadow"
+              : "gap-2 border-success/30 text-success hover:bg-success/10 hover:text-success hover:ring-2 hover:ring-success/20 transition-shadow"
           }
         >
           {isActive ? (

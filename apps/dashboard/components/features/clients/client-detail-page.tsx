@@ -146,7 +146,7 @@ export function ClientDetailPage({ clientId }: Props) {
           </Button>
           <Button
             variant="outline"
-            className="gap-2 rounded-lg px-6 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="gap-2 rounded-lg px-6 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:ring-2 hover:ring-destructive/20 hover:shadow-sm transition-all"
             onClick={() => setDeleteOpen(true)}
           >
             <HugeiconsIcon icon={Delete02Icon} size={16} />

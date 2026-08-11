@@ -43,4 +43,22 @@ describe('TelemetryModule', () => {
     await expect(probe.metrics()).resolves.toContain('http_errors_total{status_class="5xx"} 1');
     await expect(probe.metrics()).resolves.toContain('db_table_row_count{table="Booking"} 17');
   });
+
+  it('exposes the outbox terminal failure counter with a finite event_type label', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [TelemetryModule],
+    }).compile();
+
+    const appMetrics = moduleRef.get(AppMetricsService);
+
+    appMetrics.outboxTerminalFailures.labels({ event_type: 'bookings.booking.created' }).inc();
+    appMetrics.outboxTerminalFailures.labels({ event_type: 'bookings.booking.created' }).inc();
+    appMetrics.outboxTerminalFailures.labels({ event_type: 'finance.payment.completed' }).inc();
+
+    const text = await appMetrics.registry.metrics();
+
+    expect(text).toContain('outbox_terminal_failures_total');
+    expect(text).toContain('outbox_terminal_failures_total{event_type="bookings.booking.created"} 2');
+    expect(text).toContain('outbox_terminal_failures_total{event_type="finance.payment.completed"} 1');
+  });
 });

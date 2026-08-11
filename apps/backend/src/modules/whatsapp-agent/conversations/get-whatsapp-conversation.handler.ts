@@ -26,6 +26,11 @@ export class GetWhatsappConversationHandler {
         tokenUsage: true,
         latencyMs: true,
         errorMessage: true,
+        deliveryStatus: true,
+        providerMessageId: true,
+        externalMessageId: true,
+        inReplyToExternalMessageId: true,
+        readAt: true,
         createdAt: true,
       },
     });

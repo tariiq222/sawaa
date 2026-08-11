@@ -37,4 +37,30 @@ describe('EvolutionApiClient', () => {
       }),
     );
   });
+
+  it('provisions the configured instance when Evolution does not have it yet', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ instance: { instanceName: 'sawaa-main' } }), {
+        status: 201,
+      }),
+    );
+    const client = new EvolutionApiClient({
+      baseUrl: 'http://localhost:8090',
+      apiKey: 'api-key',
+      instanceName: 'sawaa-main',
+    });
+
+    await expect(client.createInstance()).resolves.toEqual({ created: true });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:8090/instance/create',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          instanceName: 'sawaa-main',
+          integration: 'WHATSAPP-BAILEYS',
+          qrcode: true,
+        }),
+      }),
+    );
+  });
 });

@@ -55,9 +55,18 @@ describe("WhatsappWebhookVerifier", () => {
 
   function buildVerifier(configRow: unknown) {
     const prisma = buildPrisma(configRow);
-    const creds = buildCreds();
+    const hasSecret = (configRow as { webhookSecretEnc?: string | null } | null)
+      ?.webhookSecretEnc;
+    const evolutionConfig = {
+      get: jest.fn().mockReturnValue({
+        baseUrl: "https://evolution.example.com",
+        instanceName: "sawaa-main",
+        apiKey: "evolution-key",
+        webhookSecret: hasSecret ? secret : null,
+      }),
+    };
     return {
-      verifier: new WhatsappWebhookVerifier(prisma as never, creds),
+      verifier: new WhatsappWebhookVerifier(prisma as never, evolutionConfig as never),
       prisma,
     };
   }

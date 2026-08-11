@@ -1,10 +1,9 @@
 // whatsapp-webhook-verifier — verifies Evolution API's short-lived webhook JWT.
 //
-// The dashboard generates a webhookSecret (write-only field) that is encrypted
-// at rest under the WhatsApp encryption key. This handler:
+// The backend environment provides the webhook secret. This handler:
 //
 //   1. Loads the singleton config from the DB (system context).
-//   2. Decrypts the stored webhook secret.
+//   2. Loads the backend-owned webhook secret.
 //   3. Verifies the HS256 JWT from the Authorization bearer header.
 //   4. Validates expiry and Evolution's app/action claims.
 //   5. Pins the payload instance name to the configured instance.
@@ -19,8 +18,7 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "crypto";
 import { PrismaService } from "../../../../infrastructure/database";
-import { WhatsappCredentialsService } from "../../../../infrastructure/whatsapp/whatsapp-credentials.service";
-import { DEFAULT_ORG_ID } from "../../../../common/constants";
+import { WhatsappEvolutionConfigService } from "../../../../infrastructure/whatsapp/whatsapp-evolution-config.service";
 
 export interface WebhookVerifyInput {
   /** Raw request body bytes; required so empty requests fail before processing. */
@@ -50,7 +48,7 @@ export class WhatsappWebhookVerifier {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly credentials: WhatsappCredentialsService,
+    private readonly evolutionConfig: WhatsappEvolutionConfigService,
   ) {}
 
   async verify(input: WebhookVerifyInput): Promise<WebhookVerifyResult> {
@@ -65,43 +63,25 @@ export class WhatsappWebhookVerifier {
     const config = await this.prisma.whatsappAgentConfig.findFirst({
       select: {
         id: true,
-        evolutionInstanceName: true,
-        webhookSecretEnc: true,
         isActive: true,
       },
     });
-    if (!config || !config.isActive) {
+    const runtime = this.evolutionConfig.get();
+    if (!config || !config.isActive || !runtime) {
       throw new UnauthorizedException("WhatsApp agent is not configured");
     }
-    if (!config.webhookSecretEnc) {
+    if (!runtime.webhookSecret) {
       throw new UnauthorizedException("Webhook secret is not configured");
     }
 
-    let secret: string;
-    try {
-      const decrypted = this.credentials.decrypt<{ webhookSecret?: string }>(
-        config.webhookSecretEnc,
-        DEFAULT_ORG_ID,
-      );
-      if (!decrypted.webhookSecret) {
-        throw new Error("webhookSecret missing in decrypted payload");
-      }
-      secret = decrypted.webhookSecret;
-    } catch (e: unknown) {
-      this.logger.warn(
-        `Failed to decrypt webhook secret: ${e instanceof Error ? e.message : "unknown"}`,
-      );
-      throw new UnauthorizedException("Webhook secret is invalid");
-    }
-
-    this.verifyToken(token, secret);
+    this.verifyToken(token, runtime.webhookSecret);
 
     if (
-      config.evolutionInstanceName &&
-      input.payloadInstance !== config.evolutionInstanceName
+      input.payloadInstance &&
+      input.payloadInstance !== runtime.instanceName
     ) {
       this.logger.warn(
-        `Webhook instance mismatch: configured=${config.evolutionInstanceName}`,
+        `Webhook instance mismatch: configured=${runtime.instanceName}`,
       );
       throw new UnauthorizedException("Webhook instance mismatch");
     }
@@ -109,7 +89,7 @@ export class WhatsappWebhookVerifier {
     return {
       ok: true,
       configId: config.id,
-      instanceName: config.evolutionInstanceName ?? "",
+      instanceName: runtime.instanceName,
     };
   }
 

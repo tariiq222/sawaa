@@ -14,7 +14,7 @@ describe('StaffReplyHandler', () => {
           }),
           update,
         },
-        whatsappMessage: { create },
+         whatsappMessage: { create, update: jest.fn().mockResolvedValue({}) },
       } as never,
       { resolve: jest.fn().mockResolvedValue({ client: { sendText } }) } as never,
     );
@@ -23,10 +23,7 @@ describe('StaffReplyHandler', () => {
 
     expect(update.mock.invocationCallOrder[0]).toBeLessThan(sendText.mock.invocationCallOrder[0]);
     expect(create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        deliveryStatus: 'SENT',
-        providerMessageId: 'out-1',
-      }),
+      data: expect.objectContaining({ deliveryStatus: 'PENDING' }),
     });
   });
 });

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { WhatsappTransportService } from '../../../infrastructure/whatsapp/whatsapp-transport.service';
+import { WhatsappEvolutionConfigService } from '../../../infrastructure/whatsapp/whatsapp-evolution-config.service';
 
 export interface WhatsappStatusView {
   isActive: boolean;
@@ -28,6 +29,7 @@ export class GetWhatsappStatusHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly transport: WhatsappTransportService,
+    private readonly evolutionConfig: WhatsappEvolutionConfigService,
   ) {}
 
   async execute(): Promise<WhatsappStatusView> {
@@ -57,7 +59,7 @@ export class GetWhatsappStatusHandler {
     let evolutionState: string | null = null;
     let connectedPhone = config.connectedPhone;
     let isConnected = config.isConnected;
-    if (config.evolutionBaseUrl && config.evolutionInstanceName) {
+    if (this.evolutionConfig.get()) {
       try {
         const { client } = await this.transport.resolve();
         const state = await client.getConnectionState();

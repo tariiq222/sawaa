@@ -27,7 +27,6 @@ import { WhatsappModule } from "./modules/integrations/whatsapp/whatsapp.module"
 
 import { OpsModule } from "./modules/ops/ops.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
-import { AiModule } from "./modules/ai/ai.module";
 import { CommsModule } from "./modules/comms/comms.module";
 import { MobileClientModule } from "./api/mobile/client/mobile-client.module";
 import { MobileEmployeeModule } from "./api/mobile/employee/mobile-employee.module";
@@ -85,7 +84,6 @@ import { TelemetryModule } from "./infrastructure/telemetry/telemetry.module";
 
     OpsModule,
     DashboardModule,
-    AiModule,
     CommsModule,
     MobileClientModule,
     MobileEmployeeModule,

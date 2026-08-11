@@ -6,12 +6,16 @@ describe('DashboardOpsController', () => {
   let generateReport: jest.Mock;
   let packageReports: jest.Mock;
   let listActivity: jest.Mock;
+  let listFailedOutbox: jest.Mock;
+  let retryFailedOutbox: jest.Mock;
   let resMock: any;
 
   beforeEach(() => {
     generateReport = jest.fn();
     packageReports = jest.fn();
     listActivity = jest.fn();
+    listFailedOutbox = jest.fn().mockResolvedValue({ items: [] });
+    retryFailedOutbox = jest.fn().mockResolvedValue({});
     resMock = {
       setHeader: jest.fn().mockReturnThis(),
       send: jest.fn().mockReturnThis(),
@@ -20,6 +24,8 @@ describe('DashboardOpsController', () => {
       { execute: generateReport } as any,
       { execute: packageReports } as any,
       { execute: listActivity } as any,
+      { execute: listFailedOutbox } as any,
+      { execute: retryFailedOutbox } as any,
     );
   });
 
@@ -74,5 +80,27 @@ describe('DashboardOpsController', () => {
 
     await controller.listActivityEndpoint(query as any);
     expect(listActivity).toHaveBeenCalledWith(expect.objectContaining({ ...query }));
+  });
+
+  it('listFailedOutboxEndpoint should forward limit and eventType to the handler', async () => {
+    await controller.listFailedOutboxEndpoint({ limit: 25, eventType: 'finance.payment.completed' } as any);
+
+    expect(listFailedOutbox).toHaveBeenCalledWith({
+      limit: 25,
+      eventType: 'finance.payment.completed',
+    });
+  });
+
+  it('listFailedOutboxEndpoint should forward an empty query (handler applies defaults)', async () => {
+    await controller.listFailedOutboxEndpoint({} as any);
+
+    expect(listFailedOutbox).toHaveBeenCalledWith({ limit: undefined, eventType: undefined });
+  });
+
+  it('retryFailedOutboxEndpoint should forward the UUID param to the handler', async () => {
+    const id = '11111111-1111-1111-1111-111111111111';
+    await controller.retryFailedOutboxEndpoint(id);
+
+    expect(retryFailedOutbox).toHaveBeenCalledWith({ id });
   });
 });

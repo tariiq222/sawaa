@@ -7,7 +7,6 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   Max,
   Min,
 } from 'class-validator';
@@ -19,37 +18,6 @@ export class UpsertWhatsappConfigDto {
   @ApiProperty({ example: 'EVOLUTION_API', enum: WHATSAPP_PROVIDERS })
   @IsIn(WHATSAPP_PROVIDERS)
   provider!: WhatsappProviderName;
-
-  @ApiPropertyOptional({
-    example: 'https://evolution.example.com',
-    description: 'Evolution API base URL (no trailing slash)',
-  })
-  @IsOptional()
-  @IsUrl({ require_tld: false })
-  evolutionBaseUrl?: string;
-
-  @ApiPropertyOptional({ example: 'sawaa-main' })
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  evolutionInstanceName?: string;
-
-  @ApiPropertyOptional({
-    example: 'evo-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    description: 'Evolution API key (encrypted at rest)',
-  })
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  evolutionApiKey?: string;
-
-  @ApiPropertyOptional({
-    description: 'Webhook signature secret (encrypted at rest)',
-  })
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  webhookSecret?: string;
 
   @ApiPropertyOptional({ default: true })
   @IsOptional()

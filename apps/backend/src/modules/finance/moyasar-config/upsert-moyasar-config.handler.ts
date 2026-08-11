@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/database";
 import { MoyasarCredentialsService } from "../../../infrastructure/payments/moyasar-credentials.service";
 import { MoyasarApiClient } from "../moyasar-api/moyasar-api.client";
@@ -21,6 +21,32 @@ export interface UpsertMoyasarConfigResult {
 	updatedAt: Date;
 }
 
+/**
+ * Rejects Moyasar keys whose test/live prefix does not match the effective
+ * `isLive` mode. Called before any encryption or database write so a live
+ * config can never be created (or updated) from test keys or vice versa.
+ *
+ * The error message only ever names the expected prefix — key material is
+ * never echoed back into errors or logs.
+ */
+export function assertMoyasarKeyModeMatches(
+	isLive: boolean,
+	publishableKey: string,
+	secretKey?: string,
+): void {
+	const mode = isLive ? "live" : "test";
+	if (!publishableKey.startsWith(`pk_${mode}_`)) {
+		throw new BadRequestException(
+			`Moyasar publishable key must be a ${mode} key (pk_${mode}_...)`,
+		);
+	}
+	if (secretKey !== undefined && !secretKey.startsWith(`sk_${mode}_`)) {
+		throw new BadRequestException(
+			`Moyasar secret key must be a ${mode} key (sk_${mode}_...)`,
+		);
+	}
+}
+
 @Injectable()
 export class UpsertMoyasarConfigHandler {
 	constructor(
@@ -41,6 +67,11 @@ export class UpsertMoyasarConfigHandler {
 		const existing = await this.prisma.organizationPaymentConfig.findUnique({
 			where: { singletonKey: PAYMENT_CONFIG_SINGLETON_KEY },
 		});
+
+		// Effective mode: explicit flag wins, otherwise inherit the stored row,
+		// otherwise default to test mode. Validated before any encryption or write.
+		const isLive = cmd.isLive ?? existing?.isLive ?? false;
+		assertMoyasarKeyModeMatches(isLive, cmd.publishableKey, cmd.secretKey);
 
 		if (!existing && (!cmd.secretKey || !cmd.webhookSecret)) {
 			throw new Error(
@@ -65,13 +96,13 @@ export class UpsertMoyasarConfigHandler {
 				publishableKey: cmd.publishableKey,
 				secretKeyEnc: secretKeyEnc!,
 				webhookSecretEnc: webhookSecretEnc!,
-				isLive: cmd.isLive ?? false,
+				isLive,
 			},
 			update: {
 				publishableKey: cmd.publishableKey,
 				...(secretKeyEnc !== undefined && { secretKeyEnc }),
 				...(webhookSecretEnc !== undefined && { webhookSecretEnc }),
-				isLive: cmd.isLive ?? existing?.isLive ?? false,
+				isLive,
 				// updating credentials invalidates the prior verification
 				lastVerifiedAt: null,
 				lastVerifiedStatus: null,

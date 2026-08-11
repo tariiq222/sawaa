@@ -1,73 +1,61 @@
 "use client"
 
-// whatsapp-prompts-section — Arabic/English system prompts + greetings.
+// whatsapp-prompts-section — unified agent prompt, active policy rules, and greetings.
 
 import { Input, Label, Textarea } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 
 interface WhatsappPromptsSectionProps {
-  systemPromptAr: string
-  systemPromptEn: string
-  greetingAr: string
-  greetingEn: string
-  onChangeSystemPromptAr: (value: string) => void
-  onChangeSystemPromptEn: (value: string) => void
-  onChangeGreetingAr: (value: string) => void
-  onChangeGreetingEn: (value: string) => void
+  systemPrompt: string
+  greeting: string
+  onChangeSystemPrompt: (value: string) => void
+  onChangeGreeting: (value: string) => void
 }
 
 export function WhatsappPromptsSection({
-  systemPromptAr,
-  systemPromptEn,
-  greetingAr,
-  greetingEn,
-  onChangeSystemPromptAr,
-  onChangeSystemPromptEn,
-  onChangeGreetingAr,
-  onChangeGreetingEn,
+  systemPrompt,
+  greeting,
+  onChangeSystemPrompt,
+  onChangeGreeting,
 }: WhatsappPromptsSectionProps) {
   const { t } = useLocale()
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="ai-promptAr">{t("whatsapp.ai.systemPromptAr")}</Label>
-          <Textarea
-            id="ai-promptAr"
-            value={systemPromptAr}
-            onChange={(e) => onChangeSystemPromptAr(e.target.value)}
-            rows={6}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="ai-promptEn">{t("whatsapp.ai.systemPromptEn")}</Label>
-          <Textarea
-            id="ai-promptEn"
-            value={systemPromptEn}
-            onChange={(e) => onChangeSystemPromptEn(e.target.value)}
-            rows={6}
-          />
-        </div>
+      <div className="rounded-lg border border-border/70 bg-surface-muted/30 p-4">
+        <p className="text-sm font-semibold text-foreground">
+          {t("whatsapp.ai.currentRules")}
+        </p>
+        <ul className="mt-3 list-disc space-y-1 ps-5 text-xs leading-5 text-muted-foreground">
+          {[1, 2, 3, 4, 5, 6, 7].map((rule) => (
+            <li key={rule}>{t(`whatsapp.ai.rule${rule}`)}</li>
+          ))}
+        </ul>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="ai-greetingAr">{t("whatsapp.ai.greetingAr")}</Label>
-          <Input
-            id="ai-greetingAr"
-            value={greetingAr}
-            onChange={(e) => onChangeGreetingAr(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="ai-greetingEn">{t("whatsapp.ai.greetingEn")}</Label>
-          <Input
-            id="ai-greetingEn"
-            value={greetingEn}
-            onChange={(e) => onChangeGreetingEn(e.target.value)}
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="ai-system-prompt">{t("whatsapp.ai.systemPrompt")}</Label>
+        <Textarea
+          id="ai-system-prompt"
+          value={systemPrompt}
+          onChange={(e) => onChangeSystemPrompt(e.target.value)}
+          rows={8}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t("whatsapp.ai.systemPromptHint")}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ai-greeting">{t("whatsapp.ai.greeting")}</Label>
+        <Input
+          id="ai-greeting"
+          value={greeting}
+          onChange={(e) => onChangeGreeting(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t("whatsapp.ai.greetingHint")}
+        </p>
       </div>
     </>
   )

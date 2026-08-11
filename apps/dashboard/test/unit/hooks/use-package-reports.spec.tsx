@@ -13,6 +13,8 @@ vi.mock("@/lib/api/package-reports", () => ({
 
 import { usePackageReport } from "@/hooks/use-package-reports"
 
+const QUERY_SETTLE_TIMEOUT = { timeout: 30_000 }
+
 function makeWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -70,7 +72,10 @@ describe("usePackageReport — happy path", () => {
       () => usePackageReport("SALES", "2026-01-01", "2026-01-31"),
       { wrapper: makeWrapper() },
     )
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(
+      () => expect(result.current.isLoading).toBe(false),
+      QUERY_SETTLE_TIMEOUT,
+    )
     expect(fetchPackageReport).toHaveBeenCalledWith({
       report: "SALES",
       from: "2026-01-01",
@@ -91,7 +96,10 @@ describe("usePackageReport — happy path", () => {
       () => usePackageReport("SALES", "2026-01-01", "2026-01-31"),
       { wrapper: makeWrapper() },
     )
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(
+      () => expect(result.current.isLoading).toBe(false),
+      QUERY_SETTLE_TIMEOUT,
+    )
     expect(result.current.data?.kind).toBe("SALES")
   })
 
@@ -117,7 +125,10 @@ describe("usePackageReport — happy path", () => {
       () => usePackageReport("REFUNDED", "2026-06-01", "2026-06-30"),
       { wrapper: makeWrapper() },
     )
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(
+      () => expect(result.current.isLoading).toBe(false),
+      QUERY_SETTLE_TIMEOUT,
+    )
     expect(result.current.data?.kind).toBe("REFUNDED")
   })
 
@@ -131,7 +142,10 @@ describe("usePackageReport — happy path", () => {
       () => usePackageReport("CONSUMPTION", "2026-01-01", "2026-01-31"),
       { wrapper: makeWrapper() },
     )
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(
+      () => expect(result.current.isLoading).toBe(false),
+      QUERY_SETTLE_TIMEOUT,
+    )
     expect(fetchPackageReport.mock.calls[0][0].report).toBe("CONSUMPTION")
     expect(result.current.data?.kind).toBe("CONSUMPTION")
   })

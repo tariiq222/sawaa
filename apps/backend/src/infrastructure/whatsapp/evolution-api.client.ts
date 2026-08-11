@@ -7,12 +7,13 @@
 // Endpoints used:
 //   GET    /instance/connectionState/{instance}     → connection state + phone
 //   GET    /instance/connect/{instance}             → returns QR base64 (when pairing)
-//   POST   /instance/logout/{instance}             → graceful disconnect
+//   DELETE /instance/logout/{instance}             → graceful disconnect
+//   POST   /instance/create                        → provision instance
 //   POST   /instance/restart/{instance}            → restart instance
 //   POST   /message/sendText/{instance}            → send text message
 //   POST   /webhook/set/{instance}                 → register webhook URL
 //
-// Auth: apikey header. The key is stored encrypted in WhatsappAgentConfig.
+// Auth: apikey header. The key is owned by the backend environment.
 
 import { Injectable, Logger } from '@nestjs/common';
 
@@ -133,6 +134,23 @@ export class EvolutionApiClient {
       base64: data.base64 ?? null,
       count: data.count ?? 0,
     };
+  }
+
+  async createInstance(): Promise<{ created: boolean }> {
+    const res = await fetch(this.url('/instance/create'), {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({
+        instanceName: this.config.instanceName,
+        integration: 'WHATSAPP-BAILEYS',
+        qrcode: true,
+      }),
+    });
+    if (res.ok) return { created: true };
+    if (res.status === 409) return { created: false };
+
+    const text = await res.text();
+    throw new Error(`Evolution API ${res.status}: ${text.slice(0, 200)}`);
   }
 
   async logout(): Promise<{ ok: true }> {

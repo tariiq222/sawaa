@@ -4,6 +4,7 @@ import request from "supertest";
 import { WhatsappWebhookController } from "./whatsapp-webhook.controller";
 import { WhatsappWebhookVerifier } from "../../modules/integrations/whatsapp/webhook/whatsapp-webhook-verifier";
 import { WhatsappCredentialsService } from "../../infrastructure/whatsapp/whatsapp-credentials.service";
+import { WhatsappEvolutionConfigService } from "../../infrastructure/whatsapp/whatsapp-evolution-config.service";
 import { PrismaService } from "../../infrastructure/database";
 import type { ConfigService } from "@nestjs/config";
 import { DEFAULT_ORG_ID } from "../../common/constants";
@@ -46,6 +47,7 @@ describe("WhatsappWebhookController (security)", () => {
         { provide: WhatsappCredentialsService, useValue: credentials },
         { provide: PrismaService, useValue: prismaMock },
         { provide: WhatsappInboundQueueService, useValue: inboundQueue },
+        { provide: WhatsappEvolutionConfigService, useValue: { get: () => null } },
       ],
     }).compile();
 

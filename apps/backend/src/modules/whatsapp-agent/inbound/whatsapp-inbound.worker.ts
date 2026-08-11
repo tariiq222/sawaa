@@ -59,6 +59,7 @@ export class WhatsappInboundWorker implements OnModuleInit {
         data.phone,
         data.text,
         data.externalMessageId,
+        data.contactName,
       );
     } finally {
       clearInterval(renewal);

@@ -29,6 +29,7 @@ export function WhatsappStatusTab() {
 
   const isConnected = status?.isConnected ?? false
   const configured = config?.configured ?? false
+  const ready = configured
 
   const statusKey = isConnected
     ? "whatsapp.status.connected"
@@ -79,7 +80,7 @@ export function WhatsappStatusTab() {
           <div className="flex flex-wrap gap-2 pt-2">
             <Button
               onClick={() => control.mutate({ action: "start" })}
-              disabled={control.isPending || !configured}
+              disabled={control.isPending || !ready}
               variant={isConnected ? "outline" : "default"}
             >
               {t("whatsapp.status.actions.start")}
@@ -93,7 +94,7 @@ export function WhatsappStatusTab() {
             </Button>
             <Button
               onClick={() => control.mutate({ action: "restart" })}
-              disabled={control.isPending || !configured}
+              disabled={control.isPending || !ready}
               variant="outline"
             >
               {t("whatsapp.status.actions.restart")}

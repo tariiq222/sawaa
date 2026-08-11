@@ -22,7 +22,6 @@ import { fetchUsers } from "@/lib/api/users"
 import { fetchCoupons } from "@/lib/api/coupons"
 import { fetchIntakeForms } from "@/lib/api/intake-forms"
 import { fetchNotifications } from "@/lib/api/notifications"
-import { fetchChatSessions } from "@/lib/api/chatbot"
 
 type PrefetchEntry = (qc: QueryClient) => Promise<void>
 
@@ -80,10 +79,6 @@ export const ROUTE_PREFETCH: Record<string, PrefetchEntry> = {
   "/notifications": entry(
     queryKeys.notifications.list({ page: 1, limit: 20 }),
     () => fetchNotifications({ page: 1, limit: 20 }),
-  ),
-  "/chatbot": entry(
-    queryKeys.chatbot.sessions.list({ page: 1, limit: 20 }),
-    () => fetchChatSessions({ page: 1, limit: 20 }),
   ),
 }
 

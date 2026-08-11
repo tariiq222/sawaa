@@ -69,23 +69,48 @@ export class GetWhatsappQrHandler {
 
     try {
       const qr = await transport.client.getQr();
-      return {
-        status: qr.base64 ? 'pending' : 'disconnected',
-        base64: qr.base64,
-        pairingCode: qr.pairingCode,
-        count: qr.count,
-        connectedPhone: null,
-        error: null,
-      };
+      return this.toView(qr);
     } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to fetch QR';
+      if (message.includes('Evolution API 404')) {
+        try {
+          await transport.client.createInstance();
+          const qr = await transport.client.getQr();
+          return this.toView(qr);
+        } catch (createError: unknown) {
+          return {
+            status: 'disconnected',
+            base64: null,
+            pairingCode: null,
+            count: 0,
+            connectedPhone: null,
+            error: createError instanceof Error ? createError.message : message,
+          };
+        }
+      }
       return {
         status: 'disconnected',
         base64: null,
         pairingCode: null,
         count: 0,
         connectedPhone: null,
-        error: e instanceof Error ? e.message : 'Failed to fetch QR',
+        error: message,
       };
     }
+  }
+
+  private toView(qr: {
+    base64: string | null;
+    pairingCode: string | null;
+    count: number;
+  }): WhatsappQrView {
+    return {
+      status: qr.base64 ? 'pending' : 'disconnected',
+      base64: qr.base64,
+      pairingCode: qr.pairingCode,
+      count: qr.count,
+      connectedPhone: null,
+      error: null,
+    };
   }
 }

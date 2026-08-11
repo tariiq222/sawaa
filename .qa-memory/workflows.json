@@ -4,7 +4,7 @@
   "lastChangedCommit": "207d3d29",
   "totalWorkflows": 62,
   "testedWorkflows": 62,
-  "note": "All 62 workflows have ≥1 associated test file by enumeration. Dashboard flow pass-rate is materially lower due to documented selector/seed flakes (see .tariq/lessons.md). Backend real-e2e and unit suites are green.",
+  "note": "All 62 workflows have ≥1 associated test file by enumeration. Dashboard flow pass-rate is materially lower due to documented selector/seed flakes (see .tariq/memory/notes/lessons.md). Backend real-e2e and unit suites are green.",
   "workflows": [
     {
       "id": "wf.auth.dashboard-login",

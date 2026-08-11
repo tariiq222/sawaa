@@ -28,6 +28,8 @@ import { ReconcileRefundsCron } from './cron-tasks/reconcile-refunds.cron';
 import { ReconcilePaymentsCron } from './cron-tasks/reconcile-payments.cron';
 import { OutboxPublisherCron } from './cron-tasks/outbox-publisher.cron';
 import { AuthenticaBalanceCheckCron } from './cron-tasks/authentica-balance-check.cron';
+import { ListTerminalFailedOutboxHandler } from './outbox/list-terminal-failed-outbox.handler';
+import { RetryFailedOutboxEventHandler } from './outbox/retry-failed-outbox-event.handler';
 
 const handlers = [
   LogActivityHandler,
@@ -35,6 +37,8 @@ const handlers = [
   GenerateReportHandler,
   PackageReportsHandler,
   HealthCheckHandler,
+  ListTerminalFailedOutboxHandler,
+  RetryFailedOutboxEventHandler,
 ];
 
 const cronHandlers = [

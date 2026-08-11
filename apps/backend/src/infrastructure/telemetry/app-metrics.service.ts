@@ -25,4 +25,11 @@ export class AppMetricsService {
     labelNames: ['phase'] as const,
     registers: [this.registry],
   });
+
+  readonly outboxTerminalFailures = new Counter({
+    name: 'outbox_terminal_failures_total',
+    help: 'Total outbox events that reached the terminal FAILED state',
+    labelNames: ['event_type'] as const,
+    registers: [this.registry],
+  });
 }

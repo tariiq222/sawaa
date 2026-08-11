@@ -81,8 +81,8 @@ export function WhatsappModelSelector({
           }
         }}
       >
-        <SelectTrigger id="ai-model">
-          <SelectValue />
+        <SelectTrigger id="ai-model" className="w-full min-w-0">
+          <SelectValue className="min-w-0 truncate" />
         </SelectTrigger>
         <SelectContent className="max-h-[320px]">
           {MODEL_OPTIONS.map((group) => (
@@ -90,10 +90,7 @@ export function WhatsappModelSelector({
               <SelectLabel>{group.provider}</SelectLabel>
               {group.models.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
-                  {m.label}
-                  <span className="ms-2 text-xs text-muted-foreground">
-                    {m.id}
-                  </span>
+                  <span className="truncate">{m.label}</span>
                 </SelectItem>
               ))}
             </SelectGroup>
@@ -118,6 +115,11 @@ export function WhatsappModelSelector({
           ? t("whatsapp.ai.modelCustomHint")
           : t("whatsapp.ai.modelHint")}
       </p>
+      {!isCustomModel && (
+        <p className="truncate text-[11px] text-muted-foreground/80" dir="ltr">
+          {model}
+        </p>
+      )}
     </div>
   )
 }

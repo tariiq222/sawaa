@@ -4,6 +4,8 @@ import { PrismaService } from '../../../infrastructure/database';
 import { CreateContactMessageHandler } from './create-contact-message.handler';
 import { ListContactMessagesHandler } from './list-contact-messages.handler';
 import { UpdateContactMessageStatusHandler } from './update-contact-message-status.handler';
+import { SendNotificationHandler } from '../send-notification/send-notification.handler';
+import { GetStaffTargetsHandler } from '../notifications/get-staff-targets.handler';
 
 describe('ContactMessages handlers', () => {
   let createHandler: CreateContactMessageHandler;
@@ -18,6 +20,14 @@ describe('ContactMessages handlers', () => {
         CreateContactMessageHandler,
         ListContactMessagesHandler,
         UpdateContactMessageStatusHandler,
+        {
+          provide: SendNotificationHandler,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: GetStaffTargetsHandler,
+          useValue: { execute: jest.fn().mockResolvedValue([]) },
+        },
         {
           provide: PrismaService,
           useValue: {

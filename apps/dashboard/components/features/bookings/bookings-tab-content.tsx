@@ -4,6 +4,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Skeleton } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Download01Icon } from "@hugeicons/core-free-icons"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"
@@ -18,6 +20,10 @@ import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { showApiError } from "@/lib/mutation-helpers"
+import {
+  MAX_EXPORT_ROWS,
+  runBookingsExport,
+} from "@/lib/api/bookings-export"
 import type { Booking, CancellationReason } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
@@ -28,11 +34,12 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const { t, locale } = useLocale()
   const { weekStartDayNumber, dateFormat } = useOrganizationConfig()
   const queryClient = useQueryClient()
-  const { bookings, meta, loading, error, filters, setFilters, resetFilters, hasFilters, setPage } = useBookings()
+  const { bookings, meta, loading, error, filters, setFilters, resetFilters, hasFilters, setPage, query } = useBookings()
   const { confirmMut, checkInMut, completeMut, noShowMut, adminCancelMut, deleteMut } = useBookingMutations()
   const { employees } = useEmployees()
   const [activeTimeTab, setActiveTimeTab] = useState("all")
   const [search, setSearch] = useState("")
+  const [exporting, setExporting] = useState(false)
 
   // Debounce search → filters.search (300ms)
   useEffect(() => {

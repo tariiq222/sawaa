@@ -20,8 +20,6 @@ export interface WhatsappConfigView {
   configured: boolean
   isActive: boolean
   provider?: string
-  evolutionBaseUrl?: string
-  evolutionInstanceName?: string
   lastTestAt?: string | null
   lastTestOk?: boolean | null
   lastTestError?: string | null
@@ -34,10 +32,6 @@ export interface WhatsappConfigView {
 
 export interface UpsertWhatsappConfigInput {
   provider: WhatsappProviderName
-  evolutionBaseUrl?: string
-  evolutionInstanceName?: string
-  evolutionApiKey?: string
-  webhookSecret?: string
   isActive?: boolean
 }
 
@@ -111,10 +105,14 @@ export interface WhatsappQrView {
 export interface WhatsappConversationSummary {
   id: string
   phone: string
+  contactName: string | null
   clientId: string | null
+  clientName: string | null
   status: WhatsappConversationStatus
   language: string
   staffTakeover: boolean
+  unreadCount: number
+  lastInboundAt: string | null
   lastMessageAt: string
   messageCount: number
   lastMessagePreview: string | null
@@ -125,6 +123,7 @@ export interface WhatsappConversationList {
   total: number
   page: number
   pageSize: number
+  totalPages?: number
 }
 
 export interface WhatsappMessageView {
@@ -136,12 +135,18 @@ export interface WhatsappMessageView {
   tokenUsage?: number | null
   latencyMs?: number | null
   errorMessage?: string | null
+  deliveryStatus?: "PENDING" | "SENT" | "FAILED" | null
+  providerMessageId?: string | null
+  externalMessageId?: string | null
+  inReplyToExternalMessageId?: string | null
+  readAt?: string | null
   createdAt: string
 }
 
 export interface WhatsappConversationDetail {
   id: string
   phone: string
+  contactName?: string | null
   clientId: string | null
   status: WhatsappConversationStatus
   language: string
@@ -149,6 +154,8 @@ export interface WhatsappConversationDetail {
   staffTakeover: boolean
   staffUserId: string | null
   staffTookOverAt: string | null
+  unreadCount?: number
+  lastInboundAt?: string | null
   lastMessageAt: string
   createdAt: string
   updatedAt: string

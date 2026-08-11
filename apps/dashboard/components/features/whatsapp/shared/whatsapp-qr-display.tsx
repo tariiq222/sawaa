@@ -4,7 +4,11 @@ import { Button } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useWhatsappQr } from "@/hooks/use-whatsapp"
 
-export function WhatsappQrDisplay() {
+interface WhatsappQrDisplayProps {
+  onConfigure?: () => void
+}
+
+export function WhatsappQrDisplay({ onConfigure }: WhatsappQrDisplayProps) {
   const { t } = useLocale()
   const { qr, error, refetch, isFetching } = useWhatsappQr()
 
@@ -35,7 +39,12 @@ export function WhatsappQrDisplay() {
   if (qr.status === "not_configured") {
     return (
       <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-        {qr.error ?? t("whatsapp.qr.notConfigured")}
+        <p>{t("whatsapp.qr.notConfigured")}</p>
+        {onConfigure && (
+          <Button className="mt-3" variant="outline" size="sm" onClick={onConfigure}>
+            {t("whatsapp.status.actions.configure")}
+          </Button>
+        )}
       </div>
     )
   }

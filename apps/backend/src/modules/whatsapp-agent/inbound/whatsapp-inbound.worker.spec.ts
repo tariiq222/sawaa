@@ -33,6 +33,7 @@ describe('WhatsappInboundWorker', () => {
       data.phone,
       data.text,
       data.externalMessageId,
+      undefined,
     );
     expect(redis.eval).toHaveBeenCalled();
   });

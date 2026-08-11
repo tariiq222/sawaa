@@ -102,6 +102,7 @@ export class WhatsappWebhookController {
       phone,
       text,
       externalMessageId: body.data.key?.id,
+      contactName: body.data.pushName,
       rawBody: raw,
     });
 

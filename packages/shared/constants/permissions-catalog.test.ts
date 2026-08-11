@@ -24,6 +24,7 @@ describe('permissions catalog', () => {
       'Service',
       'Setting',
       'User',
+      'WhatsappConversation',
     ]);
   });
 

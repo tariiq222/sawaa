@@ -36,6 +36,10 @@ const baseValidEnv = {
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
   EMAIL_PROVIDER_ENCRYPTION_KEY: base64_44,
   WHATSAPP_PROVIDER_ENCRYPTION_KEY: base64_44,
+  WHATSAPP_EVOLUTION_BASE_URL: 'https://evolution.example.com',
+  WHATSAPP_EVOLUTION_INSTANCE_NAME: 'sawaa-main',
+  WHATSAPP_EVOLUTION_API_KEY: 'evolution-api-key-123', // gitleaks:allow -- test fixture
+  WHATSAPP_EVOLUTION_WEBHOOK_SECRET: 'evolution-webhook-secret-123',
   PLATFORM_SETTINGS_KEY: 'a'.repeat(64),
   SUPER_ADMIN_PASSWORD: 'SuperSecurePassword123!',
   THROTTLER_DISABLED: 'false',

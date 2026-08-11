@@ -48,7 +48,6 @@ describe("prefetchRouteData", () => {
         limit: 20,
         includeHidden: true,
       }),
-      "/chatbot": queryKeys.chatbot.sessions.list({ page: 1, limit: 20 }),
     }
     for (const [href, queryKey] of Object.entries(expected)) {
       prefetchQuery.mockClear()

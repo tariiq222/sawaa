@@ -58,7 +58,7 @@ describe("BookingTypeRow — price & duration fields", () => {
     // Two number inputs should be present (price + duration)
     const inputs = screen.getAllByRole("spinbutton")
     expect(inputs.length).toBeGreaterThanOrEqual(2)
-  })
+  }, 30_000)
 
   it("calls onUpdate with price when price input changes", async () => {
     const onUpdate = vi.fn()

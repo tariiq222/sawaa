@@ -290,7 +290,7 @@
       },
       "lastResult": "not-run-this-session",
       "lastRunAt": null,
-      "note": "Heavy (~20 min, 1 worker). Documented-flaky: dev-server crashes under load + test-data pollution + stale selectors. Needs clean prod-build (next start) run for trustworthy signal. See .tariq/lessons.md."
+      "note": "Heavy (~20 min, 1 worker). Documented-flaky: dev-server crashes under load + test-data pollution + stale selectors. Needs clean prod-build (next start) run for trustworthy signal. See .tariq/memory/notes/lessons.md."
     },
     {
       "id": "apps/dashboard/src (171 Vitest files)",

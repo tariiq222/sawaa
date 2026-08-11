@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { WhatsappEvolutionConfigService } from '../../../infrastructure/whatsapp/whatsapp-evolution-config.service';
 
 export interface WhatsappConfigView {
   configured: boolean;
   isActive: boolean;
   provider?: string;
-  evolutionBaseUrl?: string;
-  evolutionInstanceName?: string;
   lastTestAt?: Date | null;
   lastTestOk?: boolean | null;
   lastTestError?: string | null;
@@ -19,21 +18,23 @@ export interface WhatsappConfigView {
 
 @Injectable()
 export class GetWhatsappConfigHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly evolutionConfig: WhatsappEvolutionConfigService,
+  ) {}
 
   async execute(): Promise<WhatsappConfigView> {
     const config = await this.prisma.whatsappAgentConfig.findFirst();
+    const runtime = this.evolutionConfig.get();
 
-    if (!config) {
+    if (!config || !runtime) {
       return { configured: false, isActive: false };
     }
 
     return {
       configured: true,
       isActive: config.isActive,
-      provider: config.provider,
-      evolutionBaseUrl: config.evolutionBaseUrl ?? undefined,
-      evolutionInstanceName: config.evolutionInstanceName ?? undefined,
+      provider: 'EVOLUTION_API',
       lastTestAt: config.lastTestAt,
       lastTestOk: config.lastTestOk,
       lastTestError: config.lastTestError,

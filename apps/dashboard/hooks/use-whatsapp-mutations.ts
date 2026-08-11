@@ -9,7 +9,10 @@ import {
   controlWhatsapp,
   resetWhatsappConfig,
   staffReply,
+  markWhatsappConversationRead,
+  releaseWhatsappTakeover,
   testWhatsappConfig,
+  unlinkWhatsappConfig,
   upsertWhatsappAgentConfig,
   upsertWhatsappConfig,
 } from "@/lib/api/whatsapp"
@@ -57,6 +60,19 @@ export function useResetWhatsappConfig() {
     mutationFn: resetWhatsappConfig,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["whatsapp"] })
+    },
+  })
+}
+
+export function useUnlinkWhatsappConfig() {
+  const qc = useQueryClient()
+  return useMutation<{ unlinked: boolean; logoutOk: boolean }, Error, void>({
+    mutationFn: unlinkWhatsappConfig,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["whatsapp", "config"] })
+      qc.invalidateQueries({ queryKey: ["whatsapp", "status"] })
+      qc.invalidateQueries({ queryKey: ["whatsapp", "agent-config"] })
+      qc.invalidateQueries({ queryKey: ["whatsapp", "conversations"] })
     },
   })
 }
@@ -113,6 +129,29 @@ export function useCloseWhatsappConversation() {
   return useMutation<{ closed: true }, Error, string>({
     mutationFn: closeWhatsappConversation,
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["whatsapp", "conversations"] })
+    },
+  })
+}
+
+export function useMarkWhatsappConversationRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, throughMessageId }: { id: string; throughMessageId?: string }) =>
+      markWhatsappConversationRead(id, throughMessageId),
+    onSuccess: (_result, variables) => {
+      qc.invalidateQueries({ queryKey: ["whatsapp", "conversation", variables.id] })
+      qc.invalidateQueries({ queryKey: ["whatsapp", "conversations"] })
+    },
+  })
+}
+
+export function useReleaseWhatsappTakeover() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: releaseWhatsappTakeover,
+    onSuccess: (_result, id) => {
+      qc.invalidateQueries({ queryKey: ["whatsapp", "conversation", id] })
       qc.invalidateQueries({ queryKey: ["whatsapp", "conversations"] })
     },
   })

@@ -97,6 +97,7 @@ export function useWhatsappConversations(
   return {
     data: data?.items ?? [],
     total: data?.total ?? 0,
+    totalPages: data?.totalPages ?? Math.max(1, Math.ceil((data?.total ?? 0) / (args.pageSize ?? 20))),
     loading: isLoading,
     error,
     refetch,

@@ -39,10 +39,8 @@ async function main() {
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
   await prisma.rating.deleteMany({});
-  await prisma.groupEnrollment.deleteMany({});
   await prisma.bookingStatusLog.deleteMany({});
   await prisma.booking.deleteMany({});
-  await prisma.groupSession.deleteMany({});
   await prisma.employeeService.deleteMany({});
   await prisma.employeeAvailabilityException.deleteMany({});
   await prisma.employeeAvailability.deleteMany({});
@@ -260,6 +258,27 @@ async function main() {
     },
   });
 
+  // WhatsApp booking needs an explicit duration option for each delivery type.
+  const services = [svc1, svc2, svc3, svc4, svc5, svc6a, svc6b, svc6c, svc6d];
+  for (const service of services) {
+    for (const deliveryType of ['IN_PERSON', 'ONLINE'] as const) {
+      await prisma.serviceDurationOption.create({
+        data: {
+          serviceId: service.id,
+          deliveryType,
+          label: `${service.nameEn ?? service.nameAr} (${service.durationMins} min)`,
+          labelAr: `${service.nameAr} (${service.durationMins} دقيقة)`,
+          durationMins: service.durationMins,
+          price: service.price,
+          currency: service.currency,
+          isDefault: true,
+          sortOrder: 0,
+          isActive: true,
+        },
+      });
+    }
+  }
+
   // ── Employees ──────────────────────────────────────────────────────────────
   async function createEmployee(data: {
     name: string;
@@ -284,6 +303,7 @@ async function main() {
         employmentType: 'FULL_TIME',
         onboardingStatus: 'COMPLETED',
         isActive: true,
+        isPublic: true,
       },
     });
   }

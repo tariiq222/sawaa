@@ -18,24 +18,16 @@ export class ControlWhatsappHandler {
       throw new Error('WhatsApp agent is not configured yet');
     }
 
-    const { client } = await this.transport.resolve();
-
-    let isActive = existing.isActive;
     try {
       if (dto.action === 'stop') {
-        await client.logout();
-        isActive = false;
         await this.prisma.whatsappAgentConfig.update({
           where: { id: existing.id },
-          data: {
-            isActive: false,
-            isConnected: false,
-            disconnectedAt: new Date(),
-          },
+          data: { isActive: false },
         });
+        return { action: dto.action, isActive: false };
       } else if (dto.action === 'restart') {
+        const { client } = await this.transport.resolve();
         await client.restart();
-        isActive = true;
         await this.prisma.whatsappAgentConfig.update({
           where: { id: existing.id },
           data: {
@@ -45,7 +37,6 @@ export class ControlWhatsappHandler {
         });
       } else {
         // start
-        isActive = true;
         await this.prisma.whatsappAgentConfig.update({
           where: { id: existing.id },
           data: { isActive: true },
@@ -64,6 +55,6 @@ export class ControlWhatsappHandler {
       throw new Error(message);
     }
 
-    return { action: dto.action, isActive };
+    return { action: dto.action, isActive: true };
   }
 }

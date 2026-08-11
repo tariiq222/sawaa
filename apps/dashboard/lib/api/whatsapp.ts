@@ -38,6 +38,16 @@ export async function resetWhatsappConfig(): Promise<{ reset: boolean }> {
   return api.delete<{ reset: boolean }>("/dashboard/integrations/whatsapp")
 }
 
+export async function unlinkWhatsappConfig(): Promise<{
+  unlinked: boolean
+  logoutOk: boolean
+}> {
+  return api.post<{ unlinked: boolean; logoutOk: boolean }>(
+    "/dashboard/integrations/whatsapp/unlink",
+    {},
+  )
+}
+
 // ── AI agent config ─────────────────────────────────────────────────────────
 
 export async function fetchWhatsappAgentConfig(): Promise<WhatsappAgentConfigView> {
@@ -70,7 +80,15 @@ export async function fetchWhatsappQr(): Promise<WhatsappQrView> {
 
 export interface ListWhatsappConversationsArgs {
   status?: string
+  bookingFilter?: "BOOKED" | "NOT_BOOKED"
   search?: string
+  unread?: boolean
+  staffTakeover?: boolean
+  deliveryFailure?: boolean
+  from?: string
+  to?: string
+  staffUserId?: string
+  sort?: "recent" | "oldest"
   page?: number
   pageSize?: number
 }
@@ -80,7 +98,15 @@ export async function listWhatsappConversations(
 ): Promise<WhatsappConversationList> {
   return api.get<WhatsappConversationList>("/dashboard/whatsapp/conversations", {
     status: args.status,
+    bookingFilter: args.bookingFilter,
     search: args.search,
+    unread: args.unread,
+    staffTakeover: args.staffTakeover,
+    deliveryFailure: args.deliveryFailure,
+    from: args.from,
+    to: args.to,
+    staffUserId: args.staffUserId,
+    sort: args.sort,
     page: args.page ?? 1,
     pageSize: args.pageSize ?? 20,
   })
@@ -108,4 +134,19 @@ export async function closeWhatsappConversation(
   return api.post<{ closed: true }>(
     `/dashboard/whatsapp/conversations/${id}/close`,
   )
+}
+
+export async function markWhatsappConversationRead(
+  id: string,
+  throughMessageId?: string,
+): Promise<{ conversationId: string; unreadCount: number }> {
+  return api.post(`/dashboard/whatsapp/conversations/${id}/read`, {
+    throughMessageId,
+  })
+}
+
+export async function releaseWhatsappTakeover(
+  id: string,
+): Promise<{ released: true }> {
+  return api.post(`/dashboard/whatsapp/conversations/${id}/release`)
 }

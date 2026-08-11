@@ -1,10 +1,10 @@
 import {
-  Controller, Get, Post, Body, Query,
-  UseGuards, HttpCode, HttpStatus, Res,
+  Controller, Get, Post, Body, Query, Param,
+  UseGuards, ParseUUIDPipe, HttpCode, HttpStatus, Res,
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation,
-  ApiOkResponse, ApiQuery,
+  ApiOkResponse, ApiQuery, ApiParam, ApiNotFoundResponse, ApiConflictResponse,
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ReportFormat } from '@prisma/client';
@@ -17,6 +17,21 @@ import { PackageReportsHandler } from '../../modules/ops/generate-report/package
 import { PackageReportQueryDto } from '../../modules/ops/generate-report/package-report.dto';
 import { ListActivityHandler } from '../../modules/ops/log-activity/list-activity.handler';
 import { ListActivityDto } from '../../modules/ops/log-activity/list-activity.dto';
+import { ListTerminalFailedOutboxHandler } from '../../modules/ops/outbox/list-terminal-failed-outbox.handler';
+import { ListFailedOutboxDto } from '../../modules/ops/outbox/list-failed-outbox.dto';
+import { RetryFailedOutboxEventHandler } from '../../modules/ops/outbox/retry-failed-outbox-event.handler';
+
+const FAILED_OUTBOX_ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    eventType: { type: 'string' },
+    attemptCount: { type: 'number' },
+    createdAt: { type: 'string', format: 'date-time' },
+    failedAt: { type: 'string', format: 'date-time', nullable: true },
+    failureReason: { type: 'string', nullable: true },
+  },
+} as const;
 
 @ApiTags('Dashboard / Ops')
 @ApiBearerAuth()
@@ -28,6 +43,8 @@ export class DashboardOpsController {
     private readonly generateReport: GenerateReportHandler,
     private readonly packageReports: PackageReportsHandler,
     private readonly listActivity: ListActivityHandler,
+    private readonly listFailedOutbox: ListTerminalFailedOutboxHandler,
+    private readonly retryFailedOutbox: RetryFailedOutboxEventHandler,
   ) {}
 
   @Post('reports')
@@ -143,5 +160,66 @@ export class DashboardOpsController {
   @ApiQuery({ name: 'to', required: false, description: 'End of date range (ISO 8601)' })
   listActivityEndpoint(@Query() query: ListActivityDto) {
     return this.listActivity.execute({ ...query });
+  }
+
+  @Get('outbox/failed')
+  @CheckPermissions({ action: 'read', subject: 'Report' })
+  @ApiOperation({ summary: 'List terminal failed outbox events' })
+  @ApiOkResponse({
+    description:
+      'Failed outbox event metadata only — the event payload is never returned',
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: FAILED_OUTBOX_ITEM_SCHEMA,
+        },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum events to return (default 50, max 100)',
+    example: 50,
+  })
+  @ApiQuery({
+    name: 'eventType',
+    required: false,
+    description: 'Filter by exact outbox event type',
+    example: 'bookings.booking.created',
+  })
+  listFailedOutboxEndpoint(@Query() query: ListFailedOutboxDto) {
+    return this.listFailedOutbox.execute({
+      limit: query.limit,
+      eventType: query.eventType,
+    });
+  }
+
+  @Post('outbox/:id/retry')
+  @HttpCode(HttpStatus.OK)
+  @CheckPermissions({ action: 'manage', subject: 'Report' })
+  @ApiOperation({ summary: 'Retry a terminal failed outbox event' })
+  @ApiParam({
+    name: 'id',
+    description: 'Outbox event UUID',
+    example: '00000000-0000-0000-0000-000000000000',
+  })
+  @ApiOkResponse({
+    description:
+      'Event reset to PENDING with attemptCount 0; the next outbox tick will publish it',
+    schema: {
+      ...FAILED_OUTBOX_ITEM_SCHEMA,
+      properties: {
+        ...FAILED_OUTBOX_ITEM_SCHEMA.properties,
+        status: { type: 'string', enum: ['PENDING'] },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Outbox event not found' })
+  @ApiConflictResponse({ description: 'Outbox event is not in FAILED state' })
+  retryFailedOutboxEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+    return this.retryFailedOutbox.execute({ id });
   }
 }

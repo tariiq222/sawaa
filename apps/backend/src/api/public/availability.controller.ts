@@ -1,11 +1,12 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiParam, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam, ApiOkResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { GetPublicAvailabilityHandler } from '../../modules/bookings/availability/public/get-public-availability.handler';
 import { GetPublicAvailabilityDto } from '../../modules/bookings/availability/public/get-public-availability.dto';
 import { GetPublicAvailabilityDaysHandler } from '../../modules/bookings/availability/public/get-public-availability-days.handler';
+import { GetPublicAvailabilityDaysDto } from '../../modules/bookings/availability/public/get-public-availability-days.dto';
 
 @ApiTags('Public / Employees')
 @ApiPublicResponses()
@@ -34,24 +35,14 @@ export class PublicAvailabilityController {
   @Get(':id/availability/days')
   @ApiOperation({ summary: 'Probe which days in a window have any open slots' })
   @ApiParam({ name: 'id', description: 'Employee ID', example: '00000000-0000-0000-0000-000000000001' })
-  @ApiQuery({ name: 'serviceId', required: false })
-  @ApiQuery({ name: 'branchId', required: false })
-  @ApiQuery({ name: 'startDate', required: false, example: '2026-05-24' })
-  @ApiQuery({ name: 'days', required: false, example: 14 })
   @ApiOkResponse({ description: 'Per-day boolean: does this day have at least one open slot?' })
   async getAvailabilityDays(
     @Param('id') id: string,
-    @Query('serviceId') serviceId?: string,
-    @Query('branchId') branchId?: string,
-    @Query('startDate') startDate?: string,
-    @Query('days') days?: string,
+    @Query() query: GetPublicAvailabilityDaysDto,
   ) {
     return this.daysHandler.execute({
+      ...query,
       employeeId: id,
-      serviceId,
-      branchId,
-      startDate,
-      days: days ? parseInt(days, 10) : undefined,
     });
   }
 }

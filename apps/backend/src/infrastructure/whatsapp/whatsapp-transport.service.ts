@@ -3,9 +3,8 @@
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database';
-import { WhatsappCredentialsService } from './whatsapp-credentials.service';
 import { EvolutionApiClient } from './evolution-api.client';
-import { DEFAULT_ORG_ID } from '../../common/constants';
+import { WhatsappEvolutionConfigService } from './whatsapp-evolution-config.service';
 import { EvolutionUrlValidator } from './evolution-url.validator';
 
 export interface ResolvedTransport {
@@ -20,7 +19,7 @@ export interface ResolvedTransport {
 export class WhatsappTransportService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly credentials: WhatsappCredentialsService,
+    private readonly evolutionConfig: WhatsappEvolutionConfigService,
     private readonly urlValidator: EvolutionUrlValidator,
   ) {}
 
@@ -33,38 +32,28 @@ export class WhatsappTransportService {
     if (!config) {
       throw new Error('WhatsApp agent is not configured');
     }
-    if (!config.evolutionBaseUrl || !config.evolutionInstanceName) {
-      throw new Error('Evolution API URL or instance name is missing');
-    }
-    if (!config.credentialsCiphertext) {
-      throw new Error('Evolution API credentials are not stored');
+    const runtime = this.evolutionConfig.get();
+    if (!runtime) {
+      throw new Error('Evolution API is not configured on the backend');
     }
 
     // Resolve DNS again immediately before attaching the API key. This closes
-    // the save-time DNS rebinding window for a stored hostname.
+    // the configuration-time DNS rebinding window for the backend-owned host.
     await this.urlValidator.validate({
-      newBaseUrl: config.evolutionBaseUrl,
-      previousBaseUrl: config.evolutionBaseUrl,
+      newBaseUrl: runtime.baseUrl,
+      previousBaseUrl: runtime.baseUrl,
     });
 
-    const stored = this.credentials.decrypt<{
-      evolutionApiKey?: string;
-    }>(config.credentialsCiphertext, DEFAULT_ORG_ID);
-
-    if (!stored.evolutionApiKey) {
-      throw new Error('Evolution API key is not stored');
-    }
-
     const client = new EvolutionApiClient({
-      baseUrl: config.evolutionBaseUrl,
-      apiKey: stored.evolutionApiKey,
-      instanceName: config.evolutionInstanceName,
+      baseUrl: runtime.baseUrl,
+      apiKey: runtime.apiKey,
+      instanceName: runtime.instanceName,
     });
 
     return {
       client,
-      instanceName: config.evolutionInstanceName,
-      evolutionBaseUrl: config.evolutionBaseUrl,
+      instanceName: runtime.instanceName,
+      evolutionBaseUrl: runtime.baseUrl,
       provider: config.provider,
       configId: config.id,
     };

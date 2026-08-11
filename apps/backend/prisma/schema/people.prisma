@@ -12,6 +12,7 @@ enum ClientSource {
   WALK_IN
   ONLINE
   REFERRAL
+  WHATSAPP
 }
 
 enum ClientAccountType {

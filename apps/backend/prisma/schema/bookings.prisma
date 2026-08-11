@@ -36,6 +36,7 @@ enum DeliveryType {
 enum BookingSource {
   RECEPTION
   ONLINE
+  WHATSAPP
 }
 
 enum CancellationReason {

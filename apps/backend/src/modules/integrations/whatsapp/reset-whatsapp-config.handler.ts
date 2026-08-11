@@ -14,10 +14,6 @@ export class ResetWhatsappConfigHandler {
     await this.prisma.whatsappAgentConfig.update({
       where: { id: existing.id },
       data: {
-        evolutionBaseUrl: null,
-        evolutionInstanceName: null,
-        credentialsCiphertext: null,
-        webhookSecretEnc: null,
         isActive: false,
         isConnected: false,
         connectedPhone: null,

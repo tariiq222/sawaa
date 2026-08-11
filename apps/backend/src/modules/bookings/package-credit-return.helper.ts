@@ -9,7 +9,7 @@ import { Prisma, PackageCreditUsageStatus, PackagePurchaseStatus } from '@prisma
  * non-completed case, with no burn window and no refund/invoice (the booking
  * had zero monetary value).
  *
- * Steps (all keyed by id — never a nested save, per .tariq/lessons.md):
+ * Steps (all keyed by id — never a nested save, per .tariq/memory/notes/lessons.md):
  *  1. Find the booking's CONSUMED usage row. Scoping the lookup to CONSUMED
  *     makes the operation idempotent: a booking whose credit was already
  *     returned yields no row, so a double cancel/expire cannot double-credit.

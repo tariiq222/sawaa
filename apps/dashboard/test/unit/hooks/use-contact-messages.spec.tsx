@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import type { ReactNode } from "react"
@@ -56,6 +56,25 @@ describe("useContactMessages", () => {
     const { result } = renderHook(() => useContactMessages(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.data?.items).toEqual(items)
+  })
+
+  it("polls every 30 seconds (refetchInterval)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      fetchContactMessages.mockResolvedValue({ items: [], meta: { total: 0 } })
+      const { Wrapper } = makeWrapper()
+      renderHook(() => useContactMessages(), { wrapper: Wrapper })
+      await waitFor(() => expect(fetchContactMessages).toHaveBeenCalledTimes(1))
+
+      await act(async () => {
+        vi.advanceTimersByTime(30_000)
+        await Promise.resolve()
+      })
+
+      await waitFor(() => expect(fetchContactMessages).toHaveBeenCalledTimes(2))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

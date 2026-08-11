@@ -11,6 +11,7 @@ export interface WhatsappInboundJobData {
   phone: string;
   text: string;
   externalMessageId?: string;
+  contactName?: string;
 }
 
 export interface EnqueueWhatsappInboundInput extends WhatsappInboundJobData {
@@ -50,6 +51,7 @@ export class WhatsappInboundQueueService {
       phone: input.phone,
       text: input.text.slice(0, 4_000),
       externalMessageId: input.externalMessageId,
+      contactName: input.contactName?.trim().slice(0, 255) || undefined,
     };
 
     try {

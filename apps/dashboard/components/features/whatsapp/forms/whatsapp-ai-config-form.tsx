@@ -36,10 +36,8 @@ interface FormState {
   isCustomModel: boolean
   temperature: number
   maxTokens: number
-  systemPromptAr: string
-  systemPromptEn: string
-  greetingAr: string
-  greetingEn: string
+  systemPrompt: string
+  greeting: string
   defaultLanguage: "ar" | "en"
   businessHoursOnly: boolean
   activeDays: number[]
@@ -51,10 +49,8 @@ const DEFAULTS: FormState = {
   isCustomModel: false,
   temperature: 0.4,
   maxTokens: 800,
-  systemPromptAr: "",
-  systemPromptEn: "",
-  greetingAr: "",
-  greetingEn: "",
+  systemPrompt: "",
+  greeting: "",
   defaultLanguage: "ar",
   businessHoursOnly: false,
   activeDays: [0, 1, 2, 3, 4],
@@ -79,10 +75,9 @@ function seedFromConfig(state: FormState, config: {
     model: config.aiModel,
     temperature: config.aiTemperature,
     maxTokens: config.aiMaxTokens,
-    systemPromptAr: config.systemPromptAr,
-    systemPromptEn: config.systemPromptEn,
-    greetingAr: config.greetingAr ?? "",
-    greetingEn: config.greetingEn ?? "",
+    systemPrompt: config.systemPromptAr.trim() || config.systemPromptEn,
+    // A single source greeting is translated to the customer's language.
+    greeting: config.greetingAr?.trim() || config.greetingEn?.trim() || "",
     defaultLanguage: config.defaultLanguage,
     businessHoursOnly: config.businessHoursOnly,
     activeDays: config.activeDays ?? [0, 1, 2, 3, 4],
@@ -124,10 +119,12 @@ export function WhatsappAiConfigForm() {
     aiModel: finalModel,
     aiTemperature: state.temperature,
     aiMaxTokens: state.maxTokens,
-    systemPromptAr: state.systemPromptAr,
-    systemPromptEn: state.systemPromptEn,
-    greetingAr: state.greetingAr || undefined,
-    greetingEn: state.greetingEn || undefined,
+    // Keep both persisted language columns aligned with the unified editor.
+    systemPromptAr: state.systemPrompt,
+    systemPromptEn: state.systemPrompt,
+    // Keep both legacy storage columns aligned while the editor exposes one greeting.
+    greetingAr: state.greeting || undefined,
+    greetingEn: state.greeting || undefined,
     defaultLanguage: state.defaultLanguage,
     businessHoursOnly: state.businessHoursOnly,
     activeDays: state.activeDays,
@@ -165,20 +162,22 @@ export function WhatsappAiConfigForm() {
         <CardTitle>{t("whatsapp.ai.title")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <WhatsappModelSelector
-            model={state.model}
-            customModel={state.customModel}
-            isCustomModel={state.isCustomModel}
-            onModelChange={(v) => update("model", v)}
-            onCustomModelChange={(v) => update("customModel", v)}
-            onSwitchToCustom={() => update("isCustomModel", true)}
-            onSwitchToList={() => {
-              update("isCustomModel", false)
-              update("customModel", "")
-            }}
-          />
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+            <WhatsappModelSelector
+              model={state.model}
+              customModel={state.customModel}
+              isCustomModel={state.isCustomModel}
+              onModelChange={(v) => update("model", v)}
+              onCustomModelChange={(v) => update("customModel", v)}
+              onSwitchToCustom={() => update("isCustomModel", true)}
+              onSwitchToList={() => {
+                update("isCustomModel", false)
+                update("customModel", "")
+              }}
+            />
+          </div>
+          <div className="min-w-0 space-y-2">
             <Label htmlFor="ai-temp">{t("whatsapp.ai.temperature")}</Label>
             <Input
               id="ai-temp"
@@ -190,7 +189,7 @@ export function WhatsappAiConfigForm() {
               onChange={(e) => update("temperature", Number(e.target.value))}
             />
           </div>
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <Label htmlFor="ai-maxTokens">{t("whatsapp.ai.maxTokens")}</Label>
             <Input
               id="ai-maxTokens"
@@ -254,14 +253,10 @@ export function WhatsappAiConfigForm() {
         </div>
 
         <WhatsappPromptsSection
-          systemPromptAr={state.systemPromptAr}
-          systemPromptEn={state.systemPromptEn}
-          greetingAr={state.greetingAr}
-          greetingEn={state.greetingEn}
-          onChangeSystemPromptAr={(v) => update("systemPromptAr", v)}
-          onChangeSystemPromptEn={(v) => update("systemPromptEn", v)}
-          onChangeGreetingAr={(v) => update("greetingAr", v)}
-          onChangeGreetingEn={(v) => update("greetingEn", v)}
+          systemPrompt={state.systemPrompt}
+          greeting={state.greeting}
+          onChangeSystemPrompt={(v) => update("systemPrompt", v)}
+          onChangeGreeting={(v) => update("greeting", v)}
         />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -295,7 +290,7 @@ export function WhatsappAiConfigForm() {
           onToggle={toggleDay}
         />
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={() => onSave(apiKeyChanged ? { aiApiKey: apiKey } : undefined)}
             disabled={upsert.isPending}

@@ -134,5 +134,77 @@ describe('PublicAvailabilityController (e2e)', () => {
         expect.objectContaining({ days: undefined }),
       );
     });
+
+    it('forwards durationOptionId, durationMins, deliveryType, and bookingType query parameters', async () => {
+      mockDaysHandler.execute.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .get(
+          `/public/employees/${uuid(1)}/availability/days?serviceId=${uuid(2)}&branchId=${uuid(3)}&startDate=2026-05-20&days=7&durationOptionId=${uuid(4)}&durationMins=45&deliveryType=ONLINE&bookingType=INDIVIDUAL`,
+        )
+        .expect(200);
+
+      expect(mockDaysHandler.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          serviceId: uuid(2),
+          branchId: uuid(3),
+          startDate: '2026-05-20',
+          days: 7,
+          durationOptionId: uuid(4),
+          durationMins: 45,
+          deliveryType: 'ONLINE',
+          bookingType: 'INDIVIDUAL',
+        }),
+      );
+    });
+
+    it('omits the new context fields when no context query params are sent', async () => {
+      mockDaysHandler.execute.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .get(`/public/employees/${uuid(1)}/availability/days?days=14`)
+        .expect(200);
+
+      expect(mockDaysHandler.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          durationOptionId: undefined,
+          durationMins: undefined,
+          deliveryType: undefined,
+          bookingType: undefined,
+        }),
+      );
+    });
+
+    it('rejects a non-numeric durationMins with 400 (never forwards NaN)', async () => {
+      await request(app.getHttpServer())
+        .get(`/public/employees/${uuid(1)}/availability/days?durationMins=abc`)
+        .expect(400);
+
+      expect(mockDaysHandler.execute).not.toHaveBeenCalled();
+    });
+
+    it('rejects a non-integer durationMins with 400', async () => {
+      await request(app.getHttpServer())
+        .get(`/public/employees/${uuid(1)}/availability/days?durationMins=45.5`)
+        .expect(400);
+
+      expect(mockDaysHandler.execute).not.toHaveBeenCalled();
+    });
+
+    it('rejects a deliveryType outside the Prisma enum with 400', async () => {
+      await request(app.getHttpServer())
+        .get(`/public/employees/${uuid(1)}/availability/days?deliveryType=TELEPORT`)
+        .expect(400);
+
+      expect(mockDaysHandler.execute).not.toHaveBeenCalled();
+    });
+
+    it('rejects a non-UUID durationOptionId with 400', async () => {
+      await request(app.getHttpServer())
+        .get(`/public/employees/${uuid(1)}/availability/days?durationOptionId=not-a-uuid`)
+        .expect(400);
+
+      expect(mockDaysHandler.execute).not.toHaveBeenCalled();
+    });
   });
 });

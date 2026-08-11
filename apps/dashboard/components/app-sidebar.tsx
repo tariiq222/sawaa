@@ -141,15 +141,15 @@ export function AppSidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/chatbot"
-                  aria-label={t("nav.knowledge")}
+                  href="/whatsapp"
+                  aria-label={t("nav.whatsapp")}
                   onClick={isMobile ? () => setOpenMobile(false) : undefined}
                   className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60 transition-colors"
                 >
                   <HugeiconsIcon icon={Book02Icon} size={18} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="top">{t("nav.knowledge")}</TooltipContent>
+              <TooltipContent side="top">{t("nav.whatsapp")}</TooltipContent>
             </Tooltip>
           </div>
         </SidebarFooter>

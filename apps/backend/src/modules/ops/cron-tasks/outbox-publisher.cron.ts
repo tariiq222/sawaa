@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import type { DomainEventEnvelope } from '../../../infrastructure/events/event-bus.service';
+import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 
 /** How many unpublished outbox rows to process per tick. */
@@ -34,6 +35,7 @@ export class OutboxPublisherCron {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
+    private readonly appMetrics: AppMetricsService,
   ) {}
 
   async execute(): Promise<void> {
@@ -90,6 +92,14 @@ export class OutboxPublisherCron {
               }),
             },
           });
+          // Count only the transition into the terminal FAILED state, and only
+          // after the DB update succeeded. Non-terminal retries and rows that
+          // are already FAILED (excluded from polling) never reach this point.
+          if (isTerminal) {
+            this.appMetrics.outboxTerminalFailures
+              .labels({ event_type: row.eventType })
+              .inc();
+          }
           this.logger.warn(
             {
               err: err instanceof Error ? err.message : err,

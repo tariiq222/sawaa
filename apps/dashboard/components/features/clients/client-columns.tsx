@@ -228,7 +228,7 @@ export function getClientColumns({
                   onClick={() => onDeleteClick(row.original)}
                   aria-label={t("clients.actions.delete")}
                   data-testid={`delete-client-${row.original.id}`}
-                  className="flex size-9 items-center justify-center rounded-sm border border-transparent text-destructive transition-all duration-200 hover:border-destructive/30 hover:bg-destructive/10"
+                  className="flex size-9 items-center justify-center rounded-sm border border-transparent text-destructive transition-all duration-200 hover:border-destructive/30 hover:bg-destructive/10 hover:shadow-sm hover:scale-105 active:scale-100"
                 >
                   <HugeiconsIcon icon={Delete02Icon} size={16} />
                 </button>

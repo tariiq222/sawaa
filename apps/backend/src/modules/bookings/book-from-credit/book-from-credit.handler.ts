@@ -272,7 +272,7 @@ export class BookFromCreditHandler {
         });
 
         // Record the consumption + increment the bucket (id-keyed update — no
-        // nested save, per .tariq/lessons.md).
+        // nested save, per .tariq/memory/notes/lessons.md).
         await tx.packageCreditUsage.create({
           data: {
             creditId: credit.id,

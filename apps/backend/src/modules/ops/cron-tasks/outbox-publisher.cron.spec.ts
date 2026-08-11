@@ -1,5 +1,14 @@
 import { OutboxPublisherCron } from './outbox-publisher.cron';
 
+/** Mock AppMetricsService: labels() returns a fresh recorder per label set. */
+function createMetricsMock() {
+  return {
+    outboxTerminalFailures: {
+      labels: jest.fn().mockImplementation(() => ({ inc: jest.fn() })),
+    },
+  };
+}
+
 describe('OutboxPublisherCron', () => {
   it('publishes pending outbox events and stamps publishedAt', async () => {
     const rows = [
@@ -21,7 +30,9 @@ describe('OutboxPublisherCron', () => {
 
     const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    const cron = new OutboxPublisherCron(prisma as never, eventBus as never);
+    const metrics = createMetricsMock();
+
+    const cron = new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never);
     await cron.execute();
 
     expect(eventBus.publish).toHaveBeenCalledTimes(2);
@@ -48,12 +59,14 @@ describe('OutboxPublisherCron', () => {
       },
     };
     const eventBus = { publish: jest.fn() };
+    const metrics = createMetricsMock();
 
-    const cron = new OutboxPublisherCron(prisma as never, eventBus as never);
+    const cron = new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never);
     await cron.execute();
 
     expect(eventBus.publish).not.toHaveBeenCalled();
     expect(prisma.outboxEvent.updateMany).not.toHaveBeenCalled();
+    expect(metrics.outboxTerminalFailures.labels).not.toHaveBeenCalled();
   });
 
   it('skips a failing event but still stamps the successful ones', async () => {
@@ -79,8 +92,9 @@ describe('OutboxPublisherCron', () => {
         .mockRejectedValueOnce(new Error('redis down'))
         .mockResolvedValueOnce(undefined),
     };
+    const metrics = createMetricsMock();
 
-    const cron = new OutboxPublisherCron(prisma as never, eventBus as never);
+    const cron = new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never);
     await cron.execute();
 
     expect(prisma.$executeRaw).toHaveBeenCalled();
@@ -95,6 +109,8 @@ describe('OutboxPublisherCron', () => {
         data: expect.objectContaining({ attemptCount: 1 }),
       }),
     );
+    // Non-terminal failure must NOT touch the terminal-failure counter.
+    expect(metrics.outboxTerminalFailures.labels).not.toHaveBeenCalled();
   });
 
   it('marks event as FAILED after max attempts (attemptCount reaches 10)', async () => {
@@ -117,8 +133,9 @@ describe('OutboxPublisherCron', () => {
     const eventBus = {
       publish: jest.fn().mockRejectedValue(new Error('zoho timeout')),
     };
+    const metrics = createMetricsMock();
 
-    const cron = new OutboxPublisherCron(prisma as never, eventBus as never);
+    const cron = new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never);
     await cron.execute();
 
     const updateManyCalls = (prisma.outboxEvent.updateMany as jest.Mock).mock.calls;
@@ -135,6 +152,14 @@ describe('OutboxPublisherCron', () => {
         }),
       }),
     );
+
+    // Terminal transition must be counted exactly once, keyed by event type.
+    expect(metrics.outboxTerminalFailures.labels).toHaveBeenCalledTimes(1);
+    expect(metrics.outboxTerminalFailures.labels).toHaveBeenCalledWith({
+      event_type: 'platform.subscription_invoice.paid',
+    });
+    const inc = (metrics.outboxTerminalFailures.labels as jest.Mock).mock.results[0].value.inc;
+    expect(inc).toHaveBeenCalledTimes(1);
   });
 
   it('increments attemptCount without marking terminal when below max attempts', async () => {
@@ -157,8 +182,9 @@ describe('OutboxPublisherCron', () => {
     const eventBus = {
       publish: jest.fn().mockRejectedValue(new Error('transient error')),
     };
+    const metrics = createMetricsMock();
 
-    const cron = new OutboxPublisherCron(prisma as never, eventBus as never);
+    const cron = new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never);
     await cron.execute();
 
     expect(prisma.outboxEvent.update).toHaveBeenCalledWith(
@@ -172,5 +198,42 @@ describe('OutboxPublisherCron', () => {
     };
     expect(updateCall.data.failedAt).toBeUndefined();
     expect(updateCall.data.status).toBeUndefined();
+    // Still below MAX_ATTEMPTS — no terminal transition, no counter increment.
+    expect(metrics.outboxTerminalFailures.labels).not.toHaveBeenCalled();
+  });
+
+  it('increments the terminal failure counter once per event crossing MAX_ATTEMPTS in the same tick', async () => {
+    const rows = [
+      { id: 'evt-a', eventType: 'bookings.booking.created', attemptCount: 9, payload: {} },
+      { id: 'evt-b', eventType: 'finance.payment.completed', attemptCount: 9, payload: {} },
+      { id: 'evt-c', eventType: 'finance.payment.completed', attemptCount: 9, payload: {} },
+    ];
+
+    const prisma = {
+      $queryRaw: jest.fn()
+        .mockResolvedValueOnce([{ acquired: true }])
+        .mockResolvedValueOnce(rows),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      outboxEvent: {
+        findMany: jest.fn().mockResolvedValue(rows),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    const eventBus = { publish: jest.fn().mockRejectedValue(new Error('down')) };
+    const metrics = createMetricsMock();
+
+    const cron = new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never);
+    await cron.execute();
+
+    const labels = metrics.outboxTerminalFailures.labels as jest.Mock;
+    expect(labels).toHaveBeenCalledTimes(3);
+    expect(labels).toHaveBeenCalledWith({ event_type: 'bookings.booking.created' });
+    expect(labels).toHaveBeenCalledWith({ event_type: 'finance.payment.completed' });
+
+    const incCalls = labels.mock.results.map((r) => r.value.inc.mock.calls.length);
+    expect(incCalls).toEqual([1, 1, 1]);
+    expect(prisma.outboxEvent.update).toHaveBeenCalledTimes(3);
   });
 });
