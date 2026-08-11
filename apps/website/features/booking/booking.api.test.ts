@@ -91,12 +91,20 @@ describe('booking.api', () => {
         branchId: 'br1',
         startDate: '2026-07-01',
         days: 7,
+        durationOptionId: 'opt1',
+        durationMins: 45,
+        deliveryType: 'ONLINE',
+        bookingType: 'INDIVIDUAL',
       });
       const [url] = fetchMock.mock.calls[0];
       expect(url).toContain('serviceId=svc1');
       expect(url).toContain('branchId=br1');
       expect(url).toContain('startDate=2026-07-01');
       expect(url).toContain('days=7');
+      expect(url).toContain('durationOptionId=opt1');
+      expect(url).toContain('durationMins=45');
+      expect(url).toContain('deliveryType=ONLINE');
+      expect(url).toContain('bookingType=INDIVIDUAL');
     });
   });
 

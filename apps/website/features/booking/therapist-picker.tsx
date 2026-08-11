@@ -1,10 +1,12 @@
 'use client';
 
+import { useRef } from 'react';
 import type { EmployeeWithUser } from '@sawaa/shared';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import Image from 'next/image';
 import { safeImageSrc } from '@/lib/image-url';
 import { therapistDisplayName, initialsFromName } from './therapist-name';
+import { rovingTabIndex, handleRadioGroupKeyDown } from './radio-group-nav';
 
 interface TherapistPickerProps {
   therapists: EmployeeWithUser[];
@@ -17,8 +19,13 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
+  const groupRef = useRef<HTMLUListElement>(null);
 
   const valid = therapists.filter((emp) => emp.user);
+
+  const focusIndex = rovingTabIndex(
+    valid.map((emp) => ({ disabled: false, selected: selected?.id === emp.id })),
+  );
 
   return (
     <section className="flex flex-col gap-5">
@@ -43,10 +50,20 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
         <TherapistEmptyState isAr={isAr} />
       ) : (
         <ul
+          ref={groupRef}
           className={`grid gap-3 ${valid.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}
-          role="list"
+          role="radiogroup"
+          aria-label={t('booking.selectTherapist')}
+          onKeyDown={(e) =>
+            handleRadioGroupKeyDown(
+              e,
+              groupRef.current!,
+              (i) => onSelect(valid[i]),
+              { axis: 'both', rtl: isAr },
+            )
+          }
         >
-          {valid.map((emp) => {
+          {valid.map((emp, i) => {
             const isSelected = selected?.id === emp.id;
             const fullName = therapistDisplayName(emp, isAr) || (isAr ? 'معالج' : 'Therapist');
             const specialty = isAr
@@ -58,8 +75,10 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
               <li key={emp.id}>
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  tabIndex={i === focusIndex ? 0 : -1}
                   onClick={() => onSelect(emp)}
-                  aria-pressed={isSelected}
                   className="group relative w-full h-full text-start cursor-pointer rounded-[1.25rem] bg-white transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                   style={{
                     border: isSelected

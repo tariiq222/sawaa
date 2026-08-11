@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useT } from '@/features/locale/locale-provider';
+import { rovingTabIndex, handleRadioGroupKeyDown } from './radio-group-nav';
 
 interface DateStripProps {
   value: string; // YYYY-MM-DD (local)
@@ -108,6 +109,31 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
   const canGoPrev = anchor > today;
   const isTodayVisible = visibleDays.some((d) => sameDay(d, today));
 
+  // Per-day option state shared by rendering, the roving tabindex and the
+  // radio-group keyboard handler. Disabled = past or unavailable; the
+  // keyboard handler skips disabled days, so arrows can never select one.
+  const dayOptions = visibleDays.map((d) => {
+    const iso = isoLocal(d);
+    const isSelected = iso === value;
+    const isPast = startOfDay(d) < today;
+    const isUnavailable = bookableDates
+      ? !bookableDates.has(iso)
+      : allowedSet
+        ? !allowedSet.has(d.getDay())
+        : false;
+    return {
+      iso,
+      d,
+      isSelected,
+      isPast,
+      isUnavailable,
+      isDisabled: isPast || isUnavailable,
+    };
+  });
+  const dayFocusIndex = rovingTabIndex(
+    dayOptions.map((o) => ({ disabled: o.isDisabled, selected: o.isSelected })),
+  );
+
   return (
     <div className="flex flex-col gap-3">
       {/* Header: month label + jump buttons */}
@@ -158,12 +184,21 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
         </div>
       </div>
 
-      {/* Day strip */}
+      {/* Day strip — horizontal radio group with roving tabindex; arrow
+          keys move across enabled days (RTL-aware) and select them. */}
       <div
         ref={stripRef}
         className="date-strip-scroll flex gap-2 -mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto scroll-smooth"
         role="radiogroup"
         aria-label={t('booking.selectDate')}
+        onKeyDown={(e) =>
+          handleRadioGroupKeyDown(
+            e,
+            stripRef.current!,
+            (i) => onChange(dayOptions[i].iso),
+            { axis: 'horizontal', rtl: isAr },
+          )
+        }
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -172,20 +207,8 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
         <style>{`
           .date-strip-scroll::-webkit-scrollbar { display: none; }
         `}</style>
-        {visibleDays.map((d) => {
-          const iso = isoLocal(d);
-          const isSelected = iso === value;
+        {dayOptions.map(({ iso, d, isSelected, isPast, isUnavailable, isDisabled }, i) => {
           const isToday = sameDay(d, today);
-          const isPast = startOfDay(d) < today;
-          // bookableDates (when present, even if empty) is authoritative — it
-          // came from the per-day backend probe. allowedDaysOfWeek is the
-          // fast-render fallback before the probe lands.
-          const isUnavailable = bookableDates
-            ? !bookableDates.has(iso)
-            : allowedSet
-              ? !allowedSet.has(d.getDay())
-              : false;
-          const isDisabled = isPast || isUnavailable;
           const weekday = new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(d);
           const dayNum = new Intl.NumberFormat(dateLocale, { useGrouping: false }).format(d.getDate());
           const fullLabel = new Intl.DateTimeFormat(dateLocale, {
@@ -204,6 +227,7 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
               aria-checked={isSelected}
               aria-label={isUnavailable ? `${fullLabel} — ${isAr ? 'غير متاح' : 'unavailable'}` : fullLabel}
               disabled={isDisabled}
+              tabIndex={i === dayFocusIndex ? 0 : -1}
               onClick={() => onChange(iso)}
               className="group relative shrink-0 flex flex-col items-center justify-center gap-1 w-[60px] sm:w-[68px] py-3 rounded-2xl cursor-pointer transition-all duration-150 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
               style={

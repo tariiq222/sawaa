@@ -152,6 +152,7 @@ function IntakeFormCard({ bookingId, form }: { bookingId: string; form: IntakeFo
       {fields.map((field) => (
         <IntakeFieldInput
           key={field.id}
+          idPrefix={form.id}
           field={field}
           locale={locale}
           value={answers[field.id]}
@@ -179,12 +180,14 @@ function IntakeFormCard({ bookingId, form }: { bookingId: string; form: IntakeFo
 }
 
 function IntakeFieldInput({
+  idPrefix,
   field,
   locale,
   value,
   onChange,
   onToggleCheckbox,
 }: {
+  idPrefix: string;
   field: IntakeField;
   locale: 'ar' | 'en';
   value: IntakeAnswer | undefined;
@@ -192,11 +195,13 @@ function IntakeFieldInput({
   onToggleCheckbox: (option: string) => void;
 }) {
   const label = fieldLabel(field, locale);
+  // Form-scoped id so labels stay unique across forms and fields.
+  const inputId = `${idPrefix}-${field.id}`;
   const stringValue = typeof value === 'string' ? value : '';
   const arrayValue = Array.isArray(value) ? value : [];
   const options = field.options ?? [];
   const labelEl = (
-    <label className="block text-sm font-medium text-[var(--sw-secondary-700)] mb-1.5">
+    <label htmlFor={inputId} className="block text-sm font-medium text-[var(--sw-secondary-700)] mb-1.5">
       {label}
       {field.isRequired && <span className="text-[var(--error)] ms-1">*</span>}
     </label>
@@ -208,6 +213,7 @@ function IntakeFieldInput({
         <div>
           {labelEl}
           <textarea
+            id={inputId}
             rows={3}
             value={stringValue}
             onChange={(e) => onChange(e.target.value)}
@@ -220,6 +226,7 @@ function IntakeFieldInput({
         <div>
           {labelEl}
           <input
+            id={inputId}
             type="number"
             value={stringValue}
             onChange={(e) => onChange(e.target.value)}
@@ -232,6 +239,7 @@ function IntakeFieldInput({
         <div>
           {labelEl}
           <input
+            id={inputId}
             type="date"
             value={stringValue}
             onChange={(e) => onChange(e.target.value)}
@@ -245,6 +253,7 @@ function IntakeFieldInput({
         <div>
           {labelEl}
           <select
+            id={inputId}
             value={stringValue}
             onChange={(e) => onChange(e.target.value)}
             className={INPUT}
@@ -309,6 +318,7 @@ function IntakeFieldInput({
         <div>
           {labelEl}
           <input
+            id={inputId}
             type="text"
             value={stringValue}
             onChange={(e) => onChange(e.target.value)}

@@ -24,6 +24,7 @@ import {
   type PractitionerBookingOption,
 } from '@/features/booking/booking.api';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
+import { resolveBookingSubmitOutcome } from '@/features/booking/booking-submit-outcome';
 import { PaymentRedirect } from '@/features/payment/payment-redirect';
 import { BookingSkeleton } from '@/features/booking/booking-skeleton';
 import { SummaryRail, SummaryChips, type SummaryScreen } from '@/features/booking/summary-rail';
@@ -67,6 +68,8 @@ type UiState = {
   submitError: string | null;
   redirectUrl: string | null;
   bookingId: string | null;
+  /** True once a booking completed without an online payment (no invoice). */
+  confirmed: boolean;
   practitionerOptions: PractitionerBookingOptions | null;
   practitionerOptionsLoading: boolean;
   showingChoiceStep: boolean;
@@ -87,6 +90,8 @@ type UiAction =
   | { type: 'SUBMIT_START' }
   | { type: 'SUBMIT_ERROR'; error: string }
   | { type: 'SUBMIT_DONE'; bookingId: string; redirectUrl: string }
+  | { type: 'SUBMIT_CONFIRMED'; bookingId: string }
+  | { type: 'CLEAR_COMPLETION' }
   | { type: 'SET_PRACTITIONER_OPTIONS'; opts: PractitionerBookingOptions | null }
   | { type: 'SET_PRACTITIONER_OPTIONS_LOADING'; loading: boolean }
   | { type: 'ENTER_CHOICE_STEP' }
@@ -106,6 +111,7 @@ const INITIAL_UI_STATE: UiState = {
   submitError: null,
   redirectUrl: null,
   bookingId: null,
+  confirmed: false,
   practitionerOptions: null,
   practitionerOptionsLoading: false,
   showingChoiceStep: false,
@@ -142,6 +148,20 @@ function uiReducer(state: UiState, action: UiAction): UiState {
         isSubmitting: false,
         bookingId: action.bookingId,
         redirectUrl: action.redirectUrl,
+      };
+    case 'SUBMIT_CONFIRMED':
+      return {
+        ...state,
+        isSubmitting: false,
+        bookingId: action.bookingId,
+        confirmed: true,
+      };
+    case 'CLEAR_COMPLETION':
+      return {
+        ...state,
+        confirmed: false,
+        bookingId: null,
+        redirectUrl: null,
       };
     case 'SET_PRACTITIONER_OPTIONS':
       return { ...state, practitionerOptions: action.opts };
@@ -635,6 +655,10 @@ function BookingWizardInner() {
         serviceId,
         branchId,
         days: 14,
+        // Probe with the SAME duration/delivery context as the slot fetch so
+        // the strip greys exactly the days the later query can book.
+        durationOptionId: selectedChoice?.durationOptionId,
+        deliveryType: selectedChoice?.deliveryType,
       }),
     enabled: state.step === WizardStep.SLOT && !!employeeId && !!branchId,
   });
@@ -831,6 +855,9 @@ function BookingWizardInner() {
    * On the very first screen it exits the booking flow (same as the close button).
    */
   const handleStepBack = () => {
+    // The confirmation screen is terminal (like the shared machine's
+    // CONFIRMATION step) — the only exits are "book another" (RESET) or close.
+    if (ui.confirmed) return;
     if (awaitingBranch) {
       // Branch picker was opened via the change-branch affordance or summary
       // rail edit. Pressing back cancels the change and returns to the current
@@ -918,7 +945,12 @@ function BookingWizardInner() {
     }
   };
 
-  const isConfirmation = state.step === WizardStep.CONFIRMATION;
+  const isConfirmation = state.step === WizardStep.CONFIRMATION || ui.confirmed;
+  // Success on the confirmation screen: either the shared machine reached a
+  // successful CONFIRMATION, or the booking completed locally without an
+  // online payment (CONFIRMED / DEPOSIT_PAID with no invoice).
+  const confirmationSucceeded =
+    ui.confirmed || (state.step === WizardStep.CONFIRMATION && state.status === 'success');
   const screenKey = nothingBookable
     ? 'dead-end'
     : isConfirmation
@@ -1205,16 +1237,23 @@ function BookingWizardInner() {
                           durationOptionId: selectedChoice?.durationOptionId,
                           deliveryType: selectedChoice?.deliveryType,
                         });
-                        if (!booking.invoiceId) {
+                        const outcome = resolveBookingSubmitOutcome(booking);
+                        if (outcome.kind === 'failure') {
                           dispatchUi({ type: 'SUBMIT_ERROR', error: t('common.bookingFailed') });
                           return;
                         }
-                        const payment = await initPayment(booking.invoiceId);
-                        dispatchUi({
-                          type: 'SUBMIT_DONE',
-                          bookingId: booking.id,
-                          redirectUrl: payment.redirectUrl,
-                        });
+                        if (outcome.kind === 'payment') {
+                          const payment = await initPayment(outcome.invoiceId);
+                          dispatchUi({
+                            type: 'SUBMIT_DONE',
+                            bookingId: booking.id,
+                            redirectUrl: payment.redirectUrl,
+                          });
+                          return;
+                        }
+                        // CONFIRMED / DEPOSIT_PAID with no invoice: booking is
+                        // final — show success without initializing payment.
+                        dispatchUi({ type: 'SUBMIT_CONFIRMED', bookingId: booking.id });
                       } catch (err) {
                         dispatchUi({
                           type: 'SUBMIT_ERROR',
@@ -1229,7 +1268,7 @@ function BookingWizardInner() {
                 {/* === CONFIRMATION === */}
                 {isConfirmation && (
                   <div className="text-center py-12 px-4 flex flex-col items-center gap-5">
-                    {state.step === WizardStep.CONFIRMATION && state.status === 'success' ? (
+                    {confirmationSucceeded ? (
                       <>
                         <div
                           className="sw-pop-in inline-flex h-16 w-16 items-center justify-center rounded-full"
@@ -1274,7 +1313,10 @@ function BookingWizardInner() {
                     )}
                     <button
                       type="button"
-                      onClick={() => dispatch({ type: 'RESET' })}
+                      onClick={() => {
+                        dispatch({ type: 'RESET' });
+                        dispatchUi({ type: 'CLEAR_COMPLETION' });
+                      }}
                       className="mt-2 inline-flex items-center justify-center px-7 py-3 rounded-full text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.99] cursor-pointer"
                       style={{
                         background: 'var(--primary)',
@@ -1282,7 +1324,7 @@ function BookingWizardInner() {
                         boxShadow: 'var(--sw-shadow-primary)',
                       }}
                     >
-                      {state.step === WizardStep.CONFIRMATION && state.status === 'success'
+                      {confirmationSucceeded
                         ? t('booking.bookAnother')
                         : t('booking.tryAgain')}
                     </button>

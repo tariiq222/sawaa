@@ -12,6 +12,7 @@ import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient } from '@/features/auth/public';
 import { IntakeFormsSection } from '@/features/intake/intake-forms-section';
 import { AccountLoadError } from './load-error';
+import { useDialogFocus } from '@/hooks/use-dialog-focus';
 import type { ClientBookingItem } from '@sawaa/shared';
 import {
   getMyBookingApi,
@@ -19,6 +20,7 @@ import {
   rescheduleMyBookingApi,
 } from '@/features/auth/auth.api';
 import { initPayment } from '@/features/booking/booking.api';
+import { riyadhWallTimeToUtcIso } from '@/features/booking/booking-timezone';
 import {
   paymentStatusKey,
   PAYMENT_STATUS_TOKEN,
@@ -368,16 +370,25 @@ function StatusPill({ color, label }: { color: string; label: string }) {
 function ModalShell({
   children,
   onClose,
+  labelledById,
 }: {
   children: React.ReactNode;
   onClose: () => void;
+  /** id of the heading that names this dialog (aria-labelledby). */
+  labelledById?: string;
 }) {
+  // Keyboard focus management: initial focus, Tab containment, Escape to
+  // close, focus restore to the trigger. The shell only renders while the
+  // dialog is open, so `active` is always true here.
+  const dialogRef = useDialogFocus<HTMLDivElement>({ active: true, onClose });
   return (
     <div
+      ref={dialogRef}
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(10,46,63,0.5)] backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={labelledById}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -419,13 +430,13 @@ function CancelModal({
   }
 
   return (
-    <ModalShell onClose={onClose}>
+    <ModalShell onClose={onClose} labelledById="cancel-modal-title">
       <div className="flex items-start gap-3">
         <span className="shrink-0 w-10 h-10 rounded-full grid place-items-center bg-[color-mix(in_srgb,var(--error)_12%,transparent)] text-[var(--error)]">
           <AlertTriangle size={18} aria-hidden="true" />
         </span>
         <div>
-          <h3 className="font-bold text-[var(--sw-secondary-700)] text-lg">
+          <h3 id="cancel-modal-title" className="font-bold text-[var(--sw-secondary-700)] text-lg">
             {t(locale, 'booking.cancel')}
           </h3>
           <p className="text-sm text-[var(--sw-body)] mt-1 leading-relaxed">
@@ -434,7 +445,14 @@ function CancelModal({
         </div>
       </div>
 
+      <label
+        htmlFor="cancel-reason"
+        className="block text-sm font-medium text-[var(--sw-secondary-700)] mb-1.5"
+      >
+        {tt('booking.cancelReason')}
+      </label>
       <textarea
+        id="cancel-reason"
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         rows={2}
@@ -452,14 +470,14 @@ function CancelModal({
         <button
           onClick={onClose}
           disabled={isLoading}
-          className="flex-1 px-4 py-2.5 rounded-full font-semibold text-sm bg-[var(--sw-neutral-100)] text-[var(--sw-secondary-700)] hover:bg-[var(--sw-neutral-200)] transition-colors disabled:opacity-60"
+          className="flex-1 px-4 py-2.5 rounded-full font-semibold text-sm bg-[var(--sw-neutral-100)] text-[var(--sw-secondary-700)] hover:bg-[var(--sw-neutral-200)] transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
         >
           {tt('booking.keep')}
         </button>
         <button
           onClick={handleConfirm}
           disabled={isLoading}
-          className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm text-white hover:opacity-90 transition-opacity disabled:opacity-60"
+          className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm text-white hover:opacity-90 transition-opacity disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--error)] focus-visible:ring-offset-2"
           style={{ background: 'var(--error)' }}
         >
           {isLoading ? tt('booking.detail.cancelling') : tt('booking.confirmCancel')}
@@ -493,7 +511,12 @@ function RescheduleModal({
     setIsLoading(true);
     setError(null);
     try {
-      await rescheduleApi(new Date(`${newDate}T${newTime}`).toISOString());
+      // The inputs are wall time in the center's timezone (Asia/Riyadh,
+      // UTC+03:00). The helper converts with explicit arithmetic, so the
+      // payload instant is identical regardless of the visitor's browser
+      // timezone; it throws a RangeError on invalid values, which the
+      // generic catch below surfaces as the localized rescheduleFailed.
+      await rescheduleApi(riyadhWallTimeToUtcIso(newDate, newTime));
       onSuccess();
     } catch {
       setError(tt('booking.rescheduleFailed'));
@@ -503,9 +526,9 @@ function RescheduleModal({
   }
 
   return (
-    <ModalShell onClose={onClose}>
+    <ModalShell onClose={onClose} labelledById="reschedule-modal-title">
       <div>
-        <h3 className="font-bold text-[var(--sw-secondary-700)] text-lg">
+        <h3 id="reschedule-modal-title" className="font-bold text-[var(--sw-secondary-700)] text-lg">
           {t(locale, 'booking.reschedule')}
         </h3>
         <p className="text-sm text-[var(--sw-body)] mt-1 leading-relaxed">
@@ -518,10 +541,14 @@ function RescheduleModal({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-[var(--sw-secondary-700)] mb-1.5">
+          <label
+            htmlFor="reschedule-date"
+            className="block text-sm font-medium text-[var(--sw-secondary-700)] mb-1.5"
+          >
             {tt('booking.detail.newDate')}
           </label>
           <input
+            id="reschedule-date"
             type="date"
             value={newDate}
             onChange={(e) => setNewDate(e.target.value)}
@@ -531,10 +558,14 @@ function RescheduleModal({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--sw-secondary-700)] mb-1.5">
+          <label
+            htmlFor="reschedule-time"
+            className="block text-sm font-medium text-[var(--sw-secondary-700)] mb-1.5"
+          >
             {tt('booking.detail.newTime')}
           </label>
           <input
+            id="reschedule-time"
             type="time"
             value={newTime}
             onChange={(e) => setNewTime(e.target.value)}
@@ -542,6 +573,8 @@ function RescheduleModal({
           />
         </div>
       </div>
+
+      <p className="text-xs text-[var(--sw-neutral-500)]">{tt('booking.timezoneRiyadh')}</p>
 
       {error && (
         <div className="px-3 py-2 rounded-lg text-sm bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border border-[color-mix(in_srgb,var(--error)_25%,transparent)] text-[var(--error)]">
@@ -553,14 +586,14 @@ function RescheduleModal({
         <button
           onClick={onClose}
           disabled={isLoading}
-          className="flex-1 px-4 py-2.5 rounded-full font-semibold text-sm bg-[var(--sw-neutral-100)] text-[var(--sw-secondary-700)] hover:bg-[var(--sw-neutral-200)] transition-colors disabled:opacity-60"
+          className="flex-1 px-4 py-2.5 rounded-full font-semibold text-sm bg-[var(--sw-neutral-100)] text-[var(--sw-secondary-700)] hover:bg-[var(--sw-neutral-200)] transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
         >
           {tt('booking.back')}
         </button>
         <button
           onClick={handleConfirm}
           disabled={isLoading || !newDate || !newTime}
-          className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+          className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
         >
           {isLoading ? tt('booking.detail.rescheduling') : tt('booking.detail.confirm')}
         </button>

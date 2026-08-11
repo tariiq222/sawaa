@@ -72,6 +72,7 @@ export function BurnoutTest({ locale }: Props) {
               {OPTIONS.map((opt) => (
                 <label
                   key={opt.value}
+                  className="focus-within:ring-2 focus-within:ring-[var(--primary)] focus-within:ring-offset-2"
                   style={{
                     padding: '0.5rem 0.75rem',
                     borderRadius: '0.5rem',
@@ -89,7 +90,7 @@ export function BurnoutTest({ locale }: Props) {
                     value={opt.value}
                     checked={answers[q.id] === opt.value}
                     onChange={() => onAnswer(q.id, opt.value)}
-                    style={{ display: 'none' }}
+                    className="sr-only"
                   />
                   {locale === 'ar' ? opt.labelAr : opt.labelEn}
                 </label>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { localeDir } from '@/features/locale/dir';
+import { useDialogFocus } from '@/hooks/use-dialog-focus';
 import type { MessageKey } from '@/features/locale/dictionary';
 
 type ConsentValue = 'all' | 'essential' | 'declined';
@@ -74,6 +75,14 @@ export function CookieConsentBanner() {
   const dir = localeDir(locale);
   const [open, setOpen] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  // Keyboard focus management: initial focus, Tab containment, Escape to
+  // dismiss (no consent decision is recorded for Escape — undecided stays
+  // fail-closed with analytics off), focus restore to the page element that
+  // had focus before the banner appeared.
+  const bannerRef = useDialogFocus<HTMLDivElement>({
+    active: open,
+    onClose: () => setOpen(false),
+  });
 
   useEffect(() => {
     if (readConsent() === null) {
@@ -101,7 +110,9 @@ export function CookieConsentBanner() {
 
   return (
     <div
+      ref={bannerRef}
       role="dialog"
+      aria-modal="true"
       aria-live="polite"
       aria-label={t('consent.title' as MessageKey)}
       dir={dir}
@@ -142,6 +153,7 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => setShowDetails((v) => !v)}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             style={{
               background: 'none',
               border: 'none',
@@ -167,6 +179,7 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={handleDecline}
+            className={FOCUS_VISIBLE_CLASS}
             style={btnStyle('ghost')}
           >
             {t('consent.decline' as MessageKey)}
@@ -174,6 +187,7 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={handleEssential}
+            className={FOCUS_VISIBLE_CLASS}
             style={btnStyle('secondary')}
           >
             {t('consent.essentialOnly' as MessageKey)}
@@ -181,6 +195,7 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={handleAccept}
+            className={FOCUS_VISIBLE_CLASS}
             style={btnStyle('primary')}
           >
             {t('consent.acceptAll' as MessageKey)}
@@ -209,3 +224,9 @@ function btnStyle(variant: 'primary' | 'secondary' | 'ghost'): React.CSSProperti
   }
   return { ...base, background: 'transparent', color: '#cbd5e1', borderColor: 'transparent' }
 }
+
+// Visible focus indicator for the dark consent banner: ring with a
+// transparent offset so the ring sits directly against the dark surface
+// (default white offset would create a jarring band).
+const FOCUS_VISIBLE_CLASS =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent';

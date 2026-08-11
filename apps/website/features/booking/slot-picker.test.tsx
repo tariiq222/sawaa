@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import type { ReactNode } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { AvailableSlot } from '@sawaa/shared';
@@ -57,31 +58,77 @@ describe('SlotPicker', () => {
       makeSlot('2026-07-01T11:00:00.000Z'),
     ];
     render(withLocale(<SlotPicker slots={slots} selected={null} onSelect={onSelect} />));
-    const buttons = screen
-      .getAllByRole('button')
+    const radios = screen
+      .getAllByRole('radio')
       .map((b) => b.textContent?.trim())
       .filter((t) => t && /^\d/.test(t));
-    expect(buttons).toEqual(['09:00 AM', '10:00 AM', '11:00 AM']);
+    expect(radios).toEqual(['09:00 AM', '10:00 AM', '11:00 AM']);
   });
 
-  it('calls onSelect with the slot when a time button is clicked', () => {
+  it('calls onSelect with the slot when a time radio is clicked', () => {
     const onSelect = vi.fn();
     const slot = makeSlot('2026-07-01T14:30:00.000Z');
     render(withLocale(<SlotPicker slots={[slot]} selected={null} onSelect={onSelect} />));
-    fireEvent.click(screen.getByRole('button', { name: /02:30 PM/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /02:30 PM/ }));
     expect(onSelect).toHaveBeenCalledWith(slot);
   });
 
-  it('marks the selected slot as aria-pressed=true and others as false', () => {
+  it('marks the selected slot as aria-checked=true and others as false (no aria-pressed)', () => {
     const slots = [makeSlot('2026-07-01T09:00:00.000Z'), makeSlot('2026-07-01T10:00:00.000Z')];
     const selected = slots[1];
     render(withLocale(<SlotPicker slots={slots} selected={selected} onSelect={vi.fn()} />));
-    expect(screen.getByRole('button', { name: /10:00 AM/ }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
-    expect(screen.getByRole('button', { name: /09:00 AM/ }).getAttribute('aria-pressed')).toBe(
-      'false',
-    );
+    const radios = screen.getAllByRole('radio');
+    expect(radios[1].getAttribute('aria-checked')).toBe('true');
+    expect(radios[0].getAttribute('aria-checked')).toBe('false');
+    expect(radios[0].getAttribute('aria-pressed')).toBeNull();
+  });
+
+  it('renders the time picker as a radiogroup with a localized name', () => {
+    const slots = [makeSlot('2026-07-01T09:00:00.000Z')];
+    render(withLocale(<SlotPicker slots={slots} selected={null} onSelect={vi.fn()} />));
+    expect(screen.getByRole('radiogroup', { name: /Select Time/i })).toBeTruthy();
+  });
+
+  it('gives the selected slot roving tabindex 0 and the rest -1', () => {
+    const slots = [makeSlot('2026-07-01T09:00:00.000Z'), makeSlot('2026-07-01T10:00:00.000Z')];
+    render(withLocale(<SlotPicker slots={slots} selected={slots[1]} onSelect={vi.fn()} />));
+    const radios = screen.getAllByRole('radio');
+    expect(radios[0].tabIndex).toBe(-1);
+    expect(radios[1].tabIndex).toBe(0);
+  });
+
+  it('ArrowRight moves to and selects the next slot, wrapping at the end', () => {
+    const onSelect = vi.fn();
+    const slots = [makeSlot('2026-07-01T09:00:00.000Z'), makeSlot('2026-07-01T10:00:00.000Z')];
+    render(withLocale(<SlotPicker slots={slots} selected={null} onSelect={onSelect} />));
+    const radios = screen.getAllByRole('radio');
+    radios[0].focus();
+    fireEvent.keyDown(radios[0], { key: 'ArrowRight' });
+    expect(onSelect).toHaveBeenCalledWith(slots[1]);
+    expect(radios[1]).toHaveFocus();
+    fireEvent.keyDown(radios[1], { key: 'ArrowRight' });
+    expect(onSelect).toHaveBeenCalledWith(slots[0]);
+    expect(radios[0]).toHaveFocus();
+  });
+
+  it('supports Up/Down arrows and Home/End on the slot grid', () => {
+    const onSelect = vi.fn();
+    const slots = [
+      makeSlot('2026-07-01T09:00:00.000Z'),
+      makeSlot('2026-07-01T10:00:00.000Z'),
+      makeSlot('2026-07-01T11:00:00.000Z'),
+    ];
+    render(withLocale(<SlotPicker slots={slots} selected={null} onSelect={onSelect} />));
+    const radios = screen.getAllByRole('radio');
+    radios[2].focus();
+    fireEvent.keyDown(radios[2], { key: 'ArrowDown' });
+    expect(onSelect).toHaveBeenCalledWith(slots[0]); // wraps
+    fireEvent.keyDown(radios[0], { key: 'ArrowUp' });
+    expect(onSelect).toHaveBeenCalledWith(slots[2]); // wraps
+    fireEvent.keyDown(radios[1], { key: 'Home' });
+    expect(onSelect).toHaveBeenCalledWith(slots[0]);
+    fireEvent.keyDown(radios[0], { key: 'End' });
+    expect(onSelect).toHaveBeenCalledWith(slots[2]);
   });
 
   it('renders Arabic labels under the ar locale', () => {

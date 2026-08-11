@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import type { ReactNode } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { Service } from '@sawaa/shared';
@@ -76,7 +77,7 @@ describe('ServicePicker', () => {
         />,
       ),
     );
-    expect(screen.getByRole('button', { name: /Consultation/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Consultation/i })).toBeTruthy();
   });
 
   it('renders service names in Arabic under the ar locale', () => {
@@ -90,7 +91,7 @@ describe('ServicePicker', () => {
         />
       </LocaleProvider>,
     );
-    expect(screen.getByRole('button', { name: /جلسة استشارية/ })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /جلسة استشارية/ })).toBeTruthy();
   });
 
   it('shows the empty-state when the filter excludes all services', () => {
@@ -169,7 +170,7 @@ describe('ServicePicker', () => {
         />,
       ),
     );
-    fireEvent.click(screen.getByRole('button', { name: /^Consultation/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /^Consultation/ }));
     expect(onSelect).toHaveBeenCalledWith(service, {
       durationOptionId: 'cfg1',
       deliveryType: 'IN_PERSON',
@@ -195,7 +196,7 @@ describe('ServicePicker', () => {
         />,
       ),
     );
-    fireEvent.click(screen.getByRole('button', { name: /^Consultation/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /^Consultation/ }));
     // Type stage prompt appears when there is more than one delivery type.
     expect(screen.getByText(/How would you like to attend/)).toBeTruthy();
     // Picking a type moves to the duration stage.
@@ -231,7 +232,7 @@ describe('ServicePicker', () => {
         />,
       ),
     );
-    fireEvent.click(screen.getByRole('button', { name: /^Consultation/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /^Consultation/ }));
     // No "How would you like to attend?" type-stage prompt — durations visible directly.
     expect(screen.queryByText(/How would you like to attend/)).toBeNull();
     // The "30 min" and "60 min" buttons are visible.
@@ -320,7 +321,7 @@ describe('ServicePicker', () => {
     expect(screen.queryByText(/60 min/)).toBeNull();
   });
 
-  it('marks the selected service as aria-pressed', () => {
+  it('marks the selected service as aria-checked=true and not aria-pressed', () => {
     const selected = makeService();
     render(
       withLocale(
@@ -332,7 +333,70 @@ describe('ServicePicker', () => {
         />,
       ),
     );
-    const btn = screen.getByRole('button', { name: /^Consultation/ });
-    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    const radio = screen.getByRole('radio', { name: /^Consultation/ });
+    expect(radio.getAttribute('aria-checked')).toBe('true');
+    expect(radio.getAttribute('aria-pressed')).toBeNull();
+  });
+
+  it('renders the service list as a radiogroup with a localized name', () => {
+    render(
+      withLocale(
+        <ServicePicker
+          services={[makeService()]}
+          categories={CATEGORIES}
+          selected={null}
+          onSelect={vi.fn()}
+        />,
+      ),
+    );
+    expect(screen.getByRole('radiogroup', { name: /Select Service/i })).toBeTruthy();
+  });
+
+  it('keyboard arrows move through the service options and activate the focused card', () => {
+    const onSelect = vi.fn();
+    const svc1 = makeService();
+    const svc2 = makeService({ id: 'svc2', nameEn: 'TherapyX' });
+    render(
+      withLocale(
+        <ServicePicker
+          services={[svc1, svc2]}
+          categories={CATEGORIES}
+          selected={null}
+          onSelect={onSelect}
+        />,
+      ),
+    );
+    const radios = screen.getAllByRole('radio');
+    radios[0].focus();
+    fireEvent.keyDown(radios[0], { key: 'ArrowDown' });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect.mock.calls[0][0]).toBe(svc2);
+    expect(radios[1]).toHaveFocus();
+  });
+
+  it('keyboard activation of a multi-option service opens its inline picker', () => {
+    const svc1 = makeService({ id: 'svc1' });
+    const svc2 = makeService({
+      id: 'svc2',
+      nameEn: 'TherapyX',
+      bookingConfigs: [
+        { id: 'cfg1', deliveryType: 'IN_PERSON', price: 10000, durationMins: 60 },
+        { id: 'cfg2', deliveryType: 'ONLINE', price: 8000, durationMins: 45 },
+      ],
+    });
+    render(
+      withLocale(
+        <ServicePicker
+          services={[svc1, svc2]}
+          categories={CATEGORIES}
+          selected={null}
+          onSelect={vi.fn()}
+        />,
+      ),
+    );
+    const radios = screen.getAllByRole('radio');
+    radios[0].focus();
+    fireEvent.keyDown(radios[0], { key: 'ArrowDown' });
+    expect(screen.getByText(/How would you like to attend/)).toBeTruthy();
   });
 });

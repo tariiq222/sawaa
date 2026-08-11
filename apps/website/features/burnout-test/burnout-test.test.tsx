@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 import { BurnoutTest } from './burnout-test';
-import { QUESTIONS } from './questions';
+import { QUESTIONS, OPTIONS } from './questions';
 
 function answerAll(valuePicker: (idx: number) => string) {
   QUESTIONS.forEach((q, idx) => {
@@ -50,5 +51,36 @@ describe('BurnoutTest', () => {
     render(<BurnoutTest locale="ar" />);
     expect(screen.getAllByText('أبداً').length).toBe(QUESTIONS.length);
     expect(screen.getAllByText('دائماً').length).toBe(QUESTIONS.length);
+  });
+
+  it('keeps every option as a native radio input in the accessibility tree', () => {
+    render(<BurnoutTest locale="en" />);
+    const radios = screen.getAllByRole('radio');
+    expect(radios).toHaveLength(QUESTIONS.length * OPTIONS.length);
+    // Options are reachable by their visible label text, once per question.
+    expect(screen.getAllByRole('radio', { name: 'Never' })).toHaveLength(
+      QUESTIONS.length,
+    );
+    expect(screen.getAllByRole('radio', { name: 'Always' })).toHaveLength(
+      QUESTIONS.length,
+    );
+  });
+
+  it('keeps fieldset/legend grouping per question', () => {
+    render(<BurnoutTest locale="en" />);
+    const groups = screen.getAllByRole('group');
+    expect(groups).toHaveLength(QUESTIONS.length);
+    expect(
+      screen.getByRole('group', {
+        name: /exhausted at the end of my workday/i,
+      }),
+    ).toBeTruthy();
+  });
+
+  it('keeps radios keyboard-focusable', () => {
+    render(<BurnoutTest locale="en" />);
+    const first = screen.getAllByRole('radio')[0];
+    first.focus();
+    expect(first).toHaveFocus();
   });
 });

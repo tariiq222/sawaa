@@ -140,11 +140,41 @@ describe('ClientInfoStep', () => {
         />,
       ),
     );
-    // The login form has placeholder-based inputs (no id/htmlFor wiring);
-    // assert the inputs are present via their placeholders. The phone field is
-    // the primary identifier (registration is phone-first).
+    // The login form inputs remain reachable via their placeholders.
     expect(screen.getByPlaceholderText('05XXXXXXXX')).toBeTruthy();
     expect(screen.getByPlaceholderText('••••••••')).toBeTruthy();
+  });
+
+  it('programmatically labels the phone and password inputs with matching htmlFor/id', () => {
+    useCurrentClientMock.mockReturnValue({
+      client: null,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    render(
+      withLocale(
+        <ClientInfoStep
+          slot={slot}
+          service={service}
+          employee={employee}
+          onSubmitInfo={vi.fn()}
+          isSubmitting={false}
+        />,
+      ),
+    );
+    const phone = screen.getByLabelText(/phone number/i);
+    const password = screen.getByLabelText(/password/i);
+    // Each input has a unique id matched by its label's htmlFor.
+    expect(phone).toHaveAttribute('id');
+    expect(password).toHaveAttribute('id');
+    expect(phone.id).not.toBe(password.id);
+    expect(screen.getByText('Phone number')).toHaveAttribute('for', phone.id);
+    expect(screen.getByText('Password')).toHaveAttribute('for', password.id);
+    // Existing input affordances are preserved.
+    expect(phone).toHaveAttribute('autocomplete', 'tel');
+    expect(phone).toHaveAttribute('inputmode', 'tel');
+    expect(password).toHaveAttribute('autocomplete', 'current-password');
   });
 
   it('requires a valid phone and password before calling the API', async () => {

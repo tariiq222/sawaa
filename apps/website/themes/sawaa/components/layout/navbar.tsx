@@ -7,6 +7,7 @@ import { useBranding } from '@/features/branding/public';
 import { isAuthenticated } from '@/features/auth/public';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { LanguageSwitcher } from '@/features/locale/language-switcher';
+import { useDialogFocus } from '@/hooks/use-dialog-focus';
 import { SITE } from '../../lib/constants';
 
 const navLinks = [
@@ -26,6 +27,12 @@ export function Navbar() {
   const [authed, setAuthed] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // Keyboard focus management for the mobile menu dialog: initial focus,
+  // Tab containment, Escape to close, focus restore on close.
+  const mobileMenuRef = useDialogFocus<HTMLDivElement>({
+    active: mobileOpen,
+    onClose: () => setMobileOpen(false),
+  });
 
   // Auth is hydrated client-side from localStorage by `auth-store`.
   // Wait for mount before reading it to avoid SSR/CSR markup mismatch.
@@ -160,6 +167,7 @@ export function Navbar() {
       {mobileOpen ? (
         <div
           id="mobile-menu"
+          ref={mobileMenuRef}
           role="dialog"
           aria-modal="true"
           aria-label={t('nav.menuLabel')}

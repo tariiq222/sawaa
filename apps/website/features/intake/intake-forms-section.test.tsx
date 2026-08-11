@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -56,6 +57,70 @@ const form = {
   ],
 };
 
+const multiFieldForm = {
+  id: 'form_2',
+  nameAr: 'نموذج متعدد',
+  nameEn: 'Multi Form',
+  type: 'pre_session',
+  scope: 'service',
+  fields: [
+    {
+      id: 'f_notes',
+      labelAr: 'ملاحظات',
+      labelEn: 'Notes',
+      fieldType: 'TEXTAREA' as const,
+      isRequired: false,
+      options: null,
+      position: 0,
+    },
+    {
+      id: 'f_age',
+      labelAr: 'العمر',
+      labelEn: 'Age',
+      fieldType: 'NUMBER' as const,
+      isRequired: false,
+      options: null,
+      position: 1,
+    },
+    {
+      id: 'f_date',
+      labelAr: 'التاريخ المفضل',
+      labelEn: 'Preferred date',
+      fieldType: 'DATE' as const,
+      isRequired: false,
+      options: null,
+      position: 2,
+    },
+    {
+      id: 'f_city',
+      labelAr: 'المدينة',
+      labelEn: 'City',
+      fieldType: 'SELECT' as const,
+      isRequired: false,
+      options: ['Riyadh', 'Jeddah'],
+      position: 3,
+    },
+    {
+      id: 'f_radio',
+      labelAr: 'التفضيل',
+      labelEn: 'Preference',
+      fieldType: 'RADIO' as const,
+      isRequired: false,
+      options: ['Morning', 'Evening'],
+      position: 4,
+    },
+    {
+      id: 'f_cb',
+      labelAr: 'الاهتمامات',
+      labelEn: 'Interests',
+      fieldType: 'CHECKBOX' as const,
+      isRequired: false,
+      options: ['Anxiety', 'Sleep'],
+      position: 5,
+    },
+  ],
+};
+
 describe('IntakeFormsSection', () => {
   beforeEach(() => {
     fetchMock.mockReset();
@@ -98,5 +163,39 @@ describe('IntakeFormsSection', () => {
       }),
     );
     await waitFor(() => expect(screen.getByText(/submitted successfully/i)).toBeTruthy());
+  });
+
+  it('programmatically labels TEXT, TEXTAREA, NUMBER, DATE and SELECT fields', async () => {
+    fetchMock.mockResolvedValue([multiFieldForm]);
+    render(wrap('en', <IntakeFormsSection bookingId="bk1" serviceId="svc1" />));
+    await waitFor(() => expect(screen.getByText('Multi Form')).toBeTruthy());
+    expect(screen.getByLabelText('Notes')).toHaveAttribute('id');
+    expect(screen.getByLabelText('Age')).toHaveAttribute('id');
+    expect(screen.getByLabelText('Preferred date')).toHaveAttribute('id');
+    expect(screen.getByLabelText('City')).toHaveAttribute('id');
+  });
+
+  it('assigns unique ids to equal-label fields across different forms', async () => {
+    fetchMock.mockResolvedValue([
+      { ...form, id: 'form_a' },
+      { ...form, id: 'form_b' },
+    ]);
+    render(wrap('en', <IntakeFormsSection bookingId="bk1" serviceId="svc1" />));
+    await waitFor(() => expect(screen.getAllByText('Your name')).toHaveLength(2));
+    // Regex: the required-field label also contains the "*" marker.
+    const inputs = screen.getAllByLabelText(/Your name/i);
+    expect(inputs).toHaveLength(2);
+    expect(inputs[0]).toHaveAttribute('id');
+    expect(inputs[0].id).not.toBe(inputs[1].id);
+  });
+
+  it('keeps fieldset/legend grouping for RADIO and CHECKBOX fields', async () => {
+    fetchMock.mockResolvedValue([multiFieldForm]);
+    render(wrap('en', <IntakeFormsSection bookingId="bk1" serviceId="svc1" />));
+    await waitFor(() => expect(screen.getByText('Multi Form')).toBeTruthy());
+    expect(screen.getByRole('group', { name: 'Preference' })).toBeTruthy();
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    expect(screen.getByRole('group', { name: 'Interests' })).toBeTruthy();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
   });
 });

@@ -1,7 +1,9 @@
 'use client';
 
+import { useRef } from 'react';
 import type { AvailableSlot } from '@sawaa/shared';
 import { useT, useLocale } from '@/features/locale/locale-provider';
+import { rovingTabIndex, handleRadioGroupKeyDown } from './radio-group-nav';
 
 type Translate = ReturnType<typeof useT>;
 
@@ -52,6 +54,7 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
+  const groupRef = useRef<HTMLDivElement>(null);
 
   if (isLoading) {
     return <SlotsLoading isAr={isAr} t={t} />;
@@ -64,6 +67,14 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
   const sorted = [...slots].sort(
     (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
   );
+
+  // Radio-group state over the flattened (sorted) slot list. The rendered
+  // DOM order matches `sorted` because each period section renders its slots
+  // in order.
+  const slotFocusIndex = rovingTabIndex(
+    sorted.map((s) => ({ disabled: false, selected: selected?.startTime === s.startTime })),
+  );
+  const slotIndexByStart = new Map(sorted.map((s, i) => [s.startTime, i]));
 
   const groups: Array<{ period: Period; slots: AvailableSlot[] }> = [];
   for (const slot of sorted) {
@@ -83,7 +94,20 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
   };
 
   return (
-    <div className="flex flex-col gap-5" role="group" aria-label={t('booking.selectTime')}>
+    <div
+      className="flex flex-col gap-5"
+      ref={groupRef}
+      role="radiogroup"
+      aria-label={t('booking.selectTime')}
+      onKeyDown={(e) =>
+        handleRadioGroupKeyDown(
+          e,
+          groupRef.current!,
+          (i) => onSelect(sorted[i]),
+          { axis: 'both', rtl: isAr },
+        )
+      }
+    >
       <h3
         className="text-base font-bold tracking-tight"
         style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.01em' }}
@@ -129,8 +153,10 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
                 <button
                   key={slot.startTime}
                   type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  tabIndex={slotIndexByStart.get(slot.startTime) === slotFocusIndex ? 0 : -1}
                   onClick={() => onSelect(slot)}
-                  aria-pressed={isSelected}
                   aria-label={ariaLabel}
                   className="px-2 py-3 cursor-pointer rounded-xl tabular-nums text-sm transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                   style={

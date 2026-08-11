@@ -1,14 +1,80 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { Service } from '@sawaa/shared';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { useT, useLocale } from '@/features/locale/locale-provider';
+import { rovingTabIndex, handleRadioGroupKeyDown } from './radio-group-nav';
 
 interface Category {
   id: string;
   nameAr: string;
   nameEn: string;
+}
+
+/** Extended shape ServicePicker reads off each service. */
+type ExtendedService = Service & {
+  durationMins?: number;
+  bookingConfigs?: Array<{
+    id: string;
+    deliveryType: 'IN_PERSON' | 'ONLINE';
+    price: number | string;
+    durationMins: number;
+  }>;
+  durationOptions?: Array<{
+    id: string;
+    deliveryType: 'IN_PERSON' | 'ONLINE';
+    label: string;
+    labelAr: string | null;
+    durationMins: number;
+    price: number | string;
+  }>;
+};
+
+type Choice = {
+  id: string;
+  deliveryType: 'IN_PERSON' | 'ONLINE';
+  durationMins: number;
+  price: number;
+  label?: string;
+};
+
+/** Build the list of choices: prefer durationOptions when present, otherwise
+ *  fall back to bookingConfigs (one row per delivery type). */
+function getServiceChoices(service: Service, isAr: boolean): Choice[] {
+  const ext = service as ExtendedService;
+  const durationOpts = ext.durationOptions ?? [];
+  const configs = ext.bookingConfigs ?? [];
+  return durationOpts.length > 0
+    ? durationOpts.map((o) => ({
+        id: o.id,
+        deliveryType: o.deliveryType,
+        durationMins: o.durationMins,
+        price: Number(o.price),
+        label: isAr ? o.labelAr ?? '' : o.label,
+      }))
+    : configs.map((c) => ({
+        id: c.id,
+        deliveryType: c.deliveryType,
+        durationMins: c.durationMins,
+        price: Number(c.price),
+      }));
+}
+
+/** Delivery types come from bookingConfigs — durationOptions are
+ *  delivery-agnostic duration/price tiers and carry no deliveryType, so
+ *  deriving from `choices` yields [null] when options are present. */
+function getServiceDisplayTypes(service: Service, choices: Choice[]): Array<'IN_PERSON' | 'ONLINE'> {
+  const ext = service as ExtendedService;
+  const configs = ext.bookingConfigs ?? [];
+  const deliveryTypeSource = configs.length > 0 ? configs : choices;
+  return Array.from(
+    new Set(
+      deliveryTypeSource
+        .map((c) => c.deliveryType)
+        .filter((d): d is 'IN_PERSON' | 'ONLINE' => d === 'IN_PERSON' || d === 'ONLINE'),
+    ),
+  );
 }
 
 interface ServicePickerProps {
@@ -41,14 +107,6 @@ interface ServicePickerProps {
   skipChoicePicker?: boolean;
 }
 
-type Choice = {
-  id: string;
-  deliveryType: 'IN_PERSON' | 'ONLINE';
-  durationMins: number;
-  price: number;
-  label?: string;
-};
-
 export function ServicePicker({
   services,
   categories,
@@ -63,6 +121,7 @@ export function ServicePicker({
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
+  const groupRef = useRef<HTMLUListElement>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategoryId);
   const [pickerOpen, setPickerOpen] = useState<string | null>(null);
   const [pickerType, setPickerType] = useState<'IN_PERSON' | 'ONLINE' | null>(null);
@@ -81,6 +140,48 @@ export function ServicePicker({
     : services;
 
   const showFilter = visibleCategories.length > 1;
+
+  // Radio-group state over the visible (filtered) service cards. The DOM
+  // order of the rendered radios matches `filtered`.
+  const focusIndex = rovingTabIndex(
+    filtered.map((s) => ({ disabled: false, selected: selected?.id === s.id })),
+  );
+
+  /**
+   * Shared activation for the service cards — used by click AND by the
+   * radio-group keyboard navigation so both paths behave identically:
+   * skipChoicePicker or single-choice cards select immediately; multi-option
+   * cards open the inline delivery/duration picker.
+   */
+  const handleCardActivate = (service: Service) => {
+    if (skipChoicePicker) {
+      onSelect(service);
+      return;
+    }
+    const choices = getServiceChoices(service, isAr);
+    const hasOptions = choices.length > 1;
+    const singleChoice = choices.length === 1 ? choices[0] : null;
+    if (!hasOptions) {
+      onSelect(
+        service,
+        singleChoice
+          ? { durationOptionId: singleChoice.id, deliveryType: singleChoice.deliveryType }
+          : undefined,
+      );
+      return;
+    }
+    if (pickerOpen === service.id) {
+      setPickerOpen(null);
+      setPickerType(null);
+    } else {
+      setPickerOpen(service.id);
+      setPickerType(
+        getServiceDisplayTypes(service, choices).length === 1
+          ? getServiceDisplayTypes(service, choices)[0]
+          : null,
+      );
+    }
+  };
 
   const fmt = (halalas: number) =>
     Intl.NumberFormat(isAr ? 'ar-SA' : 'en-US', {
@@ -201,52 +302,31 @@ export function ServicePicker({
         </div>
       )}
 
-      <ul className="flex flex-col gap-3" role="list">
-        {filtered.map((service) => {
+      <ul
+        ref={groupRef}
+        className="flex flex-col gap-3"
+        role="radiogroup"
+        aria-label={t('booking.selectService')}
+        onKeyDown={(e) =>
+          handleRadioGroupKeyDown(
+            e,
+            groupRef.current!,
+            (i) => handleCardActivate(filtered[i]),
+            { axis: 'both', rtl: isAr },
+          )
+        }
+      >
+        {filtered.map((service, i) => {
           const isSelected = selected?.id === service.id;
           const name = isAr ? service.nameAr : service.nameEn;
-          const extended = service as Service & {
-            durationMins?: number;
-            bookingConfigs?: Array<{
-              id: string;
-              deliveryType: 'IN_PERSON' | 'ONLINE';
-              price: number | string;
-              durationMins: number;
-            }>;
-            durationOptions?: Array<{
-              id: string;
-              deliveryType: 'IN_PERSON' | 'ONLINE';
-              label: string;
-              labelAr: string | null;
-              durationMins: number;
-              price: number | string;
-            }>;
-          };
-          const configs = extended.bookingConfigs ?? [];
+          const extended = service as ExtendedService;
           const durationOpts = extended.durationOptions ?? [];
           const fallbackDuration = extended.durationMins ?? service.duration ?? 0;
           const fallbackPrice = Number(service.price ?? 0);
           const showPrice = service.showPrice ?? true;
           const showDuration = service.showDuration ?? true;
 
-          // Build the list of choices: prefer durationOptions when present,
-          // otherwise fall back to bookingConfigs (one row per delivery type).
-          const choices: Choice[] =
-            durationOpts.length > 0
-              ? durationOpts.map((o) => ({
-                  id: o.id,
-                  deliveryType: o.deliveryType,
-                  durationMins: o.durationMins,
-                  price: Number(o.price),
-                  label: isAr ? o.labelAr ?? '' : o.label,
-                }))
-              : configs.map((c) => ({
-                  id: c.id,
-                  deliveryType: c.deliveryType,
-                  durationMins: c.durationMins,
-                  price: Number(c.price),
-                }));
-
+          const choices = getServiceChoices(service, isAr);
           const hasOptions = choices.length > 1;
 
           const numericPrices = choices.map((c) => c.price);
@@ -261,44 +341,11 @@ export function ServicePicker({
 
           const singleChoice = choices.length === 1 ? choices[0] : null;
           const displayDuration = singleChoice?.durationMins ?? fallbackDuration;
-          // Delivery types come from bookingConfigs — durationOptions are
-          // delivery-agnostic duration/price tiers and carry no deliveryType,
-          // so deriving from `choices` yields [null] when options are present.
           const usesDurationOptions = durationOpts.length > 0;
-          const deliveryTypeSource = configs.length > 0 ? configs : choices;
-          const displayTypes: Array<'IN_PERSON' | 'ONLINE'> = Array.from(
-            new Set(
-              deliveryTypeSource
-                .map((c) => c.deliveryType)
-                .filter((d): d is 'IN_PERSON' | 'ONLINE' => d === 'IN_PERSON' || d === 'ONLINE'),
-            ),
-          );
+          const displayTypes = getServiceDisplayTypes(service, choices);
 
           const isOpen = pickerOpen === service.id;
           const stage: 'type' | 'duration' = pickerType ? 'duration' : 'type';
-
-          const handleHeaderClick = () => {
-            if (skipChoicePicker) {
-              onSelect(service);
-              return;
-            }
-            if (!hasOptions) {
-              onSelect(
-                service,
-                singleChoice
-                  ? { durationOptionId: singleChoice.id, deliveryType: singleChoice.deliveryType }
-                  : undefined,
-              );
-              return;
-            }
-            if (isOpen) {
-              setPickerOpen(null);
-              setPickerType(null);
-            } else {
-              setPickerOpen(service.id);
-              setPickerType(displayTypes.length === 1 ? displayTypes[0] : null);
-            }
-          };
 
           // durationOptions are delivery-agnostic → show every tier once a type
           // is chosen. bookingConfig-based choices stay filtered by delivery type.
@@ -323,9 +370,10 @@ export function ServicePicker({
               >
                 <button
                   type="button"
-                  onClick={handleHeaderClick}
-                  aria-pressed={isSelected}
-                  aria-expanded={hasOptions ? isOpen : undefined}
+                  role="radio"
+                  aria-checked={isSelected}
+                  tabIndex={i === focusIndex ? 0 : -1}
+                  onClick={() => handleCardActivate(service)}
                   className="group w-full text-start cursor-pointer rounded-[1.25rem] transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                   onMouseEnter={(e) => {
                     if (isSelected || isOpen) return;

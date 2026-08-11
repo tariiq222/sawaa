@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import type { ReactNode } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { EmployeeWithUser } from '@sawaa/shared';
@@ -114,19 +115,81 @@ describe('TherapistPicker', () => {
         <TherapistPicker therapists={[employee]} selected={null} onSelect={onSelect} />,
       ),
     );
-    fireEvent.click(screen.getByRole('button', { name: /Dr\. Layla/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /Dr\. Layla/ }));
     expect(onSelect).toHaveBeenCalledWith(employee);
   });
 
-  it('marks the selected therapist as aria-pressed=true', () => {
-    const selected = makeEmployee();
+  it('marks the selected therapist as aria-checked=true and others as false (no aria-pressed)', () => {
+    const emp1 = makeEmployee();
+    const emp2 = makeEmployee({ id: 'emp2', nameEn: 'Dr. Nour' });
     render(
       withLocale(
-        <TherapistPicker therapists={[selected]} selected={selected} onSelect={vi.fn()} />,
+        <TherapistPicker therapists={[emp1, emp2]} selected={emp1} onSelect={vi.fn()} />,
       ),
     );
-    const btn = screen.getByRole('button', { name: /Dr\. Layla/ });
-    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    const radios = screen.getAllByRole('radio');
+    expect(radios[0].getAttribute('aria-checked')).toBe('true');
+    expect(radios[1].getAttribute('aria-checked')).toBe('false');
+    expect(radios[0].getAttribute('aria-pressed')).toBeNull();
+  });
+
+  it('renders the therapist list as a radiogroup with a localized name', () => {
+    render(
+      withLocale(
+        <TherapistPicker therapists={[makeEmployee()]} selected={null} onSelect={vi.fn()} />,
+      ),
+    );
+    expect(screen.getByRole('radiogroup', { name: /Select Therapist/i })).toBeTruthy();
+  });
+
+  it('gives the selected therapist roving tabindex 0 and the rest -1', () => {
+    const emp1 = makeEmployee();
+    const emp2 = makeEmployee({ id: 'emp2', nameEn: 'Dr. Nour' });
+    render(
+      withLocale(
+        <TherapistPicker therapists={[emp1, emp2]} selected={emp2} onSelect={vi.fn()} />,
+      ),
+    );
+    const radios = screen.getAllByRole('radio');
+    expect(radios[0].tabIndex).toBe(-1);
+    expect(radios[1].tabIndex).toBe(0);
+  });
+
+  it('ArrowDown moves to and selects the next therapist, wrapping at the end', () => {
+    const onSelect = vi.fn();
+    const emp1 = makeEmployee();
+    const emp2 = makeEmployee({ id: 'emp2', nameEn: 'Dr. Nour' });
+    render(
+      withLocale(
+        <TherapistPicker therapists={[emp1, emp2]} selected={null} onSelect={onSelect} />,
+      ),
+    );
+    const radios = screen.getAllByRole('radio');
+    radios[0].focus();
+    fireEvent.keyDown(radios[0], { key: 'ArrowDown' });
+    expect(onSelect).toHaveBeenCalledWith(emp2);
+    expect(radios[1]).toHaveFocus();
+    fireEvent.keyDown(radios[1], { key: 'ArrowDown' });
+    expect(onSelect).toHaveBeenCalledWith(emp1);
+    expect(radios[0]).toHaveFocus();
+  });
+
+  it('Home/End jump to the first/last therapist', () => {
+    const onSelect = vi.fn();
+    const emp1 = makeEmployee();
+    const emp2 = makeEmployee({ id: 'emp2', nameEn: 'Dr. Nour' });
+    const emp3 = makeEmployee({ id: 'emp3', nameEn: 'Dr. Sami' });
+    render(
+      withLocale(
+        <TherapistPicker therapists={[emp1, emp2, emp3]} selected={null} onSelect={onSelect} />,
+      ),
+    );
+    const radios = screen.getAllByRole('radio');
+    radios[1].focus();
+    fireEvent.keyDown(radios[1], { key: 'Home' });
+    expect(onSelect).toHaveBeenCalledWith(emp1);
+    fireEvent.keyDown(radios[0], { key: 'End' });
+    expect(onSelect).toHaveBeenCalledWith(emp3);
   });
 
   it('renders the empty state when no therapists are available', () => {

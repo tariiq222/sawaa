@@ -28,10 +28,14 @@ export interface AuthedBookingPayload {
 
 /**
  * The create-booking handler returns the persisted booking row plus the
- * generated invoice id. We only consume `id` (booking id) and `invoiceId`.
+ * generated invoice id. `status` is the authoritative backend booking status
+ * (e.g. CONFIRMED for pay-at-clinic / zero-price bookings, AWAITING_PAYMENT
+ * for online-paid ones); `invoiceId` is null whenever no online payment is
+ * due, so the client must branch on `status`, not on invoice presence alone.
  */
 export interface AuthedBookingResponse {
   id: string;
+  status: string;
   invoiceId: string | null;
 }
 
@@ -65,13 +69,28 @@ export interface AvailabilityDay {
 
 export async function getPublicAvailabilityDays(
   employeeId: string,
-  opts: { serviceId?: string; branchId?: string; startDate?: string; days?: number } = {},
+  opts: {
+    serviceId?: string;
+    branchId?: string;
+    startDate?: string;
+    days?: number;
+    /** Specific duration option chosen in the wizard — keeps the date strip on the same duration context as the slot fetch. */
+    durationOptionId?: string;
+    /** Explicit session duration in minutes (overrides the option lookup). */
+    durationMins?: number;
+    deliveryType?: 'IN_PERSON' | 'ONLINE';
+    bookingType?: 'INDIVIDUAL' | 'WALK_IN' | 'GROUP';
+  } = {},
 ): Promise<AvailabilityDay[]> {
   const params = new URLSearchParams();
   if (opts.serviceId) params.set('serviceId', opts.serviceId);
   if (opts.branchId) params.set('branchId', opts.branchId);
   if (opts.startDate) params.set('startDate', opts.startDate);
   if (opts.days) params.set('days', String(opts.days));
+  if (opts.durationOptionId) params.set('durationOptionId', opts.durationOptionId);
+  if (opts.durationMins) params.set('durationMins', String(opts.durationMins));
+  if (opts.deliveryType) params.set('deliveryType', opts.deliveryType);
+  if (opts.bookingType) params.set('bookingType', opts.bookingType);
   const qs = params.toString();
   const json = await publicFetch<unknown>(
     `/public/employees/${employeeId}/availability/days${qs ? `?${qs}` : ''}`,

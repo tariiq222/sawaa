@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import type { AvailableSlot, Service, EmployeeWithUser } from '@sawaa/shared';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
@@ -73,6 +73,8 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
+  const phoneInputId = useId();
+  const passwordInputId = useId();
 
   const handleInlineLogin = async () => {
     setLoginError(null);
@@ -189,7 +191,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
             </h3>
 
             <div className="flex flex-col">
-              <label className={fieldLabelClass} style={fieldLabelStyle}>
+              <label htmlFor={phoneInputId} className={fieldLabelClass} style={fieldLabelStyle}>
                 {isAr ? 'رقم الجوال' : 'Phone number'}
               </label>
               <div className="relative">
@@ -200,6 +202,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   </svg>
                 </FieldIcon>
                 <input
+                  id={phoneInputId}
                   type="tel"
                   inputMode="tel"
                   value={loginPhone}
@@ -215,7 +218,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
             </div>
 
             <div className="flex flex-col">
-              <label className={fieldLabelClass} style={fieldLabelStyle}>
+              <label htmlFor={passwordInputId} className={fieldLabelClass} style={fieldLabelStyle}>
                 {isAr ? 'كلمة المرور' : 'Password'}
               </label>
               <div className="relative">
@@ -226,6 +229,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   </svg>
                 </FieldIcon>
                 <input
+                  id={passwordInputId}
                   type="password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}

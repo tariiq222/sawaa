@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import type { ReactNode } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DateStrip } from './date-strip';
@@ -13,13 +14,24 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
 
-function todayIso(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
+function isoFromDate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function todayIso(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return isoFromDate(d);
+}
+
+function isoAfterDays(days: number): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  return isoFromDate(d);
 }
 
 function withLocale(children: ReactNode) {
@@ -141,5 +153,103 @@ describe('DateStrip', () => {
     );
     // Heading should contain an Arabic month token; assert the radiogroup renders.
     expect(screen.getByRole('radiogroup')).toBeTruthy();
+  });
+});
+
+describe('DateStrip keyboard behavior (radio group)', () => {
+  it('gives the selected day roving tabindex 0 and every other day -1', () => {
+    render(withLocale(<DateStrip value={todayIso()} onChange={vi.fn()} days={7} />));
+    const radios = screen.getAllByRole('radio');
+    expect((radios[0] as HTMLButtonElement).tabIndex).toBe(0);
+    for (const r of radios.slice(1)) {
+      expect((r as HTMLButtonElement).tabIndex).toBe(-1);
+    }
+  });
+
+  it('puts roving tabindex on the first enabled day when the selected day is disabled', () => {
+    render(withLocale(<DateStrip value={isoAfterDays(-1)} onChange={vi.fn()} days={7} />));
+    const radios = screen.getAllByRole('radio');
+    // The selected day (yesterday) is disabled, so today (first enabled) takes tabindex 0.
+    expect((radios[0] as HTMLButtonElement).disabled).toBe(false);
+    expect((radios[0] as HTMLButtonElement).tabIndex).toBe(0);
+  });
+
+  it('ArrowRight moves focus to and selects the next enabled day', () => {
+    const onChange = vi.fn();
+    render(withLocale(<DateStrip value={todayIso()} onChange={onChange} days={7} />));
+    const radios = screen.getAllByRole('radio');
+    radios[0].focus();
+    fireEvent.keyDown(radios[0], { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toBe(isoAfterDays(1));
+    expect(radios[1]).toHaveFocus();
+  });
+
+  it('ArrowLeft moves back one day', () => {
+    const onChange = vi.fn();
+    render(withLocale(<DateStrip value={isoAfterDays(2)} onChange={onChange} days={7} />));
+    const radios = screen.getAllByRole('radio');
+    // The strip is anchored at the selected day, so radios[i] = value + i days.
+    radios[2].focus(); // value + 2
+    fireEvent.keyDown(radios[2], { key: 'ArrowLeft' });
+    expect(onChange).toHaveBeenCalledWith(isoAfterDays(3)); // value + 1
+    expect(radios[1]).toHaveFocus();
+  });
+
+  it('wraps ArrowRight from the last day back to the first', () => {
+    const onChange = vi.fn();
+    render(withLocale(<DateStrip value={todayIso()} onChange={onChange} days={7} />));
+    const radios = screen.getAllByRole('radio');
+    radios[6].focus();
+    fireEvent.keyDown(radios[6], { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenCalledWith(todayIso());
+    expect(radios[0]).toHaveFocus();
+  });
+
+  it('never selects disabled or past days via the keyboard', () => {
+    const onChange = vi.fn();
+    render(
+      withLocale(
+        <DateStrip
+          value={todayIso()}
+          onChange={onChange}
+          days={7}
+          bookableDates={new Set([todayIso()])}
+        />,
+      ),
+    );
+    const radios = screen.getAllByRole('radio');
+    expect((radios[0] as HTMLButtonElement).disabled).toBe(false);
+    radios[0].focus();
+    // Only today is enabled — arrow navigation must not select any other day.
+    fireEvent.keyDown(radios[0], { key: 'ArrowRight' });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('Home focuses and selects the first enabled day; End the last', () => {
+    const onChange = vi.fn();
+    render(withLocale(<DateStrip value={isoAfterDays(3)} onChange={onChange} days={7} />));
+    const radios = screen.getAllByRole('radio');
+    // The strip is anchored at the selected day, so radios[i] = value + i days.
+    radios[3].focus(); // value + 3
+    fireEvent.keyDown(radios[3], { key: 'End' });
+    expect(onChange).toHaveBeenCalledWith(isoAfterDays(9)); // last visible day
+    expect(radios[6]).toHaveFocus();
+    fireEvent.keyDown(radios[6], { key: 'Home' });
+    expect(onChange).toHaveBeenCalledWith(isoAfterDays(3)); // first visible day
+    expect(radios[0]).toHaveFocus();
+  });
+
+  it('swaps arrow mapping under RTL: ArrowLeft moves to the next day', () => {
+    const onChange = vi.fn();
+    render(
+      <LocaleProvider locale="ar">
+        <DateStrip value={todayIso()} onChange={onChange} days={7} />
+      </LocaleProvider>,
+    );
+    const radios = screen.getAllByRole('radio');
+    radios[0].focus();
+    fireEvent.keyDown(radios[0], { key: 'ArrowLeft' });
+    expect(onChange).toHaveBeenCalledWith(isoAfterDays(1));
   });
 });

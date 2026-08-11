@@ -1,7 +1,9 @@
 'use client';
 
+import { useRef } from 'react';
 import type { PublicBranch } from './booking.api';
 import { useT, useLocale } from '@/features/locale/locale-provider';
+import { rovingTabIndex, handleRadioGroupKeyDown } from './radio-group-nav';
 
 interface BranchStepProps {
   branches: PublicBranch[];
@@ -18,6 +20,11 @@ export function BranchStep({ branches, onSelect }: BranchStepProps) {
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
+  const groupRef = useRef<HTMLUListElement>(null);
+
+  // Branch cards are choose-and-continue options — nothing is ever preselected,
+  // so the roving tabindex stays on the first option.
+  const focusIndex = rovingTabIndex(branches.map(() => ({ disabled: false, selected: false })));
 
   return (
     <div className="flex flex-col gap-5">
@@ -37,10 +44,20 @@ export function BranchStep({ branches, onSelect }: BranchStepProps) {
       </header>
 
       <ul
+        ref={groupRef}
         className={`grid gap-3 ${branches.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}
-        role="list"
+        role="radiogroup"
+        aria-label={t('booking.selectBranch')}
+        onKeyDown={(e) =>
+          handleRadioGroupKeyDown(
+            e,
+            groupRef.current!,
+            (i) => onSelect(branches[i]),
+            { axis: 'both', rtl: isAr },
+          )
+        }
       >
-        {branches.map((branch) => {
+        {branches.map((branch, i) => {
           const primary = isAr ? branch.nameAr : (branch.nameEn || branch.nameAr);
           const secondary = isAr ? branch.nameEn : branch.nameAr;
           const showSecondary = secondary && secondary !== primary;
@@ -50,6 +67,9 @@ export function BranchStep({ branches, onSelect }: BranchStepProps) {
             <li key={branch.id}>
               <button
                 type="button"
+                role="radio"
+                aria-checked={false}
+                tabIndex={i === focusIndex ? 0 : -1}
                 onClick={() => onSelect(branch)}
                 className="group relative w-full h-full text-start cursor-pointer rounded-[1.25rem] bg-white transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                 style={{
