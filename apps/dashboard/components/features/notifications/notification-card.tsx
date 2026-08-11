@@ -15,6 +15,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 import { formatRelativeTime, formatDatePattern } from "@/lib/date"
+import { formatNotificationBody } from "@/lib/format-notification-body"
 import { useLocale } from "@/components/locale-provider"
 import type { Notification } from "@/lib/types/notification"
 
@@ -162,7 +163,7 @@ export function NotificationCard({
         {/* Row 2: body (1 line, 2 max) */}
         {notification.body && (
           <p className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">
-            {notification.body}
+            {formatNotificationBody(notification)}
           </p>
         )}
       </button>

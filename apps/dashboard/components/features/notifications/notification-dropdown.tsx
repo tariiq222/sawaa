@@ -15,9 +15,10 @@ import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { formatRelativeTime } from "@/lib/date"
+import { formatNotificationBody } from "@/lib/format-notification-body"
 import { useLocale } from "@/components/locale-provider"
 import {
-  useNotifications,
+  useDashboardNotifications,
   useUnreadCount,
   useNotificationMutations,
 } from "@/hooks/use-notifications"
@@ -36,7 +37,7 @@ function NotificationRow({
 }) {
   const isUnread = !notification.isRead
   const title = notification.title
-  const body = notification.body
+  const body = formatNotificationBody(notification)
 
   return (
     <button
@@ -85,12 +86,11 @@ function NotificationRow({
 
 export function NotificationDropdown() {
   const { locale, t } = useLocale()
-  const { notifications, isLoading } = useNotifications()
+  const { data, isLoading } = useDashboardNotifications()
   const { data: unreadCount } = useUnreadCount()
   const { markAllMut, markOneMut } = useNotificationMutations()
 
-  // Show latest 5 notifications in dropdown
-  const recentNotifications = notifications.slice(0, 5)
+  const recentNotifications = data?.items ?? []
   const hasUnread = (unreadCount ?? 0) > 0
 
   return (
@@ -107,7 +107,7 @@ export function NotificationDropdown() {
           {hasUnread && (
             <span
               data-testid="notifications-badge"
-              className="absolute -top-0.5 -end-0.5 flex size-4 items-center justify-center rounded-full bg-error text-[9px] font-bold tabular-nums text-error-foreground ring-2 ring-background"
+              className="absolute -top-0.5 -end-0.5 flex size-4 items-center justify-center rounded-full bg-error text-[9px] font-bold tabular-nums text-white ring-2 ring-background"
             >
               {unreadCount! > 9 ? "9+" : unreadCount}
             </span>
@@ -143,7 +143,7 @@ export function NotificationDropdown() {
         <Separator />
 
         {/* Notification list */}
-        <ScrollArea className="max-h-[320px]">
+        <ScrollArea className="max-h-[min(420px,_calc(100vh-12rem))]">
           <div className="flex flex-col py-1">
             {isLoading ? (
               <div className="flex flex-col gap-2 p-3">

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationType, RecipientType } from '@prisma/client';
+import { formatHalalas } from '@sawaa/shared/money';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
 import { GetStaffTargetsHandler } from '../notifications/get-staff-targets.handler';
@@ -35,7 +36,7 @@ export class OnPaymentCompletedStaffHandler {
         roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'],
       });
 
-      const amountStr = `${payload.amount} ${payload.currency}`;
+      const amountStr = `${formatHalalas(payload.amount)} ${payload.currency}`;
       await Promise.allSettled(
         targets.map((target) =>
           this.notify.execute({

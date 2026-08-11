@@ -32,9 +32,11 @@ describe('OnPaymentCompletedStaffHandler', () => {
     expect(eventBus.subscribe).toHaveBeenCalled();
   });
 
-  it('should send notifications on payment completed', async () => {
-    await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'i1', bookingId: 'b1', amount: 100, currency: 'SAR', organizationId: 'org-1' } } as any);
-    expect(notify.execute).toHaveBeenCalled();
+  it('should send notifications with the amount converted from halalas to SAR', async () => {
+    await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'i1', bookingId: 'b1', amount: 17500, currency: 'SAR', organizationId: 'org-1' } } as any);
+    expect(notify.execute).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'تم استلام دفع بقيمة 175.00 SAR',
+    }));
   });
 
   it('should do nothing when no organizationId', async () => {
