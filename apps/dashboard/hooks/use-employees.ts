@@ -76,9 +76,11 @@ export function useEmployees() {
   )
 
   useEffect(() => {
+    if (debouncedSearch === urlSearch) return
+
     updateParams({
       search: debouncedSearch || undefined,
-      page: debouncedSearch !== urlSearch ? "1" : undefined,
+      page: "1",
     })
   }, [debouncedSearch, updateParams, urlSearch])
 

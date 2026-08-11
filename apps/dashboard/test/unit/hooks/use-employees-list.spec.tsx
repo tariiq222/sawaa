@@ -147,6 +147,19 @@ describe("useEmployees", () => {
     )
   })
 
+  it("keeps the selected page when the URL changes due to pagination", async () => {
+    navState.params = new URLSearchParams("page=2")
+    fetchEmployees.mockResolvedValue({ items: [], meta: { total: 40, page: 2, totalPages: 2 } })
+
+    const { result } = renderHook(() => useEmployees(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.page).toBe(2))
+
+    act(() => { result.current.setPage(3) })
+
+    await waitFor(() => expect(result.current.page).toBe(3))
+    expect(navState.params.get("page")).toBe("3")
+  })
+
   it("resetFilters clears search, isActive, and resets page", async () => {
     fetchEmployees.mockResolvedValue({ items: [], meta: { total: 0 } })
 
