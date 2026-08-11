@@ -6,9 +6,6 @@
     "jsx": "react-jsx",
     "types": ["jest", "node"],
     "paths": {
-      "react-native-gifted-chat": [
-        "./types/react-native-gifted-chat"
-      ],
       "@/*": [
         "./*"
       ]

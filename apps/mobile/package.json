@@ -25,8 +25,10 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",
+    "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^5.2.2",
     "@react-native-async-storage/async-storage": "^3.0.1",
+    "@react-navigation/native": "^7.1.33",
     "@reduxjs/toolkit": "^2.11.2",
     "@sawaa/shared": "workspace:*",
     "@sentry/react-native": "^8.10.0",

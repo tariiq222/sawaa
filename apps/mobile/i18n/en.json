@@ -109,7 +109,7 @@
     "today": "Today",
     "calendar": "Calendar",
     "clients": "Clients",
-    "assistant": "Assistant",
+    "assistant": "WhatsApp",
     "notifications": "Notifications",
     "records": "Records"
   },
@@ -435,6 +435,12 @@
     "viewAll": "View All",
     "comingSoon": "Coming Soon",
     "saved": "Saved"
+  },
+  "whatsapp": {
+    "title": "Contact us on WhatsApp",
+    "description": "The Sawa team can help with questions and appointments on WhatsApp.",
+    "open": "Open WhatsApp",
+    "unavailable": "The contact number is not available right now"
   },
   "chatbot": {
     "title": "AI Assistant",
