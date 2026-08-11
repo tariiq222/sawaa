@@ -2,10 +2,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Skeleton } from "@sawaa/ui"
-import { Button } from "@sawaa/ui"
+import { Button, Skeleton } from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Download01Icon } from "@hugeicons/core-free-icons"
+import { toast } from "sonner"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"
@@ -20,7 +20,7 @@ import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { showApiError } from "@/lib/mutation-helpers"
-import { runBookingsExport } from "@/hooks/use-bookings-export"
+import { useBookingsExport } from "@/hooks/use-bookings-export"
 import type { Booking, CancellationReason } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
@@ -36,28 +36,14 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const { employees } = useEmployees()
   const [activeTimeTab, setActiveTimeTab] = useState("all")
   const [search, setSearch] = useState("")
-  const [exporting, setExporting] = useState(false)
+  const bookingsExport = useBookingsExport()
 
   const handleExport = async () => {
-    setExporting(true)
     try {
-      await runBookingsExport(
-        query,
-        {
-          pending: t("bookings.export.pending"),
-          success: (count) => t("bookings.export.success").replace("{count}", String(count)),
-          errorFallback: t("bookings.export.error"),
-          tooLarge: (total, max) =>
-            t("bookings.export.tooLarge")
-              .replace("{total}", String(total))
-              .replace("{max}", String(max)),
-        },
-        { t },
-      )
-    } catch {
-      // The export helper owns translated error feedback.
-    } finally {
-      setExporting(false)
+      const result = await bookingsExport.mutateAsync({ ...query, search: search || undefined })
+      toast.success(t("bookings.export.success").replace("{count}", String(result.rowCount)))
+    } catch (err) {
+      showApiError(err, { fallback: t("bookings.export.error"), t })
     }
   }
 
@@ -146,17 +132,6 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={exporting}
-          onClick={() => void handleExport()}
-        >
-          <HugeiconsIcon icon={Download01Icon} size={16} />
-          {exporting ? t("bookings.export.pending") : t("bookings.export.button")}
-        </Button>
-      </div>
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("bookings.searchPlaceholder") }}
         tabs={{
@@ -245,6 +220,18 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
         }}
         hasFilters={hasFilters}
         onReset={() => { setSearch(""); resetFilters(); setActiveTimeTab("all") }}
+        trailing={
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={bookingsExport.isPending}
+            onClick={() => void handleExport()}
+          >
+            <HugeiconsIcon icon={Download01Icon} size={16} />
+            {bookingsExport.isPending ? t("bookings.export.exporting") : t("bookings.export.csv")}
+          </Button>
+        }
       />
 
       {error && (!bookings || bookings.length === 0) && (

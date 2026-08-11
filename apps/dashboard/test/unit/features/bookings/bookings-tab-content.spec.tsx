@@ -2,7 +2,7 @@
  * bookings-tab-content.spec.tsx
  */
 
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ButtonHTMLAttributes, ReactNode } from "react"
@@ -15,7 +15,7 @@ const { useQueryClient } = vi.hoisted(() => ({
 
 // ── Mock all dependencies ─────────────────────────────────────────────────────
 
-const { useBookings, useBookingMutations } = vi.hoisted(() => ({
+const { useBookings, useBookingMutations, exportMutateAsync, useBookingsExport } = vi.hoisted(() => ({
   useBookings: vi.fn(() => ({
     bookings: [],
     stats: null,
@@ -28,13 +28,18 @@ const { useBookings, useBookingMutations } = vi.hoisted(() => ({
     resetFilters: vi.fn(),
     hasFilters: false,
     setPage: vi.fn(),
+    query: { page: 2, limit: 20, status: "confirmed", dateFrom: "2026-08-01" },
   })),
   useBookingMutations: vi.fn(() => ({
     confirmMut: { mutateAsync: vi.fn(), isPending: false },
     noShowMut: { mutateAsync: vi.fn(), isPending: false },
+    checkInMut: { mutateAsync: vi.fn(), isPending: false },
+    completeMut: { mutateAsync: vi.fn(), isPending: false },
     adminCancelMut: { mutateAsync: vi.fn(), isPending: false },
     deleteMut: { mutateAsync: vi.fn(), isPending: false },
   })),
+  exportMutateAsync: vi.fn(),
+  useBookingsExport: vi.fn(() => ({ mutateAsync: exportMutateAsync, isPending: false })),
 }))
 
 const { useEmployees } = vi.hoisted(() => ({
@@ -60,9 +65,12 @@ const { useLocale } = vi.hoisted(() => ({
 }))
 
 vi.mock("@/hooks/use-bookings", () => ({ useBookings, useBookingMutations }))
+vi.mock("@/hooks/use-bookings-export", () => ({ useBookingsExport }))
 vi.mock("@/hooks/use-employees", () => ({ useEmployees }))
 vi.mock("@/hooks/use-organization-config", () => ({ useOrganizationConfig }))
 vi.mock("@/lib/api/bookings", () => ({}))
+vi.mock("@/lib/mutation-helpers", () => ({ showApiError: vi.fn() }))
+vi.mock("sonner", () => ({ toast: { success: vi.fn() } }))
 vi.mock("@/components/features/data-table", () => ({
   DataTable: ({ emptyTitle }: { emptyTitle: string }) => (
     <div data-testid="data-table">{emptyTitle}</div>
@@ -71,10 +79,16 @@ vi.mock("@/components/features/data-table", () => ({
 vi.mock("@/components/features/filter-bar", () => ({
   FilterBar: ({
     selects,
+    search,
+    trailing,
   }: {
     selects: Array<{ options: Array<{ value: string }> }>
+    search?: { value: string; onChange: (value: string) => void }
+    trailing?: ReactNode
   }) => (
     <div data-testid="filter-bar">
+      {search && <input aria-label="booking-search" value={search.value} onChange={(e) => search.onChange(e.target.value)} />}
+      {trailing}
       {selects?.map((s, i) =>
         s.options.map((o) => (
           <span key={`${i}-${o.value}`} data-testid={`option-${o.value}`} />
@@ -128,5 +142,27 @@ describe("BookingsTabContent", () => {
     })
 
     expect(screen.getByTestId("option-walk_in")).toBeTruthy()
+  })
+
+  it("exports current filters with the immediate local search value", async () => {
+    exportMutateAsync.mockResolvedValueOnce({ rowCount: 1, filename: "bookings.csv" })
+    render(<BookingsTabContent onRowClick={vi.fn()} />, { wrapper: makeWrapper() })
+    fireEvent.change(screen.getByLabelText("booking-search"), { target: { value: "new search" } })
+    fireEvent.click(screen.getByRole("button", { name: "bookings.export.csv" }))
+
+    await waitFor(() => expect(exportMutateAsync).toHaveBeenCalledWith({
+      page: 2,
+      limit: 20,
+      status: "confirmed",
+      dateFrom: "2026-08-01",
+      search: "new search",
+    }))
+  })
+
+  it("disables the export button and shows the translated pending label", () => {
+    useBookingsExport.mockReturnValue({ mutateAsync: exportMutateAsync, isPending: true })
+    render(<BookingsTabContent onRowClick={vi.fn()} />, { wrapper: makeWrapper() })
+    const button = screen.getByRole("button", { name: "bookings.export.exporting" })
+    expect(button).toBeDisabled()
   })
 })
