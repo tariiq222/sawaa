@@ -11,7 +11,12 @@ import {
 import { Button } from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons"
+import {
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  Cancel01Icon,
+  Search01Icon,
+} from "@hugeicons/core-free-icons"
 import { useLocale } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"
 
@@ -81,60 +86,84 @@ export function FilterBar({
   className,
 }: FilterBarProps) {
   const { t } = useLocale()
+  const [isExpanded, setIsExpanded] = React.useState(false)
+  const [hasOverflow, setHasOverflow] = React.useState(false)
+  const viewportRef = React.useRef<HTMLDivElement>(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const viewport = viewportRef.current
+    const content = contentRef.current
+    if (!viewport || !content) return
+    if (typeof ResizeObserver === "undefined") return
+
+    const updateOverflow = () => {
+      setHasOverflow(content.scrollWidth > viewport.clientWidth + 1)
+    }
+
+    updateOverflow()
+    const observer = new ResizeObserver(updateOverflow)
+    observer.observe(viewport)
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [search, tabs, selects, dateRange, trailing])
 
   return (
     <div className={cn("rounded-2xl border border-border bg-card/60 p-3 ring-1 ring-primary/[0.04]", className)}>
-      {/* Row 1: tabs + search + trailing | Row 2: attribute filters */}
       <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-        {tabs && (
-          <div
-            role="tablist"
-            aria-label={t("common.filters")}
-            className="flex items-center gap-0.5 rounded-lg border border-border/70 bg-background p-1 me-1"
-          >
-            {tabs.items.map((tab) => {
-              const isActive = tabs.activeKey === tab.key
-              return (
-                <button
-                  key={tab.key}
-                  role="tab"
-                  type="button"
-                  aria-selected={isActive}
-                  tabIndex={isActive ? 0 : -1}
-                  onClick={() => tabs.onTabChange(tab.key)}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-primary/[0.06]"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              )
-            })}
-          </div>
-        )}
+        <div className="flex min-w-0 items-center gap-2">
+          <div ref={viewportRef} className="min-w-0 flex-1 overflow-hidden">
+            <div
+              ref={contentRef}
+              className={cn(
+                "flex items-center gap-2",
+                isExpanded ? "w-full flex-wrap" : "w-max min-w-full flex-nowrap",
+              )}
+            >
+            {tabs && (
+              <div
+                role="tablist"
+                aria-label={t("common.filters")}
+                className="flex shrink-0 items-center gap-0.5 rounded-lg border border-border/70 bg-background p-1 me-1"
+              >
+                {tabs.items.map((tab) => {
+                  const isActive = tabs.activeKey === tab.key
+                  return (
+                    <button
+                      key={tab.key}
+                      role="tab"
+                      type="button"
+                      aria-selected={isActive}
+                      tabIndex={isActive ? 0 : -1}
+                      onClick={() => tabs.onTabChange(tab.key)}
+                      className={cn(
+                        "rounded-md px-3 py-1.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-primary/[0.06]"
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
-        {search && (
-          <label className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 min-w-[200px] transition-all duration-200 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50">
-            <span className="sr-only">{search.placeholder ?? t("common.search")}</span>
-            <HugeiconsIcon icon={Search01Icon} size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
-            <input
-              type="search"
-              value={search.value}
-              onChange={(e) => search.onChange(e.target.value)}
-              placeholder={search.placeholder}
-              className="border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full"
-            />
-          </label>
-        )}
-        {trailing && <div className="flex items-center ms-auto">{trailing}</div>}
-        </div>
+            {search && (
+              <label className="flex shrink-0 items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 min-w-[200px] transition-all duration-200 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50">
+                <span className="sr-only">{search.placeholder ?? t("common.search")}</span>
+                <HugeiconsIcon icon={Search01Icon} size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={search.value}
+                  onChange={(e) => search.onChange(e.target.value)}
+                  placeholder={search.placeholder}
+                  className="border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full"
+                />
+              </label>
+            )}
 
-        {((selects?.length ?? 0) > 0 || dateRange) && (
-          <div className="flex flex-wrap items-center gap-2">
             {selects?.map((filter) => (
               <Select
                 key={filter.key}
@@ -143,7 +172,7 @@ export function FilterBar({
               >
                 <SelectTrigger
                   size="sm"
-                  className={cn("w-auto min-w-[120px]", filter.width)}
+                  className={cn("w-auto min-w-[120px] shrink-0", filter.width)}
                 >
                   <SelectValue placeholder={filter.placeholder} />
                 </SelectTrigger>
@@ -183,8 +212,24 @@ export function FilterBar({
                 </div>
               </>
             )}
+            {trailing && <div className="flex shrink-0 items-center ms-auto">{trailing}</div>}
+            </div>
           </div>
-        )}
+
+          {(hasOverflow || isExpanded) && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={t("common.filters")}
+              title={t("common.filters")}
+              onClick={() => setIsExpanded((expanded) => !expanded)}
+              className="shrink-0"
+            >
+              <HugeiconsIcon icon={isExpanded ? ArrowUp01Icon : ArrowDown01Icon} size={16} aria-hidden="true" />
+            </Button>
+          )}
+        </div>
 
         {(hasFilters || resultCount !== undefined) && (
           <div className="flex flex-wrap items-center gap-2">
