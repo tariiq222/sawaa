@@ -6,6 +6,7 @@
  * intentionally keeps js-yaml on 5.x, so restore only those compatibility
  * aliases before the generator starts.
  */
+/* eslint-disable @typescript-eslint/no-require-imports -- NODE_OPTIONS preload is CommonJS. */
 const yaml = require("js-yaml");
 
 if (!yaml.types) {
