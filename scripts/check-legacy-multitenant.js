@@ -12,6 +12,8 @@ const ignoredDirs = new Set([
   'dist',
   'build',
   'coverage',
+  'test-results',
+  'playwright-report',
 ]);
 
 const textExtensions = new Set([
