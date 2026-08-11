@@ -10,7 +10,7 @@ import type { ConfigService } from "@nestjs/config";
 import { DEFAULT_ORG_ID } from "../../common/constants";
 import { WhatsappInboundQueueService } from "../../infrastructure/whatsapp/whatsapp-inbound-queue.service";
 
-const mockSecret = "wh-test-secret-1234567890";
+const mockSecret = "wh-test-secret-1234567890"; // gitleaks:allow -- test fixture
 const rawBody = JSON.stringify({
   event: "messages.upsert",
   instance: "sawaa-main",

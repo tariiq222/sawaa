@@ -21,7 +21,7 @@ function buildPrisma(configRow: unknown) {
 }
 
 describe("WhatsappWebhookVerifier", () => {
-  const secret = "wh-secret-test-1234567890";
+  const secret = "wh-secret-test-1234567890"; // gitleaks:allow -- test fixture
   const rawBody = JSON.stringify({
     event: "messages.upsert",
     instance: "sawaa-main",
