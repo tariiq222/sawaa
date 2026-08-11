@@ -118,6 +118,7 @@ apps/backend/coverage.backup-*/
 graphify-out/
 
 # ─── Local scratch / tool artifacts (never commit) ────────────
+.worktrees/
 testsprite_tests/
 test-results/
 
