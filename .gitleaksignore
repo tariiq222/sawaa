@@ -1,0 +1,25 @@
+# Deterministic CI/test fixtures in recovered historical commits.
+# Each entry is pinned to an exact commit, path, rule, and line.
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:136
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:138
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:139
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:140
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:141
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:44
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:46
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:47
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:48
+2eb62fe8d308f0b0333c3b7b443e0fe0cb400052:.github/workflows/regression-check.yml:generic-api-key:49
+6bfa0e9a4a511246738b802e0123fb5614221304:.github/workflows/ci.yml:generic-api-key:105
+6bfa0e9a4a511246738b802e0123fb5614221304:.github/workflows/ci.yml:generic-api-key:128
+6bfa0e9a4a511246738b802e0123fb5614221304:.github/workflows/ci.yml:generic-api-key:163
+6bfa0e9a4a511246738b802e0123fb5614221304:.github/workflows/ci.yml:generic-api-key:342
+6bfa0e9a4a511246738b802e0123fb5614221304:apps/backend/src/api/public/whatsapp-webhook.controller.spec.ts:generic-api-key:12
+6bfa0e9a4a511246738b802e0123fb5614221304:apps/backend/src/modules/integrations/whatsapp/upsert-whatsapp-config.handler.spec.ts:generic-api-key:197
+6bfa0e9a4a511246738b802e0123fb5614221304:apps/backend/src/modules/integrations/whatsapp/upsert-whatsapp-config.handler.spec.ts:generic-api-key:205
+6bfa0e9a4a511246738b802e0123fb5614221304:apps/backend/src/modules/integrations/whatsapp/webhook/whatsapp-webhook-verifier.spec.ts:generic-api-key:24
+8e591466b1a5828b9a3563c9db63c4ce22c708ce:.github/workflows/merge-gate.yml:generic-api-key:62
+8e591466b1a5828b9a3563c9db63c4ce22c708ce:.github/workflows/merge-gate.yml:generic-api-key:64
+8e591466b1a5828b9a3563c9db63c4ce22c708ce:.github/workflows/merge-gate.yml:generic-api-key:65
+8e591466b1a5828b9a3563c9db63c4ce22c708ce:.github/workflows/merge-gate.yml:generic-api-key:66
+8e591466b1a5828b9a3563c9db63c4ce22c708ce:.github/workflows/merge-gate.yml:generic-api-key:67
