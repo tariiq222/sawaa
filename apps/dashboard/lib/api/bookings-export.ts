@@ -86,7 +86,9 @@ function rowFor(b: Booking): string[] {
     ? `${b.employee.user.firstName} ${b.employee.user.lastName}`.trim()
     : ""
   return [
-    b.bookingNumber ?? "",
+    b.bookingNumber === null || b.bookingNumber === undefined
+      ? ""
+      : String(b.bookingNumber),
     b.id,
     b.date,
     b.startTime,
@@ -104,8 +106,10 @@ function rowFor(b: Booking): string[] {
     b.type,
     b.deliveryType ?? "",
     b.source,
-    b.durationMinutesSnapshot ?? "",
-    b.priceSnapshot ?? "",
+    b.durationMinutesSnapshot === null
+      ? ""
+      : String(b.durationMinutesSnapshot),
+    b.priceSnapshot === null ? "" : String(b.priceSnapshot),
     b.cancellationReason ?? "",
     b.notes ?? "",
     b.createdAt,

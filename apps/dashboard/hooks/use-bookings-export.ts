@@ -1,6 +1,5 @@
 "use client"
 
-import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { exportBookingsCsv } from "@/lib/api/bookings-export"
 import { showApiError } from "@/lib/mutation-helpers"
@@ -15,17 +14,6 @@ export interface BookingsExportLabels {
 
 interface MutationContext {
   t?: (key: string) => string
-}
-
-/**
- * TanStack mutation around `exportBookingsCsv`. The component owns the
- * toasts and the translated messages so the hook stays UI-agnostic and
- * test-friendly.
- */
-export function useBookingsExport(labels: BookingsExportLabels) {
-  return useMutation({
-    mutationFn: async (query: BookingListQuery) => exportBookingsCsv(query),
-  })
 }
 
 /**
@@ -54,7 +42,7 @@ export async function runBookingsExport(
     showApiError(err, {
       fallback: labels.errorFallback,
       t: context.t,
-      dedupeKey: loadingToastId,
+      dedupeKey: String(loadingToastId),
     })
     throw err
   }

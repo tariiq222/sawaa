@@ -20,10 +20,7 @@ import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { showApiError } from "@/lib/mutation-helpers"
-import {
-  MAX_EXPORT_ROWS,
-  runBookingsExport,
-} from "@/lib/api/bookings-export"
+import { runBookingsExport } from "@/hooks/use-bookings-export"
 import type { Booking, CancellationReason } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
@@ -40,6 +37,29 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const [activeTimeTab, setActiveTimeTab] = useState("all")
   const [search, setSearch] = useState("")
   const [exporting, setExporting] = useState(false)
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      await runBookingsExport(
+        query,
+        {
+          pending: t("bookings.export.pending"),
+          success: (count) => t("bookings.export.success").replace("{count}", String(count)),
+          errorFallback: t("bookings.export.error"),
+          tooLarge: (total, max) =>
+            t("bookings.export.tooLarge")
+              .replace("{total}", String(total))
+              .replace("{max}", String(max)),
+        },
+        { t },
+      )
+    } catch {
+      // The export helper owns translated error feedback.
+    } finally {
+      setExporting(false)
+    }
+  }
 
   // Debounce search → filters.search (300ms)
   useEffect(() => {
@@ -126,6 +146,17 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={exporting}
+          onClick={() => void handleExport()}
+        >
+          <HugeiconsIcon icon={Download01Icon} size={16} />
+          {exporting ? t("bookings.export.pending") : t("bookings.export.button")}
+        </Button>
+      </div>
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("bookings.searchPlaceholder") }}
         tabs={{

@@ -5,7 +5,7 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import type { ReactNode } from "react"
+import type { ButtonHTMLAttributes, ReactNode } from "react"
 
 const { useQueryClient } = vi.hoisted(() => ({
   useQueryClient: vi.fn(() => ({
@@ -88,6 +88,9 @@ vi.mock("@/components/features/error-banner", () => ({
 }))
 vi.mock("@sawaa/ui", () => ({
   Skeleton: () => <div data-testid="skeleton" />,
+  Button: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button {...props}>{children}</button>
+  ),
 }))
 vi.mock("@/components/features/bookings/booking-columns", () => ({
   getBookingColumns: vi.fn(() => []),
