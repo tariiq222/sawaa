@@ -119,24 +119,16 @@ export const envValidationSchema = Joi.object({
   // Encrypts Meta Cloud API credentials (accessToken, businessAccountId, phoneNumberId)
   // and the webhook verify token. Same HKDF + SINGLE_TENANT_CONTEXT_ID pattern as the
   // other provider keys.
-  WHATSAPP_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
+  WHATSAPP_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).optional(),
   // Evolution API is server-owned. These values must never come from the dashboard.
   WHATSAPP_EVOLUTION_BASE_URL: Joi.when('NODE_ENV', {
     is: 'production',
-    then: Joi.string().uri({ scheme: ['https'] }).required(),
+    then: Joi.string().uri({ scheme: ['https'] }).optional(),
     otherwise: Joi.string().uri().allow('').optional(),
   }),
   WHATSAPP_EVOLUTION_INSTANCE_NAME: Joi.string().default('sawaa-main'),
-  WHATSAPP_EVOLUTION_API_KEY: Joi.when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().min(8).required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
-  WHATSAPP_EVOLUTION_WEBHOOK_SECRET: Joi.when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().min(16).required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
+  WHATSAPP_EVOLUTION_API_KEY: Joi.string().min(8).allow('').optional(),
+  WHATSAPP_EVOLUTION_WEBHOOK_SECRET: Joi.string().min(16).allow('').optional(),
   SMS_WEBHOOK_URL_BASE: Joi.string().uri().allow('').optional(),
 
   // WhatsApp agent runtime — optional until WhatsApp module is enabled.
@@ -245,6 +237,24 @@ export const envValidationSchema = Joi.object({
   // running app with a known JWT secret is far worse than a non-running app.
   .custom((value, helpers) => {
     if (value.NODE_ENV !== 'production') return value;
+    const whatsappKeys = [
+      'WHATSAPP_PROVIDER_ENCRYPTION_KEY',
+      'WHATSAPP_EVOLUTION_BASE_URL',
+      'WHATSAPP_EVOLUTION_API_KEY',
+      'WHATSAPP_EVOLUTION_WEBHOOK_SECRET',
+    ];
+    const configuredWhatsappKeys = whatsappKeys.filter((key) => {
+      const setting = value[key];
+      return typeof setting === 'string' && setting.trim().length > 0;
+    });
+    if (
+      configuredWhatsappKeys.length > 0 &&
+      configuredWhatsappKeys.length !== whatsappKeys.length
+    ) {
+      return helpers.error('any.invalid', {
+        message: 'WhatsApp integration must provide all four settings or none',
+      });
+    }
     const placeholderSubstrings = ['change-me', 'CHANGE_ME', 'REPLACE_ME', 'REPLACE_WITH', 'dev-', 'sk_test_'];
     const sensitiveKeys = [
       'JWT_ACCESS_SECRET',

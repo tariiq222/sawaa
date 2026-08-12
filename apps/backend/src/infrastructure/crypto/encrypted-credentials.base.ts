@@ -64,10 +64,12 @@ export interface EncryptedCredentialsSpec {
 	legacyWarnLabel: string;
 	/** Accepted post-decrypt payload shapes (see credential-payload-shape.ts). */
 	payloadVariants: CredentialVariantSpec[];
+	/** Allow the provider to boot disabled; encrypt/decrypt still fail without a key. */
+	allowMissingKey?: boolean;
 }
 
 export abstract class EncryptedCredentialsBase {
-	private readonly masterKey: Buffer;
+	private readonly masterKey: Buffer | null;
 	protected readonly logger: Logger;
 
 	protected constructor(
@@ -77,6 +79,10 @@ export abstract class EncryptedCredentialsBase {
 		this.logger = new Logger(spec.serviceName);
 		const raw = cfg.get<string>(spec.envKeyName);
 		if (!raw) {
+			if (spec.allowMissingKey) {
+				this.masterKey = null;
+				return;
+			}
 			throw new InternalServerErrorException(`${spec.envKeyName} missing`);
 		}
 		const key = Buffer.from(raw, "base64");
@@ -91,6 +97,7 @@ export abstract class EncryptedCredentialsBase {
 	// ── Public API ────────────────────────────────────────────────────────────
 
 	encrypt(payload: Record<string, unknown>, contextId: string): string {
+		this.requireMasterKey();
 		const key = this.deriveKey(contextId);
 		const iv = randomBytes(12);
 		const cipher = createCipheriv("aes-256-gcm", key, iv);
@@ -116,6 +123,7 @@ export abstract class EncryptedCredentialsBase {
 		ciphertext: string,
 		contextId: string,
 	): T {
+		const masterKey = this.requireMasterKey();
 		let plain: Record<string, unknown>;
 		try {
 			plain = this.decryptWithKey(this.deriveKey(contextId), ciphertext);
@@ -125,7 +133,7 @@ export abstract class EncryptedCredentialsBase {
 			// (not a structural error like a too-short buffer).
 			if (!this.looksLikeAuthFailure(err)) throw err;
 			try {
-				plain = this.decryptWithKey(this.masterKey, ciphertext);
+				plain = this.decryptWithKey(masterKey, ciphertext);
 			} catch {
 				// Both schemes failed — surface the original (HKDF) error for diagnostics.
 				throw err;
@@ -203,14 +211,22 @@ export abstract class EncryptedCredentialsBase {
 	 *    or keys for other contexts
 	 */
 	private deriveKey(contextId: string): Buffer {
+		const masterKey = this.requireMasterKey();
 		return Buffer.from(
 			hkdfSync(
 				"sha256",
-				this.masterKey,
+				masterKey,
 				this.spec.hkdfSalt,
 				contextId,
 				HKDF_KEY_LEN,
 			),
 		);
+	}
+
+	private requireMasterKey(): Buffer {
+		if (!this.masterKey) {
+			throw new InternalServerErrorException(`${this.spec.envKeyName} missing`);
+		}
+		return this.masterKey;
 	}
 }

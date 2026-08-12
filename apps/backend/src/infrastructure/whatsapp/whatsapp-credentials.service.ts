@@ -54,6 +54,7 @@ export class WhatsappCredentialsService extends EncryptedCredentialsBase {
 			hkdfSalt: "deqah-whatsapp-creds-v1",
 			legacyWarnLabel: "WhatsApp",
 			payloadVariants: PAYLOAD_VARIANTS,
+			allowMissingKey: true,
 		});
 	}
 }

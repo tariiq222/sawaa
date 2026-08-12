@@ -104,6 +104,31 @@ describe('envValidationSchema', () => {
     expect(result.error).toBeUndefined();
   });
 
+  it('allows production to boot when the optional WhatsApp integration is not configured', () => {
+    process.env.NODE_ENV = 'production';
+    const env = {
+      ...baseValidEnv,
+      WHATSAPP_PROVIDER_ENCRYPTION_KEY: undefined,
+      WHATSAPP_EVOLUTION_BASE_URL: undefined,
+      WHATSAPP_EVOLUTION_API_KEY: undefined,
+      WHATSAPP_EVOLUTION_WEBHOOK_SECRET: undefined,
+    };
+    const result = envValidationSchema.validate(env, { abortEarly: false });
+    expect(result.error).toBeUndefined();
+  });
+
+  it('rejects a partial WhatsApp configuration in production', () => {
+    process.env.NODE_ENV = 'production';
+    const env = {
+      ...baseValidEnv,
+      WHATSAPP_PROVIDER_ENCRYPTION_KEY: undefined,
+      WHATSAPP_EVOLUTION_API_KEY: undefined,
+      WHATSAPP_EVOLUTION_WEBHOOK_SECRET: undefined,
+    };
+    const result = envValidationSchema.validate(env, { abortEarly: false });
+    expect(result.error).toBeDefined();
+  });
+
   it('passes with minimal development env', () => {
     process.env.NODE_ENV = 'development';
     const result = envValidationSchema.validate(buildDevEnv(), {
