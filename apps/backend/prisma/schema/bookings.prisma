@@ -68,6 +68,9 @@ model Booking {
   // Origin of the booking (front desk vs public website). Existing rows backfill to RECEPTION.
   source               BookingSource       @default(RECEPTION)
   status               BookingStatus       @default(PENDING)
+  // Historical Booknetic rows preserve their source status but must never be
+  // processed by live autocomplete/no-show automation.
+  isHistoricalImport   Boolean             @default(false)
   scheduledAt          DateTime
   endsAt               DateTime // scheduledAt + durationMins — stored for overlap index queries
   durationMins         Int

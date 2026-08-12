@@ -122,3 +122,33 @@ model OutboxEvent {
   @@index([status, lockedUntil], map: "OutboxEvent_status_locked_idx")
   @@index([failedAt], map: "OutboxEvent_failedAt_idx")
 }
+
+// ─── LegacyImportRecord ──────────────────────────────────────────────────────
+// Idempotency and reconciliation ledger for one-shot historical imports.
+// The source identity is immutable; payloadHash makes source drift explicit.
+
+enum LegacyImportDisposition {
+  IMPORTED
+  LINKED_EXISTING
+  ARCHIVED_ONLY
+  SKIPPED
+}
+
+model LegacyImportRecord {
+  id           String                  @id @default(uuid()) @db.Uuid
+  sourceSystem String
+  sourceTenant String
+  entityType   String
+  legacyId     String
+  targetType   String?
+  targetId     String?
+  disposition  LegacyImportDisposition
+  payloadHash  String
+  metadata     Json?
+  importedAt   DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime                @updatedAt @db.Timestamptz(3)
+
+  @@unique([sourceSystem, sourceTenant, entityType, legacyId])
+  @@index([targetType, targetId])
+  @@index([disposition])
+}

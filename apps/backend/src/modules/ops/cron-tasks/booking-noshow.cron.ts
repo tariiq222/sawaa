@@ -33,6 +33,7 @@ export class BookingNoShowCron {
       const targets = await this.prisma.booking.findMany({
         where: {
           status: BookingStatus.CONFIRMED,
+          isHistoricalImport: false,
           scheduledAt: { lte: cutoff },
           checkedInAt: null,
         },

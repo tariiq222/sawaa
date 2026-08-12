@@ -59,6 +59,7 @@ describe('BookingAutocompleteCron', () => {
         where: expect.objectContaining({
           status: BookingStatus.CONFIRMED,
           checkedInAt: { not: null },
+          isHistoricalImport: false,
         }),
         orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
         take: 100,
@@ -140,6 +141,7 @@ describe('BookingNoShowCron', () => {
         where: expect.objectContaining({
           status: BookingStatus.CONFIRMED,
           checkedInAt: null,
+          isHistoricalImport: false,
         }),
         orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
         take: 100,

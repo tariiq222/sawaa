@@ -85,6 +85,7 @@ describe('BookingNoShowCron', () => {
     const call = (prisma.booking.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where.status).toBe(BookingStatus.CONFIRMED);
     expect(call.where.checkedInAt).toBeNull();
+    expect(call.where.isHistoricalImport).toBe(false);
     expect(call.where.scheduledAt).toHaveProperty('lte');
   });
 });

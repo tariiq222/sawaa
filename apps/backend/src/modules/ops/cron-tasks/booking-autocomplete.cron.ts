@@ -33,6 +33,7 @@ export class BookingAutocompleteCron {
       const targets = await this.prisma.booking.findMany({
         where: {
           status: BookingStatus.CONFIRMED,
+          isHistoricalImport: false,
           endsAt: { lte: cutoff },
           checkedInAt: { not: null },
         },
