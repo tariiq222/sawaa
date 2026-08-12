@@ -13,6 +13,49 @@ describe('ListBookingsHandler', () => {
     expect(result.meta.total).toBe(1);
   });
 
+  it('loads Booknetic payment metadata for imported booking rows', async () => {
+    const prisma = buildPrisma() as ReturnType<typeof buildPrisma> & {
+      legacyImportRecord: { findMany: jest.Mock };
+    };
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { ...mockBooking, isHistoricalImport: true, status: BookingStatus.CONFIRMED },
+    ]);
+    prisma.legacyImportRecord.findMany = jest.fn().mockResolvedValue([
+        {
+          targetId: 'book-1',
+          metadata: { paymentStatus: 'paid', paymentMethod: 'local', paidAmount: '200.0000' },
+        },
+      ]);
+
+    const result = await new ListBookingsHandler(prisma as never).execute({ page: 1, limit: 10 });
+
+    expect(result.items[0]?.historicalPayment).toEqual({
+      status: 'paid',
+      amount: 20000,
+      method: 'local',
+      requiresReview: false,
+    });
+    expect(prisma.legacyImportRecord.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ targetId: { in: ['book-1'] } }),
+      }),
+    );
+  });
+
+  it('does not load legacy payment metadata for a linked operational booking', async () => {
+    const prisma = buildPrisma() as ReturnType<typeof buildPrisma> & {
+      legacyImportRecord: { findMany: jest.Mock };
+    };
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { ...mockBooking, isHistoricalImport: false },
+    ]);
+
+    const result = await new ListBookingsHandler(prisma as never).execute({ page: 1, limit: 10 });
+
+    expect(prisma.legacyImportRecord.findMany).not.toHaveBeenCalled();
+    expect(result.items[0]?.historicalPayment).toBeNull();
+  });
+
   it('filters by status when provided', async () => {
     const prisma = buildPrisma();
     const handler = new ListBookingsHandler(prisma as never);

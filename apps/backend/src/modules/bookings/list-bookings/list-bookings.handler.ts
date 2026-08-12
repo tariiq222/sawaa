@@ -4,6 +4,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListBookingsDto } from './list-bookings.dto';
 import { mapBookingRow, type BookingRelations } from '../booking-row.mapper';
+import type { HistoricalPaymentMetadata } from '../historical-payment.helper';
 
 export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDate' | 'toDate'> & {
   page: number;
@@ -129,14 +130,23 @@ export class ListBookingsHandler {
 
 async function loadRelations(
   prisma: PrismaService,
-  rows: { id: string; clientId: string; employeeId: string; serviceId: string | null }[],
+  rows: {
+    id: string;
+    clientId: string;
+    employeeId: string;
+    serviceId: string | null;
+    isHistoricalImport: boolean;
+  }[],
 ): Promise<BookingRelations> {
   const bookingIds = rows.map((r) => r.id);
+  const historicalBookingIds = rows
+    .filter((r) => r.isHistoricalImport)
+    .map((r) => r.id);
   const clientIds = [...new Set(rows.map((r) => r.clientId))];
   const employeeIds = [...new Set(rows.map((r) => r.employeeId))];
   const serviceIds = [...new Set(rows.map((r) => r.serviceId).filter((id): id is string => id !== null))];
 
-  const [clients, employees, services, invoices] = await Promise.all([
+  const [clients, employees, services, invoices, historicalRecords] = await Promise.all([
     clientIds.length
       ? prisma.client.findMany({ where: { id: { in: clientIds } } })
       : Promise.resolve([]),
@@ -167,6 +177,17 @@ async function loadRelations(
               },
             },
           },
+        })
+      : Promise.resolve([]),
+    historicalBookingIds.length
+      ? prisma.legacyImportRecord.findMany({
+          where: {
+            sourceSystem: 'booknetic',
+            entityType: 'APPOINTMENT',
+            targetType: 'Booking',
+            targetId: { in: historicalBookingIds },
+          },
+          select: { targetId: true, metadata: true },
         })
       : Promise.resolve([]),
   ]);
@@ -223,5 +244,13 @@ async function loadRelations(
     servicesById: new Map(services.map((s) => [s.id, s])),
     paymentsByBookingId,
     invoicesByBookingId,
+    historicalPaymentsByBookingId: new Map(
+      historicalRecords
+        .filter((row) => row.targetId && row.metadata)
+        .map((row) => [
+          row.targetId!,
+          row.metadata as HistoricalPaymentMetadata,
+        ]),
+    ),
   };
 }

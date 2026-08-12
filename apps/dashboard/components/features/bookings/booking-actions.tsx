@@ -149,7 +149,7 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
     }
   }
 
-  if (actions.length === 0) return null
+  if (booking.isHistoricalImport || actions.length === 0) return null
 
   return (
     <>

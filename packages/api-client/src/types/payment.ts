@@ -73,6 +73,12 @@ export interface PaymentStats {
   refunded: number
   refundedAmount: number
   failed: number
+  historical: {
+    collectedCount: number
+    collectedAmount: number
+    reviewCount: number
+    reviewAmount: number
+  }
 }
 
 export interface PaymentListQuery extends PaginationParams {

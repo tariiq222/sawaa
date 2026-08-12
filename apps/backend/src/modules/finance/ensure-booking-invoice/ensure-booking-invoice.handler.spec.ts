@@ -60,6 +60,15 @@ describe('EnsureBookingInvoiceHandler', () => {
     });
   });
 
+  it('rejects an imported historical booking before creating an invoice', async () => {
+    const { handler, prisma, createInvoice } = build({ isHistoricalImport: true });
+
+    await expect(handler.execute({ bookingId: 'booking-1' }))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.invoice.findUnique).not.toHaveBeenCalled();
+    expect(createInvoice.execute).not.toHaveBeenCalled();
+  });
+
   it('passes the stored discount as discountAmt', async () => {
     const { handler, createInvoice } = build({ discountedPrice: dec(35000) });
     await handler.execute({ bookingId: 'booking-1' });

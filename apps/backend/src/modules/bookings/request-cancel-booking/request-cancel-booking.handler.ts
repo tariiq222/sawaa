@@ -7,7 +7,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRequestedEvent } from '../events/booking-cancel-requested.event';
 import { assertTransition } from '../booking-state-machine';
-import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { assertBookingIsMutable, updateBookingAtomically } from '../booking-lifecycle.helper';
 
 export interface RequestCancelBookingCommand {
   bookingId: string;
@@ -31,6 +31,7 @@ export class RequestCancelBookingHandler {
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
+    assertBookingIsMutable(booking);
 
     const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
 

@@ -12,7 +12,7 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
 import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { ProgramCapacityService } from '../program/program-capacity.service';
-import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { assertBookingIsMutable, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { returnPackageCreditForBooking } from '../package-credit-return.helper';
 
 export type CancelBookingCommand = CancelBookingDto & {
@@ -46,6 +46,7 @@ export class CancelBookingHandler {
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
+    assertBookingIsMutable(booking);
     if (cmd.source === 'client' && cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');
     }

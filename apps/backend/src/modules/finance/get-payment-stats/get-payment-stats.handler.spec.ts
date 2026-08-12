@@ -5,10 +5,18 @@ import { PrismaService } from '../../../infrastructure/database';
 
 describe('GetPaymentStatsHandler', () => {
   let handler: GetPaymentStatsHandler;
-  let prisma: { payment: { groupBy: jest.Mock } };
+  let prisma: { payment: { groupBy: jest.Mock }; $queryRaw: jest.Mock };
 
   beforeEach(async () => {
-    prisma = { payment: { groupBy: jest.fn() } };
+    prisma = {
+      payment: { groupBy: jest.fn() },
+      $queryRaw: jest.fn().mockResolvedValue([{
+        collectedCount: 0n,
+        collectedAmount: 0n,
+        reviewCount: 0n,
+        reviewAmount: 0n,
+      }]),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -35,6 +43,12 @@ describe('GetPaymentStatsHandler', () => {
       refunded: 0,
       refundedAmount: 0,
       failed: 0,
+      historical: {
+        collectedCount: 0,
+        collectedAmount: 0,
+        reviewCount: 0,
+        reviewAmount: 0,
+      },
     });
   });
 
@@ -66,5 +80,26 @@ describe('GetPaymentStatsHandler', () => {
     ]);
     const result = await handler.execute();
     expect(result.completedAmount).toBe(0);
+  });
+
+  it('returns legacy collections separately in integer halalas', async () => {
+    prisma.payment.groupBy.mockResolvedValue([]);
+    prisma.$queryRaw.mockResolvedValue([{
+      collectedCount: 3427n,
+      collectedAmount: 103353250n,
+      reviewCount: 109n,
+      reviewAmount: 1575000n,
+    }]);
+
+    const result = await handler.execute();
+
+    expect(result.total).toBe(0);
+    expect(result.totalAmount).toBe(0);
+    expect(result.historical).toEqual({
+      collectedCount: 3427,
+      collectedAmount: 103353250,
+      reviewCount: 109,
+      reviewAmount: 1575000,
+    });
   });
 });

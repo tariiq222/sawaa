@@ -85,6 +85,10 @@ const buildPrismaRaw = () => ({
     findUnique: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockResolvedValue({ id: 'inv-1' }),
   },
+  legacyImportRecord: {
+    findFirst: jest.fn().mockResolvedValue(null),
+    findMany: jest.fn().mockResolvedValue([]),
+  },
   // Session-package credit return (cancel / no-show / expire). Defaults model
   // a booking that consumed a credit from an ACTIVE purchase; specs override
   // packageCreditUsage.findFirst to null for non-credit bookings.

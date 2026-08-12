@@ -130,14 +130,16 @@ export function ActionsCell({
   }
 
   const payment = booking.payment
+  const isHistorical = booking.isHistoricalImport
   const canVerify = payment?.status === "awaiting"
   const isPending = verifyMut.isPending
   // Terminal bookings are over: no editing. Invoice stays reachable for review.
-  const hasInvoice = !!booking.invoice
+  const hasInvoice = !isHistorical && !!booking.invoice
   // Off-gateway refund: only cash/bank-transfer/mada/tabby payments (no Moyasar
   // card gateway). Card refunds go through the admin-only gateway path.
   // Backend gate: PATCH /payments/:id/manual-refund requires `update:Payment`.
   const canManualRefund =
+    !isHistorical &&
     !!payment &&
     payment.status === "paid" &&
     payment.method !== "moyasar" &&
@@ -198,13 +200,15 @@ export function ActionsCell({
           />
         </>
       )}
-      <button
-        className={intentIconBtn.danger}
-        aria-label={t("bookings.col.delete")}
-        onClick={onDelete}
-      >
-        <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2.2} />
-      </button>
+      {!isHistorical && (
+        <button
+          className={intentIconBtn.danger}
+          aria-label={t("bookings.col.delete")}
+          onClick={onDelete}
+        >
+          <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2.2} />
+        </button>
+      )}
     </div>
   )
 }
@@ -220,6 +224,7 @@ export function StatusCell({
   onDelete: (booking: Booking) => void
 }) {
   const { t } = useLocale()
+  if (booking.isHistoricalImport) return <StatusBadge status={booking.status} />
   const actions = quickStatusActions[booking.status] ?? []
   const canCancel = CANCELLABLE_STATUSES.has(booking.status)
   if (!actions.length && !canCancel) return <StatusBadge status={booking.status} />
@@ -268,6 +273,24 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
   const { t } = useLocale()
   const { canDo } = useAuth()
   const payment = booking.payment
+  const historicalPayment = booking.historicalPayment
+  const [recordOpen, setRecordOpen] = useState(false)
+  if (booking.isHistoricalImport && historicalPayment) {
+    const statusKey = historicalPayment.requiresReview
+      ? "review"
+      : historicalPayment.status
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <PaymentStatusBadge
+          status={historicalPayment.requiresReview ? "awaiting" : historicalPayment.status}
+          label={t(`bookings.col.historicalPayment.${statusKey}`)}
+        />
+        <span className="text-[11px] font-medium text-muted-foreground">
+          {t("bookings.col.historicalPayment.legacyMarker")}
+        </span>
+      </div>
+    )
+  }
   const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
   // Pay-at-clinic bookings have no invoice yet — still allow recording a payment
   // (the dialog materialises a DRAFT invoice on open). Needs a price and a client
@@ -277,11 +300,10 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
   // Backend gate: POST /dashboard/finance/payments requires `manage:Payment`
   // (and manage:Invoice for the DRAFT-invoice sub-call).
   const canRecordPayment =
+    !booking.isHistoricalImport &&
     (hasOutstanding || noInvoiceButPayable) &&
     payment?.status !== "awaiting" &&
     canDo("payment", "manage")
-
-  const [recordOpen, setRecordOpen] = useState(false)
 
   const status = isPartiallyPaid(booking) ? "partial" : payment?.status ?? "unpaid"
   const label = payment

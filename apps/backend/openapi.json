@@ -11748,7 +11748,7 @@
                 }
               }
             },
-            "description": "Booking has no payable amount or no client"
+            "description": "Booking is historical, has no payable amount, or has no client"
           },
           "401": {
             "content": {
@@ -13555,7 +13555,84 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Payment statistics"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "completed": {
+                      "example": 20,
+                      "type": "number"
+                    },
+                    "completedAmount": {
+                      "example": 100000,
+                      "type": "number"
+                    },
+                    "failed": {
+                      "example": 3,
+                      "type": "number"
+                    },
+                    "historical": {
+                      "description": "Booknetic collections kept separate from operational finance",
+                      "properties": {
+                        "collectedAmount": {
+                          "description": "Integer halalas",
+                          "example": 103353250,
+                          "type": "number"
+                        },
+                        "collectedCount": {
+                          "example": 3427,
+                          "type": "number"
+                        },
+                        "reviewAmount": {
+                          "description": "Integer halalas",
+                          "example": 1575000,
+                          "type": "number"
+                        },
+                        "reviewCount": {
+                          "example": 109,
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "pending": {
+                      "example": 2,
+                      "type": "number"
+                    },
+                    "pendingAmount": {
+                      "example": 10000,
+                      "type": "number"
+                    },
+                    "pendingVerification": {
+                      "example": 1,
+                      "type": "number"
+                    },
+                    "pendingVerificationAmount": {
+                      "example": 5000,
+                      "type": "number"
+                    },
+                    "refunded": {
+                      "example": 3,
+                      "type": "number"
+                    },
+                    "refundedAmount": {
+                      "example": 10000,
+                      "type": "number"
+                    },
+                    "total": {
+                      "example": 29,
+                      "type": "number"
+                    },
+                    "totalAmount": {
+                      "example": 125000,
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Operational payment statistics plus a separate read-only legacy summary"
           },
           "400": {
             "content": {

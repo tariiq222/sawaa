@@ -1,5 +1,9 @@
 import type { Booking, Client, Employee, Service } from '@prisma/client';
 import { formatToBusinessHHmm, formatToBusinessYmd } from '../../common/timezone';
+import {
+  mapHistoricalPayment,
+  type HistoricalPaymentMetadata,
+} from './historical-payment.helper';
 
 /** One representative payment per booking (latest). Amounts in halalat. */
 export interface BookingPaymentRelation {
@@ -26,6 +30,8 @@ export interface BookingRelations {
   servicesById: Map<string, Service>;
   /** bookingId → latest payment (in halalat). Absent key means no payment. */
   paymentsByBookingId: Map<string, BookingPaymentRelation>;
+  /** bookingId → immutable Booknetic payment metadata. */
+  historicalPaymentsByBookingId?: Map<string, HistoricalPaymentMetadata>;
   /** bookingId → invoice summary. Absent key means no invoice yet. */
   invoicesByBookingId?: Map<string, BookingInvoiceRelation>;
 }
@@ -72,6 +78,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
 
   const pay = relations.paymentsByBookingId.get(b.id) ?? null;
   const inv = relations.invoicesByBookingId?.get(b.id) ?? null;
+  const historicalMetadata = relations.historicalPaymentsByBookingId?.get(b.id) ?? null;
 
   return {
     id: b.id,
@@ -91,6 +98,10 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     startTime,
     endTime,
     status: mapStatusForUi(b.status),
+    isHistoricalImport: b.isHistoricalImport === true,
+    historicalPayment: historicalMetadata
+      ? mapHistoricalPayment(historicalMetadata, b.status)
+      : null,
     checkedInAt: b.checkedInAt?.toISOString() ?? null,
     notes: b.notes ?? null,
     zoomJoinUrl: b.zoomJoinUrl ?? null,

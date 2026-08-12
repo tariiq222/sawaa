@@ -10,7 +10,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.event';
 import { assertTransition } from '../booking-state-machine';
 import { ProgramCapacityService } from '../program/program-capacity.service';
-import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { assertBookingIsMutable, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { returnPackageCreditForBooking } from '../package-credit-return.helper';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 
@@ -49,6 +49,7 @@ export class ApproveCancelBookingHandler {
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
+    assertBookingIsMutable(booking);
     const nextStatus = assertTransition(booking.status, 'APPROVE_CANCEL');
 
     const settings = await this.settingsHandler.execute({

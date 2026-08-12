@@ -142,6 +142,17 @@ describe("BookingActions", () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it("returns null for a historical booking even when its status is actionable", () => {
+    mockMutations()
+    const { container } = render(
+      <BookingActions
+        booking={makeBooking("confirmed", { isHistoricalImport: true })}
+        onAction={vi.fn()}
+      />,
+    )
+    expect(container.firstChild).toBeNull()
+  })
+
   // ─── Dropdown renders for actionable statuses ─────────────────────────────────
 
   it.each([

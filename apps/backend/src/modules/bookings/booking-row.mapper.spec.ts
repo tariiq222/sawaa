@@ -278,6 +278,37 @@ describe('mapBookingRow', () => {
     expect(result.payment).toBeNull();
   });
 
+  it('projects historical payment separately from operational payment', () => {
+    const historicalBooking = {
+      ...mockBooking,
+      isHistoricalImport: true,
+      status: 'CONFIRMED',
+    } as Booking;
+    const historicalRelations: BookingRelations = {
+      ...relations,
+      historicalPaymentsByBookingId: new Map([
+        ['book-1', { paymentStatus: 'paid', paymentMethod: 'local', paidAmount: '200.5000' }],
+      ]),
+    };
+
+    const result = mapBookingRow(historicalBooking, historicalRelations);
+
+    expect(result.isHistoricalImport).toBe(true);
+    expect(result.payment).toBeNull();
+    expect(result.historicalPayment).toEqual({
+      status: 'paid',
+      amount: 20050,
+      method: 'local',
+      requiresReview: false,
+    });
+  });
+
+  it('returns null historical payment for a normal booking', () => {
+    const result = mapBookingRow(mockBooking, relations);
+    expect(result.isHistoricalImport).toBe(false);
+    expect(result.historicalPayment).toBeNull();
+  });
+
   it('returns real payment when entry exists in paymentsByBookingId', () => {
     const relationsWithPayment: BookingRelations = {
       ...relations,

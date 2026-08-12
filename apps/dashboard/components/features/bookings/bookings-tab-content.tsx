@@ -91,6 +91,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   }
 
   const handleStatusAction = async (booking: Booking, action: QuickStatusActionType) => {
+    if (booking.isHistoricalImport) return
     if (action === "reschedule") { onRowClick(booking, "reschedule"); return }
     try {
       if (action === "confirm") await confirmMut.mutateAsync(booking.id)
@@ -108,6 +109,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const TERMINAL_STATUSES = new Set(["completed", "cancelled", "no_show", "expired"])
 
   const handleDelete = (booking: Booking) => {
+    if (booking.isHistoricalImport) return
     if (TERMINAL_STATUSES.has(booking.status)) setHardDeleteTarget(booking)
     else setDeleteTarget(booking)
   }

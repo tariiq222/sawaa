@@ -192,7 +192,35 @@ export class DashboardFinanceController {
   @Get('payments/stats')
   @CheckPermissions({ action: 'read', subject: 'Payment' })
   @ApiOperation({ summary: 'Get payment statistics summary' })
-  @ApiOkResponse({ description: 'Payment statistics' })
+  @ApiOkResponse({
+    description: 'Operational payment statistics plus a separate read-only legacy summary',
+    schema: {
+      type: 'object',
+      properties: {
+        total: { type: 'number', example: 29 },
+        totalAmount: { type: 'number', example: 125000 },
+        completed: { type: 'number', example: 20 },
+        completedAmount: { type: 'number', example: 100000 },
+        pending: { type: 'number', example: 2 },
+        pendingAmount: { type: 'number', example: 10000 },
+        pendingVerification: { type: 'number', example: 1 },
+        pendingVerificationAmount: { type: 'number', example: 5000 },
+        refunded: { type: 'number', example: 3 },
+        refundedAmount: { type: 'number', example: 10000 },
+        failed: { type: 'number', example: 3 },
+        historical: {
+          type: 'object',
+          description: 'Booknetic collections kept separate from operational finance',
+          properties: {
+            collectedCount: { type: 'number', example: 3427 },
+            collectedAmount: { type: 'number', example: 103353250, description: 'Integer halalas' },
+            reviewCount: { type: 'number', example: 109 },
+            reviewAmount: { type: 'number', example: 1575000, description: 'Integer halalas' },
+          },
+        },
+      },
+    },
+  })
   getPaymentStatsEndpoint() {
     return this.getPaymentStats.execute();
   }
@@ -210,7 +238,7 @@ export class DashboardFinanceController {
   @ApiOperation({ summary: 'Ensure a (DRAFT) invoice exists for a booking and return it' })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiCreatedResponse({ description: 'Invoice ensured' })
-  @ApiResponse({ status: 400, description: 'Booking has no payable amount or no client', type: ApiErrorDto })
+  @ApiResponse({ status: 400, description: 'Booking is historical, has no payable amount, or has no client', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   ensureBookingInvoiceEndpoint(@Param('bookingId', ParseUUIDPipe) bookingId: string) {
     return this.ensureBookingInvoice.execute({ bookingId });

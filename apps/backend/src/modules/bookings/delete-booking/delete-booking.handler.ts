@@ -14,6 +14,7 @@ import {
 	RlsTransactionService,
 } from "../../../infrastructure/database";
 import { isTerminalStatus } from "../booking-state-machine";
+import { assertBookingIsMutable } from "../booking-lifecycle.helper";
 
 export interface DeleteBookingCommand {
 	bookingId: string;
@@ -66,6 +67,7 @@ export class DeleteBookingHandler {
 				clientId: true,
 				serviceNameSnapshot: true,
 				scheduledAt: true,
+				isHistoricalImport: true,
 			},
 		});
 		if (!booking) {
@@ -73,6 +75,7 @@ export class DeleteBookingHandler {
 				DELETE_BOOKING_MESSAGES.notFound(cmd.bookingId),
 			);
 		}
+		assertBookingIsMutable(booking);
 
 		if (!isTerminalStatus(booking.status)) {
 			throw new BadRequestException(

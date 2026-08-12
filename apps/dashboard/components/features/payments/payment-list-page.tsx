@@ -14,10 +14,11 @@ import { Skeleton } from "@sawaa/ui"
 import { usePayments } from "@/hooks/use-payments"
 import { useLocale } from "@/components/locale-provider"
 import type { Payment } from "@/lib/types/payment"
+import { HistoricalPaymentStats } from "@/components/features/payments/historical-payment-stats"
 
 export function PaymentListPage() {
   const { t } = useLocale()
-  const { payments, meta, isLoading, error, search, setSearch, status, setStatus, method, setMethod, hasFilters, resetFilters, refetch, page, setPage } = usePayments()
+  const { payments, meta, isLoading, error, search, setSearch, status, setStatus, method, setMethod, hasFilters, resetFilters, refetch, page, setPage, historicalStats } = usePayments()
 
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -35,6 +36,8 @@ export function PaymentListPage() {
         title={t("payments.title")}
         description={t("payments.description")}
       />
+
+      {historicalStats && <HistoricalPaymentStats stats={historicalStats} />}
 
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("payments.searchPlaceholder") }}

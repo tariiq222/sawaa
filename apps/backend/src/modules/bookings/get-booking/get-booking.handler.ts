@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { mapBookingRow, type BookingRelations } from '../booking-row.mapper';
+import type { HistoricalPaymentMetadata } from '../historical-payment.helper';
 
 export interface GetBookingQuery {
   bookingId: string;
@@ -45,7 +46,7 @@ export class GetBookingHandler {
       }
     }
 
-    const [client, employee, service, invoice] = await Promise.all([
+    const [client, employee, service, invoice, historicalRecord] = await Promise.all([
       this.prisma.client.findFirst({ where: { id: booking.clientId } }),
       this.prisma.employee.findFirst({ where: { id: booking.employeeId } }),
       booking.serviceId ? this.prisma.service.findFirst({ where: { id: booking.serviceId } }) : Promise.resolve(null),
@@ -70,6 +71,17 @@ export class GetBookingHandler {
           },
         },
       }),
+      booking.isHistoricalImport
+        ? this.prisma.legacyImportRecord.findFirst({
+            where: {
+              sourceSystem: 'booknetic',
+              entityType: 'APPOINTMENT',
+              targetType: 'Booking',
+              targetId: booking.id,
+            },
+            select: { targetId: true, metadata: true },
+          })
+        : Promise.resolve(null),
     ]);
 
     // Build paymentsByBookingId for this single booking
@@ -121,6 +133,14 @@ export class GetBookingHandler {
       servicesById: new Map(service ? [[service.id, service]] : []),
       paymentsByBookingId,
       invoicesByBookingId,
+      historicalPaymentsByBookingId: new Map(
+        historicalRecord?.targetId && historicalRecord.metadata
+          ? [[
+              historicalRecord.targetId,
+              historicalRecord.metadata as HistoricalPaymentMetadata,
+            ]]
+          : [],
+      ),
     };
 
     return mapBookingRow(booking, relations);

@@ -5,12 +5,15 @@ import type { ReactNode } from "react"
 
 const {
   fetchPayments,
+  fetchPaymentStats,
 } = vi.hoisted(() => ({
   fetchPayments: vi.fn(),
+  fetchPaymentStats: vi.fn(),
 }))
 
 vi.mock("@/lib/api/payments", () => ({
   fetchPayments,
+  fetchPaymentStats,
 }))
 
 import {
@@ -28,7 +31,10 @@ function makeWrapper() {
 }
 
 describe("usePayments", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+    fetchPaymentStats.mockResolvedValue({ historical: null })
+  })
 
   it("fetches payments and returns items", async () => {
     const items = [{ id: "pay-1", amount: 500 }]

@@ -66,6 +66,14 @@ export interface PaymentStats {
   refunded: number
   refundedAmount: number
   failed: number
+  historical: HistoricalPaymentStats
+}
+
+export interface HistoricalPaymentStats {
+  collectedCount: number
+  collectedAmount: number
+  reviewCount: number
+  reviewAmount: number
 }
 
 /* ─── Query ─── */

@@ -31,6 +31,19 @@ describe('fetchBookingOrFail', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it('rejects historical imports even when their status would otherwise allow the action', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      isHistoricalImport: true,
+    });
+
+    await expect(
+      fetchBookingOrFail(prisma as never, 'book-1', [BookingStatus.CONFIRMED], 'rescheduled'),
+    ).rejects.toThrow(/Historical bookings are read-only/);
+  });
+
   it('error message includes booking status', async () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CANCELLED });

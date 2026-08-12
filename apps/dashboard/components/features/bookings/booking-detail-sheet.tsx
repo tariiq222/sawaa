@@ -59,8 +59,8 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
   const bookedParts = isoToClinicParts(booking.createdAt)
   const bookedAt = bookedParts.date ? `${formatDate(bookedParts.date)} - ${bookedParts.time}` : "—"
 
-  const canReschedule = !["completed", "cancelled", "no_show", "cancel_requested", "expired"].includes(booking.status)
-  const hasInvoice = !!booking.invoice
+  const canReschedule = !booking.isHistoricalImport && !["completed", "cancelled", "no_show", "cancel_requested", "expired"].includes(booking.status)
+  const hasInvoice = !booking.isHistoricalImport && !!booking.invoice
   // Keep the requested tab valid for this booking; fall back to details.
   const activeTab =
     (defaultTab === "reschedule" && !canReschedule) || (defaultTab === "invoice" && !hasInvoice)

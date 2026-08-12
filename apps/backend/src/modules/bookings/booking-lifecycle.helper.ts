@@ -28,12 +28,19 @@ export async function fetchBookingOrFail(
   if (!booking) {
     throw new NotFoundException(`Booking ${bookingId} not found`);
   }
+  assertBookingIsMutable(booking);
   if (!allowedStatuses.includes(booking.status)) {
     throw new BadRequestException(
       `Booking cannot be ${actionLabel} (status: ${booking.status})`,
     );
   }
   return booking;
+}
+
+export function assertBookingIsMutable(booking: { isHistoricalImport?: boolean }) {
+  if (booking.isHistoricalImport) {
+    throw new BadRequestException('Historical bookings are read-only');
+  }
 }
 
 export async function updateBookingAtomically(

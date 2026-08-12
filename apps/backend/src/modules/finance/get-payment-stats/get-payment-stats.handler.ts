@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 
 export interface PaymentStats {
@@ -14,6 +14,12 @@ export interface PaymentStats {
   refunded: number;
   refundedAmount: number;
   failed: number;
+  historical: {
+    collectedCount: number;
+    collectedAmount: number;
+    reviewCount: number;
+    reviewAmount: number;
+  };
 }
 
 @Injectable()
@@ -21,11 +27,49 @@ export class GetPaymentStatsHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(): Promise<PaymentStats> {
-    const rows = await this.prisma.payment.groupBy({
-      by: ['status'],
-      _count: { id: true },
-      _sum: { amount: true },
-    });
+    const [rows, historicalRows] = await Promise.all([
+      this.prisma.payment.groupBy({
+        by: ['status'],
+        _count: { id: true },
+        _sum: { amount: true },
+      }),
+      this.prisma.$queryRaw<Array<{
+        collectedCount: bigint | number;
+        collectedAmount: bigint | number;
+        reviewCount: bigint | number;
+        reviewAmount: bigint | number;
+      }>>(Prisma.sql`
+        SELECT
+          COUNT(*) FILTER (
+            WHERE LOWER(COALESCE(r.metadata->>'paymentStatus', '')) = 'paid'
+              AND b.status = 'CONFIRMED'
+          )::bigint AS "collectedCount",
+          COALESCE(ROUND(SUM(CASE
+            WHEN LOWER(COALESCE(r.metadata->>'paymentStatus', '')) = 'paid'
+              AND b.status = 'CONFIRMED'
+              AND COALESCE(r.metadata->>'paidAmount', '') ~ '^[0-9]+([.][0-9]+)?$'
+            THEN (r.metadata->>'paidAmount')::numeric * 100
+            ELSE 0
+          END)), 0)::bigint AS "collectedAmount",
+          COUNT(*) FILTER (
+            WHERE LOWER(COALESCE(r.metadata->>'paymentStatus', '')) = 'paid'
+              AND (b.id IS NULL OR b.status <> 'CONFIRMED')
+          )::bigint AS "reviewCount",
+          COALESCE(ROUND(SUM(CASE
+            WHEN LOWER(COALESCE(r.metadata->>'paymentStatus', '')) = 'paid'
+              AND (b.id IS NULL OR b.status <> 'CONFIRMED')
+              AND COALESCE(r.metadata->>'paidAmount', '') ~ '^[0-9]+([.][0-9]+)?$'
+            THEN (r.metadata->>'paidAmount')::numeric * 100
+            ELSE 0
+          END)), 0)::bigint AS "reviewAmount"
+        FROM "LegacyImportRecord" r
+        LEFT JOIN "Booking" b ON b.id = r."targetId"
+        WHERE r."sourceSystem" = 'booknetic'
+          AND r."sourceTenant" = '6'
+          AND r."entityType" = 'APPOINTMENT'
+      `),
+    ]);
+    const historical = historicalRows[0];
 
     const stats: PaymentStats = {
       total: 0,
@@ -39,6 +83,12 @@ export class GetPaymentStatsHandler {
       refunded: 0,
       refundedAmount: 0,
       failed: 0,
+      historical: {
+        collectedCount: Number(historical?.collectedCount ?? 0),
+        collectedAmount: Number(historical?.collectedAmount ?? 0),
+        reviewCount: Number(historical?.reviewCount ?? 0),
+        reviewAmount: Number(historical?.reviewAmount ?? 0),
+      },
     };
 
     for (const row of rows) {

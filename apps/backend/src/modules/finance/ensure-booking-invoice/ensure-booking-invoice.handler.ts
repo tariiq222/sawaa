@@ -42,10 +42,14 @@ export class EnsureBookingInvoiceHandler {
         employeeId: true,
         price: true,
         discountedPrice: true,
+        isHistoricalImport: true,
       },
     });
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
+    }
+    if (booking.isHistoricalImport) {
+      throw new BadRequestException('Historical bookings are read-only and cannot be invoiced');
     }
 
     // Existing invoice — return its current shape (idempotent).

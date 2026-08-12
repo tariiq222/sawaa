@@ -5,7 +5,11 @@
 
 import { api } from "@/lib/api"
 import type { PaginatedResponse } from "@/lib/types/common"
-import type { Payment, PaymentListQuery } from "@/lib/types/payment"
+import type { Payment, PaymentListQuery, PaymentStats } from "@/lib/types/payment"
+
+export async function fetchPaymentStats(): Promise<PaymentStats> {
+  return api.get<PaymentStats>("/dashboard/finance/payments/stats")
+}
 
 export async function refundPayment(
   id: string,

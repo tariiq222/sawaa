@@ -12475,7 +12475,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Booking has no payable amount or no client */
+            /** @description Booking is historical, has no payable amount, or has no client */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13872,12 +13872,54 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Payment statistics */
+            /** @description Operational payment statistics plus a separate read-only legacy summary */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @example 20 */
+                        completed?: number;
+                        /** @example 100000 */
+                        completedAmount?: number;
+                        /** @example 3 */
+                        failed?: number;
+                        /** @description Booknetic collections kept separate from operational finance */
+                        historical?: {
+                            /**
+                             * @description Integer halalas
+                             * @example 103353250
+                             */
+                            collectedAmount?: number;
+                            /** @example 3427 */
+                            collectedCount?: number;
+                            /**
+                             * @description Integer halalas
+                             * @example 1575000
+                             */
+                            reviewAmount?: number;
+                            /** @example 109 */
+                            reviewCount?: number;
+                        };
+                        /** @example 2 */
+                        pending?: number;
+                        /** @example 10000 */
+                        pendingAmount?: number;
+                        /** @example 1 */
+                        pendingVerification?: number;
+                        /** @example 5000 */
+                        pendingVerificationAmount?: number;
+                        /** @example 3 */
+                        refunded?: number;
+                        /** @example 10000 */
+                        refundedAmount?: number;
+                        /** @example 29 */
+                        total?: number;
+                        /** @example 125000 */
+                        totalAmount?: number;
+                    };
+                };
             };
             /** @description Validation failed */
             400: {

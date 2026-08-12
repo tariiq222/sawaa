@@ -143,7 +143,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
         </div>
       </div>
 
-      <div className={`grid gap-3 ${booking.payment ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`grid gap-3 ${booking.payment || booking.historicalPayment ? "grid-cols-2" : "grid-cols-1"}`}>
         <div className={card}>
           <div className={cardHeader}><p className={cardTitle}>{t("detail.appointment")}</p></div>
           <div className="px-5 py-3 grid grid-cols-2 gap-x-6 gap-y-4">
@@ -186,6 +186,37 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
                 value={booking.payment.method ? <PaymentMethodBadge method={booking.payment.method} t={t} /> : "—"}
                 icon={CreditCardIcon}
               />
+            </div>
+          </div>
+        )}
+        {booking.isHistoricalImport && booking.historicalPayment && (
+          <div className={card}>
+            <div className={cardHeader}>
+              <p className={cardTitle}>{t("detail.historicalPayment")}</p>
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {t("bookings.col.historicalPayment.legacyMarker")}
+              </span>
+            </div>
+            <div className={cardBody}>
+              <DetailRow
+                label={t("detail.amount")}
+                value={<FormattedCurrency amount={booking.historicalPayment.amount} locale={locale} decimals={2} />}
+                numeric
+                icon={Money02Icon}
+              />
+              <DetailRow
+                label={t("detail.status")}
+                value={t(`bookings.col.historicalPayment.${booking.historicalPayment.requiresReview ? "review" : booking.historicalPayment.status}`)}
+                icon={CheckmarkCircle02Icon}
+              />
+              <DetailRow
+                label={t("detail.method")}
+                value={booking.historicalPayment.method ?? "—"}
+                icon={CreditCardIcon}
+              />
+              <p className="col-span-2 text-xs text-muted-foreground">
+                {t("bookings.col.historicalPayment.readOnly")}
+              </p>
             </div>
           </div>
         )}

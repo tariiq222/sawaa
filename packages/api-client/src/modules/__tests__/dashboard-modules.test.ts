@@ -454,6 +454,12 @@ describe('payments module', () => {
       refunded: 3,
       refundedAmount: 1500,
       failed: 2,
+      historical: {
+        collectedCount: 3427,
+        collectedAmount: 103353250,
+        reviewCount: 109,
+        reviewAmount: 1575000,
+      },
     }
     vi.mocked(fetch).mockReset()
     vi.mocked(fetch).mockResolvedValueOnce(okJson(fakeStats))

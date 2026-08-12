@@ -68,6 +68,13 @@ export interface BookingPayment {
   totalAmount: number
 }
 
+export interface HistoricalBookingPayment {
+  status: "paid" | "not_paid" | "pending" | "canceled" | "unknown"
+  amount: number
+  method: string | null
+  requiresReview: boolean
+}
+
 export interface BookingInvoice {
   id: string
   subtotal: number    // halalas, net before VAT/discount
@@ -99,6 +106,8 @@ export interface Booking {
   startTime: string
   endTime: string
   status: BookingStatus
+  isHistoricalImport: boolean
+  historicalPayment: HistoricalBookingPayment | null
   checkedInAt: string | null
   notes: string | null
   zoomJoinUrl: string | null

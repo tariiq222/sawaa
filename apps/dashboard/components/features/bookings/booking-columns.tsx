@@ -193,7 +193,11 @@ export function getBookingColumns(
       header: t("bookings.col.header.amount"),
       cell: ({ row }) => {
         const payment = row.original.payment
-        const amount = payment?.totalAmount ?? row.original.priceSnapshot ?? row.original.service?.price ?? null
+        const amount = (row.original.isHistoricalImport ? row.original.historicalPayment?.amount : undefined)
+          ?? payment?.totalAmount
+          ?? row.original.priceSnapshot
+          ?? row.original.service?.price
+          ?? null
         if (amount == null) return <span className="text-muted-foreground">—</span>
         return <FormattedCurrency amount={amount} locale={locale} decimals={2} className="font-numeric text-sm font-medium text-foreground" />
       },

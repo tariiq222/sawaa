@@ -75,6 +75,7 @@ export const queryKeys = {
     all: ["payments"] as const,
     list: (filters?: object) => ["payments", "list", filters] as const,
     detail: (id: string) => ["payments", "detail", id] as const,
+    stats: () => ["payments", "stats"] as const,
     byBooking: (bookingId: string) =>
       ["payments", "booking", bookingId] as const,
   },

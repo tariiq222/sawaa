@@ -11,6 +11,7 @@ import {
   applyInvoiceDiscount,
   ensureBookingInvoice,
   manualRefundPayment,
+  fetchPaymentStats,
 } from "@/lib/api/payments"
 import type { PaymentListQuery } from "@/lib/types/payment"
 import type { PaymentStatus, PaymentMethod } from "@/lib/types/common"
@@ -121,6 +122,12 @@ export function usePayments() {
     retry: 1,
   })
 
+  const statsQuery = useQuery({
+    queryKey: queryKeys.payments.stats(),
+    queryFn: fetchPaymentStats,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const hasFilters = !!search || status !== "all" || method !== "all" || !!dateFrom || !!dateTo
 
   const resetFilters = useCallback(() => {
@@ -151,5 +158,7 @@ export function usePayments() {
     hasFilters,
     resetFilters,
     refetch,
+    historicalStats: statsQuery.data?.historical ?? null,
+    statsLoading: statsQuery.isLoading,
   }
 }

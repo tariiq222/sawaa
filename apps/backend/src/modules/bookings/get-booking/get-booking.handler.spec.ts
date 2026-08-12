@@ -19,6 +19,7 @@ describe('GetBookingHandler', () => {
       employee: { findFirst: jest.fn() },
       service: { findFirst: jest.fn() },
       invoice: { findFirst: jest.fn().mockResolvedValue(null) },
+      legacyImportRecord: { findFirst: jest.fn().mockResolvedValue(null) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -127,5 +128,28 @@ describe('GetBookingHandler', () => {
     expect(payment.amount).not.toBe(1200000);
     expect(payment.refundedAmount).toBe(3000);
     expect(payment.refundedAmount).not.toBe(300000);
+  });
+
+  it('passes Booknetic payment metadata to the booking mapper', async () => {
+    prisma.booking.findFirst.mockResolvedValue({
+      id: 'b1', clientId: 'c1', employeeId: 'e1', serviceId: 's1', isHistoricalImport: true,
+    });
+    prisma.client.findFirst.mockResolvedValue(null);
+    prisma.employee.findFirst.mockResolvedValue(null);
+    prisma.service.findFirst.mockResolvedValue(null);
+    prisma.legacyImportRecord.findFirst.mockResolvedValue({
+      targetId: 'b1',
+      metadata: { paymentStatus: 'paid', paymentMethod: 'local', paidAmount: '200.0000' },
+    });
+
+    (mapBookingRow as jest.Mock).mockClear();
+    await handler.execute({ bookingId: 'b1' });
+
+    const relations = (mapBookingRow as jest.Mock).mock.calls[0][1];
+    expect(relations.historicalPaymentsByBookingId.get('b1')).toEqual({
+      paymentStatus: 'paid',
+      paymentMethod: 'local',
+      paidAmount: '200.0000',
+    });
   });
 });

@@ -6,7 +6,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRejectedEvent } from '../events/booking-cancel-rejected.event';
 import { assertTransition } from '../booking-state-machine';
-import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { assertBookingIsMutable, updateBookingAtomically } from '../booking-lifecycle.helper';
 
 export interface RejectCancelBookingCommand {
   bookingId: string;
@@ -29,6 +29,7 @@ export class RejectCancelBookingHandler {
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
+    assertBookingIsMutable(booking);
 
     // Restore the booking to the status it held BEFORE the client requested
     // cancellation, read from the matching status-log row. Without this the
