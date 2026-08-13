@@ -7,6 +7,7 @@ import { PrismaService } from '../../infrastructure/database';
 import { CacheService } from '../../infrastructure/cache';
 import { MinioService } from '../../infrastructure/storage/minio.service';
 import { GetPractitionerBookingOptionsHandler } from '../../modules/org-experience/services/get-practitioner-booking-options/get-practitioner-booking-options.handler';
+import { GetPublicCatalogHandler } from '../../modules/org-experience/public-catalog/get-public-catalog.handler';
 
 describe('PublicCatalogController (e2e)', () => {
   let app: INestApplication;
@@ -39,6 +40,7 @@ describe('PublicCatalogController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicCatalogController],
       providers: [
+        GetPublicCatalogHandler,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: GetPractitionerBookingOptionsHandler, useValue: mockGetPractitionerBookingOptions },
         { provide: CacheService, useValue: mockCache },

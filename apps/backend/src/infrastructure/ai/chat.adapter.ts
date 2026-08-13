@@ -9,6 +9,7 @@ export interface ChatMessage {
   content: string;
   tool_call_id?: string;
   name?: string;
+  toolCalls?: ToolCall[];
 }
 
 export interface CompletionResult {
@@ -84,7 +85,19 @@ export class ChatAdapter implements IChatService, OnModuleInit {
         };
       }
       if (m.role === 'assistant') {
-        return { role: 'assistant', content: m.content };
+        return {
+          role: 'assistant',
+          content: m.content,
+          ...(m.toolCalls?.length
+            ? {
+                tool_calls: m.toolCalls.map((call) => ({
+                  id: call.id,
+                  type: 'function' as const,
+                  function: call.function,
+                })),
+              }
+            : {}),
+        };
       }
       if (m.role === 'system') {
         return { role: 'system', content: m.content };

@@ -106,6 +106,40 @@ describe('ChatAdapter', () => {
     expect(result.tokensUsed).toBe(0);
   });
 
+  it('preserves assistant tool calls when sending tool results in a follow-up round', async () => {
+    mockCreate.mockResolvedValue({
+      choices: [{ message: { content: 'Done', tool_calls: [] } }],
+      usage: { total_tokens: 4 },
+      model: 'gpt-4',
+    });
+
+    await adapter.completeWithTools([
+      { role: 'user', content: 'List services' },
+      {
+        role: 'assistant',
+        content: '',
+        toolCalls: [{ id: 'call-1', function: { name: 'listServices', arguments: '{}' } }],
+      },
+      { role: 'tool', content: '{"ok":true}', tool_call_id: 'call-1' },
+    ], []);
+
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      messages: [
+        { role: 'user', content: 'List services' },
+        {
+          role: 'assistant',
+          content: '',
+          tool_calls: [{
+            id: 'call-1',
+            type: 'function',
+            function: { name: 'listServices', arguments: '{}' },
+          }],
+        },
+        { role: 'tool', content: '{"ok":true}', tool_call_id: 'call-1' },
+      ],
+    }));
+  });
+
   it('should stream responses', async () => {
     mockCreate.mockResolvedValue({
       [Symbol.asyncIterator]: async function* () {

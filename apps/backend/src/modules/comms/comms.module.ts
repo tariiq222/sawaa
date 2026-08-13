@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { forwardRef, Module, OnModuleInit } from '@nestjs/common';
 import { DashboardCommsController } from '../../api/dashboard/comms.controller';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
@@ -62,6 +62,12 @@ import { GetCurrentConversationHandler } from './chat/guest/get-current-conversa
 import { ClaimConversationHandler } from './chat/guest/claim-conversation.handler';
 import { SendChatMessageHandler } from './chat/messages/send-chat-message.handler';
 import { ListChatMessagesHandler } from './chat/messages/list-chat-messages.handler';
+import { AiModule } from '../ai/ai.module';
+import { BookingsModule } from '../bookings/bookings.module';
+import { OrgExperienceModule } from '../org-experience/org-experience.module';
+import { PeopleModule } from '../people/people.module';
+import { AdministrativeAssistantService } from './chat/assistant/administrative-assistant.service';
+import { AdministrativeToolsService } from './chat/assistant/administrative-tools.service';
 
 const handlers = [
   SendPushHandler,
@@ -111,6 +117,8 @@ const handlers = [
   ClaimConversationHandler,
   SendChatMessageHandler,
   ListChatMessagesHandler,
+  AdministrativeAssistantService,
+  AdministrativeToolsService,
 ];
 
 const eventHandlers = [
@@ -125,7 +133,18 @@ const eventHandlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule, MailModule, NotificationChannelModule, SmsModule, EmailModule, ],
+  imports: [
+    DatabaseModule,
+    MessagingModule,
+    MailModule,
+    NotificationChannelModule,
+    SmsModule,
+    EmailModule,
+    AiModule,
+    BookingsModule,
+    OrgExperienceModule,
+    forwardRef(() => PeopleModule),
+  ],
   controllers: [DashboardCommsController],
   providers: [...handlers, ...eventHandlers],
   exports: [...handlers, NotificationChannelModule],
