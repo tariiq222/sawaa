@@ -7,6 +7,7 @@ import { GetPublicBrandingHandler } from '../../../org-experience/branding/publi
 import { GetPublicCatalogHandler } from '../../../org-experience/public-catalog/get-public-catalog.handler';
 import { ListPublicEmployeesHandler } from '../../../people/employees/public/list-public-employees.handler';
 import { AdministrativeToolContext } from './administrative-tool-context';
+import type { AdministrativePublicMetadata } from './administrative-policy';
 
 const ALLOWED_TOOL_NAMES = [
   'getCenterInfo',
@@ -27,13 +28,20 @@ const PERSONAL_BOOKING_TOOL_NAMES = new Set([
 ]);
 
 export type AdministrativeToolResult =
-  | { ok: true; data: unknown }
+  | { ok: true; data: unknown; publicMetadata?: AdministrativePublicMetadata }
   | { ok: false; error: { code: 'AUTH_REQUIRED' | 'INVALID_ARGUMENTS' | 'TOOL_NOT_ALLOWED' | 'TOOL_NOT_AVAILABLE' | 'TOOL_FAILED' } };
 
 const objectSchema = {
   type: 'object' as const,
   additionalProperties: false,
 };
+
+const MAX_LIST_ITEMS = 10;
+const MAX_KNOWLEDGE_ITEMS = 5;
+const MAX_SHORT_TEXT_CHARS = 160;
+const MAX_DESCRIPTION_CHARS = 300;
+const MAX_KNOWLEDGE_CONTENT_CHARS = 1_000;
+const MAX_TOOL_RESULT_CHARS = 10_000;
 
 const DEFINITIONS: FunctionToolDefinition[] = [
   {
@@ -144,15 +152,15 @@ export class AdministrativeToolsService {
     try {
       switch (name) {
         case 'getCenterInfo':
-          return { ok: true, data: await this.branding.execute() };
+          return { ok: true, data: this.projectCenterInfo(await this.branding.execute()) };
         case 'listServices': {
           const result = await this.catalog.execute();
           const categoryId = this.optionalString(args.categoryId);
           return {
             ok: true,
             data: categoryId
-              ? result.services.filter((service) => service.categoryId === categoryId)
-              : result.services,
+              ? this.projectServices(result.services.filter((service) => service.categoryId === categoryId))
+              : this.projectServices(result.services),
           };
         }
         case 'listPractitioners': {
@@ -161,8 +169,8 @@ export class AdministrativeToolsService {
           return {
             ok: true,
             data: serviceId
-              ? result.filter((employee) => employee.serviceIds.includes(serviceId))
-              : result,
+              ? this.projectPractitioners(result.filter((employee) => employee.serviceIds.includes(serviceId)))
+              : this.projectPractitioners(result),
           };
         }
         case 'getAvailability': {
@@ -171,7 +179,7 @@ export class AdministrativeToolsService {
           if (!employeeId || !date) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
           return {
             ok: true,
-            data: await this.availability.execute({
+            data: this.projectAvailability(await this.availability.execute({
               employeeId,
               date,
               ...(this.optionalString(args.serviceId) ? { serviceId: String(args.serviceId) } : {}),
@@ -181,18 +189,19 @@ export class AdministrativeToolsService {
               ...(args.deliveryType === 'IN_PERSON' || args.deliveryType === 'ONLINE'
                 ? { deliveryType: args.deliveryType }
                 : {}),
-            }),
+            })),
           };
         }
         case 'searchKnowledge': {
           const query = this.requiredString(args.query);
           if (!query) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
-          return { ok: true, data: await this.search.execute({ query, topK: 5 }) };
+          return { ok: true, data: this.projectKnowledge(await this.search.execute({ query, topK: 5 })) };
         }
         case 'handoffToReception':
           return {
             ok: true,
             data: { intent: 'HANDOFF_TO_RECEPTION', optionOnly: true },
+            publicMetadata: { action: 'OFFER_HANDOFF', reason: 'USER_REQUESTED' },
           };
       }
     } catch {
@@ -233,5 +242,130 @@ export class AdministrativeToolsService {
       default:
         return undefined;
     }
+  }
+
+  private projectCenterInfo(value: unknown): Record<string, unknown> {
+    const item = this.asRecord(value);
+    return this.compact({
+      organizationNameAr: this.text(item.organizationNameAr, MAX_SHORT_TEXT_CHARS),
+      organizationNameEn: this.text(item.organizationNameEn, MAX_SHORT_TEXT_CHARS),
+      productTagline: this.text(item.productTagline, MAX_DESCRIPTION_CHARS),
+      timeFormat: this.text(item.timeFormat, 8),
+      contactPhone: this.text(item.contactPhone, 40),
+      contactEmail: this.text(item.contactEmail, MAX_SHORT_TEXT_CHARS),
+    });
+  }
+
+  private projectServices(values: unknown[]): Array<Record<string, unknown>> {
+    return this.capSerializedArray(values.slice(0, MAX_LIST_ITEMS).map((value) => {
+      const item = this.asRecord(value);
+      return this.compact({
+        id: this.text(item.id, 80),
+        categoryId: this.text(item.categoryId, 80),
+        nameAr: this.text(item.nameAr, MAX_SHORT_TEXT_CHARS),
+        nameEn: this.text(item.nameEn, MAX_SHORT_TEXT_CHARS),
+        descriptionAr: this.text(item.descriptionAr, MAX_DESCRIPTION_CHARS),
+        descriptionEn: this.text(item.descriptionEn, MAX_DESCRIPTION_CHARS),
+        durationMins: this.number(item.durationMins),
+        price: this.number(item.price),
+        currency: this.text(item.currency, 8),
+        showPrice: this.boolean(item.showPrice),
+        showDuration: this.boolean(item.showDuration),
+      });
+    }));
+  }
+
+  private projectPractitioners(values: unknown[]): Array<Record<string, unknown>> {
+    return this.capSerializedArray(values.slice(0, MAX_LIST_ITEMS).map((value) => {
+      const item = this.asRecord(value);
+      return this.compact({
+        id: this.text(item.id, 80),
+        nameAr: this.text(item.nameAr, MAX_SHORT_TEXT_CHARS),
+        nameEn: this.text(item.nameEn, MAX_SHORT_TEXT_CHARS),
+        title: this.text(item.title, MAX_SHORT_TEXT_CHARS),
+        specialty: this.text(item.specialty, MAX_SHORT_TEXT_CHARS),
+        specialtyAr: this.text(item.specialtyAr, MAX_SHORT_TEXT_CHARS),
+        publicBioAr: this.text(item.publicBioAr, MAX_DESCRIPTION_CHARS),
+        publicBioEn: this.text(item.publicBioEn, MAX_DESCRIPTION_CHARS),
+        isAvailableToday: this.boolean(item.isAvailableToday),
+        isBookable: this.boolean(item.isBookable),
+        serviceIds: this.stringArray(item.serviceIds, MAX_LIST_ITEMS, 80),
+        branchIds: this.stringArray(item.branchIds, MAX_LIST_ITEMS, 80),
+        availableDaysOfWeek: this.numberArray(item.availableDaysOfWeek, 7),
+      });
+    }));
+  }
+
+  private projectAvailability(values: unknown[]): Array<Record<string, unknown>> {
+    return this.capSerializedArray(values.slice(0, MAX_LIST_ITEMS).map((value) => {
+      const item = this.asRecord(value);
+      return this.compact({
+        startTime: this.dateText(item.startTime),
+        endTime: this.dateText(item.endTime),
+      });
+    }));
+  }
+
+  private projectKnowledge(values: unknown[]): Array<Record<string, unknown>> {
+    return this.capSerializedArray(values.slice(0, MAX_KNOWLEDGE_ITEMS).map((value) => {
+      const item = this.asRecord(value);
+      return this.compact({
+        content: this.text(item.content, MAX_KNOWLEDGE_CONTENT_CHARS),
+        similarity: this.number(item.similarity),
+      });
+    }));
+  }
+
+  private capSerializedArray(values: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+    const bounded: Array<Record<string, unknown>> = [];
+    for (const value of values) {
+      const candidate = [...bounded, value];
+      if (JSON.stringify(candidate).length > MAX_TOOL_RESULT_CHARS) break;
+      bounded.push(value);
+    }
+    return bounded;
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> {
+    return value !== null && typeof value === 'object' ? value as Record<string, unknown> : {};
+  }
+
+  private text(value: unknown, maxChars: number): string | null {
+    if (typeof value !== 'string') return null;
+    return Array.from(value).slice(0, maxChars).join('');
+  }
+
+  private dateText(value: unknown): string | null {
+    if (value instanceof Date) return value.toISOString();
+    return this.text(value, 40);
+  }
+
+  private number(value: unknown): number | null {
+    const result = Number(value);
+    return Number.isFinite(result) ? result : null;
+  }
+
+  private boolean(value: unknown): boolean | null {
+    return typeof value === 'boolean' ? value : null;
+  }
+
+  private stringArray(value: unknown, maxItems: number, maxChars: number): string[] | undefined {
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === 'string')
+        .slice(0, maxItems)
+        .map((item) => Array.from(item).slice(0, maxChars).join(''))
+      : undefined;
+  }
+
+  private numberArray(value: unknown, maxItems: number): number[] | undefined {
+    return Array.isArray(value)
+      ? value.map(Number).filter(Number.isFinite).slice(0, maxItems)
+      : undefined;
+  }
+
+  private compact(value: Record<string, unknown>): Record<string, unknown> {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, field]) => field !== null && field !== undefined),
+    );
   }
 }

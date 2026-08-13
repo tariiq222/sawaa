@@ -5,6 +5,7 @@ describe('toChatMessageResponse', () => {
   it('maps only public message fields and never exposes AI metadata or accounting fields', () => {
     const response = toChatMessageResponse({
       id: 'message-1',
+      sequence: 1n,
       conversationId: 'conversation-1',
       senderType: MessageSenderType.AI,
       senderId: 'staff-internal-id',

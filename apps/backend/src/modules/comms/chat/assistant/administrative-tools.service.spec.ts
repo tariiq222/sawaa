@@ -22,7 +22,10 @@ describe('AdministrativeToolsService', () => {
       { id: 'employee-1', serviceIds: ['service-1'] },
       { id: 'employee-2', serviceIds: ['service-2'] },
     ]);
-    availability.execute.mockResolvedValue([{ startsAt: '2026-08-14T09:00:00.000Z' }]);
+    availability.execute.mockResolvedValue([{
+      startTime: '2026-08-14T09:00:00.000Z',
+      endTime: '2026-08-14T10:00:00.000Z',
+    }]);
     search.execute.mockResolvedValue([{ content: 'الدوام من 8 إلى 4', similarity: 0.9 }]);
     service = new AdministrativeToolsService(
       catalog as unknown as GetPublicCatalogHandler,
@@ -91,7 +94,13 @@ describe('AdministrativeToolsService', () => {
       'getAvailability',
       JSON.stringify({ employeeId: 'employee-1', date: '2026-08-14', clientId: 'forged-client' }),
       context,
-    )).resolves.toEqual({ ok: true, data: [{ startsAt: '2026-08-14T09:00:00.000Z' }] });
+    )).resolves.toEqual({
+      ok: true,
+      data: [{
+        startTime: '2026-08-14T09:00:00.000Z',
+        endTime: '2026-08-14T10:00:00.000Z',
+      }],
+    });
     await expect(service.execute(
       'searchKnowledge',
       JSON.stringify({ query: 'ما أوقات الدوام؟', clientId: 'forged-client' }),
@@ -116,6 +125,76 @@ describe('AdministrativeToolsService', () => {
     )).resolves.toEqual({
       ok: true,
       data: { intent: 'HANDOFF_TO_RECEPTION', optionOnly: true },
+      publicMetadata: { action: 'OFFER_HANDOFF', reason: 'USER_REQUESTED' },
     });
+  });
+
+  it('projects and caps catalog results instead of returning raw handler payloads', async () => {
+    catalog.execute.mockResolvedValue({
+      services: Array.from({ length: 15 }, (_, index) => ({
+        id: `service-${index}`,
+        categoryId: 'category-1',
+        nameAr: `خدمة ${index}`,
+        nameEn: `Service ${index}`,
+        descriptionAr: 'و'.repeat(800),
+        descriptionEn: 'x'.repeat(800),
+        durationMins: 60,
+        price: 200,
+        currency: 'SAR',
+        showPrice: true,
+        showDuration: true,
+        internalSecret: 'must-not-leak',
+        durationOptions: [{ raw: 'large-private-shape' }],
+      })),
+    });
+
+    const result = await service.execute(
+      'listServices',
+      '{}',
+      new AdministrativeToolContext('conversation-1', null),
+    );
+
+    expect(result.ok).toBe(true);
+    const data = (result as { ok: true; data: Array<Record<string, unknown>> }).data;
+    expect(data).toHaveLength(10);
+    expect(data[0]).toEqual({
+      id: 'service-0',
+      categoryId: 'category-1',
+      nameAr: 'خدمة 0',
+      nameEn: 'Service 0',
+      descriptionAr: 'و'.repeat(300),
+      descriptionEn: 'x'.repeat(300),
+      durationMins: 60,
+      price: 200,
+      currency: 'SAR',
+      showPrice: true,
+      showDuration: true,
+    });
+    expect(JSON.stringify(result)).not.toContain('must-not-leak');
+    expect(JSON.stringify(result)).not.toContain('large-private-shape');
+  });
+
+  it('caps knowledge results and projects only bounded content and similarity', async () => {
+    search.execute.mockResolvedValue(Array.from({ length: 8 }, (_, index) => ({
+      chunkId: `chunk-${index}`,
+      documentId: `document-${index}`,
+      content: `knowledge-${index}-${'x'.repeat(1_500)}`,
+      chunkIndex: index,
+      similarity: 0.9,
+      rawSecret: 'private',
+    })));
+
+    const result = await service.execute(
+      'searchKnowledge',
+      '{"query":"hours"}',
+      new AdministrativeToolContext('conversation-1', null),
+    );
+
+    const data = (result as { ok: true; data: Array<Record<string, unknown>> }).data;
+    expect(data).toHaveLength(5);
+    expect(data[0]).toEqual({ content: `knowledge-0-${'x'.repeat(988)}`, similarity: 0.9 });
+    expect(JSON.stringify(result)).not.toContain('chunk-0');
+    expect(JSON.stringify(result)).not.toContain('document-0');
+    expect(JSON.stringify(result)).not.toContain('private');
   });
 });

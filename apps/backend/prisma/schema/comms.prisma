@@ -93,6 +93,8 @@ model ChatConversation {
   closedAt            DateTime?
   staffUnreadCount    Int                @default(0)
   clientUnreadCount   Int                @default(0)
+  assistantLeaseOwner String?
+  assistantLeaseExpiresAt DateTime?
   lastMessageAt       DateTime?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
@@ -104,6 +106,7 @@ model ChatConversation {
   @@index([employeeId])
   @@index([status, lastMessageAt])
   @@index([assignedStaffUserId, status, lastMessageAt])
+  @@index([assistantLeaseExpiresAt])
 }
 
 model CommsChatMessage {
@@ -117,6 +120,7 @@ model CommsChatMessage {
   metadata             Json?
   clientMessageId      String?
   responseForMessageId String?           @unique
+  sequence             BigInt            @unique @default(autoincrement())
   model                String?
   tokensUsed           Int               @default(0)
   latencyMs            Int?
@@ -126,6 +130,7 @@ model CommsChatMessage {
 
   @@unique([conversationId, clientMessageId])
   @@index([conversationId, createdAt])
+  @@index([conversationId, sequence])
 }
 
 model ChatOperation {

@@ -68,6 +68,9 @@ import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { PeopleModule } from '../people/people.module';
 import { AdministrativeAssistantService } from './chat/assistant/administrative-assistant.service';
 import { AdministrativeToolsService } from './chat/assistant/administrative-tools.service';
+import { AdministrativeAssistantLeaseService } from './chat/assistant/administrative-assistant-lease.service';
+import { AdministrativeScopeGate } from './chat/assistant/administrative-scope-gate';
+import { AdministrativeOutputValidator } from './chat/assistant/administrative-output-validator';
 
 const handlers = [
   SendPushHandler,
@@ -119,6 +122,9 @@ const handlers = [
   ListChatMessagesHandler,
   AdministrativeAssistantService,
   AdministrativeToolsService,
+  AdministrativeAssistantLeaseService,
+  AdministrativeScopeGate,
+  AdministrativeOutputValidator,
 ];
 
 const eventHandlers = [
