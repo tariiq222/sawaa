@@ -114,6 +114,10 @@ describe('AdministrativeAssistantRecoveryWorker', () => {
       }) },
     });
     expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+    expect(tx.chatConversation.update).toHaveBeenCalledWith({
+      where: { id: 'conversation-1' },
+      data: { assistantLeaseOwner: null, assistantLeaseExpiresAt: null },
+    });
   });
 
   it('normalizes an old RETRYING marker without a dispatch epoch to a safe retryable state', async () => {

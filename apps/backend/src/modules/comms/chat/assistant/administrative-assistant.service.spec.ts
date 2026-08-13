@@ -51,6 +51,7 @@ describe('AdministrativeAssistantService', () => {
     chatOperation: { deleteMany: jest.Mock };
   };
   let tx: {
+    $queryRaw: jest.Mock;
     commsChatMessage: { findUnique: jest.Mock; create: jest.Mock };
     chatConversation: { findUnique: jest.Mock; updateMany: jest.Mock };
     chatOperation: { updateMany: jest.Mock };
@@ -87,8 +88,21 @@ describe('AdministrativeAssistantService', () => {
       chatOperation: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     };
     tx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       commsChatMessage: {
-        findUnique: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockImplementation(({ where }) => (
+          where.responseForMessageId
+            ? null
+            : {
+              ...inboundMessage,
+              metadata: {
+                assistantStatus: 'QUEUED',
+                dispatchAttempt: 0,
+                assistantStateVersion: 0,
+                assistantClientId: null,
+              },
+            }
+        )),
         create: jest.fn().mockImplementation(({ data }) => Promise.resolve({
           id: `response-${data.responseForMessageId}`,
           ...data,
@@ -408,7 +422,10 @@ describe('AdministrativeAssistantService', () => {
   });
 
   it('does not save a completion after lease ownership expires during the provider call', async () => {
-    lease.renew.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    lease.renew
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
 
     await expect(service.processMessage(messageId)).resolves.toBeNull();
 
@@ -433,6 +450,30 @@ describe('AdministrativeAssistantService', () => {
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
   });
 
+  it('does not start provider round two after recovery advances the dispatch between rounds', async () => {
+    chat.completeWithTools
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{ id: 'public', function: { name: 'listServices', arguments: '{}' } }],
+        tokensUsed: 1,
+        model: 'selector',
+      })
+      .mockResolvedValueOnce({ content: null, toolCalls: [], tokensUsed: 1, model: 'selector' });
+    // Initial lease, provider round one, and the tool are healthy; recovery
+    // then advances the durable dispatch before a second provider call.
+    lease.renew
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(chat.completeWithTools).toHaveBeenCalledTimes(1);
+    expect(tools.execute).toHaveBeenCalledTimes(1);
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+  });
+
   it('compensates only its unpublished dispatch so a successor card cannot be deleted after lease loss', async () => {
     chat.completeWithTools.mockResolvedValueOnce({
       content: null,
@@ -446,6 +487,7 @@ describe('AdministrativeAssistantService', () => {
       publicMetadata: { action: 'CHAT_OPERATION', operation: { id: 'operation-1' } },
     });
     lease.renew
+      .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(false);
@@ -534,6 +576,27 @@ describe('AdministrativeAssistantService', () => {
 
     expect(chat.completeWithTools).toHaveBeenCalledTimes(1);
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+  });
+
+  it('does not persist an old completion after capped recovery terminalizes its dispatch', async () => {
+    tx.commsChatMessage.findUnique.mockImplementation(({ where }) => {
+      if (where.responseForMessageId) return null;
+      return {
+        ...inboundMessage,
+        metadata: {
+          assistantStatus: 'RETRYABLE_FAILURE',
+          retryable: true,
+          dispatchAttempt: 5,
+          assistantStateVersion: 0,
+          assistantClientId: null,
+        },
+      };
+    });
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
   });
 
   it('limits tool calls to three per round without executing overflow calls', async () => {

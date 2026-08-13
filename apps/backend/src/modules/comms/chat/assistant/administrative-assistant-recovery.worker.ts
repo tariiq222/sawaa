@@ -129,6 +129,10 @@ export class AdministrativeAssistantRecoveryWorker implements OnModuleInit {
             assistantClientId: conversation.clientId,
           } },
         });
+        await tx.chatConversation.update({
+          where: { id: conversationId },
+          data: { assistantLeaseOwner: null, assistantLeaseExpiresAt: null },
+        });
         return;
       }
 

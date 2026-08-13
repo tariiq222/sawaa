@@ -213,6 +213,7 @@ export class AdministrativeAssistantService {
       latencyMs: Date.now() - startedAt,
       stateVersion: conversation.stateVersion,
       leaseOwner,
+      dispatchAttempt,
     });
   }
 
@@ -262,6 +263,7 @@ export class AdministrativeAssistantService {
     const executions: ExecutedAdministrativeTool[] = [];
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+      await assertLeaseHealthy();
       const result = await this.chat.completeWithTools(
         messages,
         this.tools.getDefinitions(),
@@ -310,6 +312,7 @@ export class AdministrativeAssistantService {
     latencyMs: number;
     stateVersion: number;
     leaseOwner: string;
+    dispatchAttempt: number;
   }): Promise<CommsChatMessage | null> {
     try {
       return await this.rlsTransaction.withTransaction(async (tx) => {
@@ -317,6 +320,23 @@ export class AdministrativeAssistantService {
           where: { responseForMessageId: input.messageId },
         });
         if (existing) return existing;
+
+        await tx.$queryRaw`
+          SELECT "id" FROM "CommsChatMessage"
+          WHERE "id" = ${input.messageId}
+          FOR UPDATE
+        `;
+        const inbound = await tx.commsChatMessage.findUnique({
+          where: { id: input.messageId },
+          select: { conversationId: true, metadata: true },
+        });
+        const inboundState = inbound ? readAdministrativeMessageState(inbound.metadata) : {};
+        if (
+          !inbound
+          || inbound.conversationId !== input.conversationId
+          || readNonNegativeInteger(inboundState.dispatchAttempt) !== input.dispatchAttempt
+          || (inboundState.assistantStatus !== 'QUEUED' && inboundState.assistantStatus !== 'RETRYING')
+        ) throw new ConversationStatusChanged();
 
         const conversation = await tx.chatConversation.findUnique({
           where: { id: input.conversationId },
