@@ -5,10 +5,13 @@ export interface AssistantOperationFence {
   stateVersion: number;
   leaseOwner: string;
   dispatchAttempt: number;
+  sourceMessageId: string;
 }
 
 export function assistantDispatchIdempotencyKey(key: string, fence?: AssistantOperationFence): string {
-  return fence ? `${key}:assistant-dispatch:${fence.dispatchAttempt}` : key;
+  return fence
+    ? `${key}:assistant-execution:${fence.leaseOwner}:${fence.dispatchAttempt}`
+    : key;
 }
 
 export async function assertAssistantOperationFence(
@@ -32,4 +35,13 @@ export async function assertAssistantOperationFence(
     select: { id: true },
   });
   if (!conversation) throw new ConflictException('Administrative assistant state changed');
+  const message = await tx.commsChatMessage.findFirst({
+    where: {
+      id: fence.sourceMessageId,
+      conversationId,
+      metadata: { path: ['dispatchAttempt'], equals: fence.dispatchAttempt },
+    },
+    select: { id: true },
+  });
+  if (!message) throw new ConflictException('Administrative assistant dispatch changed');
 }

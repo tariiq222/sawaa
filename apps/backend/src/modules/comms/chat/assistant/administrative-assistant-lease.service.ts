@@ -9,7 +9,13 @@ export class AdministrativeAssistantLeaseService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async acquire(conversationId: string, owner: string, stateVersion: number): Promise<boolean> {
+  async acquire(
+    conversationId: string,
+    owner: string,
+    stateVersion: number,
+    messageId: string,
+    dispatchAttempt: number,
+  ): Promise<boolean> {
     const expiresAt = new Date(Date.now() + ASSISTANT_LEASE_MS);
     const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
       UPDATE "ChatConversation"
@@ -24,12 +30,26 @@ export class AdministrativeAssistantLeaseService {
           OR "assistantLeaseExpiresAt" IS NULL
           OR "assistantLeaseExpiresAt" < now()
         )
+        AND EXISTS (
+          SELECT 1
+          FROM "CommsChatMessage" message
+          WHERE message."id" = ${messageId}
+            AND message."conversationId" = "ChatConversation"."id"
+            AND message."metadata"->>'dispatchAttempt' = ${String(dispatchAttempt)}
+            AND message."metadata"->>'assistantStatus' IN ('QUEUED', 'RETRYING')
+        )
       RETURNING "id"
     `;
     return rows.length === 1;
   }
 
-  async renew(conversationId: string, owner: string, stateVersion: number): Promise<boolean> {
+  async renew(
+    conversationId: string,
+    owner: string,
+    stateVersion: number,
+    messageId: string,
+    dispatchAttempt: number,
+  ): Promise<boolean> {
     const expiresAt = new Date(Date.now() + ASSISTANT_LEASE_MS);
     const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
       UPDATE "ChatConversation"
@@ -40,6 +60,14 @@ export class AdministrativeAssistantLeaseService {
         AND "stateVersion" = ${stateVersion}
         AND "isAiChat" = true
         AND "status" = 'AI_ACTIVE'::"ConversationStatus"
+        AND EXISTS (
+          SELECT 1
+          FROM "CommsChatMessage" message
+          WHERE message."id" = ${messageId}
+            AND message."conversationId" = "ChatConversation"."id"
+            AND message."metadata"->>'dispatchAttempt' = ${String(dispatchAttempt)}
+            AND message."metadata"->>'assistantStatus' IN ('QUEUED', 'RETRYING')
+        )
       RETURNING "id"
     `;
     return rows.length === 1;

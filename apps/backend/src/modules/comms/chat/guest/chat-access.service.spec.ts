@@ -102,7 +102,9 @@ describe('ChatAccessService', () => {
       guestPhone: null,
     });
     const outboxCreate = jest.fn().mockResolvedValue({});
+    const lock = jest.fn().mockResolvedValue(1);
     rlsTransaction.withTransaction.mockImplementation(async (work) => work({
+      $executeRaw: lock,
       chatConversation: { updateMany, findUnique },
       outboxEvent: { create: outboxCreate },
     }));
@@ -115,6 +117,7 @@ describe('ChatAccessService', () => {
 
     expect(claimed).toMatchObject({ id: guestConversation.id, clientId: 'client-a', guestTokenHash: null });
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
+    expect(lock).toHaveBeenCalledTimes(1);
     expect(updateMany).toHaveBeenCalledWith({
       where: {
         id: guestConversation.id,
@@ -149,7 +152,10 @@ describe('ChatAccessService', () => {
 
   it('refuses a claim when the guest cookie no longer owns an unclaimed conversation', async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 0 });
-    rlsTransaction.withTransaction.mockImplementation(async (work) => work({ chatConversation: { updateMany, findUnique: jest.fn() } }));
+    rlsTransaction.withTransaction.mockImplementation(async (work) => work({
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      chatConversation: { updateMany, findUnique: jest.fn() },
+    }));
 
     await expect(service.claimGuestConversation({
       conversationId: guestConversation.id,

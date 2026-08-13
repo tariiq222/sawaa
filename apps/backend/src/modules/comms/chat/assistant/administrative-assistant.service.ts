@@ -107,16 +107,17 @@ export class AdministrativeAssistantService {
     ) return null;
 
     const owner = randomUUID();
-    if (!await this.lease.acquire(conversation.id, owner, conversation.stateVersion)) return null;
+    const dispatchAttempt = readNonNegativeInteger(state.dispatchAttempt);
+    if (!await this.lease.acquire(conversation.id, owner, conversation.stateVersion, target.id, dispatchAttempt)) return null;
 
     try {
-      if (!await this.lease.renew(conversation.id, owner, conversation.stateVersion)) throw new AssistantLeaseLost();
-      const response = await this.processInbound(target, conversation, owner, readNonNegativeInteger(state.dispatchAttempt));
+      if (!await this.lease.renew(conversation.id, owner, conversation.stateVersion, target.id, dispatchAttempt)) throw new AssistantLeaseLost();
+      const response = await this.processInbound(target, conversation, owner, dispatchAttempt);
       if (response) await this.clearRetryableFailure(target);
       return response ?? this.findExistingResponse(messageId);
     } catch (error) {
       if (error instanceof ConversationStatusChanged || error instanceof AssistantLeaseLost) {
-        await this.discardUnpublishedOperations(target.id, readNonNegativeInteger(state.dispatchAttempt));
+        await this.discardUnpublishedOperations(target.id, owner, dispatchAttempt);
         return null;
       }
       if (await this.markRetryableFailure(target, conversation, owner)) {
@@ -163,7 +164,13 @@ export class AdministrativeAssistantService {
             dispatchAttempt,
           ),
           async () => {
-            if (!await this.lease.renew(conversation.id, leaseOwner, conversation.stateVersion)) {
+            if (!await this.lease.renew(
+              conversation.id,
+              leaseOwner,
+              conversation.stateVersion,
+              inbound.id,
+              dispatchAttempt,
+            )) {
               throw new AssistantLeaseLost();
             }
           },
@@ -187,7 +194,13 @@ export class AdministrativeAssistantService {
 
     // The completion happens outside a database transaction. Confirm lease
     // ownership again immediately before the short persistence transaction.
-    if (!await this.lease.renew(conversation.id, leaseOwner, conversation.stateVersion)) throw new AssistantLeaseLost();
+    if (!await this.lease.renew(
+      conversation.id,
+      leaseOwner,
+      conversation.stateVersion,
+      inbound.id,
+      dispatchAttempt,
+    )) throw new AssistantLeaseLost();
 
     return this.persistResponse({
       messageId: inbound.id,
@@ -415,13 +428,17 @@ export class AdministrativeAssistantService {
     }
   }
 
-  private async discardUnpublishedOperations(messageId: string, dispatchAttempt: number): Promise<void> {
+  private async discardUnpublishedOperations(
+    messageId: string,
+    leaseOwner: string,
+    dispatchAttempt: number,
+  ): Promise<void> {
     try {
       await this.prisma.chatOperation.deleteMany({
         where: {
           idempotencyKey: {
             startsWith: `chat:${messageId}:`,
-            endsWith: `:assistant-dispatch:${dispatchAttempt}`,
+            endsWith: `:assistant-execution:${leaseOwner}:${dispatchAttempt}`,
           },
           resultMessageId: null,
         },

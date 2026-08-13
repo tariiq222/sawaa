@@ -144,6 +144,13 @@ export class AdministrativeAssistantRecoveryWorker implements OnModuleInit {
           ...(manualRetry ? { retryAttempts: readNonNegativeInteger(state.retryAttempts) } : {}),
         }) },
       });
+      // The message marker is the dispatch fence used by every lease renewal.
+      // Clearing a live owner under this locked transaction makes an in-flight
+      // older worker fail renewal after this attempt is committed.
+      await tx.chatConversation.update({
+        where: { id: conversationId },
+        data: { assistantLeaseOwner: null, assistantLeaseExpiresAt: null },
+      });
       await stageAdministrativeMessageProcessing(tx, {
         messageId,
         manualRetry,

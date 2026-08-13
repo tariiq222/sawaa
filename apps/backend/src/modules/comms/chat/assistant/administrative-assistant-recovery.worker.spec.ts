@@ -26,7 +26,7 @@ describe('AdministrativeAssistantRecoveryWorker', () => {
       },
       chatConversation: { findUnique: jest.fn().mockResolvedValue({
         status: ConversationStatus.AI_ACTIVE, isAiChat: true, stateVersion: 0, clientId: null,
-      }) },
+      }), update: jest.fn().mockResolvedValue({ id: 'conversation-1' }) },
       outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-2' }) },
     };
     prisma = { $queryRaw: jest.fn().mockResolvedValue([{ id: 'message-1', conversationId: 'conversation-1' }]) };
@@ -58,6 +58,10 @@ describe('AdministrativeAssistantRecoveryWorker', () => {
       aggregateId: 'message-1', eventType: 'comms.chat.assistant.processing_requested',
       status: 'PENDING_V2', deliveryLane: 'PENDING_V2',
     }) });
+    expect(tx.chatConversation.update).toHaveBeenCalledWith({
+      where: { id: 'conversation-1' },
+      data: { assistantLeaseOwner: null, assistantLeaseExpiresAt: null },
+    });
   });
 
   it('does not stage work when the response appeared or the conversation left AI_ACTIVE', async () => {

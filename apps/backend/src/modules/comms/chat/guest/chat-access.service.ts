@@ -3,6 +3,7 @@ import { ConversationStatus, Prisma, type ChatConversation } from '@prisma/clien
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { GuestChatTokenService } from './guest-chat-token.service';
 import { ChatOperationsResumeRequestedEvent } from '../operations/events/chat-operations-resume-requested.event';
+import { lockChatConversation } from '../conversation-lock.helper';
 
 export interface ClaimGuestConversationCommand {
   conversationId: string;
@@ -68,6 +69,7 @@ export class ChatAccessService {
     const guestTokenHash = this.tokens.toStoredToken(command.guestToken).tokenHash;
 
     return this.rlsTransaction.withTransaction(async (tx) => {
+      await lockChatConversation(tx, command.conversationId);
       const claimed = await tx.chatConversation.updateMany({
         where: {
           id: command.conversationId,

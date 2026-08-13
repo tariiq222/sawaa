@@ -455,9 +455,9 @@ describe('AdministrativeAssistantService', () => {
     expect(tools.execute).toHaveBeenCalledTimes(1);
     expect(prisma.chatOperation.deleteMany).toHaveBeenCalledWith({
       where: {
-        idempotencyKey: {
-          startsWith: `chat:${messageId}:`,
-          endsWith: ':assistant-dispatch:0',
+          idempotencyKey: {
+            startsWith: `chat:${messageId}:`,
+            endsWith: expect.stringMatching(/^:assistant-execution:[0-9a-f-]{36}:0$/),
         },
         resultMessageId: null,
       },
@@ -653,7 +653,7 @@ describe('AdministrativeAssistantService', () => {
 
     await expect(service.processMessage(messageId)).resolves.toBeNull();
 
-    expect(lease.acquire).toHaveBeenCalledWith(conversationId, expect.any(String), 0);
+    expect(lease.acquire).toHaveBeenCalledWith(conversationId, expect.any(String), 0, messageId, 0);
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
     expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
   });
@@ -723,6 +723,30 @@ describe('AdministrativeAssistantService', () => {
     await expect(service.processMessage(messageId)).resolves.toEqual(existing);
 
     expect(chat.completeWithTools).not.toHaveBeenCalled();
+  });
+
+  it('does not call the provider when recovery advanced the dispatch before the old worker acquires its lease', async () => {
+    const pending = {
+      ...inboundMessage,
+      metadata: {
+        assistantStatus: 'QUEUED',
+        dispatchAttempt: 0,
+        assistantStateVersion: 0,
+        assistantClientId: null,
+      },
+    };
+    prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => (
+      where.responseForMessageId ? null : pending
+    ));
+    // The real lease query checks the now-advanced durable dispatch marker.
+    // Model that interleaving by rejecting acquisition for the old attempt.
+    lease.acquire.mockResolvedValue(false);
+
+    await expect(service.processMessage(messageId, { manualRetry: false, dispatchAttempt: 0 })).resolves.toBeNull();
+
+    expect(lease.acquire).toHaveBeenCalledWith(conversationId, expect.any(String), 0, messageId, 0);
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(tools.execute).not.toHaveBeenCalled();
   });
 
   it('reads the winning response after a same-message P2002 race without a second counter update', async () => {
