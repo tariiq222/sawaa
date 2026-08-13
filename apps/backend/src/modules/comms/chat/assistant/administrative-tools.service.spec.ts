@@ -136,6 +136,7 @@ describe('AdministrativeToolsService', () => {
         categoryId: 'category-1',
         nameAr: `خدمة ${index}`,
         nameEn: `Service ${index}`,
+        name: `Generic Service ${index}`,
         descriptionAr: 'و'.repeat(800),
         descriptionEn: 'x'.repeat(800),
         durationMins: 60,
@@ -162,8 +163,7 @@ describe('AdministrativeToolsService', () => {
       categoryId: 'category-1',
       nameAr: 'خدمة 0',
       nameEn: 'Service 0',
-      descriptionAr: 'و'.repeat(300),
-      descriptionEn: 'x'.repeat(300),
+      name: 'Generic Service 0',
       durationMins: 60,
       price: 200,
       currency: 'SAR',
@@ -172,6 +172,8 @@ describe('AdministrativeToolsService', () => {
     });
     expect(JSON.stringify(result)).not.toContain('must-not-leak');
     expect(JSON.stringify(result)).not.toContain('large-private-shape');
+    expect(JSON.stringify(result)).not.toContain('descriptionAr');
+    expect(JSON.stringify(result)).not.toContain('descriptionEn');
   });
 
   it('caps knowledge results and projects only bounded content and similarity', async () => {

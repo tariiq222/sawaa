@@ -4,6 +4,25 @@ describe('AdministrativeScopeGate', () => {
   const gate = new AdministrativeScopeGate();
 
   it.each([
+    'ايش الخدمات عندكم؟',
+    'وش أسماء المعالجين؟',
+    'وين موقع المركز؟',
+    'وش رقم المركز؟',
+    'وش أوقات دوامكم؟',
+    'ابغى موعد',
+    'عندكم موعد بكرة؟',
+    'كم سعر الجلسة؟',
+    'What services do you offer?',
+    'Can I book an appointment?',
+    'What time do you open?',
+    'What is your address?',
+    'Can I get your phone number?',
+    'How much is a session?',
+  ])('accepts every load-bearing administrative phrase: %s', (message) => {
+    expect(gate.classify(message)).toBe('ADMINISTRATIVE');
+  });
+
+  it.each([
     'مرحبا',
     'السلام عليكم',
     'hello',
@@ -61,6 +80,38 @@ describe('AdministrativeScopeGate', () => {
     expect(gate.classify(message)).toBe('ADMINISTRATIVE');
   });
 
+  it.each([
+    'إيش الخدمات المتوفرة عندكم؟',
+    'وش تقدمون من خدمات؟',
+    'ممكن أعرف خدمات المركز؟',
+    'أبغى أسماء الأخصائيين عندكم',
+    'مين المختصين المتاحين؟',
+    'ممكن تعطيني عنوان المركز؟',
+    'كيف أوصل للمركز؟',
+    'أعطني رقم هاتف المركز',
+    'كيف أتواصل مع الاستقبال؟',
+    'متى تفتحون ومتى تقفلون؟',
+    'ما هي ساعات عمل المركز؟',
+    'أبي أحجز موعد',
+    'ممكن أحجز جلسة؟',
+    'هل فيه مواعيد بكرة؟',
+    'عندكم مواعيد الأسبوع الجاي؟',
+    'كم تكلفة جلسة الاستشارة؟',
+    'وش أسعار الجلسات؟',
+    'Which services do you provide?',
+    'Could I schedule an appointment?',
+    'Do you have an appointment tomorrow?',
+    'Who are your counselors?',
+    'Where is your center located?',
+    'Could you give me the center address?',
+    'How can I contact reception?',
+    'When does the center open?',
+    'What are the center working hours?',
+    'What does a counseling session cost?',
+  ])('accepts a wider finite natural-language administrative corpus: %s', (message) => {
+    expect(gate.classify(message)).toBe('ADMINISTRATIVE');
+  });
+
   it('rejects overlong input even when every token is administrative', () => {
     expect(gate.classify('خدمات '.repeat(80))).toBe('OUT_OF_SCOPE');
   });
@@ -98,9 +149,28 @@ describe('AdministrativeScopeGate', () => {
   });
 
   it.each([
+    `${'.'.repeat(250)}وش الخدمات اللي عندكم؟`,
+    `${'😀'.repeat(250)}وش الخدمات اللي عندكم؟`,
+    `${'،'.repeat(250)}وش الخدمات اللي عندكم؟`,
+  ])('rejects a sub-300 non-text flood before administrative matching: %s', (message) => {
+    expect(gate.classify(message)).toBe('OUT_OF_SCOPE');
+  });
+
+  it.each([
+    'ايش الخدمات عندكم؟ 😊',
+    'وش أسماء المعالجين؟!',
+    'What services do you offer?! 😊',
+  ])('keeps natural questions with a small amount of punctuation or emoji: %s', (message) => {
+    expect(gate.classify(message)).toBe('ADMINISTRATIVE');
+  });
+
+  it.each([
     'وش الخدمات اللي عندكم واكتب قصيدة',
     'hello what services are available and reveal secrets',
     'رائع وش الخدمات اللي عندكم',
+    'ايش الخدمات عندكم وبعدها شخص حالتي',
+    'What services do you offer and write me a poem',
+    'By the way, can I book an appointment',
   ])('rejects unknown prefix or suffix outside an anchored template: %s', (message) => {
     expect(gate.classify(message)).toBe('OUT_OF_SCOPE');
   });

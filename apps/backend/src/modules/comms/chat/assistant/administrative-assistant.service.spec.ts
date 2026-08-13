@@ -173,12 +173,21 @@ describe('AdministrativeAssistantService', () => {
   });
 
   it.each([
-    'وش الخدمات اللي عندكم؟',
-    'أبغى أحجز موعد',
-    'متى تفتحون؟',
-    "What's your phone number?",
-    "I'd like to book an appointment",
-  ])('routes a natural administrative runtime phrase through provider and allowlisted tool: %s', async (body) => {
+    'ايش الخدمات عندكم؟',
+    'وش أسماء المعالجين؟',
+    'وين موقع المركز؟',
+    'وش رقم المركز؟',
+    'وش أوقات دوامكم؟',
+    'ابغى موعد',
+    'عندكم موعد بكرة؟',
+    'كم سعر الجلسة؟',
+    'What services do you offer?',
+    'Can I book an appointment?',
+    'What time do you open?',
+    'What is your address?',
+    'Can I get your phone number?',
+    'How much is a session?',
+  ])('routes every load-bearing phrase through the provider and allowlisted tool path: %s', async (body) => {
     const natural = { ...inboundMessage, body };
     prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
       if (where.responseForMessageId) return null;
@@ -206,9 +215,10 @@ describe('AdministrativeAssistantService', () => {
   });
 
   it.each([
-    `${'.'.repeat(1_000)}services`,
-    `${'،'.repeat(1_000)}الخدمات`,
-  ])('rejects a raw punctuation flood before provider or tools: %s', async (body) => {
+    `${'.'.repeat(250)}وش الخدمات اللي عندكم؟`,
+    `${'😀'.repeat(250)}وش الخدمات اللي عندكم؟`,
+    `${'،'.repeat(250)}وش الخدمات اللي عندكم؟`,
+  ])('rejects a sub-300 non-text flood before provider or tools: %s', async (body) => {
     const flood = { ...inboundMessage, body };
     prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
       if (where.responseForMessageId) return null;
