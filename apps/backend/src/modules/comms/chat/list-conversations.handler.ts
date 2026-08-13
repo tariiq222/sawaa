@@ -30,7 +30,13 @@ export class ListConversationsHandler {
       this.prisma.chatConversation.count({ where }),
     ]);
 
-    const clientIds = [...new Set(rows.map((r) => r.clientId))];
+    const clientIds = [
+      ...new Set(
+        rows
+          .map((row) => row.clientId)
+          .filter((clientId): clientId is string => clientId !== null),
+      ),
+    ];
     const clients = await this.prisma.client.findMany({
       where: { id: { in: clientIds } },
       select: { id: true, firstName: true, lastName: true },
@@ -38,7 +44,7 @@ export class ListConversationsHandler {
     const clientById = new Map(clients.map((c) => [c.id, c]));
 
     const items = rows.map((row) => {
-      const client = clientById.get(row.clientId);
+      const client = row.clientId ? clientById.get(row.clientId) : undefined;
       return {
         id: row.id,
         clientId: row.clientId,

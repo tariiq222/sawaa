@@ -15,12 +15,15 @@ export class CreateConversationHandler {
 
   async execute(dto: CreateConversationDto) {
     const isAiChat = !dto.employeeId;
+    const status = isAiChat
+      ? ConversationStatus.AI_ACTIVE
+      : ConversationStatus.STAFF_ACTIVE;
 
     const existing = await this.prisma.chatConversation.findFirst({
       where: {
         clientId: dto.clientId,
         employeeId: dto.employeeId ?? null,
-        status: ConversationStatus.OPEN,
+        status,
       },
     });
     if (existing) return existing;
@@ -30,6 +33,7 @@ export class CreateConversationHandler {
         clientId: dto.clientId,
         employeeId: dto.employeeId ?? null,
         isAiChat,
+        status,
       },
     });
   }

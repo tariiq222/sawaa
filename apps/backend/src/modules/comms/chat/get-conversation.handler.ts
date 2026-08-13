@@ -17,7 +17,10 @@ export interface GetConversationCommand {
 const SENDER_TYPE_TO_ROLE: Record<MessageSenderType, 'user' | 'staff' | 'assistant'> = {
   [MessageSenderType.CLIENT]: 'user',
   [MessageSenderType.EMPLOYEE]: 'staff',
+  [MessageSenderType.VISITOR]: 'user',
   [MessageSenderType.AI]: 'assistant',
+  [MessageSenderType.STAFF]: 'staff',
+  [MessageSenderType.SYSTEM]: 'assistant',
 };
 
 @Injectable()
@@ -34,10 +37,12 @@ export class GetConversationHandler {
     }
     await assertConversationAccess(this.prisma, conversation, cmd);
 
-    const client = await this.prisma.client.findFirst({
-      where: { id: conversation.clientId },
-      select: { id: true, firstName: true, lastName: true },
-    });
+    const client = conversation.clientId
+      ? await this.prisma.client.findFirst({
+          where: { id: conversation.clientId },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : null;
 
     return {
       id: conversation.id,

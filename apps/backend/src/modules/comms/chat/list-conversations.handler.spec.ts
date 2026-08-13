@@ -44,4 +44,44 @@ describe('ListConversationsHandler', () => {
     }));
     expect(result.meta.page).toBe(2);
   });
+
+  it('keeps guest conversations while looking up only linked client records', async () => {
+    prisma.chatConversation.findMany.mockResolvedValue([
+      {
+        id: 'guest-conversation',
+        clientId: null,
+        employeeId: null,
+        status: 'AI_ACTIVE',
+        createdAt: new Date('2026-08-13T10:00:00Z'),
+        updatedAt: new Date('2026-08-13T10:00:00Z'),
+        lastMessageAt: null,
+        _count: { messages: 1 },
+      },
+      {
+        id: 'client-conversation',
+        clientId: 'client-1',
+        employeeId: null,
+        status: 'AI_ACTIVE',
+        createdAt: new Date('2026-08-13T11:00:00Z'),
+        updatedAt: new Date('2026-08-13T11:00:00Z'),
+        lastMessageAt: null,
+        _count: { messages: 1 },
+      },
+    ]);
+    prisma.chatConversation.count.mockResolvedValue(2);
+    prisma.client.findMany.mockResolvedValue([
+      { id: 'client-1', firstName: 'ليان', lastName: 'أحمد' },
+    ]);
+
+    const result = await handler.execute({ page: 1, limit: 10 });
+
+    expect(prisma.client.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['client-1'] } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    expect(result.items.map((conversation) => conversation.user.id)).toEqual([
+      null,
+      'client-1',
+    ]);
+  });
 });
