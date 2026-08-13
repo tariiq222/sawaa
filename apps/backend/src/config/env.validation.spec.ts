@@ -134,6 +134,18 @@ describe('envValidationSchema', () => {
     expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
   });
 
+  it.each([
+    'change.me-chat-guest-token-secret-123456',
+    'change me-chat-guest-token-secret-123456',
+    'replace.me-chat-guest-token-secret-123456',
+  ])('rejects the legacy production guest token placeholder %s', (secret) => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: secret },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+  });
+
   it.each(NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES)(
     'rejects the non-production guest token fixture %s in production',
     (fixture) => {
@@ -170,7 +182,10 @@ describe('envValidationSchema', () => {
   it.each([
     ...NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES,
     'change-me-chat-guest-token-secret-123456',
+    'change.me-chat-guest-token-secret-123456',
+    'change me-chat-guest-token-secret-123456',
     'REPLACE_ME-chat-guest-token-secret-123456',
+    'replace.me-chat-guest-token-secret-123456',
   ])('identifies %s as a production guest token placeholder', (secret) => {
     expect(isProductionChatGuestTokenSecretPlaceholder(secret)).toBe(true);
   });

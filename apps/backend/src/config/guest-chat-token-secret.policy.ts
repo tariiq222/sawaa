@@ -10,8 +10,8 @@ export const NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES = [
 ] as const;
 
 const CHAT_GUEST_TOKEN_SECRET_PLACEHOLDER_PATTERNS = [
-  /change[-_]?me/i,
-  /replace[-_]?(?:me|with)/i,
+  /change.?me/i,
+  /replace.?me/i,
 ];
 
 /**
