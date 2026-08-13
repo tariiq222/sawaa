@@ -116,8 +116,9 @@ export class AdministrativeAssistantService {
       return targetResponse ?? this.findExistingResponse(messageId);
     } catch (error) {
       if (error instanceof ConversationStatusChanged || error instanceof AssistantLeaseLost) return null;
-      await this.markRetryableFailure(currentMessage);
-      this.logger.warn('Administrative assistant attempt failed; the message remains retryable');
+      if (await this.markRetryableFailure(currentMessage, conversation, owner)) {
+        this.logger.warn('Administrative assistant attempt failed; the message remains retryable');
+      }
       return null;
     } finally {
       await this.lease.release(conversation.id, owner);
@@ -337,11 +338,29 @@ export class AdministrativeAssistantService {
     }
   }
 
-  private async markRetryableFailure(inbound: InboundMessage): Promise<void> {
+  private async markRetryableFailure(
+    inbound: InboundMessage,
+    conversation: ActiveConversation,
+    leaseOwner: string,
+  ): Promise<boolean> {
     const existingMetadata = this.readApprovedMetadata(inbound.metadata);
+    const leaseValidAt = new Date();
     try {
-      await this.prisma.commsChatMessage.update({
-        where: { id: inbound.id },
+      const updated = await this.prisma.commsChatMessage.updateMany({
+        where: {
+          id: inbound.id,
+          conversationId: conversation.id,
+          conversation: {
+            is: {
+              id: conversation.id,
+              status: ConversationStatus.AI_ACTIVE,
+              isAiChat: true,
+              stateVersion: conversation.stateVersion,
+              assistantLeaseOwner: leaseOwner,
+              assistantLeaseExpiresAt: { gt: leaseValidAt },
+            },
+          },
+        },
         data: {
           metadata: {
             ...existingMetadata,
@@ -350,8 +369,10 @@ export class AdministrativeAssistantService {
           },
         },
       });
+      return updated.count === 1;
     } catch {
       this.logger.warn('Could not mark the administrative assistant attempt as retryable');
+      return false;
     }
   }
 

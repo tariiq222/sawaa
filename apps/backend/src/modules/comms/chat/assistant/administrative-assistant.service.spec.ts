@@ -46,7 +46,7 @@ function duplicateError(): Prisma.PrismaClientKnownRequestError {
 
 describe('AdministrativeAssistantService', () => {
   let prisma: {
-    commsChatMessage: { findUnique: jest.Mock; findMany: jest.Mock; update: jest.Mock };
+    commsChatMessage: { findUnique: jest.Mock; findMany: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
     chatConversation: { findUnique: jest.Mock };
   };
   let tx: {
@@ -79,6 +79,7 @@ describe('AdministrativeAssistantService', () => {
           return [inboundMessage];
         }),
         update: jest.fn().mockResolvedValue(inboundMessage),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       chatConversation: { findUnique: jest.fn().mockResolvedValue(activeConversation) },
     };
@@ -366,7 +367,7 @@ describe('AdministrativeAssistantService', () => {
 
     expect(chat.completeWithTools).toHaveBeenCalledTimes(1);
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
-    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.updateMany).not.toHaveBeenCalled();
     expect(lease.release).toHaveBeenCalledTimes(1);
   });
 
@@ -408,11 +409,11 @@ describe('AdministrativeAssistantService', () => {
 
     await expect(service.processMessage('message-2')).resolves.toBeNull();
 
-    expect(prisma.commsChatMessage.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'message-1' },
+    expect(prisma.commsChatMessage.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: 'message-1', conversationId }),
     }));
-    expect(prisma.commsChatMessage.update).not.toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'message-2' },
+    expect(prisma.commsChatMessage.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: 'message-2' }),
     }));
   });
 
@@ -570,7 +571,7 @@ describe('AdministrativeAssistantService', () => {
 
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
     expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
-    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.updateMany).not.toHaveBeenCalled();
   });
 
   it('rejects persistence when the same owner lease is expired in the database', async () => {
@@ -584,7 +585,7 @@ describe('AdministrativeAssistantService', () => {
 
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
     expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
-    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.updateMany).not.toHaveBeenCalled();
   });
 
   it('rejects and rolls back when lease ownership changes after the read but before the final CAS', async () => {
@@ -598,7 +599,7 @@ describe('AdministrativeAssistantService', () => {
         assistantLeaseExpiresAt: { gt: expect.any(Date) },
       }),
     }));
-    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.updateMany).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -611,7 +612,7 @@ describe('AdministrativeAssistantService', () => {
 
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
     expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
-    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.updateMany).not.toHaveBeenCalled();
   });
 
   it('returns an existing response without invoking AI', async () => {
@@ -643,6 +644,82 @@ describe('AdministrativeAssistantService', () => {
     expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
   });
 
+  it.each([
+    {
+      name: 'guest claim',
+      after: (_owner: string) => ({
+        ...activeConversation,
+        clientId: 'client-a',
+        stateVersion: 1,
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
+      }),
+    },
+    {
+      name: 'legacy close',
+      after: (_owner: string) => ({
+        ...activeConversation,
+        status: ConversationStatus.CLOSED,
+        stateVersion: 1,
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
+      }),
+    },
+    {
+      name: 'another worker reacquires the lease',
+      after: (_owner: string) => ({
+        ...activeConversation,
+        assistantLeaseOwner: 'other-worker',
+        assistantLeaseExpiresAt: new Date(Date.now() + 60_000),
+      }),
+    },
+  ])('does not mutate retry metadata when provider failure races with $name', async ({ after }) => {
+    const originalMetadata = { existing: 'unchanged' };
+    const failingInbound = { ...inboundMessage, metadata: originalMetadata };
+    let storedMetadata: unknown = originalMetadata;
+    let rejectProvider!: (reason: Error) => void;
+    let providerStarted!: () => void;
+    const started = new Promise<void>((resolve) => { providerStarted = resolve; });
+    const providerResult = new Promise<never>((_resolve, reject) => { rejectProvider = reject; });
+    prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => (
+      where.responseForMessageId ? null : failingInbound
+    ));
+    prisma.commsChatMessage.findMany.mockImplementation(({ select }) => (
+      select.id ? [failingInbound] : [failingInbound]
+    ));
+    prisma.commsChatMessage.update.mockImplementation(async ({ data }) => {
+      storedMetadata = data.metadata;
+      return failingInbound;
+    });
+    chat.completeWithTools.mockImplementation(() => {
+      providerStarted();
+      return providerResult;
+    });
+
+    const processing = service.processMessage(messageId);
+    await started;
+    const stateAfterRace = after(lease.acquire.mock.calls[0][1]);
+    prisma.commsChatMessage.updateMany.mockImplementation(async ({ where, data }) => {
+      const guard = where.conversation.is;
+      const leaseExpiry = stateAfterRace.assistantLeaseExpiresAt;
+      const matches = stateAfterRace.status === guard.status
+        && stateAfterRace.isAiChat === guard.isAiChat
+        && stateAfterRace.stateVersion === guard.stateVersion
+        && stateAfterRace.assistantLeaseOwner === guard.assistantLeaseOwner
+        && leaseExpiry instanceof Date
+        && leaseExpiry > guard.assistantLeaseExpiresAt.gt;
+      if (matches) storedMetadata = data.metadata;
+      return { count: matches ? 1 : 0 };
+    });
+    rejectProvider(new Error('provider secret after lease transition'));
+
+    await expect(processing).resolves.toBeNull();
+    expect(storedMetadata).toBe(originalMetadata);
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
+    expect(JSON.stringify(storedMetadata)).not.toContain('provider secret');
+  });
+
   it('merges safe metadata on provider failure without persisting the raw error and releases the lease', async () => {
     const withMetadata = {
       ...inboundMessage,
@@ -654,8 +731,22 @@ describe('AdministrativeAssistantService', () => {
 
     await expect(service.processMessage(messageId)).resolves.toBeNull();
 
-    expect(prisma.commsChatMessage.update).toHaveBeenCalledWith({
-      where: { id: messageId },
+    const leaseOwner = lease.acquire.mock.calls[0][1];
+    expect(prisma.commsChatMessage.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: messageId,
+        conversationId,
+        conversation: {
+          is: {
+            id: conversationId,
+            status: ConversationStatus.AI_ACTIVE,
+            isAiChat: true,
+            stateVersion: 0,
+            assistantLeaseOwner: leaseOwner,
+            assistantLeaseExpiresAt: { gt: expect.any(Date) },
+          },
+        },
+      },
       data: {
         metadata: {
           action: 'OFFER_HANDOFF',
@@ -665,7 +756,8 @@ describe('AdministrativeAssistantService', () => {
         },
       },
     });
-    expect(JSON.stringify(prisma.commsChatMessage.update.mock.calls)).not.toMatch(/provider secret|discard-me/);
+    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+    expect(JSON.stringify(prisma.commsChatMessage.updateMany.mock.calls)).not.toMatch(/provider secret|discard-me/);
     expect(lease.release).toHaveBeenCalledTimes(1);
   });
 
