@@ -10,7 +10,7 @@ import {
   replyToConversation,
 } from "@/lib/api/conversations"
 import type { MarkConversationReadPayload } from "@/lib/types/conversations"
-import { conversationQueryKeys } from "@/hooks/use-conversations"
+import { queryKeys } from "@/lib/query-keys"
 
 function createClientMessageId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -20,7 +20,7 @@ function createClientMessageId() {
 
 export function useConversationMutations() {
   const queryClient = useQueryClient()
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: conversationQueryKeys.all })
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all })
 
   const claim = useMutation({
     mutationFn: ({ conversationId }: { conversationId: string }) => claimConversation(conversationId),

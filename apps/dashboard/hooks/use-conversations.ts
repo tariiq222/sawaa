@@ -7,6 +7,7 @@ import {
   fetchConversations,
 } from "@/lib/api/conversations"
 import { fetchUsers } from "@/lib/api/users"
+import { queryKeys } from "@/lib/query-keys"
 import type {
   ConversationFilters,
   ConversationMessageFilters,
@@ -14,19 +15,9 @@ import type {
 
 export const CONVERSATION_POLL_INTERVAL = 7_500
 
-// Kept local until the orchestrator applies the query-keys registration hunk.
-export const conversationQueryKeys = {
-  all: ["conversations"] as const,
-  list: (filters: ConversationFilters = {}) => ["conversations", "list", filters] as const,
-  detail: (conversationId: string) => ["conversations", "detail", conversationId] as const,
-  messages: (conversationId: string, filters: ConversationMessageFilters = {}) =>
-    ["conversations", "messages", conversationId, filters] as const,
-  staff: ["conversations", "assignable-staff"] as const,
-}
-
 export function useConversations(filters: ConversationFilters = {}) {
   return useQuery({
-    queryKey: conversationQueryKeys.list(filters),
+    queryKey: queryKeys.conversations.list(filters),
     queryFn: () => fetchConversations(filters),
     staleTime: 5_000,
     refetchInterval: CONVERSATION_POLL_INTERVAL,
@@ -36,7 +27,7 @@ export function useConversations(filters: ConversationFilters = {}) {
 
 export function useConversation(conversationId: string | null) {
   return useQuery({
-    queryKey: conversationQueryKeys.detail(conversationId ?? ""),
+    queryKey: queryKeys.conversations.detail(conversationId ?? ""),
     queryFn: () => fetchConversation(conversationId!),
     enabled: Boolean(conversationId),
     staleTime: 5_000,
@@ -49,7 +40,7 @@ export function useConversationMessages(
   filters: ConversationMessageFilters = { limit: 100 },
 ) {
   return useQuery({
-    queryKey: conversationQueryKeys.messages(conversationId ?? "", filters),
+    queryKey: queryKeys.conversations.messages(conversationId ?? "", filters),
     queryFn: () => fetchConversationMessages(conversationId!, filters),
     enabled: Boolean(conversationId),
     staleTime: 5_000,
@@ -59,7 +50,7 @@ export function useConversationMessages(
 
 export function useAssignableConversationStaff(enabled: boolean) {
   return useQuery({
-    queryKey: conversationQueryKeys.staff,
+    queryKey: queryKeys.conversations.staff(),
     queryFn: () => fetchUsers({ limit: 100, isActive: true }),
     enabled,
     staleTime: 5 * 60_000,
