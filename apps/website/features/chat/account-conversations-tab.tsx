@@ -131,7 +131,7 @@ export function AccountConversationsTab() {
     );
   }
 
-  if (loading) return <p className="py-10 text-center text-sm text-[var(--sw-neutral-500)]">{t('common.loading')}</p>;
+  if (loading) return <p role="status" aria-live="polite" className="py-10 text-center text-sm text-[var(--sw-neutral-500)]">{t('common.loading')}</p>;
   if (error) {
     return (
       <div role="alert" className="rounded-3xl border border-[color-mix(in_srgb,var(--error)_20%,transparent)] p-5 text-center">

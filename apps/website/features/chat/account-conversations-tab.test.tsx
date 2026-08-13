@@ -45,6 +45,13 @@ describe('AccountConversationsTab', () => {
     expect(screen.queryByRole('button', { name: 'Continue with assistant' })).toBeNull();
   });
 
+  it('announces initial history loading accessibly', () => {
+    listConversations.mockReturnValue(new Promise(() => undefined));
+    renderTab();
+
+    expect(screen.getByRole('status').getAttribute('aria-live')).toBe('polite');
+  });
+
   it('opens the administrative assistant from an active detail without browser-supplied identity', async () => {
     const active = { ...conversation, status: 'AI_ACTIVE' as const };
     listConversations.mockResolvedValue({ data: [active], meta: { limit: 20, nextCursor: null, hasMore: false } });

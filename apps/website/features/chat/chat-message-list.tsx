@@ -76,7 +76,7 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
     );
   }
 
-  if (isSystem) {
+  if (isSystem && !isOperationResult) {
     return <p role="status" aria-label={t('chat.sender.system')} className="px-4 py-1 text-center text-xs leading-5 text-[var(--sw-neutral-500)]">{message.body}</p>;
   }
 

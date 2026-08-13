@@ -82,7 +82,7 @@ describe('ChatMessageList', () => {
       {
         ...baseMessage,
         id: 'result',
-        senderType: 'AI',
+        senderType: 'SYSTEM',
         kind: 'OPERATION_RESULT',
         body: 'اكتمل الإجراء',
         metadata: { operationId: 'operation-1', type: 'CREATE_BOOKING', status: 'SUCCEEDED', outcome: 'BOOKING_CREATED' },

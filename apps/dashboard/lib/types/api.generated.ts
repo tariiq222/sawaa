@@ -5277,7 +5277,7 @@ export interface components {
             hasMore: boolean;
             limit: number;
             /** Format: uuid */
-            nextCursor?: string | null;
+            nextCursor: string | null;
         };
         ClientChatConversationDetailDto: {
             /** Format: date-time */
@@ -5296,9 +5296,9 @@ export interface components {
             createdAt: string;
             /** Format: uuid */
             id: string;
-            lastMessage?: components["schemas"]["ClientChatLastMessageDto"] | null;
+            lastMessage: components["schemas"]["ClientChatLastMessageDto"] | null;
             /** Format: date-time */
-            lastMessageAt?: string | null;
+            lastMessageAt: string | null;
             /** @enum {string} */
             status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
             /** Format: date-time */

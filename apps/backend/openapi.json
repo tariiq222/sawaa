@@ -1031,6 +1031,7 @@
         },
         "required": [
           "limit",
+          "nextCursor",
           "hasMore"
         ],
         "type": "object"
@@ -1119,7 +1120,9 @@
           "id",
           "status",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "lastMessageAt",
+          "lastMessage"
         ],
         "type": "object"
       },

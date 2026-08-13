@@ -22,8 +22,8 @@ export class ClientChatConversationSummaryDto {
   @ApiProperty({ enum: ConversationStatus }) status!: ConversationStatus;
   @ApiProperty({ type: String, format: 'date-time' }) createdAt!: Date;
   @ApiProperty({ type: String, format: 'date-time' }) updatedAt!: Date;
-  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) lastMessageAt!: Date | null;
-  @ApiPropertyOptional({ type: ClientChatLastMessageDto, nullable: true }) lastMessage!: ClientChatLastMessageDto | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) lastMessageAt!: Date | null;
+  @ApiProperty({ type: ClientChatLastMessageDto, nullable: true }) lastMessage!: ClientChatLastMessageDto | null;
 }
 
 export class ClientChatConversationDetailDto {
@@ -37,7 +37,7 @@ export class ClientChatConversationDetailDto {
 
 export class ClientChatConversationCursorMetaDto {
   @ApiProperty() limit!: number;
-  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) nextCursor!: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) nextCursor!: string | null;
   @ApiProperty() hasMore!: boolean;
 }
 
