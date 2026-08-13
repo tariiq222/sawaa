@@ -51,7 +51,9 @@ export class GetConversationHandler {
       handedOff: conversation.employeeId != null,
       startedAt: conversation.createdAt,
       endedAt:
-        conversation.status === ConversationStatus.CLOSED ? conversation.updatedAt : null,
+        conversation.status === ConversationStatus.CLOSED
+          ? (conversation.closedAt ?? conversation.updatedAt)
+          : null,
       lastMessageAt: conversation.lastMessageAt,
       user: {
         id: conversation.clientId,

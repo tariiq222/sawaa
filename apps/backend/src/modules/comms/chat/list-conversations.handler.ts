@@ -51,7 +51,10 @@ export class ListConversationsHandler {
         employeeId: row.employeeId,
         handedOff: row.employeeId != null,
         startedAt: row.createdAt,
-        endedAt: row.status === ConversationStatus.CLOSED ? row.updatedAt : null,
+        endedAt:
+          row.status === ConversationStatus.CLOSED
+            ? (row.closedAt ?? row.updatedAt)
+            : null,
         lastMessageAt: row.lastMessageAt,
         user: {
           id: row.clientId,

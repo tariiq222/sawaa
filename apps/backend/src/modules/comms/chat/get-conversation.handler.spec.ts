@@ -143,6 +143,26 @@ describe('GetConversationHandler', () => {
     expect(result.endedAt).toEqual(updatedAt);
   });
 
+  it('returns closedAt instead of a later updatedAt for a closed conversation', async () => {
+    const closedAt = new Date('2026-08-13T10:30:00Z');
+    const updatedAt = new Date('2026-08-13T11:00:00Z');
+    prisma.chatConversation.findFirst.mockResolvedValue({
+      id: 'c1',
+      clientId: 'u1',
+      employeeId: null,
+      status: ConversationStatus.CLOSED,
+      closedAt,
+      createdAt: new Date('2026-08-13T10:00:00Z'),
+      updatedAt,
+      lastMessageAt: null,
+      messages: [],
+    });
+
+    const result = await handler.execute({ conversationId: 'c1' });
+
+    expect(result.endedAt).toEqual(closedAt);
+  });
+
   // AUTHZ-004 / COMMS-004: EMPLOYEE callers may only read their assigned chats.
   it('forbids an EMPLOYEE from reading a conversation assigned to another counselor', async () => {
     prisma.chatConversation.findFirst.mockResolvedValue({

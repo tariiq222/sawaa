@@ -30,7 +30,10 @@ export class CloseConversationHandler {
     }
     return this.prisma.chatConversation.update({
       where: { id: cmd.conversationId },
-      data: { status: ConversationStatus.CLOSED },
+      data: {
+        status: ConversationStatus.CLOSED,
+        closedAt: new Date(),
+      },
     });
   }
 }

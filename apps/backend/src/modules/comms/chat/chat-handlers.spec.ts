@@ -86,7 +86,10 @@ describe('CloseConversationHandler', () => {
     expect(result).toEqual(updated);
     expect(prisma.chatConversation.update).toHaveBeenCalledWith({
       where: { id: conversationId },
-      data: { status: ConversationStatus.CLOSED },
+      data: {
+        status: ConversationStatus.CLOSED,
+        closedAt: expect.any(Date),
+      },
     });
   });
 

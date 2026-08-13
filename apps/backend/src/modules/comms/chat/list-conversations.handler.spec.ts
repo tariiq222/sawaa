@@ -84,4 +84,42 @@ describe('ListConversationsHandler', () => {
       'client-1',
     ]);
   });
+
+  it('returns closedAt with an updatedAt fallback for closed conversations', async () => {
+    const closedAt = new Date('2026-08-13T10:30:00Z');
+    const updatedAt = new Date('2026-08-13T11:00:00Z');
+    prisma.chatConversation.findMany.mockResolvedValue([
+      {
+        id: 'closed-with-timestamp',
+        clientId: 'client-1',
+        employeeId: null,
+        status: 'CLOSED',
+        closedAt,
+        createdAt: new Date('2026-08-13T10:00:00Z'),
+        updatedAt,
+        lastMessageAt: null,
+        _count: { messages: 0 },
+      },
+      {
+        id: 'legacy-closed',
+        clientId: 'client-2',
+        employeeId: null,
+        status: 'CLOSED',
+        closedAt: null,
+        createdAt: new Date('2026-08-13T09:00:00Z'),
+        updatedAt,
+        lastMessageAt: null,
+        _count: { messages: 0 },
+      },
+    ]);
+    prisma.chatConversation.count.mockResolvedValue(2);
+    prisma.client.findMany.mockResolvedValue([]);
+
+    const result = await handler.execute({ page: 1, limit: 10 });
+
+    expect(result.items.map((conversation) => conversation.endedAt)).toEqual([
+      closedAt,
+      updatedAt,
+    ]);
+  });
 });

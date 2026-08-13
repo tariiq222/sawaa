@@ -61,7 +61,7 @@ describe('CloseConversationHandler', () => {
     expect(prisma.chatConversation.update).not.toHaveBeenCalled();
   });
 
-  it('updates an OPEN conversation to CLOSED', async () => {
+  it('updates an OPEN conversation to CLOSED with a closure timestamp', async () => {
     prisma.chatConversation.findFirst.mockResolvedValue({
       id: 'c1',
       status: ConversationStatus.OPEN,
@@ -75,7 +75,10 @@ describe('CloseConversationHandler', () => {
 
     expect(prisma.chatConversation.update).toHaveBeenCalledWith({
       where: { id: 'c1' },
-      data: { status: ConversationStatus.CLOSED },
+      data: {
+        status: ConversationStatus.CLOSED,
+        closedAt: expect.any(Date),
+      },
     });
   });
 });
