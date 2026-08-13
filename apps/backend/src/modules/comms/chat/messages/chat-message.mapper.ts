@@ -41,8 +41,14 @@ export interface PublicChatOperationResultMetadata {
   syncPending?: boolean;
 }
 
+export interface PublicChatAssistantRecoveryMetadata {
+  action: 'ASSISTANT_RECOVERY';
+  canRetry: boolean;
+}
+
 export type PublicChatMessageMetadata =
   | PublicChatHandoffMetadata
+  | PublicChatAssistantRecoveryMetadata
   | ChatOperationCardMetadata
   | PublicChatOperationResultMetadata;
 
@@ -60,7 +66,7 @@ export interface ChatMessageResponse {
 type ChatMessageSource = Omit<ChatMessageResponse, 'metadata'> & { metadata?: unknown };
 
 export function toChatMessageResponse<T extends ChatMessageSource>(message: T): ChatMessageResponse {
-  const metadata = toPublicMetadata(message.kind, message.metadata);
+  const metadata = toPublicMetadata(message.kind, message.senderType, message.metadata);
   return {
     id: message.id,
     conversationId: message.conversationId,
@@ -75,10 +81,25 @@ export function toChatMessageResponse<T extends ChatMessageSource>(message: T): 
 
 function toPublicMetadata(
   kind: ChatMessageKind,
+  senderType: MessageSenderType,
   value: unknown,
 ): PublicChatMessageMetadata | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const metadata = value as Record<string, unknown>;
+
+  if (
+    kind === ChatMessageKind.TEXT
+    && (senderType === 'CLIENT' || senderType === 'VISITOR')
+    && metadata.assistantStatus === 'RETRYABLE_FAILURE'
+    && metadata.retryable === true
+  ) {
+    const attempts = typeof metadata.retryAttempts === 'number'
+      && Number.isSafeInteger(metadata.retryAttempts)
+      && metadata.retryAttempts >= 0
+      ? metadata.retryAttempts
+      : 0;
+    return { action: 'ASSISTANT_RECOVERY', canRetry: attempts < 2 };
+  }
 
   if (
     kind === ChatMessageKind.ACTION_CARD

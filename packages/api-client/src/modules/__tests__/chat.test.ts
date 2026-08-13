@@ -17,6 +17,8 @@ import {
   listGuestChatMessages,
   requestClientChatHandoff,
   requestGuestChatHandoff,
+  retryClientChatMessage,
+  retryGuestChatMessage,
   sendClientChatMessage,
   sendGuestChatMessage,
 } from '../chat'
@@ -202,6 +204,8 @@ describe('chat routes and browser credentials', () => {
     await sendClientChatMessage('conversation/1', { body: 'مرحبا', clientMessageId: 'message-2' })
     await listGuestChatMessages('conversation/1', { cursor: 'message/1', limit: 5 })
     await listClientChatMessages('conversation/1', { cursor: 'message/1', limit: 5 })
+    await retryGuestChatMessage('conversation/1', 'message/1')
+    await retryClientChatMessage('conversation/1', 'message/1')
 
     expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
       'http://api.test/api/v1/public/branding',
@@ -213,11 +217,13 @@ describe('chat routes and browser credentials', () => {
       'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/messages',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/messages?cursor=message%2F1&limit=5',
       'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/messages?cursor=message%2F1&limit=5',
+      'http://api.test/api/v1/public/chat/conversations/conversation%2F1/messages/message%2F1/retry',
+      'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/messages/message%2F1/retry',
     ])
     expect(vi.mocked(fetch).mock.calls.every(([, init]) => init?.credentials === 'include')).toBe(true)
 
     const mutations = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'POST')
-    expect(mutations).toHaveLength(4)
+    expect(mutations).toHaveLength(6)
     for (const [, init] of mutations) {
       expect(new Headers(init?.headers).get('x-csrf-token')).toBe('a'.repeat(64))
     }
@@ -230,6 +236,8 @@ describe('chat routes and browser credentials', () => {
       {},
       { body: 'مرحبا', clientMessageId: 'message-1' },
       { body: 'مرحبا', clientMessageId: 'message-2' },
+      {},
+      {},
     ])
     expect(JSON.stringify(bodies)).not.toMatch(/clientId|senderId|senderType|guestToken/)
   })

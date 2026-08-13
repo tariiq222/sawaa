@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { CalendarClock, Check, CircleAlert, LockKeyhole } from 'lucide-react';
 
 import { useLocale, useT } from '@/features/locale/locale-provider';
+import { halalasToSarNumber } from '@/lib/money';
 import type { ChatOperation } from './chat.types';
 
 type BookingSummary = NonNullable<ChatOperation['summary']['proposedBooking']>;
@@ -141,7 +142,7 @@ function OperationSummary({ summary, locale }: { summary: BookingSummary; locale
   if (typeof summary.price === 'number') {
     fields.push(new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en-SA', {
       style: 'currency', currency: summary.currency ?? 'SAR',
-    }).format(summary.price));
+    }).format(halalasToSarNumber(summary.price)));
   }
   if (fields.length === 0) return null;
   return (

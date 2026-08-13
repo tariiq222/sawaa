@@ -36,6 +36,8 @@ export {
   claimGuestChatConversation,
   sendGuestChatMessage,
   sendClientChatMessage,
+  retryGuestChatMessage,
+  retryClientChatMessage,
   listGuestChatMessages,
   listClientChatMessages,
   requestGuestChatHandoff,

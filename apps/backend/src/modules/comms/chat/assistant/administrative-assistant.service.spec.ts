@@ -796,12 +796,28 @@ describe('AdministrativeAssistantService', () => {
           reason: 'USER_REQUESTED',
           assistantStatus: 'RETRYABLE_FAILURE',
           retryable: true,
+          retryAttempts: 0,
         },
       },
     });
     expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
     expect(JSON.stringify(prisma.commsChatMessage.updateMany.mock.calls)).not.toMatch(/provider secret|discard-me/);
     expect(lease.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not let an idempotent send replay bypass the bounded manual retry endpoint', async () => {
+    const retryableInbound = {
+      ...inboundMessage,
+      metadata: { assistantStatus: 'RETRYABLE_FAILURE', retryable: true, retryAttempts: 1 },
+    };
+    prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => (
+      where.responseForMessageId ? null : retryableInbound
+    ));
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(lease.acquire).not.toHaveBeenCalled();
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
   });
 
   it('persists one unified AI response and increments client unread once in the same short transaction', async () => {

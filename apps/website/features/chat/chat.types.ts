@@ -16,6 +16,7 @@ export type {
   ChatOperation,
   ChatOperationCardMetadata,
   ChatHandoffOfferMetadata,
+  ChatAssistantRecoveryMetadata,
   ChatOperationResultMetadata,
   ChatCursorMeta,
   ChatMessagePage,

@@ -2,10 +2,15 @@
 
 import { ApiError } from '@sawaa/api-client';
 import { Bot, MessageCircle, ShieldCheck, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { isAuthenticated } from '@/features/auth/auth-store';
+import {
+  getAuthIdentitySnapshot,
+  getServerAuthIdentitySnapshot,
+  subscribeAuth,
+  clearAuth,
+} from '@/features/auth/auth-store';
 import { t as translate } from '@/features/locale/dictionary';
 import { useLocale, useT } from '@/features/locale/locale-provider';
 import {
@@ -20,69 +25,137 @@ import {
   listGuestChatMessagesApi,
   requestClientChatHandoffApi,
   requestGuestChatHandoffApi,
+  retryClientChatMessageApi,
+  retryGuestChatMessageApi,
   sendClientChatMessageApi,
   sendGuestChatMessageApi,
 } from './chat.api';
 import { ChatComposer } from './chat-composer';
 import { ChatMessageList } from './chat-message-list';
-import { consumeChatReopen, savePendingChatResume } from './chat-resume';
+import {
+  clearPendingChatResume,
+  consumeChatReopen,
+  readPendingChatResume,
+  savePendingChatResume,
+} from './chat-resume';
 import type { ChatConversationDetail, ChatMessage, ChatOperation } from './chat.types';
 
 const MESSAGE_LIMIT = 50;
 
 export function AiChatWidget() {
+  const [open, setOpen] = useState(false);
+  const authIdentity = useSyncExternalStore(
+    subscribeAuth,
+    getAuthIdentitySnapshot,
+    getServerAuthIdentitySnapshot,
+  );
+  return (
+    <AiChatWidgetSession
+      key={authIdentity ?? 'guest'}
+      authIdentity={authIdentity}
+      open={open}
+      setOpen={setOpen}
+    />
+  );
+}
+
+function AiChatWidgetSession({
+  authIdentity,
+  open,
+  setOpen,
+}: {
+  authIdentity: string | null;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}) {
   const t = useT();
   const locale = useLocale();
   const router = useRouter();
   const launcherRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(false);
+  const authenticated = authIdentity !== null;
+  const requestGenerationRef = useRef(0);
   const [conversation, setConversation] = useState<ChatConversationDetail | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMessages = useCallback(async (current: ChatConversationDetail, client: boolean) => {
+  const loadMessages = useCallback(async (
+    current: ChatConversationDetail,
+    client: boolean,
+    generation = requestGenerationRef.current,
+    resumedOperations: ChatOperation[] | null = null,
+  ) => {
     const page = client
       ? await listClientChatMessagesApi(current.id, { limit: MESSAGE_LIMIT })
       : await listGuestChatMessagesApi(current.id, { limit: MESSAGE_LIMIT });
-    setMessages([...page.data].reverse());
+    if (generation !== requestGenerationRef.current) return;
+    const ordered = [...page.data].reverse();
+    setMessages(resumedOperations
+      ? reconcileResumedOperations(ordered, resumedOperations)
+      : ordered);
   }, []);
 
   const loadConversation = useCallback(async () => {
+    const generation = requestGenerationRef.current + 1;
+    requestGenerationRef.current = generation;
     setLoading(true);
     setError(null);
-    const client = isAuthenticated();
-    setAuthenticated(client);
+    const client = authenticated;
     try {
       let current: ChatConversationDetail;
-      try {
-        current = client
-          ? await getCurrentClientChatConversationApi()
-          : await getCurrentGuestChatConversationApi();
-      } catch (currentError) {
-        if (!(currentError instanceof ApiError) || currentError.status !== 404) throw currentError;
-        const guest = await createGuestChatConversationApi({ language: locale });
-        current = client ? await claimGuestChatConversationApi(guest.id) : guest;
+      let resumedOperations: ChatOperation[] | null = null;
+      const pendingResume = client ? readPendingChatResume() : null;
+      if (pendingResume) {
+        try {
+          const claimed = await claimGuestChatConversationApi(pendingResume);
+          current = claimed;
+          resumedOperations = claimed.resumedOperations ?? [];
+          clearPendingChatResume();
+        } catch {
+          if (generation === requestGenerationRef.current) setError(translate(locale, 'chat.error.claim'));
+          return;
+        }
+      } else {
+        try {
+          current = client
+            ? await getCurrentClientChatConversationApi()
+            : await getCurrentGuestChatConversationApi();
+        } catch (currentError) {
+          const canBootstrap = currentError instanceof ApiError
+            && (currentError.status === 404 || (!client && currentError.status === 401));
+          if (!canBootstrap) throw currentError;
+          const guest = await createGuestChatConversationApi({ language: locale });
+          if (client) {
+            const claimed = await claimGuestChatConversationApi(guest.id);
+            current = claimed;
+            resumedOperations = claimed.resumedOperations ?? [];
+          } else {
+            current = guest;
+          }
+        }
       }
+      if (generation !== requestGenerationRef.current) return;
       setConversation(current);
-      await loadMessages(current, client);
-    } catch {
-      setError(translate(locale, 'chat.error.load'));
+      await loadMessages(current, client, generation, resumedOperations);
+    } catch (loadError) {
+      if (client && loadError instanceof ApiError && loadError.status === 401) clearAuth();
+      else if (generation === requestGenerationRef.current) setError(translate(locale, 'chat.error.load'));
     } finally {
-      setLoading(false);
+      if (generation === requestGenerationRef.current) setLoading(false);
     }
-  }, [loadMessages, locale]);
+  }, [authenticated, loadMessages, locale]);
 
   useEffect(() => {
-    const fromLogin = consumeChatReopen()
-      || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('chat') === 'resume');
+    const queryResume = typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).get('chat') === 'resume';
+    const fromLogin = consumeChatReopen() || queryResume;
     if (!fromLogin) return;
+    if (queryResume) removeResumeQuery();
     const timeout = window.setTimeout(() => setOpen(true), 0);
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [setOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,10 +169,13 @@ export function AiChatWidget() {
   useEffect(() => {
     if (!open || !conversation) return;
     const interval = window.setInterval(() => {
-      void loadMessages(conversation, authenticated).catch(() => undefined);
+      void loadMessages(conversation, authenticated).catch((pollError) => {
+        if (authenticated && pollError instanceof ApiError && pollError.status === 401) clearAuth();
+        else setError(t('chat.error.poll'));
+      });
     }, 5000);
     return () => window.clearInterval(interval);
-  }, [authenticated, conversation, loadMessages, open]);
+  }, [authenticated, conversation, loadMessages, open, t]);
 
   function close() {
     setOpen(false);
@@ -128,11 +204,11 @@ export function AiChatWidget() {
     }
   }
 
-  async function send(body: string) {
+  async function send(body: string, clientMessageId: string) {
     if (!conversation) return;
     setError(null);
     try {
-      const payload = { body, clientMessageId: createClientMessageId() };
+      const payload = { body, clientMessageId };
       const message = authenticated
         ? await sendClientChatMessageApi(conversation.id, payload)
         : await sendGuestChatMessageApi(conversation.id, payload);
@@ -140,7 +216,8 @@ export function AiChatWidget() {
       window.setTimeout(() => {
         void loadMessages(conversation, authenticated).catch(() => undefined);
       }, 1200);
-    } catch {
+    } catch (sendError) {
+      if (authenticated && sendError instanceof ApiError && sendError.status === 401) clearAuth();
       setError(t('chat.error.send'));
       throw new Error('chat send failed');
     }
@@ -172,6 +249,18 @@ export function AiChatWidget() {
   async function clientHandoff() {
     if (!conversation) return;
     setConversation(await requestClientChatHandoffApi(conversation.id));
+  }
+
+  async function retryAssistant(messageId: string) {
+    if (!conversation) return;
+    setError(null);
+    const response = authenticated
+      ? await retryClientChatMessageApi(conversation.id, messageId)
+      : await retryGuestChatMessageApi(conversation.id, messageId);
+    setMessages((current) => current.some(({ id }) => id === response.id)
+      ? current
+      : [...current, response]);
+    await loadMessages(conversation, authenticated);
   }
 
   const closed = conversation?.status === 'CLOSED';
@@ -225,6 +314,7 @@ export function AiChatWidget() {
             onDecline={async (id, version) => updateOperation(await declineChatOperationApi(id, version))}
             onGuestHandoff={guestHandoff}
             onClientHandoff={clientHandoff}
+            onRetryAssistant={retryAssistant}
           />
           {closed
             ? <p className="border-t border-[var(--sw-neutral-100)] px-4 py-3 text-center text-xs font-semibold text-[var(--sw-neutral-500)]">{t('chat.closed')}</p>
@@ -245,7 +335,18 @@ export function AiChatWidget() {
   );
 }
 
-function createClientMessageId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-  return `web-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+function reconcileResumedOperations(messages: ChatMessage[], resumed: ChatOperation[]): ChatMessage[] {
+  const resumedById = new Map(resumed.map((operation) => [operation.id, operation]));
+  return messages.flatMap((message) => {
+    if (message.kind !== 'ACTION_CARD' || message.metadata?.action !== 'CHAT_OPERATION') return [message];
+    const next = resumedById.get(message.metadata.operation.id);
+    if (next) return [{ ...message, metadata: { action: 'CHAT_OPERATION' as const, operation: next } }];
+    return message.metadata.operation.status === 'AWAITING_AUTH' ? [] : [message];
+  });
+}
+
+function removeResumeQuery(): void {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('chat');
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
 }

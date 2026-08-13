@@ -8,6 +8,8 @@ import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/ge
 import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
 import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
+import { AdministrativeAssistantService } from '../../modules/comms/chat/assistant/administrative-assistant.service';
+import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { PublicChatController } from './public-chat.controller';
 
 describe('PublicChatController (e2e)', () => {
@@ -17,6 +19,8 @@ describe('PublicChatController (e2e)', () => {
   const send = { execute: jest.fn() };
   const list = { execute: jest.fn() };
   const handoff = { execute: jest.fn() };
+  const assistant = { processMessage: jest.fn() };
+  const retry = { execute: jest.fn() };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -27,6 +31,8 @@ describe('PublicChatController (e2e)', () => {
         { provide: SendChatMessageHandler, useValue: send },
         { provide: ListChatMessagesHandler, useValue: list },
         { provide: RequestHandoffHandler, useValue: handoff },
+        { provide: AdministrativeAssistantService, useValue: assistant },
+        { provide: RetryAdministrativeMessageHandler, useValue: retry },
         { provide: GuestChatTokenService, useValue: { setCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public', maxAge: 30 * 24 * 60 * 60 * 1000 }) } },
       ],
     }).compile();
@@ -60,7 +66,7 @@ describe('PublicChatController (e2e)', () => {
   });
 
   it('rejects a clientId supplied at the public creation boundary', async () => {
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .post('/public/chat/conversations')
       .send({ clientId: 'client-a' })
       .expect(400);
@@ -102,6 +108,37 @@ describe('PublicChatController (e2e)', () => {
       body: 'مرحبا',
       clientMessageId: '00000000-0000-4000-a000-000000000002',
     });
+    expect(assistant.processMessage).toHaveBeenCalledWith('message-1');
+  });
+
+  it('retries only an existing guest-owned inbound message using the guest cookie', async () => {
+    retry.execute.mockResolvedValue({
+      id: 'assistant-message-1', conversationId: '00000000-0000-4000-a000-000000000001',
+      senderType: 'AI', kind: 'TEXT', body: 'تمت الإجابة', clientMessageId: null,
+      createdAt: new Date('2026-08-13T09:00:00.000Z'),
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/public/chat/conversations/00000000-0000-4000-a000-000000000001/messages/00000000-0000-4000-a000-000000000002/retry')
+      .set('Cookie', 'sawaa_chat_guest=guest-a')
+      .send({})
+      .expect(200);
+    expect(response.body).toEqual(expect.objectContaining({ id: 'assistant-message-1', senderType: 'AI' }));
+
+    expect(retry.execute).toHaveBeenCalledWith({
+      audience: 'guest',
+      conversationId: '00000000-0000-4000-a000-000000000001',
+      messageId: '00000000-0000-4000-a000-000000000002',
+      guestToken: 'guest-a',
+    });
+
+    retry.execute.mockClear();
+    await request(app.getHttpServer())
+      .post('/public/chat/conversations/00000000-0000-4000-a000-000000000001/messages/00000000-0000-4000-a000-000000000002/retry')
+      .set('Cookie', 'sawaa_chat_guest=guest-a')
+      .send({ providerError: 'forged' })
+      .expect(400);
+    expect(retry.execute).not.toHaveBeenCalled();
   });
 
   it('requires the guest cookie for sending and reading conversation messages', async () => {

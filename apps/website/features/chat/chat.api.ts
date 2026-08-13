@@ -10,6 +10,8 @@ import {
   listGuestChatMessages,
   requestClientChatHandoff,
   requestGuestChatHandoff,
+  retryClientChatMessage,
+  retryGuestChatMessage,
   sendClientChatMessage,
   sendGuestChatMessage,
   setChatBaseUrl,
@@ -74,6 +76,16 @@ export function sendClientChatMessageApi(
 ): Promise<ChatMessage> {
   ensureInitialised()
   return sendClientChatMessage(conversationId, payload)
+}
+
+export function retryGuestChatMessageApi(conversationId: string, messageId: string): Promise<ChatMessage> {
+  ensureInitialised()
+  return retryGuestChatMessage(conversationId, messageId)
+}
+
+export function retryClientChatMessageApi(conversationId: string, messageId: string): Promise<ChatMessage> {
+  ensureInitialised()
+  return retryClientChatMessage(conversationId, messageId)
 }
 
 export function listGuestChatMessagesApi(

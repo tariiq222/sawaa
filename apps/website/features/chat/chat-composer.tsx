@@ -7,7 +7,7 @@ import { useT } from '@/features/locale/locale-provider';
 
 interface ChatComposerProps {
   disabled: boolean;
-  onSend: (body: string) => Promise<void>;
+  onSend: (body: string, clientMessageId: string) => Promise<void>;
 }
 
 export function ChatComposer({ disabled, onSend }: ChatComposerProps) {
@@ -15,15 +15,23 @@ export function ChatComposer({ disabled, onSend }: ChatComposerProps) {
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const pendingRef = useRef(false);
+  const attemptRef = useRef<{ body: string; clientMessageId: string } | null>(null);
 
   async function submit() {
     const value = body.trim();
     if (!value || disabled || pendingRef.current) return;
     pendingRef.current = true;
     setSending(true);
+    const attempt = attemptRef.current?.body === value
+      ? attemptRef.current
+      : { body: value, clientMessageId: createClientMessageId() };
+    attemptRef.current = attempt;
     try {
-      await onSend(value);
+      await onSend(value, attempt.clientMessageId);
+      attemptRef.current = null;
       setBody('');
+    } catch {
+      // The parent surface owns the recoverable error. Keep the attempt id.
     } finally {
       pendingRef.current = false;
       setSending(false);
@@ -53,7 +61,12 @@ export function ChatComposer({ disabled, onSend }: ChatComposerProps) {
       <textarea
         id="sawaa-chat-message"
         value={body}
-        onChange={(event) => setBody(event.target.value)}
+        onChange={(event) => {
+          if (attemptRef.current && event.target.value.trim() !== attemptRef.current.body) {
+            attemptRef.current = null;
+          }
+          setBody(event.target.value);
+        }}
         onKeyDown={handleKeyDown}
         disabled={disabled || sending}
         maxLength={2000}
@@ -71,4 +84,9 @@ export function ChatComposer({ disabled, onSend }: ChatComposerProps) {
       </button>
     </form>
   );
+}
+
+function createClientMessageId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `web-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }

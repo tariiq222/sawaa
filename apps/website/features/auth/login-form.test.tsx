@@ -19,7 +19,7 @@ vi.mock('./auth-store', () => ({ setClient: mocks.setClient }));
 vi.mock('@/features/chat/chat.api', () => ({ claimGuestChatConversationApi: mocks.claim }));
 
 import { LocaleProvider } from '@/features/locale/locale-provider';
-import { savePendingChatResume } from '@/features/chat/chat-resume';
+import { readPendingChatResume, savePendingChatResume } from '@/features/chat/chat-resume';
 import { LoginForm } from './login-form';
 
 describe('LoginForm chat resume', () => {
@@ -67,5 +67,21 @@ describe('LoginForm chat resume', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
 
     await waitFor(() => expect(mocks.routerPush).toHaveBeenCalledWith('/account'));
+  });
+
+  it('preserves a failed claim for retry after redirect instead of discarding the original conversation', async () => {
+    savePendingChatResume('conversation-retry');
+    mocks.claim.mockRejectedValue(new Error('temporary claim failure'));
+    render(
+      <LocaleProvider locale="en">
+        <LoginForm />
+      </LocaleProvider>,
+    );
+    fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '0501234567' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+
+    await waitFor(() => expect(mocks.routerPush).toHaveBeenCalledWith('/?chat=resume'));
+    expect(readPendingChatResume()).toBe('conversation-retry');
   });
 });

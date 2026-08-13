@@ -34,6 +34,11 @@ function writeLocalStorage(key: string, value: string | null): void {
 
 // `undefined` = not yet loaded from localStorage; `null` = loaded and absent/expired.
 let storedClient: ClientProfile | null | undefined = undefined;
+const authListeners = new Set<() => void>();
+
+function publishAuthChange(): void {
+  authListeners.forEach((listener) => listener());
+}
 
 function loadFromStorage(): ClientProfile | null {
   const raw = readLocalStorage(CLIENT_KEY);
@@ -61,10 +66,12 @@ export function setClient(client: ClientProfile | null): void {
   storedClient = client;
   if (client === null) {
     writeLocalStorage(CLIENT_KEY, null);
+    publishAuthChange();
     return;
   }
   const payload: StoredClient = { profile: client, savedAt: Date.now() };
   writeLocalStorage(CLIENT_KEY, JSON.stringify(payload));
+  publishAuthChange();
 }
 
 export function getClient(): ClientProfile | null {
@@ -75,8 +82,20 @@ export function getClient(): ClientProfile | null {
 }
 
 export function clearAuth(): void {
-  storedClient = null;
-  writeLocalStorage(CLIENT_KEY, null);
+  setClient(null);
+}
+
+export function getAuthIdentitySnapshot(): string | null {
+  return getClient()?.id ?? null;
+}
+
+export function getServerAuthIdentitySnapshot(): null {
+  return null;
+}
+
+export function subscribeAuth(listener: () => void): () => void {
+  authListeners.add(listener);
+  return () => authListeners.delete(listener);
 }
 
 export function isAuthenticated(): boolean {

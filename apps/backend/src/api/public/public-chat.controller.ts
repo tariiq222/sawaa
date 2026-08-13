@@ -15,6 +15,9 @@ import { SendChatMessageDto } from '../../modules/comms/chat/messages/send-chat-
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
 import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
 import { GuestRequestHandoffDto } from '../../modules/comms/chat/staff/request-handoff.dto';
+import { AdministrativeAssistantService } from '../../modules/comms/chat/assistant/administrative-assistant.service';
+import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
+import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -29,6 +32,8 @@ export class PublicChatController {
     private readonly sendMessage: SendChatMessageHandler,
     private readonly listMessages: ListChatMessagesHandler,
     private readonly requestHandoff: RequestHandoffHandler,
+    private readonly assistant: AdministrativeAssistantService,
+    private readonly retryMessage: RetryAdministrativeMessageHandler,
   ) {}
 
   @Public()
@@ -68,11 +73,31 @@ export class PublicChatController {
     @Req() request: CookieRequest,
   ) {
     const guestToken = this.requireGuestToken(request);
-    return toChatMessageResponse(await this.sendMessage.execute({
+    const message = await this.sendMessage.execute({
       audience: 'guest',
       conversationId,
       guestToken,
       ...dto,
+    });
+    await this.assistant.processMessage(message.id);
+    return toChatMessageResponse(message);
+  }
+
+  @Public()
+  @Post('conversations/:conversationId/messages/:messageId/retry')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Retry an unanswered administrative assistant message as a guest owner' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
+  @ApiParam({ name: 'messageId', format: 'uuid', description: 'Inbound message UUID' })
+  async retryMessageForGuest(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Param('messageId', ParseUUIDPipe) messageId: string,
+    @Body() _body: RetryAdministrativeMessageDto,
+    @Req() request: CookieRequest,
+  ) {
+    const guestToken = this.requireGuestToken(request);
+    return toChatMessageResponse(await this.retryMessage.execute({
+      audience: 'guest', conversationId, messageId, guestToken,
     }));
   }
 

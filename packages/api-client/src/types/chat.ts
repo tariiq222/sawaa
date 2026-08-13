@@ -95,6 +95,11 @@ export interface ChatHandoffOfferMetadata {
   reason: 'OUT_OF_SCOPE' | 'USER_REQUESTED' | 'LIMIT_REACHED'
 }
 
+export interface ChatAssistantRecoveryMetadata {
+  action: 'ASSISTANT_RECOVERY'
+  canRetry: boolean
+}
+
 export interface ChatOperationResultMetadata {
   operationId: string
   type: ChatOperationType
@@ -121,7 +126,7 @@ interface ChatMessageBase {
 
 export interface ChatTextMessage extends ChatMessageBase {
   kind: 'TEXT'
-  metadata?: ChatHandoffOfferMetadata
+  metadata?: ChatHandoffOfferMetadata | ChatAssistantRecoveryMetadata
 }
 
 export interface ChatActionCardMessage extends ChatMessageBase {

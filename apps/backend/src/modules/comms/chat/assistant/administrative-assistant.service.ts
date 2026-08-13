@@ -74,12 +74,16 @@ export class AdministrativeAssistantService {
     private readonly outputValidator: AdministrativeOutputValidator,
   ) {}
 
-  async processMessage(messageId: string): Promise<CommsChatMessage | null> {
+  async processMessage(
+    messageId: string,
+    options: { manualRetry?: boolean } = {},
+  ): Promise<CommsChatMessage | null> {
     const existing = await this.findExistingResponse(messageId);
     if (existing) return existing;
 
     const target = await this.findInboundMessage(messageId);
     if (!target) return null;
+    if (!options.manualRetry && this.hasAssistantFailureMarker(target.metadata)) return null;
 
     const conversation = await this.findActiveConversation(target.conversationId);
     if (!conversation) return null;
@@ -111,6 +115,7 @@ export class AdministrativeAssistantService {
         currentMessage = message;
         if (!await this.lease.renew(conversation.id, owner, conversation.stateVersion)) throw new AssistantLeaseLost();
         const response = await this.processInbound(message, conversation, owner);
+        if (response) await this.clearRetryableFailure(message);
         if (message.id === messageId) targetResponse = response;
       }
 
@@ -351,6 +356,7 @@ export class AdministrativeAssistantService {
     leaseOwner: string,
   ): Promise<boolean> {
     const existingMetadata = this.readApprovedMetadata(inbound.metadata);
+    const retryAttempts = this.readRetryAttempts(inbound.metadata);
     const leaseValidAt = new Date();
     try {
       const updated = await this.prisma.commsChatMessage.updateMany({
@@ -373,6 +379,7 @@ export class AdministrativeAssistantService {
             ...existingMetadata,
             assistantStatus: 'RETRYABLE_FAILURE',
             retryable: true,
+            retryAttempts,
           },
         },
       });
@@ -392,6 +399,33 @@ export class AdministrativeAssistantService {
       ? value.reason
       : undefined;
     return action && reason ? { action, reason } : {};
+  }
+
+  private readRetryAttempts(value: Prisma.JsonValue | null): number {
+    if (!value || Array.isArray(value) || typeof value !== 'object') return 0;
+    const attempts = value.retryAttempts;
+    return typeof attempts === 'number' && Number.isSafeInteger(attempts) && attempts >= 0 ? attempts : 0;
+  }
+
+  private hasAssistantFailureMarker(value: Prisma.JsonValue | null): boolean {
+    if (!value || Array.isArray(value) || typeof value !== 'object') return false;
+    return value.assistantStatus === 'RETRYABLE_FAILURE' || value.assistantStatus === 'RETRYING';
+  }
+
+  private async clearRetryableFailure(inbound: InboundMessage): Promise<void> {
+    const approved = this.readApprovedMetadata(inbound.metadata);
+    try {
+      await this.prisma.commsChatMessage.updateMany({
+        where: { id: inbound.id, conversationId: inbound.conversationId },
+        data: {
+          metadata: Object.keys(approved).length > 0
+            ? approved as Prisma.InputJsonValue
+            : Prisma.JsonNull,
+        },
+      });
+    } catch {
+      this.logger.warn('Could not clear an administrative assistant retry marker after success');
+    }
   }
 
   private async findInboundMessage(messageId: string): Promise<InboundMessage | null> {

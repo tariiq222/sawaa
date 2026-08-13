@@ -18,6 +18,7 @@ interface ChatMessageListProps {
   onDecline: (operationId: string, expectedVersion: number) => Promise<ChatOperation>;
   onGuestHandoff: (identity: { guestName: string; guestPhone: string }) => Promise<void>;
   onClientHandoff: () => Promise<void>;
+  onRetryAssistant: (messageId: string) => Promise<void>;
 }
 
 export function ChatMessageList(props: ChatMessageListProps) {
@@ -78,6 +79,9 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
         {message.kind === 'TEXT' && message.metadata?.action === 'OFFER_HANDOFF' && (
           <HandoffOffer {...props} />
         )}
+        {message.kind === 'TEXT' && message.metadata?.action === 'ASSISTANT_RECOVERY' && (
+          <AssistantRecovery messageId={message.id} canRetry={message.metadata.canRetry} {...props} />
+        )}
       </div>
       {own && (
         <span className="grid size-7 shrink-0 place-items-center rounded-xl bg-[var(--sw-neutral-200)] text-[var(--sw-secondary-700)]"><UserRound size={14} aria-hidden="true" /></span>
@@ -86,33 +90,89 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
   );
 }
 
+function AssistantRecovery(props: ChatMessageListProps & { messageId: string; canRetry: boolean }) {
+  const t = useT();
+  const pendingRef = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function retry() {
+    if (!props.canRetry || pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(true);
+    setError(null);
+    try {
+      await props.onRetryAssistant(props.messageId);
+    } catch {
+      setError(t('chat.recovery.error'));
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-2xl bg-[var(--sw-neutral-0)] p-3 text-[var(--sw-secondary-700)]">
+      <p className="text-xs font-semibold">{t(props.canRetry ? 'chat.recovery.body' : 'chat.recovery.exhausted')}</p>
+      {props.canRetry && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => void retry()}
+          className="mt-2 w-full rounded-full bg-[var(--sw-primary-600)] px-4 py-2 text-xs font-extrabold text-[var(--sw-neutral-0)] disabled:opacity-55"
+        >
+          {pending ? t('chat.recovery.retrying') : t('chat.recovery.retry')}
+        </button>
+      )}
+      {error && <p role="alert" className="mt-2 text-xs font-semibold text-[var(--error)]">{error}</p>}
+      <HandoffOffer {...props} />
+    </div>
+  );
+}
+
 function HandoffOffer(props: ChatMessageListProps) {
   const t = useT();
   const [showGuestForm, setShowGuestForm] = useState(false);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const pendingRef = useRef(false);
 
   if (!props.isAuthenticated && showGuestForm) {
     return <GuestHandoffForm onSubmit={props.onGuestHandoff} />;
   }
 
   async function requestClientHandoff() {
-    if (pending) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setPending(true);
+    setError(null);
     try {
       await props.onClientHandoff();
+      setSent(true);
+    } catch {
+      setError(t('chat.handoff.error'));
     } finally {
+      pendingRef.current = false;
       setPending(false);
     }
   }
 
+  if (sent) {
+    return <p role="status" className="mt-3 text-sm font-semibold text-[var(--sw-primary-700)]">{t('chat.handoff.sent')}</p>;
+  }
+
   return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() => props.isAuthenticated ? void requestClientHandoff() : setShowGuestForm(true)}
-      className="mt-3 w-full rounded-full border border-[color-mix(in_srgb,var(--sw-primary-500)_30%,transparent)] bg-[var(--sw-primary-50)] px-4 py-2 text-xs font-extrabold text-[var(--sw-primary-700)] disabled:opacity-55"
-    >
-      {pending ? t('chat.handoff.sending') : t('chat.handoff.cta')}
-    </button>
+    <>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => props.isAuthenticated ? void requestClientHandoff() : setShowGuestForm(true)}
+        className="mt-3 w-full rounded-full border border-[color-mix(in_srgb,var(--sw-primary-500)_30%,transparent)] bg-[var(--sw-primary-50)] px-4 py-2 text-xs font-extrabold text-[var(--sw-primary-700)] disabled:opacity-55"
+      >
+        {pending ? t('chat.handoff.sending') : t('chat.handoff.cta')}
+      </button>
+      {error && <p role="alert" className="mt-2 text-xs font-semibold text-[var(--error)]">{error}</p>}
+    </>
   );
 }

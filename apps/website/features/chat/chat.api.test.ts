@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   listClientChatMessages: vi.fn(),
   requestGuestChatHandoff: vi.fn(),
   requestClientChatHandoff: vi.fn(),
+  retryGuestChatMessage: vi.fn(),
+  retryClientChatMessage: vi.fn(),
   acknowledgeChatOperation: vi.fn(),
   confirmChatOperation: vi.fn(),
   declineChatOperation: vi.fn(),
@@ -33,6 +35,8 @@ import {
   listGuestChatMessagesApi,
   requestClientChatHandoffApi,
   requestGuestChatHandoffApi,
+  retryGuestChatMessageApi,
+  retryClientChatMessageApi,
   sendClientChatMessageApi,
   sendGuestChatMessageApi,
 } from './chat.api'
@@ -51,6 +55,8 @@ describe('chat website API', () => {
     await sendClientChatMessageApi('conversation-1', { body: 'أهلًا', clientMessageId: 'message-2' })
     await listGuestChatMessagesApi('conversation-1', { limit: 10 })
     await listClientChatMessagesApi('conversation-1', { cursor: 'message-1' })
+    await retryGuestChatMessageApi('conversation-1', 'message-1')
+    await retryClientChatMessageApi('conversation-1', 'message-1')
 
     expect(mocks.setChatBaseUrl).toHaveBeenCalledTimes(1)
     expect(mocks.setChatBaseUrl).toHaveBeenCalledWith('http://api.local/api/v1')
@@ -68,6 +74,8 @@ describe('chat website API', () => {
     )
     expect(mocks.listGuestChatMessages).toHaveBeenCalledWith('conversation-1', { limit: 10 })
     expect(mocks.listClientChatMessages).toHaveBeenCalledWith('conversation-1', { cursor: 'message-1' })
+    expect(mocks.retryGuestChatMessage).toHaveBeenCalledWith('conversation-1', 'message-1')
+    expect(mocks.retryClientChatMessage).toHaveBeenCalledWith('conversation-1', 'message-1')
   })
 
   it('forwards handoff and operation actions without adding identity fields', async () => {

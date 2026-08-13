@@ -3,6 +3,7 @@ import type {
   ChatActionCardMessage,
   ChatConversationDetail,
   ChatHandoffOfferMetadata,
+  ChatAssistantRecoveryMetadata,
   ChatMessage,
   ChatMessagePage,
   ChatOperation,
@@ -68,6 +69,28 @@ export async function sendClientChatMessage(
   const result = await chatMutation<ChatMessage>(
     `/public/me/chat/conversations/${encodeURIComponent(conversationId)}/messages`,
     payload,
+  )
+  return toChatMessage(result)
+}
+
+export async function retryGuestChatMessage(
+  conversationId: string,
+  messageId: string,
+): Promise<ChatMessage> {
+  const result = await chatMutation<ChatMessage>(
+    `/public/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/retry`,
+    {},
+  )
+  return toChatMessage(result)
+}
+
+export async function retryClientChatMessage(
+  conversationId: string,
+  messageId: string,
+): Promise<ChatMessage> {
+  const result = await chatMutation<ChatMessage>(
+    `/public/me/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/retry`,
+    {},
   )
   return toChatMessage(result)
 }
@@ -224,10 +247,14 @@ function toActionCardMetadata(
 }
 
 function toHandoffMetadata(
-  value: ChatHandoffOfferMetadata | undefined,
-): ChatHandoffOfferMetadata | undefined {
-  if (!value || value.action !== 'OFFER_HANDOFF') return undefined
-  return { action: 'OFFER_HANDOFF', reason: value.reason }
+  value: ChatHandoffOfferMetadata | ChatAssistantRecoveryMetadata | undefined,
+): ChatHandoffOfferMetadata | ChatAssistantRecoveryMetadata | undefined {
+  if (!value) return undefined
+  if (value.action === 'OFFER_HANDOFF') return { action: 'OFFER_HANDOFF', reason: value.reason }
+  if (value.action === 'ASSISTANT_RECOVERY') {
+    return { action: 'ASSISTANT_RECOVERY', canRetry: value.canRetry === true }
+  }
+  return undefined
 }
 
 function toOperationResultMetadata(

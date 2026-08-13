@@ -113,4 +113,21 @@ describe('ChatActionCard', () => {
     resolve(operation({ status: 'SUCCEEDED', version: 4 }));
     await waitFor(() => expect(screen.getByText('تم تنفيذ الطلب')).toBeTruthy());
   });
+
+  it('converts the operation price from halalas before formatting SAR', () => {
+    render(
+      <LocaleProvider locale="en">
+        <ChatActionCard
+          operation={operation({ summary: { serviceName: 'Family Session', price: 30_000, currency: 'SAR' } })}
+          onLoginRequired={vi.fn()}
+          onAcknowledge={vi.fn()}
+          onConfirm={vi.fn()}
+          onDecline={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText(/SAR\s*300\.00/)).toBeTruthy();
+    expect(screen.queryByText(/30,000/)).toBeNull();
+  });
 });

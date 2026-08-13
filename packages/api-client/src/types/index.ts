@@ -172,6 +172,7 @@ export type {
   ChatOperation,
   ChatOperationCardMetadata,
   ChatHandoffOfferMetadata,
+  ChatAssistantRecoveryMetadata,
   ChatOperationResultMetadata,
   ChatTextMessage,
   ChatActionCardMessage,

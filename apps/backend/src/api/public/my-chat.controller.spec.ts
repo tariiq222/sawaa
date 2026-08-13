@@ -14,6 +14,8 @@ import { AcknowledgeExistingBookingHandler } from '../../modules/comms/chat/oper
 import { ConfirmOperationHandler } from '../../modules/comms/chat/operations/confirm-operation.handler';
 import { DeclineOperationHandler } from '../../modules/comms/chat/operations/decline-operation.handler';
 import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
+import { AdministrativeAssistantService } from '../../modules/comms/chat/assistant/administrative-assistant.service';
+import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 
 describe('MyChatController (e2e)', () => {
   let app: INestApplication;
@@ -26,6 +28,8 @@ describe('MyChatController (e2e)', () => {
   const confirm = { execute: jest.fn() };
   const decline = { execute: jest.fn() };
   const resume = { execute: jest.fn().mockResolvedValue([]) };
+  const assistant = { processMessage: jest.fn() };
+  const retry = { execute: jest.fn() };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -40,6 +44,8 @@ describe('MyChatController (e2e)', () => {
         { provide: ConfirmOperationHandler, useValue: confirm },
         { provide: DeclineOperationHandler, useValue: decline },
         { provide: ResumeChatOperationsHandler, useValue: resume },
+        { provide: AdministrativeAssistantService, useValue: assistant },
+        { provide: RetryAdministrativeMessageHandler, useValue: retry },
         { provide: GuestChatTokenService, useValue: { clearCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
       ],
     })
@@ -61,7 +67,7 @@ describe('MyChatController (e2e)', () => {
   it('loads a claimed current conversation using ClientSessionGuard identity', async () => {
     current.execute.mockResolvedValue({ id: 'conv-1', clientId: 'client-a' });
 
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .get('/public/me/chat/conversations/current')
       .expect(200)
       .expect({ id: 'conv-1', clientId: 'client-a' });
@@ -147,11 +153,33 @@ describe('MyChatController (e2e)', () => {
       body: 'مرحبا',
       clientMessageId: '00000000-0000-4000-a000-000000000002',
     });
+    expect(assistant.processMessage).toHaveBeenCalledWith('message-1');
     expect(list.execute).toHaveBeenCalledWith({
       audience: 'client',
       conversationId: '00000000-0000-4000-a000-000000000001',
       clientId: 'client-a',
       limit: 20,
+    });
+  });
+
+  it('retries only an existing message from the guard-owned client conversation', async () => {
+    retry.execute.mockResolvedValue({
+      id: 'assistant-message-1', conversationId: '00000000-0000-4000-a000-000000000001',
+      senderType: 'AI', kind: 'TEXT', body: 'Done', clientMessageId: null,
+      createdAt: new Date('2026-08-13T09:00:00.000Z'),
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/public/me/chat/conversations/00000000-0000-4000-a000-000000000001/messages/00000000-0000-4000-a000-000000000002/retry')
+      .send({})
+      .expect(200);
+    expect(response.body).toEqual(expect.objectContaining({ id: 'assistant-message-1', senderType: 'AI' }));
+
+    expect(retry.execute).toHaveBeenCalledWith({
+      audience: 'client',
+      conversationId: '00000000-0000-4000-a000-000000000001',
+      messageId: '00000000-0000-4000-a000-000000000002',
+      clientId: 'client-a',
     });
   });
 

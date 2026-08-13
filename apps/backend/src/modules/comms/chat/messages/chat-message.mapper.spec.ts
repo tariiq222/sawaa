@@ -6,7 +6,33 @@ import {
 } from '@prisma/client';
 import { toChatMessageResponse } from './chat-message.mapper';
 
+function message(overrides: Record<string, unknown>) {
+  return {
+    id: 'message-retry',
+    conversationId: 'conversation-1',
+    senderType: MessageSenderType.VISITOR,
+    body: 'ساعات العمل؟',
+    kind: ChatMessageKind.TEXT,
+    clientMessageId: 'client-message-1',
+    createdAt: new Date('2026-08-13T10:00:00.000Z'),
+    ...overrides,
+  };
+}
+
 describe('toChatMessageResponse', () => {
+  it('exposes only a bounded safe recovery capability for retryable assistant failures', () => {
+    expect(toChatMessageResponse(message({
+      senderType: MessageSenderType.VISITOR,
+      metadata: {
+        assistantStatus: 'RETRYABLE_FAILURE', retryable: true, retryAttempts: 1,
+        providerError: 'secret upstream detail', stack: 'internal',
+      },
+    })).metadata).toEqual({ action: 'ASSISTANT_RECOVERY', canRetry: true });
+    expect(toChatMessageResponse(message({
+      senderType: MessageSenderType.VISITOR,
+      metadata: { assistantStatus: 'RETRYABLE_FAILURE', retryable: true, retryAttempts: 2 },
+    })).metadata).toEqual({ action: 'ASSISTANT_RECOVERY', canRetry: false });
+  });
   it('maps only public message fields and never exposes AI metadata or accounting fields', () => {
     const response = toChatMessageResponse({
       id: 'message-1',

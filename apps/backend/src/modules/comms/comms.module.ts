@@ -67,6 +67,7 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { PeopleModule } from '../people/people.module';
 import { AdministrativeAssistantService } from './chat/assistant/administrative-assistant.service';
+import { RetryAdministrativeMessageHandler } from './chat/assistant/retry-administrative-message.handler';
 import { AdministrativeToolsService } from './chat/assistant/administrative-tools.service';
 import { AdministrativeAssistantLeaseService } from './chat/assistant/administrative-assistant-lease.service';
 import { AdministrativeScopeGate } from './chat/assistant/administrative-scope-gate';
@@ -143,6 +144,7 @@ const handlers = [
   SendChatMessageHandler,
   ListChatMessagesHandler,
   AdministrativeAssistantService,
+  RetryAdministrativeMessageHandler,
   AdministrativeToolsService,
   AdministrativeAssistantLeaseService,
   AdministrativeScopeGate,
