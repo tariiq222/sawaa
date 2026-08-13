@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ClientSession } from '../../common/auth/client-session.decorator';
@@ -9,6 +9,11 @@ import { ClaimConversationHandler } from '../../modules/comms/chat/guest/claim-c
 import { ClaimGuestConversationDto } from '../../modules/comms/chat/guest/claim-guest-conversation.dto';
 import { CHAT_GUEST_COOKIE_NAME, GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat-token.service';
 import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/get-current-conversation.handler';
+import { ListMessagesDto } from '../../modules/comms/chat/list-messages.dto';
+import { toChatMessageResponse } from '../../modules/comms/chat/messages/chat-message.mapper';
+import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
+import { SendChatMessageDto } from '../../modules/comms/chat/messages/send-chat-message.dto';
+import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -23,6 +28,8 @@ export class MyChatController {
     private readonly getCurrentConversation: GetCurrentConversationHandler,
     private readonly claimConversation: ClaimConversationHandler,
     private readonly tokens: GuestChatTokenService,
+    private readonly sendMessage: SendChatMessageHandler,
+    private readonly listMessages: ListChatMessagesHandler,
   ) {}
 
   @Get('conversations/current')
@@ -55,5 +62,39 @@ export class MyChatController {
     });
     response.clearCookie(CHAT_GUEST_COOKIE_NAME, this.tokens.clearCookieOptions());
     return conversation;
+  }
+
+  @Post('conversations/:conversationId/messages')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Send a message as the authenticated client' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  async sendMessageForClient(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Body() dto: SendChatMessageDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toChatMessageResponse(await this.sendMessage.execute({
+      audience: 'client',
+      conversationId,
+      clientId: session.id,
+      ...dto,
+    }));
+  }
+
+  @Get('conversations/:conversationId/messages')
+  @ApiOperation({ summary: 'List messages as the authenticated client' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  listMessagesForClient(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Query() dto: ListMessagesDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return this.listMessages.execute({
+      audience: 'client',
+      conversationId,
+      clientId: session.id,
+      limit: dto.limit ?? 20,
+      ...(dto.cursor ? { cursor: dto.cursor } : {}),
+    });
   }
 }

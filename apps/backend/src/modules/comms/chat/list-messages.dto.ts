@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -7,5 +7,5 @@ export class ListMessagesDto {
   @IsOptional() @IsUUID() cursor?: string;
 
   @ApiPropertyOptional({ description: 'Number of messages to return', example: 20 })
-  @IsOptional() @IsInt() @Min(1) @Type(() => Number) limit?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(100) @Type(() => Number) limit?: number;
 }

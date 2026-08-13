@@ -84,6 +84,9 @@ export const envValidationSchema = Joi.object({
   // Guest chat capability secret — HMAC-SHA256 key for opaque browser-bound
   // conversation tokens. Required at boot; never fall back to a shared dev key.
   CHAT_GUEST_TOKEN_SECRET: Joi.string().min(32).required(),
+  // Maximum text length accepted from web chat callers. Keep this independent
+  // from WhatsApp's provider-specific outbound limit.
+  CHAT_MAX_MESSAGE_LENGTH: Joi.number().integer().min(1).max(10_000).default(4000),
 
   // License Server (Platform BC) — optional until Phase 3
   LICENSE_SERVER_URL: Joi.string().uri().allow('').optional(),

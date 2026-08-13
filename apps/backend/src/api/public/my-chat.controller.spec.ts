@@ -6,12 +6,16 @@ import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { ClaimConversationHandler } from '../../modules/comms/chat/guest/claim-conversation.handler';
 import { GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat-token.service';
 import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/get-current-conversation.handler';
+import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
+import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
 import { MyChatController } from './my-chat.controller';
 
 describe('MyChatController (e2e)', () => {
   let app: INestApplication;
   const current = { execute: jest.fn() };
   const claim = { execute: jest.fn() };
+  const send = { execute: jest.fn() };
+  const list = { execute: jest.fn() };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -19,6 +23,8 @@ describe('MyChatController (e2e)', () => {
       providers: [
         { provide: GetCurrentConversationHandler, useValue: current },
         { provide: ClaimConversationHandler, useValue: claim },
+        { provide: SendChatMessageHandler, useValue: send },
+        { provide: ListChatMessagesHandler, useValue: list },
         { provide: GuestChatTokenService, useValue: { clearCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
       ],
     })
@@ -81,6 +87,40 @@ describe('MyChatController (e2e)', () => {
       conversationId: '00000000-0000-4000-a000-000000000001',
       clientId: 'client-a',
       guestToken: 'guest-a',
+    });
+  });
+
+  it('sends and lists client messages using ClientSessionGuard identity rather than body identity', async () => {
+    send.execute.mockResolvedValue({ id: 'message-1', senderType: 'CLIENT', body: 'مرحبا' });
+    list.execute.mockResolvedValue({ data: [], meta: { limit: 20, hasMore: false, nextCursor: null } });
+
+    await request(app.getHttpServer())
+      .post('/public/me/chat/conversations/00000000-0000-4000-a000-000000000001/messages')
+      .send({ body: 'مرحبا', clientMessageId: '00000000-0000-4000-a000-000000000002', clientId: 'client-b' })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/public/me/chat/conversations/00000000-0000-4000-a000-000000000001/messages')
+      .send({ body: 'مرحبا', clientMessageId: '00000000-0000-4000-a000-000000000002' })
+      .expect(201)
+      .expect({ id: 'message-1', senderType: 'CLIENT', body: 'مرحبا' });
+    await request(app.getHttpServer())
+      .get('/public/me/chat/conversations/00000000-0000-4000-a000-000000000001/messages?limit=20')
+      .expect(200)
+      .expect({ data: [], meta: { limit: 20, hasMore: false, nextCursor: null } });
+
+    expect(send.execute).toHaveBeenCalledWith({
+      audience: 'client',
+      conversationId: '00000000-0000-4000-a000-000000000001',
+      clientId: 'client-a',
+      body: 'مرحبا',
+      clientMessageId: '00000000-0000-4000-a000-000000000002',
+    });
+    expect(list.execute).toHaveBeenCalledWith({
+      audience: 'client',
+      conversationId: '00000000-0000-4000-a000-000000000001',
+      clientId: 'client-a',
+      limit: 20,
     });
   });
 });

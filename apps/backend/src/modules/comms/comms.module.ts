@@ -60,6 +60,8 @@ import { ChatAccessService } from './chat/guest/chat-access.service';
 import { CreateGuestConversationHandler } from './chat/guest/create-conversation.handler';
 import { GetCurrentConversationHandler } from './chat/guest/get-current-conversation.handler';
 import { ClaimConversationHandler } from './chat/guest/claim-conversation.handler';
+import { SendChatMessageHandler } from './chat/messages/send-chat-message.handler';
+import { ListChatMessagesHandler } from './chat/messages/list-chat-messages.handler';
 
 const handlers = [
   SendPushHandler,
@@ -107,6 +109,8 @@ const handlers = [
   CreateGuestConversationHandler,
   GetCurrentConversationHandler,
   ClaimConversationHandler,
+  SendChatMessageHandler,
+  ListChatMessagesHandler,
 ];
 
 const eventHandlers = [
