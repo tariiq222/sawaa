@@ -1,10 +1,9 @@
 import { AdministrativeOutputValidator } from './administrative-output-validator';
 import { AdministrativeResponseRenderer } from './administrative-response-renderer';
-import { AdministrativeScopeGate } from './administrative-scope-gate';
 
 describe('AdministrativeOutputValidator', () => {
   const validator = new AdministrativeOutputValidator();
-  const renderer = new AdministrativeResponseRenderer(new AdministrativeScopeGate());
+  const renderer = new AdministrativeResponseRenderer();
 
   it('accepts a bounded response carrying the deterministic renderer contract', () => {
     const rendered = renderer.render([{

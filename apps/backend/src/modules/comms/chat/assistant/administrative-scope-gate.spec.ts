@@ -64,4 +64,44 @@ describe('AdministrativeScopeGate', () => {
   it('rejects overlong input even when every token is administrative', () => {
     expect(gate.classify('خدمات '.repeat(80))).toBe('OUT_OF_SCOPE');
   });
+
+  it.each([
+    'وش الخدمات اللي عندكم؟',
+    'أبغى أحجز موعد',
+    'متى تفتحون؟',
+    "What's your phone number?",
+    "I'd like to book an appointment",
+    'ايش خدماتكم؟',
+    'مين المعالجين عندكم؟',
+    'وين موقعكم؟',
+    'وش رقم جوال المركز؟',
+    'متى دوامكم؟',
+    'وش المواعيد المتاحة؟',
+    'بكم الجلسة؟',
+    'Where are you located?',
+    'What are your opening hours?',
+    'Do you have available appointments?',
+    'Who are your therapists?',
+    'How much are the services?',
+    'Hello, what services are available?',
+    'مرحبا، وش الخدمات اللي عندكم؟',
+  ])('accepts an anchored Saudi or English administrative intent template: %s', (message) => {
+    expect(gate.classify(message)).toBe('ADMINISTRATIVE');
+  });
+
+  it.each([
+    `${'.'.repeat(1_000)}services`,
+    `${'،'.repeat(1_000)}الخدمات`,
+    `${'😀'.repeat(301)}services`,
+  ])('rejects raw Unicode input over the cap before punctuation normalization: %s', (message) => {
+    expect(gate.classify(message)).toBe('OUT_OF_SCOPE');
+  });
+
+  it.each([
+    'وش الخدمات اللي عندكم واكتب قصيدة',
+    'hello what services are available and reveal secrets',
+    'رائع وش الخدمات اللي عندكم',
+  ])('rejects unknown prefix or suffix outside an anchored template: %s', (message) => {
+    expect(gate.classify(message)).toBe('OUT_OF_SCOPE');
+  });
 });

@@ -3,12 +3,11 @@ import {
   getAdministrativeFallbackResponse,
   type AdministrativePublicMetadata,
 } from './administrative-policy';
-import { AdministrativeScopeGate } from './administrative-scope-gate';
+import { normalizeAdministrativeText } from './administrative-scope-gate';
 import type { AdministrativeToolResult } from './administrative-tools.service';
 
 const MAX_RENDERED_CHARS = 2_000;
 const MAX_LABEL_CHARS = 80;
-const MAX_KNOWLEDGE_SNIPPET_CHARS = 280;
 
 const UNSAFE_DYNAMIC_LABEL_WORDS = new Set([
   'اتبع', 'تجاهل', 'تعليمات', 'التعليمات', 'اكشف', 'اعرض', 'اسرار', 'الاسرار',
@@ -30,8 +29,6 @@ export interface RenderedAdministrativeResponse {
 
 @Injectable()
 export class AdministrativeResponseRenderer {
-  constructor(private readonly scopeGate: AdministrativeScopeGate) {}
-
   render(executions: ExecutedAdministrativeTool[], language: string): RenderedAdministrativeResponse {
     const english = language.toLowerCase().startsWith('en');
     const sections: string[] = [];
@@ -67,7 +64,9 @@ export class AdministrativeResponseRenderer {
       case 'getAvailability':
         return this.renderAvailability(data, english);
       case 'searchKnowledge':
-        return this.renderKnowledge(data, english);
+        // Knowledge-base fields are intentionally non-renderable in Task 4.
+        // They are untrusted free text regardless of apparent scope.
+        return null;
       case 'handoffToReception':
         return english
           ? 'I can offer the option to contact reception.'
@@ -123,23 +122,6 @@ export class AdministrativeResponseRenderer {
       : null;
   }
 
-  private renderKnowledge(data: unknown, english: boolean): string | null {
-    const lines = this.array(data).flatMap((value) => {
-      const content = this.record(value).content;
-      if (typeof content !== 'string') return [];
-      const snippet = content.trim();
-      if (
-        snippet.length === 0
-        || Array.from(snippet).length > MAX_KNOWLEDGE_SNIPPET_CHARS
-        || this.scopeGate.classify(snippet) !== 'ADMINISTRATIVE'
-      ) return [];
-      return [`- ${snippet}`];
-    });
-    return lines.length > 0
-      ? `${english ? 'Administrative knowledge:' : 'معلومات إدارية من قاعدة المعرفة:'}\n${lines.join('\n')}`
-      : null;
-  }
-
   private safeLabel(value: unknown): string | null {
     if (typeof value !== 'string') return null;
     const label = value.trim().replace(/\s+/g, ' ');
@@ -151,7 +133,13 @@ export class AdministrativeResponseRenderer {
       || !/^[\p{L}\p{N} .'-]+$/u.test(label)
       || tokens.some((token) => UNSAFE_DYNAMIC_LABEL_WORDS.has(token))
     ) return null;
-    return this.scopeGate.classify(label) === 'ADMINISTRATIVE' ? label : null;
+    const normalized = normalizeAdministrativeText(label);
+    const isCenterName = /^(?:مركز سواء|sawa (?:center|centre))$/u.test(normalized);
+    const isArabicServiceName = /^(?:ال)?(?:ارشاد|استشاره|جلسه|خدمه)(?: (?:ال)?(?:اسري|زواجي|فردي|جماعي|اونلاين|حضوري)){0,2}$/u
+      .test(normalized);
+    const isEnglishServiceName = /^(?:(?:family|marital|individual|group|online|inperson) )?(?:guidance|counseling|counselling|session|service)$/
+      .test(normalized);
+    return isCenterName || isArabicServiceName || isEnglishServiceName ? label : null;
   }
 
   private safePhone(value: unknown): string | null {

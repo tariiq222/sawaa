@@ -2,62 +2,56 @@ import { Injectable } from '@nestjs/common';
 
 export type AdministrativeScope = 'ADMINISTRATIVE' | 'OUT_OF_SCOPE';
 
-const MAX_INPUT_CHARS = 300;
+const MAX_RAW_INPUT_CODEPOINTS = 300;
+const MAX_NORMALIZED_CODEPOINTS = 300;
 const MAX_INPUT_TOKENS = 40;
 
-const ARABIC_ADMIN_WORDS = new Set([
-  'مركز', 'المركز', 'مركزكم', 'سواء',
-  'خدمه', 'الخدمه', 'خدمات', 'الخدمات',
-  'متاح', 'متاحه', 'المتاح', 'المتاحه', 'المتاحون', 'المتاحين', 'توفر', 'التوفر',
-  'معالج', 'المعالج', 'معالجون', 'المعالجون', 'معالجين', 'المعالجين',
-  'مختص', 'المختص', 'مختصون', 'المختصون', 'مختصين', 'المختصين',
-  'اخصائي', 'الاخصائي', 'اخصائيون', 'الاخصائيون', 'اخصائيين', 'الاخصائيين',
-  'موعد', 'الموعد', 'مواعيد', 'المواعيد', 'حجز', 'الحجز', 'احجز',
-  'شاغر', 'شاغره', 'شاغرون', 'شاغرين',
-  'سعر', 'السعر', 'اسعار', 'الاسعار', 'تكلفه', 'التكلفه',
-  'موقع', 'الموقع', 'موقعكم', 'عنوان', 'العنوان', 'عنوانكم',
-  'ساعه', 'الساعه', 'ساعات', 'الساعات', 'عمل', 'العمل', 'دوام', 'الدوام',
-  'استقبال', 'الاستقبال', 'تحويل', 'التحويل', 'حولني',
-  'تواصل', 'التواصل', 'اتواصل', 'هاتف', 'الهاتف', 'جوال', 'الجوال',
-  'رقم', 'الرقم', 'بريد', 'البريد', 'الكتروني',
-  'فرع', 'الفرع', 'فروع', 'الفروع', 'جلسه', 'الجلسه', 'جلسات', 'الجلسات',
-  'ارشاد', 'الارشاد', 'اسري', 'الاسري', 'استشاره', 'الاستشاره',
-  'اليوم', 'غدا', 'اسبوع', 'الاسبوع', 'قادم', 'القادم', 'صباحا', 'مساء', 'حضوري', 'اونلاين',
-]);
+const GREETING_TEMPLATES = [
+  /^(?:مرحبا|اهلا|اهلين|السلام عليكم|وعليكم السلام|صباح الخير|مساء الخير)$/u,
+  /^(?:hi|hello|hey|good morning|good evening)$/,
+] as const;
 
-const ARABIC_GREETING_WORDS = new Set([
-  'مرحبا', 'اهلا', 'اهلين', 'السلام', 'عليكم', 'وعليكم', 'صباح', 'الخير', 'مساء',
-]);
+const ARABIC_INTENT_TEMPLATES = [
+  /^(?:ما|وش|ايش)(?: هي)? (?:الخدمات|خدمات|خدماتكم)(?: المركز| المتاحه)?(?: اللي عندكم)?$/u,
+  /^هل يمكنني معرفه اسعار الخدمات المتاحه في المركز$/u,
+  /^ما هي الخدمات التي يقدمها المركز$/u,
+  /^(?:من|مين)(?: هم)? (?:المعالجون|المعالجين|الاخصائيون|الاخصائيين|المختصون|المختصين)(?: المتاحون| المتاحين)?(?: عندكم)?(?: وما مواعيد العمل)?$/u,
+  /^(?:اين|وين) (?:يقع )?(?:موقعكم|المركز|مركز سواء)(?: وما ساعات العمل| وكيف اتواصل مع الاستقبال)?$/u,
+  /^(?:وش|ما) رقم (?:جوال|هاتف)(?: المركز|كم)?$/u,
+  /^كيف اتواصل مع (?:المركز|الاستقبال)$/u,
+  /^متي (?:تفتحون|دوامكم)$/u,
+  /^وش ساعات (?:الدوام|العمل)$/u,
+  /^(?:ابغي|اريد|اود) (?:ان )?(?:احجز|حجز) موعد$/u,
+  /^هل يوجد موعد متاح غدا$/u,
+  /^هل لديكم مواعيد شاغره الاسبوع القادم$/u,
+  /^وش المواعيد المتاحه$/u,
+  /^(?:كم سعر الخدمه|كم الاسعار|بكم الجلسه)$/u,
+  /^حولني (?:الي|الى) الاستقبال$/u,
+] as const;
 
-const ARABIC_STOP_WORDS = new Set([
-  'ما', 'ماذا', 'هل', 'من', 'هم', 'هو', 'هي', 'اين', 'متى', 'كيف', 'كم', 'التي', 'الذي',
-  'يمكن', 'يمكنني', 'ممكن', 'اريد', 'اود', 'معرفه', 'اعرف', 'اخبرني',
-  'يوجد', 'توجد', 'يقع', 'تعملون', 'تقدمون', 'يقدم', 'يقدمها', 'وما', 'وكيف', 'او', 'و',
-  'في', 'عن', 'على', 'الى', 'الي', 'مع', 'لديكم', 'لكم', 'لي', 'لنا', 'فضلا', 'لو', 'سمحت',
-]);
+const ENGLISH_INTENT_TEMPLATES = [
+  /^what services and appointment times are available$/,
+  /^(?:what|which) services are available(?: at the center)?$/,
+  /^could you tell me which services are available at the center$/,
+  /^who are (?:the |your )?(?:practitioners|therapists|counselors|counsellors)(?: at the center)?(?: and when are appointments available)?$/,
+  /^where are you located$/,
+  /^where is the (?:center|centre)$/,
+  /^what is the (?:center|centre) address and working hours$/,
+  /^what s your (?:phone|contact) number$/,
+  /^what are your (?:opening|working|business) hours$/,
+  /^i d like to book an appointment$/,
+  /^i would like to book an appointment$/,
+  /^do you have available appointments$/,
+  /^can i see your available appointment slots for next week$/,
+  /^how much does a counseling session cost$/,
+  /^how much are the services$/,
+  /^(?:transfer|connect) me to reception$/,
+] as const;
 
-const ENGLISH_ADMIN_WORDS = new Set([
-  'sawa', 'center', 'centre', 'service', 'services', 'practitioner', 'practitioners',
-  'therapist', 'therapists', 'counsellor', 'counsellors', 'counselor', 'counselors',
-  'appointment', 'appointments', 'availability', 'available', 'booking', 'bookings', 'book',
-  'price', 'prices', 'cost', 'costs', 'location', 'address', 'hour', 'hours', 'working',
-  'business', 'opening', 'open', 'schedule', 'schedules', 'time', 'times',
-  'reception', 'handoff', 'transfer', 'contact', 'phone', 'email', 'branch', 'branches',
-  'session', 'sessions', 'slot', 'slots', 'week', 'next', 'counseling', 'counselling',
-  'guidance', 'family', 'today', 'tomorrow', 'online', 'inperson',
-]);
-
-const ENGLISH_GREETING_WORDS = new Set([
-  'hi', 'hello', 'hey', 'good', 'morning', 'evening',
-]);
-
-const ENGLISH_STOP_WORDS = new Set([
-  'what', 'which', 'who', 'where', 'when', 'how', 'much', 'does', 'do', 'can', 'could',
-  'would', 'please', 'you', 'me', 'tell', 'show', 'list', 'give', 'find', 'are', 'is',
-  'a', 'an', 'the', 'at', 'in', 'on', 'for', 'of', 'to', 'and', 'or', 'with', 'about',
-  'i', 'we', 'your', 'want', 'like', 'have', 'has', 'there', 'any', 'offer', 'offers',
-  'get', 'know', 'see',
-]);
+const GREETING_PREFIXES = [
+  /^(?:مرحبا|اهلا|اهلين|السلام عليكم|صباح الخير|مساء الخير) /u,
+  /^(?:hi|hello|hey|good morning|good evening) /,
+] as const;
 
 @Injectable()
 export class AdministrativeScopeGate {
@@ -67,29 +61,26 @@ export class AdministrativeScopeGate {
 }
 
 export function classifyAdministrativeText(message: string): AdministrativeScope {
+  if (Array.from(message).length > MAX_RAW_INPUT_CODEPOINTS) return 'OUT_OF_SCOPE';
+
   const normalized = normalizeAdministrativeText(message);
-  if (!normalized || Array.from(normalized).length > MAX_INPUT_CHARS) return 'OUT_OF_SCOPE';
+  if (!normalized || Array.from(normalized).length > MAX_NORMALIZED_CODEPOINTS) return 'OUT_OF_SCOPE';
+  if (normalized.split(' ').length > MAX_INPUT_TOKENS) return 'OUT_OF_SCOPE';
 
-  const tokens = normalized.split(' ');
-  if (tokens.length > MAX_INPUT_TOKENS) return 'OUT_OF_SCOPE';
+  if (GREETING_TEMPLATES.some((template) => template.test(normalized))) return 'ADMINISTRATIVE';
+  if (matchesAdministrativeIntent(normalized)) return 'ADMINISTRATIVE';
 
-  let hasAdministrativeWord = false;
-  let hasGreetingWord = false;
-  for (const token of tokens) {
-    if (/^\d{1,4}$/.test(token)) continue;
-    if (ARABIC_ADMIN_WORDS.has(token) || ENGLISH_ADMIN_WORDS.has(token)) {
-      hasAdministrativeWord = true;
-      continue;
+  for (const prefix of GREETING_PREFIXES) {
+    if (prefix.test(normalized) && matchesAdministrativeIntent(normalized.replace(prefix, ''))) {
+      return 'ADMINISTRATIVE';
     }
-    if (ARABIC_GREETING_WORDS.has(token) || ENGLISH_GREETING_WORDS.has(token)) {
-      hasGreetingWord = true;
-      continue;
-    }
-    if (ARABIC_STOP_WORDS.has(token) || ENGLISH_STOP_WORDS.has(token)) continue;
-    return 'OUT_OF_SCOPE';
   }
+  return 'OUT_OF_SCOPE';
+}
 
-  return hasAdministrativeWord || hasGreetingWord ? 'ADMINISTRATIVE' : 'OUT_OF_SCOPE';
+function matchesAdministrativeIntent(value: string): boolean {
+  return [...ARABIC_INTENT_TEMPLATES, ...ENGLISH_INTENT_TEMPLATES]
+    .some((template) => template.test(value));
 }
 
 export function normalizeAdministrativeText(value: string): string {
@@ -102,5 +93,6 @@ export function normalizeAdministrativeText(value: string): string {
     .toLowerCase()
     .replace(/in[ -]person/g, 'inperson')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
+    .trim()
+    .replace(/\s+/g, ' ');
 }

@@ -121,7 +121,7 @@ describe('AdministrativeAssistantService', () => {
       tools as unknown as AdministrativeToolsService,
       lease as unknown as AdministrativeAssistantLeaseService,
       scopeGate,
-      new AdministrativeResponseRenderer(scopeGate),
+      new AdministrativeResponseRenderer(),
       new AdministrativeOutputValidator(),
     );
   });
@@ -170,6 +170,86 @@ describe('AdministrativeAssistantService', () => {
         metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
       }),
     });
+  });
+
+  it.each([
+    'وش الخدمات اللي عندكم؟',
+    'أبغى أحجز موعد',
+    'متى تفتحون؟',
+    "What's your phone number?",
+    "I'd like to book an appointment",
+  ])('routes a natural administrative runtime phrase through provider and allowlisted tool: %s', async (body) => {
+    const natural = { ...inboundMessage, body };
+    prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
+      if (where.responseForMessageId) return null;
+      return natural;
+    });
+    prisma.commsChatMessage.findMany.mockImplementation(({ select }) => select.id ? [natural] : [natural]);
+    chat.completeWithTools
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{ id: 'services', function: { name: 'listServices', arguments: '{}' } }],
+        tokensUsed: 2,
+        model: 'selector',
+      })
+      .mockResolvedValueOnce({ content: 'ignored', toolCalls: [], tokensUsed: 1, model: 'selector' });
+    tools.execute.mockResolvedValue({ ok: true, data: [{ nameAr: 'الإرشاد الأسري' }] });
+
+    await service.processMessage(messageId);
+
+    expect(chat.completeWithTools).toHaveBeenCalled();
+    expect(tools.execute).toHaveBeenCalledWith(
+      'listServices',
+      '{}',
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    `${'.'.repeat(1_000)}services`,
+    `${'،'.repeat(1_000)}الخدمات`,
+  ])('rejects a raw punctuation flood before provider or tools: %s', async (body) => {
+    const flood = { ...inboundMessage, body };
+    prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
+      if (where.responseForMessageId) return null;
+      return flood;
+    });
+    prisma.commsChatMessage.findMany.mockImplementation(({ select }) => select.id ? [flood] : []);
+
+    await service.processMessage(messageId);
+
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(tools.execute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'Family counseling is good for you',
+    'Book counseling 4 times',
+    'أنصحك بحجز أربع جلسات إرشاد أسري',
+  ])('persists only fixed fallback when searchKnowledge returns free-form content: %s', async (content) => {
+    chat.completeWithTools
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{ id: 'knowledge', function: { name: 'searchKnowledge', arguments: '{"query":"hours"}' } }],
+        tokensUsed: 2,
+        model: 'selector',
+      })
+      .mockResolvedValueOnce({ content: 'ignored', toolCalls: [], tokensUsed: 1, model: 'selector' });
+    tools.execute.mockResolvedValue({
+      ok: true,
+      data: [{ content, similarity: 0.99, internalPrompt: 'never-store-me' }],
+    });
+
+    await service.processMessage(messageId);
+
+    expect(tx.commsChatMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        body: 'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+        metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
+      }),
+    });
+    expect(JSON.stringify(tx.commsChatMessage.create.mock.calls)).not.toContain(content);
+    expect(JSON.stringify(tx.commsChatMessage.create.mock.calls)).not.toContain('never-store-me');
   });
 
   it('does not forward a previously rejected inbound message in later administrative history', async () => {
