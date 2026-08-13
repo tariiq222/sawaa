@@ -112,6 +112,10 @@ model Payment {
   idempotencyKey String?       @unique // prevent duplicate webhook processing
   receiptUrl     String? // MinIO path for bank transfer receipt
   failureReason  String?
+  // One external provider refund call at a time per payment. RefundRequest
+  // leases alone are insufficient when two distinct requests target this row.
+  refundProviderLeaseOwner     String?
+  refundProviderLeaseExpiresAt DateTime?     @db.Timestamptz(3)
   processedAt    DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -121,6 +125,7 @@ model Payment {
   @@index([invoiceId])
   @@index([gatewayRef])
   @@index([status, createdAt])
+  @@index([refundProviderLeaseExpiresAt])
 }
 
 // ─── Coupon ───────────────────────────────────────────────────────────────────
@@ -223,6 +228,7 @@ model RefundRequest {
   @@index([status, updatedAt])
   @@index([status, providerLeaseExpiresAt])
   @@index([paymentId])
+  // DB migration enforces this as a partial unique index for PROCESSING.
 }
 
 // ─── Per-tenant Moyasar credentials (singleton per org) ──────────────────────

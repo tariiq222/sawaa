@@ -90,6 +90,13 @@ describe('CreateZoomMeetingHandler — durable provider reconciliation', () => {
     await expect(h.handler.execute({ bookingId: 'booking-1' })).rejects.toThrow(BadRequestException);
   });
 
+  it('does not create Zoom when a queued delivery arrives after cancellation', async () => {
+    const h = buildHarness({ status: BookingStatus.CANCELLED });
+    await h.handler.execute({ bookingId: 'booking-1' });
+    expect(h.prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
+  });
+
   it('returns an existing completed meeting without acquiring a lease', async () => {
     const h = buildHarness({
       zoomMeetingId: 'existing',
@@ -101,6 +108,15 @@ describe('CreateZoomMeetingHandler — durable provider reconciliation', () => {
     );
     expect(h.prisma.booking.updateMany).not.toHaveBeenCalled();
     expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
+  });
+
+  it('treats a legacy CREATED meeting as complete even when its phase was backfilled incorrectly', async () => {
+    const h = buildHarness({
+      zoomMeetingId: 'existing', zoomMeetingStatus: ZoomMeetingStatus.CREATED, zoomCreatePhase: 'BEFORE_CALL',
+    });
+    await h.handler.execute({ bookingId: 'booking-1' });
+    expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
+    expect(h.prisma.booking.updateMany).not.toHaveBeenCalled();
   });
 
   it('lets a concurrent lease loser exit without any provider call', async () => {

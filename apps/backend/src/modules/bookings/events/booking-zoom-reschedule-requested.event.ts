@@ -5,7 +5,9 @@ export interface BookingZoomRescheduleRequestedPayload {
   syncId: string;
   bookingId: string;
   zoomMeetingId: string;
-  revision: number;
+  // Pre-transition PENDING rows did not carry this field. They are normalized
+  // to their durable BookingZoomSync revision by the consumer.
+  revision?: number;
 }
 
 export class BookingZoomRescheduleRequestedEvent extends BaseEvent<BookingZoomRescheduleRequestedPayload> {

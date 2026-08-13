@@ -52,6 +52,7 @@ export class ConfirmBookingHandler {
           id: zoomEvent.eventId,
           aggregateId: booking.id,
           eventType: zoomEvent.eventName,
+          status: 'PENDING_V2',
           payload: zoomEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
         },
       })] : []),

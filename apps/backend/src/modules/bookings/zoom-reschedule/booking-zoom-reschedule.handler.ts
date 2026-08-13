@@ -32,7 +32,7 @@ export class BookingZoomRescheduleHandler {
       sync.id !== event.payload.syncId
       || sync.bookingId !== event.payload.bookingId
       || sync.zoomMeetingId !== event.payload.zoomMeetingId
-      || sync.revision !== event.payload.revision
+      || (event.payload.revision !== undefined && sync.revision !== event.payload.revision)
     ) {
       throw new ConflictException('Zoom synchronization event does not match durable state');
     }
@@ -89,30 +89,32 @@ export class BookingZoomRescheduleHandler {
           await this.markSuperseded(sync.id);
           return;
         }
-        const current = await this.zoom.getMeeting(
-          event.payload.organizationId,
-          sync.zoomMeetingId,
-        );
-        const providerAlreadyCurrent =
-          current.topic === sync.desiredTopic
-          && current.durationMins === sync.desiredDurationMins
-          && new Date(current.startTime).getTime() === sync.desiredStartAt.getTime();
-
-        if (!providerAlreadyCurrent) {
-          if (!await this.isCurrentRevision(sync.bookingId, sync.zoomMeetingId, sync.revision, leaseOwner)) {
-            await this.markSuperseded(sync.id);
-            return;
-          }
-          await this.zoom.updateMeeting(
+        await this.withLeaseHeartbeat(sync.bookingId, leaseOwner, async () => {
+          const current = await this.zoom.getMeeting(
             event.payload.organizationId,
             sync.zoomMeetingId,
-            {
-              topic: sync.desiredTopic,
-              startTime: sync.desiredStartAt.toISOString(),
-              durationMins: sync.desiredDurationMins,
-            },
           );
-        }
+          const providerAlreadyCurrent =
+            current.topic === sync.desiredTopic
+            && current.durationMins === sync.desiredDurationMins
+            && new Date(current.startTime).getTime() === sync.desiredStartAt.getTime();
+
+          if (!providerAlreadyCurrent) {
+            if (!await this.isCurrentRevision(sync.bookingId, sync.zoomMeetingId, sync.revision, leaseOwner)) {
+              await this.markSuperseded(sync.id);
+              return;
+            }
+            await this.zoom.updateMeeting(
+              event.payload.organizationId,
+              sync.zoomMeetingId,
+              {
+                topic: sync.desiredTopic,
+                startTime: sync.desiredStartAt.toISOString(),
+                durationMins: sync.desiredDurationMins,
+              },
+            );
+          }
+        });
 
         await this.prisma.bookingZoomSync.updateMany({
           where: { id: sync.id, revision: sync.revision, status: { notIn: ['COMPLETED', 'SUPERSEDED'] } },
@@ -181,6 +183,28 @@ export class BookingZoomRescheduleHandler {
       && booking.zoomSyncRevision === revision
       && booking.zoomSyncLeaseOwner === leaseOwner,
     );
+  }
+
+  /** Keep the exclusive provider fence alive for slow Zoom calls. */
+  private async withLeaseHeartbeat<T>(bookingId: string, leaseOwner: string, work: () => Promise<T>): Promise<T> {
+    let lost = false;
+    const renew = async () => {
+      const result = await this.prisma.booking.updateMany({
+        where: { id: bookingId, zoomSyncLeaseOwner: leaseOwner },
+        data: { zoomSyncLeaseExpiresAt: new Date(Date.now() + 60_000) },
+      });
+      if (result.count !== 1) lost = true;
+    };
+    await renew();
+    if (lost) throw new ConflictException('Zoom synchronization lease was lost');
+    const timer = setInterval(() => { void renew(); }, 15_000);
+    try {
+      const result = await work();
+      if (lost) throw new ConflictException('Zoom synchronization lease was lost');
+      return result;
+    } finally {
+      clearInterval(timer);
+    }
   }
 
   private async markSuperseded(syncId: string): Promise<void> {

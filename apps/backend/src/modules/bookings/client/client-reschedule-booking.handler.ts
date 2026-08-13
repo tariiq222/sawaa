@@ -237,6 +237,7 @@ export class ClientRescheduleBookingHandler {
             id: event.eventId,
             aggregateId: booking.id,
             eventType: event.eventName,
+            status: 'PENDING_V2',
             payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
           },
         });

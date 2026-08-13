@@ -306,6 +306,33 @@ describe('ConfirmOperationHandler', () => {
   });
 
   it.each([
+    ['expiresAt', new Date('2026-08-19T09:00:00.000Z')],
+    ['payAtClinic', true],
+    ['couponCode', 'LATER'],
+    ['notes', 'different durable note'],
+  ])('rejects legacy null-hash recovery when persisted %s differs before backfill', async (field, value) => {
+    const { handler, tx, quote, createBooking } = harness();
+    tx.booking.findUnique.mockResolvedValue({
+      id: 'booking-recovered', clientId: 'client-1',
+      branchId: bookingPayload.branchId, employeeId: bookingPayload.employeeId,
+      serviceId: bookingPayload.serviceId,
+      scheduledAt: new Date(bookingPayload.scheduledAt), endsAt: new Date(bookingPayload.endsAt),
+      durationMins: bookingPayload.durationMins, durationOptionId: bookingPayload.durationOptionId,
+      bookingType: bookingPayload.bookingType, deliveryType: bookingPayload.deliveryType,
+      price: bookingPayload.price, currency: bookingPayload.currency, source: 'AI_CHAT',
+      creationRequestHash: null, expiresAt: null, payAtClinic: false, couponCode: null, notes: null,
+      [field]: value,
+    });
+    const result = await handler.execute({ operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0 });
+    expect(result).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: 'IDEMPOTENCY_CONFLICT' });
+    expect(tx.booking.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'booking-recovered', creationRequestHash: null },
+    }));
+    expect(quote.quoteBooking).not.toHaveBeenCalled();
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it.each([
     [ChatOperationType.RESCHEDULE_BOOKING, 'BOOKING_RESCHEDULED'],
     [ChatOperationType.CANCEL_BOOKING, 'BOOKING_CANCELLED'],
   ] as const)('recovers durable %s mutation before revalidating a now-changed booking', async (type, outcome) => {

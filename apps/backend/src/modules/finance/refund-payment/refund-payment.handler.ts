@@ -435,6 +435,7 @@ export class RefundPaymentHandler {
     }
 
     let primaryError: unknown;
+    let paymentLeaseId: string | null = null;
     try {
       // Keep early terminal/manual-review returns scoped to the processing
       // closure so the outer flow always releases the provider lease.
@@ -471,6 +472,27 @@ export class RefundPaymentHandler {
       if (!payment.gatewayRef) {
         throw new ConflictException('Gateway refund has no payment reference');
       }
+      // A RefundRequest lease is not enough: two distinct requests for the
+      // same Payment can otherwise baseline the same cumulative amount and
+      // both POST. This lease is the provider-call serialization fence.
+      const paymentLease = await this.prisma.payment.updateMany({
+        where: {
+          id: payment.id,
+          OR: [
+            { refundProviderLeaseOwner: null },
+            { refundProviderLeaseExpiresAt: null },
+            { refundProviderLeaseExpiresAt: { lt: leaseNow } },
+          ],
+        },
+        data: {
+          refundProviderLeaseOwner: leaseOwner,
+          refundProviderLeaseExpiresAt: leaseExpiresAt,
+        },
+      });
+      if (paymentLease.count !== 1) {
+        throw new ConflictException('Payment refund provider lease is already held');
+      }
+      paymentLeaseId = payment.id;
 
       const refundAmount = decimalToHalalas(refundReq.amount);
       const phase = refundReq.providerState === 'NOT_CALLED'
@@ -595,24 +617,20 @@ export class RefundPaymentHandler {
           );
           return;
         }
-        if (providerPayment.refunded >= target) {
-          await this.requireOwnedRefundUpdate(cmd.refundRequestId, leaseOwner, {
-            gatewayRef: providerPaymentId,
-            providerState: 'CONFIRMED',
-            observedCumulativeRefundedAmount: providerPayment.refunded,
-            lastProviderError: null,
-          });
-        } else {
-          await this.markRefundManualReview(
-            cmd.refundRequestId,
-            leaseOwner,
-            providerPayment.refunded,
-            providerPayment.refunded === baseline
-              ? 'Provider cumulative refund is unchanged after an unknown call; manual review required'
+        // Cumulative provider totals cannot attribute a refund to this request
+        // after a timeout: even >= target may include an external refund. Never
+        // account it automatically; an operator reconciles the durable facts.
+        await this.markRefundManualReview(
+          cmd.refundRequestId,
+          leaseOwner,
+          providerPayment.refunded,
+          providerPayment.refunded === baseline
+            ? 'Provider cumulative refund is unchanged after an unknown call; manual review required'
+            : providerPayment.refunded >= target
+              ? 'Provider cumulative refund is ambiguous after an unknown call; manual review required'
               : 'Provider cumulative refund is between baseline and target; manual review required',
-          );
-          return;
-        }
+        );
+        return;
       } else if (phase !== 'CONFIRMED') {
         throw new ConflictException(`Refund provider phase ${phase} is not retryable`);
       }
@@ -655,6 +673,18 @@ export class RefundPaymentHandler {
       });
     } catch (error) {
       releaseError = error;
+    }
+    if (paymentLeaseId) {
+      try {
+        await this.prisma.payment.updateMany({
+          where: { id: paymentLeaseId, refundProviderLeaseOwner: leaseOwner },
+          data: { refundProviderLeaseOwner: null, refundProviderLeaseExpiresAt: null },
+        });
+      } catch (error) {
+        releaseError = releaseError
+          ? new AggregateError([releaseError, error], 'Refund provider leases could not be released')
+          : error;
+      }
     }
     if (primaryError && releaseError) {
       throw new AggregateError(

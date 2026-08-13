@@ -53,7 +53,11 @@ export class OutboxPublisherCron {
       // Exclude terminal rows (failedAt IS NOT NULL) from the poll.
       const rows = await this.prisma.$queryRaw<{ id: string; eventType: string; payload: unknown; attemptCount: number }[]>`
         SELECT id, "eventType", "payload", "attemptCount" FROM "OutboxEvent"
-        WHERE status = 'PENDING'
+        -- PENDING_V2 is intentionally invisible to 1ebce257, whose publisher
+        -- only selects PENDING and whose legacy worker ACKs unknown handlers.
+        -- This binary owns both lanes and only stamps PUBLISHED after durable
+        -- consumer-specific BullMQ jobs have been added.
+        WHERE status IN ('PENDING', 'PENDING_V2')
         AND ("lockedUntil" IS NULL OR "lockedUntil" < ${now})
         AND "failedAt" IS NULL
         ORDER BY "createdAt" ASC

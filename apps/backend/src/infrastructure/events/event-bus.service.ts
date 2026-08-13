@@ -30,6 +30,10 @@ type ConsumerJobData = {
 };
 
 const EVENT_QUEUE_PREFIX = 'domain-events--';
+// Kept for a full rolling window. Pods from 1ebce257 publish/consume this
+// queue; importantly the bridge below *throws* for an unknown event instead of
+// acknowledging it as that version did.
+const LEGACY_EVENT_QUEUE = 'domain-events';
 
 /** Signals a rolling worker that it does not yet know how to route an event. */
 export class NoEventConsumersRegisteredError extends Error {
@@ -53,6 +57,7 @@ export class EventBusService {
   private readonly handlersByEvent = new Map<string, RegisteredHandler[]>();
   private readonly handlersByConsumer = new Map<string, RegisteredHandler>();
   private readonly workers = new Map<string, Worker>();
+  private legacyWorker?: Worker;
 
   constructor(
     private readonly bullmq: BullMqService,
@@ -112,7 +117,24 @@ export class EventBusService {
     list.push(registered);
     this.handlersByEvent.set(eventName, list);
     this.ensureWorker(registered);
+    this.ensureLegacyBridgeWorker();
     this.logger.log(`Handler "${consumerId}" registered for event "${eventName}"`);
+  }
+
+  /**
+   * A compatibility bridge for jobs published by a pre-dedicated-queue pod.
+   * It deliberately has no registration-index fallback: an event for which
+   * this binary has no consumer fails its BullMQ job and remains retryable for
+   * the later pod that introduces that consumer.
+   */
+  private ensureLegacyBridgeWorker(): void {
+    if (this.legacyWorker) return;
+    this.legacyWorker = this.bullmq.createWorker(LEGACY_EVENT_QUEUE, async (job: Job) => {
+      const event = job.data as DomainEventEnvelope;
+      const consumers = this.handlersByEvent.get(job.name) ?? [];
+      if (consumers.length === 0) throw new NoEventConsumersRegisteredError(job.name);
+      for (const consumer of consumers) await this.dispatch(consumer, event);
+    });
   }
 
   private getQueue(queueName: string): Queue {

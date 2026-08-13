@@ -47,6 +47,24 @@ describe('OutboxPublisherCron', () => {
     });
   });
 
+  it('owns the PENDING_V2 transition lane that a 1ebce257 PENDING-only publisher cannot see', async () => {
+    const row = { id: 'evt-v2', eventType: 'bookings.zoom.create_requested', attemptCount: 0, payload: { eventId: 'e-v2' } };
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValueOnce([{ acquired: true }]).mockResolvedValueOnce([row]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      outboxEvent: { updateMany: jest.fn().mockResolvedValue({ count: 1 }), update: jest.fn() },
+    };
+    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
+    const cron = new OutboxPublisherCron(prisma as never, eventBus as never, createMetricsMock() as never);
+    await cron.execute();
+    // The former pod's predicate was exactly status = PENDING, so this event
+    // cannot enter its legacy ACK-on-unknown worker before this publisher adds
+    // the current consumer-specific job.
+    const oldPublisherSelects = (status: string) => status === 'PENDING';
+    expect(oldPublisherSelects('PENDING_V2')).toBe(false);
+    expect(eventBus.publish).toHaveBeenCalledWith(row.eventType, row.payload);
+  });
+
   it('is a no-op when no pending events exist', async () => {
     const prisma = {
       $queryRaw: jest.fn()

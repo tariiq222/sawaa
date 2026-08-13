@@ -174,6 +174,13 @@ export class ConfirmOperationHandler {
         deliveryType: this.deliveryType(payload, 'deliveryType'),
         price: this.number(payload, 'price'),
         currency: this.string(payload, 'currency'),
+        // Prepared chat bookings intentionally have no mutable checkout
+        // fields. Include their persisted defaults in the canonical command so
+        // legacy null-hash recovery cannot bless a different durable shape.
+        expiresAt: null,
+        payAtClinic: false,
+        couponCode: null,
+        notes: null,
         source: 'AI_CHAT',
       });
       const recovered = await tx.booking.findUnique({
@@ -417,24 +424,34 @@ export class ConfirmOperationHandler {
       deliveryType: string;
       price: Prisma.Decimal;
       currency: string;
+      expiresAt: Date | null;
+      payAtClinic: boolean;
+      couponCode: string | null;
+      notes: string | null;
       source: string;
       creationRequestHash: string | null;
     },
   ): Promise<void> {
-    const matches = booking.clientId === clientId
-      && booking.branchId === this.string(payload, 'branchId')
-      && booking.employeeId === this.string(payload, 'employeeId')
-      && booking.serviceId === this.string(payload, 'serviceId')
-      && booking.scheduledAt.toISOString() === new Date(this.string(payload, 'scheduledAt')).toISOString()
-      && booking.endsAt.toISOString() === new Date(this.string(payload, 'endsAt')).toISOString()
-      && booking.durationMins === this.number(payload, 'durationMins')
-      && booking.durationOptionId === this.optionalString(payload, 'durationOptionId')
-      && booking.bookingType === this.string(payload, 'bookingType')
-      && booking.deliveryType === this.deliveryType(payload, 'deliveryType')
-      && Number(booking.price) === this.number(payload, 'price')
-      && booking.currency === this.string(payload, 'currency')
-      && booking.source === 'AI_CHAT';
-    if (!matches) {
+    const persistedHash = bookingCreationRequestHash({
+      branchId: booking.branchId,
+      clientId: booking.clientId,
+      employeeId: booking.employeeId,
+      serviceId: booking.serviceId ?? '',
+      scheduledAt: booking.scheduledAt.toISOString(),
+      endsAt: booking.endsAt.toISOString(),
+      durationMins: booking.durationMins,
+      durationOptionId: booking.durationOptionId,
+      bookingType: booking.bookingType,
+      deliveryType: booking.deliveryType as never,
+      price: Number(booking.price),
+      currency: booking.currency,
+      expiresAt: booking.expiresAt?.toISOString() ?? null,
+      payAtClinic: booking.payAtClinic,
+      couponCode: booking.couponCode,
+      notes: booking.notes,
+      source: booking.source,
+    });
+    if (persistedHash !== creationRequestHash) {
       throw new OperationExecutionError(
         'IDEMPOTENCY_CONFLICT',
         'Durable creation key belongs to a different booking',

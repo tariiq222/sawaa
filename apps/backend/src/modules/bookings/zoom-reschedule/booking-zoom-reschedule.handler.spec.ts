@@ -85,6 +85,19 @@ describe('BookingZoomRescheduleHandler', () => {
     );
   });
 
+  it('normalizes a pre-upgrade PENDING event with no revision to durable revision zero', async () => {
+    const legacy = {
+      ...envelope,
+      payload: { ...envelope.payload, revision: undefined },
+    };
+    const { handler, zoom, prisma } = setup({ ...desired, revision: 0 });
+    await handler.handle(legacy);
+    expect(zoom.updateMeeting).toHaveBeenCalledTimes(1);
+    expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ revision: 0 }),
+    }));
+  });
+
   it('skips a completed desired-state row on replay', async () => {
     const { handler, zoom, prisma } = setup({ ...desired, status: 'COMPLETED' });
     await handler.handle(envelope);

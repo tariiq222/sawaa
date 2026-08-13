@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { DeliveryType, ZoomMeetingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType, ZoomMeetingStatus } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { PrismaService } from '../../../infrastructure/database';
@@ -41,6 +41,10 @@ export class CreateZoomMeetingHandler {
     if (initial.deliveryType !== DeliveryType.ONLINE) {
       throw new BadRequestException('Zoom meetings can only be created for ONLINE delivery bookings');
     }
+    // A durable outbox delivery may legitimately arrive after cancellation.
+    // Never acquire a provider lease or create a remote meeting for a booking
+    // that is no longer eligible for delivery.
+    if (!this.isEligibleLifecycle(initial.status)) return initial;
     if (this.isCompleted(initial)) return initial;
 
     const leaseOwner = randomUUID();
@@ -73,6 +77,10 @@ export class CreateZoomMeetingHandler {
     }
     if (this.isCompleted(booking)) {
       await this.release(leaseOwner, cmd.bookingId);
+      return booking;
+    }
+    if (!this.isEligibleLifecycle(booking.status)) {
+      await this.release(leaseOwner, booking.id);
       return booking;
     }
 
@@ -252,8 +260,15 @@ export class CreateZoomMeetingHandler {
     return Boolean(
       booking.zoomMeetingId
       && booking.zoomMeetingStatus === ZoomMeetingStatus.CREATED
-      && (booking.zoomCreatePhase === COMPLETED || !booking.zoomCreatePhase),
+      // Older rows predate zoomCreatePhase. CREATED + a durable meeting id is
+      // already proof of completion and must never arm another POST.
     );
+  }
+
+  private isEligibleLifecycle(status: BookingStatus): boolean {
+    return status === BookingStatus.PENDING
+      || status === BookingStatus.CONFIRMED
+      || status === BookingStatus.DEPOSIT_PAID;
   }
 
   private async requireBooking(bookingId: string) {

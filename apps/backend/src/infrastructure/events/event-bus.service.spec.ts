@@ -63,9 +63,17 @@ describe('EventBusService', () => {
     expect(bullmq.createWorker).toHaveBeenNthCalledWith(
       1, 'domain-events--consumer-a', expect.any(Function),
     );
-    expect(bullmq.createWorker).toHaveBeenNthCalledWith(
-      2, 'domain-events--consumer-b', expect.any(Function),
-    );
+    expect(bullmq.createWorker).toHaveBeenNthCalledWith(2, 'domain-events', expect.any(Function));
+    expect(bullmq.createWorker).toHaveBeenNthCalledWith(3, 'domain-events--consumer-b', expect.any(Function));
+  });
+
+  it('bridges a 1ebce257 legacy job but refuses to ACK an unknown rolling event', async () => {
+    const handler = jest.fn();
+    service.subscribe('legacy.event', 'consumer-a', handler);
+    await workers.get('domain-events')!({ name: 'legacy.event', data: event() });
+    expect(handler).toHaveBeenCalledWith(event());
+    await expect(workers.get('domain-events')!({ name: 'new.event', data: event() }))
+      .rejects.toThrow(NoEventConsumersRegisteredError);
   });
 
   it('fans out in registration order with a stable event job ID per isolated queue', async () => {
