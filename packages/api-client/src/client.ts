@@ -108,6 +108,13 @@ function invalidateCsrfToken(): void {
 }
 
 async function doRefresh(refreshPath: string): Promise<string> {
+  return sendRefresh(refreshPath)
+}
+
+async function sendRefresh(
+  refreshPath: string,
+  csrfRetried = false,
+): Promise<string> {
   if (!config) throw new Error('api-client not initialized')
   // CR-9: refresh token is an httpOnly cookie (ck_refresh); credentials: 'include'
   // sends it automatically. No token in body — empty object for compatibility.
@@ -124,8 +131,19 @@ async function doRefresh(refreshPath: string): Promise<string> {
   })
   captureCsrfToken(res)
   if (!res.ok) {
-    config.onAuthFailure()
     const peek = await peekErrorBody(res)
+    if (
+      refreshPath.startsWith('/public/') &&
+      peek.code === CSRF_INVALID_CODE &&
+      !csrfRetried
+    ) {
+      // A competing tab can win the initial cookie write. Refresh is a fixed,
+      // empty JSON body and the rejected request never reaches its handler, so
+      // one fresh-token replay is safe. A second failure is terminal.
+      invalidateCsrfToken()
+      return sendRefresh(refreshPath, true)
+    }
+    config.onAuthFailure()
     throw new ApiError(res.status, peek.message, peek.body, peek.code)
   }
   const raw = (await res.json()) as unknown
