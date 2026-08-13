@@ -78,6 +78,9 @@ describe('CloseConversationHandler', () => {
       data: {
         status: ConversationStatus.CLOSED,
         closedAt: expect.any(Date),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
   });

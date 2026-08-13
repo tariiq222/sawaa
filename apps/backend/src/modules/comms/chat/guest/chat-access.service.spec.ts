@@ -120,6 +120,9 @@ describe('ChatAccessService', () => {
         guestTokenHash: null,
         guestName: null,
         guestPhone: null,
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
   });

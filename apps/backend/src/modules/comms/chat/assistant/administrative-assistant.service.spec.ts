@@ -91,7 +91,11 @@ describe('AdministrativeAssistantService', () => {
         })),
       },
       chatConversation: {
-        findUnique: jest.fn().mockResolvedValue(activeConversation),
+        findUnique: jest.fn().mockImplementation(() => ({
+          ...activeConversation,
+          assistantLeaseOwner: lease.acquire.mock.calls[0]?.[1],
+          assistantLeaseExpiresAt: new Date(Date.now() + 60_000),
+        })),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
@@ -555,6 +559,61 @@ describe('AdministrativeAssistantService', () => {
     expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
   });
 
+  it('rejects persistence when another worker reacquires the lease after renewal', async () => {
+    tx.chatConversation.findUnique.mockResolvedValue({
+      ...activeConversation,
+      assistantLeaseOwner: 'other-worker',
+      assistantLeaseExpiresAt: new Date(Date.now() + 60_000),
+    });
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects persistence when the same owner lease is expired in the database', async () => {
+    tx.chatConversation.findUnique.mockImplementation(() => ({
+      ...activeConversation,
+      assistantLeaseOwner: lease.acquire.mock.calls[0]?.[1],
+      assistantLeaseExpiresAt: new Date(Date.now() - 1_000),
+    }));
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects and rolls back when lease ownership changes after the read but before the final CAS', async () => {
+    tx.chatConversation.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(tx.chatConversation.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        assistantLeaseOwner: lease.acquire.mock.calls[0][1],
+        assistantLeaseExpiresAt: { gt: expect.any(Date) },
+      }),
+    }));
+    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: 'guest claim', conversation: { ...activeConversation, clientId: 'client-a', stateVersion: 1, assistantLeaseOwner: null, assistantLeaseExpiresAt: null } },
+    { name: 'legacy close', conversation: { ...activeConversation, status: ConversationStatus.CLOSED, stateVersion: 1, assistantLeaseOwner: null, assistantLeaseExpiresAt: null } },
+  ])('rejects an old completion after $name invalidates the lease and version', async ({ conversation }) => {
+    tx.chatConversation.findUnique.mockResolvedValue(conversation);
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.update).not.toHaveBeenCalled();
+  });
+
   it('returns an existing response without invoking AI', async () => {
     const existing = { id: 'existing-response', responseForMessageId: messageId };
     prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
@@ -611,6 +670,11 @@ describe('AdministrativeAssistantService', () => {
   });
 
   it('persists one unified AI response and increments client unread once in the same short transaction', async () => {
+    tx.chatConversation.findUnique.mockImplementation(() => ({
+      ...activeConversation,
+      assistantLeaseOwner: lease.acquire.mock.calls[0]?.[1],
+      assistantLeaseExpiresAt: new Date(Date.now() + 60_000),
+    }));
     await service.processMessage(messageId);
 
     expect(transaction.withTransaction).toHaveBeenCalledTimes(1);
@@ -628,6 +692,17 @@ describe('AdministrativeAssistantService', () => {
         latencyMs: expect.any(Number),
       },
     });
-    expect(tx.chatConversation.updateMany).toHaveBeenCalledTimes(1);
+    const leaseOwner = lease.acquire.mock.calls[0][1];
+    expect(tx.chatConversation.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: conversationId,
+        status: ConversationStatus.AI_ACTIVE,
+        isAiChat: true,
+        stateVersion: 0,
+        assistantLeaseOwner: leaseOwner,
+        assistantLeaseExpiresAt: { gt: expect.any(Date) },
+      },
+      data: { lastMessageAt: expect.any(Date), clientUnreadCount: { increment: 1 } },
+    });
   });
 });

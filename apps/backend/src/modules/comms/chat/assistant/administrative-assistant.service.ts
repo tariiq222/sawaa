@@ -177,6 +177,7 @@ export class AdministrativeAssistantService {
       tokensUsed,
       latencyMs: Date.now() - startedAt,
       stateVersion: conversation.stateVersion,
+      leaseOwner,
     });
   }
 
@@ -270,6 +271,7 @@ export class AdministrativeAssistantService {
     tokensUsed: number;
     latencyMs: number;
     stateVersion: number;
+    leaseOwner: string;
   }): Promise<CommsChatMessage | null> {
     try {
       return await this.rlsTransaction.withTransaction(async (tx) => {
@@ -280,12 +282,22 @@ export class AdministrativeAssistantService {
 
         const conversation = await tx.chatConversation.findUnique({
           where: { id: input.conversationId },
-          select: { status: true, isAiChat: true, stateVersion: true },
+          select: {
+            status: true,
+            isAiChat: true,
+            stateVersion: true,
+            assistantLeaseOwner: true,
+            assistantLeaseExpiresAt: true,
+          },
         });
+        const leaseValidAt = new Date();
         if (
           !conversation
           || !this.canUseAi(conversation)
           || conversation.stateVersion !== input.stateVersion
+          || conversation.assistantLeaseOwner !== input.leaseOwner
+          || !conversation.assistantLeaseExpiresAt
+          || conversation.assistantLeaseExpiresAt <= leaseValidAt
         ) throw new ConversationStatusChanged();
 
         const response = await tx.commsChatMessage.create({
@@ -310,6 +322,8 @@ export class AdministrativeAssistantService {
             status: ConversationStatus.AI_ACTIVE,
             isAiChat: true,
             stateVersion: input.stateVersion,
+            assistantLeaseOwner: input.leaseOwner,
+            assistantLeaseExpiresAt: { gt: leaseValidAt },
           },
           data: { lastMessageAt: new Date(), clientUnreadCount: { increment: 1 } },
         });

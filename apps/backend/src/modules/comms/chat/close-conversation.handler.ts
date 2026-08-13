@@ -33,6 +33,9 @@ export class CloseConversationHandler {
       data: {
         status: ConversationStatus.CLOSED,
         closedAt: new Date(),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
   }
