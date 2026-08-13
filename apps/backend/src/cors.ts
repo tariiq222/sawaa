@@ -31,8 +31,8 @@ export function configureCors(app: INestApplication): void {
     // allow-list the browser preflight strips the header and the mutation
     // fails (INFRA-030).
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-CSRF-Token'],
-    // Expose the request id so the client can surface it in error messages for
-    // support correlation.
-    exposedHeaders: ['X-Request-ID'],
+    // Request ids support error correlation. The CSRF token is exposed only to
+    // exact allowed origins so the host-only API cookie can stay host-only.
+    exposedHeaders: ['X-Request-ID', 'X-CSRF-Token'],
   });
 }

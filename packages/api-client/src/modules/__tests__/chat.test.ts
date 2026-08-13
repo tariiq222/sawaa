@@ -70,10 +70,14 @@ const message = {
   model: 'must-not-leak',
 }
 
-function wrapped(data: unknown): Response {
+function wrapped(data: unknown, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify({ success: true, data }), {
     status: 200,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': 'a'.repeat(64),
+      ...headers,
+    },
   })
 }
 
@@ -84,7 +88,7 @@ beforeEach(() => {
     onTokenRefreshed: vi.fn(),
     onAuthFailure: vi.fn(),
   })
-  vi.stubGlobal('document', { cookie: 'locale=ar; ck_csrf=csrf-token%2Fvalue' })
+  vi.stubGlobal('document', { cookie: 'locale=ar' })
   vi.stubGlobal('fetch', vi.fn())
 })
 
@@ -103,6 +107,7 @@ describe('safe public chat contracts', () => {
 
   it('projects only the public conversation and action-card fields', async () => {
     vi.mocked(fetch)
+      .mockResolvedValueOnce(wrapped({}))
       .mockResolvedValueOnce(wrapped(conversation))
       .mockResolvedValueOnce(wrapped({
         data: [message],
@@ -156,6 +161,26 @@ describe('safe public chat contracts', () => {
 })
 
 describe('chat routes and browser credentials', () => {
+  it('bootstraps CSRF from an exposed API response header when the website cannot read the API cookie', async () => {
+    const token = 'b'.repeat(64)
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(wrapped({}, { 'X-CSRF-Token': token }))
+      .mockResolvedValueOnce(wrapped(conversation, { 'X-CSRF-Token': token }))
+
+    await createGuestChatConversation({ language: 'ar' })
+
+    expect(vi.mocked(fetch).mock.calls).toHaveLength(2)
+    const [bootstrapUrl, bootstrapInit] = vi.mocked(fetch).mock.calls[0]!
+    expect(bootstrapUrl).toBe('http://api.test/api/v1/public/chat/conversations/current')
+    expect(bootstrapInit).toMatchObject({ method: 'GET', credentials: 'include' })
+
+    const [mutationUrl, mutationInit] = vi.mocked(fetch).mock.calls[1]!
+    expect(mutationUrl).toBe('http://api.test/api/v1/public/chat/conversations')
+    expect(mutationInit).toMatchObject({ method: 'POST', credentials: 'include' })
+    expect(new Headers(mutationInit?.headers).get('x-csrf-token')).toBe(token)
+    expect(document.cookie).not.toContain('ck_csrf')
+  })
+
   it('uses the real guest and authenticated conversation/message routes', async () => {
     vi.mocked(fetch).mockImplementation(async (url) => {
       const path = String(url)
@@ -178,6 +203,7 @@ describe('chat routes and browser credentials', () => {
     await listClientChatMessages('conversation/1', { cursor: 'message/1', limit: 5 })
 
     expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
+      'http://api.test/api/v1/public/chat/conversations/current',
       'http://api.test/api/v1/public/chat/conversations',
       'http://api.test/api/v1/public/chat/conversations/current',
       'http://api.test/api/v1/public/me/chat/conversations/current',
@@ -192,7 +218,7 @@ describe('chat routes and browser credentials', () => {
     const mutations = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'POST')
     expect(mutations).toHaveLength(4)
     for (const [, init] of mutations) {
-      expect(new Headers(init?.headers).get('x-csrf-token')).toBe('csrf-token/value')
+      expect(new Headers(init?.headers).get('x-csrf-token')).toBe('a'.repeat(64))
     }
 
     const bodies = vi.mocked(fetch).mock.calls
@@ -222,6 +248,7 @@ describe('chat routes and browser credentials', () => {
     await declineChatOperation('operation/1', 4)
 
     expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
+      'http://api.test/api/v1/public/chat/conversations/current',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/handoff',
       'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/handoff',
       'http://api.test/api/v1/public/me/chat/operations/operation%2F1/acknowledge',
@@ -229,11 +256,12 @@ describe('chat routes and browser credentials', () => {
       'http://api.test/api/v1/public/me/chat/operations/operation%2F1/decline',
     ])
 
-    for (const [, init] of vi.mocked(fetch).mock.calls) {
+    const mutationCalls = vi.mocked(fetch).mock.calls.slice(1)
+    for (const [, init] of mutationCalls) {
       expect(init).toMatchObject({ method: 'POST', credentials: 'include' })
-      expect(new Headers(init?.headers).get('x-csrf-token')).toBe('csrf-token/value')
+      expect(new Headers(init?.headers).get('x-csrf-token')).toBe('a'.repeat(64))
     }
-    expect(vi.mocked(fetch).mock.calls.map(([, init]) => JSON.parse(String(init?.body)))).toEqual([
+    expect(mutationCalls.map(([, init]) => JSON.parse(String(init?.body)))).toEqual([
       { guestName: 'سارة', guestPhone: '+966501234567' },
       {},
       { expectedVersion: 2 },

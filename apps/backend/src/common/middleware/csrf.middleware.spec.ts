@@ -9,6 +9,7 @@ describe('csrfMiddleware', () => {
     req = { method: 'POST', cookies: {}, headers: {} };
     res = {
       cookie: jest.fn(),
+      setHeader: jest.fn(),
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
     };
@@ -29,18 +30,33 @@ describe('csrfMiddleware', () => {
     expect(opts.httpOnly).toBe(false);
     expect(opts.sameSite).toBe('lax');
     expect(req.cookies[CSRF_COOKIE_NAME]).toBe(value);
+    expect(res.setHeader).toHaveBeenCalledWith('x-csrf-token', value);
   });
 
   it('reuses an existing valid token', () => {
     req.cookies[CSRF_COOKIE_NAME] = 'a'.repeat(64);
     csrfMiddleware(req, res, next);
     expect(res.cookie).not.toHaveBeenCalled();
+    expect(res.setHeader).toHaveBeenCalledWith('x-csrf-token', 'a'.repeat(64));
   });
 
   it('replaces a short (invalid) token', () => {
     req.cookies[CSRF_COOKIE_NAME] = 'short';
     csrfMiddleware(req, res, next);
     expect(res.cookie).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reflect a malformed cookie value into the response header', () => {
+    const malformed = 'z'.repeat(64);
+    req.method = 'GET';
+    req.cookies[CSRF_COOKIE_NAME] = malformed;
+
+    csrfMiddleware(req, res, next);
+
+    const [, fresh] = res.cookie.mock.calls[0];
+    expect(fresh).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.setHeader).toHaveBeenCalledWith('x-csrf-token', fresh);
+    expect(res.setHeader).not.toHaveBeenCalledWith('x-csrf-token', malformed);
   });
 
   it('lets safe methods (GET/HEAD/OPTIONS) through regardless of header', () => {

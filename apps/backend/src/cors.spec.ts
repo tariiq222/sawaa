@@ -78,6 +78,17 @@ describe('configureCors', () => {
     expect(corsConfig.exposedHeaders).toContain('X-Request-ID');
   });
 
+  it('exposes X-CSRF-Token so an explicitly allowed cross-origin website can bootstrap mutations', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CORS_ORIGINS = 'https://sawaa.sa';
+    configureCors(app as INestApplication);
+
+    expect(corsConfig.exposedHeaders).toContain('X-CSRF-Token');
+    const cb = jest.fn();
+    corsConfig.origin('https://evil.example', cb);
+    expect(cb).toHaveBeenCalledWith(expect.any(Error), false);
+  });
+
   it('should not include dev origins in production', () => {
     process.env.NODE_ENV = 'production';
     configureCors(app as INestApplication);

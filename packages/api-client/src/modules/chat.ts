@@ -1,4 +1,4 @@
-import { apiRequest, setApiRequestBaseUrl } from '../client'
+import { apiRequest, ensureCsrfToken, setApiRequestBaseUrl } from '../client'
 import type {
   ChatActionCardMessage,
   ChatConversationDetail,
@@ -16,7 +16,7 @@ import type {
   SendChatMessageRequest,
 } from '../types/chat'
 
-const CSRF_COOKIE_NAME = 'ck_csrf'
+const CSRF_BOOTSTRAP_PATH = '/public/chat/conversations/current'
 
 export function setChatBaseUrl(url: string): void {
   setApiRequestBaseUrl(url)
@@ -152,30 +152,14 @@ function chatRequest<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { credentials: 'include' })
 }
 
-function chatMutation<T>(path: string, body: object): Promise<T> {
-  const token = readCookie(CSRF_COOKIE_NAME)
+async function chatMutation<T>(path: string, body: object): Promise<T> {
+  const token = await ensureCsrfToken(CSRF_BOOTSTRAP_PATH)
   return apiRequest<T>(path, {
     method: 'POST',
     credentials: 'include',
     ...(token ? { headers: { 'X-CSRF-Token': token } } : {}),
     body: JSON.stringify(body),
   })
-}
-
-function readCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null
-  const prefix = `${name}=`
-  const item = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(prefix))
-  if (!item) return null
-  const value = item.slice(prefix.length)
-  try {
-    return decodeURIComponent(value)
-  } catch {
-    return value
-  }
 }
 
 function messageQuery(query: ListChatMessagesQuery): string {

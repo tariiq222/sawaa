@@ -5,6 +5,8 @@ import { getRefreshMutex, setRefreshMutex } from './refresh-mutex'
 // the refresh-token loop is intentionally skipped (refreshing a suspended
 // organization just bounces back the same 401).
 export const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED'
+const CSRF_HEADER_NAME = 'X-CSRF-Token'
+const CSRF_TOKEN_PATTERN = /^[a-f0-9]{64}$/i
 
 export interface ClientConfig {
   baseUrl: string
@@ -20,12 +22,16 @@ export interface ClientConfig {
 }
 
 let config: ClientConfig | null = null
+let csrfToken: string | null = null
+let csrfBootstrap: Promise<string> | null = null
 
 export function initClient(cfg: ClientConfig): void {
   config = cfg
+  resetCsrfState()
 }
 
 export function setApiRequestBaseUrl(baseUrl: string): void {
+  if (!config || config.baseUrl !== baseUrl) resetCsrfState()
   config = config
     ? { ...config, baseUrl }
     : {
@@ -34,6 +40,49 @@ export function setApiRequestBaseUrl(baseUrl: string): void {
         onTokenRefreshed: () => undefined,
         onAuthFailure: () => undefined,
       }
+}
+
+/**
+ * Acquire the double-submit token from an API response header. This works when
+ * the browser app and API are on different origins and the API cookie is
+ * intentionally host-only, so `document.cookie` cannot read it.
+ */
+export function ensureCsrfToken(bootstrapPath: string): Promise<string> {
+  if (csrfToken) return Promise.resolve(csrfToken)
+  if (csrfBootstrap) return csrfBootstrap
+  csrfBootstrap = bootstrapCsrfToken(bootstrapPath).finally(() => {
+    csrfBootstrap = null
+  })
+  return csrfBootstrap
+}
+
+async function bootstrapCsrfToken(path: string): Promise<string> {
+  if (!config) throw new Error('api-client not initialized')
+  const res = await fetch(`${config.baseUrl}${path}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  })
+  captureCsrfToken(res)
+  if (!csrfToken) {
+    throw new ApiError(
+      res.status,
+      'CSRF token bootstrap failed',
+      undefined,
+      'CSRF_BOOTSTRAP_FAILED',
+    )
+  }
+  return csrfToken
+}
+
+function captureCsrfToken(response: Response): void {
+  const candidate = response.headers.get(CSRF_HEADER_NAME)
+  if (candidate && CSRF_TOKEN_PATTERN.test(candidate)) csrfToken = candidate
+}
+
+function resetCsrfState(): void {
+  csrfToken = null
+  csrfBootstrap = null
 }
 
 async function doRefresh(refreshPath: string): Promise<string> {
@@ -46,6 +95,7 @@ async function doRefresh(refreshPath: string): Promise<string> {
     credentials: 'include',
     body: JSON.stringify({}),
   })
+  captureCsrfToken(res)
   if (!res.ok) {
     config.onAuthFailure()
     const peek = await peekErrorBody(res)
@@ -98,6 +148,7 @@ export async function apiRequest<T>(
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   const res = await fetch(`${config.baseUrl}${path}`, { ...options, headers })
+  captureCsrfToken(res)
 
   if (res.status === 401 && !retried && !isAuthEndpoint(path)) {
     // Organization-suspended responses must NOT trigger the refresh loop —
