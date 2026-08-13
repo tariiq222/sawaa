@@ -8,7 +8,7 @@ describe('RetryFailedOutboxEventHandler', () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const findUnique = jest
       .fn()
-      .mockResolvedValueOnce({ id: ID, status: 'FAILED' })
+      .mockResolvedValueOnce({ id: ID, status: 'FAILED', deliveryLane: 'PENDING' })
       .mockResolvedValueOnce({
         id: ID,
         eventType: 'bookings.booking.created',
@@ -43,6 +43,18 @@ describe('RetryFailedOutboxEventHandler', () => {
       failureReason: null,
     });
     expect(result).not.toHaveProperty('payload');
+  });
+
+  it('restores a failed PENDING_V2 event to its safe lane, never legacy PENDING', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const findUnique = jest.fn()
+      .mockResolvedValueOnce({ id: ID, status: 'FAILED', deliveryLane: 'PENDING_V2' })
+      .mockResolvedValueOnce({ id: ID, eventType: 'bookings.zoom.create_requested', attemptCount: 0, createdAt: new Date(), failedAt: null, failureReason: null });
+    const handler = new RetryFailedOutboxEventHandler({ outboxEvent: { findUnique, updateMany } } as never);
+    await expect(handler.execute({ id: ID })).resolves.toMatchObject({ status: 'PENDING_V2' });
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'PENDING_V2' }),
+    }));
   });
 
   it('throws 404 and does not mutate when the event does not exist', async () => {

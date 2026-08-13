@@ -153,11 +153,11 @@ export class CreateZoomMeetingHandler {
     let meeting: ZoomMeetingResponse;
     try {
       // Exactly one POST. Once armed CALL_UNKNOWN, every replay is GET-only.
-      meeting = await this.zoomApi.createMeeting(token, {
+      meeting = await this.withLeaseHeartbeat(booking.id, leaseOwner, () => this.zoomApi.createMeeting(token, {
         topic,
         startTime: booking.scheduledAt.toISOString(),
         durationMins: booking.durationMins,
-      }, timezone);
+      }, timezone));
     } catch (error) {
       await this.release(
         leaseOwner,
@@ -179,7 +179,7 @@ export class CreateZoomMeetingHandler {
   ) {
     let meeting: (ZoomMeetingState & { join_url?: string; start_url?: string }) | null;
     try {
-      meeting = await this.zoomApi.findMeetingByTopic(token, topic);
+      meeting = await this.withLeaseHeartbeat(booking.id, leaseOwner, () => this.zoomApi.findMeetingByTopic(token, topic));
       if (!meeting) {
         return this.manualReview(
           booking.id,
@@ -187,14 +187,15 @@ export class CreateZoomMeetingHandler {
           'Zoom create outcome is unknown and no matching meeting is visible; do not retry POST',
         );
       }
+      const foundMeeting = meeting;
       const desiredStart = booking.scheduledAt.toISOString();
-      if (new Date(meeting.startTime).toISOString() !== desiredStart
-        || meeting.durationMins !== booking.durationMins) {
-        await this.zoomApi.updateMeeting(token, String(meeting.id), {
+      if (new Date(foundMeeting.startTime).toISOString() !== desiredStart
+        || foundMeeting.durationMins !== booking.durationMins) {
+        await this.withLeaseHeartbeat(booking.id, leaseOwner, () => this.zoomApi.updateMeeting(token, String(foundMeeting.id), {
           topic,
           startTime: desiredStart,
           durationMins: booking.durationMins,
-        }, timezone);
+        }, timezone));
       }
     } catch (error) {
       await this.release(
@@ -259,6 +260,35 @@ export class CreateZoomMeetingHandler {
     });
     if (released.count !== 1) {
       throw new Error(`Could not release Zoom creation lease for booking ${bookingId}`);
+    }
+  }
+
+  /**
+   * Provider requests may outlive the initial lease. Renewal is serialized and
+   * every failure is observed by the owning delivery; no fire-and-forget timer
+   * can create an unhandled rejection or silently lose the fence.
+   */
+  private async withLeaseHeartbeat<T>(bookingId: string, leaseOwner: string, work: () => Promise<T>): Promise<T> {
+    let renewalFailure: unknown;
+    let renewal = Promise.resolve();
+    const renew = () => {
+      renewal = renewal.then(async () => {
+        const result = await this.prisma.booking.updateMany({
+          where: { id: bookingId, zoomCreateLeaseOwner: leaseOwner },
+          data: { zoomCreateLeaseExpiresAt: new Date(Date.now() + LEASE_MS) },
+        });
+        if (result.count !== 1) throw new Error('Zoom creation lease was lost');
+      }).catch((error) => { renewalFailure ??= error; });
+      return renewal;
+    };
+    const timer = setInterval(() => { renew(); }, 15_000);
+    try {
+      const result = await work();
+      await renewal;
+      if (renewalFailure) throw renewalFailure;
+      return result;
+    } finally {
+      clearInterval(timer);
     }
   }
 

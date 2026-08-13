@@ -44,7 +44,7 @@ export class BookingZoomRescheduleHandler {
     if (event.payload.revision === undefined) {
       const newestLegacy = await this.prisma.bookingZoomSync.findFirst({
         where: { bookingId: sync.bookingId, revision: 0 },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         select: { id: true },
       });
       if (newestLegacy && newestLegacy.id !== sync.id) {

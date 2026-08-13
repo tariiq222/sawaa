@@ -99,6 +99,7 @@ export class ChatAccessService {
           aggregateId: command.conversationId,
           eventType: resumeEvent.eventName,
           status: 'PENDING_V2',
+          deliveryLane: 'PENDING_V2',
           payload: resumeEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
         },
       });

@@ -23,7 +23,7 @@ export class RetryFailedOutboxEventHandler {
   async execute(cmd: RetryFailedOutboxEventCommand): Promise<OutboxRetryEventView> {
     const existing = await this.prisma.outboxEvent.findUnique({
       where: { id: cmd.id },
-      select: { id: true, status: true },
+      select: { id: true, status: true, deliveryLane: true },
     });
 
     if (!existing) {
@@ -36,7 +36,7 @@ export class RetryFailedOutboxEventHandler {
     const result = await this.prisma.outboxEvent.updateMany({
       where: { id: cmd.id, status: 'FAILED' },
       data: {
-        status: 'PENDING',
+        status: existing.deliveryLane === 'PENDING_V2' ? 'PENDING_V2' : 'PENDING',
         attemptCount: 0,
         failedAt: null,
         failureReason: null,
@@ -65,6 +65,6 @@ export class RetryFailedOutboxEventHandler {
     if (!row) {
       throw new NotFoundException('Outbox event not found');
     }
-    return { ...toFailedEventView(row), status: 'PENDING' };
+    return { ...toFailedEventView(row), status: existing.deliveryLane === 'PENDING_V2' ? 'PENDING_V2' : 'PENDING' };
   }
 }

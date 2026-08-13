@@ -94,6 +94,7 @@ export class PaymentCompletedEventHandler {
                   aggregateId: bookingId,
                   eventType: zoomEvent.eventName,
                   status: 'PENDING_V2',
+                  deliveryLane: 'PENDING_V2',
                   payload: zoomEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
                 },
               })] : []),

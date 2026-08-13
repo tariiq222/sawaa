@@ -34,7 +34,7 @@ export interface OutboxFailedEventView {
 
 /** Result of an explicit retry: the row is back to PENDING. */
 export interface OutboxRetryEventView extends OutboxFailedEventView {
-  status: 'PENDING';
+  status: 'PENDING' | 'PENDING_V2';
 }
 
 export type OutboxEventRowShape = {

@@ -207,6 +207,7 @@ export class RescheduleBookingHandler {
               aggregateId: booking.id,
               eventType: event.eventName,
               status: 'PENDING_V2',
+              deliveryLane: 'PENDING_V2',
               payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
             },
           }));
