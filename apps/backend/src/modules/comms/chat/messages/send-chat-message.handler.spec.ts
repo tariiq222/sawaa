@@ -21,6 +21,7 @@ function knownRequestError(): Prisma.PrismaClientKnownRequestError {
 describe('SendChatMessageHandler', () => {
   let prisma: {
     commsChatMessage: { findUnique: jest.Mock };
+    chatConversation: { findFirst: jest.Mock };
   };
   let transaction: {
     commsChatMessage: { create: jest.Mock };
@@ -37,6 +38,7 @@ describe('SendChatMessageHandler', () => {
     };
     prisma = {
       commsChatMessage: { findUnique: jest.fn() },
+      chatConversation: { findFirst: jest.fn().mockResolvedValue({ ...guestConversation, status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-a' }) },
     };
     rlsTransaction = { withTransaction: jest.fn().mockImplementation((work) => work(transaction)) };
     access = {
@@ -114,6 +116,37 @@ describe('SendChatMessageHandler', () => {
     expect(transaction.commsChatMessage.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ senderType: MessageSenderType.CLIENT, senderId: 'client-a' }),
     }));
+  });
+
+  it('persists an assigned staff reply through the unified idempotent path and increments client unread', async () => {
+    await handler.execute({
+      audience: 'staff', conversationId: guestConversation.id, staffUserId: 'staff-a', body: ' hello ', clientMessageId: 'staff-1',
+    });
+
+    expect(prisma.chatConversation.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: guestConversation.id,
+        status: ConversationStatus.STAFF_ACTIVE,
+        assignedStaffUserId: 'staff-a',
+      },
+    });
+    expect(transaction.commsChatMessage.create).toHaveBeenCalledWith({
+      data: {
+        conversationId: guestConversation.id,
+        senderType: MessageSenderType.STAFF,
+        senderId: 'staff-a',
+        body: 'hello',
+        clientMessageId: 'staff-1',
+      },
+    });
+    expect(transaction.chatConversation.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: guestConversation.id,
+        status: ConversationStatus.STAFF_ACTIVE,
+        assignedStaffUserId: 'staff-a',
+      },
+      data: { lastMessageAt: expect.any(Date), clientUnreadCount: { increment: 1 } },
+    });
   });
 
   it('does not allow a known conversation ID to bypass guest ownership', async () => {

@@ -8,6 +8,7 @@ import { GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat
 import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/get-current-conversation.handler';
 import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
+import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
 import { MyChatController } from './my-chat.controller';
 
 describe('MyChatController (e2e)', () => {
@@ -16,6 +17,7 @@ describe('MyChatController (e2e)', () => {
   const claim = { execute: jest.fn() };
   const send = { execute: jest.fn() };
   const list = { execute: jest.fn() };
+  const handoff = { execute: jest.fn() };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -25,6 +27,7 @@ describe('MyChatController (e2e)', () => {
         { provide: ClaimConversationHandler, useValue: claim },
         { provide: SendChatMessageHandler, useValue: send },
         { provide: ListChatMessagesHandler, useValue: list },
+        { provide: RequestHandoffHandler, useValue: handoff },
         { provide: GuestChatTokenService, useValue: { clearCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
       ],
     })
@@ -121,6 +124,22 @@ describe('MyChatController (e2e)', () => {
       conversationId: '00000000-0000-4000-a000-000000000001',
       clientId: 'client-a',
       limit: 20,
+    });
+  });
+
+  it('requests reception from ClientSessionGuard identity and accepts no body identity or reason fields', async () => {
+    handoff.execute.mockResolvedValue({ id: 'conv-1', clientId: 'client-a' });
+    const url = '/public/me/chat/conversations/00000000-0000-4000-a000-000000000001/handoff';
+
+    await request(app.getHttpServer()).post(url).send({ clientId: 'client-b' }).expect(400);
+    await request(app.getHttpServer()).post(url).send({ guestName: 'سارة', guestPhone: '+966501234567' }).expect(400);
+    await request(app.getHttpServer()).post(url).send({ reason: 'medical', riskTag: 'high' }).expect(400);
+    await request(app.getHttpServer()).post(url).send({}).expect(201);
+
+    expect(handoff.execute).toHaveBeenCalledWith({
+      audience: 'client',
+      conversationId: '00000000-0000-4000-a000-000000000001',
+      clientId: 'client-a',
     });
   });
 });

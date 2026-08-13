@@ -5,7 +5,7 @@ export type Rule = {
   subject: PermissionSubject | 'all';
 };
 
-const ADMIN_RULES: readonly Rule[] = [
+const SHARED_ADMIN_OWNER_RULES: readonly Rule[] = [
   { action: 'manage', subject: 'User' },
   { action: 'manage', subject: 'Role' },
   { action: 'manage', subject: 'Booking' },
@@ -24,9 +24,14 @@ const ADMIN_RULES: readonly Rule[] = [
   { action: 'manage', subject: 'WhatsappConversation' },
 ];
 
+const ADMIN_RULES: readonly Rule[] = [
+  ...SHARED_ADMIN_OWNER_RULES,
+  { action: 'manage', subject: 'Conversation' },
+];
+
 export const BUILT_IN: Record<string, readonly Rule[]> = {
   SUPER_ADMIN: [{ action: 'manage', subject: 'all' }],
-  OWNER: [...ADMIN_RULES],
+  OWNER: [...SHARED_ADMIN_OWNER_RULES],
   ADMIN: ADMIN_RULES,
   RECEPTIONIST: [
     { action: ['create', 'read', 'update'], subject: 'Booking' },
@@ -42,6 +47,7 @@ export const BUILT_IN: Record<string, readonly Rule[]> = {
     { action: 'read', subject: 'Category' },
     { action: 'read', subject: 'Branch' },
     { action: 'manage', subject: 'WhatsappConversation' },
+    { action: ['read', 'update'], subject: 'Conversation' },
   ],
   ACCOUNTANT: [
     { action: 'manage', subject: 'Invoice' },

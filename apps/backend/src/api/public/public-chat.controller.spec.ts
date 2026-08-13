@@ -7,6 +7,7 @@ import { GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat
 import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/get-current-conversation.handler';
 import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
+import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
 import { PublicChatController } from './public-chat.controller';
 
 describe('PublicChatController (e2e)', () => {
@@ -15,6 +16,7 @@ describe('PublicChatController (e2e)', () => {
   const current = { execute: jest.fn() };
   const send = { execute: jest.fn() };
   const list = { execute: jest.fn() };
+  const handoff = { execute: jest.fn() };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -24,6 +26,7 @@ describe('PublicChatController (e2e)', () => {
         { provide: GetCurrentConversationHandler, useValue: current },
         { provide: SendChatMessageHandler, useValue: send },
         { provide: ListChatMessagesHandler, useValue: list },
+        { provide: RequestHandoffHandler, useValue: handoff },
         { provide: GuestChatTokenService, useValue: { setCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public', maxAge: 30 * 24 * 60 * 60 * 1000 }) } },
       ],
     }).compile();
@@ -111,5 +114,36 @@ describe('PublicChatController (e2e)', () => {
       .expect(401);
     expect(send.execute).not.toHaveBeenCalled();
     expect(list.execute).not.toHaveBeenCalled();
+  });
+
+  it('requests reception only with owned guest access and validated contact fields', async () => {
+    handoff.execute.mockResolvedValue({
+      id: '00000000-0000-4000-a000-000000000001', clientId: null, employeeId: null,
+      isAiChat: true, status: 'WAITING_FOR_STAFF', language: 'ar', createdAt: '2026-08-13', updatedAt: '2026-08-13',
+    });
+
+    await request(app.getHttpServer())
+      .post('/public/chat/conversations/00000000-0000-4000-a000-000000000001/handoff')
+      .set('Cookie', 'sawaa_chat_guest=guest-a')
+      .send({ guestName: 'سارة' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/public/chat/conversations/00000000-0000-4000-a000-000000000001/handoff')
+      .set('Cookie', 'sawaa_chat_guest=guest-a')
+      .send({ guestName: 'سارة', guestPhone: '+966501234567', reason: 'medical', riskTag: 'high' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/public/chat/conversations/00000000-0000-4000-a000-000000000001/handoff')
+      .set('Cookie', 'sawaa_chat_guest=guest-a')
+      .send({ guestName: '  سارة  ', guestPhone: '0501234567' })
+      .expect(201);
+
+    expect(handoff.execute).toHaveBeenCalledWith({
+      audience: 'guest',
+      conversationId: '00000000-0000-4000-a000-000000000001',
+      guestToken: 'guest-a',
+      guestName: 'سارة',
+      guestPhone: '+966501234567',
+    });
   });
 });

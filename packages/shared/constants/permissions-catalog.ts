@@ -21,6 +21,7 @@ export const PERMISSION_SUBJECTS = [
   'Branch',
   'Category',
   'Client',
+  'Conversation',
   'Coupon',
   'Department',
   'Employee',

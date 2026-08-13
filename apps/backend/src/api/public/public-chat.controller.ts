@@ -13,6 +13,8 @@ import { ListChatMessagesDto } from '../../modules/comms/chat/messages/list-chat
 import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
 import { SendChatMessageDto } from '../../modules/comms/chat/messages/send-chat-message.dto';
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
+import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
+import { GuestRequestHandoffDto } from '../../modules/comms/chat/staff/request-handoff.dto';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -26,6 +28,7 @@ export class PublicChatController {
     private readonly tokens: GuestChatTokenService,
     private readonly sendMessage: SendChatMessageHandler,
     private readonly listMessages: ListChatMessagesHandler,
+    private readonly requestHandoff: RequestHandoffHandler,
   ) {}
 
   @Public()
@@ -90,6 +93,26 @@ export class PublicChatController {
       limit: dto.limit ?? 20,
       ...(dto.cursor ? { cursor: dto.cursor } : {}),
     });
+  }
+
+  @Public()
+  @Post('conversations/:conversationId/handoff')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Request reception handoff as a guest chat owner' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
+  async requestReceptionForGuest(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Body() dto: GuestRequestHandoffDto,
+    @Req() request: CookieRequest,
+  ) {
+    const guestToken = this.requireGuestToken(request);
+    return toChatConversationResponse(await this.requestHandoff.execute({
+      audience: 'guest',
+      conversationId,
+      guestToken,
+      guestName: dto.guestName,
+      guestPhone: dto.guestPhone,
+    }));
   }
 
   private requireGuestToken(request: CookieRequest): string {

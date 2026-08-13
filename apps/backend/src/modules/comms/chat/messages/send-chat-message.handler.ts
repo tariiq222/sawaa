@@ -8,6 +8,7 @@ import type { SendChatMessageDto } from './send-chat-message.dto';
 export type SendChatMessageCommand = SendChatMessageDto & (
   | { audience: 'guest'; conversationId: string; guestToken: string }
   | { audience: 'client'; conversationId: string; clientId: string }
+  | { audience: 'staff'; conversationId: string; staffUserId: string }
 );
 
 @Injectable()
@@ -28,7 +29,16 @@ export class SendChatMessageHandler {
 
     const conversation = command.audience === 'guest'
       ? await this.access.assertGuestAccess(command.conversationId, command.guestToken)
-      : await this.access.assertClientAccess(command.conversationId, command.clientId);
+      : command.audience === 'client'
+        ? await this.access.assertClientAccess(command.conversationId, command.clientId)
+        : await this.prisma.chatConversation.findFirst({
+            where: {
+              id: command.conversationId,
+              status: ConversationStatus.STAFF_ACTIVE,
+              assignedStaffUserId: command.staffUserId,
+            },
+          });
+    if (!conversation) throw new BadRequestException('Conversation is not assigned to this staff user');
 
     const existing = await this.findExistingMessage(command.conversationId, command.clientMessageId);
     if (existing) return existing;
@@ -39,7 +49,9 @@ export class SendChatMessageHandler {
 
     const sender = command.audience === 'guest'
       ? { senderType: MessageSenderType.VISITOR, senderId: null }
-      : { senderType: MessageSenderType.CLIENT, senderId: command.clientId };
+      : command.audience === 'client'
+        ? { senderType: MessageSenderType.CLIENT, senderId: command.clientId }
+        : { senderType: MessageSenderType.STAFF, senderId: command.staffUserId };
 
     try {
       return await this.rlsTransaction.withTransaction(async (tx) => {
@@ -51,13 +63,22 @@ export class SendChatMessageHandler {
             clientMessageId: command.clientMessageId,
           },
         });
-        const updated = await tx.chatConversation.updateMany({
-          where: { id: command.conversationId, status: { not: ConversationStatus.CLOSED } },
-          data: {
-            lastMessageAt: new Date(),
-            staffUnreadCount: { increment: 1 },
-          },
-        });
+        const updated = command.audience === 'staff'
+          ? await tx.chatConversation.updateMany({
+              where: {
+                id: command.conversationId,
+                status: ConversationStatus.STAFF_ACTIVE,
+                assignedStaffUserId: command.staffUserId,
+              },
+              data: { lastMessageAt: new Date(), clientUnreadCount: { increment: 1 } },
+            })
+          : await tx.chatConversation.updateMany({
+              where: { id: command.conversationId, status: { not: ConversationStatus.CLOSED } },
+              data: {
+                lastMessageAt: new Date(),
+                staffUnreadCount: { increment: 1 },
+              },
+            });
         if (updated.count !== 1) {
           throw new BadRequestException('Cannot send message to a closed conversation');
         }

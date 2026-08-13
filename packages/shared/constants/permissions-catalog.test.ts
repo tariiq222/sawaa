@@ -13,6 +13,7 @@ describe('permissions catalog', () => {
       'Branch',
       'Category',
       'Client',
+      'Conversation',
       'Coupon',
       'Department',
       'Employee',

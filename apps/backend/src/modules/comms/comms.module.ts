@@ -72,6 +72,17 @@ import { AdministrativeAssistantLeaseService } from './chat/assistant/administra
 import { AdministrativeScopeGate } from './chat/assistant/administrative-scope-gate';
 import { AdministrativeOutputValidator } from './chat/assistant/administrative-output-validator';
 import { AdministrativeResponseRenderer } from './chat/assistant/administrative-response-renderer';
+import { RequestHandoffHandler } from './chat/staff/request-handoff.handler';
+import { ClaimConversationHandler as ClaimStaffConversationHandler } from './chat/staff/claim-conversation.handler';
+import { AssignConversationHandler } from './chat/staff/assign-conversation.handler';
+import { ReleaseConversationHandler } from './chat/staff/release-conversation.handler';
+import { CloseConversationHandler as CloseStaffConversationHandler } from './chat/staff/close-conversation.handler';
+import { MarkConversationReadHandler } from './chat/staff/mark-conversation-read.handler';
+import { ReplyConversationHandler } from './chat/staff/reply-conversation.handler';
+import { ListInboxHandler } from './chat/staff/list-inbox.handler';
+import { GetConversationHandler as GetStaffConversationHandler } from './chat/staff/get-conversation.handler';
+import { ListConversationMessagesHandler } from './chat/staff/list-conversation-messages.handler';
+import { StaffConversationAccessService } from './chat/staff/staff-conversation-access.service';
 
 const handlers = [
   SendPushHandler,
@@ -127,6 +138,17 @@ const handlers = [
   AdministrativeScopeGate,
   AdministrativeOutputValidator,
   AdministrativeResponseRenderer,
+  RequestHandoffHandler,
+  ClaimStaffConversationHandler,
+  AssignConversationHandler,
+  ReleaseConversationHandler,
+  CloseStaffConversationHandler,
+  MarkConversationReadHandler,
+  ReplyConversationHandler,
+  ListInboxHandler,
+  GetStaffConversationHandler,
+  ListConversationMessagesHandler,
+  StaffConversationAccessService,
 ];
 
 const eventHandlers = [

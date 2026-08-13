@@ -123,6 +123,20 @@ describe('CaslAbilityFactory', () => {
     expect(ability.can('manage', 'anything')).toBe(true);
   });
 
+  it.each([
+    ['SUPER_ADMIN', true],
+    ['ADMIN', true],
+    ['RECEPTIONIST', true],
+    ['OWNER', false],
+    ['ACCOUNTANT', false],
+    ['EMPLOYEE', false],
+    ['CLIENT', false],
+  ])('grants Conversation only to the approved built-in role set: %s', (role, expected) => {
+    const ability = factory.buildForUser({ role, customRole: null });
+    expect(ability.can('read', 'Conversation')).toBe(expected);
+    expect(ability.can('update', 'Conversation')).toBe(expected);
+  });
+
   describe('sensitive-money operations (R-16) are gated on manage:Setting', () => {
     it('OWNER and ADMIN hold manage:Setting (can approve refunds / rotate keys)', () => {
       for (const role of ['OWNER', 'ADMIN']) {
