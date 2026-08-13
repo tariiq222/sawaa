@@ -25,6 +25,7 @@ import { toPublicChatOperation } from '../../modules/comms/chat/operations/chat-
 import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
+import { ChatMessageResponseDto, ClaimGuestConversationResponseDto } from '../../modules/comms/chat/messages/public-chat-response.dto';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -62,7 +63,7 @@ export class MyChatController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Claim a guest conversation for the authenticated client' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
-  @ApiCreatedResponse({ description: 'Guest conversation claimed by the authenticated client' })
+  @ApiCreatedResponse({ type: ClaimGuestConversationResponseDto, description: 'Guest conversation claimed by the authenticated client' })
   async claim(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() _body: ClaimGuestConversationDto,
@@ -118,6 +119,7 @@ export class MyChatController {
   @ApiOperation({ summary: 'Retry an unanswered administrative assistant message as the client owner' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
   @ApiParam({ name: 'messageId', format: 'uuid', description: 'Inbound message UUID' })
+  @ApiOkResponse({ type: ChatMessageResponseDto, description: 'The retryable inbound message after a durable retry was staged' })
   async retryMessageForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Param('messageId', ParseUUIDPipe) messageId: string,

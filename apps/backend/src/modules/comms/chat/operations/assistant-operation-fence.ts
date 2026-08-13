@@ -4,6 +4,11 @@ import { ConversationStatus, type Prisma } from '@prisma/client';
 export interface AssistantOperationFence {
   stateVersion: number;
   leaseOwner: string;
+  dispatchAttempt: number;
+}
+
+export function assistantDispatchIdempotencyKey(key: string, fence?: AssistantOperationFence): string {
+  return fence ? `${key}:assistant-dispatch:${fence.dispatchAttempt}` : key;
 }
 
 export async function assertAssistantOperationFence(

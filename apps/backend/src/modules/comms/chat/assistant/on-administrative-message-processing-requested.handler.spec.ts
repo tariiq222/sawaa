@@ -25,7 +25,7 @@ describe('OnAdministrativeMessageProcessingRequestedHandler', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 'message-1', senderType: MessageSenderType.VISITOR,
           metadata: {
-            assistantStatus: 'QUEUED', queuedAt: new Date().toISOString(),
+            assistantStatus: 'QUEUED', dispatchAttempt: 0, queuedAt: new Date().toISOString(),
             assistantStateVersion: 0, assistantClientId: null,
           },
           conversation: { status: ConversationStatus.AI_ACTIVE, isAiChat: true, stateVersion: 0, clientId: null },
@@ -48,7 +48,36 @@ describe('OnAdministrativeMessageProcessingRequestedHandler', () => {
       expect.any(Function),
     );
     await expect(eventBus.subscribe.mock.calls[0][2](event)).resolves.toBeUndefined();
-    expect(assistant.processMessage).toHaveBeenCalledWith('message-1', { manualRetry: false });
+    expect(assistant.processMessage).toHaveBeenCalledWith('message-1', {
+      manualRetry: false,
+      dispatchAttempt: 0,
+    });
+  });
+
+  it.each([
+    {
+      name: 'a redelivered older dispatch after a newer attempt was staged',
+      payload: { messageId: 'message-1', manualRetry: true, dispatchAttempt: 1 },
+      metadata: { assistantStatus: 'RETRYING', retryable: false, dispatchAttempt: 2, assistantStateVersion: 0, assistantClientId: null },
+    },
+    {
+      name: 'a transport-capped terminal marker',
+      payload: { messageId: 'message-1', manualRetry: true, dispatchAttempt: 5 },
+      metadata: { assistantStatus: 'RETRYABLE_FAILURE', retryable: true, retryAttempts: 2, dispatchAttempt: 5, assistantStateVersion: 0, assistantClientId: null },
+    },
+    {
+      name: 'a duplicate delivery after a terminal provider failure',
+      payload: { messageId: 'message-1', manualRetry: false, dispatchAttempt: 0 },
+      metadata: { assistantStatus: 'RETRYABLE_FAILURE', retryable: true, dispatchAttempt: 0, assistantStateVersion: 0, assistantClientId: null },
+    },
+  ])('acknowledges $name without invoking the provider path', async ({ payload, metadata }) => {
+    prisma.commsChatMessage.findUnique.mockResolvedValue({
+      id: 'message-1', senderType: MessageSenderType.VISITOR, metadata,
+      conversation: { status: ConversationStatus.AI_ACTIVE, isAiChat: true, stateVersion: 0, clientId: null },
+    });
+
+    await expect(handler.handle({ ...event, payload })).resolves.toBeUndefined();
+    expect(assistant.processMessage).not.toHaveBeenCalled();
   });
 
   it('throws while an active queued message is still unanswered so BullMQ retries a lease loser', async () => {

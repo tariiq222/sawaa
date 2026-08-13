@@ -8,7 +8,7 @@ import {
 import { createHash } from 'node:crypto';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { ChatBookingQuoteService } from './chat-booking-quote.service';
-import { assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
+import { assistantDispatchIdempotencyKey, assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
 
 export interface PrepareRescheduleCommand {
   conversationId: string;
@@ -92,7 +92,7 @@ export class PrepareRescheduleHandler {
     const hash = createHash('sha256')
       .update(JSON.stringify({ bookingId: command.bookingId, newScheduledAt: command.newScheduledAt }))
       .digest('hex');
-    return `chat:${command.sourceMessageId}:prepareReschedule:${hash}`;
+    return assistantDispatchIdempotencyKey(`chat:${command.sourceMessageId}:prepareReschedule:${hash}`, command.assistantFence);
   }
 
   private async createOrGet(data: {

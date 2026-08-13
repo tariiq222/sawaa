@@ -77,18 +77,30 @@ export class AdministrativeAssistantService {
 
   async processMessage(
     messageId: string,
-    options: { manualRetry?: boolean } = {},
+    options: { manualRetry?: boolean; dispatchAttempt?: number } = {},
   ): Promise<CommsChatMessage | null> {
     const existing = await this.findExistingResponse(messageId);
     if (existing) return existing;
 
     const target = await this.findInboundMessage(messageId);
     if (!target) return null;
+    const state = readAdministrativeMessageState(target.metadata);
+    if (
+      options.dispatchAttempt !== undefined
+      && readNonNegativeInteger(state.dispatchAttempt) !== options.dispatchAttempt
+    ) return null;
+    if (
+      options.dispatchAttempt !== undefined
+      && (state.assistantStatus !== 'QUEUED' && state.assistantStatus !== 'RETRYING')
+    ) return null;
+    if (
+      options.dispatchAttempt !== undefined
+      && Boolean(options.manualRetry) !== (state.assistantStatus === 'RETRYING')
+    ) return null;
     if (!options.manualRetry && this.hasAssistantFailureMarker(target.metadata)) return null;
 
     const conversation = await this.findActiveConversation(target.conversationId);
     if (!conversation) return null;
-    const state = readAdministrativeMessageState(target.metadata);
     if (
       readNonNegativeInteger(state.assistantStateVersion) !== conversation.stateVersion
       || (state.assistantClientId ?? null) !== conversation.clientId
@@ -99,12 +111,12 @@ export class AdministrativeAssistantService {
 
     try {
       if (!await this.lease.renew(conversation.id, owner, conversation.stateVersion)) throw new AssistantLeaseLost();
-      const response = await this.processInbound(target, conversation, owner);
+      const response = await this.processInbound(target, conversation, owner, readNonNegativeInteger(state.dispatchAttempt));
       if (response) await this.clearRetryableFailure(target);
       return response ?? this.findExistingResponse(messageId);
     } catch (error) {
       if (error instanceof ConversationStatusChanged || error instanceof AssistantLeaseLost) {
-        await this.discardUnpublishedOperations(target.id);
+        await this.discardUnpublishedOperations(target.id, readNonNegativeInteger(state.dispatchAttempt));
         return null;
       }
       if (await this.markRetryableFailure(target, conversation, owner)) {
@@ -120,6 +132,7 @@ export class AdministrativeAssistantService {
     inbound: InboundMessage,
     conversation: ActiveConversation,
     leaseOwner: string,
+    dispatchAttempt: number,
   ): Promise<CommsChatMessage | null> {
     const existing = await this.findExistingResponse(inbound.id);
     if (existing) return existing;
@@ -147,6 +160,7 @@ export class AdministrativeAssistantService {
             inbound.id,
             conversation.stateVersion,
             leaseOwner,
+            dispatchAttempt,
           ),
           async () => {
             if (!await this.lease.renew(conversation.id, leaseOwner, conversation.stateVersion)) {
@@ -327,6 +341,15 @@ export class AdministrativeAssistantService {
             latencyMs: input.latencyMs,
           },
         });
+        const operationId = input.metadata?.action === 'CHAT_OPERATION'
+          ? input.metadata.operation.id
+          : null;
+        if (operationId) {
+          await tx.chatOperation.updateMany({
+            where: { id: operationId, resultMessageId: null },
+            data: { resultMessageId: response.id },
+          });
+        }
         const updated = await tx.chatConversation.updateMany({
           where: {
             id: input.conversationId,
@@ -392,10 +415,16 @@ export class AdministrativeAssistantService {
     }
   }
 
-  private async discardUnpublishedOperations(messageId: string): Promise<void> {
+  private async discardUnpublishedOperations(messageId: string, dispatchAttempt: number): Promise<void> {
     try {
       await this.prisma.chatOperation.deleteMany({
-        where: { idempotencyKey: { startsWith: `chat:${messageId}:` } },
+        where: {
+          idempotencyKey: {
+            startsWith: `chat:${messageId}:`,
+            endsWith: `:assistant-dispatch:${dispatchAttempt}`,
+          },
+          resultMessageId: null,
+        },
       });
     } catch {
       this.logger.warn('Could not discard an administrative operation after the assistant epoch changed');

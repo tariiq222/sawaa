@@ -54,7 +54,7 @@ export class AdministrativeAssistantRecoveryWorker implements OnModuleInit {
         AND conversation."isAiChat" = true
         AND conversation."status" = 'AI_ACTIVE'::"ConversationStatus"
         AND message."metadata"->>'assistantStatus' IN ('QUEUED', 'RETRYING')
-        AND (message."metadata"->>'queuedAt')::timestamptz < ${staleBefore}
+        AND COALESCE((message."metadata"->>'queuedAt')::timestamptz, message."createdAt") < ${staleBefore}
       ORDER BY message."createdAt" ASC
       LIMIT ${limit}
     `;
@@ -84,6 +84,27 @@ export class AdministrativeAssistantRecoveryWorker implements OnModuleInit {
         select: { status: true, isAiChat: true, stateVersion: true, clientId: true },
       });
       if (!conversation?.isAiChat || conversation.status !== ConversationStatus.AI_ACTIVE) return;
+      const hasLegacyEpoch = typeof state.assistantStateVersion !== 'number'
+        || !Number.isSafeInteger(state.assistantStateVersion)
+        || state.assistantStateVersion < 0
+        || !Object.prototype.hasOwnProperty.call(state, 'assistantClientId');
+      if (hasLegacyEpoch) {
+        // Old pre-dispatch markers have no immutable epoch to prove their
+        // identity. Make them user-retryable instead of silently processing
+        // them under an identity that may have changed since they were sent.
+        await tx.commsChatMessage.update({
+          where: { id: messageId },
+          data: { metadata: {
+            assistantStatus: 'RETRYABLE_FAILURE',
+            retryable: true,
+            retryAttempts: readNonNegativeInteger(state.retryAttempts),
+            dispatchAttempt: readNonNegativeInteger(state.dispatchAttempt),
+            assistantStateVersion: conversation.stateVersion,
+            assistantClientId: conversation.clientId,
+          } },
+        });
+        return;
+      }
       if (
         state.assistantStateVersion !== conversation.stateVersion
         || (state.assistantClientId ?? null) !== conversation.clientId

@@ -5187,7 +5187,44 @@ export interface components {
              */
             userMessage: string;
         };
+        ChatMessageResponseDto: {
+            body: string;
+            /** Format: uuid */
+            clientMessageId?: string | null;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "TEXT" | "ACTION_CARD" | "OPERATION_RESULT" | "SYSTEM_EVENT";
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
+        };
         ClaimGuestConversationDto: Record<string, never>;
+        ClaimGuestConversationResponseDto: {
+            /** Format: uuid */
+            clientId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            employeeId?: string | null;
+            /** Format: uuid */
+            id: string;
+            isAiChat: boolean;
+            language: string;
+            resumedOperations: {
+                [key: string]: unknown;
+            }[];
+            /** @enum {string} */
+            status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
+            /** Format: date-time */
+            updatedAt: string;
+        };
         /**
          * @description Account type
          * @enum {string}
@@ -28543,11 +28580,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The retryable inbound message after a durable retry was staged */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ChatMessageResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29434,7 +29474,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ClaimGuestConversationResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29673,11 +29715,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The retryable inbound message after a durable retry was staged */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ChatMessageResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {

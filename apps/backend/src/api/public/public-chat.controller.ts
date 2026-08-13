@@ -17,6 +17,7 @@ import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-ha
 import { GuestRequestHandoffDto } from '../../modules/comms/chat/staff/request-handoff.dto';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
+import { ChatMessageResponseDto } from '../../modules/comms/chat/messages/public-chat-response.dto';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -86,6 +87,7 @@ export class PublicChatController {
   @ApiOperation({ summary: 'Retry an unanswered administrative assistant message as a guest owner' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
   @ApiParam({ name: 'messageId', format: 'uuid', description: 'Inbound message UUID' })
+  @ApiOkResponse({ type: ChatMessageResponseDto, description: 'The retryable inbound message after a durable retry was staged' })
   async retryMessageForGuest(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Param('messageId', ParseUUIDPipe) messageId: string,

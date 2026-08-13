@@ -1,5 +1,5 @@
 import { ConflictException } from '@nestjs/common';
-import { assertAssistantOperationFence } from './assistant-operation-fence';
+import { assistantDispatchIdempotencyKey, assertAssistantOperationFence } from './assistant-operation-fence';
 
 describe('assertAssistantOperationFence', () => {
   it('locks and rejects an operation when handoff or claim invalidated the assistant epoch', async () => {
@@ -12,7 +12,7 @@ describe('assertAssistantOperationFence', () => {
       tx as never,
       'conversation-1',
       null,
-      { stateVersion: 3, leaseOwner: 'worker-a' },
+      { stateVersion: 3, leaseOwner: 'worker-a', dispatchAttempt: 1 },
     )).rejects.toThrow(ConflictException);
 
     expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
@@ -23,5 +23,15 @@ describe('assertAssistantOperationFence', () => {
       }),
       select: { id: true },
     });
+  });
+
+  it('scopes assistant operation idempotency to the durable dispatch attempt', () => {
+    const base = 'chat:message-1:prepareBooking:fingerprint';
+    expect(assistantDispatchIdempotencyKey(base, {
+      stateVersion: 3, leaseOwner: 'worker-a', dispatchAttempt: 1,
+    })).toBe(`${base}:assistant-dispatch:1`);
+    expect(assistantDispatchIdempotencyKey(base, {
+      stateVersion: 3, leaseOwner: 'worker-b', dispatchAttempt: 2,
+    })).toBe(`${base}:assistant-dispatch:2`);
   });
 });

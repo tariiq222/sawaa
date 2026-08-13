@@ -863,8 +863,124 @@
         ],
         "type": "object"
       },
+      "ChatMessageResponseDto": {
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "clientMessageId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "conversationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "TEXT",
+              "ACTION_CARD",
+              "OPERATION_RESULT",
+              "SYSTEM_EVENT"
+            ],
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "senderType": {
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE",
+              "VISITOR",
+              "AI",
+              "STAFF",
+              "SYSTEM"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderType",
+          "body",
+          "kind",
+          "createdAt"
+        ],
+        "type": "object"
+      },
       "ClaimGuestConversationDto": {
         "properties": {},
+        "type": "object"
+      },
+      "ClaimGuestConversationResponseDto": {
+        "properties": {
+          "clientId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "isAiChat": {
+            "type": "boolean"
+          },
+          "language": {
+            "type": "string"
+          },
+          "resumedOperations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "OPEN",
+              "AI_ACTIVE",
+              "WAITING_FOR_STAFF",
+              "STAFF_ACTIVE",
+              "CLOSED"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "isAiChat",
+          "status",
+          "language",
+          "createdAt",
+          "updatedAt",
+          "resumedOperations"
+        ],
         "type": "object"
       },
       "ClientAccountType": {
@@ -33029,7 +33145,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageResponseDto"
+                }
+              }
+            },
+            "description": "The retryable inbound message after a durable retry was staged"
           },
           "400": {
             "content": {
@@ -34286,6 +34409,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimGuestConversationResponseDto"
+                }
+              }
+            },
             "description": "Guest conversation claimed by the authenticated client"
           },
           "400": {
@@ -34629,7 +34759,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageResponseDto"
+                }
+              }
+            },
+            "description": "The retryable inbound message after a durable retry was staged"
           },
           "400": {
             "content": {

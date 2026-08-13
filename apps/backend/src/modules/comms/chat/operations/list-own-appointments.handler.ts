@@ -11,7 +11,7 @@ import {
   ListClientBookingsHandler,
   type ListClientBookingsResult,
 } from '../../../bookings/client/list-client-bookings.handler';
-import { assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
+import { assistantDispatchIdempotencyKey, assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
 
 export interface ListOwnAppointmentsCommand {
   conversationId: string;
@@ -47,9 +47,9 @@ export class ListOwnAppointmentsHandler {
       };
     }
 
-    const idempotencyKey = `chat:${command.sourceMessageId}:listOwnAppointments:${createHash('sha256')
+    const idempotencyKey = assistantDispatchIdempotencyKey(`chat:${command.sourceMessageId}:listOwnAppointments:${createHash('sha256')
       .update(command.conversationId)
-      .digest('hex')}`;
+      .digest('hex')}`, command.assistantFence);
     const expiresAt = new Date(Date.now() + 15 * 60_000);
     const createOrGet = async (tx: Prisma.TransactionClient) => {
       await assertAssistantOperationFence(tx, command.conversationId, command.clientId, command.assistantFence);

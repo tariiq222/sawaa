@@ -5,5 +5,6 @@ export class AdministrativeToolContext {
     readonly sourceMessageId: string | null = null,
     readonly stateVersion: number | null = null,
     readonly leaseOwner: string | null = null,
+    readonly dispatchAttempt: number | null = null,
   ) {}
 }

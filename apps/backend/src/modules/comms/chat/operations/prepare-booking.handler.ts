@@ -13,7 +13,7 @@ import {
   ChatBookingQuoteService,
   type PreparedBookingSummary,
 } from './chat-booking-quote.service';
-import { assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
+import { assistantDispatchIdempotencyKey, assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
 
 const OPERATION_TTL_MS = 15 * 60_000;
 
@@ -185,7 +185,7 @@ export class PrepareBookingHandler {
         deliveryType: command.deliveryType,
       }))
       .digest('hex');
-    return `chat:${command.sourceMessageId}:prepareBooking:${fingerprint}`;
+    return assistantDispatchIdempotencyKey(`chat:${command.sourceMessageId}:prepareBooking:${fingerprint}`, command.assistantFence);
   }
 
   private async createOrGet(data: {

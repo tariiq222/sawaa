@@ -111,4 +111,25 @@ describe('AdministrativeAssistantRecoveryWorker', () => {
     });
     expect(tx.outboxEvent.create).not.toHaveBeenCalled();
   });
+
+  it('normalizes an old RETRYING marker without a dispatch epoch to a safe retryable state', async () => {
+    tx.commsChatMessage.findUnique
+      .mockReset()
+      .mockResolvedValueOnce({
+        id: 'message-1', conversationId: 'conversation-1', senderType: MessageSenderType.VISITOR,
+        metadata: { assistantStatus: 'RETRYING', retryable: false },
+      })
+      .mockResolvedValueOnce(null);
+
+    await worker.execute();
+
+    expect(tx.commsChatMessage.update).toHaveBeenCalledWith({
+      where: { id: 'message-1' },
+      data: { metadata: expect.objectContaining({
+        assistantStatus: 'RETRYABLE_FAILURE', retryable: true, dispatchAttempt: 0,
+        assistantStateVersion: 0, assistantClientId: null,
+      }) },
+    });
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+  });
 });

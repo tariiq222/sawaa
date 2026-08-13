@@ -53,6 +53,7 @@ describe('AdministrativeAssistantService', () => {
   let tx: {
     commsChatMessage: { findUnique: jest.Mock; create: jest.Mock };
     chatConversation: { findUnique: jest.Mock; updateMany: jest.Mock };
+    chatOperation: { updateMany: jest.Mock };
   };
   let transaction: { withTransaction: jest.Mock };
   let chat: { completeWithTools: jest.Mock; isAvailable: jest.Mock };
@@ -101,6 +102,7 @@ describe('AdministrativeAssistantService', () => {
         })),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      chatOperation: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     };
     transaction = { withTransaction: jest.fn().mockImplementation((work) => work(tx)) };
     chat = {
@@ -431,7 +433,7 @@ describe('AdministrativeAssistantService', () => {
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
   });
 
-  it('compensates a prepared operation when handoff wins after the tool but before response CAS', async () => {
+  it('compensates only its unpublished dispatch so a successor card cannot be deleted after lease loss', async () => {
     chat.completeWithTools.mockResolvedValueOnce({
       content: null,
       toolCalls: [{ id: 'prepare', function: { name: 'prepareBooking', arguments: '{}' } }],
@@ -452,7 +454,13 @@ describe('AdministrativeAssistantService', () => {
 
     expect(tools.execute).toHaveBeenCalledTimes(1);
     expect(prisma.chatOperation.deleteMany).toHaveBeenCalledWith({
-      where: { idempotencyKey: { startsWith: `chat:${messageId}:` } },
+      where: {
+        idempotencyKey: {
+          startsWith: `chat:${messageId}:`,
+          endsWith: ':assistant-dispatch:0',
+        },
+        resultMessageId: null,
+      },
     });
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
   });

@@ -354,8 +354,12 @@ export class AdministrativeToolsService {
   }
 
   private assistantFence(context: AdministrativeToolContext) {
-    return context.stateVersion !== null && context.leaseOwner
-      ? { assistantFence: { stateVersion: context.stateVersion, leaseOwner: context.leaseOwner } }
+    return context.stateVersion !== null && context.leaseOwner && context.dispatchAttempt !== null
+      ? { assistantFence: {
+        stateVersion: context.stateVersion,
+        leaseOwner: context.leaseOwner,
+        dispatchAttempt: context.dispatchAttempt,
+      } }
       : {};
   }
 
