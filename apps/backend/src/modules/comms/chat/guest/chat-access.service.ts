@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { ChatConversation } from '@prisma/client';
+import { ConversationStatus, type ChatConversation } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { GuestChatTokenService } from './guest-chat-token.service';
 
@@ -42,8 +42,9 @@ export class ChatAccessService {
       where: {
         clientId: null,
         guestTokenHash: this.tokens.toStoredToken(guestToken).tokenHash,
+        status: { not: ConversationStatus.CLOSED },
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
     });
     if (!conversation) throw new NotFoundException('Conversation not found');
     return conversation;
@@ -51,8 +52,8 @@ export class ChatAccessService {
 
   async getCurrentForClient(clientId: string): Promise<ChatConversation> {
     const conversation = await this.prisma.chatConversation.findFirst({
-      where: { clientId },
-      orderBy: { updatedAt: 'desc' },
+      where: { clientId, status: { not: ConversationStatus.CLOSED } },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
     });
     if (!conversation) throw new NotFoundException('Conversation not found');
     return conversation;

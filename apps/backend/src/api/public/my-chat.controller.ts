@@ -53,7 +53,7 @@ export class MyChatController {
       clientId: session.id,
       guestToken,
     });
-    response.clearCookie(CHAT_GUEST_COOKIE_NAME, this.tokens.cookieOptions());
+    response.clearCookie(CHAT_GUEST_COOKIE_NAME, this.tokens.clearCookieOptions());
     return conversation;
   }
 }

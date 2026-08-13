@@ -19,7 +19,7 @@ describe('MyChatController (e2e)', () => {
       providers: [
         { provide: GetCurrentConversationHandler, useValue: current },
         { provide: ClaimConversationHandler, useValue: claim },
-        { provide: GuestChatTokenService, useValue: { cookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
+        { provide: GuestChatTokenService, useValue: { clearCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
       ],
     })
       .overrideGuard(ClientSessionGuard)
@@ -72,6 +72,10 @@ describe('MyChatController (e2e)', () => {
       .expect({ id: 'conv-1', clientId: 'client-a' });
 
     expect(claimResponse.headers['set-cookie'][0]).toEqual(expect.stringContaining('sawaa_chat_guest=;'));
+    expect(claimResponse.headers['set-cookie'][0]).toEqual(expect.stringContaining('Path=/api/v1/public'));
+    expect(claimResponse.headers['set-cookie'][0]).toEqual(expect.stringContaining('SameSite=Lax'));
+    expect(claimResponse.headers['set-cookie'][0]).toEqual(expect.stringContaining('Expires=Thu, 01 Jan 1970'));
+    expect(claimResponse.headers['set-cookie'][0]).not.toEqual(expect.stringContaining('Max-Age=2592000'));
 
     expect(claim.execute).toHaveBeenCalledWith({
       conversationId: '00000000-0000-4000-a000-000000000001',

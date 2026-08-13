@@ -80,6 +80,10 @@ export const envValidationSchema = Joi.object({
   JWT_CLIENT_ACCESS_SECRET: Joi.string().min(16).required(),
   JWT_CLIENT_ACCESS_TTL: Joi.string().default('15m'),
 
+  // Guest chat capability secret — HMAC-SHA256 key for opaque browser-bound
+  // conversation tokens. Required at boot; never fall back to a shared dev key.
+  CHAT_GUEST_TOKEN_SECRET: Joi.string().min(32).required(),
+
   // License Server (Platform BC) — optional until Phase 3
   LICENSE_SERVER_URL: Joi.string().uri().allow('').optional(),
   LICENSE_KEY: Joi.string().allow('').optional(),
@@ -261,6 +265,7 @@ export const envValidationSchema = Joi.object({
       'JWT_REFRESH_SECRET',
       'JWT_OTP_SECRET',
       'JWT_CLIENT_ACCESS_SECRET',
+      'CHAT_GUEST_TOKEN_SECRET',
       'SMS_PROVIDER_ENCRYPTION_KEY',
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
       'MOYASAR_ENCRYPTION_KEY',

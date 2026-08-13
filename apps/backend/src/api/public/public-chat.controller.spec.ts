@@ -18,7 +18,7 @@ describe('PublicChatController (e2e)', () => {
       providers: [
         { provide: CreateGuestConversationHandler, useValue: create },
         { provide: GetCurrentConversationHandler, useValue: current },
-        { provide: GuestChatTokenService, useValue: { cookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
+        { provide: GuestChatTokenService, useValue: { setCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public', maxAge: 30 * 24 * 60 * 60 * 1000 }) } },
       ],
     }).compile();
     app = module.createNestApplication();
@@ -47,6 +47,7 @@ describe('PublicChatController (e2e)', () => {
     expect(response.headers['set-cookie'][0]).toEqual(expect.stringContaining('sawaa_chat_guest=raw-guest-token'));
     expect(response.headers['set-cookie'][0]).toEqual(expect.stringContaining('HttpOnly'));
     expect(response.headers['set-cookie'][0]).toEqual(expect.stringContaining('SameSite=Lax'));
+    expect(response.headers['set-cookie'][0]).toEqual(expect.stringContaining('Max-Age=2592000'));
   });
 
   it('rejects a clientId supplied at the public creation boundary', async () => {

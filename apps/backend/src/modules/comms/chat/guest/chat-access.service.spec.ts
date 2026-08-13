@@ -57,13 +57,37 @@ describe('ChatAccessService', () => {
     await expect(service.assertClientAccess(guestConversation.id, 'client-b')).resolves.toMatchObject({ clientId: 'client-b' });
   });
 
-  it('returns the current guest conversation only for its guest cookie', async () => {
-    prisma.chatConversation.findFirst.mockImplementation(async ({ where }) => (
-      where.guestTokenHash === tokenService.hash('guest-a') ? { ...guestConversation, guestTokenHash: where.guestTokenHash } : null
+  it('returns the current guest conversation only for its guest cookie and excludes newer closed rows', async () => {
+    const conversations = [
+      { ...guestConversation, id: 'guest-closed-newer', status: 'CLOSED' },
+      { ...guestConversation, id: 'guest-active', status: 'AI_ACTIVE' },
+    ];
+    prisma.chatConversation.findFirst.mockImplementation(async ({ where, orderBy }) => (
+      where.guestTokenHash === tokenService.hash('guest-a') &&
+      where.status?.not === 'CLOSED' &&
+      JSON.stringify(orderBy) === JSON.stringify([{ updatedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }])
+        ? conversations.find((conversation) => conversation.status !== 'CLOSED')
+        : null
     ));
 
     await expect(service.getCurrentForGuest('guest-b')).rejects.toThrow(NotFoundException);
-    await expect(service.getCurrentForGuest('guest-a')).resolves.toMatchObject({ id: guestConversation.id });
+    await expect(service.getCurrentForGuest('guest-a')).resolves.toMatchObject({ id: 'guest-active', status: 'AI_ACTIVE' });
+  });
+
+  it('returns the current client conversation only from active rows and breaks timestamp ties by ID', async () => {
+    const timestampTie = [
+      { ...guestConversation, id: 'client-a', clientId: 'client-a', status: 'AI_ACTIVE' },
+      { ...guestConversation, id: 'client-z', clientId: 'client-a', status: 'AI_ACTIVE' },
+    ];
+    prisma.chatConversation.findFirst.mockImplementation(async ({ where, orderBy }) => (
+      where.clientId === 'client-a' &&
+      where.status?.not === 'CLOSED' &&
+      JSON.stringify(orderBy) === JSON.stringify([{ updatedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }])
+        ? timestampTie.find((conversation) => conversation.id === 'client-z')
+        : null
+    ));
+
+    await expect(service.getCurrentForClient('client-a')).resolves.toMatchObject({ id: 'client-z', status: 'AI_ACTIVE' });
   });
 
   it('claims a guest conversation atomically, binds the authenticated client, and clears guest identity material', async () => {

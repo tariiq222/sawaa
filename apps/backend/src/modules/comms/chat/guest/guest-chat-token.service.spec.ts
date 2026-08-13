@@ -35,14 +35,25 @@ describe('GuestChatTokenService', () => {
     expect(service.matches('guest-b', storedHash)).toBe(false);
   });
 
-  it('uses a HttpOnly Lax cookie and sets Secure only in production', () => {
-    expect(service.cookieOptions('development')).toMatchObject({
+  it('sets a 30-day HttpOnly Lax cookie and sets Secure only in production', () => {
+    expect(service.setCookieOptions('development')).toMatchObject({
       httpOnly: true,
       sameSite: 'lax',
       secure: false,
       path: '/api/v1/public',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
-    expect(service.cookieOptions('production')).toMatchObject({
+    expect(service.setCookieOptions('production')).toMatchObject({
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/api/v1/public',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+  });
+
+  it('clears the guest cookie with the same security scope but no persistent maxAge', () => {
+    expect(service.clearCookieOptions('production')).toEqual({
       httpOnly: true,
       sameSite: 'lax',
       secure: true,

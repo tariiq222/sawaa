@@ -31,7 +31,7 @@ export class PublicChatController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const { conversation, guestToken } = await this.createConversation.execute(dto);
-    response.cookie(CHAT_GUEST_COOKIE_NAME, guestToken, this.tokens.cookieOptions());
+    response.cookie(CHAT_GUEST_COOKIE_NAME, guestToken, this.tokens.setCookieOptions());
     return toChatConversationResponse(conversation);
   }
 

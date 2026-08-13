@@ -31,6 +31,7 @@ const baseValidEnv = {
   JWT_REFRESH_TTL: '30d',
   JWT_CLIENT_ACCESS_SECRET: 'a-very-long-and-secure-client-access-secret',
   JWT_CLIENT_ACCESS_TTL: '15m',
+  CHAT_GUEST_TOKEN_SECRET: 'a-very-long-and-secure-chat-guest-token-secret',
   MOYASAR_ENCRYPTION_KEY: base64_44,
   SMS_PROVIDER_ENCRYPTION_KEY: base64_44,
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
@@ -73,6 +74,7 @@ const buildDevEnv = (overrides: Record<string, string | undefined> = {}) => ({
   JWT_ACCESS_SECRET: 'a-very-long-and-secure-jwt-access-secret-32b',
   JWT_REFRESH_SECRET: 'a-very-long-and-secure-jwt-refresh-secret-32b',
   JWT_CLIENT_ACCESS_SECRET: 'a-very-long-and-secure-client-access-secret',
+  CHAT_GUEST_TOKEN_SECRET: 'a-very-long-and-secure-chat-guest-token-secret',
   MOYASAR_ENCRYPTION_KEY: base64_44,
   SMS_PROVIDER_ENCRYPTION_KEY: base64_44,
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
@@ -102,6 +104,30 @@ describe('envValidationSchema', () => {
       abortEarly: false,
     });
     expect(result.error).toBeUndefined();
+  });
+
+  it('rejects a missing CHAT_GUEST_TOKEN_SECRET at startup', () => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: undefined },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.path.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+  });
+
+  it('rejects a weak CHAT_GUEST_TOKEN_SECRET at startup', () => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: 'too-short' },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.path.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+  });
+
+  it('rejects a production placeholder CHAT_GUEST_TOKEN_SECRET', () => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: 'change-me-chat-guest-token-secret-123456' },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
   });
 
   it('allows production to boot when the optional WhatsApp integration is not configured', () => {

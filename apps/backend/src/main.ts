@@ -138,6 +138,7 @@ async function bootstrap(): Promise<void> {
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
       'MOYASAR_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
+      'CHAT_GUEST_TOKEN_SECRET',
       'SUPER_ADMIN_PASSWORD',
     ]) {
       const v = config.get<string>(key);
