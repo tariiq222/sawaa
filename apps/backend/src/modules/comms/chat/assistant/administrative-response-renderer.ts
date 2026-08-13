@@ -29,7 +29,7 @@ const COMMAND_LABEL_STARTS = new Set([
   'اتبع', 'تجاهل', 'اكشف', 'اعرض', 'خذ', 'تناول', 'اكتب', 'احجز', 'ارسل',
   'نفذ', 'قم', 'حولني',
   'follow', 'ignore', 'reveal', 'take', 'book', 'write', 'show', 'send',
-  'disclose', 'execute', 'call', 'contact',
+  'disclose', 'execute', 'call', 'contact', 'consult', 'program', 'support',
 ]);
 
 const URL_PATTERN = /(?:https?|ftp|javascript|data):[^\s<]+|www\.[^\s<]+|\b(?:[\p{L}\p{N}](?:[\p{L}\p{N}-]{0,62})\.)+[\p{L}]{2,63}(?:\/[^\s<]*)?/giu;
@@ -79,6 +79,16 @@ const ENGLISH_SERVICE_MODIFIERS = new Set([
   'cognitive', 'behavioral', 'behavioural', 'cbt', 'quick',
   'follow', 'up', 'support', 'individual', 'group', 'weekly',
 ]);
+
+const ENGLISH_SERVICE_NAME_GRAMMAR = [
+  /^(?:family|child|children|adolescent|adolescents|cbt|individual|group|weekly) session$/,
+  /^(?:marriage|marital|couple|couples|psychological|child|children|adolescent|adolescents) (?:counseling|counselling) session$/,
+  /^(?:addiction recovery|mental health|cognitive behavioral|cognitive behavioural) session$/,
+  /^initial psychological assessment$/,
+  /^follow up session$/,
+  /^quick consult$/,
+  /^(?:addiction recovery|mental health|family|individual|group) (?:program|programme|package)$/,
+] as const;
 
 export interface ExecutedAdministrativeTool {
   name: string;
@@ -238,6 +248,7 @@ export class AdministrativeResponseRenderer {
       .split(/[^\p{L}]+/u)
       .filter(Boolean);
     if (tokens.length === 0 || tokens.length > MAX_SERVICE_NAME_TOKENS) return null;
+    if (this.isCommandLikeLabel(tokens)) return null;
 
     const first = tokens[0];
     const last = tokens[tokens.length - 1];
@@ -249,9 +260,10 @@ export class AdministrativeResponseRenderer {
         : null;
     }
     if (tokens.every((token) => LATIN_TOKEN_PATTERN.test(token))) {
-      const hasNounHead = Boolean(last && ENGLISH_SERVICE_HEADS.has(last))
-        || (tokens.length === 2 && tokens[0] === 'follow' && tokens[1] === 'up');
-      return hasNounHead && tokens.every((token) => ENGLISH_SERVICE_MODIFIERS.has(token))
+      const phrase = tokens.join(' ');
+      return Boolean(last && ENGLISH_SERVICE_HEADS.has(last))
+        && tokens.every((token) => ENGLISH_SERVICE_MODIFIERS.has(token))
+        && ENGLISH_SERVICE_NAME_GRAMMAR.some((grammar) => grammar.test(phrase))
         ? label
         : null;
     }
@@ -261,7 +273,10 @@ export class AdministrativeResponseRenderer {
   private isCommandLikeLabel(tokens: string[]): boolean {
     const first = tokens[0];
     if (!first || !COMMAND_LABEL_STARTS.has(first)) return false;
-    return first !== 'follow' || tokens[1] !== 'up';
+    return first !== 'follow'
+      || tokens.length !== 3
+      || tokens[1] !== 'up'
+      || tokens[2] !== 'session';
   }
 
   private normalizeLabelForSafety(value: string): string {

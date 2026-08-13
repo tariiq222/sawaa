@@ -235,6 +235,29 @@ describe('AdministrativeAssistantService', () => {
     expect(tools.execute).not.toHaveBeenCalled();
   });
 
+  it('rejects Arabic diacritic padding before provider or tools', async () => {
+    const body = 'وش الخدمات اللي عندكم؟'.replace(
+      /\p{Script=Arabic}/gu,
+      (letter) => `${letter}${'\u064B'.repeat(15)}`,
+    );
+    const padded = { ...inboundMessage, body };
+    prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
+      if (where.responseForMessageId) return null;
+      return padded;
+    });
+    prisma.commsChatMessage.findMany.mockImplementation(({ select }) => select.id ? [padded] : []);
+
+    await service.processMessage(messageId);
+
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(tools.execute).not.toHaveBeenCalled();
+    expect(tx.commsChatMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
+      }),
+    });
+  });
+
   it.each([
     'Family counseling is good for you',
     'Book counseling 4 times',

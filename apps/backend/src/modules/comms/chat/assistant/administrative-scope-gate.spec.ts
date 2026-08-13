@@ -160,10 +160,20 @@ describe('AdministrativeScopeGate', () => {
   it.each([
     'ايش الخدمات عندكم؟ 😊',
     'ايش الخدمات عندكم؟ 👨‍👩‍👧‍👦',
+    'وَشْ أَسْمَاءُ الْمُعَالِجِينَ؟',
     'وش أسماء المعالجين؟!',
     'What services do you offer?! 😊',
   ])('keeps natural questions with a small amount of punctuation or emoji: %s', (message) => {
     expect(gate.classify(message)).toBe('ADMINISTRATIVE');
+  });
+
+  it('rejects Arabic diacritic padding hidden inside otherwise valid graphemes', () => {
+    const padded = 'وش الخدمات اللي عندكم؟'.replace(
+      /\p{Script=Arabic}/gu,
+      (letter) => `${letter}${'\u064B'.repeat(15)}`,
+    );
+
+    expect(gate.classify(padded)).toBe('OUT_OF_SCOPE');
   });
 
   it.each([

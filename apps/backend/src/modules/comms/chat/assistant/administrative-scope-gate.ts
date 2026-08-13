@@ -13,9 +13,16 @@ const MAX_NON_TEXTUAL_RATIO = 0.25;
 const MIN_MEANINGFUL_RATIO = 0.6;
 const MAX_NORMALIZATION_LOSS_GRAPHEMES = 24;
 const MAX_NORMALIZATION_LOSS_RATIO = 0.35;
+const MAX_NORMALIZATION_LOSS_CODEPOINTS = 48;
+const MAX_NORMALIZATION_LOSS_CODEPOINT_RATIO = 0.5;
+const MAX_MARK_FORMAT_CODEPOINTS = 24;
+const MAX_MARK_FORMAT_RATIO = 0.35;
+const MAX_MARK_FORMATS_PER_TEXT_GRAPHEME = 3;
+const MAX_FORMATS_PER_NON_TEXT_GRAPHEME = 4;
 
 const LETTER_OR_NUMBER = /[\p{L}\p{N}]/u;
 const MARK_OR_WHITESPACE = /^[\p{M}\p{White_Space}]+$/u;
+const MARK_OR_FORMAT = /[\p{M}\p{Cf}]/u;
 const GRAPHEME_SEGMENTER = new Intl.Segmenter('und', { granularity: 'grapheme' });
 
 const GREETING_TEMPLATES = [
@@ -143,10 +150,16 @@ export function classifyAdministrativeText(message: string): AdministrativeScope
   ) return 'OUT_OF_SCOPE';
 
   const normalized = normalizeAdministrativeText(message);
+  const normalizedCodepoints = Array.from(normalized);
   const normalizedLength = splitGraphemes(normalized).length;
   if (!normalized || normalizedLength > MAX_NORMALIZED_GRAPHEMES) return 'OUT_OF_SCOPE';
   if (normalized.split(' ').length > MAX_INPUT_TOKENS) return 'OUT_OF_SCOPE';
-  if (!hasAcceptableTextShape(rawGraphemes, normalizedLength)) return 'OUT_OF_SCOPE';
+  if (!hasAcceptableTextShape(
+    rawGraphemes,
+    rawCodepoints.length,
+    normalizedLength,
+    normalizedCodepoints.length,
+  )) return 'OUT_OF_SCOPE';
 
   if (GREETING_TEMPLATES.some((template) => template.test(normalized))) return 'ADMINISTRATIVE';
   if (matchesAdministrativeIntent(normalized)) return 'ADMINISTRATIVE';
@@ -159,13 +172,27 @@ export function classifyAdministrativeText(message: string): AdministrativeScope
   return 'OUT_OF_SCOPE';
 }
 
-function hasAcceptableTextShape(rawGraphemes: string[], normalizedLength: number): boolean {
+function hasAcceptableTextShape(
+  rawGraphemes: string[],
+  rawCodepointCount: number,
+  normalizedLength: number,
+  normalizedCodepointCount: number,
+): boolean {
   let meaningful = 0;
   let nonTextual = 0;
+  let markOrFormatCodepoints = 0;
   let currentNonTextualRun = 0;
   let longestNonTextualRun = 0;
 
   for (const grapheme of rawGraphemes) {
+    const graphemeCodepoints = Array.from(grapheme);
+    const graphemeMarkOrFormats = graphemeCodepoints.filter((codepoint) => MARK_OR_FORMAT.test(codepoint)).length;
+    markOrFormatCodepoints += graphemeMarkOrFormats;
+    if (
+      (LETTER_OR_NUMBER.test(grapheme) && graphemeMarkOrFormats > MAX_MARK_FORMATS_PER_TEXT_GRAPHEME)
+      || (!LETTER_OR_NUMBER.test(grapheme) && graphemeMarkOrFormats > MAX_FORMATS_PER_NON_TEXT_GRAPHEME)
+    ) return false;
+
     if (LETTER_OR_NUMBER.test(grapheme)) {
       meaningful += 1;
       currentNonTextualRun = 0;
@@ -187,9 +214,20 @@ function hasAcceptableTextShape(rawGraphemes: string[], normalizedLength: number
     && nonTextual / rawGraphemes.length > MAX_NON_TEXTUAL_RATIO
   ) return false;
 
+  if (
+    markOrFormatCodepoints > MAX_MARK_FORMAT_CODEPOINTS
+    && markOrFormatCodepoints / rawCodepointCount > MAX_MARK_FORMAT_RATIO
+  ) return false;
+
   const normalizationLoss = Math.max(0, rawGraphemes.length - normalizedLength);
-  return normalizationLoss <= MAX_NORMALIZATION_LOSS_GRAPHEMES
-    || normalizationLoss / rawGraphemes.length <= MAX_NORMALIZATION_LOSS_RATIO;
+  if (
+    normalizationLoss > MAX_NORMALIZATION_LOSS_GRAPHEMES
+    && normalizationLoss / rawGraphemes.length > MAX_NORMALIZATION_LOSS_RATIO
+  ) return false;
+
+  const codepointLoss = Math.max(0, rawCodepointCount - normalizedCodepointCount);
+  return codepointLoss <= MAX_NORMALIZATION_LOSS_CODEPOINTS
+    || codepointLoss / rawCodepointCount <= MAX_NORMALIZATION_LOSS_CODEPOINT_RATIO;
 }
 
 function splitGraphemes(value: string): string[] {
