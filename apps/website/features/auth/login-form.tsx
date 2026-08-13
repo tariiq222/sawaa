@@ -7,6 +7,12 @@ import { normalizeSaudiPhone } from './auth.schema';
 import { clientLoginApi } from './auth.api';
 import { setClient } from './auth-store';
 import { getMeApi } from './auth.api';
+import { claimGuestChatConversationApi } from '@/features/chat/chat.api';
+import {
+  clearPendingChatResume,
+  markChatForReopen,
+  readPendingChatResume,
+} from '@/features/chat/chat-resume';
 import { User, Lock } from 'lucide-react';
 
 interface LoginFormProps {
@@ -45,6 +51,17 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       await clientLoginApi(credentials);
       const profile = await getMeApi();
       setClient(profile);
+      const pendingConversationId = readPendingChatResume();
+      if (pendingConversationId) {
+        try {
+          await claimGuestChatConversationApi(pendingConversationId);
+          clearPendingChatResume();
+          markChatForReopen();
+        } catch {
+          // Authentication succeeded. Keep the pending conversation id for a
+          // later retry; never turn a chat-resume failure into a false login error.
+        }
+      }
       if (onSuccess) {
         onSuccess();
       } else {
