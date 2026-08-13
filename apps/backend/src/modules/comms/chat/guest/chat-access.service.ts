@@ -1,0 +1,89 @@
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import type { ChatConversation } from '@prisma/client';
+import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { GuestChatTokenService } from './guest-chat-token.service';
+
+export interface ClaimGuestConversationCommand {
+  conversationId: string;
+  guestToken: string;
+  clientId: string;
+}
+
+@Injectable()
+export class ChatAccessService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tokens: GuestChatTokenService,
+    private readonly rlsTransaction: RlsTransactionService,
+  ) {}
+
+  async assertGuestAccess(conversationId: string, guestToken: string): Promise<ChatConversation> {
+    const conversation = await this.prisma.chatConversation.findFirst({
+      where: {
+        id: conversationId,
+        clientId: null,
+        guestTokenHash: this.tokens.toStoredToken(guestToken).tokenHash,
+      },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    return conversation;
+  }
+
+  async assertClientAccess(conversationId: string, clientId: string): Promise<ChatConversation> {
+    const conversation = await this.prisma.chatConversation.findFirst({
+      where: { id: conversationId, clientId },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    return conversation;
+  }
+
+  async getCurrentForGuest(guestToken: string): Promise<ChatConversation> {
+    const conversation = await this.prisma.chatConversation.findFirst({
+      where: {
+        clientId: null,
+        guestTokenHash: this.tokens.toStoredToken(guestToken).tokenHash,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    return conversation;
+  }
+
+  async getCurrentForClient(clientId: string): Promise<ChatConversation> {
+    const conversation = await this.prisma.chatConversation.findFirst({
+      where: { clientId },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    return conversation;
+  }
+
+  async claimGuestConversation(command: ClaimGuestConversationCommand): Promise<ChatConversation> {
+    const guestTokenHash = this.tokens.toStoredToken(command.guestToken).tokenHash;
+
+    return this.rlsTransaction.withTransaction(async (tx) => {
+      const claimed = await tx.chatConversation.updateMany({
+        where: {
+          id: command.conversationId,
+          clientId: null,
+          guestTokenHash,
+        },
+        data: {
+          clientId: command.clientId,
+          guestTokenHash: null,
+          guestName: null,
+          guestPhone: null,
+        },
+      });
+      if (claimed.count !== 1) {
+        throw new ForbiddenException('Guest conversation cannot be claimed');
+      }
+
+      const conversation = await tx.chatConversation.findUnique({
+        where: { id: command.conversationId },
+      });
+      if (!conversation) throw new NotFoundException('Conversation not found');
+      return conversation;
+    });
+  }
+}

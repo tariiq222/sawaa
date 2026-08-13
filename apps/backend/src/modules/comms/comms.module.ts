@@ -55,6 +55,11 @@ import { ResilientNotificationDispatcher } from './resilient-notification-dispat
 import { NotificationRetryWorker } from './resilient-notification-dispatcher/notification-retry-worker';
 import { ListTenantDeliveryLogsHandler } from './list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { ListSmsDeliveriesHandler } from './list-sms-deliveries/list-sms-deliveries.handler';
+import { GuestChatTokenService } from './chat/guest/guest-chat-token.service';
+import { ChatAccessService } from './chat/guest/chat-access.service';
+import { CreateGuestConversationHandler } from './chat/guest/create-conversation.handler';
+import { GetCurrentConversationHandler } from './chat/guest/get-current-conversation.handler';
+import { ClaimConversationHandler } from './chat/guest/claim-conversation.handler';
 
 const handlers = [
   SendPushHandler,
@@ -97,6 +102,11 @@ const handlers = [
   NotificationRetryWorker,
   ListTenantDeliveryLogsHandler,
   ListSmsDeliveriesHandler,
+  GuestChatTokenService,
+  ChatAccessService,
+  CreateGuestConversationHandler,
+  GetCurrentConversationHandler,
+  ClaimConversationHandler,
 ];
 
 const eventHandlers = [
