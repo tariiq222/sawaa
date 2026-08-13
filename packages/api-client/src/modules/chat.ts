@@ -16,8 +16,6 @@ import type {
   SendChatMessageRequest,
 } from '../types/chat'
 
-const CSRF_BOOTSTRAP_PATH = '/public/chat/conversations/current'
-
 export function setChatBaseUrl(url: string): void {
   setApiRequestBaseUrl(url)
 }
@@ -153,7 +151,7 @@ function chatRequest<T>(path: string): Promise<T> {
 }
 
 async function chatMutation<T>(path: string, body: object): Promise<T> {
-  const token = await ensureCsrfToken(CSRF_BOOTSTRAP_PATH)
+  const token = await ensureCsrfToken()
   return apiRequest<T>(path, {
     method: 'POST',
     credentials: 'include',

@@ -7,6 +7,8 @@ import { getRefreshMutex, setRefreshMutex } from './refresh-mutex'
 export const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED'
 const CSRF_HEADER_NAME = 'X-CSRF-Token'
 const CSRF_TOKEN_PATTERN = /^[a-f0-9]{64}$/i
+const CSRF_INVALID_CODE = 'CSRF_INVALID'
+const DEFAULT_CSRF_BOOTSTRAP_PATH = '/public/branding'
 
 export interface ClientConfig {
   baseUrl: string
@@ -47,7 +49,21 @@ export function setApiRequestBaseUrl(baseUrl: string): void {
  * the browser app and API are on different origins and the API cookie is
  * intentionally host-only, so `document.cookie` cannot read it.
  */
-export function ensureCsrfToken(bootstrapPath: string): Promise<string> {
+export function ensureCsrfToken(
+  bootstrapPath = DEFAULT_CSRF_BOOTSTRAP_PATH,
+): Promise<string> {
+  // Server rendering has no browser cookie jar. Fail closed instead of
+  // attempting a double-submit mutation without a cookie-bound proof.
+  if (typeof window === 'undefined') {
+    return Promise.reject(
+      new ApiError(
+        0,
+        'CSRF-protected mutations require a browser context',
+        undefined,
+        'CSRF_BROWSER_REQUIRED',
+      ),
+    )
+  }
   if (csrfToken) return Promise.resolve(csrfToken)
   if (csrfBootstrap) return csrfBootstrap
   csrfBootstrap = bootstrapCsrfToken(bootstrapPath).finally(() => {
@@ -85,13 +101,24 @@ function resetCsrfState(): void {
   csrfBootstrap = null
 }
 
+function invalidateCsrfToken(): void {
+  // Retain an in-flight bootstrap so concurrent stale requests converge on
+  // one safe GET rather than creating another local race.
+  csrfToken = null
+}
+
 async function doRefresh(refreshPath: string): Promise<string> {
   if (!config) throw new Error('api-client not initialized')
   // CR-9: refresh token is an httpOnly cookie (ck_refresh); credentials: 'include'
   // sends it automatically. No token in body — empty object for compatibility.
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (refreshPath.startsWith('/public/')) {
+    // Public refresh relies on the client-session cookie and is CSRF-protected.
+    setHeader(headers, CSRF_HEADER_NAME, await ensureCsrfToken())
+  }
   const res = await fetch(`${config.baseUrl}${refreshPath}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     credentials: 'include',
     body: JSON.stringify({}),
   })
@@ -131,6 +158,7 @@ export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
   retried = false,
+  csrfRetried = false,
 ): Promise<T> {
   if (!config) throw new Error('api-client not initialized')
 
@@ -139,13 +167,11 @@ export async function apiRequest<T>(
   // omit the JSON CT we'd otherwise default to.
   const isMultipart =
     typeof FormData !== 'undefined' && options.body instanceof FormData
-  const headers: Record<string, string> = isMultipart
-    ? { ...(options.headers as Record<string, string>) }
-    : {
-        'Content-Type': 'application/json',
-        ...(options.headers as Record<string, string>),
-      }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  const headers = toHeaderRecord(options.headers)
+  if (!isMultipart && !hasHeader(headers, 'Content-Type')) {
+    setHeader(headers, 'Content-Type', 'application/json')
+  }
+  if (token) setHeader(headers, 'Authorization', `Bearer ${token}`)
 
   const res = await fetch(`${config.baseUrl}${path}`, { ...options, headers })
   captureCsrfToken(res)
@@ -169,11 +195,23 @@ export async function apiRequest<T>(
       setRefreshMutex(mutex)
     }
     await mutex
-    return apiRequest<T>(path, options, true)
+    return apiRequest<T>(path, options, true, csrfRetried)
   }
 
   if (!res.ok) {
     const peek = await peekErrorBody(res)
+    if (
+      peek.code === CSRF_INVALID_CODE &&
+      !csrfRetried &&
+      isUnsafeMethod(options.method) &&
+      isReplayableBody(options.body)
+    ) {
+      // CSRF rejects before the controller, so one exact-body replay after a
+      // fresh safe GET cannot duplicate a mutation. A second 403 is surfaced.
+      invalidateCsrfToken()
+      const freshToken = await ensureCsrfToken()
+      return apiRequest<T>(path, withCsrfHeader(options, freshToken), retried, true)
+    }
     throw new ApiError(res.status, peek.message, peek.body, peek.code)
   }
 
@@ -190,6 +228,44 @@ export async function apiRequest<T>(
     return (json as { data: T }).data
   }
   return json as T
+}
+
+function toHeaderRecord(headers: HeadersInit | undefined): Record<string, string> {
+  if (!headers) return {}
+  if (headers instanceof Headers) return Object.fromEntries(headers.entries())
+  if (Array.isArray(headers)) return Object.fromEntries(headers)
+  return { ...headers }
+}
+
+function hasHeader(headers: Record<string, string>, name: string): boolean {
+  return Object.keys(headers).some((key) => key.toLowerCase() === name.toLowerCase())
+}
+
+function setHeader(headers: Record<string, string>, name: string, value: string): void {
+  const existing = Object.keys(headers).find((key) => key.toLowerCase() === name.toLowerCase())
+  if (existing && existing !== name) delete headers[existing]
+  headers[name] = value
+}
+
+function withCsrfHeader(options: RequestInit, token: string): RequestInit {
+  const headers = toHeaderRecord(options.headers)
+  setHeader(headers, CSRF_HEADER_NAME, token)
+  return { ...options, headers }
+}
+
+function isUnsafeMethod(method: string | undefined): boolean {
+  return !['GET', 'HEAD', 'OPTIONS'].includes((method ?? 'GET').toUpperCase())
+}
+
+function isReplayableBody(body: BodyInit | null | undefined): boolean {
+  if (body == null || typeof body === 'string') return true
+  if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) return true
+  if (typeof FormData !== 'undefined' && body instanceof FormData) return true
+  if (typeof Blob !== 'undefined' && body instanceof Blob) return true
+  if (typeof ArrayBuffer !== 'undefined' && (body instanceof ArrayBuffer || ArrayBuffer.isView(body))) {
+    return true
+  }
+  return false
 }
 
 interface PeekedError {

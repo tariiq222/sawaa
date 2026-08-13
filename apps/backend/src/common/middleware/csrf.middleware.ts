@@ -53,7 +53,11 @@ export function csrfMiddleware(req: Request, res: Response, next: NextFunction):
     headerToken.length === 0 ||
     headerToken !== cookieToken
   ) {
-    res.status(403).json({ statusCode: 403, message: 'CSRF token missing or invalid' });
+    res.status(403).json({
+      statusCode: 403,
+      code: 'CSRF_INVALID',
+      message: 'CSRF token missing or invalid',
+    });
     return;
   }
 

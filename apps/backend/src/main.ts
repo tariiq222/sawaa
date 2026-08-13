@@ -31,6 +31,9 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
   app.use(cookieParser());
+  // Register CORS before middleware which may reject a request. This preserves
+  // headers on a CSRF 403 for explicitly allowed browser origins only.
+  configureCors(app);
 
   // CSRF protection: applied to cookie-based auth endpoints (mobile-client,
   // public with session cookie). Dashboard uses Bearer tokens which are
@@ -62,8 +65,6 @@ async function bootstrap(): Promise<void> {
   // defaultVersion='1' preserves the existing /api/v1/... URL shape, so existing
   // clients and reverse-proxy rewrites are unaffected.
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-
-  configureCors(app);
 
   app.useGlobalPipes(
     new ValidationPipe({

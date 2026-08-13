@@ -1,4 +1,9 @@
 import { csrfMiddleware, CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from './csrf.middleware';
+import { Test } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import cookieParser from 'cookie-parser';
+import { configureCors } from '../../cors';
 
 describe('csrfMiddleware', () => {
   let req: any;
@@ -69,6 +74,11 @@ describe('csrfMiddleware', () => {
     req.cookies[CSRF_COOKIE_NAME] = 'a'.repeat(64);
     csrfMiddleware(req, res, next);
     expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({
+      statusCode: 403,
+      code: 'CSRF_INVALID',
+      message: 'CSRF token missing or invalid',
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -77,6 +87,11 @@ describe('csrfMiddleware', () => {
     req.headers[CSRF_HEADER_NAME] = 'b'.repeat(64);
     csrfMiddleware(req, res, next);
     expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({
+      statusCode: 403,
+      code: 'CSRF_INVALID',
+      message: 'CSRF token missing or invalid',
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -87,5 +102,42 @@ describe('csrfMiddleware', () => {
     csrfMiddleware(req, res, next);
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
+  });
+});
+
+describe('CSRF rejection CORS visibility', () => {
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    process.env.NODE_ENV = 'development';
+    const moduleRef = await Test.createTestingModule({}).compile();
+    app = moduleRef.createNestApplication();
+    // CORS must run before CSRF can return a 403, otherwise an allowed
+    // cross-origin browser cannot recover safely.
+    configureCors(app);
+    app.use(cookieParser());
+    app.use(csrfMiddleware);
+    app.getHttpAdapter().getInstance().post('/csrf-probe', (_req: unknown, res: any) => {
+      res.status(204).end();
+    });
+    await app.init();
+  });
+
+  afterEach(async () => {
+    await app.close();
+    delete process.env.NODE_ENV;
+  });
+
+  it('keeps CORS headers on a CSRF mismatch for an allowed website origin', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/csrf-probe')
+      .set('Origin', 'http://localhost:5205')
+      .set('Cookie', `${CSRF_COOKIE_NAME}=${'a'.repeat(64)}`)
+      .expect(403);
+
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5205');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+    expect(response.headers['access-control-expose-headers']).toContain('X-CSRF-Token');
+    expect(response.body).toMatchObject({ code: 'CSRF_INVALID' });
   });
 });

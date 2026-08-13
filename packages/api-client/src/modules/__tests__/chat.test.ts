@@ -88,6 +88,7 @@ beforeEach(() => {
     onTokenRefreshed: vi.fn(),
     onAuthFailure: vi.fn(),
   })
+  vi.stubGlobal('window', {})
   vi.stubGlobal('document', { cookie: 'locale=ar' })
   vi.stubGlobal('fetch', vi.fn())
 })
@@ -171,7 +172,7 @@ describe('chat routes and browser credentials', () => {
 
     expect(vi.mocked(fetch).mock.calls).toHaveLength(2)
     const [bootstrapUrl, bootstrapInit] = vi.mocked(fetch).mock.calls[0]!
-    expect(bootstrapUrl).toBe('http://api.test/api/v1/public/chat/conversations/current')
+    expect(bootstrapUrl).toBe('http://api.test/api/v1/public/branding')
     expect(bootstrapInit).toMatchObject({ method: 'GET', credentials: 'include' })
 
     const [mutationUrl, mutationInit] = vi.mocked(fetch).mock.calls[1]!
@@ -203,7 +204,7 @@ describe('chat routes and browser credentials', () => {
     await listClientChatMessages('conversation/1', { cursor: 'message/1', limit: 5 })
 
     expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
-      'http://api.test/api/v1/public/chat/conversations/current',
+      'http://api.test/api/v1/public/branding',
       'http://api.test/api/v1/public/chat/conversations',
       'http://api.test/api/v1/public/chat/conversations/current',
       'http://api.test/api/v1/public/me/chat/conversations/current',
@@ -248,7 +249,7 @@ describe('chat routes and browser credentials', () => {
     await declineChatOperation('operation/1', 4)
 
     expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
-      'http://api.test/api/v1/public/chat/conversations/current',
+      'http://api.test/api/v1/public/branding',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/handoff',
       'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/handoff',
       'http://api.test/api/v1/public/me/chat/operations/operation%2F1/acknowledge',
