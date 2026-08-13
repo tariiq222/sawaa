@@ -23,6 +23,17 @@ export type EventHandler<TPayload = unknown> = (
   event: DomainEventEnvelope<TPayload>,
 ) => Promise<void> | void;
 
+type RegisteredHandler = {
+  consumerId: string;
+  handler: EventHandler;
+};
+
+type ConsumerJobData = {
+  eventName: string;
+  consumerId: string;
+  event: DomainEventEnvelope;
+};
+
 const EVENT_QUEUE_NAME = 'domain-events';
 
 /**
@@ -41,7 +52,7 @@ const EVENT_QUEUE_NAME = 'domain-events';
 @Injectable()
 export class EventBusService {
   private readonly logger = new Logger(EventBusService.name);
-  private readonly handlers = new Map<string, EventHandler[]>();
+  private readonly handlers = new Map<string, RegisteredHandler[]>();
   private worker?: Worker;
 
   constructor(
@@ -58,7 +69,7 @@ export class EventBusService {
     event: DomainEventEnvelope<TPayload>,
   ): Promise<void> {
     const queue = this.getQueue();
-    await queue.add(eventName, event, {
+    const options = (consumerId: string) => ({
       // At-least-once delivery: a handler that throws must be retried, not
       // dropped. Set attempts + backoff explicitly so the contract holds
       // regardless of the queue's defaultJobOptions.
@@ -66,7 +77,28 @@ export class EventBusService {
       backoff: { type: 'exponential', delay: 2000 },
       removeOnComplete: { age: 3600, count: 1000 },
       removeOnFail: { age: 24 * 3600 },
+      jobId: this.consumerJobId(event.eventId, consumerId),
     });
+
+    const consumers = this.handlers.get(eventName) ?? [];
+    if (consumers.length === 0) {
+      // Backward compatibility for publishers that run before subscribers are
+      // registered. The worker understands the legacy envelope and will fan it
+      // out to whichever consumers are present when the job is processed.
+      await queue.add(eventName, event, options('unrouted'));
+      return;
+    }
+
+    // One durable job per consumer isolates retries: a later failing consumer
+    // cannot replay an earlier successful one. Stable job IDs also make an
+    // outbox enqueue/update crash safe to retry.
+    for (const consumer of consumers) {
+      await queue.add(eventName, {
+        eventName,
+        consumerId: consumer.consumerId,
+        event,
+      } satisfies ConsumerJobData, options(consumer.consumerId));
+    }
   }
 
   /**
@@ -74,12 +106,32 @@ export class EventBusService {
    * worker that drains the queue — we defer worker creation so test suites
    * and modules that only publish don't open a Redis connection.
    */
-  subscribe<TPayload>(eventName: string, handler: EventHandler<TPayload>): void {
+  subscribe<TPayload>(eventName: string, handler: EventHandler<TPayload>): void;
+  subscribe<TPayload>(
+    eventName: string,
+    consumerId: string,
+    handler: EventHandler<TPayload>,
+  ): void;
+  subscribe<TPayload>(
+    eventName: string,
+    consumerIdOrHandler: string | EventHandler<TPayload>,
+    maybeHandler?: EventHandler<TPayload>,
+  ): void {
     const list = this.handlers.get(eventName) ?? [];
-    list.push(handler as EventHandler);
+    const handler = typeof consumerIdOrHandler === 'function'
+      ? consumerIdOrHandler
+      : maybeHandler;
+    if (!handler) throw new Error(`Event consumer handler is required for "${eventName}"`);
+    const consumerId = typeof consumerIdOrHandler === 'string'
+      ? consumerIdOrHandler
+      : `legacy.${eventName}.${list.length + 1}`;
+    if (list.some((registered) => registered.consumerId === consumerId)) {
+      throw new Error(`Duplicate event consumer "${consumerId}" for "${eventName}"`);
+    }
+    list.push({ consumerId, handler: handler as EventHandler });
     this.handlers.set(eventName, list);
     this.ensureWorker();
-    this.logger.log(`Handler registered for event "${eventName}"`);
+    this.logger.log(`Handler "${consumerId}" registered for event "${eventName}"`);
   }
 
   private getQueue(): Queue {
@@ -89,7 +141,12 @@ export class EventBusService {
   private ensureWorker(): void {
     if (this.worker) return;
     this.worker = this.bullmq.createWorker(EVENT_QUEUE_NAME, async (job: Job) => {
-      await this.dispatch(job.name, job.data as DomainEventEnvelope);
+      const data = job.data as DomainEventEnvelope | ConsumerJobData;
+      if (this.isConsumerJob(data)) {
+        await this.dispatchConsumer(data.eventName, data.consumerId, data.event);
+      } else {
+        await this.dispatch(job.name, data);
+      }
     });
   }
 
@@ -126,9 +183,54 @@ export class EventBusService {
         this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       }
 
-      for (const handler of list) {
-        await handler(event);
+      for (const registered of list) {
+        await registered.handler(event);
       }
     });
+  }
+
+  private async dispatchConsumer(
+    eventName: string,
+    consumerId: string,
+    event: DomainEventEnvelope,
+  ): Promise<void> {
+    const registered = this.handlers.get(eventName)
+      ?.find((candidate) => candidate.consumerId === consumerId);
+    if (!registered) {
+      // A rolling-start worker may receive a job before its module registers.
+      // Throwing keeps the job retryable; acknowledging here would lose it.
+      throw new Error(`Event consumer "${consumerId}" is not registered for "${eventName}"`);
+    }
+
+    const organizationId = (event.payload as Record<string, unknown>)?.organizationId as string | undefined;
+    await this.cls.run(async () => {
+      if (organizationId) {
+        this.cls.set(TENANT_CLS_KEY, {
+          organizationId,
+          id: '',
+          role: '',
+          isSuperAdmin: false,
+        });
+      } else {
+        this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+      }
+      await registered.handler(event);
+    });
+  }
+
+  private isConsumerJob(value: DomainEventEnvelope | ConsumerJobData): value is ConsumerJobData {
+    return Boolean(
+      value
+      && typeof value === 'object'
+      && 'eventName' in value
+      && 'consumerId' in value
+      && 'event' in value,
+    );
+  }
+
+  private consumerJobId(eventId: string, consumerId: string): string {
+    const safeEventId = eventId.replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 100);
+    const safeConsumerId = consumerId.replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 80);
+    return `${safeEventId}--${safeConsumerId}`;
   }
 }

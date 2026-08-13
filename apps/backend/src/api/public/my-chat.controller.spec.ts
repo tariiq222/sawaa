@@ -13,6 +13,7 @@ import { MyChatController } from './my-chat.controller';
 import { AcknowledgeExistingBookingHandler } from '../../modules/comms/chat/operations/acknowledge-existing-booking.handler';
 import { ConfirmOperationHandler } from '../../modules/comms/chat/operations/confirm-operation.handler';
 import { DeclineOperationHandler } from '../../modules/comms/chat/operations/decline-operation.handler';
+import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
 
 describe('MyChatController (e2e)', () => {
   let app: INestApplication;
@@ -24,6 +25,7 @@ describe('MyChatController (e2e)', () => {
   const acknowledge = { execute: jest.fn() };
   const confirm = { execute: jest.fn() };
   const decline = { execute: jest.fn() };
+  const resume = { execute: jest.fn().mockResolvedValue([]) };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -37,6 +39,7 @@ describe('MyChatController (e2e)', () => {
         { provide: AcknowledgeExistingBookingHandler, useValue: acknowledge },
         { provide: ConfirmOperationHandler, useValue: confirm },
         { provide: DeclineOperationHandler, useValue: decline },
+        { provide: ResumeChatOperationsHandler, useValue: resume },
         { provide: GuestChatTokenService, useValue: { clearCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
       ],
     })
@@ -87,7 +90,7 @@ describe('MyChatController (e2e)', () => {
       .set('Cookie', 'sawaa_chat_guest=guest-a')
       .send({})
       .expect(201)
-      .expect({ id: 'conv-1', clientId: 'client-a' });
+      .expect({ id: 'conv-1', clientId: 'client-a', resumedOperations: [] });
 
     expect(claimResponse.headers['set-cookie'][0]).toEqual(expect.stringContaining('sawaa_chat_guest=;'));
     expect(claimResponse.headers['set-cookie'][0]).toEqual(expect.stringContaining('Path=/api/v1/public'));
@@ -100,6 +103,22 @@ describe('MyChatController (e2e)', () => {
       clientId: 'client-a',
       guestToken: 'guest-a',
     });
+    expect(resume.execute).toHaveBeenCalledWith({
+      conversationId: '00000000-0000-4000-a000-000000000001',
+      clientId: 'client-a',
+    });
+  });
+
+  it('keeps a successful identity claim when operation resume has a transient failure', async () => {
+    claim.execute.mockResolvedValue({ id: 'conv-1', clientId: 'client-a' });
+    resume.execute.mockRejectedValueOnce(new Error('database unavailable'));
+
+    await request(app.getHttpServer())
+      .post('/public/me/chat/conversations/00000000-0000-4000-a000-000000000001/claim')
+      .set('Cookie', 'sawaa_chat_guest=guest-a')
+      .send({})
+      .expect(201)
+      .expect({ id: 'conv-1', clientId: 'client-a', resumedOperations: [] });
   });
 
   it('sends and lists client messages using ClientSessionGuard identity rather than body identity', async () => {

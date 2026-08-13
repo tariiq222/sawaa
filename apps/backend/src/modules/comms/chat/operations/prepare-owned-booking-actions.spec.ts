@@ -75,6 +75,19 @@ describe('prepare owned booking actions', () => {
         requiredConfirmations: 0,
         confirmationCount: 0,
       });
+      expect(operation.payload).toEqual(kind === 'reschedule'
+        ? {
+            intent: 'RESCHEDULE_BOOKING',
+            request: {
+              bookingId: 'booking-forged',
+              newScheduledAt: NEW_START.toISOString(),
+            },
+          }
+        : {
+            intent: 'CANCEL_BOOKING',
+            request: { bookingId: 'booking-forged' },
+          });
+      expect(JSON.stringify(operation.payload)).not.toMatch(/clientId|phone|newDurationMins/);
       expect(harness.quote.quoteReschedule).not.toHaveBeenCalled();
       expect(harness.quote.quoteCancellation).not.toHaveBeenCalled();
     },

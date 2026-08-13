@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PaymentStatus, RefundStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -39,6 +45,8 @@ interface RefundPaymentCommand {
   reason: string;
   amount?: number;
   performedBy?: string;
+  /** Stable domain-event identity for queue replay recovery. */
+  sourceEventId?: string;
 }
 
 /**
@@ -62,7 +70,7 @@ export class RefundPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
+    _eventBus: EventBusService,
     private readonly moyasar: MoyasarApiClient,
   ) {}
 
@@ -174,7 +182,13 @@ export class RefundPaymentHandler {
    */
   async createRefundRequestInTx(
     tx: Prisma.TransactionClient,
-    cmd: { paymentId: string; reason: string; performedBy?: string; amount?: number },
+    cmd: {
+      paymentId: string;
+      reason: string;
+      performedBy?: string;
+      amount?: number;
+      sourceEventId?: string;
+    },
   ): Promise<CreateRefundRequestInTxResult> {
     const rows = await tx.$queryRaw<
       Array<{
@@ -275,6 +289,9 @@ export class RefundPaymentHandler {
           status: RefundStatus.COMPLETED,
           processedAt: new Date(),
           processedBy: cmd.performedBy ?? 'system',
+          idempotencyKey,
+          sourceEventId: cmd.sourceEventId,
+          providerState: 'CONFIRMED',
         },
         select: { id: true },
       });
@@ -322,6 +339,9 @@ export class RefundPaymentHandler {
         status: RefundStatus.PROCESSING,
         processedAt: new Date(),
         processedBy: cmd.performedBy ?? 'system',
+        idempotencyKey,
+        sourceEventId: cmd.sourceEventId,
+        providerState: 'NOT_CALLED',
       },
       select: { id: true },
     });
@@ -346,36 +366,159 @@ export class RefundPaymentHandler {
    * Invoice → REFUNDED inside a single RLS transaction.
    */
   async finalizeRefundFromCancellation(
-    cmd: { refundRequestId: string; idempotencyKey: string },
+    cmd: { refundRequestId: string; idempotencyKey: string; sourceEventId?: string },
   ): Promise<void> {
     const refundReq = await this.prisma.refundRequest.findUniqueOrThrow({
       where: { id: cmd.refundRequestId },
-      select: { id: true, paymentId: true, amount: true, invoiceId: true, status: true },
+      select: {
+        id: true,
+        paymentId: true,
+        amount: true,
+        invoiceId: true,
+        status: true,
+        gatewayRef: true,
+        idempotencyKey: true,
+        sourceEventId: true,
+        providerState: true,
+      },
     });
 
+    if (refundReq.idempotencyKey && refundReq.idempotencyKey !== cmd.idempotencyKey) {
+      throw new ConflictException('Refund idempotency key does not match the durable request');
+    }
+    if (refundReq.sourceEventId && cmd.sourceEventId && refundReq.sourceEventId !== cmd.sourceEventId) {
+      throw new ConflictException('Refund request belongs to a different source event');
+    }
     if (refundReq.status === RefundStatus.COMPLETED) {
       this.logger.warn({ refundRequestId: cmd.refundRequestId }, 'refund_already_completed_skipping');
       return;
+    }
+    if (refundReq.status === RefundStatus.FAILED && refundReq.providerState === 'FAILED') {
+      this.logger.warn({ refundRequestId: cmd.refundRequestId }, 'refund_provider_failure_already_recorded');
+      return;
+    }
+    if (refundReq.status !== RefundStatus.PROCESSING) {
+      throw new ConflictException(`Refund request is not retryable from status ${refundReq.status}`);
     }
 
     const payment = await this.prisma.payment.findUniqueOrThrow({
       where: { id: refundReq.paymentId },
       select: { id: true, gatewayRef: true },
     });
+    if (!payment.gatewayRef) {
+      throw new ConflictException('Gateway refund has no payment reference');
+    }
 
     // Decimal → integer halalas, converted once at the read boundary.
     const refundAmount = decimalToHalalas(refundReq.amount);
 
-    const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
-      paymentId: payment.gatewayRef ?? '',
-      amount: refundAmount, // already halalas
-      idempotencyKey: cmd.idempotencyKey,
-    });
+    // A stored provider reference proves the provider response was durably
+    // recorded. Otherwise repeat the POST with the exact same provider key;
+    // Moyasar's Idempotency-Key makes a response-lost retry one logical refund.
+    let providerRefundId = refundReq.gatewayRef;
+    let providerConfirmed = refundReq.providerState === 'CONFIRMED';
+    if (providerRefundId && refundReq.providerState === 'CALL_UNKNOWN') {
+      const providerStatus = await this.moyasar.getRefundStatus(
+        DEFAULT_ORG_ID,
+        providerRefundId,
+      );
+      if (providerStatus.status === 'failed') {
+        await this.prisma.refundRequest.updateMany({
+          where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
+          data: {
+            status: RefundStatus.FAILED,
+            providerState: 'FAILED',
+            lastProviderError: 'Provider confirmed refund failure',
+          },
+        });
+        return;
+      }
+      if (providerStatus.status === 'pending') {
+        throw new ConflictException('Provider refund is still pending reconciliation');
+      }
+      await this.prisma.refundRequest.updateMany({
+        where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
+        data: {
+          providerState: 'CONFIRMED',
+          lastProviderError: null,
+        },
+      });
+      providerConfirmed = true;
+    }
+    if (!providerRefundId || !providerConfirmed) {
+      await this.prisma.refundRequest.updateMany({
+        where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
+        data: {
+          idempotencyKey: cmd.idempotencyKey,
+          ...(cmd.sourceEventId ? { sourceEventId: cmd.sourceEventId } : {}),
+          providerState: 'CALL_UNKNOWN',
+          providerAttemptCount: { increment: 1 },
+          lastProviderAttemptAt: new Date(),
+          lastProviderError: null,
+        },
+      });
+      try {
+        const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
+          paymentId: payment.gatewayRef,
+          amount: refundAmount,
+          idempotencyKey: cmd.idempotencyKey,
+        });
+        providerRefundId = moyasarRefund.id;
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          // Moyasar definitively reports that the payment/refund resource does
+          // not exist. Persist the terminal provider outcome, but rethrow this
+          // first delivery so the consumer never hides a provider error. A
+          // replay observes FAILED and acknowledges without another call.
+          await this.prisma.refundRequest.updateMany({
+            where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
+            data: {
+              status: RefundStatus.FAILED,
+              providerState: 'FAILED',
+              lastProviderError: 'Provider confirmed refund resource is unavailable',
+            },
+          });
+          throw error;
+        }
+        // Do not infer that money did not move from a timeout/5xx. Preserve the
+        // ambiguous state and rethrow so BullMQ retries with the same key.
+        await this.prisma.refundRequest.updateMany({
+          where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
+          data: {
+            providerState: 'CALL_UNKNOWN',
+            lastProviderError: 'Provider refund attempt failed; retry/reconciliation required',
+          },
+        });
+        throw error;
+      }
+
+      // Persist provider confirmation before accounting. If this write fails,
+      // replay safely repeats the idempotent provider request; if accounting
+      // fails later, replay sees CONFIRMED and never calls the provider again.
+      await this.prisma.refundRequest.updateMany({
+        where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
+        data: {
+          gatewayRef: providerRefundId,
+          providerState: 'CONFIRMED',
+          lastProviderError: null,
+        },
+      });
+    }
+
+    if (!providerRefundId) {
+      throw new ConflictException('Provider refund confirmation is missing');
+    }
 
     await this.rlsTransaction.withTransaction(async (tx) => {
       const { count } = await tx.refundRequest.updateMany({
         where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
-        data: { status: RefundStatus.COMPLETED, gatewayRef: moyasarRefund.id },
+        data: {
+          status: RefundStatus.COMPLETED,
+          gatewayRef: providerRefundId,
+          providerState: 'CONFIRMED',
+          processedAt: new Date(),
+          lastProviderError: null,
+        },
       });
       if (count === 0) {
         this.logger.warn({ refundRequestId: cmd.refundRequestId }, 'refund_already_finalized_concurrent_skip');
@@ -383,7 +526,14 @@ export class RefundPaymentHandler {
       }
       const currentInvoice = await tx.invoice.findUniqueOrThrow({
         where: { id: refundReq.invoiceId },
-        select: { total: true, vatAmt: true, refundedAmount: true },
+        select: {
+          total: true,
+          vatAmt: true,
+          refundedAmount: true,
+          id: true,
+          bookingId: true,
+          currency: true,
+        },
       });
       const accounting = computeRefundAccounting({
         invoiceTotal: currentInvoice.total,
@@ -411,28 +561,58 @@ export class RefundPaymentHandler {
           refundedVatAmt: accounting.newRefundedVatAmt,
         },
       });
-    });
 
-    const invoice = await this.prisma.invoice.findUnique({
-      where: { id: refundReq.invoiceId },
-      select: { id: true, bookingId: true, currency: true },
+      // The completion notification is part of the same accounting commit.
+      // refundRequestId is a UUID and uniquely names this logical event.
+      const event = new RefundCompletedEvent({
+        refundRequestId: cmd.refundRequestId,
+        organizationId: DEFAULT_ORG_ID,
+        invoiceId: refundReq.invoiceId,
+        paymentId: refundReq.paymentId,
+        bookingId: currentInvoice.bookingId,
+        amount: refundAmount,
+        currency: currentInvoice.currency,
+      }, cmd.refundRequestId);
+      await tx.outboxEvent.create({
+        data: {
+          id: event.eventId,
+          aggregateId: cmd.refundRequestId,
+          eventType: event.eventName,
+          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      });
     });
-
-    const event = new RefundCompletedEvent({
-      refundRequestId: cmd.refundRequestId,
-      organizationId: DEFAULT_ORG_ID,
-      invoiceId: refundReq.invoiceId,
-      paymentId: refundReq.paymentId,
-      bookingId: invoice?.bookingId ?? '',
-      amount: refundAmount,
-      currency: invoice?.currency ?? '',
-    });
-    await this.eventBus
-      .publish(event.eventName, event.toEnvelope())
-      .catch((err) => this.logger.error(`Failed to publish RefundCompletedEvent`, err));
   }
 
   async execute(cmd: RefundPaymentCommand) {
+    if (cmd.sourceEventId) {
+      const recovered = await this.prisma.refundRequest.findUnique({
+        where: { sourceEventId: cmd.sourceEventId },
+        select: {
+          id: true,
+          paymentId: true,
+          status: true,
+          idempotencyKey: true,
+        },
+      });
+      if (recovered) {
+        if (recovered.paymentId !== cmd.paymentId || !recovered.idempotencyKey) {
+          throw new ConflictException('Refund source event belongs to a different request');
+        }
+        if (recovered.status === RefundStatus.PROCESSING) {
+          await this.finalizeRefundFromCancellation({
+            refundRequestId: recovered.id,
+            idempotencyKey: recovered.idempotencyKey,
+            sourceEventId: cmd.sourceEventId,
+          });
+        }
+        // COMPLETED/FAILED are both durable terminal outcomes. Returning the
+        // current payment acknowledges a replay after the consumer job result
+        // was lost; it must not create another RefundRequest or provider call.
+        return this.prisma.payment.findUniqueOrThrow({ where: { id: cmd.paymentId } });
+      }
+    }
+
     // ── Locking transaction: read + validate + persist in-flight record ──
     // SELECT FOR UPDATE prevents two concurrent requests from both reading
     // Payment.status=COMPLETED and proceeding to issue a double-refund.
@@ -523,6 +703,9 @@ export class RefundPaymentHandler {
             status: RefundStatus.PROCESSING,
             processedAt: new Date(),
             processedBy: cmd.performedBy ?? 'system',
+            idempotencyKey: iKey,
+            sourceEventId: cmd.sourceEventId,
+            providerState: 'NOT_CALLED',
           },
           select: { id: true },
         });
@@ -532,7 +715,16 @@ export class RefundPaymentHandler {
 
     // Step 2 — gateway round-trip OUTSIDE any DB transaction. Never hold a
     // transaction across an external HTTP call.
-    let moyasarRefundId: string | undefined;
+    await this.prisma.refundRequest.update({
+      where: { id: refundRequestId },
+      data: {
+        providerState: 'CALL_UNKNOWN',
+        providerAttemptCount: { increment: 1 },
+        lastProviderAttemptAt: new Date(),
+        lastProviderError: null,
+      },
+    });
+    let moyasarRefundId: string;
     try {
       const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
         paymentId: payment.gatewayRef,
@@ -541,28 +733,56 @@ export class RefundPaymentHandler {
       });
       moyasarRefundId = moyasarRefund.id;
     } catch (error) {
-      // Moyasar refused the refund. No money moved. Safe to mark FAILED.
-      await this.prisma.refundRequest
-        .update({ where: { id: refundRequestId }, data: { status: RefundStatus.FAILED } })
-        .catch((persistErr) => {
-          this.logger.error(
-            `Refund ${refundRequestId}: failed to mark FAILED after Moyasar rejection`,
-            persistErr instanceof Error ? persistErr.stack : undefined,
-          );
+      if (error instanceof NotFoundException) {
+        await this.prisma.refundRequest.update({
+          where: { id: refundRequestId },
+          data: {
+            status: RefundStatus.FAILED,
+            providerState: 'FAILED',
+            lastProviderError: 'Provider confirmed refund resource is unavailable',
+          },
         });
+        throw error;
+      }
+      // A timeout/5xx is ambiguous: the provider may have accepted the refund.
+      // Keep it retryable and let reconciliation repeat with the same key.
+      await this.prisma.refundRequest.update({
+        where: { id: refundRequestId },
+        data: {
+          providerState: 'CALL_UNKNOWN',
+          lastProviderError: 'Provider refund attempt failed; retry/reconciliation required',
+        },
+      });
       throw error;
     }
+
+    // Durable boundary between external success and local accounting. A crash
+    // after this write is recovered without another provider mutation.
+    await this.prisma.refundRequest.update({
+      where: { id: refundRequestId },
+      data: {
+        gatewayRef: moyasarRefundId,
+        providerState: 'CONFIRMED',
+        lastProviderError: null,
+      },
+    });
 
     // Step 3 — atomic finalize. If this transaction fails, money has
     // already moved at Moyasar; we persist gatewayRef separately and
     // leave the row in PROCESSING for reconciliation.
-    let updatedPayment;
-    try {
-      updatedPayment = await this.rlsTransaction.withTransaction(async (tx) => {
-        await tx.refundRequest.update({
-          where: { id: refundRequestId },
-          data: { status: RefundStatus.COMPLETED, gatewayRef: moyasarRefundId },
+    const updatedPayment = await this.rlsTransaction.withTransaction(async (tx) => {
+        const { count } = await tx.refundRequest.updateMany({
+          where: { id: refundRequestId, status: RefundStatus.PROCESSING },
+          data: {
+            status: RefundStatus.COMPLETED,
+            gatewayRef: moyasarRefundId,
+            providerState: 'CONFIRMED',
+            lastProviderError: null,
+          },
         });
+        if (count === 0) {
+          return tx.payment.findUniqueOrThrow({ where: { id: cmd.paymentId } });
+        }
         const currentInvoice = await tx.invoice.findUniqueOrThrow({
           where: { id: payment.invoice.id },
           select: { total: true, vatAmt: true, refundedAmount: true },
@@ -592,36 +812,26 @@ export class RefundPaymentHandler {
             refundedVatAmt: accounting.newRefundedVatAmt,
           },
         });
+
+        const event = new RefundCompletedEvent({
+          refundRequestId,
+          organizationId: DEFAULT_ORG_ID,
+          invoiceId: payment.invoice.id,
+          paymentId: payment.id,
+          bookingId: payment.invoice.bookingId,
+          amount: refundAmount,
+          currency: payment.invoice.currency,
+        }, refundRequestId);
+        await tx.outboxEvent.create({
+          data: {
+            id: event.eventId,
+            aggregateId: refundRequestId,
+            eventType: event.eventName,
+            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+          },
+        });
         return updated;
       });
-    } catch (error) {
-      this.logger.error(
-        `Refund ${refundRequestId}: Moyasar succeeded (gatewayRef=${moyasarRefundId}) but DB finalize failed — left in PROCESSING for reconciliation`,
-        error instanceof Error ? error.stack : undefined,
-      );
-      await this.prisma.refundRequest
-        .update({ where: { id: refundRequestId }, data: { gatewayRef: moyasarRefundId } })
-        .catch((persistErr) => {
-          this.logger.error(
-            `Refund ${refundRequestId}: failed to persist gatewayRef after partial-success — manual intervention required`,
-            persistErr instanceof Error ? persistErr.stack : undefined,
-          );
-        });
-      throw error;
-    }
-
-    const event = new RefundCompletedEvent({
-      refundRequestId,
-      organizationId: DEFAULT_ORG_ID,
-      invoiceId: payment.invoice.id,
-      paymentId: payment.id,
-      bookingId: payment.invoice.bookingId,
-      amount: refundAmount,
-      currency: payment.invoice.currency,
-    });
-    await this.eventBus
-      .publish(event.eventName, event.toEnvelope())
-      .catch((err) => this.logger.error(`Failed to publish RefundCompletedEvent`, err));
 
     return updatedPayment;
   }

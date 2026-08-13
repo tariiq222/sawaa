@@ -21,6 +21,7 @@ import {
   ACTIVE_BOOKING_STATUSES,
   STAFF_TIME_BLOCKING_BOOKING_STATUSES,
 } from '../active-booking-statuses';
+import { bookingCreationRequestHash } from './creation-request-hash';
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
 function mapDbConflict(err: unknown): never {
@@ -43,6 +44,8 @@ export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expir
   source?: 'RECEPTION' | 'ONLINE' | 'WHATSAPP' | 'AI_CHAT';
   /** Durable one-shot creation key. Omitted by legacy/dashboard callers. */
   creationIdempotencyKey?: string;
+  /** Complete normalized immutable command hash paired with the key. */
+  creationRequestHash?: string;
   /** Internal transaction port used by confirmed chat operations. */
   transaction?: Prisma.TransactionClient;
 };
@@ -61,6 +64,18 @@ export class CreateBookingHandler {
 
   async execute(dto: CreateBookingCommand) {
     const db = (dto.transaction ?? this.prisma) as unknown as Prisma.TransactionClient;
+
+    if (dto.creationIdempotencyKey) {
+      if (!dto.creationRequestHash || !/^[a-f0-9]{64}$/.test(dto.creationRequestHash)) {
+        throw new BadRequestException('A valid creation request hash is required with an idempotency key');
+      }
+      // This lookup intentionally precedes every mutable preflight check. A
+      // committed result remains replayable after its slot/time/price/settings
+      // have changed, and returns before any side effect or provider enqueue.
+      const replay = await this.findIdempotentBooking(dto);
+      if (replay) return replay;
+    }
+
     const scheduledAt = new Date(dto.scheduledAt);
     if (scheduledAt <= new Date()) {
       throw new BadRequestException('Booking must be scheduled in the future');
@@ -281,6 +296,34 @@ export class CreateBookingHandler {
       price > 0;
 
     const initialStatus = needsOnlinePayment ? 'AWAITING_PAYMENT' : 'CONFIRMED';
+    const effectiveExpiresAt = initialStatus === 'CONFIRMED'
+      ? null
+      : dto.expiresAt ?? new Date(Date.now() + 15 * 60 * 1000);
+    const normalizedRequestHash = bookingCreationRequestHash({
+      branchId: dto.branchId,
+      clientId: dto.clientId,
+      employeeId: dto.employeeId,
+      serviceId: dto.serviceId,
+      scheduledAt,
+      endsAt,
+      durationMins,
+      durationOptionId: resolved.durationOptionId || null,
+      bookingType,
+      deliveryType,
+      price,
+      currency,
+      source: resolvedSource,
+      expiresAt: effectiveExpiresAt,
+      payAtClinic: dto.payAtClinic,
+      couponCode: dto.couponCode,
+      notes: dto.notes,
+    });
+    if (
+      dto.creationIdempotencyKey
+      && normalizedRequestHash !== dto.creationRequestHash
+    ) {
+      throw new ConflictException('Creation request hash does not match the validated booking quote');
+    }
 
     const createInTransaction = async (tx: Prisma.TransactionClient) => {
         // Global booking lock order: client -> employee/slot -> coupon -> booking number.
@@ -295,19 +338,7 @@ export class CreateBookingHandler {
             where: { creationIdempotencyKey: dto.creationIdempotencyKey },
           });
           if (existing) {
-            if (!this.matchesIdempotentShape(existing, {
-              ...dto,
-              scheduledAt,
-              bookingType,
-              deliveryType,
-              durationMins,
-              durationOptionId: resolved.durationOptionId || null,
-              price,
-              currency,
-              source: resolvedSource,
-            })) {
-              throw new ConflictException('Creation idempotency key belongs to another booking');
-            }
+            this.assertIdempotentIdentity(existing, dto);
             const invoice = await tx.invoice.findFirst({
               where: { bookingId: existing.id },
               select: { id: true },
@@ -409,14 +440,14 @@ export class CreateBookingHandler {
             deliveryType,
             source: resolvedSource,
             creationIdempotencyKey: dto.creationIdempotencyKey,
+            creationRequestHash: dto.creationIdempotencyKey
+              ? normalizedRequestHash
+              : undefined,
             notes: dto.notes,
             // CONFIRMED bookings carry no expiry window — EXPIRE only acts on
             // unconfirmed states. AWAITING_PAYMENT gets a 15-minute window
             // (or the caller-supplied expiresAt).
-            expiresAt:
-              initialStatus === 'CONFIRMED'
-                ? undefined
-                : dto.expiresAt ?? new Date(Date.now() + 15 * 60 * 1000),
+            expiresAt: effectiveExpiresAt ?? undefined,
             payAtClinic: dto.payAtClinic ?? false,
             couponCode: dto.couponCode ?? null,
             discountedPrice: discountedPrice,
@@ -496,16 +527,22 @@ export class CreateBookingHandler {
         return { ...booking, invoiceId: invoice?.id ?? null };
       };
 
-    const booking = await (
-      dto.transaction
-        ? createInTransaction(dto.transaction)
-        : this.rlsTransaction.withTransaction(
-            createInTransaction,
-            { isolationLevel: 'Serializable' },
-          )
-    ).catch(mapDbConflict);
-
-    return booking;
+    try {
+      return await (
+        dto.transaction
+          ? createInTransaction(dto.transaction)
+          : this.rlsTransaction.withTransaction(
+              createInTransaction,
+              { isolationLevel: 'Serializable' },
+            )
+      );
+    } catch (error) {
+      if (dto.creationIdempotencyKey && this.isUniqueConstraint(error) && !dto.transaction) {
+        const replay = await this.findIdempotentBooking(dto);
+        if (replay) return replay;
+      }
+      mapDbConflict(error);
+    }
   }
 
   private async assertSlotAvailable(input: {
@@ -540,49 +577,76 @@ export class CreateBookingHandler {
     }
   }
 
-  private matchesIdempotentShape(
+  private async findIdempotentBooking(dto: CreateBookingCommand) {
+    const lookup = async (tx: Prisma.TransactionClient) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(dto.clientId)}::int)`;
+      const existing = await tx.booking.findUnique({
+        where: { creationIdempotencyKey: dto.creationIdempotencyKey! },
+      });
+      if (!existing) return null;
+      this.assertIdempotentIdentity(existing, dto);
+      const invoice = await tx.invoice.findFirst({
+        where: { bookingId: existing.id },
+        select: { id: true },
+      });
+      return { ...existing, invoiceId: invoice?.id ?? null };
+    };
+    return dto.transaction
+      ? lookup(dto.transaction)
+      : this.rlsTransaction.withTransaction(lookup, { isolationLevel: 'Serializable' });
+  }
+
+  private assertIdempotentIdentity(
     existing: {
-      branchId: string;
       clientId: string;
+      branchId: string;
       employeeId: string;
       serviceId: string | null;
       scheduledAt: Date;
-      durationMins: number;
+      expiresAt: Date | null;
       durationOptionId: string | null;
       bookingType: string;
       deliveryType: string;
-      source: string;
-      price: Prisma.Decimal;
       currency: string;
+      source: string;
       payAtClinic: boolean;
       couponCode: string | null;
       notes: string | null;
+      creationRequestHash: string | null;
     },
-    expected: Omit<CreateBookingCommand, 'durationOptionId' | 'bookingType' | 'deliveryType'> & {
-      scheduledAt: Date;
-      bookingType: string;
-      deliveryType: string;
-      durationMins: number;
-      durationOptionId: string | null;
-      price: number;
-      currency: string;
-      source: string;
-    },
-  ): boolean {
-    return existing.branchId === expected.branchId
-      && existing.clientId === expected.clientId
-      && existing.employeeId === expected.employeeId
-      && existing.serviceId === expected.serviceId
-      && existing.scheduledAt.getTime() === expected.scheduledAt.getTime()
-      && existing.durationMins === expected.durationMins
-      && existing.durationOptionId === expected.durationOptionId
-      && existing.bookingType === expected.bookingType
-      && existing.deliveryType === expected.deliveryType
-      && existing.source === expected.source
-      && Number(existing.price) === expected.price
-      && existing.currency === expected.currency
-      && existing.payAtClinic === (expected.payAtClinic ?? false)
-      && existing.couponCode === (expected.couponCode ?? null)
-      && (existing.notes ?? null) === (expected.notes ?? null);
+    dto: CreateBookingCommand,
+  ): void {
+    const normalized = normalizeBookingTypes({
+      bookingType: dto.bookingType,
+      deliveryType: dto.deliveryType,
+    });
+    const scheduledAt = new Date(dto.scheduledAt);
+    const stableShapeMatches = !Number.isNaN(scheduledAt.getTime())
+      && existing.branchId === dto.branchId
+      && existing.employeeId === dto.employeeId
+      && existing.serviceId === dto.serviceId
+      && existing.scheduledAt.getTime() === scheduledAt.getTime()
+      && existing.bookingType === normalized.bookingType
+      && existing.deliveryType === normalized.deliveryType
+      && existing.source === (dto.source ?? 'RECEPTION')
+      && existing.payAtClinic === (dto.payAtClinic ?? false)
+      && (existing.couponCode ?? null) === (dto.couponCode ?? null)
+      && (existing.notes ?? null) === (dto.notes ?? null)
+      && (!dto.durationOptionId || (existing.durationOptionId ?? null) === dto.durationOptionId)
+      && (!dto.currency || existing.currency === dto.currency)
+      && (!dto.expiresAt || existing.expiresAt?.getTime() === dto.expiresAt.getTime());
+    if (
+      existing.clientId !== dto.clientId
+      || existing.creationRequestHash !== dto.creationRequestHash
+      || !stableShapeMatches
+    ) {
+      throw new ConflictException('Creation idempotency key belongs to another booking request');
+    }
+  }
+
+  private isUniqueConstraint(error: unknown): boolean {
+    return error instanceof Prisma.PrismaClientKnownRequestError
+      ? error.code === 'P2002'
+      : Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'P2002');
   }
 }

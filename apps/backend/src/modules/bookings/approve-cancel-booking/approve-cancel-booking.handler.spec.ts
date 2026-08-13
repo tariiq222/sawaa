@@ -57,7 +57,10 @@ describe('ApproveCancelBookingHandler', () => {
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CANCELLED }) }),
     );
-    expect(eb.publish).toHaveBeenCalledWith('bookings.booking.cancel_approved', expect.anything());
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ eventType: 'bookings.booking.cancel_approved' }),
+    });
+    expect(eb.publish).not.toHaveBeenCalled();
     expect(result.autoRefund).toBe(true);
   });
 
@@ -115,16 +118,18 @@ describe('ApproveCancelBookingHandler', () => {
       refundAmount: 5000,
     });
 
-    expect(eb.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancel_approved',
-      expect.objectContaining({
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        eventType: 'bookings.booking.cancel_approved',
         payload: expect.objectContaining({
+          payload: expect.objectContaining({
           refundType: 'PARTIAL',
           refundAmount: 5000,
           approverNotes: 'client travelled',
+          }),
         }),
       }),
-    );
+    });
     expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -143,12 +148,13 @@ describe('ApproveCancelBookingHandler', () => {
 
     await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
 
-    expect(eb.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancel_approved',
-      expect.objectContaining({
-        payload: expect.objectContaining({ refundType: 'FULL', refundAmount: undefined }),
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        payload: expect.objectContaining({
+          payload: expect.objectContaining({ refundType: 'FULL', refundAmount: undefined }),
+        }),
       }),
-    );
+    });
     expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ reason: 'Cancel request approved — refund: FULL' }),
@@ -165,12 +171,13 @@ describe('ApproveCancelBookingHandler', () => {
 
     await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
 
-    expect(eb.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancel_approved',
-      expect.objectContaining({
-        payload: expect.objectContaining({ refundType: undefined, refundAmount: undefined }),
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        payload: expect.objectContaining({
+          payload: expect.objectContaining({ refundType: undefined, refundAmount: undefined }),
+        }),
       }),
-    );
+    });
     expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ reason: 'Cancel request approved' }),
@@ -305,7 +312,7 @@ describe('ApproveCancelBookingHandler', () => {
     expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
   });
 
-  it('includes refundRequestId and paymentId in the published event', async () => {
+  it('includes refundRequestId and paymentId in the transactional outbox event', async () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
     prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
@@ -316,16 +323,19 @@ describe('ApproveCancelBookingHandler', () => {
 
     await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
 
-    expect(eb.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancel_approved',
-      expect.objectContaining({
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        eventType: 'bookings.booking.cancel_approved',
         payload: expect.objectContaining({
+          payload: expect.objectContaining({
           paymentId: 'pay-1',
           refundRequestId: 'rr-1',
           idempotencyKey: 'ik-1',
+          }),
         }),
       }),
-    );
+    });
+    expect(eb.publish).not.toHaveBeenCalled();
   });
 
   // ─── Session-package credit return (P1-1 fix) ───────────────────────────

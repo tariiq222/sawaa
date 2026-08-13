@@ -58,7 +58,7 @@ export class ListOwnAppointmentsHandler {
           clientId: null,
           type: ChatOperationType.LIST_OWN_APPOINTMENTS,
           status: ChatOperationStatus.AWAITING_AUTH,
-          payload: { intent: 'LIST_OWN_APPOINTMENTS' },
+          payload: { intent: 'LIST_OWN_APPOINTMENTS', request: {} },
           summary: { action: 'LOGIN_REQUIRED', intent: 'LIST_OWN_APPOINTMENTS' },
           idempotencyKey,
           requiredConfirmations: 0,

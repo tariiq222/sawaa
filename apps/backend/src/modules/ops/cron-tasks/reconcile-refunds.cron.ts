@@ -1,205 +1,71 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ActivityAction } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { MoyasarApiClient } from '../../finance/moyasar-api/moyasar-api.client';
-import { computeRefundAccounting } from '../../finance/refund-payment/refund-vat.helper';
+import { PrismaService } from '../../../infrastructure/database';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 
-const CRON_ACTOR_EMAIL = 'system:reconcile-refunds-cron';
 const BATCH_SIZE = 100;
 
 /**
- * Reconciles RefundRequest rows that are stuck in PROCESSING.
+ * Replays stale PROCESSING refunds through the same durable state machine used
+ * by the booking-cancellation consumer.
  *
- * A row lands in PROCESSING when:
- *   1. Moyasar accepted the refund (money moved), AND
- *   2. Our finalize DB transaction failed (or the process crashed).
- *
- * This cron polls Moyasar for each stuck row and:
- *   - 'paid'    → flip RefundRequest to COMPLETED + Payment to REFUNDED + Invoice to REFUNDED
- *   - 'failed'  → flip RefundRequest to FAILED
- *   - 'pending' → leave as-is; Moyasar is still processing
- *
- * Rows with no gatewayRef are skipped — they have no Moyasar refund to query.
- *
- * Schedule: every 15 minutes (wired in CronTasksService).
+ * Importantly this includes rows whose provider reference is still null: that
+ * is the response-lost window, not proof that the provider was never called.
+ * RefundPaymentHandler repeats the provider request with the persisted stable
+ * idempotency key, or reconciles an already-known provider reference, and then
+ * applies accounting under a PROCESSING -> COMPLETED CAS.
  */
 @Injectable()
 export class ReconcileRefundsCron {
   private readonly logger = new Logger(ReconcileRefundsCron.name);
-
-  /** A row is considered "stuck" if it has been in PROCESSING for more than 15 min. */
   private static readonly STALE_THRESHOLD_MS = 15 * 60 * 1_000;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
-    private readonly moyasar: MoyasarApiClient,
+    private readonly refunds: RefundPaymentHandler,
   ) {}
 
   async execute(): Promise<void> {
-    await this.reconcile();
-  }
-
-  private async reconcile(): Promise<void> {
     await withCronLeader(this.prisma, 'reconcile-refunds', async () => {
       const cutoff = new Date(Date.now() - ReconcileRefundsCron.STALE_THRESHOLD_MS);
-
-      const stuckRows = await this.prisma.refundRequest.findMany({
+      const rows = await this.prisma.refundRequest.findMany({
         where: {
           status: 'PROCESSING',
           updatedAt: { lt: cutoff },
-          gatewayRef: { not: null },
         },
         select: {
           id: true,
-          paymentId: true,
-          invoiceId: true,
+          idempotencyKey: true,
+          sourceEventId: true,
           gatewayRef: true,
-          amount: true,
+          providerState: true,
         },
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
         take: BATCH_SIZE,
       });
 
-      if (stuckRows.length === 0) return;
+      if (rows.length === 0) return;
+      this.logger.log(`reconcile-refunds: found ${rows.length} stuck row(s)`);
 
-      this.logger.log(`reconcile-refunds: found ${stuckRows.length} stuck row(s)`);
-
-      for (const row of stuckRows) {
-        // gatewayRef is guaranteed non-null by the query filter above
-        const gatewayRef = row.gatewayRef as string;
+      for (const row of rows) {
         try {
-          await this.processRow(
-            row.id,
-            DEFAULT_ORG_ID,
-            row.paymentId,
-            row.invoiceId,
-            gatewayRef,
-            Math.round(Number(row.amount)),
-          );
-        } catch (err) {
+          await this.refunds.finalizeRefundFromCancellation({
+            refundRequestId: row.id,
+            // Migration backfills this; fallback protects rolling deploys in
+            // which the new code can briefly observe a pre-backfill row.
+            idempotencyKey: row.idempotencyKey ?? `refund:${row.id}`,
+            ...(row.sourceEventId ? { sourceEventId: row.sourceEventId } : {}),
+          });
+        } catch (error) {
+          // One provider outage must not starve unrelated refunds. The handler
+          // has already persisted a public-safe retry state; the row remains
+          // PROCESSING and the next cron pass retries it.
           this.logger.error(
-            `reconcile-refunds: failed to process RefundRequest ${row.id}`,
-            err instanceof Error ? err.stack : err,
+            `reconcile-refunds: retry failed for RefundRequest ${row.id}`,
+            error instanceof Error ? error.stack : undefined,
           );
-          // Continue with next row — don't let one failure abort the whole batch.
         }
       }
     });
-  }
-
-  private async processRow(
-    refundRequestId: string,
-    organizationId: string,
-    paymentId: string,
-    invoiceId: string,
-    gatewayRef: string,
-    refundAmount: number,
-  ): Promise<void> {
-    const { status } = await this.moyasar.getRefundStatus(organizationId, gatewayRef);
-
-    if (status === 'pending') {
-      this.logger.debug(
-        `reconcile-refunds: RefundRequest ${refundRequestId} still pending at Moyasar — skipping`,
-      );
-      return;
-    }
-
-    if (status === 'failed') {
-      await this.rlsTransaction.withTransaction(async (tx) => {
-        await tx.refundRequest.update({
-          where: { id: refundRequestId },
-          data: { status: 'FAILED' },
-        });
-        await tx.activityLog.create({
-          data: {
-            userEmail: CRON_ACTOR_EMAIL,
-            action: ActivityAction.SYSTEM,
-            entity: 'RefundRequest',
-            entityId: refundRequestId,
-            description: 'Reconciled from Moyasar → FAILED',
-          },
-        });
-      });
-      this.logger.warn(
-        `reconcile-refunds: RefundRequest ${refundRequestId} → FAILED (Moyasar reported failure)`,
-      );
-      return;
-    }
-
-    // status === 'paid' — finalize atomically.
-    //
-    // Mirror ApproveRefundHandler's accounting EXACTLY: a partial refund must
-    // land PARTIALLY_REFUNDED with the ledger columns (refundedAmount /
-    // refundedVatAmt) incremented — never force a blanket REFUNDED, which would
-    // hide remaining refundable balance and leave the columns stale. The row is
-    // still PROCESSING here, so this refund has NOT yet been applied to the
-    // invoice/payment (the approve transaction never committed) — apply it once.
-    if (status === 'paid') {
-      const newStatus = await this.rlsTransaction.withTransaction(async (tx) => {
-        // P1 (money-safety): gate the finalize on status='PROCESSING' with a
-        // conditional updateMany and bail if it claimed zero rows. Without this
-        // re-check inside the tx, the cron and the approve handler (or a second
-        // cron pass) could both reach this block for the same row and each
-        // unconditionally increment invoice.refundedAmount / payment.refundedAmount
-        // — a double-applied refund. The guard makes the accounting fire EXACTLY
-        // once: only the writer that wins the PROCESSING → COMPLETED flip applies
-        // the ledger. Mirrors ReconcilePaymentsCron's in-tx PENDING re-check.
-        const { count } = await tx.refundRequest.updateMany({
-          where: { id: refundRequestId, status: 'PROCESSING' },
-          data: { status: 'COMPLETED' },
-        });
-        if (count === 0) {
-          this.logger.debug(
-            `reconcile-refunds: RefundRequest ${refundRequestId} already finalized by another writer — skipping accounting`,
-          );
-          return null;
-        }
-
-        const invoiceForAccounting = await tx.invoice.findUniqueOrThrow({
-          where: { id: invoiceId },
-          select: { total: true, vatAmt: true, refundedAmount: true },
-        });
-        const accounting = computeRefundAccounting({
-          invoiceTotal: invoiceForAccounting.total,
-          invoiceVatAmt: invoiceForAccounting.vatAmt,
-          alreadyRefundedAmount: invoiceForAccounting.refundedAmount,
-          thisRefundAmount: refundAmount,
-        });
-
-        await tx.invoice.update({
-          where: { id: invoiceId },
-          data: {
-            status: accounting.newInvoiceStatus,
-            refundedAmount: accounting.newRefundedAmount,
-            refundedVatAmt: accounting.newRefundedVatAmt,
-          },
-        });
-        await tx.payment.update({
-          where: { id: paymentId },
-          data: {
-            status: accounting.newInvoiceStatus === 'REFUNDED' ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
-            refundedAmount: { increment: refundAmount },
-          },
-        });
-        await tx.activityLog.create({
-          data: {
-            userEmail: CRON_ACTOR_EMAIL,
-            action: ActivityAction.SYSTEM,
-            entity: 'RefundRequest',
-            entityId: refundRequestId,
-            description: `Reconciled from Moyasar → COMPLETED (${accounting.newInvoiceStatus}, amount=${refundAmount} payment=${paymentId} invoice=${invoiceId})`,
-          },
-        });
-        return accounting.newInvoiceStatus;
-      });
-      if (newStatus === null) return;
-      this.logger.log(
-        `reconcile-refunds: RefundRequest ${refundRequestId} → COMPLETED ` +
-          `(reconciled from Moyasar 'paid', invoice ${newStatus})`,
-      );
-    }
   }
 }

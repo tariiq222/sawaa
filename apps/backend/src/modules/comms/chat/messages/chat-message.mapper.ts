@@ -15,6 +15,7 @@ const OPERATION_RESULT_OUTCOMES = new Set([
   'BOOKING_CANCELLED',
   'CANCELLATION_REQUESTED',
   'OPERATION_FAILED',
+  'APPOINTMENTS_LISTED',
 ]);
 const OPERATION_TYPES = new Set(Object.values(ChatOperationType));
 const OPERATION_RESULT_STATUSES = new Set<ChatOperationStatus>([

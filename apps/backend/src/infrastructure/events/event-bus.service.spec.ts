@@ -53,6 +53,63 @@ describe('EventBusService', () => {
     );
   });
 
+  it('fans one outbox event into stable per-consumer BullMQ jobs', async () => {
+    service.subscribe('test.event', 'consumer-a', jest.fn());
+    service.subscribe('test.event', 'consumer-b', jest.fn());
+    const event = { eventId: 'event-1', source: 'test', version: 1, occurredAt: new Date(), payload: {} };
+
+    await service.publish('test.event', event);
+
+    expect(mockQueue.add).toHaveBeenCalledTimes(2);
+    expect(mockQueue.add).toHaveBeenNthCalledWith(1, 'test.event', {
+      eventName: 'test.event', consumerId: 'consumer-a', event,
+    }, expect.objectContaining({ jobId: 'event-1--consumer-a' }));
+    expect(mockQueue.add).toHaveBeenNthCalledWith(2, 'test.event', {
+      eventName: 'test.event', consumerId: 'consumer-b', event,
+    }, expect.objectContaining({ jobId: 'event-1--consumer-b' }));
+  });
+
+  it('reuses the same consumer job identity when outbox publish is replayed after enqueue', async () => {
+    service.subscribe('test.event', 'consumer-a', jest.fn());
+    const event = { eventId: 'event-1', source: 'test', version: 1, occurredAt: new Date(), payload: {} };
+
+    await service.publish('test.event', event);
+    await service.publish('test.event', event);
+
+    expect(mockQueue.add).toHaveBeenCalledTimes(2);
+    expect(mockQueue.add.mock.calls[0][2].jobId).toBe('event-1--consumer-a');
+    expect(mockQueue.add.mock.calls[1][2].jobId).toBe('event-1--consumer-a');
+  });
+
+  it('dispatches a consumer job only to its named consumer', async () => {
+    const handlerA = jest.fn().mockResolvedValue(undefined);
+    const handlerB = jest.fn().mockResolvedValue(undefined);
+    service.subscribe('test.event', 'consumer-a', handlerA);
+    service.subscribe('test.event', 'consumer-b', handlerB);
+    const workerCallback = bullmq.createWorker.mock.calls[0][1];
+    const event = { eventId: 'event-1', source: 'test', version: 1, occurredAt: new Date(), payload: {} };
+
+    await workerCallback({
+      name: 'test.event',
+      data: { eventName: 'test.event', consumerId: 'consumer-b', event },
+    });
+
+    expect(handlerA).not.toHaveBeenCalled();
+    expect(handlerB).toHaveBeenCalledTimes(1);
+    expect(handlerB).toHaveBeenCalledWith(event);
+  });
+
+  it('retries rather than acknowledging a targeted job before its consumer is registered', async () => {
+    service.subscribe('test.event', 'consumer-a', jest.fn());
+    const workerCallback = bullmq.createWorker.mock.calls[0][1];
+    const event = { eventId: 'event-1', source: 'test', version: 1, occurredAt: new Date(), payload: {} };
+
+    await expect(workerCallback({
+      name: 'test.event',
+      data: { eventName: 'test.event', consumerId: 'consumer-b', event },
+    })).rejects.toThrow('consumer-b');
+  });
+
   it('should subscribe and create worker on first subscription', () => {
     const handler = jest.fn();
     service.subscribe('test.event', handler);

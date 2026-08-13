@@ -22,7 +22,7 @@ export interface BookingCancelApprovedPayload {
 export class BookingCancelApprovedEvent extends BaseEvent<BookingCancelApprovedPayload> {
   readonly eventName = 'bookings.booking.cancel_approved';
 
-  constructor(payload: BookingCancelApprovedPayload) {
-    super({ source: 'bookings', version: 1, payload });
+  constructor(payload: BookingCancelApprovedPayload, eventId?: string) {
+    super({ source: 'bookings', version: 1, payload, eventId });
   }
 }

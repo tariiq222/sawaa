@@ -6,6 +6,7 @@ import {
   DeliveryType,
 } from '@prisma/client';
 import { ConfirmOperationHandler } from './confirm-operation.handler';
+import { bookingCreationRequestHash } from '../../../bookings/create-booking/creation-request-hash';
 
 const NOW = new Date('2026-08-13T09:00:00.000Z');
 const bookingPayload = {
@@ -259,6 +260,11 @@ describe('ConfirmOperationHandler', () => {
       durationMins: bookingPayload.durationMins, durationOptionId: bookingPayload.durationOptionId,
       bookingType: bookingPayload.bookingType, deliveryType: bookingPayload.deliveryType,
       price: bookingPayload.price, currency: bookingPayload.currency, source: 'AI_CHAT',
+      creationRequestHash: bookingCreationRequestHash({
+        ...bookingPayload,
+        clientId: 'client-1',
+        source: 'AI_CHAT',
+      }),
     });
 
     const result = await handler.execute({

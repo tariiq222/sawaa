@@ -154,6 +154,12 @@ model ChatOperation {
   bookingId             String?
   resultMessageId       String?             @unique
   errorCode             String?
+  // Set once a guest intent has been revalidated after conversation claim.
+  // The result-message key prevents double-claim/resume from creating cards.
+  authResumedAt         DateTime?
+  authResumeMessageId   String?             @unique
+  resumedFromOperationId String?             @unique
+  resumedOperationId    String?              @unique
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 

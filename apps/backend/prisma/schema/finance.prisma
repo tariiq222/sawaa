@@ -173,6 +173,13 @@ enum RefundStatus {
   FAILED
 }
 
+enum RefundProviderState {
+  NOT_CALLED
+  CALL_UNKNOWN
+  CONFIRMED
+  FAILED
+}
+
 model RefundRequest {
   id           String       @id @default(uuid())
   invoiceId    String
@@ -188,6 +195,14 @@ model RefundRequest {
   processedBy  String?
   denialReason String?
   gatewayRef   String?
+  // Stable across BullMQ/outbox replay and sent to the provider on every
+  // attempt. sourceEventId binds cancellation events to one logical refund.
+  idempotencyKey       String?             @unique
+  sourceEventId        String?             @unique @db.Uuid
+  providerState        RefundProviderState @default(NOT_CALLED)
+  providerAttemptCount Int                 @default(0)
+  lastProviderAttemptAt DateTime?          @db.Timestamptz(3)
+  lastProviderError    String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -195,6 +210,7 @@ model RefundRequest {
   @@index([invoiceId])
   @@index([status])
   @@index([status, createdAt])
+  @@index([status, updatedAt])
   @@index([paymentId])
 }
 

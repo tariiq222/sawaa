@@ -69,6 +69,9 @@ model Booking {
   // Origin of the booking (front desk vs public website). Existing rows backfill to RECEPTION.
   source                 BookingSource       @default(RECEPTION)
   creationIdempotencyKey String?             @unique
+  // Canonical immutable command hash paired with creationIdempotencyKey.
+  // Nullable keeps every legacy/no-key caller backward compatible.
+  creationRequestHash    String?
   status                 BookingStatus       @default(PENDING)
   // Historical Booknetic rows preserve their source status but must never be
   // processed by live autocomplete/no-show automation.
@@ -248,6 +251,30 @@ model BookingStatusLog {
 
   @@index([bookingId])
   @@index([createdAt])
+}
+
+// Durable desired-state ledger for Zoom reschedules. The booking mutation and
+// this row are committed together; a transactional outbox event wakes the
+// worker, which may safely retry until the provider reflects this state.
+model BookingZoomSync {
+  id                  String    @id @default(uuid()) @db.Uuid
+  eventId             String    @unique @db.Uuid
+  bookingId           String
+  sourceActionId      String    @unique
+  zoomMeetingId       String
+  desiredTopic        String
+  desiredStartAt      DateTime  @db.Timestamptz(3)
+  desiredDurationMins Int
+  status              String    @default("PENDING") // PENDING | PROCESSING | COMPLETED
+  attemptCount        Int       @default(0)
+  lastAttemptAt       DateTime? @db.Timestamptz(3)
+  lastError           String?
+  completedAt         DateTime? @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([bookingId])
+  @@index([status, updatedAt])
 }
 
 // ─── BookingSettings ──────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import {
   STAFF_TIME_BLOCKING_BOOKING_STATUSES,
 } from '../active-booking-statuses';
+import { bookingCreationRequestHash } from './creation-request-hash';
 
 const futureDate = new Date(Date.now() + 86400_000);
 
@@ -120,6 +121,22 @@ const baseDto = {
   serviceId: 'svc-1',
   scheduledAt: futureDate,
 };
+
+const chatCreationHash = (scheduledAt = futureDate) => bookingCreationRequestHash({
+  branchId: 'branch-1',
+  clientId: 'client-1',
+  employeeId: 'emp-1',
+  serviceId: 'svc-1',
+  scheduledAt,
+  endsAt: new Date(scheduledAt.getTime() + 60 * 60_000),
+  durationMins: 60,
+  durationOptionId: null,
+  bookingType: 'INDIVIDUAL',
+  deliveryType: 'IN_PERSON',
+  price: 200,
+  currency: 'SAR',
+  source: 'AI_CHAT',
+});
 
 describe('CreateBookingHandler', () => {
   let handler: CreateBookingHandler;
@@ -1101,19 +1118,21 @@ describe('CreateBookingHandler', () => {
       ...baseDto,
       source: 'AI_CHAT',
       creationIdempotencyKey: 'operation-1',
+      creationRequestHash: chatCreationHash(),
     });
 
     expect(order.slice(0, 5)).toEqual([
       'lock',
       'idempotency',
-      'client-overlap',
       'lock',
-      'employee-overlap',
+      'idempotency',
+      'client-overlap',
     ]);
     expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         source: 'AI_CHAT',
         creationIdempotencyKey: 'operation-1',
+        creationRequestHash: chatCreationHash(),
       }),
     }));
   });
@@ -1127,6 +1146,7 @@ describe('CreateBookingHandler', () => {
       ...baseDto,
       source: 'AI_CHAT',
       creationIdempotencyKey: 'operation-1',
+      creationRequestHash: chatCreationHash(),
     })).rejects.toThrow('Client already has an overlapping appointment');
 
     expect(prisma.booking.findFirst).toHaveBeenCalledWith({
@@ -1158,7 +1178,10 @@ describe('CreateBookingHandler', () => {
       source: 'AI_CHAT',
       payAtClinic: false,
       couponCode: null,
+      notes: null,
+      expiresAt: null,
       creationIdempotencyKey: 'operation-1',
+      creationRequestHash: chatCreationHash(),
     };
     prisma.booking.findUnique.mockResolvedValue(existing);
     prisma.invoice.findFirst.mockResolvedValue({ id: 'invoice-existing' });
@@ -1167,6 +1190,7 @@ describe('CreateBookingHandler', () => {
       ...baseDto,
       source: 'AI_CHAT',
       creationIdempotencyKey: 'operation-1',
+      creationRequestHash: chatCreationHash(),
     });
 
     expect(result).toEqual(expect.objectContaining({ id: 'book-1', invoiceId: 'invoice-existing' }));
@@ -1192,12 +1216,15 @@ describe('CreateBookingHandler', () => {
       payAtClinic: false,
       couponCode: null,
       creationIdempotencyKey: 'operation-1',
+      creationRequestHash: chatCreationHash(),
     });
 
     await expect((handler.execute as (command: Record<string, unknown>) => Promise<unknown>)({
       ...baseDto,
+      branchId: 'different-request-branch',
       source: 'AI_CHAT',
       creationIdempotencyKey: 'operation-1',
+      creationRequestHash: chatCreationHash(),
     })).rejects.toThrow(ConflictException);
     expect(prisma.booking.create).not.toHaveBeenCalled();
   });
@@ -1207,10 +1234,57 @@ describe('CreateBookingHandler', () => {
       ...baseDto,
       source: 'AI_CHAT',
       creationIdempotencyKey: 'operation-1',
+      creationRequestHash: chatCreationHash(),
       transaction: prisma,
     });
 
     expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
     expect(prisma.booking.create).toHaveBeenCalled();
+  });
+
+  it('replays before expired-time, settings, price, and availability checks can change', async () => {
+    const originalTime = new Date('2026-08-20T10:00:00.000Z');
+    const requestHash = chatCreationHash(originalTime);
+    prisma.booking.findUnique.mockResolvedValue({
+      ...mockBooking,
+      scheduledAt: originalTime,
+      endsAt: new Date(originalTime.getTime() + 60 * 60_000),
+      clientId: 'client-1',
+      branchId: 'branch-1',
+      employeeId: 'emp-1',
+      serviceId: 'svc-1',
+      durationOptionId: null,
+      bookingType: 'INDIVIDUAL',
+      deliveryType: 'IN_PERSON',
+      currency: 'SAR',
+      source: 'AI_CHAT',
+      payAtClinic: false,
+      couponCode: null,
+      notes: null,
+      expiresAt: null,
+      creationIdempotencyKey: 'operation-replay',
+      creationRequestHash: requestHash,
+    });
+    prisma.invoice.findFirst.mockResolvedValue({ id: 'invoice-existing' });
+    settingsHandler.execute.mockRejectedValue(new Error('settings changed'));
+    priceResolver.resolve.mockRejectedValue(new Error('price changed'));
+    availabilityHandler.execute.mockRejectedValue(new Error('slot no longer available'));
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-21T10:00:00.000Z'));
+    try {
+      const result = await (handler.execute as unknown as (command: Record<string, unknown>) => Promise<Record<string, unknown>>)({
+        ...baseDto,
+        scheduledAt: originalTime,
+        source: 'AI_CHAT',
+        creationIdempotencyKey: 'operation-replay',
+        creationRequestHash: requestHash,
+      });
+      expect(result.id).toBe('book-1');
+      expect(settingsHandler.execute).not.toHaveBeenCalled();
+      expect(priceResolver.resolve).not.toHaveBeenCalled();
+      expect(availabilityHandler.execute).not.toHaveBeenCalled();
+      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

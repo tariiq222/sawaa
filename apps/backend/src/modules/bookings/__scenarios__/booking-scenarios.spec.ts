@@ -53,6 +53,7 @@ import {
 	mockBooking,
 } from "../testing/booking-test-helpers";
 import { DEFAULT_ORG_ID } from "../../../common/constants";
+import { stableEventId } from "../../../common/events";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1047,8 +1048,11 @@ describe("Scenario 16 — Race condition: two clients book last slot simultaneou
 			scheduledAt: sharedSlot,
 		});
 
-		// Second booking finds the slot now occupied
-		prisma.booking.findFirst.mockResolvedValueOnce({ id: "book-16a" });
+			// Different client has no own overlap, then the employee-slot check
+			// observes the first booking after the advisory lock.
+			prisma.booking.findFirst
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({ id: "book-16a" });
 
 		await expect(
 			handler.execute({
@@ -1695,16 +1699,20 @@ describe("Scenario 26 — Staff cancels all doctor sessions, full refund + resch
 
 		expect(result.status).toBe(BookingStatus.CANCELLED);
 		expect(result.refundType).toBe(RefundType.FULL);
-		expect(eventBus.publish).toHaveBeenCalledWith(
-			"bookings.booking.cancelled",
-			expect.objectContaining({
-				payload: expect.objectContaining({
-					bookingId: "book-26",
-					reason: CancellationReason.EMPLOYEE_UNAVAILABLE,
-					cancelNotes: "Doctor emergency — all day cancelled",
+			expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+				data: expect.objectContaining({
+					id: stableEventId("booking:book-26:direct-cancel:lifecycle"),
+					eventType: "bookings.booking.cancelled",
+					payload: expect.objectContaining({
+						payload: expect.objectContaining({
+							bookingId: "book-26",
+							reason: CancellationReason.EMPLOYEE_UNAVAILABLE,
+							cancelNotes: "Doctor emergency — all day cancelled",
+						}),
+					}),
 				}),
-			}),
-		);
+			});
+			expect(eventBus.publish).not.toHaveBeenCalled();
 		expect(zoomService.deleteMeeting).toHaveBeenCalledWith(
 			DEFAULT_ORG_ID,
 			"zoom-26",

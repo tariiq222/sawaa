@@ -132,4 +132,32 @@ describe('toChatMessageResponse', () => {
     });
     expect(forgedCard).not.toHaveProperty('metadata');
   });
+
+  it('allows the public-safe appointments-listed result without private fields', () => {
+    const result = toChatMessageResponse({
+      id: 'message-5',
+      conversationId: 'conversation-1',
+      senderType: MessageSenderType.SYSTEM,
+      body: 'لا توجد مواعيد مسجلة حاليًا.',
+      kind: ChatMessageKind.OPERATION_RESULT,
+      clientMessageId: null,
+      createdAt: new Date('2026-08-13T10:04:00.000Z'),
+      metadata: {
+        operationId: 'operation-2',
+        type: ChatOperationType.LIST_OWN_APPOINTMENTS,
+        status: ChatOperationStatus.SUCCEEDED,
+        bookingId: null,
+        outcome: 'APPOINTMENTS_LISTED',
+        clientId: 'must-not-leak',
+      },
+    });
+
+    expect(result.metadata).toEqual({
+      operationId: 'operation-2',
+      type: ChatOperationType.LIST_OWN_APPOINTMENTS,
+      status: ChatOperationStatus.SUCCEEDED,
+      bookingId: null,
+      outcome: 'APPOINTMENTS_LISTED',
+    });
+  });
 });

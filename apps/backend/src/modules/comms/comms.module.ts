@@ -91,6 +91,7 @@ import { ListOwnAppointmentsHandler } from './chat/operations/list-own-appointme
 import { AcknowledgeExistingBookingHandler } from './chat/operations/acknowledge-existing-booking.handler';
 import { ConfirmOperationHandler } from './chat/operations/confirm-operation.handler';
 import { DeclineOperationHandler } from './chat/operations/decline-operation.handler';
+import { ResumeChatOperationsHandler } from './chat/operations/resume-chat-operations.handler';
 
 const handlers = [
   SendPushHandler,
@@ -165,6 +166,7 @@ const handlers = [
   AcknowledgeExistingBookingHandler,
   ConfirmOperationHandler,
   DeclineOperationHandler,
+  ResumeChatOperationsHandler,
 ];
 
 const eventHandlers = [

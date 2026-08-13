@@ -21,6 +21,7 @@ import { ClientRescheduleBookingHandler } from '../../../bookings/client/client-
 import { ClientCancelBookingHandler } from '../../../bookings/client/client-cancel-booking.handler';
 import { hashToInt32 } from '../../../bookings/booking-lifecycle.helper';
 import { ACTIVE_BOOKING_STATUSES } from '../../../bookings/active-booking-statuses';
+import { bookingCreationRequestHash } from '../../../bookings/create-booking/creation-request-hash';
 import { lockChatConversation } from '../conversation-lock.helper';
 import { assertOperationOwnership, lockChatOperation } from './acknowledge-existing-booking.handler';
 import {
@@ -39,7 +40,7 @@ export interface ConfirmOperationCommand {
 type MutationResult = {
   bookingId: string;
   outcome: 'BOOKING_CREATED' | 'BOOKING_RESCHEDULED' | 'BOOKING_CANCELLED' | 'CANCELLATION_REQUESTED';
-  postCommit?: () => Promise<void>;
+  syncPending?: boolean;
 };
 
 class OperationExecutionError extends Error {
@@ -67,7 +68,6 @@ export class ConfirmOperationHandler {
 
   async execute(command: ConfirmOperationCommand): Promise<ChatOperation> {
     let executionStarted = false;
-    let postCommit: (() => Promise<void>) | undefined;
 
     try {
       const completed = await this.rlsTransaction.withTransaction(async (tx) => {
@@ -127,11 +127,11 @@ export class ConfirmOperationHandler {
         executionStarted = true;
 
         const mutation = await this.executeMutation(tx, operation);
-        postCommit = mutation.postCommit;
         const messageId = await this.writeResultMessage(tx, operation, {
           status: ChatOperationStatus.SUCCEEDED,
           bookingId: mutation.bookingId,
           outcome: mutation.outcome,
+          syncPending: mutation.syncPending,
         });
         return tx.chatOperation.update({
           where: { id: operation.id },
@@ -145,7 +145,6 @@ export class ConfirmOperationHandler {
         });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-      if (postCommit) await postCommit().catch(() => {});
       return completed;
     } catch (error) {
       if (!executionStarted) throw error;
@@ -162,11 +161,26 @@ export class ConfirmOperationHandler {
 
     if (operation.type === ChatOperationType.CREATE_BOOKING) {
       const creationIdempotencyKey = `chat-operation:${operation.id}`;
+      const creationRequestHash = bookingCreationRequestHash({
+        branchId: this.string(payload, 'branchId'),
+        clientId,
+        employeeId: this.string(payload, 'employeeId'),
+        serviceId: this.string(payload, 'serviceId'),
+        scheduledAt: this.string(payload, 'scheduledAt'),
+        endsAt: this.string(payload, 'endsAt'),
+        durationMins: this.number(payload, 'durationMins'),
+        durationOptionId: this.optionalString(payload, 'durationOptionId'),
+        bookingType: this.string(payload, 'bookingType'),
+        deliveryType: this.deliveryType(payload, 'deliveryType'),
+        price: this.number(payload, 'price'),
+        currency: this.string(payload, 'currency'),
+        source: 'AI_CHAT',
+      });
       const recovered = await tx.booking.findUnique({
         where: { creationIdempotencyKey },
       });
       if (recovered) {
-        this.assertRecoveredCreation(payload, clientId, recovered);
+        this.assertRecoveredCreation(payload, clientId, creationRequestHash, recovered);
         return { bookingId: recovered.id, outcome: 'BOOKING_CREATED' };
       }
       if (operation.requiredConfirmations === 1) {
@@ -211,6 +225,7 @@ export class ConfirmOperationHandler {
         currency: trusted.currency,
         source: 'AI_CHAT',
         creationIdempotencyKey,
+        creationRequestHash,
         transaction: tx,
       });
       return { bookingId: booking.id, outcome: 'BOOKING_CREATED' };
@@ -234,7 +249,7 @@ export class ConfirmOperationHandler {
         return {
           bookingId: result.booking.id,
           outcome: 'BOOKING_RESCHEDULED',
-          postCommit: result.postCommit,
+          syncPending: Boolean(result.booking.zoomMeetingId),
         };
       }
       const fresh = await this.quote.quoteReschedule({
@@ -251,7 +266,7 @@ export class ConfirmOperationHandler {
       return {
         bookingId: result.booking.id,
         outcome: 'BOOKING_RESCHEDULED',
-        postCommit: result.postCommit,
+        syncPending: Boolean(result.booking.zoomMeetingId),
       };
     }
 
@@ -273,7 +288,6 @@ export class ConfirmOperationHandler {
           outcome: result.status === 'CANCEL_REQUESTED'
             ? 'CANCELLATION_REQUESTED'
             : 'BOOKING_CANCELLED',
-          postCommit: result.postCommit,
         };
       }
       const fresh = await this.quote.quoteCancellation({ clientId, bookingId, transaction: tx });
@@ -289,7 +303,6 @@ export class ConfirmOperationHandler {
         outcome: result.status === 'CANCEL_REQUESTED'
           ? 'CANCELLATION_REQUESTED'
           : 'BOOKING_CANCELLED',
-        postCommit: result.postCommit,
       };
     }
 
@@ -333,6 +346,7 @@ export class ConfirmOperationHandler {
       status: ChatOperationStatus;
       bookingId: string | null;
       outcome: string;
+      syncPending?: boolean;
     },
   ): Promise<string> {
     await lockChatConversation(tx, operation.conversationId);
@@ -349,6 +363,7 @@ export class ConfirmOperationHandler {
           status: result.status,
           bookingId: result.bookingId,
           outcome: result.outcome,
+          ...(result.syncPending ? { syncPending: true } : {}),
         },
       },
     });
@@ -386,6 +401,7 @@ export class ConfirmOperationHandler {
   private assertRecoveredCreation(
     payload: Record<string, Prisma.JsonValue>,
     clientId: string,
+    creationRequestHash: string,
     booking: {
       clientId: string;
       branchId: string;
@@ -400,6 +416,7 @@ export class ConfirmOperationHandler {
       price: Prisma.Decimal;
       currency: string;
       source: string;
+      creationRequestHash: string | null;
     },
   ): void {
     const matches = booking.clientId === clientId
@@ -414,7 +431,8 @@ export class ConfirmOperationHandler {
       && booking.deliveryType === this.deliveryType(payload, 'deliveryType')
       && Number(booking.price) === this.number(payload, 'price')
       && booking.currency === this.string(payload, 'currency')
-      && booking.source === 'AI_CHAT';
+      && booking.source === 'AI_CHAT'
+      && booking.creationRequestHash === creationRequestHash;
     if (!matches) {
       throw new OperationExecutionError(
         'IDEMPOTENCY_CONFLICT',

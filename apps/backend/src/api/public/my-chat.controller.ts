@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ClientSession } from '../../common/auth/client-session.decorator';
@@ -22,6 +22,7 @@ import { ConfirmOperationHandler } from '../../modules/comms/chat/operations/con
 import { DeclineOperationHandler } from '../../modules/comms/chat/operations/decline-operation.handler';
 import { OperationVersionDto } from '../../modules/comms/chat/operations/operation-version.dto';
 import { toPublicChatOperation } from '../../modules/comms/chat/operations/chat-operation-public.mapper';
+import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -32,6 +33,8 @@ type CookieRequest = Request & { cookies?: Record<string, unknown> };
 @Public()
 @Controller('public/me/chat')
 export class MyChatController {
+  private readonly logger = new Logger(MyChatController.name);
+
   constructor(
     private readonly getCurrentConversation: GetCurrentConversationHandler,
     private readonly claimConversation: ClaimConversationHandler,
@@ -42,6 +45,7 @@ export class MyChatController {
     private readonly acknowledgeOperation: AcknowledgeExistingBookingHandler,
     private readonly confirmOperation: ConfirmOperationHandler,
     private readonly declineOperation: DeclineOperationHandler,
+    private readonly resumeOperations: ResumeChatOperationsHandler,
   ) {}
 
   @Get('conversations/current')
@@ -72,8 +76,20 @@ export class MyChatController {
       clientId: session.id,
       guestToken,
     });
+    let resumedOperations: ReturnType<typeof toPublicChatOperation>[] = [];
+    try {
+      resumedOperations = (await this.resumeOperations.execute({
+        conversationId,
+        clientId: session.id,
+      })).map(toPublicChatOperation);
+    } catch (error) {
+      // The identity claim is already committed. A transient resume failure must
+      // never roll it back or leave the guest cookie usable; retrying claim/resume
+      // remains safe because guest operations are row-locked and linked once.
+      this.logger.warn(`Guest chat operations could not be resumed: ${error instanceof Error ? error.name : 'UnknownError'}`);
+    }
     response.clearCookie(CHAT_GUEST_COOKIE_NAME, this.tokens.clearCookieOptions());
-    return conversation;
+    return { ...conversation, resumedOperations };
   }
 
   @Post('conversations/:conversationId/messages')

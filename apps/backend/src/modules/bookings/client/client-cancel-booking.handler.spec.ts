@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ClientCancelBookingHandler } from './client-cancel-booking.handler';
+import { stableEventId } from '../../../common/events';
 import { mockBooking, buildPrisma, buildRlsTransaction } from '../testing/booking-test-helpers';
 
 const buildGroupCapacity = () => ({ recalculateGroupStatus: jest.fn().mockResolvedValue(undefined) });
@@ -208,6 +209,11 @@ describe('ClientCancelBookingHandler', () => {
       sourceActionResult: { kind: 'CANCELLATION', bookingId: 'book-1', status: 'CANCELLED', requiresApproval: false },
     }) });
     expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: stableEventId('booking:book-1:client-cancel:22222222-2222-4222-8222-222222222222'),
+      }),
+    });
     expect(eventBus.publish).not.toHaveBeenCalled();
   });
 

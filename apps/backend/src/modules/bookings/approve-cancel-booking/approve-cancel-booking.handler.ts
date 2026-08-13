@@ -3,8 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RefundType } from '@prisma/client';
+import { Prisma, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { stableEventId } from '../../../common/events';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.event';
@@ -29,7 +30,7 @@ export class ApproveCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
+    _eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly groupSessionCapacity: ProgramCapacityService,
     private readonly refundHandler: RefundPaymentHandler,
@@ -76,6 +77,7 @@ export class ApproveCancelBookingHandler {
 
     let refundRequestId: string | null = null;
     let idempotencyKey: string | null = null;
+    const cancellationEventId = stableEventId(`booking:${booking.id}:cancel-approved`);
 
     const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
       const results = await Promise.all([
@@ -113,6 +115,7 @@ export class ApproveCancelBookingHandler {
             reason: `Booking ${cmd.bookingId} cancel-approval (${effectiveRefundType})`,
             performedBy: cmd.approvedBy,
             amount: refundAmount,
+            sourceEventId: cancellationEventId,
           });
           refundRequestId = created.refundRequestId;
           idempotencyKey = created.idempotencyKey;
@@ -134,22 +137,29 @@ export class ApproveCancelBookingHandler {
         await tx.programEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
         await this.groupSessionCapacity.decrementEnrollment(tx, booking.programId);
       }
+
+      const event = new BookingCancelApprovedEvent({
+        bookingId: booking.id,
+        clientId: booking.clientId,
+        employeeId: booking.employeeId,
+        autoRefund,
+        approverNotes: cmd.approverNotes,
+        refundType: cmd.refundType,
+        refundAmount: cmd.refundAmount,
+        paymentId: completedPayment?.id ?? null,
+        refundRequestId,
+        idempotencyKey,
+      }, cancellationEventId);
+      await tx.outboxEvent.create({
+        data: {
+          id: event.eventId,
+          aggregateId: booking.id,
+          eventType: event.eventName,
+          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      });
       return results;
     });
-
-    const event = new BookingCancelApprovedEvent({
-      bookingId: booking.id,
-      clientId: booking.clientId,
-      employeeId: booking.employeeId,
-      autoRefund,
-      approverNotes: cmd.approverNotes,
-      refundType: cmd.refundType,
-      refundAmount: cmd.refundAmount,
-      paymentId: completedPayment?.id ?? null,
-      refundRequestId,
-      idempotencyKey,
-    });
-    await this.eventBus.publish(event.eventName, event.toEnvelope());
 
     return { ...updated, autoRefund };
   }

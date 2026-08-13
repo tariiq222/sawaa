@@ -37,6 +37,7 @@ describe('RefundPaymentHandler', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    outboxEvent: { create: jest.fn() },
     $queryRaw: jest.fn(),
   };
   prisma.$transaction = jest.fn(async (cb: (tx: unknown) => Promise<unknown>) => await cb(prisma));
@@ -46,6 +47,12 @@ describe('RefundPaymentHandler', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    prisma.refundRequest.update.mockReset().mockResolvedValue({});
+    prisma.refundRequest.updateMany.mockReset().mockResolvedValue({ count: 1 });
+    prisma.refundRequest.findUnique.mockReset().mockResolvedValue(null);
+    prisma.outboxEvent.create.mockReset().mockResolvedValue({});
+    eventBus.publish.mockReset().mockResolvedValue(undefined);
+    moyasar.createRefund.mockReset();
     jest.spyOn(RequestContextModule.RequestContextStorage, 'get').mockReturnValue(undefined);
 
     const module = await Test.createTestingModule({
@@ -379,7 +386,7 @@ describe('RefundPaymentHandler', () => {
       expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
-    it('calls moyasar, updates DB in tx, and publishes event on success', async () => {
+    it('calls Moyasar, records confirmation, finalizes accounting, and writes the completion outbox in one tx', async () => {
       prisma.refundRequest.findUniqueOrThrow.mockResolvedValue({
         id: 'rr-1',
         paymentId: 'pay-1',
@@ -403,18 +410,24 @@ describe('RefundPaymentHandler', () => {
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(prisma.refundRequest.updateMany).toHaveBeenCalledWith({
         where: { id: 'rr-1', status: RefundStatus.PROCESSING },
-        data: { status: RefundStatus.COMPLETED, gatewayRef: 'moy-ref-1' },
+        data: expect.objectContaining({
+          status: RefundStatus.COMPLETED,
+          gatewayRef: 'moy-ref-1',
+          providerState: 'CONFIRMED',
+        }),
       });
-      expect(eventBus.publish).toHaveBeenCalledWith(
-        'finance.refund.completed',
-        expect.objectContaining({
+      expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id: 'rr-1',
+          aggregateId: 'rr-1',
+          eventType: 'finance.refund.completed',
           payload: expect.objectContaining({
-            refundRequestId: 'rr-1',
-            paymentId: 'pay-1',
-            amount: 100,
+            eventId: 'rr-1',
+            payload: expect.objectContaining({ refundRequestId: 'rr-1', amount: 100 }),
           }),
         }),
-      );
+      });
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
     it('sends an integer halala amount to Moyasar when the DB yields a Decimal', async () => {
@@ -441,15 +454,16 @@ describe('RefundPaymentHandler', () => {
           data: expect.objectContaining({ refundedAmount: { increment: 15055 } }),
         }),
       );
-      expect(eventBus.publish).toHaveBeenCalledWith(
-        'finance.refund.completed',
-        expect.objectContaining({
-          payload: expect.objectContaining({ amount: 15055 }),
+      expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          payload: expect.objectContaining({
+            payload: expect.objectContaining({ amount: 15055 }),
+          }),
         }),
-      );
+      });
     });
 
-    it('publishes event even when eventBus.publish rejects', async () => {
+    it('does not enqueue before commit; the transactional outbox is the only completion transport', async () => {
       prisma.refundRequest.findUniqueOrThrow.mockResolvedValue({
         id: 'rr-1',
         paymentId: 'pay-1',
@@ -462,20 +476,139 @@ describe('RefundPaymentHandler', () => {
       prisma.refundRequest.updateMany.mockResolvedValue({ count: 1 });
       prisma.invoice.findUniqueOrThrow.mockResolvedValue(makeInvoice());
       prisma.invoice.findUnique.mockResolvedValue(makeInvoice());
-      eventBus.publish.mockRejectedValue(new Error('bus down'));
+      await handler.finalizeRefundFromCancellation({ refundRequestId: 'rr-1', idempotencyKey: 'idemp-1' });
 
-      // Should not throw because catch swallows the publish error
-      await expect(
-        handler.finalizeRefundFromCancellation({ refundRequestId: 'rr-1', idempotencyKey: 'idemp-1' }),
-      ).resolves.toBeUndefined();
+      expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
 
-      expect(eventBus.publish).toHaveBeenCalledTimes(1);
+    it('retries an unknown provider call with the same key and never marks it FAILED on a transient error', async () => {
+      const processing = {
+        id: 'rr-1', paymentId: 'pay-1', amount: 100, invoiceId: 'inv-1',
+        status: RefundStatus.PROCESSING, gatewayRef: null,
+        idempotencyKey: 'idemp-1', sourceEventId: '11111111-1111-4111-8111-111111111111',
+        providerState: 'CALL_UNKNOWN',
+      };
+      prisma.refundRequest.findUniqueOrThrow.mockResolvedValue(processing);
+      prisma.payment.findUniqueOrThrow.mockResolvedValue({ id: 'pay-1', gatewayRef: 'gateway-ref-1' });
+      prisma.refundRequest.updateMany.mockResolvedValue({ count: 1 });
+      moyasar.createRefund
+        .mockRejectedValueOnce(new Error('timeout after provider may have accepted'))
+        .mockResolvedValueOnce({ id: 'moy-ref-1' });
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(makeInvoice());
+
+      await expect(handler.finalizeRefundFromCancellation({
+        refundRequestId: 'rr-1', idempotencyKey: 'idemp-1',
+        sourceEventId: '11111111-1111-4111-8111-111111111111',
+      })).rejects.toThrow('timeout');
+      await handler.finalizeRefundFromCancellation({
+        refundRequestId: 'rr-1', idempotencyKey: 'idemp-1',
+        sourceEventId: '11111111-1111-4111-8111-111111111111',
+      });
+
+      expect(moyasar.createRefund).toHaveBeenCalledTimes(2);
+      expect(moyasar.createRefund.mock.calls[0][1].idempotencyKey).toBe('idemp-1');
+      expect(moyasar.createRefund.mock.calls[1][1].idempotencyKey).toBe('idemp-1');
+      expect(prisma.refundRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          providerState: 'CALL_UNKNOWN',
+          lastProviderError: expect.stringContaining('retry'),
+        }),
+      }));
+    });
+
+    it('records a definitive provider 404 as FAILED while rethrowing the first consumer delivery', async () => {
+      prisma.refundRequest.findUniqueOrThrow.mockResolvedValue({
+        id: 'rr-1', paymentId: 'pay-1', amount: 100, invoiceId: 'inv-1',
+        status: RefundStatus.PROCESSING, gatewayRef: null,
+        idempotencyKey: 'idemp-1', sourceEventId: null, providerState: 'NOT_CALLED',
+      });
+      prisma.payment.findUniqueOrThrow.mockResolvedValue({ id: 'pay-1', gatewayRef: 'missing-payment' });
+      moyasar.createRefund.mockRejectedValue(new NotFoundException('Moyasar payment not found'));
+
+      await expect(handler.finalizeRefundFromCancellation({
+        refundRequestId: 'rr-1', idempotencyKey: 'idemp-1',
+      })).rejects.toThrow(NotFoundException);
+
+      expect(prisma.refundRequest.updateMany).toHaveBeenCalledWith({
+        where: { id: 'rr-1', status: RefundStatus.PROCESSING },
+        data: expect.objectContaining({
+          status: RefundStatus.FAILED,
+          providerState: 'FAILED',
+        }),
+      });
+    });
+
+    it('acknowledges replay of a durably failed provider outcome without another call', async () => {
+      prisma.refundRequest.findUniqueOrThrow.mockResolvedValue({
+        id: 'rr-1', paymentId: 'pay-1', amount: 100, invoiceId: 'inv-1',
+        status: RefundStatus.FAILED, gatewayRef: null,
+        idempotencyKey: 'idemp-1', sourceEventId: null, providerState: 'FAILED',
+      });
+
+      await handler.finalizeRefundFromCancellation({ refundRequestId: 'rr-1', idempotencyKey: 'idemp-1' });
+
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
+      expect(prisma.payment.findUniqueOrThrow).not.toHaveBeenCalled();
+    });
+
+    it('recovers a crash after provider confirmation without a second provider mutation', async () => {
+      const beforeProvider = {
+        id: 'rr-1', paymentId: 'pay-1', amount: 100, invoiceId: 'inv-1',
+        status: RefundStatus.PROCESSING, gatewayRef: null,
+        idempotencyKey: 'idemp-1', sourceEventId: null, providerState: 'NOT_CALLED',
+      };
+      const providerConfirmed = {
+        ...beforeProvider, gatewayRef: 'moy-ref-1', providerState: 'CONFIRMED',
+      };
+      prisma.refundRequest.findUniqueOrThrow
+        .mockResolvedValueOnce(beforeProvider)
+        .mockResolvedValueOnce(providerConfirmed);
+      prisma.payment.findUniqueOrThrow.mockResolvedValue({ id: 'pay-1', gatewayRef: 'gateway-ref-1' });
+      moyasar.createRefund.mockResolvedValue({ id: 'moy-ref-1' });
+      prisma.refundRequest.updateMany.mockResolvedValue({ count: 1 });
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(makeInvoice());
+      prisma.$transaction
+        .mockRejectedValueOnce(new Error('crash before accounting commit'))
+        .mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => cb(prisma));
+
+      await expect(handler.finalizeRefundFromCancellation({
+        refundRequestId: 'rr-1', idempotencyKey: 'idemp-1',
+      })).rejects.toThrow('crash before accounting commit');
+      await handler.finalizeRefundFromCancellation({ refundRequestId: 'rr-1', idempotencyKey: 'idemp-1' });
+
+      expect(moyasar.createRefund).toHaveBeenCalledTimes(1);
+      expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
     });
   });
 
   // ── execute ───────────────────────────────────────────────────────────────
 
   describe('execute', () => {
+    it('acknowledges a source-event replay after DB finalize without another refund or preflight', async () => {
+      prisma.refundRequest.findUnique.mockResolvedValue({
+        id: 'rr-existing',
+        paymentId: 'pay-1',
+        status: RefundStatus.COMPLETED,
+        idempotencyKey: 'refund:rr-existing',
+      });
+      prisma.payment.findUniqueOrThrow.mockResolvedValue({
+        id: 'pay-1',
+        status: PaymentStatus.REFUNDED,
+      });
+
+      const result = await handler.execute({
+        paymentId: 'pay-1',
+        reason: 'legacy cancellation replay',
+        sourceEventId: '11111111-1111-4111-8111-111111111111',
+      });
+
+      expect(result).toMatchObject({ id: 'pay-1', status: PaymentStatus.REFUNDED });
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.refundRequest.create).not.toHaveBeenCalled();
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
+    });
+
     it('throws NotFoundException when payment is not found', async () => {
       prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce([]);
@@ -567,7 +700,7 @@ describe('RefundPaymentHandler', () => {
       expect(params.idempotencyKey).not.toBe('refund:pay-1:50.00');
     });
 
-    it('full success path: creates refund request, calls moyasar, finalizes DB, publishes event', async () => {
+    it('full success path: creates refund request, calls Moyasar, finalizes DB, and commits an outbox event', async () => {
       let txCallCount = 0;
       prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         txCallCount++;
@@ -590,15 +723,16 @@ describe('RefundPaymentHandler', () => {
 
       expect(result.status).toBe(PaymentStatus.REFUNDED);
       expect(moyasar.createRefund).toHaveBeenCalledWith(DEFAULT_ORG_ID, expect.any(Object));
-      expect(eventBus.publish).toHaveBeenCalledWith(
-        'finance.refund.completed',
-        expect.objectContaining({
-          payload: expect.objectContaining({ paymentId: 'pay-1' }),
+      expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id: 'test-uuid-1234',
+          eventType: 'finance.refund.completed',
         }),
-      );
+      });
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
-    it('marks refund FAILED when Moyasar rejects the refund', async () => {
+    it('keeps an ambiguous Moyasar failure PROCESSING/CALL_UNKNOWN for stable-key retry', async () => {
       prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());
         prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice());
@@ -614,11 +748,14 @@ describe('RefundPaymentHandler', () => {
 
       expect(prisma.refundRequest.update).toHaveBeenCalledWith({
         where: { id: 'test-uuid-1234' },
-        data: { status: RefundStatus.FAILED },
+        data: expect.objectContaining({
+          providerState: 'CALL_UNKNOWN',
+          lastProviderError: expect.stringContaining('retry'),
+        }),
       });
     });
 
-    it('still throws when marking FAILED after Moyasar rejection also fails', async () => {
+    it('does not call the provider when persisting CALL_UNKNOWN fails before the external boundary', async () => {
       prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());
         prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice());
@@ -627,10 +764,10 @@ describe('RefundPaymentHandler', () => {
         return cb(prisma);
       });
 
-      moyasar.createRefund.mockRejectedValue(new Error('Moyasar declined'));
       prisma.refundRequest.update.mockRejectedValue(new Error('DB write failed'));
 
-      await expect(handler.execute({ paymentId: 'pay-1', reason: 'test' })).rejects.toThrow('Moyasar declined');
+      await expect(handler.execute({ paymentId: 'pay-1', reason: 'test' })).rejects.toThrow('DB write failed');
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
     });
 
     it('persists gatewayRef and throws when DB finalize fails after Moyasar success', async () => {
@@ -654,11 +791,14 @@ describe('RefundPaymentHandler', () => {
 
       expect(prisma.refundRequest.update).toHaveBeenCalledWith({
         where: { id: 'test-uuid-1234' },
-        data: { gatewayRef: 'moy-ref-1' },
+        data: expect.objectContaining({
+          gatewayRef: 'moy-ref-1',
+          providerState: 'CONFIRMED',
+        }),
       });
     });
 
-    it('throws when even persisting gatewayRef after finalize failure fails', async () => {
+    it('rethrows when durable provider confirmation cannot be persisted', async () => {
       let txCallCount = 0;
       prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         txCallCount++;
@@ -673,12 +813,15 @@ describe('RefundPaymentHandler', () => {
       });
 
       moyasar.createRefund.mockResolvedValue({ id: 'moy-ref-1' });
-      prisma.refundRequest.update.mockRejectedValue(new Error('persist gatewayRef failed'));
+      prisma.refundRequest.update
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('persist provider confirmation failed'));
 
-      await expect(handler.execute({ paymentId: 'pay-1', reason: 'test' })).rejects.toThrow('DB deadlock');
+      await expect(handler.execute({ paymentId: 'pay-1', reason: 'test' }))
+        .rejects.toThrow('persist provider confirmation failed');
     });
 
-    it('publishes event with catch when eventBus.publish rejects', async () => {
+    it('does not depend on an in-memory publish after accounting commits', async () => {
       let txCallCount = 0;
       prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         txCallCount++;
@@ -701,7 +844,8 @@ describe('RefundPaymentHandler', () => {
       const result = await handler.execute({ paymentId: 'pay-1', reason: 'test' });
 
       expect(result.status).toBe(PaymentStatus.REFUNDED);
-      expect(eventBus.publish).toHaveBeenCalledTimes(1);
+      expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
     it('R-08: allows a second refund against a PARTIALLY_REFUNDED payment (was blocked before)', async () => {

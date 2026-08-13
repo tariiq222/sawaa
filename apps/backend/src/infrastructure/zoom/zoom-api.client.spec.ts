@@ -123,9 +123,50 @@ describe('ZoomApiClient', () => {
       expect(body).toEqual({ topic: 'Only topic' });
     });
 
-    it('should log error on failure', async () => {
+    it('should throw on failure so the durable worker retries', async () => {
       mockedFetch.mockResolvedValue({ ok: false, status: 404, text: jest.fn().mockResolvedValue('Not found') });
-      await expect(client.updateMeeting('token', '123', {}, 'UTC')).resolves.toBeUndefined();
+      await expect(client.updateMeeting('token', '123', {}, 'UTC'))
+        .rejects.toThrow(InternalServerErrorException);
+    });
+  });
+
+  describe('getMeeting', () => {
+    it('returns the provider state used for read-before-write recovery', async () => {
+      mockedFetch.mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          id: 123,
+          topic: 'Booking book-1',
+          start_time: '2026-08-20T10:00:00Z',
+          duration: 60,
+        }),
+      });
+
+      await expect(client.getMeeting('token', '123')).resolves.toEqual({
+        id: 123,
+        topic: 'Booking book-1',
+        startTime: '2026-08-20T10:00:00Z',
+        durationMins: 60,
+      });
+      expect(mockedFetch).toHaveBeenCalledWith(
+        'https://api.zoom.us/v2/meetings/123',
+        expect.objectContaining({
+          method: 'GET',
+          headers: { Authorization: 'Bearer token' },
+        }),
+        10000,
+      );
+    });
+
+    it('throws when provider state cannot be read so the worker retries', async () => {
+      mockedFetch.mockResolvedValue({
+        ok: false,
+        status: 503,
+        text: jest.fn().mockResolvedValue('unavailable'),
+      });
+
+      await expect(client.getMeeting('token', '123'))
+        .rejects.toThrow(InternalServerErrorException);
     });
   });
 

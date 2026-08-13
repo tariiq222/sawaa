@@ -25,6 +25,7 @@ describe('OnBookingCancelApprovedRefundHandler', () => {
     handler.register();
     expect(eventBus.subscribe).toHaveBeenCalledWith(
       'bookings.booking.cancel_approved',
+      'finance.booking-cancel-approved-refund',
       expect.any(Function),
     );
   });
@@ -64,7 +65,7 @@ describe('OnBookingCancelApprovedRefundHandler', () => {
     expect(refund.finalizeRefundFromCancellation).not.toHaveBeenCalled();
   });
 
-  it('does not throw when finalize fails (logs only)', async () => {
+  it('rethrows finalize failures so BullMQ retries the consumer job', async () => {
     refund.finalizeRefundFromCancellation.mockRejectedValueOnce(new Error('moyasar 502'));
     await expect(
       handler.handle({
@@ -78,6 +79,6 @@ describe('OnBookingCancelApprovedRefundHandler', () => {
           paymentId: 'pay-1',
         },
       } as any),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow('moyasar 502');
   });
 });

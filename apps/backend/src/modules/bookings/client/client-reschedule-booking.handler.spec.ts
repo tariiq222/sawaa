@@ -1,8 +1,8 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ClientRescheduleBookingHandler } from './client-reschedule-booking.handler';
+import { stableEventId } from '../../../common/events';
 import { mockBooking, buildPrisma, buildRlsTransaction } from '../testing/booking-test-helpers';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const futureBooking = {
   ...mockBooking,
@@ -189,9 +189,57 @@ describe('ClientRescheduleBookingHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('keeps the existing duration when updating Zoom', async () => {
+  it('commits the existing duration as durable Zoom desired state plus outbox event', async () => {
     const prisma = buildPrisma();
     const newScheduledAt = new Date(Date.now() + 72 * 3_600_000);
+    prisma.booking.findUnique.mockResolvedValue({
+      ...futureBooking,
+      zoomMeetingId: 'zoom-123',
+    });
+    const zoomService = buildZoomService();
+    const availability = buildAvailabilityHandler();
+    const handler = new ClientRescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      zoomService as never,
+      availability as never,
+    );
+
+    const sourceActionId = '11111111-1111-4111-8111-111111111111';
+    const result = await handler.execute({
+      bookingId: 'book-1',
+      clientId: 'client-1',
+      newScheduledAt: newScheduledAt.toISOString(),
+      sourceActionId,
+    });
+
+    expect(result.booking).toBeDefined();
+    expect(prisma.bookingZoomSync.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        bookingId: 'book-1',
+        zoomMeetingId: 'zoom-123',
+        desiredStartAt: newScheduledAt,
+        desiredDurationMins: 60,
+        desiredTopic: 'Booking book-1',
+        eventId: stableEventId(`booking:book-1:zoom-reschedule:${sourceActionId}`),
+        sourceActionId,
+      }),
+    });
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        eventType: 'bookings.zoom.reschedule_requested',
+        id: stableEventId(`booking:book-1:zoom-reschedule:${sourceActionId}`),
+        payload: expect.objectContaining({
+          payload: expect.objectContaining({ bookingId: 'book-1' }),
+        }),
+      }),
+    });
+    expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+  });
+
+  it('never calls Zoom inline, so provider availability cannot roll back the booking mutation', async () => {
+    const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({
       ...futureBooking,
       zoomMeetingId: 'zoom-123',
@@ -209,51 +257,12 @@ describe('ClientRescheduleBookingHandler', () => {
     const result = await handler.execute({
       bookingId: 'book-1',
       clientId: 'client-1',
-      newScheduledAt: newScheduledAt.toISOString(),
-    });
-
-    expect(result.booking).toBeDefined();
-    expect(zoomService.updateMeeting).toHaveBeenCalledWith(
-      DEFAULT_ORG_ID,
-      'zoom-123',
-      {
-        topic: 'Booking book-1',
-        startTime: newScheduledAt.toISOString(),
-        durationMins: 60,
-      },
-    );
-  });
-
-  it('swallows zoom updateMeeting rejection and still returns the committed booking', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findUnique.mockResolvedValue({
-      ...futureBooking,
-      zoomMeetingId: 'zoom-123',
-    });
-    const zoomService = {
-      updateMeeting: jest.fn().mockRejectedValue(new Error('zoom fail')),
-    };
-    const availability = buildAvailabilityHandler();
-    const handler = new ClientRescheduleBookingHandler(
-      prisma as never,
-      buildRlsTransaction(prisma) as never,
-      buildSettingsHandler() as never,
-      zoomService as never,
-      availability as never,
-    );
-
-    const result = await handler.execute({
-      bookingId: 'book-1',
-      clientId: 'client-1',
       newScheduledAt: new Date(Date.now() + 72 * 3_600_000).toISOString(),
     });
 
     expect(result.booking).toBeDefined();
-    expect(zoomService.updateMeeting).toHaveBeenCalledWith(
-      DEFAULT_ORG_ID,
-      'zoom-123',
-      expect.objectContaining({ durationMins: 60 }),
-    );
+    expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+    expect(prisma.bookingZoomSync.create).toHaveBeenCalledTimes(1);
   });
 
   it('skips zoom updateMeeting when booking has no zoomMeetingId', async () => {
@@ -280,6 +289,7 @@ describe('ClientRescheduleBookingHandler', () => {
 
     expect(result.booking).toBeDefined();
     expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+    expect(prisma.bookingZoomSync.create).not.toHaveBeenCalled();
   });
 
   it('calls availability handler with excludeBookingId for the rescheduled booking', async () => {

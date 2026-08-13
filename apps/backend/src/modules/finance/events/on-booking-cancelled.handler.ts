@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { BookingCancelledPayload } from '../../bookings/events/booking-cancelled.event';
 import { RefundPaymentHandler } from '../refund-payment/refund-payment.handler';
@@ -9,8 +9,6 @@ import { RefundPaymentHandler } from '../refund-payment/refund-payment.handler';
  */
 @Injectable()
 export class OnBookingCancelledRefundHandler {
-  private readonly logger = new Logger(OnBookingCancelledRefundHandler.name);
-
   constructor(
     private readonly eventBus: EventBusService,
     private readonly refund: RefundPaymentHandler,
@@ -19,6 +17,7 @@ export class OnBookingCancelledRefundHandler {
   register(): void {
     this.eventBus.subscribe<BookingCancelledPayload>(
       'bookings.booking.cancelled',
+      'finance.booking-cancelled-refund',
       (envelope: DomainEventEnvelope<BookingCancelledPayload>) => this.handle(envelope),
     );
   }
@@ -30,28 +29,21 @@ export class OnBookingCancelledRefundHandler {
     }
 
     if (refundRequestId && idempotencyKey) {
-      try {
-        await this.refund.finalizeRefundFromCancellation({ refundRequestId, idempotencyKey });
-      } catch (err) {
-        this.logger.error(
-          `Finalize refund from cancellation failed for booking ${bookingId} refundRequest ${refundRequestId}`,
-          err,
-        );
-      }
+      // Never swallow: BullMQ owns retry/backoff. The RefundRequest ledger and
+      // stable provider key make replay safe across every crash window.
+      await this.refund.finalizeRefundFromCancellation({
+        refundRequestId,
+        idempotencyKey,
+        sourceEventId: envelope.eventId,
+      });
       return;
     }
 
-    try {
-      await this.refund.execute({
-        paymentId,
-        reason: `Booking ${bookingId} cancellation (${refundType})`,
-        performedBy: clientId ?? 'system',
-      });
-    } catch (err) {
-      this.logger.error(
-        `Auto-refund failed for booking ${bookingId} payment ${paymentId}`,
-        err,
-      );
-    }
+    await this.refund.execute({
+      paymentId,
+      reason: `Booking ${bookingId} cancellation (${refundType})`,
+      performedBy: clientId ?? 'system',
+      ...(envelope.eventId ? { sourceEventId: envelope.eventId } : {}),
+    });
   }
 }

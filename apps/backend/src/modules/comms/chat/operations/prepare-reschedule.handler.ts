@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import {
   ChatOperationStatus,
   ChatOperationType,
@@ -30,13 +30,27 @@ export class PrepareRescheduleHandler {
     const expiresAt = new Date(Date.now() + 15 * 60_000);
     const idempotencyKey = this.key(command);
     if (!command.clientId) {
+      const newScheduledAt = new Date(command.newScheduledAt);
+      if (Number.isNaN(newScheduledAt.getTime())) {
+        throw new BadRequestException('New scheduled time is invalid');
+      }
       return this.createOrGet({
         conversationId: command.conversationId,
         clientId: null,
         type: ChatOperationType.RESCHEDULE_BOOKING,
         status: ChatOperationStatus.AWAITING_AUTH,
-        payload: { intent: 'RESCHEDULE_BOOKING' },
-        summary: { action: 'LOGIN_REQUIRED', intent: 'RESCHEDULE_BOOKING' },
+        payload: {
+          intent: 'RESCHEDULE_BOOKING',
+          request: {
+            bookingId: command.bookingId,
+            newScheduledAt: newScheduledAt.toISOString(),
+          },
+        },
+        summary: {
+          action: 'LOGIN_REQUIRED',
+          intent: 'RESCHEDULE_BOOKING',
+          newScheduledAt: newScheduledAt.toISOString(),
+        },
         idempotencyKey,
         requiredConfirmations: 0,
         expiresAt,

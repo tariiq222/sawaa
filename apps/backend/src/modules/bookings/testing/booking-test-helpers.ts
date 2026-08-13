@@ -37,6 +37,12 @@ const buildPrismaRaw = () => ({
   outboxEvent: {
     create: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
   },
+  bookingZoomSync: {
+    create: jest.fn().mockResolvedValue({ id: 'zoom-sync-1' }),
+    findUnique: jest.fn().mockResolvedValue(null),
+    update: jest.fn().mockResolvedValue({}),
+    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+  },
   activityLog: {
     create: jest.fn().mockResolvedValue({ id: 'activity-1' }),
     findMany: jest.fn().mockResolvedValue([]),

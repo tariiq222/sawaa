@@ -10,9 +10,10 @@ import {
   Prisma,
   RefundType,
 } from '@prisma/client';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
+import { stableEventId } from '../../../common/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientCancelBookingDto } from './client-cancel-booking.dto';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
@@ -39,23 +40,24 @@ type CancelResult = {
   status: 'CANCELLED' | 'CANCEL_REQUESTED';
   booking: Awaited<ReturnType<typeof updateBookingAtomically>>;
   requiresApproval: boolean;
-  /** Must be invoked only after an externally supplied transaction commits. */
-  postCommit?: () => Promise<void>;
 };
 
 @Injectable()
 export class ClientCancelBookingHandler {
   constructor(
-    private readonly prisma: PrismaService,
+    _prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
-    private readonly eventBus: EventBusService,
+    _eventBus: EventBusService,
     private readonly refundHandler: RefundPaymentHandler,
     private readonly programCapacity: ProgramCapacityService,
   ) {}
 
   async execute(cmd: ClientCancelCommand): Promise<CancelResult> {
     const actionHash = this.actionHash(cmd);
+    const cancellationEventId = cmd.sourceActionId
+      ? stableEventId(`booking:${cmd.bookingId}:client-cancel:${cmd.sourceActionId}`)
+      : randomUUID();
     const mutate = async (tx: Prisma.TransactionClient): Promise<CancelResult> => {
       // Cancellation needs no employee-slot lock. The client lock precedes the booking mutation.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(cmd.clientId)}::int)`;
@@ -182,6 +184,7 @@ export class ClientCancelBookingHandler {
               reason: `Booking ${cmd.bookingId} cancellation (${refundType})`,
               performedBy: cmd.clientId,
               amount: refundAmount,
+              sourceEventId: cancellationEventId,
             });
             paymentId = completedPayment.id;
             refundRequestId = created.refundRequestId;
@@ -208,27 +211,21 @@ export class ClientCancelBookingHandler {
         paymentId,
         refundRequestId,
         idempotencyKey,
+      }, cancellationEventId);
+      await tx.outboxEvent.create({
+        data: {
+          id: event.eventId,
+          aggregateId: booking.id,
+          eventType: event.eventName,
+          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
       });
-      if (cmd.sourceActionId) {
-        await tx.outboxEvent.create({
-          data: {
-            id: cmd.sourceActionId,
-            aggregateId: booking.id,
-            eventType: event.eventName,
-            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
-          },
-        });
-      }
-      const postCommit = cmd.sourceActionId
-        ? undefined
-        : () => this.eventBus.publish(event.eventName, event.toEnvelope());
-      return { status: 'CANCELLED', booking: cancelled, requiresApproval: false, postCommit };
+      return { status: 'CANCELLED', booking: cancelled, requiresApproval: false };
     };
 
     const result = cmd.transaction
       ? await mutate(cmd.transaction)
       : await this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' });
-    if (!cmd.transaction && result.postCommit) await result.postCommit();
     return cmd.transaction ? result : {
       status: result.status,
       booking: result.booking,

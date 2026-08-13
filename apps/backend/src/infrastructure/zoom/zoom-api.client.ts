@@ -27,6 +27,13 @@ export interface ZoomMeetingResponse {
   start_url: string;
 }
 
+export interface ZoomMeetingState {
+  id: number;
+  topic: string;
+  startTime: string;
+  durationMins: number;
+}
+
 interface ZoomTokenResponse {
   access_token: string;
   expires_in: number;
@@ -195,7 +202,33 @@ export class ZoomApiClient implements OnModuleInit, OnModuleDestroy {
     if (!res.ok) {
       const error = await res.text();
       this.logger.error(`Failed to update Zoom meeting ${meetingId}: ${res.status} ${error}`);
+      throw new InternalServerErrorException(`Zoom meeting update failed: ${res.status}`);
     }
+  }
+
+  /** Read-before-write makes PATCH replay safe when a prior response was lost. */
+  async getMeeting(token: string, meetingId: string): Promise<ZoomMeetingState> {
+    const res = await this.fetchWithRetry(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const error = await res.text();
+      this.logger.error(`Failed to get Zoom meeting ${meetingId}: ${res.status} ${error}`);
+      throw new InternalServerErrorException(`Zoom meeting lookup failed: ${res.status}`);
+    }
+    const meeting = await res.json() as {
+      id: number;
+      topic: string;
+      start_time: string;
+      duration: number;
+    };
+    return {
+      id: meeting.id,
+      topic: meeting.topic,
+      startTime: meeting.start_time,
+      durationMins: meeting.duration,
+    };
   }
 
   private async fetchWithRetry(url: string, init?: RequestInit, retries = 3): Promise<Response> {

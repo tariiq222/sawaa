@@ -34,7 +34,7 @@ export class PrepareCancellationHandler {
         clientId: null,
         type: ChatOperationType.CANCEL_BOOKING,
         status: ChatOperationStatus.AWAITING_AUTH,
-        payload: { intent: 'CANCEL_BOOKING' },
+        payload: { intent: 'CANCEL_BOOKING', request: { bookingId: command.bookingId } },
         summary: { action: 'LOGIN_REQUIRED', intent: 'CANCEL_BOOKING' },
         idempotencyKey,
         requiredConfirmations: 0,

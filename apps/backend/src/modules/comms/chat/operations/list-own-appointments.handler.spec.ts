@@ -6,7 +6,7 @@ function harness(clientId: string | null) {
     id: 'operation-1', conversationId: 'conversation-1', clientId,
     type: ChatOperationType.LIST_OWN_APPOINTMENTS,
     status: ChatOperationStatus.AWAITING_AUTH,
-    payload: { intent: 'LIST_OWN_APPOINTMENTS' },
+    payload: { intent: 'LIST_OWN_APPOINTMENTS', request: {} },
     summary: { action: 'LOGIN_REQUIRED', intent: 'LIST_OWN_APPOINTMENTS' },
     idempotencyKey: 'key', requiredConfirmations: 0, confirmationCount: 0,
     version: 0, expiresAt: new Date('2026-08-13T09:15:00.000Z'),
@@ -39,6 +39,7 @@ describe('ListOwnAppointmentsHandler', () => {
       requiredConfirmations: 0,
     });
     expect(result.operation.expiresAt).toEqual(new Date('2026-08-13T09:15:00.000Z'));
+    expect(result.operation.payload).toEqual({ intent: 'LIST_OWN_APPOINTMENTS', request: {} });
     expect(list.execute).not.toHaveBeenCalled();
     expect(prisma.client.findFirst).not.toHaveBeenCalled();
   });

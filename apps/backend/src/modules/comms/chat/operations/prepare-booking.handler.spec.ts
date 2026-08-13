@@ -108,6 +108,17 @@ describe('PrepareBookingHandler', () => {
       version: 0,
     });
     expect(operation.expiresAt).toEqual(new Date(NOW.getTime() + 15 * 60_000));
+    expect(operation.payload).toEqual({
+      intent: 'CREATE_BOOKING',
+      request: {
+        branchId: 'branch-1',
+        employeeId: 'employee-1',
+        serviceId: 'service-1',
+        scheduledAt: START.toISOString(),
+        durationOptionId: null,
+        deliveryType: DeliveryType.IN_PERSON,
+      },
+    });
     expect(quote.quoteBooking).not.toHaveBeenCalled();
     expect(prisma.booking.findMany).not.toHaveBeenCalled();
     expect(JSON.stringify(prisma.chatOperation.create.mock.calls[0])).not.toMatch(/phone|WALK_IN|clientId.*forged/i);

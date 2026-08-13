@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import {
   ChatOperationStatus,
   ChatOperationType,
@@ -61,13 +61,32 @@ export class PrepareBookingHandler {
     const idempotencyKey = this.idempotencyKey(command);
 
     if (!command.clientId) {
+      const scheduledAt = new Date(command.scheduledAt);
+      if (Number.isNaN(scheduledAt.getTime())) {
+        throw new BadRequestException('Booking time is invalid');
+      }
       return this.createOrGet({
         conversationId: command.conversationId,
         clientId: null,
         type: ChatOperationType.CREATE_BOOKING,
         status: ChatOperationStatus.AWAITING_AUTH,
-        payload: { intent: 'CREATE_BOOKING' },
-        summary: { action: 'LOGIN_REQUIRED', intent: 'CREATE_BOOKING' },
+        payload: {
+          intent: 'CREATE_BOOKING',
+          request: {
+            branchId: command.branchId,
+            employeeId: command.employeeId,
+            serviceId: command.serviceId,
+            scheduledAt: scheduledAt.toISOString(),
+            durationOptionId: command.durationOptionId ?? null,
+            deliveryType: command.deliveryType,
+          },
+        },
+        summary: {
+          action: 'LOGIN_REQUIRED',
+          intent: 'CREATE_BOOKING',
+          scheduledAt: scheduledAt.toISOString(),
+          deliveryType: command.deliveryType,
+        },
         idempotencyKey,
         requiredConfirmations: 0,
         expiresAt,

@@ -5,13 +5,15 @@ import {
   Injectable,
 } from '@nestjs/common';
 import type { DeliveryType, Prisma } from '@prisma/client';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { stableEventId } from '../../../common/events';
+import { BookingZoomRescheduleRequestedEvent } from '../events/booking-zoom-reschedule-requested.event';
 import { assertTransition } from '../booking-state-machine';
 import {
   ACTIVE_BOOKING_STATUSES,
@@ -32,8 +34,6 @@ export type ClientRescheduleCommand = ClientRescheduleBookingDto & {
 
 type RescheduleResult = {
   booking: Awaited<ReturnType<typeof updateBookingAtomically>>;
-  /** Must be invoked only after an externally supplied transaction commits. */
-  postCommit?: () => Promise<void>;
 };
 
 @Injectable()
@@ -42,7 +42,7 @@ export class ClientRescheduleBookingHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
-    private readonly zoomMeetingService: ZoomMeetingService,
+    _zoomMeetingService: ZoomMeetingService,
     private readonly availabilityHandler: CheckAvailabilityHandler,
   ) {}
 
@@ -52,6 +52,9 @@ export class ClientRescheduleBookingHandler {
       throw new BadRequestException('New scheduled time must be in the future');
     }
     const actionHash = this.actionHash(cmd, newScheduledAt);
+    const zoomSyncEventId = cmd.sourceActionId
+      ? stableEventId(`booking:${cmd.bookingId}:zoom-reschedule:${cmd.sourceActionId}`)
+      : randomUUID();
 
     const mutate = async (tx: Prisma.TransactionClient): Promise<RescheduleResult> => {
       // Global booking lock order: client, then employee/slot, then booking mutation.
@@ -172,22 +175,41 @@ export class ClientRescheduleBookingHandler {
         },
       });
 
-      const postCommit = booking.zoomMeetingId
-        ? async () => {
-            await this.zoomMeetingService.updateMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId!, {
-              topic: `Booking ${booking.id}`,
-              startTime: newScheduledAt.toISOString(),
-              durationMins,
-            }).catch(() => {});
-          }
-        : undefined;
-      return { booking: updated, postCommit };
+      if (booking.zoomMeetingId) {
+        const sourceActionId = cmd.sourceActionId ?? zoomSyncEventId;
+        await tx.bookingZoomSync.create({
+          data: {
+            id: zoomSyncEventId,
+            eventId: zoomSyncEventId,
+            bookingId: booking.id,
+            sourceActionId,
+            zoomMeetingId: booking.zoomMeetingId,
+            desiredTopic: `Booking ${booking.id}`,
+            desiredStartAt: newScheduledAt,
+            desiredDurationMins: durationMins,
+          },
+        });
+        const event = new BookingZoomRescheduleRequestedEvent({
+          organizationId: DEFAULT_ORG_ID,
+          syncId: zoomSyncEventId,
+          bookingId: booking.id,
+          zoomMeetingId: booking.zoomMeetingId,
+        }, zoomSyncEventId);
+        await tx.outboxEvent.create({
+          data: {
+            id: event.eventId,
+            aggregateId: booking.id,
+            eventType: event.eventName,
+            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+      return { booking: updated };
     };
 
     const result = cmd.transaction
       ? await mutate(cmd.transaction)
       : await this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' });
-    if (!cmd.transaction && result.postCommit) await result.postCommit();
     return cmd.transaction ? result : { booking: result.booking };
   }
 
