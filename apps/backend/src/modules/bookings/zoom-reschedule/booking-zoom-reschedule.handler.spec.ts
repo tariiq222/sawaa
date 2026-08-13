@@ -30,6 +30,7 @@ const desired = {
 function setup(row = desired) {
   let bookingState = {
     id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: row.revision,
+    scheduledAt: row.desiredStartAt, durationMins: row.desiredDurationMins,
     zoomSyncLeaseOwner: null as string | null, zoomSyncLeaseExpiresAt: null as Date | null,
   };
   const prisma = {
@@ -52,7 +53,6 @@ function setup(row = desired) {
     },
     bookingZoomSync: {
       findUnique: jest.fn().mockResolvedValue(row),
-      findFirst: jest.fn().mockResolvedValue({ id: row.id }),
       update: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
@@ -99,10 +99,13 @@ describe('BookingZoomRescheduleHandler', () => {
     }));
   });
 
-  it('supersedes an out-of-order revisionless legacy event instead of PATCHing stale desired state', async () => {
+  it('supersedes a stale revisionless event with a tied creation time instead of using UUID order', async () => {
     const legacy = { ...envelope, payload: { ...envelope.payload, revision: undefined } };
     const { handler, zoom, prisma } = setup({ ...desired, revision: 0 });
-    prisma.bookingZoomSync.findFirst.mockResolvedValue({ id: 'newer-sync' });
+    prisma.booking.findUnique.mockResolvedValue({
+      id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: 0,
+      scheduledAt: new Date('2026-08-21T10:00:00.000Z'), durationMins: 60,
+    });
     await handler.handle(legacy);
     expect(zoom.updateMeeting).not.toHaveBeenCalled();
     expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith(expect.objectContaining({

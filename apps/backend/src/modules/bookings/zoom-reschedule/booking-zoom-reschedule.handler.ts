@@ -38,27 +38,31 @@ export class BookingZoomRescheduleHandler {
     }
     if (sync.status === 'COMPLETED' || sync.status === 'SUPERSEDED') return;
 
-    // Pre-transition events had no revision. Multiple old PENDING rows share
-    // the backfilled zero, so only the newest durable desired state may touch
-    // Zoom; stale deliveries become explicitly superseded.
-    if (event.payload.revision === undefined) {
-      const newestLegacy = await this.prisma.bookingZoomSync.findFirst({
-        where: { bookingId: sync.bookingId, revision: 0 },
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        select: { id: true },
-      });
-      if (newestLegacy && newestLegacy.id !== sync.id) {
-        await this.markSuperseded(sync.id);
-        return;
-      }
-    }
-
     const latest = await this.prisma.booking.findUnique({
       where: { id: sync.bookingId },
-      select: { id: true, zoomMeetingId: true, zoomSyncRevision: true },
+      select: {
+        id: true,
+        zoomMeetingId: true,
+        zoomSyncRevision: true,
+        scheduledAt: true,
+        durationMins: true,
+      },
     });
     if (!latest) throw new NotFoundException('Booking for Zoom synchronization not found');
-    if (latest.zoomMeetingId !== sync.zoomMeetingId || latest.zoomSyncRevision !== sync.revision) {
+    // Multiple pre-transition events have revision zero. Their createdAt and
+    // UUID are not a causal order, so the only safe winner is the desired row
+    // that still equals the booking's durable current schedule. A stale row is
+    // terminally superseded before it can lease or PATCH the remote meeting.
+    const matchesLegacyDesiredState = event.payload.revision !== undefined
+      || (
+        latest.scheduledAt.getTime() === sync.desiredStartAt.getTime()
+        && latest.durationMins === sync.desiredDurationMins
+      );
+    if (
+      latest.zoomMeetingId !== sync.zoomMeetingId
+      || latest.zoomSyncRevision !== sync.revision
+      || !matchesLegacyDesiredState
+    ) {
       await this.markSuperseded(sync.id);
       return;
     }
