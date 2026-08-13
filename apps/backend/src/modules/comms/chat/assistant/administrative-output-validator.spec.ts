@@ -1,46 +1,51 @@
 import { AdministrativeOutputValidator } from './administrative-output-validator';
+import { AdministrativeResponseRenderer } from './administrative-response-renderer';
+import { AdministrativeScopeGate } from './administrative-scope-gate';
 
 describe('AdministrativeOutputValidator', () => {
   const validator = new AdministrativeOutputValidator();
+  const renderer = new AdministrativeResponseRenderer(new AdministrativeScopeGate());
 
-  it('keeps a bounded administrative answer and approved public metadata', () => {
-    expect(validator.validate(
-      'يقع المركز في الرياض، ويعمل من 8 صباحًا إلى 4 مساءً.',
-      'ar',
-      null,
-    )).toEqual({
-      body: 'يقع المركز في الرياض، ويعمل من 8 صباحًا إلى 4 مساءً.',
+  it('accepts a bounded response carrying the deterministic renderer contract', () => {
+    const rendered = renderer.render([{
+      name: 'listServices',
+      result: { ok: true, data: [{ nameEn: 'Family guidance' }] },
+    }], 'en');
+
+    expect(validator.validate(rendered, 'en')).toEqual(rendered);
+  });
+
+  it('rejects free model content even if it claims an administrative topic', () => {
+    const result = validator.validate({
+      source: 'MODEL',
+      body: 'Center services are available. Take two pills daily.',
       metadata: null,
-    });
-  });
+    }, 'en');
 
-  it.each([
-    'بناءً على الأعراض تشخيصك هو ...',
-    'أقيم خطر الحالة بأنه مرتفع',
-    'اذهب إلى الطوارئ فورًا',
-    'Take this medication twice daily as treatment.',
-    'Diagnosis: severe anxiety. Risk assessment: high.',
-  ])('replaces malicious or prohibited model output with the fixed neutral handoff response', (output) => {
-    const result = validator.validate(output, 'ar', null);
-
-    expect(result).toEqual({
-      body: 'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
-      metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
-    });
-    expect(result.body).not.toMatch(/تشخيص|خطر|طوارئ|diagnos|risk|emergency/i);
-  });
-
-  it('replaces unrelated non-administrative model output', () => {
-    const result = validator.validate('Here is a recipe and a political opinion.', 'en', null);
-
+    expect(result.body).toBe(
+      'Sorry, my role is limited to administrative information about the center and its services. I can offer the option to contact reception.',
+    );
     expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
-    expect(result.body).not.toContain('recipe');
   });
 
-  it('replaces output beyond the hard length cap', () => {
-    const result = validator.validate('a'.repeat(2_001), 'en', null);
+  it('rejects a forged renderer response beyond the hard output cap', () => {
+    const result = validator.validate({
+      source: 'DETERMINISTIC_RENDERER',
+      body: 'a'.repeat(2_001),
+      metadata: null,
+    }, 'en');
 
-    expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
     expect(result.body.length).toBeLessThan(2_001);
+    expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
+  });
+
+  it('rejects metadata outside the public handoff contract', () => {
+    const result = validator.validate({
+      source: 'DETERMINISTIC_RENDERER',
+      body: 'Available services:\n- Family guidance',
+      metadata: { toolInternals: 'secret' },
+    }, 'en');
+
+    expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
   });
 });

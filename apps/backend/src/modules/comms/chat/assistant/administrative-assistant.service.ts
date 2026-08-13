@@ -10,11 +10,14 @@ import { randomUUID } from 'node:crypto';
 import {
   ChatAdapter,
   type ChatMessage,
-  type CompletionWithToolsResult,
 } from '../../../../infrastructure/ai/chat.adapter';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { AdministrativeAssistantLeaseService } from './administrative-assistant-lease.service';
 import { AdministrativeOutputValidator } from './administrative-output-validator';
+import {
+  AdministrativeResponseRenderer,
+  type ExecutedAdministrativeTool,
+} from './administrative-response-renderer';
 import {
   buildAdministrativeSystemPrompt,
   getAdministrativeFallbackResponse,
@@ -24,7 +27,6 @@ import { AdministrativeScopeGate } from './administrative-scope-gate';
 import { AdministrativeToolContext } from './administrative-tool-context';
 import {
   AdministrativeToolsService,
-  type AdministrativeToolResult,
 } from './administrative-tools.service';
 
 const MAX_HISTORY_MESSAGES = 20;
@@ -66,6 +68,7 @@ export class AdministrativeAssistantService {
     private readonly tools: AdministrativeToolsService,
     private readonly lease: AdministrativeAssistantLeaseService,
     private readonly scopeGate: AdministrativeScopeGate,
+    private readonly renderer: AdministrativeResponseRenderer,
     private readonly outputValidator: AdministrativeOutputValidator,
   ) {}
 
@@ -142,19 +145,16 @@ export class AdministrativeAssistantService {
       if (!this.chat.isAvailable()) throw new Error('assistant unavailable');
       const history = await this.loadHistory(conversation.id, inbound.sequence);
       try {
-        const result = await this.runToolRounds(
+        const selection = await this.runToolRounds(
           [{ role: 'system', content: buildAdministrativeSystemPrompt() }, ...history],
           new AdministrativeToolContext(conversation.id, conversation.clientId),
         );
-        const validated = this.outputValidator.validate(
-          result.content ?? '',
-          conversation.language,
-          result.publicMetadata,
-        );
+        const rendered = this.renderer.render(selection.executions, conversation.language);
+        const validated = this.outputValidator.validate(rendered, conversation.language);
         body = validated.body;
         metadata = validated.metadata;
-        model = result.model;
-        tokensUsed = result.tokensUsed;
+        model = selection.model;
+        tokensUsed = selection.tokensUsed;
       } catch (error) {
         if (!(error instanceof AdministrativeLimitReached)) throw error;
         const fallback = getAdministrativeFallbackResponse(conversation.language, 'LIMIT_REACHED');
@@ -194,6 +194,10 @@ export class AdministrativeAssistantService {
     const boundedNewestFirst: ChatMessage[] = [];
     for (const row of rows) {
       if (remaining === 0) break;
+      if (
+        row.senderType !== MessageSenderType.AI
+        && this.scopeGate.classify(row.body) !== 'ADMINISTRATIVE'
+      ) continue;
       const content = Array.from(row.body).slice(0, remaining).join('');
       if (!content) break;
       boundedNewestFirst.push({
@@ -208,10 +212,15 @@ export class AdministrativeAssistantService {
   private async runToolRounds(
     messages: ChatMessage[],
     context: AdministrativeToolContext,
-  ): Promise<CompletionWithToolsResult & { publicMetadata: AdministrativePublicMetadata | null }> {
+  ): Promise<{
+    executions: ExecutedAdministrativeTool[];
+    model: string;
+    tokensUsed: number;
+  }> {
     let totalToolCalls = 0;
     let tokensUsed = 0;
-    let publicMetadata: AdministrativePublicMetadata | null = null;
+    let model = '';
+    const executions: ExecutedAdministrativeTool[] = [];
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
       const result = await this.chat.completeWithTools(
@@ -220,7 +229,8 @@ export class AdministrativeAssistantService {
         { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.2 },
       );
       tokensUsed += result.tokensUsed;
-      if (result.toolCalls.length === 0) return { ...result, tokensUsed, publicMetadata };
+      model = result.model;
+      if (result.toolCalls.length === 0) return { executions, model, tokensUsed };
       if (
         result.toolCalls.length > MAX_TOOL_CALLS_PER_ROUND
         || totalToolCalls + result.toolCalls.length > MAX_TOTAL_TOOL_CALLS
@@ -228,8 +238,9 @@ export class AdministrativeAssistantService {
         throw new AdministrativeLimitReached();
       }
 
-      messages.push({ role: 'assistant', content: result.content ?? '', toolCalls: result.toolCalls });
-      const results: AdministrativeToolResult[] = [];
+      // Model prose is never trusted as content; only allowlisted tool choices
+      // are carried into the next selection round.
+      messages.push({ role: 'assistant', content: '', toolCalls: result.toolCalls });
       for (const toolCall of result.toolCalls) {
         const toolResult = await this.tools.execute(
           toolCall.function.name,
@@ -237,8 +248,7 @@ export class AdministrativeAssistantService {
           context,
         );
         totalToolCalls += 1;
-        results.push(toolResult);
-        if (toolResult.ok && toolResult.publicMetadata) publicMetadata = toolResult.publicMetadata;
+        executions.push({ name: toolCall.function.name, result: toolResult });
         messages.push({
           role: 'tool',
           content: JSON.stringify({ ok: toolResult.ok, data: toolResult.ok ? toolResult.data : toolResult.error }),

@@ -25,4 +25,9 @@ describe('administrative policy', () => {
       handoff: { intent: 'HANDOFF_TO_RECEPTION', optionOnly: true },
     });
   });
+
+  it('limits the model to tool selection and declares prose content non-authoritative', () => {
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('Select tools only');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('Your prose content is ignored');
+  });
 });

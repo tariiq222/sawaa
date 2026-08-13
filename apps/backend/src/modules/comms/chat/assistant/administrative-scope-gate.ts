@@ -2,24 +2,62 @@ import { Injectable } from '@nestjs/common';
 
 export type AdministrativeScope = 'ADMINISTRATIVE' | 'OUT_OF_SCOPE';
 
-const PROHIBITED_PATTERNS = [
-  /\b(?:diagnos(?:e|is|tic)|symptoms?|treat(?:ment)?|medicat(?:e|ion)|clinical|medical|triage|risk|emergenc(?:y|ies)|suicid(?:e|al)|self[ -]?harm)\b/i,
-  /\b(?:assess|evaluate)\b.{0,24}\b(?:condition|risk|mental|health)\b/i,
-  /(?:^|\s)(?:تشخيص|يشخص|تشخص|شخص\s+حالتي|اعراض|الاعراض|علاج|العلاج|دواء|الدواء|حالتي\s+خطره|خطر|تقييم\s+خطر|طواري|الطواري|انتحار|ايذاء\s+نفسي)(?=\s|$)/u,
-  /\b(?:ignore|disregard|override|reveal|show)\b.{0,40}\b(?:instructions?|prompt|system|developer|tools?)\b/i,
-  /\b(?:jailbreak|prompt[ -]?injection)\b/i,
-  /(?:تجاهل|الغ|عطل).{0,30}(?:التعليمات|السياسه|النظام)|(?:اكشف|اعرض).{0,30}(?:البرومبت|التعليمات)/u,
-] as const;
+const MAX_INPUT_CHARS = 300;
+const MAX_INPUT_TOKENS = 40;
 
-const ADMINISTRATIVE_PATTERNS = [
-  /(?:^|\s)(?:المركز|مركز|سواء|خدمات|الخدمات|خدمه|الخدمه|معالج|المعالج|المعالجون|المعالجين|مختص|المختصين|اخصائي|الاخصائيين|موعد|مواعيد|حجز|متاح|متاحه|التوفر|سعر|السعر|الاسعار|موقع|موقعكم|العنوان|ساعات|الدوام|الاستقبال|حولني|تحويل)(?=\s|$)/u,
-  /\b(?:center|centre|services?|practitioners?|therapists?|appointments?|availability|available|prices?|cost|location|address|working hours|business hours|reception|handoff|transfer)\b/i,
-] as const;
+const ARABIC_ADMIN_WORDS = new Set([
+  'مركز', 'المركز', 'مركزكم', 'سواء',
+  'خدمه', 'الخدمه', 'خدمات', 'الخدمات',
+  'متاح', 'متاحه', 'المتاح', 'المتاحه', 'المتاحون', 'المتاحين', 'توفر', 'التوفر',
+  'معالج', 'المعالج', 'معالجون', 'المعالجون', 'معالجين', 'المعالجين',
+  'مختص', 'المختص', 'مختصون', 'المختصون', 'مختصين', 'المختصين',
+  'اخصائي', 'الاخصائي', 'اخصائيون', 'الاخصائيون', 'اخصائيين', 'الاخصائيين',
+  'موعد', 'الموعد', 'مواعيد', 'المواعيد', 'حجز', 'الحجز', 'احجز',
+  'شاغر', 'شاغره', 'شاغرون', 'شاغرين',
+  'سعر', 'السعر', 'اسعار', 'الاسعار', 'تكلفه', 'التكلفه',
+  'موقع', 'الموقع', 'موقعكم', 'عنوان', 'العنوان', 'عنوانكم',
+  'ساعه', 'الساعه', 'ساعات', 'الساعات', 'عمل', 'العمل', 'دوام', 'الدوام',
+  'استقبال', 'الاستقبال', 'تحويل', 'التحويل', 'حولني',
+  'تواصل', 'التواصل', 'اتواصل', 'هاتف', 'الهاتف', 'جوال', 'الجوال',
+  'رقم', 'الرقم', 'بريد', 'البريد', 'الكتروني',
+  'فرع', 'الفرع', 'فروع', 'الفروع', 'جلسه', 'الجلسه', 'جلسات', 'الجلسات',
+  'ارشاد', 'الارشاد', 'اسري', 'الاسري', 'استشاره', 'الاستشاره',
+  'اليوم', 'غدا', 'اسبوع', 'الاسبوع', 'قادم', 'القادم', 'صباحا', 'مساء', 'حضوري', 'اونلاين',
+]);
 
-const GREETING_PATTERNS = [
-  /^(?:مرحبا|اهلا|اهلين|السلام\s+عليكم|وعليكم\s+السلام|صباح\s+الخير|مساء\s+الخير)(?:\s+كيف\s+حالكم?)?$/u,
-  /^(?:hi|hello|hey|good morning|good evening)(?: how are you)?$/i,
-] as const;
+const ARABIC_GREETING_WORDS = new Set([
+  'مرحبا', 'اهلا', 'اهلين', 'السلام', 'عليكم', 'وعليكم', 'صباح', 'الخير', 'مساء',
+]);
+
+const ARABIC_STOP_WORDS = new Set([
+  'ما', 'ماذا', 'هل', 'من', 'هم', 'هو', 'هي', 'اين', 'متى', 'كيف', 'كم', 'التي', 'الذي',
+  'يمكن', 'يمكنني', 'ممكن', 'اريد', 'اود', 'معرفه', 'اعرف', 'اخبرني',
+  'يوجد', 'توجد', 'يقع', 'تعملون', 'تقدمون', 'يقدم', 'يقدمها', 'وما', 'وكيف', 'او', 'و',
+  'في', 'عن', 'على', 'الى', 'الي', 'مع', 'لديكم', 'لكم', 'لي', 'لنا', 'فضلا', 'لو', 'سمحت',
+]);
+
+const ENGLISH_ADMIN_WORDS = new Set([
+  'sawa', 'center', 'centre', 'service', 'services', 'practitioner', 'practitioners',
+  'therapist', 'therapists', 'counsellor', 'counsellors', 'counselor', 'counselors',
+  'appointment', 'appointments', 'availability', 'available', 'booking', 'bookings', 'book',
+  'price', 'prices', 'cost', 'costs', 'location', 'address', 'hour', 'hours', 'working',
+  'business', 'opening', 'open', 'schedule', 'schedules', 'time', 'times',
+  'reception', 'handoff', 'transfer', 'contact', 'phone', 'email', 'branch', 'branches',
+  'session', 'sessions', 'slot', 'slots', 'week', 'next', 'counseling', 'counselling',
+  'guidance', 'family', 'today', 'tomorrow', 'online', 'inperson',
+]);
+
+const ENGLISH_GREETING_WORDS = new Set([
+  'hi', 'hello', 'hey', 'good', 'morning', 'evening',
+]);
+
+const ENGLISH_STOP_WORDS = new Set([
+  'what', 'which', 'who', 'where', 'when', 'how', 'much', 'does', 'do', 'can', 'could',
+  'would', 'please', 'you', 'me', 'tell', 'show', 'list', 'give', 'find', 'are', 'is',
+  'a', 'an', 'the', 'at', 'in', 'on', 'for', 'of', 'to', 'and', 'or', 'with', 'about',
+  'i', 'we', 'your', 'want', 'like', 'have', 'has', 'there', 'any', 'offer', 'offers',
+  'get', 'know', 'see',
+]);
 
 @Injectable()
 export class AdministrativeScopeGate {
@@ -30,19 +68,31 @@ export class AdministrativeScopeGate {
 
 export function classifyAdministrativeText(message: string): AdministrativeScope {
   const normalized = normalizeAdministrativeText(message);
-  if (!normalized || hasProhibitedAdministrativeContent(normalized)) return 'OUT_OF_SCOPE';
-  if (GREETING_PATTERNS.some((pattern) => pattern.test(normalized))) return 'ADMINISTRATIVE';
-  return ADMINISTRATIVE_PATTERNS.some((pattern) => pattern.test(normalized))
-    ? 'ADMINISTRATIVE'
-    : 'OUT_OF_SCOPE';
+  if (!normalized || Array.from(normalized).length > MAX_INPUT_CHARS) return 'OUT_OF_SCOPE';
+
+  const tokens = normalized.split(' ');
+  if (tokens.length > MAX_INPUT_TOKENS) return 'OUT_OF_SCOPE';
+
+  let hasAdministrativeWord = false;
+  let hasGreetingWord = false;
+  for (const token of tokens) {
+    if (/^\d{1,4}$/.test(token)) continue;
+    if (ARABIC_ADMIN_WORDS.has(token) || ENGLISH_ADMIN_WORDS.has(token)) {
+      hasAdministrativeWord = true;
+      continue;
+    }
+    if (ARABIC_GREETING_WORDS.has(token) || ENGLISH_GREETING_WORDS.has(token)) {
+      hasGreetingWord = true;
+      continue;
+    }
+    if (ARABIC_STOP_WORDS.has(token) || ENGLISH_STOP_WORDS.has(token)) continue;
+    return 'OUT_OF_SCOPE';
+  }
+
+  return hasAdministrativeWord || hasGreetingWord ? 'ADMINISTRATIVE' : 'OUT_OF_SCOPE';
 }
 
-export function hasProhibitedAdministrativeContent(value: string): boolean {
-  const normalized = normalizeAdministrativeText(value);
-  return PROHIBITED_PATTERNS.some((pattern) => pattern.test(normalized));
-}
-
-function normalizeAdministrativeText(value: string): string {
+export function normalizeAdministrativeText(value: string): string {
   return value
     .normalize('NFKD')
     .replace(/[\u064B-\u065F\u0670]/g, '')
@@ -50,6 +100,7 @@ function normalizeAdministrativeText(value: string): string {
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
     .toLowerCase()
+    .replace(/in[ -]person/g, 'inperson')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim();
 }

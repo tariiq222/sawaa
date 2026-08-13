@@ -71,6 +71,7 @@ import { AdministrativeToolsService } from './chat/assistant/administrative-tool
 import { AdministrativeAssistantLeaseService } from './chat/assistant/administrative-assistant-lease.service';
 import { AdministrativeScopeGate } from './chat/assistant/administrative-scope-gate';
 import { AdministrativeOutputValidator } from './chat/assistant/administrative-output-validator';
+import { AdministrativeResponseRenderer } from './chat/assistant/administrative-response-renderer';
 
 const handlers = [
   SendPushHandler,
@@ -125,6 +126,7 @@ const handlers = [
   AdministrativeAssistantLeaseService,
   AdministrativeScopeGate,
   AdministrativeOutputValidator,
+  AdministrativeResponseRenderer,
 ];
 
 const eventHandlers = [
