@@ -1,5 +1,5 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 import { ApproveCancelBookingHandler } from './approve-cancel-booking.handler';
 import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
 
@@ -62,6 +62,29 @@ describe('ApproveCancelBookingHandler', () => {
     });
     expect(eb.publish).not.toHaveBeenCalled();
     expect(result.autoRefund).toBe(true);
+  });
+
+  it('fences approval against an active ONLINE reschedule sync lease', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, deliveryType: DeliveryType.ONLINE });
+    const handler = buildHandler(prisma);
+    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        AND: expect.arrayContaining([expect.objectContaining({
+          OR: expect.arrayContaining([expect.objectContaining({ zoomSyncLeaseOwner: null })]),
+        })]),
+      }),
+    }));
+  });
+
+  it('fails approval atomically when the active sync lease makes its booking CAS lose', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, deliveryType: DeliveryType.ONLINE });
+    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
+    const handler = buildHandler(prisma);
+    await expect(handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' })).rejects.toThrow('status changed concurrently');
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when booking not found', async () => {

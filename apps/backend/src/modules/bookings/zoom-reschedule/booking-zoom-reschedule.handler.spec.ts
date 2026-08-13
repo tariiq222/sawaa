@@ -217,6 +217,30 @@ describe('BookingZoomRescheduleHandler', () => {
     expect(zoom.updateMeeting).not.toHaveBeenCalled();
   });
 
+  it('aborts before PATCH when a delayed renewal rejects and surfaces the lost lease', async () => {
+    jest.useFakeTimers();
+    try {
+      const { handler, zoom, prisma } = setup();
+      const baseUpdate = prisma.booking.updateMany.getMockImplementation()!;
+      prisma.booking.updateMany.mockImplementation(async (input: any) => {
+        if (input.data.zoomSyncLeaseExpiresAt instanceof Date && input.data.zoomSyncLeaseOwner === undefined) {
+          throw new Error('renewal database unavailable');
+        }
+        return baseUpdate(input);
+      });
+      let releaseGet!: () => void;
+      zoom.getMeeting.mockImplementationOnce(() => new Promise<void>((resolve) => { releaseGet = resolve; }));
+      const delivery = handler.handle(envelope);
+      await Promise.resolve();
+      await jest.advanceTimersByTimeAsync(15_000);
+      releaseGet();
+      await expect(delivery).rejects.toThrow('lease was lost');
+      expect(zoom.updateMeeting).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('cannot let a failed older revision revert a newer successful desired state on replay', async () => {
     const revisionA = { ...desired, revision: 1, status: 'PENDING' };
     const revisionB = {

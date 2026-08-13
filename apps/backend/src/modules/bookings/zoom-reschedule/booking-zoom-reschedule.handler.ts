@@ -108,11 +108,13 @@ export class BookingZoomRescheduleHandler {
           await this.markSuperseded(sync.id);
           return;
         }
-        await this.withLeaseHeartbeat(sync.bookingId, leaseOwner, async () => {
+        await this.withLeaseHeartbeat(sync.bookingId, leaseOwner, async (assertLeaseHealthy) => {
+          assertLeaseHealthy();
           const current = await this.zoom.getMeeting(
             event.payload.organizationId,
             sync.zoomMeetingId,
           );
+          assertLeaseHealthy();
           const providerAlreadyCurrent =
             current.topic === sync.desiredTopic
             && current.durationMins === sync.desiredDurationMins
@@ -123,6 +125,7 @@ export class BookingZoomRescheduleHandler {
               await this.markSuperseded(sync.id);
               return;
             }
+            assertLeaseHealthy();
             await this.zoom.updateMeeting(
               event.payload.organizationId,
               sync.zoomMeetingId,
@@ -205,21 +208,33 @@ export class BookingZoomRescheduleHandler {
   }
 
   /** Keep the exclusive provider fence alive for slow Zoom calls. */
-  private async withLeaseHeartbeat<T>(bookingId: string, leaseOwner: string, work: () => Promise<T>): Promise<T> {
-    let lost = false;
-    const renew = async () => {
-      const result = await this.prisma.booking.updateMany({
-        where: { id: bookingId, zoomSyncLeaseOwner: leaseOwner },
-        data: { zoomSyncLeaseExpiresAt: new Date(Date.now() + 60_000) },
-      });
-      if (result.count !== 1) lost = true;
+  private async withLeaseHeartbeat<T>(
+    bookingId: string,
+    leaseOwner: string,
+    work: (assertLeaseHealthy: () => void) => Promise<T>,
+  ): Promise<T> {
+    let renewalFailure: unknown;
+    let renewal = Promise.resolve();
+    const assertLeaseHealthy = () => {
+      if (renewalFailure) throw new ConflictException('Zoom synchronization lease was lost');
     };
-    await renew();
-    if (lost) throw new ConflictException('Zoom synchronization lease was lost');
-    const timer = setInterval(() => { void renew(); }, 15_000);
+    // A serial promise chain observes every timer failure. Timers only enqueue
+    // work; they never leave a rejected Promise unhandled.
+    const renew = () => {
+      renewal = renewal.then(async () => {
+        const result = await this.prisma.booking.updateMany({
+          where: { id: bookingId, zoomSyncLeaseOwner: leaseOwner },
+          data: { zoomSyncLeaseExpiresAt: new Date(Date.now() + 60_000) },
+        });
+        if (result.count !== 1) throw new ConflictException('Zoom synchronization lease was lost');
+      }).catch((error) => { renewalFailure ??= error; });
+      return renewal;
+    };
+    const timer = setInterval(renew, 15_000);
     try {
-      const result = await work();
-      if (lost) throw new ConflictException('Zoom synchronization lease was lost');
+      const result = await work(assertLeaseHealthy);
+      await renewal;
+      assertLeaseHealthy();
       return result;
     } finally {
       clearInterval(timer);

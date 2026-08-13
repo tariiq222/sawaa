@@ -105,10 +105,17 @@ export class ClientCancelBookingHandler {
           data: { status: nextStatus, cancelNotes: cmd.reason ?? null },
           ...(booking.deliveryType === 'ONLINE' ? {
             extraWhere: {
-              OR: [
-                { zoomCreateLeaseOwner: null },
-                { zoomCreateLeaseExpiresAt: null },
-                { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+              AND: [
+                { OR: [
+                  { zoomCreateLeaseOwner: null },
+                  { zoomCreateLeaseExpiresAt: null },
+                  { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+                ] },
+                { OR: [
+                  { zoomSyncLeaseOwner: null },
+                  { zoomSyncLeaseExpiresAt: null },
+                  { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+                ] },
               ],
             },
           } : {}),
@@ -160,10 +167,17 @@ export class ClientCancelBookingHandler {
         },
         ...(booking.deliveryType === 'ONLINE' ? {
           extraWhere: {
-            OR: [
-              { zoomCreateLeaseOwner: null },
-              { zoomCreateLeaseExpiresAt: null },
-              { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+            AND: [
+              { OR: [
+                { zoomCreateLeaseOwner: null },
+                { zoomCreateLeaseExpiresAt: null },
+                { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+              ] },
+              { OR: [
+                { zoomSyncLeaseOwner: null },
+                { zoomSyncLeaseExpiresAt: null },
+                { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+              ] },
             ],
           },
         } : {}),

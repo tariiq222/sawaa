@@ -79,9 +79,8 @@ export class ApproveCancelBookingHandler {
     let idempotencyKey: string | null = null;
     const cancellationEventId = stableEventId(`booking:${booking.id}:cancel-approved`);
 
-    const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
-      const results = await Promise.all([
-        updateBookingAtomically(tx, {
+    const updated = await this.rlsTransaction.withTransaction(async (tx) => {
+      const updatedBooking = await updateBookingAtomically(tx, {
           bookingId: cmd.bookingId,
           currentStatus: booking.status,
           actionLabel: 'cancelled',
@@ -91,24 +90,30 @@ export class ApproveCancelBookingHandler {
           },
           ...(booking.deliveryType === 'ONLINE' ? {
             extraWhere: {
-              OR: [
-                { zoomCreateLeaseOwner: null },
-                { zoomCreateLeaseExpiresAt: null },
-                { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+              AND: [
+                { OR: [
+                  { zoomCreateLeaseOwner: null },
+                  { zoomCreateLeaseExpiresAt: null },
+                  { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+                ] },
+                { OR: [
+                  { zoomSyncLeaseOwner: null },
+                  { zoomSyncLeaseExpiresAt: null },
+                  { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+                ] },
               ],
             },
           } : {}),
-        }),
-        tx.bookingStatusLog.create({
-          data: {
-            bookingId: cmd.bookingId,
-            fromStatus: booking.status,
-            toStatus: nextStatus,
-            changedBy: cmd.approvedBy,
-            reason: statusLogReason,
-          },
-        }),
-      ]);
+        });
+      await tx.bookingStatusLog.create({
+        data: {
+          bookingId: cmd.bookingId,
+          fromStatus: booking.status,
+          toStatus: nextStatus,
+          changedBy: cmd.approvedBy,
+          reason: statusLogReason,
+        },
+      });
 
       // MONEY SAFETY: create the RefundRequest atomically with the status
       // change so a crash between commit and publish cannot lose the refund.
@@ -167,7 +172,7 @@ export class ApproveCancelBookingHandler {
           payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
         },
       });
-      return results;
+      return updatedBooking;
     });
 
     return { ...updated, autoRefund };

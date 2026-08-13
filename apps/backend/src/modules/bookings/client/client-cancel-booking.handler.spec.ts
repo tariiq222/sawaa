@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 import { ClientCancelBookingHandler } from './client-cancel-booking.handler';
 import { stableEventId } from '../../../common/events';
 import { mockBooking, buildPrisma, buildRlsTransaction } from '../testing/booking-test-helpers';
@@ -89,6 +89,29 @@ describe('ClientCancelBookingHandler', () => {
         data: expect.objectContaining({ status: BookingStatus.CANCEL_REQUESTED }),
       }),
     );
+  });
+
+  it('does not commit a client cancellation while an ONLINE reschedule sync lease is active', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, deliveryType: DeliveryType.ONLINE });
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        AND: expect.arrayContaining([expect.objectContaining({
+          OR: expect.arrayContaining([expect.objectContaining({ zoomSyncLeaseOwner: null })]),
+        })]),
+      }),
+    }));
+  });
+
+  it('fails atomically without status log when the active sync lease makes the cancellation CAS lose', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, deliveryType: DeliveryType.ONLINE });
+    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow('status changed concurrently');
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when booking does not exist', async () => {
