@@ -279,6 +279,11 @@ export const envValidationSchema = Joi.object({
     for (const key of sensitiveKeys) {
       const v = value[key];
       if (typeof v !== 'string' || v.length === 0) continue;
+      if (key === 'CHAT_GUEST_TOKEN_SECRET' && /^(?:ci|test)-/i.test(v)) {
+        return helpers.error('any.invalid', {
+          message: `${key} contains a non-production fixture and must be replaced before running in production`,
+        });
+      }
       if (placeholderSubstrings.some((p) => v.includes(p))) {
         return helpers.error('any.invalid', {
           message: `${key} contains a dev placeholder and must be replaced before running in production`,

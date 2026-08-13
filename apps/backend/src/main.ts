@@ -142,7 +142,9 @@ async function bootstrap(): Promise<void> {
       'SUPER_ADMIN_PASSWORD',
     ]) {
       const v = config.get<string>(key);
-      if (!v || bannedPatterns.some((p) => p.test(v))) {
+      const isGuestTokenFixture =
+        key === 'CHAT_GUEST_TOKEN_SECRET' && /^(?:ci|test)-/i.test(v ?? '');
+      if (!v || isGuestTokenFixture || bannedPatterns.some((p) => p.test(v))) {
         throw new Error(
           `Refusing to boot: ${key} is missing or set to a known dev placeholder`,
         );

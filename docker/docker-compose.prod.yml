@@ -67,6 +67,9 @@ services:
       JWT_CLIENT_ACCESS_SECRET: ${JWT_CLIENT_ACCESS_SECRET}
       JWT_CLIENT_ACCESS_TTL: ${JWT_CLIENT_ACCESS_TTL:-7d}
 
+      # Guest chat capability HMAC secret
+      CHAT_GUEST_TOKEN_SECRET: ${CHAT_GUEST_TOKEN_SECRET}
+
       # SMTP (Comms BC)
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: "${SMTP_PORT:-587}"

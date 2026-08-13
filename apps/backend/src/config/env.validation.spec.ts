@@ -130,6 +130,28 @@ describe('envValidationSchema', () => {
     expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
   });
 
+  it.each([
+    'ci-chat-guest-token-secret-32chars-long',
+    'test-chat-guest-token-secret-for-e2e-only',
+  ])('rejects the non-production guest token fixture %s in production', (fixture) => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: fixture },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+  });
+
+  it.each([
+    'ci-chat-guest-token-secret-32chars-long',
+    'test-chat-guest-token-secret-for-e2e-only',
+  ])('allows the non-production guest token fixture %s outside production', (fixture) => {
+    const result = envValidationSchema.validate(
+      buildDevEnv({ CHAT_GUEST_TOKEN_SECRET: fixture }),
+      { abortEarly: false },
+    );
+    expect(result.error).toBeUndefined();
+  });
+
   it('allows production to boot when the optional WhatsApp integration is not configured', () => {
     process.env.NODE_ENV = 'production';
     const env = {
