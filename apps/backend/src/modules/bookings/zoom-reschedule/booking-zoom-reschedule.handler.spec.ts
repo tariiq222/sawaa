@@ -117,6 +117,30 @@ describe('BookingZoomRescheduleHandler', () => {
     }));
   });
 
+  it('finishes the queued desired sync while cancellation is only requested, so a later rejection needs no replacement event', async () => {
+    const { handler, zoom, prisma } = setup();
+    // Sequence: reschedule emits this outbox row → client requests cancel →
+    // staff may reject back to active. CANCEL_REQUESTED is non-terminal, so
+    // the original durable event must remain able to converge Zoom.
+    let leaseOwner: string | null = null;
+    prisma.booking.findUnique.mockImplementation(async () => ({
+      id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: 1,
+      scheduledAt: desired.desiredStartAt, durationMins: desired.desiredDurationMins,
+      status: BookingStatus.CANCEL_REQUESTED,
+      zoomSyncLeaseOwner: leaseOwner, zoomSyncLeaseExpiresAt: null,
+    }));
+    prisma.booking.updateMany.mockImplementation(async ({ data }: any) => {
+      if (typeof data.zoomSyncLeaseOwner === 'string') leaseOwner = data.zoomSyncLeaseOwner;
+      if (data.zoomSyncLeaseOwner === null) leaseOwner = null;
+      return { count: 1 };
+    });
+    await handler.handle(envelope);
+    expect(zoom.updateMeeting).toHaveBeenCalledTimes(1);
+    expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'COMPLETED' }),
+    }));
+  });
+
   it('supersedes a stale revisionless event with a tied creation time instead of using UUID order', async () => {
     const legacy = { ...envelope, payload: { ...envelope.payload, revision: undefined } };
     const { handler, zoom, prisma } = setup({ ...desired, revision: 0 });

@@ -10,6 +10,9 @@ const ZOOM_SYNC_ELIGIBLE_STATUSES: BookingStatus[] = [
   BookingStatus.PENDING,
   BookingStatus.CONFIRMED,
   BookingStatus.DEPOSIT_PAID,
+  // A request is reversible; keep the existing desired outbox event alive so
+  // rejecting the request does not require synthesizing a replacement event.
+  BookingStatus.CANCEL_REQUESTED,
 ];
 
 @Injectable()
