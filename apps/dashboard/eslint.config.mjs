@@ -35,6 +35,7 @@ const FEATURES = [
   "programs",
   "packages",
   "whatsapp",
+  "conversations",
 ]
 
 /**
