@@ -6,6 +6,7 @@ describe('AdministrativeScopeGate', () => {
   it.each([
     'ايش الخدمات عندكم؟',
     'وش أسماء المعالجين؟',
+    'وش أسماء المعالجين المتاحين؟',
     'وين موقع المركز؟',
     'وش رقم المركز؟',
     'وش أوقات دوامكم؟',
@@ -158,10 +159,19 @@ describe('AdministrativeScopeGate', () => {
 
   it.each([
     'ايش الخدمات عندكم؟ 😊',
+    'ايش الخدمات عندكم؟ 👨‍👩‍👧‍👦',
     'وش أسماء المعالجين؟!',
     'What services do you offer?! 😊',
   ])('keeps natural questions with a small amount of punctuation or emoji: %s', (message) => {
     expect(gate.classify(message)).toBe('ADMINISTRATIVE');
+  });
+
+  it.each([
+    `${'😀'.repeat(250)}ايش الخدمات عندكم؟`,
+    `${'👨‍👩‍👧‍👦'.repeat(250)}ايش الخدمات عندكم؟`,
+    `${'\u200D'.repeat(250)}ايش الخدمات عندكم؟`,
+  ])('rejects 250 emoji/control grapheme floods without a ZWJ bypass: %s', (message) => {
+    expect(gate.classify(message)).toBe('OUT_OF_SCOPE');
   });
 
   it.each([

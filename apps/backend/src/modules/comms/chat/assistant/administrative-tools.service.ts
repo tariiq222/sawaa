@@ -20,6 +20,7 @@ const ALLOWED_TOOL_NAMES = [
 
 type AllowedToolName = (typeof ALLOWED_TOOL_NAMES)[number];
 type FunctionToolDefinition = Extract<ToolDefinition, { type: 'function' }>;
+type PublicCatalogService = Awaited<ReturnType<GetPublicCatalogHandler['execute']>>['services'][number];
 
 const PERSONAL_BOOKING_TOOL_NAMES = new Set([
   'createBooking',
@@ -30,6 +31,18 @@ const PERSONAL_BOOKING_TOOL_NAMES = new Set([
 export type AdministrativeToolResult =
   | { ok: true; data: unknown; publicMetadata?: AdministrativePublicMetadata }
   | { ok: false; error: { code: 'AUTH_REQUIRED' | 'INVALID_ARGUMENTS' | 'TOOL_NOT_ALLOWED' | 'TOOL_NOT_AVAILABLE' | 'TOOL_FAILED' } };
+
+export type AdministrativeServiceProjection = {
+  id?: string;
+  categoryId?: string;
+  nameAr?: string;
+  nameEn?: string;
+  durationMins?: number;
+  price?: number;
+  currency?: string;
+  showPrice?: boolean;
+  showDuration?: boolean;
+};
 
 const objectSchema = {
   type: 'object' as const,
@@ -256,21 +269,19 @@ export class AdministrativeToolsService {
     });
   }
 
-  private projectServices(values: unknown[]): Array<Record<string, unknown>> {
-    return this.capSerializedArray(values.slice(0, MAX_LIST_ITEMS).map((value) => {
-      const item = this.asRecord(value);
+  private projectServices(values: PublicCatalogService[]): AdministrativeServiceProjection[] {
+    return this.capSerializedArray(values.slice(0, MAX_LIST_ITEMS).map((item) => {
       return this.compact({
         id: this.text(item.id, 80),
         categoryId: this.text(item.categoryId, 80),
         nameAr: this.text(item.nameAr, MAX_SHORT_TEXT_CHARS),
         nameEn: this.text(item.nameEn, MAX_SHORT_TEXT_CHARS),
-        name: this.text(item.name, MAX_SHORT_TEXT_CHARS),
         durationMins: this.number(item.durationMins),
         price: this.number(item.price),
         currency: this.text(item.currency, 8),
         showPrice: this.boolean(item.showPrice),
         showDuration: this.boolean(item.showDuration),
-      });
+      }) as AdministrativeServiceProjection;
     }));
   }
 
@@ -315,8 +326,8 @@ export class AdministrativeToolsService {
     }));
   }
 
-  private capSerializedArray(values: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
-    const bounded: Array<Record<string, unknown>> = [];
+  private capSerializedArray<T extends object>(values: T[]): T[] {
+    const bounded: T[] = [];
     for (const value of values) {
       const candidate = [...bounded, value];
       if (JSON.stringify(candidate).length > MAX_TOOL_RESULT_CHARS) break;

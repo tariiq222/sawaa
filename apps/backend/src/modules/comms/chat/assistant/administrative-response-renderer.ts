@@ -3,12 +3,16 @@ import {
   getAdministrativeFallbackResponse,
   type AdministrativePublicMetadata,
 } from './administrative-policy';
-import type { AdministrativeToolResult } from './administrative-tools.service';
+import type {
+  AdministrativeServiceProjection,
+  AdministrativeToolResult,
+} from './administrative-tools.service';
 
 const MAX_RENDERED_CHARS = 2_000;
 const MAX_LABEL_CHARS = 80;
 const MAX_RAW_LABEL_CHARS = 240;
 const MAX_LABEL_TOKENS = 8;
+const MAX_SERVICE_NAME_TOKENS = 6;
 
 const PROHIBITED_LABEL_TOKENS = new Set([
   'تعليمات', 'التعليمات', 'اسرار', 'الاسرار', 'سر', 'السر', 'برومبت', 'البرومبت',
@@ -33,6 +37,48 @@ const MARKUP_PATTERN = /<[^>]*>/gu;
 const DANGEROUS_MARKUP_PATTERN = /<\s*\/?\s*(?:script|style|iframe|object|embed|svg|math)\b/iu;
 const CONTROL_OR_NEWLINE_PATTERN = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/gu;
 const BASIC_LABEL_PATTERN = /^[\p{L}\p{M}\p{N} .,'’&()/:+،؛-]+$/u;
+const BASIC_SERVICE_NAME_PATTERN = /^[-\p{L}\p{M} &'’]+$/u;
+const COLON_PATTERN = /[:：﹕꞉]/u;
+const ARABIC_TOKEN_PATTERN = /^\p{Script=Arabic}+$/u;
+const LATIN_TOKEN_PATTERN = /^\p{Script=Latin}+$/u;
+
+const ARABIC_SERVICE_HEADS = new Set([
+  'جلسه', 'الجلسه',
+  'استشاره', 'الاستشاره',
+  'ارشاد', 'الارشاد',
+  'متابعه', 'المتابعه',
+  'برنامج', 'البرنامج',
+  'باقه', 'الباقه',
+  'تقييم', 'التقييم',
+]);
+
+const ARABIC_SERVICE_MODIFIERS = new Set([
+  ...ARABIC_SERVICE_HEADS,
+  'اسري', 'اسريه', 'الاسري', 'الاسريه',
+  'زوجي', 'زوجيه', 'الزوجي', 'الزوجيه',
+  'نفسي', 'نفسيه', 'النفسي', 'النفسيه',
+  'طفل', 'الطفل', 'اطفال', 'الاطفال', 'مراهقين', 'المراهقين',
+  'دعم', 'الدعم', 'تعافي', 'التعافي', 'ادمان', 'الادمان',
+  'اولي', 'اوليه', 'الاولي', 'الاوليه',
+  'علاج', 'العلاج', 'معرفي', 'معرفيه', 'سلوكي', 'سلوكيه',
+  'سريع', 'سريعه', 'السريع', 'السريعه',
+  'فردي', 'فرديه', 'جماعي', 'جماعيه',
+  'زواجي', 'زواجيه', 'اسبوعي', 'اسبوعيه',
+]);
+
+const ENGLISH_SERVICE_HEADS = new Set([
+  'session', 'consultation', 'consult', 'counseling', 'counselling',
+  'program', 'programme', 'package', 'assessment',
+]);
+
+const ENGLISH_SERVICE_MODIFIERS = new Set([
+  ...ENGLISH_SERVICE_HEADS,
+  'family', 'families', 'marriage', 'marital', 'couple', 'couples',
+  'psychological', 'child', 'children', 'adolescent', 'adolescents',
+  'addiction', 'recovery', 'mental', 'health', 'initial',
+  'cognitive', 'behavioral', 'behavioural', 'cbt', 'quick',
+  'follow', 'up', 'support', 'individual', 'group', 'weekly',
+]);
 
 export interface ExecutedAdministrativeTool {
   name: string;
@@ -107,11 +153,11 @@ export class AdministrativeResponseRenderer {
 
   private renderServices(data: unknown, english: boolean): string | null {
     const lines = this.array(data).flatMap((value) => {
-      const item = this.record(value);
+      const item = this.record(value) as AdministrativeServiceProjection;
       const candidates = english
-        ? [item.nameEn, item.nameAr, item.name]
-        : [item.nameAr, item.nameEn, item.name];
-      const name = candidates.map((candidate) => this.safeLabel(candidate))
+        ? [item.nameEn, item.nameAr]
+        : [item.nameAr, item.nameEn];
+      const name = candidates.map((candidate) => this.safeServiceName(candidate))
         .find((candidate): candidate is string => candidate !== null) ?? null;
       if (!name) return [];
       const price = item.showPrice === true && typeof item.price === 'number' && Number.isFinite(item.price)
@@ -167,6 +213,49 @@ export class AdministrativeResponseRenderer {
       || this.isCommandLikeLabel(tokens)
     ) return null;
     return label;
+  }
+
+  private safeServiceName(value: unknown): string | null {
+    if (typeof value !== 'string' || Array.from(value).length > MAX_RAW_LABEL_CHARS) return null;
+
+    const normalizedInput = value.normalize('NFKC');
+    if (DANGEROUS_MARKUP_PATTERN.test(normalizedInput)) return null;
+
+    const label = normalizedInput
+      .replace(MARKUP_PATTERN, ' ')
+      .replace(URL_PATTERN, ' ')
+      .replace(CONTROL_OR_NEWLINE_PATTERN, ' ')
+      .trim()
+      .replace(/\s+/gu, ' ');
+    if (
+      label.length === 0
+      || Array.from(label).length > MAX_LABEL_CHARS
+      || COLON_PATTERN.test(label)
+      || !BASIC_SERVICE_NAME_PATTERN.test(label)
+    ) return null;
+
+    const tokens = this.normalizeLabelForSafety(label)
+      .split(/[^\p{L}]+/u)
+      .filter(Boolean);
+    if (tokens.length === 0 || tokens.length > MAX_SERVICE_NAME_TOKENS) return null;
+
+    const first = tokens[0];
+    const last = tokens[tokens.length - 1];
+    if (tokens.every((token) => ARABIC_TOKEN_PATTERN.test(token))) {
+      return first
+        && ARABIC_SERVICE_HEADS.has(first)
+        && tokens.every((token) => ARABIC_SERVICE_MODIFIERS.has(token))
+        ? label
+        : null;
+    }
+    if (tokens.every((token) => LATIN_TOKEN_PATTERN.test(token))) {
+      const hasNounHead = Boolean(last && ENGLISH_SERVICE_HEADS.has(last))
+        || (tokens.length === 2 && tokens[0] === 'follow' && tokens[1] === 'up');
+      return hasNounHead && tokens.every((token) => ENGLISH_SERVICE_MODIFIERS.has(token))
+        ? label
+        : null;
+    }
+    return null;
   }
 
   private isCommandLikeLabel(tokens: string[]): boolean {

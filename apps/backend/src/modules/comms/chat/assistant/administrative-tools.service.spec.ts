@@ -4,9 +4,33 @@ import { GetPublicBrandingHandler } from '../../../org-experience/branding/publi
 import { GetPublicCatalogHandler } from '../../../org-experience/public-catalog/get-public-catalog.handler';
 import { ListPublicEmployeesHandler } from '../../../people/employees/public/list-public-employees.handler';
 import { AdministrativeToolContext } from './administrative-tool-context';
-import { AdministrativeToolsService } from './administrative-tools.service';
+import {
+  type AdministrativeServiceProjection,
+  AdministrativeToolsService,
+} from './administrative-tools.service';
+
+type Assert<T extends true> = T;
+type HasTypedLocalizedServiceNames = Assert<
+  'nameAr' extends keyof AdministrativeServiceProjection
+    ? 'nameEn' extends keyof AdministrativeServiceProjection ? true : false
+    : false
+>;
+type HasNoSyntheticServiceName = Assert<
+  'name' extends keyof AdministrativeServiceProjection ? false : true
+>;
 
 describe('AdministrativeToolsService', () => {
+  const seededServices = [
+    { nameAr: 'جلسة إرشاد أسري', nameEn: 'Family Session' },
+    { nameAr: 'جلسة استشارة زوجية', nameEn: 'Marriage Counseling Session' },
+    { nameAr: 'جلسة إرشاد نفسي', nameEn: 'Psychological Counseling Session' },
+    { nameAr: 'جلسة إرشاد الطفل', nameEn: 'Child Counseling Session' },
+    { nameAr: 'جلسة دعم التعافي', nameEn: 'Addiction Recovery Session' },
+    { nameAr: 'تقييم نفسي أولي', nameEn: 'Initial Psychological Assessment' },
+    { nameAr: 'جلسة علاج معرفي سلوكي', nameEn: 'CBT Session' },
+    { nameAr: 'جلسة متابعة', nameEn: 'Follow-up Session' },
+    { nameAr: 'استشارة سريعة', nameEn: 'Quick Consult' },
+  ] as const;
   const catalog = { execute: jest.fn() };
   const branding = { execute: jest.fn() };
   const employees = { execute: jest.fn() };
@@ -34,6 +58,11 @@ describe('AdministrativeToolsService', () => {
       availability as unknown as GetPublicAvailabilityHandler,
       search as unknown as SemanticSearchHandler,
     );
+  });
+
+  it('types service projections with nameAr/nameEn and no synthetic name field', () => {
+    const contract: [HasTypedLocalizedServiceNames, HasNoSyntheticServiceName] = [true, true];
+    expect(contract).toEqual([true, true]);
   });
 
   it('publishes a closed administrative allowlist with no clinical, assessment, risk, or emergency capability', () => {
@@ -134,9 +163,8 @@ describe('AdministrativeToolsService', () => {
       services: Array.from({ length: 15 }, (_, index) => ({
         id: `service-${index}`,
         categoryId: 'category-1',
-        nameAr: `خدمة ${index}`,
-        nameEn: `Service ${index}`,
-        name: `Generic Service ${index}`,
+        ...seededServices[index % seededServices.length],
+        name: `Synthetic Generic Name ${index}`,
         descriptionAr: 'و'.repeat(800),
         descriptionEn: 'x'.repeat(800),
         durationMins: 60,
@@ -161,9 +189,8 @@ describe('AdministrativeToolsService', () => {
     expect(data[0]).toEqual({
       id: 'service-0',
       categoryId: 'category-1',
-      nameAr: 'خدمة 0',
-      nameEn: 'Service 0',
-      name: 'Generic Service 0',
+      nameAr: 'جلسة إرشاد أسري',
+      nameEn: 'Family Session',
       durationMins: 60,
       price: 200,
       currency: 'SAR',
@@ -174,6 +201,8 @@ describe('AdministrativeToolsService', () => {
     expect(JSON.stringify(result)).not.toContain('large-private-shape');
     expect(JSON.stringify(result)).not.toContain('descriptionAr');
     expect(JSON.stringify(result)).not.toContain('descriptionEn');
+    expect(JSON.stringify(result)).not.toContain('Synthetic Generic Name');
+    expect(data[0]).not.toHaveProperty('name');
   });
 
   it('caps knowledge results and projects only bounded content and similarity', async () => {

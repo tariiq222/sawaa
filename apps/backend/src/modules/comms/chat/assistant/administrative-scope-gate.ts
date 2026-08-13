@@ -2,18 +2,21 @@ import { Injectable } from '@nestjs/common';
 
 export type AdministrativeScope = 'ADMINISTRATIVE' | 'OUT_OF_SCOPE';
 
-const MAX_RAW_INPUT_CODEPOINTS = 300;
-const MAX_NORMALIZED_CODEPOINTS = 300;
+const MAX_RAW_INPUT_GRAPHEMES = 300;
+const MAX_RAW_INPUT_CODEPOINTS = 2_400;
+const MAX_CODEPOINTS_PER_GRAPHEME = 16;
+const MAX_NORMALIZED_GRAPHEMES = 300;
 const MAX_INPUT_TOKENS = 40;
 const MAX_NON_TEXTUAL_RUN = 6;
 const MAX_NON_TEXTUAL_BEFORE_DENSITY_CHECK = 8;
 const MAX_NON_TEXTUAL_RATIO = 0.25;
 const MIN_MEANINGFUL_RATIO = 0.6;
-const MAX_NORMALIZATION_LOSS_CODEPOINTS = 24;
+const MAX_NORMALIZATION_LOSS_GRAPHEMES = 24;
 const MAX_NORMALIZATION_LOSS_RATIO = 0.35;
 
-const LETTER_OR_NUMBER = /^[\p{L}\p{N}]$/u;
-const MARK_OR_WHITESPACE = /^[\p{M}\p{White_Space}]$/u;
+const LETTER_OR_NUMBER = /[\p{L}\p{N}]/u;
+const MARK_OR_WHITESPACE = /^[\p{M}\p{White_Space}]+$/u;
+const GRAPHEME_SEGMENTER = new Intl.Segmenter('und', { granularity: 'grapheme' });
 
 const GREETING_TEMPLATES = [
   /^(?:مرحبا|اهلا|اهلين|السلام عليكم|وعليكم السلام|صباح الخير|مساء الخير)$/u,
@@ -30,8 +33,8 @@ const ARABIC_INTENT_TEMPLATES = {
   ],
   practitioners: [
     /^(?:من|مين)(?: هم)? (?:المعالجون|المعالجين|الاخصاييون|الاخصاييين|المختصون|المختصين)(?: المتاحون| المتاحين)?(?: عندكم)?(?: وما مواعيد العمل)?$/u,
-    /^(?:وش|ما|ايش) اسماء (?:المعالجين|الاخصاييين|المختصين)(?: عندكم)?$/u,
-    /^(?:ابغي|ابغا|ابي|اريد) اسماء (?:المعالجين|الاخصاييين|المختصين)(?: عندكم)?$/u,
+    /^(?:وش|ما|ايش) اسماء (?:المعالجين|الاخصاييين|المختصين)(?: المتاحين)?(?: عندكم)?$/u,
+    /^(?:ابغي|ابغا|ابي|اريد) اسماء (?:المعالجين|الاخصاييين|المختصين)(?: المتاحين)?(?: عندكم)?$/u,
   ],
   location: [
     /^(?:اين|وين) (?:يقع )?(?:موقعكم|المركز|مركز سواء|موقع المركز)(?: وما ساعات العمل| وكيف اتواصل مع الاستقبال)?$/u,
@@ -132,13 +135,18 @@ export class AdministrativeScopeGate {
 
 export function classifyAdministrativeText(message: string): AdministrativeScope {
   const rawCodepoints = Array.from(message);
-  if (rawCodepoints.length > MAX_RAW_INPUT_CODEPOINTS) return 'OUT_OF_SCOPE';
+  const rawGraphemes = splitGraphemes(message);
+  if (
+    rawGraphemes.length > MAX_RAW_INPUT_GRAPHEMES
+    || rawCodepoints.length > MAX_RAW_INPUT_CODEPOINTS
+    || rawGraphemes.some((grapheme) => Array.from(grapheme).length > MAX_CODEPOINTS_PER_GRAPHEME)
+  ) return 'OUT_OF_SCOPE';
 
   const normalized = normalizeAdministrativeText(message);
-  const normalizedLength = Array.from(normalized).length;
-  if (!normalized || normalizedLength > MAX_NORMALIZED_CODEPOINTS) return 'OUT_OF_SCOPE';
+  const normalizedLength = splitGraphemes(normalized).length;
+  if (!normalized || normalizedLength > MAX_NORMALIZED_GRAPHEMES) return 'OUT_OF_SCOPE';
   if (normalized.split(' ').length > MAX_INPUT_TOKENS) return 'OUT_OF_SCOPE';
-  if (!hasAcceptableTextShape(rawCodepoints, normalizedLength)) return 'OUT_OF_SCOPE';
+  if (!hasAcceptableTextShape(rawGraphemes, normalizedLength)) return 'OUT_OF_SCOPE';
 
   if (GREETING_TEMPLATES.some((template) => template.test(normalized))) return 'ADMINISTRATIVE';
   if (matchesAdministrativeIntent(normalized)) return 'ADMINISTRATIVE';
@@ -151,17 +159,17 @@ export function classifyAdministrativeText(message: string): AdministrativeScope
   return 'OUT_OF_SCOPE';
 }
 
-function hasAcceptableTextShape(rawCodepoints: string[], normalizedLength: number): boolean {
+function hasAcceptableTextShape(rawGraphemes: string[], normalizedLength: number): boolean {
   let meaningful = 0;
   let nonTextual = 0;
   let currentNonTextualRun = 0;
   let longestNonTextualRun = 0;
 
-  for (const codepoint of rawCodepoints) {
-    if (LETTER_OR_NUMBER.test(codepoint)) {
+  for (const grapheme of rawGraphemes) {
+    if (LETTER_OR_NUMBER.test(grapheme)) {
       meaningful += 1;
       currentNonTextualRun = 0;
-    } else if (MARK_OR_WHITESPACE.test(codepoint)) {
+    } else if (MARK_OR_WHITESPACE.test(grapheme)) {
       currentNonTextualRun = 0;
     } else {
       nonTextual += 1;
@@ -176,12 +184,16 @@ function hasAcceptableTextShape(rawCodepoints: string[], normalizedLength: numbe
   if (meaningful / visibleContent < MIN_MEANINGFUL_RATIO) return false;
   if (
     nonTextual > MAX_NON_TEXTUAL_BEFORE_DENSITY_CHECK
-    && nonTextual / rawCodepoints.length > MAX_NON_TEXTUAL_RATIO
+    && nonTextual / rawGraphemes.length > MAX_NON_TEXTUAL_RATIO
   ) return false;
 
-  const normalizationLoss = Math.max(0, rawCodepoints.length - normalizedLength);
-  return normalizationLoss <= MAX_NORMALIZATION_LOSS_CODEPOINTS
-    || normalizationLoss / rawCodepoints.length <= MAX_NORMALIZATION_LOSS_RATIO;
+  const normalizationLoss = Math.max(0, rawGraphemes.length - normalizedLength);
+  return normalizationLoss <= MAX_NORMALIZATION_LOSS_GRAPHEMES
+    || normalizationLoss / rawGraphemes.length <= MAX_NORMALIZATION_LOSS_RATIO;
+}
+
+function splitGraphemes(value: string): string[] {
+  return Array.from(GRAPHEME_SEGMENTER.segment(value), ({ segment }) => segment);
 }
 
 function matchesAdministrativeIntent(value: string): boolean {

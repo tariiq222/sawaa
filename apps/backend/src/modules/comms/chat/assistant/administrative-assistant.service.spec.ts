@@ -175,6 +175,8 @@ describe('AdministrativeAssistantService', () => {
   it.each([
     'ايش الخدمات عندكم؟',
     'وش أسماء المعالجين؟',
+    'وش أسماء المعالجين المتاحين؟',
+    'ايش الخدمات عندكم؟ 👨‍👩‍👧‍👦',
     'وين موقع المركز؟',
     'وش رقم المركز؟',
     'وش أوقات دوامكم؟',
@@ -217,6 +219,7 @@ describe('AdministrativeAssistantService', () => {
   it.each([
     `${'.'.repeat(250)}وش الخدمات اللي عندكم؟`,
     `${'😀'.repeat(250)}وش الخدمات اللي عندكم؟`,
+    `${'👨‍👩‍👧‍👦'.repeat(250)}وش الخدمات اللي عندكم؟`,
     `${'،'.repeat(250)}وش الخدمات اللي عندكم؟`,
   ])('rejects a sub-300 non-text flood before provider or tools: %s', async (body) => {
     const flood = { ...inboundMessage, body };
