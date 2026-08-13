@@ -145,6 +145,12 @@ export class AdministrativeResponseRenderer {
         return english
           ? 'I can offer the option to contact reception.'
           : 'يمكنني عرض خيار التحويل إلى الاستقبال.';
+      case 'listOwnAppointments':
+        return this.renderOwnAppointments(data, english);
+      case 'prepareBooking':
+      case 'prepareReschedule':
+      case 'prepareCancellation':
+        return this.renderOperationCard(data, english);
       default:
         return null;
     }
@@ -197,6 +203,78 @@ export class AdministrativeResponseRenderer {
     return lines.length > 0
       ? `${english ? 'Available times:' : 'الأوقات المتاحة:'}\n${lines.join('\n')}`
       : null;
+  }
+
+  private renderOwnAppointments(data: unknown, english: boolean): string | null {
+    const operationCard = this.renderOperationCard(data, english);
+    if (operationCard) return operationCard;
+    const lines = this.array(data).flatMap((value) => {
+      const item = this.record(value);
+      const bookingId = typeof item.bookingId === 'string'
+        && /^[A-Za-z0-9-]{1,100}$/.test(item.bookingId)
+        ? item.bookingId
+        : null;
+      const start = this.safeIsoDate(item.scheduledAt);
+      const preferredService = english
+        ? [item.serviceName, item.serviceNameAr]
+        : [item.serviceNameAr, item.serviceName];
+      const service = preferredService
+        .map((name) => this.safeServiceName(name))
+        .find((name): name is string => name !== null);
+      const status = typeof item.status === 'string' && /^[A-Z_]{3,40}$/.test(item.status)
+        ? item.status
+        : null;
+      return bookingId && start && service && status
+        ? [`- ${bookingId} — ${start} — ${service} — ${status}`]
+        : [];
+    });
+    return lines.length > 0
+      ? `${english ? 'Your appointments:' : 'مواعيدك:'}\n${lines.join('\n')}`
+      : null;
+  }
+
+  private renderOperationCard(data: unknown, english: boolean): string | null {
+    const operation = this.record(this.record(data).operation);
+    const status = operation.status;
+    const type = operation.type;
+    if (
+      typeof status !== 'string'
+      || typeof type !== 'string'
+      || ![
+        'AWAITING_AUTH',
+        'AWAITING_EXISTING_BOOKING_ACK',
+        'AWAITING_CONFIRMATION',
+      ].includes(status)
+      || ![
+        'LIST_OWN_APPOINTMENTS',
+        'CREATE_BOOKING',
+        'RESCHEDULE_BOOKING',
+        'CANCEL_BOOKING',
+      ].includes(type)
+    ) return null;
+    if (status === 'AWAITING_AUTH') {
+      return english
+        ? 'Please sign in to continue with your appointment request.'
+        : 'سجّل الدخول للمتابعة في طلب الموعد.';
+    }
+    if (status === 'AWAITING_EXISTING_BOOKING_ACK') {
+      return english
+        ? 'You already have an upcoming appointment. Review both appointments, then acknowledge the additional booking.'
+        : 'لديك موعد قادم بالفعل. راجع الموعدين ثم أقرّ بإضافة موعد آخر.';
+    }
+    if (type === 'RESCHEDULE_BOOKING') {
+      return english
+        ? 'Review the reschedule details, then use the confirm or decline button.'
+        : 'راجع تفاصيل إعادة الجدولة، ثم استخدم زر التأكيد أو الرفض.';
+    }
+    if (type === 'CANCEL_BOOKING') {
+      return english
+        ? 'Review the cancellation details, then use the confirm or decline button.'
+        : 'راجع تفاصيل الإلغاء، ثم استخدم زر التأكيد أو الرفض.';
+    }
+    return english
+      ? 'Review the booking details, then use the confirm or decline button.'
+      : 'راجع تفاصيل الحجز، ثم استخدم زر التأكيد أو الرفض.';
   }
 
   private safeLabel(value: unknown): string | null {

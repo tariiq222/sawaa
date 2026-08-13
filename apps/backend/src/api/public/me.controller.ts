@@ -132,12 +132,10 @@ export class PublicMeController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: ClientRescheduleBookingDto,
   ) {
-    const { newScheduledAt, newDurationMins } = body;
     return this.rescheduleBooking.execute({
       bookingId: id,
       clientId: session.id,
-      newScheduledAt,
-      newDurationMins,
+      newScheduledAt: body.newScheduledAt,
     });
   }
 }

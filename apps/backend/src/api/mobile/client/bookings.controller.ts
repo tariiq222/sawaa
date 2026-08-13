@@ -240,7 +240,6 @@ export class MobileClientBookingsController {
       bookingId: id,
       clientId: user.id,
       newScheduledAt: body.newScheduledAt,
-      newDurationMins: body.newDurationMins,
     });
   }
 }

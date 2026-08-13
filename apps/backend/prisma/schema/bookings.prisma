@@ -235,13 +235,16 @@ model ProgramSupervisor {
 // ─── BookingStatusLog ─────────────────────────────────────────────────────────
 
 model BookingStatusLog {
-  id         String         @id @default(uuid())
-  bookingId  String
-  fromStatus BookingStatus?
-  toStatus   BookingStatus
-  changedBy  String
-  reason     String?
-  createdAt  DateTime       @default(now())
+  id                 String         @id @default(uuid())
+  bookingId          String
+  fromStatus         BookingStatus?
+  toStatus           BookingStatus
+  changedBy          String
+  reason             String?
+  sourceActionId     String?        @unique
+  sourceActionHash   String?
+  sourceActionResult Json?
+  createdAt          DateTime       @default(now())
 
   @@index([bookingId])
   @@index([createdAt])

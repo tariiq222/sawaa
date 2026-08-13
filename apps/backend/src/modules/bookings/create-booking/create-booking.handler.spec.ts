@@ -56,10 +56,14 @@ const buildPrisma = () => {
     department: { findFirst: jest.fn().mockResolvedValue(null) },
     booking: {
       findFirst: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(mockBooking),
       count: jest.fn().mockResolvedValue(0),
     },
-    invoice: { create: jest.fn().mockResolvedValue(mockInvoice) },
+    invoice: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue(mockInvoice),
+    },
     organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15', paymentAtClinicEnabled: true }) },
     outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
     coupon: { update: jest.fn().mockResolvedValue({}) },
@@ -329,7 +333,10 @@ describe('CreateBookingHandler', () => {
   });
 
   it('throws ConflictException when overlapping booking is found after lock', async () => {
-    prisma.booking.findFirst = jest.fn().mockResolvedValue({ id: 'existing' });
+    prisma.booking.findFirst = jest.fn().mockImplementation(
+      async (query: { where?: Record<string, unknown> }) =>
+        query.where?.employeeId ? { id: 'existing' } : null,
+    );
     await expect(handler.execute(baseDto)).rejects.toThrow(
       'Employee already has a booking in this time slot',
     );
@@ -343,9 +350,10 @@ describe('CreateBookingHandler', () => {
   });
 
   it('assigns sequential bookingNumber when prior booking exists', async () => {
-    // First findFirst = overlap check, second = bookingNumber lookup
+    // Client overlap, employee overlap, then bookingNumber lookup.
     prisma.booking.findFirst = jest
       .fn()
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ bookingNumber: 7 });
     prisma.booking.create = jest.fn().mockResolvedValue({ ...mockBooking, bookingNumber: 8 });
@@ -1067,5 +1075,142 @@ describe('CreateBookingHandler', () => {
       handler.execute({ ...baseDto, scheduledAt: thirtyMinAhead }),
     ).rejects.toThrow(/at least 60 minutes in advance/);
     expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 15. Chat-operation idempotency + client overlap lock order
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it('persists creationIdempotencyKey and locks the client before employee/slot resources', async () => {
+    const order: string[] = [];
+    prisma.$executeRaw.mockImplementation(async () => {
+      order.push('lock');
+    });
+    prisma.booking.findUnique.mockImplementation(async () => {
+      order.push('idempotency');
+      return null;
+    });
+    prisma.booking.findFirst.mockImplementation(async (query: { where?: Record<string, unknown> }) => {
+      if (query.where?.clientId) order.push('client-overlap');
+      else if (query.where?.employeeId) order.push('employee-overlap');
+      else order.push('booking-number');
+      return null;
+    });
+
+    await (handler.execute as (command: Record<string, unknown>) => Promise<unknown>)({
+      ...baseDto,
+      source: 'AI_CHAT',
+      creationIdempotencyKey: 'operation-1',
+    });
+
+    expect(order.slice(0, 5)).toEqual([
+      'lock',
+      'idempotency',
+      'client-overlap',
+      'lock',
+      'employee-overlap',
+    ]);
+    expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        source: 'AI_CHAT',
+        creationIdempotencyKey: 'operation-1',
+      }),
+    }));
+  });
+
+  it('blocks a client overlap using ACTIVE_BOOKING_STATUSES even when the employee differs', async () => {
+    prisma.booking.findFirst.mockImplementation(async (query: { where?: Record<string, unknown> }) =>
+      query.where?.clientId ? { id: 'client-overlap' } : null,
+    );
+
+    await expect((handler.execute as (command: Record<string, unknown>) => Promise<unknown>)({
+      ...baseDto,
+      source: 'AI_CHAT',
+      creationIdempotencyKey: 'operation-1',
+    })).rejects.toThrow('Client already has an overlapping appointment');
+
+    expect(prisma.booking.findFirst).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        clientId: 'client-1',
+        isHistoricalImport: false,
+        status: { in: expect.arrayContaining(['PENDING', 'CONFIRMED', 'DEPOSIT_PAID']) },
+        scheduledAt: { lt: expect.any(Date) },
+        endsAt: { gt: expect.any(Date) },
+      }),
+      select: { id: true },
+    });
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('returns the same booking for a matching creation idempotency key before side effects', async () => {
+    const existing = {
+      ...mockBooking,
+      branchId: 'branch-1',
+      clientId: 'client-1',
+      employeeId: 'emp-1',
+      serviceId: 'svc-1',
+      scheduledAt: futureDate,
+      endsAt: new Date(futureDate.getTime() + 60 * 60_000),
+      durationMins: 60,
+      durationOptionId: null,
+      bookingType: 'INDIVIDUAL',
+      deliveryType: 'IN_PERSON',
+      source: 'AI_CHAT',
+      payAtClinic: false,
+      couponCode: null,
+      creationIdempotencyKey: 'operation-1',
+    };
+    prisma.booking.findUnique.mockResolvedValue(existing);
+    prisma.invoice.findFirst.mockResolvedValue({ id: 'invoice-existing' });
+
+    const result = await (handler.execute as unknown as (command: Record<string, unknown>) => Promise<Record<string, unknown>>)({
+      ...baseDto,
+      source: 'AI_CHAT',
+      creationIdempotencyKey: 'operation-1',
+    });
+
+    expect(result).toEqual(expect.objectContaining({ id: 'book-1', invoiceId: 'invoice-existing' }));
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects reuse of a creation idempotency key for a different booking shape', async () => {
+    prisma.booking.findUnique.mockResolvedValue({
+      ...mockBooking,
+      branchId: 'other-branch',
+      clientId: 'client-1',
+      employeeId: 'emp-1',
+      serviceId: 'svc-1',
+      scheduledAt: futureDate,
+      endsAt: new Date(futureDate.getTime() + 60 * 60_000),
+      durationMins: 60,
+      durationOptionId: null,
+      bookingType: 'INDIVIDUAL',
+      deliveryType: 'IN_PERSON',
+      source: 'AI_CHAT',
+      payAtClinic: false,
+      couponCode: null,
+      creationIdempotencyKey: 'operation-1',
+    });
+
+    await expect((handler.execute as (command: Record<string, unknown>) => Promise<unknown>)({
+      ...baseDto,
+      source: 'AI_CHAT',
+      creationIdempotencyKey: 'operation-1',
+    })).rejects.toThrow(ConflictException);
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('joins a caller transaction instead of opening a nested transaction', async () => {
+    await (handler.execute as (command: Record<string, unknown>) => Promise<unknown>)({
+      ...baseDto,
+      source: 'AI_CHAT',
+      creationIdempotencyKey: 'operation-1',
+      transaction: prisma,
+    });
+
+    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
+    expect(prisma.booking.create).toHaveBeenCalled();
   });
 });

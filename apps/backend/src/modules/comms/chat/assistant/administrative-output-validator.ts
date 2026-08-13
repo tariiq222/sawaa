@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getAdministrativeFallbackResponse } from './administrative-policy';
 import type { RenderedAdministrativeResponse } from './administrative-response-renderer';
+import { isPublicChatOperation } from '../operations/chat-operation-public.mapper';
 
 export const MAX_ADMINISTRATIVE_OUTPUT_CHARS = 2_000;
 
@@ -29,12 +30,14 @@ export class AdministrativeOutputValidator {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
     const metadata = value as Record<string, unknown>;
     const keys = Object.keys(metadata);
-    return keys.length === 2
-      && metadata.action === 'OFFER_HANDOFF'
-      && (
-        metadata.reason === 'OUT_OF_SCOPE'
-        || metadata.reason === 'USER_REQUESTED'
-        || metadata.reason === 'LIMIT_REACHED'
-      );
+    if (metadata.action === 'OFFER_HANDOFF') {
+      return keys.length === 2 && (
+          metadata.reason === 'OUT_OF_SCOPE'
+          || metadata.reason === 'USER_REQUESTED'
+          || metadata.reason === 'LIMIT_REACHED'
+        );
+    }
+    if (metadata.action !== 'CHAT_OPERATION' || keys.length !== 2) return false;
+    return isPublicChatOperation(metadata.operation);
   }
 }

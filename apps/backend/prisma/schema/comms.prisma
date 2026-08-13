@@ -44,6 +44,7 @@ enum ChatMessageKind {
 }
 
 enum ChatOperationType {
+  LIST_OWN_APPOINTMENTS
   CREATE_BOOKING
   RESCHEDULE_BOOKING
   CANCEL_BOOKING
@@ -151,6 +152,7 @@ model ChatOperation {
   confirmedAt           DateTime?
   executedAt            DateTime?
   bookingId             String?
+  resultMessageId       String?             @unique
   errorCode             String?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt

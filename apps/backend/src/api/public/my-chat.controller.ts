@@ -17,6 +17,11 @@ import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-c
 import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
 import { ClientRequestHandoffDto } from '../../modules/comms/chat/staff/request-handoff.dto';
 import { toChatConversationResponse } from '../../modules/comms/chat/guest/chat-conversation.response';
+import { AcknowledgeExistingBookingHandler } from '../../modules/comms/chat/operations/acknowledge-existing-booking.handler';
+import { ConfirmOperationHandler } from '../../modules/comms/chat/operations/confirm-operation.handler';
+import { DeclineOperationHandler } from '../../modules/comms/chat/operations/decline-operation.handler';
+import { OperationVersionDto } from '../../modules/comms/chat/operations/operation-version.dto';
+import { toPublicChatOperation } from '../../modules/comms/chat/operations/chat-operation-public.mapper';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -34,6 +39,9 @@ export class MyChatController {
     private readonly sendMessage: SendChatMessageHandler,
     private readonly listMessages: ListChatMessagesHandler,
     private readonly requestHandoff: RequestHandoffHandler,
+    private readonly acknowledgeOperation: AcknowledgeExistingBookingHandler,
+    private readonly confirmOperation: ConfirmOperationHandler,
+    private readonly declineOperation: DeclineOperationHandler,
   ) {}
 
   @Get('conversations/current')
@@ -115,6 +123,54 @@ export class MyChatController {
       audience: 'client',
       conversationId,
       clientId: session.id,
+    }));
+  }
+
+  @Post('operations/:operationId/acknowledge')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Acknowledge an additional appointment before confirmation' })
+  @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  async acknowledgeAdditionalBooking(
+    @Param('operationId', ParseUUIDPipe) operationId: string,
+    @Body() dto: OperationVersionDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toPublicChatOperation(await this.acknowledgeOperation.execute({
+      operationId,
+      clientId: session.id,
+      expectedVersion: dto.expectedVersion,
+    }));
+  }
+
+  @Post('operations/:operationId/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm and execute a prepared chat operation' })
+  @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  async confirmPreparedOperation(
+    @Param('operationId', ParseUUIDPipe) operationId: string,
+    @Body() dto: OperationVersionDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toPublicChatOperation(await this.confirmOperation.execute({
+      operationId,
+      clientId: session.id,
+      expectedVersion: dto.expectedVersion,
+    }));
+  }
+
+  @Post('operations/:operationId/decline')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Decline a prepared chat operation without executing it' })
+  @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  async declinePreparedOperation(
+    @Param('operationId', ParseUUIDPipe) operationId: string,
+    @Body() dto: OperationVersionDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toPublicChatOperation(await this.declineOperation.execute({
+      operationId,
+      clientId: session.id,
+      expectedVersion: dto.expectedVersion,
     }));
   }
 }

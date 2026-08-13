@@ -1,5 +1,16 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { BookingType, CancellationReason, RefundType } from '@prisma/client';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  BookingType,
+  CancellationReason,
+  Prisma,
+  RefundType,
+} from '@prisma/client';
+import { createHash } from 'node:crypto';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -8,14 +19,28 @@ import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
-import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
+import { computeRefundAmountHalalas, computeRefundType } from '../cancellation-policy';
 import { ProgramCapacityService } from '../program/program-capacity.service';
-import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import {
+  assertBookingIsMutable,
+  hashToInt32,
+  updateBookingAtomically,
+} from '../booking-lifecycle.helper';
 import { returnPackageCreditForBooking } from '../package-credit-return.helper';
 
 export type ClientCancelCommand = ClientCancelBookingDto & {
   bookingId: string;
   clientId: string;
+  sourceActionId?: string;
+  transaction?: Prisma.TransactionClient;
+};
+
+type CancelResult = {
+  status: 'CANCELLED' | 'CANCEL_REQUESTED';
+  booking: Awaited<ReturnType<typeof updateBookingAtomically>>;
+  requiresApproval: boolean;
+  /** Must be invoked only after an externally supplied transaction commits. */
+  postCommit?: () => Promise<void>;
 };
 
 @Injectable()
@@ -29,96 +54,89 @@ export class ClientCancelBookingHandler {
     private readonly programCapacity: ProgramCapacityService,
   ) {}
 
-  async execute(cmd: ClientCancelCommand) {
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: cmd.bookingId },
-    });
+  async execute(cmd: ClientCancelCommand): Promise<CancelResult> {
+    const actionHash = this.actionHash(cmd);
+    const mutate = async (tx: Prisma.TransactionClient): Promise<CancelResult> => {
+      // Cancellation needs no employee-slot lock. The client lock precedes the booking mutation.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(cmd.clientId)}::int)`;
+      const booking = await tx.booking.findUnique({ where: { id: cmd.bookingId } });
+      if (!booking) throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
+      if (booking.clientId !== cmd.clientId) throw new ForbiddenException('You do not own this booking');
+      assertBookingIsMutable(booking);
 
-    if (!booking) {
-      throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
-    }
+      if (cmd.sourceActionId) {
+        const previous = await tx.bookingStatusLog.findUnique({
+          where: { sourceActionId: cmd.sourceActionId },
+        });
+        if (previous) {
+          if (previous.sourceActionHash !== actionHash || previous.bookingId !== cmd.bookingId) {
+            throw new ConflictException('Action id was already used with different cancellation data');
+          }
+          const stored = previous.sourceActionResult as Record<string, unknown> | null;
+          const status = stored?.status;
+          if (status !== 'CANCELLED' && status !== 'CANCEL_REQUESTED') {
+            throw new ConflictException('Stored cancellation result is invalid');
+          }
+          return {
+            status,
+            booking,
+            requiresApproval: stored?.requiresApproval === true,
+          };
+        }
+      }
 
-    if (booking.clientId !== cmd.clientId) {
-      throw new ForbiddenException('You do not own this booking');
-    }
+      if (booking.bookingType === BookingType.GROUP) {
+        throw new ForbiddenException('Program enrollments can only be cancelled by staff');
+      }
+      const settings = await this.settingsHandler.execute({
+        branchId: booking.branchId,
+        transaction: tx,
+      });
+      const hoursUntilBooking = (booking.scheduledAt.getTime() - Date.now()) / 3_600_000;
 
-    // Program enrollments can only be cancelled by staff — clients cannot
-    // un-enroll from a group program on their own. The dashboard's
-    // cancel-program flow (or a per-enrollment admin cancel) handles this.
-    if (booking.bookingType === BookingType.GROUP) {
-      throw new ForbiddenException('Program enrollments can only be cancelled by staff');
-    }
-
-    const settings = await this.settingsHandler.execute({ branchId: booking.branchId });
-    const hoursUntilBooking = (booking.scheduledAt.getTime() - Date.now()) / 3_600_000;
-
-    if (settings.requireCancelApproval) {
-      // CLIENT_REQUEST_CANCEL: PENDING | CONFIRMED | AWAITING_PAYMENT → CANCEL_REQUESTED
-      const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
-      const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-        updateBookingAtomically(tx, {
+      if (settings.requireCancelApproval || hoursUntilBooking < settings.freeCancelBeforeHours) {
+        const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
+        const updated = await updateBookingAtomically(tx, {
           bookingId: cmd.bookingId,
           currentStatus: booking.status,
           actionLabel: 'cancel requested',
-          data: {
-            status: nextStatus,
-            cancelNotes: cmd.reason ?? null,
-          },
-        }),
-        tx.bookingStatusLog.create({
+          data: { status: nextStatus, cancelNotes: cmd.reason ?? null },
+        });
+        await tx.bookingStatusLog.create({
           data: {
             bookingId: cmd.bookingId,
             fromStatus: booking.status,
             toStatus: nextStatus,
             changedBy: cmd.clientId,
-            reason: cmd.reason ?? 'CLIENT_CANCEL_REQUIRES_APPROVAL',
+            reason: cmd.reason ?? (
+              settings.requireCancelApproval
+                ? 'CLIENT_CANCEL_REQUIRES_APPROVAL'
+                : 'CLIENT_CANCEL_WINDOW_EXPIRED'
+            ),
+            sourceActionId: cmd.sourceActionId,
+            sourceActionHash: cmd.sourceActionId ? actionHash : undefined,
+            sourceActionResult: cmd.sourceActionId
+              ? {
+                  kind: 'CANCELLATION', bookingId: cmd.bookingId,
+                  status: 'CANCEL_REQUESTED', requiresApproval: true,
+                }
+              : undefined,
           },
-        }),
-      ]));
-      return { status: 'CANCEL_REQUESTED', booking: updated, requiresApproval: true };
-    }
+        });
+        return { status: 'CANCEL_REQUESTED', booking: updated, requiresApproval: true };
+      }
 
-    if (hoursUntilBooking < settings.freeCancelBeforeHours) {
-      // Outside free-cancel window: escalate to CANCEL_REQUESTED for staff review
-      const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
-      const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-        updateBookingAtomically(tx, {
-          bookingId: cmd.bookingId,
-          currentStatus: booking.status,
-          actionLabel: 'cancel requested',
-          data: {
-            status: nextStatus,
-            cancelNotes: cmd.reason ?? null,
-          },
-        }),
-        tx.bookingStatusLog.create({
-          data: {
-            bookingId: cmd.bookingId,
-            fromStatus: booking.status,
-            toStatus: nextStatus,
-            changedBy: cmd.clientId,
-            reason: cmd.reason ?? 'CLIENT_CANCEL_WINDOW_EXPIRED',
-          },
-        }),
-      ]));
-      return { status: 'CANCEL_REQUESTED', booking: updated, requiresApproval: true };
-    }
+      const directCancelStatus = assertTransition(booking.status, 'CLIENT_DIRECT_CANCEL');
+      const { refundType, refundPercent } = computeRefundType({
+        scheduledAt: booking.scheduledAt,
+        freeCancelBeforeHours: settings.freeCancelBeforeHours,
+        freeCancelRefundType: settings.freeCancelRefundType,
+        lateCancelRefundPercent: settings.lateCancelRefundPercent,
+      });
+      let refundRequestId: string | null = null;
+      let paymentId: string | null = null;
+      let idempotencyKey: string | null = null;
 
-    // Within free-cancel window: direct cancel (CLIENT_DIRECT_CANCEL)
-    const directCancelStatus = assertTransition(booking.status, 'CLIENT_DIRECT_CANCEL');
-
-    const { refundType, refundPercent } = computeRefundType({
-      scheduledAt: booking.scheduledAt,
-      freeCancelBeforeHours: settings.freeCancelBeforeHours,
-      freeCancelRefundType: settings.freeCancelRefundType,
-      lateCancelRefundPercent: settings.lateCancelRefundPercent,
-    });
-
-    let refundRequestId: string | null = null;
-    let paymentId: string | null = null;
-    let idempotencyKey: string | null = null;
-
-    const updated = await this.rlsTransaction.withTransaction(async (tx) => {
       const cancelled = await updateBookingAtomically(tx, {
         bookingId: cmd.bookingId,
         currentStatus: booking.status,
@@ -137,77 +155,95 @@ export class ClientCancelBookingHandler {
           toStatus: directCancelStatus,
           changedBy: cmd.clientId,
           reason: cmd.reason ?? 'CLIENT_CANCEL',
+          sourceActionId: cmd.sourceActionId,
+          sourceActionHash: cmd.sourceActionId ? actionHash : undefined,
+          sourceActionResult: cmd.sourceActionId
+            ? {
+                kind: 'CANCELLATION', bookingId: cmd.bookingId,
+                status: 'CANCELLED', requiresApproval: false,
+              }
+            : undefined,
         },
       });
+
       if (refundType !== RefundType.NONE) {
         const completedPayment = await tx.payment.findFirst({
           where: { invoice: { bookingId: cmd.bookingId }, status: 'COMPLETED' },
           select: { id: true, amount: true },
         });
         if (completedPayment) {
-          // Honour the configured refund percent. FULL → whole paid amount
-          // (amount left undefined); PARTIAL → exact integer-halala
-          // round(paidAmount * percent / 100) — never a fractional halala.
           const paidHalalas = Number(completedPayment.amount);
-          const refundAmount =
-            refundType === RefundType.FULL
-              ? undefined
-              : computeRefundAmountHalalas(paidHalalas, refundPercent);
+          const refundAmount = refundType === RefundType.FULL
+            ? undefined
+            : computeRefundAmountHalalas(paidHalalas, refundPercent);
           if (refundAmount === undefined || refundAmount > 0) {
-            const created = await this.refundHandler.createRefundRequestInTx(
-              tx,
-              {
-                paymentId: completedPayment.id,
-                reason: `Booking ${cmd.bookingId} cancellation (${refundType})`,
-                performedBy: cmd.clientId,
-                amount: refundAmount,
-              },
-            );
+            const created = await this.refundHandler.createRefundRequestInTx(tx, {
+              paymentId: completedPayment.id,
+              reason: `Booking ${cmd.bookingId} cancellation (${refundType})`,
+              performedBy: cmd.clientId,
+              amount: refundAmount,
+            });
             paymentId = completedPayment.id;
             refundRequestId = created.refundRequestId;
             idempotencyKey = created.idempotencyKey;
           }
         }
       }
-      // Session-package credit bookings: return the credit to its bucket
-      // on the direct-cancel path. The CANCEL_REQUESTED branches above do
-      // NOT return the credit — the booking is still scheduled and the
-      // credit stays consumed until staff approval (or direct cancel).
-      // Mirrors the cancel-booking behaviour: no burn window, no refund —
-      // the booking had zero monetary value.
-      if (booking.packageCreditId) {
-        await returnPackageCreditForBooking(tx, cmd.bookingId);
-      }
-
-      // Roll back sibling AWAITING_PAYMENT bookings for program enrollments
-      // when the cancellation drops the enrolled count below the threshold.
+      if (booking.packageCreditId) await returnPackageCreditForBooking(tx, cmd.bookingId);
       if (booking.programId) {
-        // Remove the ProgramEnrollment row so the client can re-enroll after
-        // their seat is freed. deleteMany is safe: a booking has at most one
-        // enrollment (@@unique on bookingId) and returns count=0 silently if
-        // there is none.
         await tx.programEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
         await this.programCapacity.decrementEnrollment(tx, booking.programId);
       }
-      return cancelled;
-    });
 
-    const event = new BookingCancelledEvent({
-      organizationId: DEFAULT_ORG_ID,
-      scheduledAt: booking.scheduledAt,
-      bookingId: booking.id,
-      bookingNumber: booking.bookingNumber,
-      clientId: booking.clientId,
-      employeeId: booking.employeeId,
-      reason: CancellationReason.CLIENT_REQUESTED,
-      cancelNotes: cmd.reason ?? undefined,
-      refundType,
-      paymentId,
-      refundRequestId,
-      idempotencyKey,
-    });
-    await this.eventBus.publish(event.eventName, event.toEnvelope());
+      const event = new BookingCancelledEvent({
+        organizationId: DEFAULT_ORG_ID,
+        scheduledAt: booking.scheduledAt,
+        bookingId: booking.id,
+        bookingNumber: booking.bookingNumber,
+        clientId: booking.clientId,
+        employeeId: booking.employeeId,
+        reason: CancellationReason.CLIENT_REQUESTED,
+        cancelNotes: cmd.reason ?? undefined,
+        refundType,
+        paymentId,
+        refundRequestId,
+        idempotencyKey,
+      });
+      if (cmd.sourceActionId) {
+        await tx.outboxEvent.create({
+          data: {
+            id: cmd.sourceActionId,
+            aggregateId: booking.id,
+            eventType: event.eventName,
+            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+      const postCommit = cmd.sourceActionId
+        ? undefined
+        : () => this.eventBus.publish(event.eventName, event.toEnvelope());
+      return { status: 'CANCELLED', booking: cancelled, requiresApproval: false, postCommit };
+    };
 
-    return { status: 'CANCELLED', booking: updated, requiresApproval: false };
+    const result = cmd.transaction
+      ? await mutate(cmd.transaction)
+      : await this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' });
+    if (!cmd.transaction && result.postCommit) await result.postCommit();
+    return cmd.transaction ? result : {
+      status: result.status,
+      booking: result.booking,
+      requiresApproval: result.requiresApproval,
+    };
+  }
+
+  private actionHash(cmd: ClientCancelCommand): string {
+    return createHash('sha256')
+      .update(JSON.stringify({
+        action: 'CLIENT_CANCELLATION',
+        bookingId: cmd.bookingId,
+        clientId: cmd.clientId,
+        reason: cmd.reason ?? null,
+      }))
+      .digest('hex');
   }
 }

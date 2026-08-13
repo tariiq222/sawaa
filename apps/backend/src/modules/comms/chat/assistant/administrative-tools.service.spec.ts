@@ -36,6 +36,10 @@ describe('AdministrativeToolsService', () => {
   const employees = { execute: jest.fn() };
   const availability = { execute: jest.fn() };
   const search = { execute: jest.fn() };
+  const listOwnAppointments = { execute: jest.fn() };
+  const prepareBooking = { execute: jest.fn() };
+  const prepareReschedule = { execute: jest.fn() };
+  const prepareCancellation = { execute: jest.fn() };
   let service: AdministrativeToolsService;
 
   beforeEach(() => {
@@ -51,12 +55,32 @@ describe('AdministrativeToolsService', () => {
       endTime: '2026-08-14T10:00:00.000Z',
     }]);
     search.execute.mockResolvedValue([{ content: 'الدوام من 8 إلى 4', similarity: 0.9 }]);
+    const operation = {
+      id: 'operation-1', type: 'CREATE_BOOKING', status: 'AWAITING_AUTH',
+      version: 0, requiredConfirmations: 0, confirmationCount: 0,
+      expiresAt: new Date('2026-08-13T09:15:00.000Z'), bookingId: null, errorCode: null,
+      summary: { action: 'LOGIN_REQUIRED', intent: 'CREATE_BOOKING' },
+    };
+    listOwnAppointments.execute.mockResolvedValue({ kind: 'AUTH_REQUIRED', operation });
+    prepareBooking.execute.mockResolvedValue(operation);
+    prepareReschedule.execute.mockResolvedValue({
+      ...operation, type: 'RESCHEDULE_BOOKING', status: 'AWAITING_CONFIRMATION',
+      requiredConfirmations: 1, summary: { action: 'RESCHEDULE_BOOKING' },
+    });
+    prepareCancellation.execute.mockResolvedValue({
+      ...operation, type: 'CANCEL_BOOKING', status: 'AWAITING_CONFIRMATION',
+      requiredConfirmations: 1, summary: { action: 'CANCEL_BOOKING' },
+    });
     service = new AdministrativeToolsService(
       catalog as unknown as GetPublicCatalogHandler,
       branding as unknown as GetPublicBrandingHandler,
       employees as unknown as ListPublicEmployeesHandler,
       availability as unknown as GetPublicAvailabilityHandler,
       search as unknown as SemanticSearchHandler,
+      listOwnAppointments as never,
+      prepareBooking as never,
+      prepareReschedule as never,
+      prepareCancellation as never,
     );
   });
 
@@ -75,7 +99,12 @@ describe('AdministrativeToolsService', () => {
       'getAvailability',
       'searchKnowledge',
       'handoffToReception',
+      'listOwnAppointments',
+      'prepareBooking',
+      'prepareReschedule',
+      'prepareCancellation',
     ]);
+    expect(JSON.stringify(definitions)).not.toMatch(/clientId|phone|newDurationMins|recurr|periodic|confirmBooking|declineBooking/);
     expect(JSON.stringify(definitions)).not.toMatch(
       /diagnos|assessment|triage|clinical|medical|risk|emergency|suicid|تشخيص|تقييم|خطر|طوارئ/i,
     );
@@ -93,14 +122,88 @@ describe('AdministrativeToolsService', () => {
     expect(search.execute).not.toHaveBeenCalled();
   });
 
-  it('takes client identity only from context and returns AUTH_REQUIRED for a guest personal-tool attempt', async () => {
+  it('keeps executable booking tools outside the closed allowlist', async () => {
     const result = await service.execute(
       'createBooking',
       JSON.stringify({ clientId: 'forged-client', serviceId: 'service-1' }),
       new AdministrativeToolContext('conversation-1', null),
     );
 
-    expect(result).toEqual({ ok: false, error: { code: 'AUTH_REQUIRED' } });
+    expect(result).toEqual({ ok: false, error: { code: 'TOOL_NOT_ALLOWED' } });
+  });
+
+  it('prepares a guest login operation using context identity and source message only', async () => {
+    const context = new AdministrativeToolContext('conversation-1', null, 'message-1');
+    const result = await service.execute('prepareBooking', JSON.stringify({
+      branchId: 'branch-1', employeeId: 'employee-1', serviceId: 'service-1',
+      scheduledAt: '2026-08-20T09:00:00.000Z', deliveryType: 'IN_PERSON',
+      clientId: 'forged-client', bookingType: 'WALK_IN', recurrence: 'weekly',
+    }), context);
+
+    expect(prepareBooking.execute).toHaveBeenCalledWith({
+      conversationId: 'conversation-1', clientId: null, sourceMessageId: 'message-1',
+      branchId: 'branch-1', employeeId: 'employee-1', serviceId: 'service-1',
+      scheduledAt: '2026-08-20T09:00:00.000Z', deliveryType: 'IN_PERSON',
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      publicMetadata: { action: 'CHAT_OPERATION', operation: { status: 'AWAITING_AUTH' } },
+    });
+    expect(JSON.stringify(result)).not.toMatch(/forged-client|WALK_IN|weekly/);
+  });
+
+  it('routes own-list, reschedule, and cancellation with no DTO identity or mutable fields', async () => {
+    const context = new AdministrativeToolContext('conversation-1', 'client-real', 'message-1');
+    await service.execute('listOwnAppointments', '{}', context);
+    await service.execute('prepareReschedule', JSON.stringify({
+      bookingId: 'booking-1', newScheduledAt: '2026-08-20T09:00:00.000Z',
+      newDurationMins: 180, clientId: 'forged',
+    }), context);
+    await service.execute('prepareCancellation', JSON.stringify({
+      bookingId: 'booking-1', reason: 'forged', clientId: 'forged',
+    }), context);
+
+    expect(listOwnAppointments.execute).toHaveBeenCalledWith({
+      conversationId: 'conversation-1', clientId: 'client-real', sourceMessageId: 'message-1',
+    });
+    expect(prepareReschedule.execute).toHaveBeenCalledWith({
+      conversationId: 'conversation-1', clientId: 'client-real', sourceMessageId: 'message-1',
+      bookingId: 'booking-1', newScheduledAt: '2026-08-20T09:00:00.000Z',
+    });
+    expect(prepareCancellation.execute).toHaveBeenCalledWith({
+      conversationId: 'conversation-1', clientId: 'client-real', sourceMessageId: 'message-1',
+      bookingId: 'booking-1',
+    });
+  });
+
+  it('projects an owned booking identifier for a follow-up prepare without leaking payment or meeting data', async () => {
+    listOwnAppointments.execute.mockResolvedValue({
+      kind: 'APPOINTMENTS',
+      appointments: {
+        items: [{
+          id: 'booking-1', status: 'CONFIRMED',
+          scheduledAt: new Date('2026-08-20T09:00:00.000Z'),
+          endsAt: new Date('2026-08-20T10:00:00.000Z'), durationMins: 60,
+          serviceName: 'Family Session', serviceNameAr: 'جلسة إرشاد أسري',
+          employeeName: 'Sarah', employeeNameAr: 'سارة',
+          branchName: 'Riyadh', branchNameAr: 'الرياض', deliveryType: 'IN_PERSON',
+          invoiceId: 'private-invoice', zoomJoinUrl: 'https://private.example/meeting',
+        }],
+        total: 1, page: 1, pageSize: 10,
+      },
+    });
+
+    const result = await service.execute(
+      'listOwnAppointments',
+      '{}',
+      new AdministrativeToolContext('conversation-1', 'client-real', 'message-1'),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: [{ bookingId: 'booking-1', status: 'CONFIRMED', durationMins: 60 }],
+    });
+    expect(JSON.stringify(result)).not.toMatch(/private-invoice|private\.example|invoiceId|zoomJoinUrl/);
   });
 
   it('routes general administrative tools through shared handlers', async () => {
@@ -121,7 +224,10 @@ describe('AdministrativeToolsService', () => {
     )).resolves.toEqual({ ok: true, data: [{ id: 'employee-1', serviceIds: ['service-1'] }] });
     await expect(service.execute(
       'getAvailability',
-      JSON.stringify({ employeeId: 'employee-1', date: '2026-08-14', clientId: 'forged-client' }),
+      JSON.stringify({
+        employeeId: 'employee-1', date: '2026-08-14',
+        clientId: 'forged-client', bookingType: 'WALK_IN',
+      }),
       context,
     )).resolves.toEqual({
       ok: true,

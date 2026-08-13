@@ -137,6 +137,13 @@ describe('AdministrativeScopeGate', () => {
     'How much are the services?',
     'Hello, what services are available?',
     'مرحبا، وش الخدمات اللي عندكم؟',
+    'وش مواعيدي القادمة؟',
+    'اعرض مواعيدي',
+    'أبغى إعادة جدولة موعدي',
+    'أريد إلغاء موعدي',
+    'Show my upcoming appointments',
+    'I want to reschedule my appointment',
+    'I would like to cancel my appointment',
   ])('accepts an anchored Saudi or English administrative intent template: %s', (message) => {
     expect(gate.classify(message)).toBe('ADMINISTRATIVE');
   });

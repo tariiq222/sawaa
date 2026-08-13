@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import type { BookingType, DeliveryType } from '@prisma/client';
+import type { BookingType, DeliveryType, Prisma } from '@prisma/client';
 
 export interface ResolvedPrice {
   price: number;
@@ -54,7 +54,8 @@ export class PriceResolverService {
      *               overrides. Owned rows are never consulted.
      */
     useCustomPricing?: boolean;
-  }): Promise<ResolvedPrice> {
+  }, transaction?: Prisma.TransactionClient): Promise<ResolvedPrice> {
+    const db = transaction ?? this.prisma;
     const { serviceId, employeeServiceId, durationOptionId, deliveryType } = params;
     const useCustomPricing = params.useCustomPricing ?? false;
 
@@ -65,7 +66,7 @@ export class PriceResolverService {
       deliveryType,
       employeeServiceId,
       useCustomPricing,
-    });
+    }, db);
 
     // Validate that the explicitly-provided duration option matches the service and delivery type
     if (durationOptionId && durationOption) {
@@ -108,7 +109,7 @@ export class PriceResolverService {
       if (deliveryType) {
         where.deliveryType = deliveryType;
       }
-      employeeOverride = await this.prisma.employeeServiceOption.findFirst({
+      employeeOverride = await db.employeeServiceOption.findFirst({
         where,
         select: { priceOverride: true, durationOverride: true },
       });
@@ -116,14 +117,14 @@ export class PriceResolverService {
 
     // --- Step 3: fall back to ServiceBookingConfig or Service base values if no duration option ---
     if (!durationOption) {
-      const service = await this.prisma.service.findUniqueOrThrow({
+      const service = await db.service.findUniqueOrThrow({
         where: { id: serviceId },
         select: { price: true, durationMins: true, currency: true, id: true },
       });
 
       // Step 3a: check ServiceBookingConfig for a config-level price scoped by deliveryType
       if (deliveryType) {
-        const bookingConfig = await this.prisma.serviceBookingConfig.findFirst({
+        const bookingConfig = await db.serviceBookingConfig.findFirst({
           where: { serviceId, deliveryType, isActive: true },
           select: { price: true, durationMins: true },
         });
@@ -187,7 +188,7 @@ export class PriceResolverService {
     bookingType?: BookingType | null;
     deliveryType?: DeliveryType | null;
     useCustomPricing?: boolean;
-  }) {
+  }, db: Prisma.TransactionClient | PrismaService) {
     const { serviceId, durationOptionId, deliveryType, employeeServiceId } = params;
     const useCustomPricing = params.useCustomPricing ?? false;
     const SELECT = { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true } as const;
@@ -196,13 +197,13 @@ export class PriceResolverService {
     if (useCustomPricing && employeeServiceId) {
       if (durationOptionId) {
         // An explicit option must be one of the practitioner's owned rows.
-        return this.prisma.serviceDurationOption.findFirst({
+        return db.serviceDurationOption.findFirst({
           where: { id: durationOptionId, serviceId, employeeServiceId, isActive: true },
           select: SELECT,
         });
       }
       if (deliveryType) {
-        const ownedScoped = await this.prisma.serviceDurationOption.findFirst({
+        const ownedScoped = await db.serviceDurationOption.findFirst({
           where: { serviceId, deliveryType, employeeServiceId, isActive: true },
           orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
           select: SELECT,
@@ -210,7 +211,7 @@ export class PriceResolverService {
         if (ownedScoped) return ownedScoped;
       }
       // No service-default fallback in custom mode — owned rows only.
-      return this.prisma.serviceDurationOption.findFirst({
+      return db.serviceDurationOption.findFirst({
         where: { serviceId, employeeServiceId, isActive: true },
         orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
         select: SELECT,
@@ -219,7 +220,7 @@ export class PriceResolverService {
 
     // ── INHERIT MODE: only service-default rows (employeeServiceId IS NULL) ──
     if (durationOptionId) {
-      return this.prisma.serviceDurationOption.findFirst({
+      return db.serviceDurationOption.findFirst({
         where: { id: durationOptionId, serviceId, employeeServiceId: null, isActive: true },
         select: SELECT,
       });
@@ -227,7 +228,7 @@ export class PriceResolverService {
 
     // Try: default option scoped to this deliveryType.
     if (deliveryType) {
-      const scoped = await this.prisma.serviceDurationOption.findFirst({
+      const scoped = await db.serviceDurationOption.findFirst({
         where: { serviceId, deliveryType, isDefault: true, isActive: true, employeeServiceId: null },
         select: SELECT,
       });
@@ -235,14 +236,14 @@ export class PriceResolverService {
     }
 
     // Try: any default option for the service.
-    const global = await this.prisma.serviceDurationOption.findFirst({
+    const global = await db.serviceDurationOption.findFirst({
       where: { serviceId, isDefault: true, isActive: true, employeeServiceId: null },
       select: SELECT,
     });
     if (global) return global;
 
     // Last resort: first active service-default option regardless of defaults
-    return this.prisma.serviceDurationOption.findFirst({
+    return db.serviceDurationOption.findFirst({
       where: { serviceId, isActive: true, employeeServiceId: null },
       orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
       select: SELECT,

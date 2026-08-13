@@ -83,6 +83,14 @@ import { ListInboxHandler } from './chat/staff/list-inbox.handler';
 import { GetConversationHandler as GetStaffConversationHandler } from './chat/staff/get-conversation.handler';
 import { ListConversationMessagesHandler } from './chat/staff/list-conversation-messages.handler';
 import { StaffConversationAccessService } from './chat/staff/staff-conversation-access.service';
+import { ChatBookingQuoteService } from './chat/operations/chat-booking-quote.service';
+import { PrepareBookingHandler } from './chat/operations/prepare-booking.handler';
+import { PrepareRescheduleHandler } from './chat/operations/prepare-reschedule.handler';
+import { PrepareCancellationHandler } from './chat/operations/prepare-cancellation.handler';
+import { ListOwnAppointmentsHandler } from './chat/operations/list-own-appointments.handler';
+import { AcknowledgeExistingBookingHandler } from './chat/operations/acknowledge-existing-booking.handler';
+import { ConfirmOperationHandler } from './chat/operations/confirm-operation.handler';
+import { DeclineOperationHandler } from './chat/operations/decline-operation.handler';
 
 const handlers = [
   SendPushHandler,
@@ -149,6 +157,14 @@ const handlers = [
   GetStaffConversationHandler,
   ListConversationMessagesHandler,
   StaffConversationAccessService,
+  ChatBookingQuoteService,
+  PrepareBookingHandler,
+  PrepareRescheduleHandler,
+  PrepareCancellationHandler,
+  ListOwnAppointmentsHandler,
+  AcknowledgeExistingBookingHandler,
+  ConfirmOperationHandler,
+  DeclineOperationHandler,
 ];
 
 const eventHandlers = [

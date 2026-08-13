@@ -222,6 +222,49 @@ describe('AdministrativeAssistantService', () => {
     );
   });
 
+  it('persists prepared operations as safe ACTION_CARD messages and passes source identity only in context', async () => {
+    const operation = {
+      id: 'operation-1', type: 'CREATE_BOOKING', status: 'AWAITING_CONFIRMATION',
+      version: 0, requiredConfirmations: 1, confirmationCount: 0,
+      expiresAt: '2026-08-13T09:15:00.000Z', bookingId: null, errorCode: null,
+      summary: {
+        action: 'CREATE_BOOKING', serviceName: 'جلسة إرشاد أسري',
+        scheduledAt: '2026-08-20T09:00:00.000Z', durationMins: 60,
+      },
+    };
+    chat.completeWithTools
+      .mockResolvedValueOnce({
+        content: 'yes, booked',
+        toolCalls: [{ id: 'prepare', function: { name: 'prepareBooking', arguments: '{"serviceId":"service-1"}' } }],
+        tokensUsed: 2,
+        model: 'selector',
+      })
+      .mockResolvedValueOnce({ content: 'yes, execute it', toolCalls: [], tokensUsed: 1, model: 'selector' });
+    tools.execute.mockResolvedValue({
+      ok: true,
+      data: { operation },
+      publicMetadata: { action: 'CHAT_OPERATION', operation },
+    });
+
+    await service.processMessage(messageId);
+
+    expect(tools.execute).toHaveBeenCalledWith(
+      'prepareBooking',
+      '{"serviceId":"service-1"}',
+      expect.objectContaining({
+        conversationId,
+        clientId: null,
+        sourceMessageId: messageId,
+      }),
+    );
+    expect(tx.commsChatMessage.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      kind: ChatMessageKind.ACTION_CARD,
+      body: 'راجع تفاصيل الحجز، ثم استخدم زر التأكيد أو الرفض.',
+      metadata: { action: 'CHAT_OPERATION', operation },
+    }) });
+    expect(JSON.stringify(tx.commsChatMessage.create.mock.calls)).not.toMatch(/yes, booked|yes, execute it/);
+  });
+
   it.each([
     `${'.'.repeat(250)}وش الخدمات اللي عندكم؟`,
     `${'😀'.repeat(250)}وش الخدمات اللي عندكم؟`,

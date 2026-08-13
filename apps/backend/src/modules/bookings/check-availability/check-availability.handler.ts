@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
-import type { BookingType, DeliveryType } from '@prisma/client';
+import type { BookingType, DeliveryType, Prisma } from '@prisma/client';
 import { CheckAvailabilityDto } from './check-availability.dto';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { combineYmdAndHmInBusinessTz, formatToBusinessYmd } from '../../../common/timezone';
@@ -21,6 +21,7 @@ export type CheckAvailabilityQuery = Omit<CheckAvailabilityDto, 'date' | 'durati
    * the legacy empty-array result.
    */
   silentOnMissingConfig?: boolean;
+  transaction?: Prisma.TransactionClient;
 };
 
 export interface AvailableSlot {
@@ -61,8 +62,10 @@ export class CheckAvailabilityHandler {
   ) {}
 
   async execute(query: CheckAvailabilityQuery): Promise<AvailableSlot[]> {
+    const db = query.transaction ?? this.prisma;
     const settings = await this.settingsHandler.execute({
       branchId: query.branchId,
+      transaction: query.transaction,
     });
 
     const dateOnly = new Date(query.date);
@@ -90,13 +93,14 @@ export class CheckAvailabilityHandler {
         query.durationOptionId ?? null,
         normalizedTypes.bookingType,
         normalizedTypes.deliveryType,
+        db,
       );
       if (option) durationMins = option.durationMins;
     }
     if (!durationMins) return [];
 
     const serviceOverrides = query.serviceId
-      ? await this.prisma.service.findFirst({
+      ? await db.service.findFirst({
           where: { id: query.serviceId },
           select: { bufferMinutes: true, minLeadMinutes: true, maxAdvanceDays: true },
         })
@@ -114,29 +118,29 @@ export class CheckAvailabilityHandler {
     const dayOfWeek = new Date(Date.UTC(ryear, rmonth - 1, rday)).getUTCDay();
 
     const [businessHour, holiday, shifts, exception, breaks, serviceConfig, serviceWindows] = await Promise.all([
-      this.prisma.businessHour.findUnique({
+      db.businessHour.findUnique({
         where: { branchId_dayOfWeek: { branchId: query.branchId, dayOfWeek } },
       }),
-      this.prisma.holiday.findFirst({
+      db.holiday.findFirst({
         where: { branchId: query.branchId, date: dateOnly },
       }),
-      this.prisma.employeeAvailability.findMany({
+      db.employeeAvailability.findMany({
         where: { employeeId: query.employeeId, dayOfWeek, isActive: true },
         orderBy: { startTime: 'asc' },
       }),
-      this.prisma.employeeAvailabilityException.findFirst({
+      db.employeeAvailabilityException.findFirst({
         where: {
           employeeId: query.employeeId,
           startDate: { lte: dateOnly },
           endDate: { gte: dateOnly },
         },
       }),
-      this.prisma.employeeBreak.findMany({
+      db.employeeBreak.findMany({
         where: { employeeId: query.employeeId, dayOfWeek },
         orderBy: { startTime: 'asc' },
       }),
       query.serviceId
-        ? this.prisma.serviceBookingConfig.findUnique({
+        ? db.serviceBookingConfig.findUnique({
             where: {
               serviceId_deliveryType: {
                 serviceId: query.serviceId,
@@ -147,7 +151,7 @@ export class CheckAvailabilityHandler {
           })
         : Promise.resolve(null),
       query.serviceId
-        ? this.prisma.serviceAvailabilityWindow.findMany({
+        ? db.serviceAvailabilityWindow.findMany({
             where: {
               serviceId: query.serviceId,
               deliveryType: normalizedTypes.deliveryType,
@@ -177,14 +181,14 @@ export class CheckAvailabilityHandler {
     //      "specialty match" in this codebase (no separate Specialty entity).
     //      A soft-disabled link (isActive=false) must not produce slots, even
     //      though the row physically exists.
-    const employee = await this.prisma.employee.findFirst({
+    const employee = await db.employee.findFirst({
       where: { id: query.employeeId },
       select: { id: true, isActive: true },
     });
     if (!employee || employee.isActive === false) return [];
 
     if (query.serviceId) {
-      const link = await this.prisma.employeeService.findUnique({
+      const link = await db.employeeService.findUnique({
         where: {
           employeeId_serviceId: { employeeId: query.employeeId, serviceId: query.serviceId },
         },
@@ -203,7 +207,7 @@ export class CheckAvailabilityHandler {
       // Custom-pricing gate: if the practitioner requires custom options and none exist
       // for this delivery type, treat it as "not offered" → no slots.
       if (link.useCustomPricing === true && normalizedTypes.deliveryType) {
-        const hasOwned = await this.prisma.serviceDurationOption.findFirst({
+        const hasOwned = await db.serviceDurationOption.findFirst({
           where: {
             serviceId: query.serviceId,
             deliveryType: normalizedTypes.deliveryType,
@@ -216,7 +220,7 @@ export class CheckAvailabilityHandler {
       }
     }
 
-    const employeeBranch = await this.prisma.employeeBranch.findUnique({
+    const employeeBranch = await db.employeeBranch.findUnique({
       where: { employeeId_branchId: { employeeId: query.employeeId, branchId: query.branchId } },
       select: { id: true },
     });
@@ -306,7 +310,7 @@ export class CheckAvailabilityHandler {
       adjustedWindows[0][1],
     );
 
-    const existingBookings = await this.prisma.booking.findMany({
+    const existingBookings = await db.booking.findMany({
       where: {
         employeeId: query.employeeId,
         ...(query.excludeBookingId ? { id: { not: query.excludeBookingId } } : {}),
@@ -352,26 +356,27 @@ export class CheckAvailabilityHandler {
     durationOptionId: string | null,
     _bookingType: BookingType | null,
     deliveryType: DeliveryType | null,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
     if (durationOptionId) {
-      return this.prisma.serviceDurationOption.findFirst({
+      return db.serviceDurationOption.findFirst({
         where: { id: durationOptionId, serviceId, isActive: true },
         select: { durationMins: true },
       });
     }
     if (deliveryType) {
-      const scoped = await this.prisma.serviceDurationOption.findFirst({
+      const scoped = await db.serviceDurationOption.findFirst({
         where: { serviceId, deliveryType, isDefault: true, isActive: true, employeeServiceId: null },
         select: { durationMins: true },
       });
       if (scoped) return scoped;
     }
-    const global = await this.prisma.serviceDurationOption.findFirst({
+    const global = await db.serviceDurationOption.findFirst({
       where: { serviceId, isDefault: true, isActive: true, employeeServiceId: null },
       select: { durationMins: true },
     });
     if (global) return global;
-    const any = await this.prisma.serviceDurationOption.findFirst({
+    const any = await db.serviceDurationOption.findFirst({
       where: { serviceId, isActive: true, employeeServiceId: null },
       orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
       select: { durationMins: true },
@@ -381,14 +386,14 @@ export class CheckAvailabilityHandler {
     // that use ServiceBookingConfig rows (e.g. direct-clinic hidden services)
     // without any ServiceDurationOption rows configured.
     if (deliveryType) {
-      const config = await this.prisma.serviceBookingConfig.findUnique({
+      const config = await db.serviceBookingConfig.findUnique({
         where: { serviceId_deliveryType: { serviceId, deliveryType } },
         select: { durationMins: true, isActive: true },
       });
       if (config && config.isActive && config.durationMins > 0) return { durationMins: config.durationMins };
     }
     // Try any active config when no deliveryType was given
-    const anyConfig = await this.prisma.serviceBookingConfig.findFirst({
+    const anyConfig = await db.serviceBookingConfig.findFirst({
       where: { serviceId, isActive: true },
       select: { durationMins: true },
     });
@@ -396,7 +401,7 @@ export class CheckAvailabilityHandler {
     // Final fallback: services that don't configure ServiceDurationOption rows
     // still carry the base duration on the Service row itself. Use it so the
     // availability check has a non-zero duration to grid against.
-    const svc = await this.prisma.service.findFirst({
+    const svc = await db.service.findFirst({
       where: { id: serviceId, isActive: true },
       select: { durationMins: true },
     });

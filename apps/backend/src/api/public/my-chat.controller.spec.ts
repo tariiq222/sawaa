@@ -10,6 +10,9 @@ import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
 import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
 import { MyChatController } from './my-chat.controller';
+import { AcknowledgeExistingBookingHandler } from '../../modules/comms/chat/operations/acknowledge-existing-booking.handler';
+import { ConfirmOperationHandler } from '../../modules/comms/chat/operations/confirm-operation.handler';
+import { DeclineOperationHandler } from '../../modules/comms/chat/operations/decline-operation.handler';
 
 describe('MyChatController (e2e)', () => {
   let app: INestApplication;
@@ -18,6 +21,9 @@ describe('MyChatController (e2e)', () => {
   const send = { execute: jest.fn() };
   const list = { execute: jest.fn() };
   const handoff = { execute: jest.fn() };
+  const acknowledge = { execute: jest.fn() };
+  const confirm = { execute: jest.fn() };
+  const decline = { execute: jest.fn() };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -28,6 +34,9 @@ describe('MyChatController (e2e)', () => {
         { provide: SendChatMessageHandler, useValue: send },
         { provide: ListChatMessagesHandler, useValue: list },
         { provide: RequestHandoffHandler, useValue: handoff },
+        { provide: AcknowledgeExistingBookingHandler, useValue: acknowledge },
+        { provide: ConfirmOperationHandler, useValue: confirm },
+        { provide: DeclineOperationHandler, useValue: decline },
         { provide: GuestChatTokenService, useValue: { clearCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
       ],
     })
@@ -141,5 +150,41 @@ describe('MyChatController (e2e)', () => {
       conversationId: '00000000-0000-4000-a000-000000000001',
       clientId: 'client-a',
     });
+  });
+
+  it.each([
+    ['acknowledge', acknowledge],
+    ['confirm', confirm],
+    ['decline', decline],
+  ])('accepts only operationId plus expectedVersion for %s', async (action, operationHandler) => {
+    const operationId = '00000000-0000-4000-a000-000000000010';
+    operationHandler.execute.mockResolvedValue({
+      id: operationId,
+      type: 'CREATE_BOOKING',
+      status: action === 'confirm' ? 'SUCCEEDED' : action === 'decline' ? 'DECLINED' : 'AWAITING_CONFIRMATION',
+      version: 1,
+      requiredConfirmations: 1,
+      confirmationCount: action === 'confirm' ? 1 : 0,
+      expiresAt: new Date('2026-08-13T09:15:00.000Z'),
+      bookingId: action === 'confirm' ? 'booking-1' : null,
+      errorCode: null,
+      summary: { action: 'CREATE_BOOKING' },
+    });
+    const url = `/public/me/chat/operations/${operationId}/${action}`;
+
+    await request(app.getHttpServer()).post(url).send({
+      expectedVersion: 0,
+      branchId: 'forged',
+    }).expect(400);
+    await request(app.getHttpServer()).post(url).send({ expectedVersion: 0 }).expect(200);
+
+    expect(operationHandler.execute).toHaveBeenCalledWith({
+      operationId,
+      clientId: 'client-a',
+      expectedVersion: 0,
+    });
+    const response = await request(app.getHttpServer()).post(url).send({ expectedVersion: 0 }).expect(200);
+    expect(response.body).not.toHaveProperty('payload');
+    expect(response.body).not.toHaveProperty('clientId');
   });
 });

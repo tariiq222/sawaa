@@ -29,5 +29,8 @@ describe('administrative policy', () => {
   it('limits the model to tool selection and declares prose content non-authoritative', () => {
     expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('Select tools only');
     expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('Your prose content is ignored');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('Never confirm or decline an operation');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('textual approval such as "yes"');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('never create periodic or recurring appointments');
   });
 });

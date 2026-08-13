@@ -22,6 +22,7 @@ import {
   buildAdministrativeSystemPrompt,
   getAdministrativeFallbackResponse,
   type AdministrativePublicMetadata,
+  type AdministrativeHandoffMetadata,
 } from './administrative-policy';
 import { AdministrativeScopeGate } from './administrative-scope-gate';
 import { AdministrativeToolContext } from './administrative-tool-context';
@@ -136,6 +137,7 @@ export class AdministrativeAssistantService {
     const startedAt = Date.now();
     let body: string;
     let metadata: AdministrativePublicMetadata | null = null;
+    let kind: ChatMessageKind = ChatMessageKind.TEXT;
     let model: string | null = null;
     let tokensUsed = 0;
 
@@ -149,12 +151,15 @@ export class AdministrativeAssistantService {
       try {
         const selection = await this.runToolRounds(
           [{ role: 'system', content: buildAdministrativeSystemPrompt() }, ...history],
-          new AdministrativeToolContext(conversation.id, conversation.clientId),
+          new AdministrativeToolContext(conversation.id, conversation.clientId, inbound.id),
         );
         const rendered = this.renderer.render(selection.executions, conversation.language);
         const validated = this.outputValidator.validate(rendered, conversation.language);
         body = validated.body;
         metadata = validated.metadata;
+        kind = validated.metadata?.action === 'CHAT_OPERATION'
+          ? ChatMessageKind.ACTION_CARD
+          : ChatMessageKind.TEXT;
         model = selection.model;
         tokensUsed = selection.tokensUsed;
       } catch (error) {
@@ -174,6 +179,7 @@ export class AdministrativeAssistantService {
       conversationId: conversation.id,
       body,
       metadata,
+      kind,
       model,
       tokensUsed,
       latencyMs: Date.now() - startedAt,
@@ -268,6 +274,7 @@ export class AdministrativeAssistantService {
     conversationId: string;
     body: string;
     metadata: AdministrativePublicMetadata | null;
+    kind: ChatMessageKind;
     model: string | null;
     tokensUsed: number;
     latencyMs: number;
@@ -307,9 +314,9 @@ export class AdministrativeAssistantService {
             senderType: MessageSenderType.AI,
             senderId: null,
             body: input.body,
-            kind: ChatMessageKind.TEXT,
+            kind: input.kind,
             metadata: input.metadata
-              ? { action: input.metadata.action, reason: input.metadata.reason }
+              ? input.metadata as unknown as Prisma.InputJsonValue
               : Prisma.JsonNull,
             responseForMessageId: input.messageId,
             model: input.model,
@@ -376,7 +383,7 @@ export class AdministrativeAssistantService {
     }
   }
 
-  private readApprovedMetadata(value: Prisma.JsonValue | null): Partial<AdministrativePublicMetadata> {
+  private readApprovedMetadata(value: Prisma.JsonValue | null): Partial<AdministrativeHandoffMetadata> {
     if (!value || Array.isArray(value) || typeof value !== 'object') return {};
     const action = value.action === 'OFFER_HANDOFF' ? value.action : undefined;
     const reason = value.reason === 'OUT_OF_SCOPE'

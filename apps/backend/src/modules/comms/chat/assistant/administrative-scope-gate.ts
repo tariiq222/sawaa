@@ -60,6 +60,10 @@ const ARABIC_INTENT_TEMPLATES = {
   booking: [
     /^(?:ابغي|ابغا|ابي|اريد|اود) (?:ان )?(?:(?:احجز|حجز) )?(?:موعد|جلسه)$/u,
     /^ممكن (?:احجز|حجز) (?:موعد|جلسه)$/u,
+    /^(?:ما|وش|ايش)(?: هي)? مواعيدي(?: القادمه)?$/u,
+    /^(?:اعرض|ورني) مواعيدي(?: القادمه)?$/u,
+    /^(?:ابغي|ابغا|ابي|اريد) (?:اعاده جدوله|تغيير) موعدي$/u,
+    /^(?:ابغي|ابغا|ابي|اريد) الغاء موعدي$/u,
   ],
   availability: [
     /^هل يوجد موعد متاح غدا$/u,
@@ -111,6 +115,10 @@ const ENGLISH_INTENT_TEMPLATES = {
     /^i would like to book an appointment$/,
     /^can i book an appointment$/,
     /^could i schedule an appointment$/,
+    /^(?:show|list) my (?:upcoming )?appointments$/,
+    /^what are my (?:upcoming )?appointments$/,
+    /^i (?:want|would like) to reschedule my appointment$/,
+    /^i (?:want|would like) to cancel my appointment$/,
   ],
   availability: [
     /^do you have available appointments$/,

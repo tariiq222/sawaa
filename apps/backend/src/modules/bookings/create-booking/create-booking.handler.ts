@@ -17,7 +17,10 @@ import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { computeVat } from '../../finance/money.helper';
 import { hashToInt32 } from '../booking-lifecycle.helper';
-import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
+import {
+  ACTIVE_BOOKING_STATUSES,
+  STAFF_TIME_BLOCKING_BOOKING_STATUSES,
+} from '../active-booking-statuses';
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
 function mapDbConflict(err: unknown): never {
@@ -37,7 +40,11 @@ export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expir
   bookingType?: string;
   deliveryType?: string;
   /** Booking source channel. Defaults to 'RECEPTION' when omitted. */
-  source?: 'RECEPTION' | 'ONLINE' | 'WHATSAPP';
+  source?: 'RECEPTION' | 'ONLINE' | 'WHATSAPP' | 'AI_CHAT';
+  /** Durable one-shot creation key. Omitted by legacy/dashboard callers. */
+  creationIdempotencyKey?: string;
+  /** Internal transaction port used by confirmed chat operations. */
+  transaction?: Prisma.TransactionClient;
 };
 
 @Injectable()
@@ -53,6 +60,7 @@ export class CreateBookingHandler {
   ) {}
 
   async execute(dto: CreateBookingCommand) {
+    const db = (dto.transaction ?? this.prisma) as unknown as Prisma.TransactionClient;
     const scheduledAt = new Date(dto.scheduledAt);
     if (scheduledAt <= new Date()) {
       throw new BadRequestException('Booking must be scheduled in the future');
@@ -60,10 +68,11 @@ export class CreateBookingHandler {
 
     const bookingSettings = await this.settingsHandler.execute({
       branchId: dto.branchId,
+      transaction: dto.transaction,
     });
 
     if (dto.payAtClinic) {
-      const orgSettings = await this.prisma.organizationSettings.findFirst({
+      const orgSettings = await db.organizationSettings.findFirst({
         select: { paymentAtClinicEnabled: true },
       });
       if (!orgSettings?.paymentAtClinicEnabled) {
@@ -77,27 +86,27 @@ export class CreateBookingHandler {
       deliveryType: dto.deliveryType,
     });
 
-    const branch = await this.prisma.branch.findFirst({
+    const branch = await db.branch.findFirst({
       where: { id: dto.branchId },
       select: { id: true, nameAr: true, isActive: true },
     });
     if (!branch) throw new NotFoundException('Branch not found');
     if (branch.isActive === false) throw new BadRequestException('Branch is not active');
 
-    const client = await this.prisma.client.findFirst({
+    const client = await db.client.findFirst({
       where: { id: dto.clientId, deletedAt: null },
       select: { id: true },
     });
     if (!client) throw new NotFoundException('Client not found');
 
-    const employee = await this.prisma.employee.findFirst({
+    const employee = await db.employee.findFirst({
       where: { id: dto.employeeId },
       select: { id: true, name: true, isActive: true },
     });
     if (!employee) throw new NotFoundException('Employee not found');
     if (employee.isActive === false) throw new BadRequestException('Employee is not active');
 
-    const service = await this.prisma.service.findFirst({
+    const service = await db.service.findFirst({
       where: { id: dto.serviceId },
       select: {
         id: true,
@@ -118,7 +127,7 @@ export class CreateBookingHandler {
       throw new BadRequestException('Service is hidden');
     }
 
-    const employeeService = await this.prisma.employeeService.findUnique({
+    const employeeService = await db.employeeService.findUnique({
       where: { employeeId_serviceId: { employeeId: dto.employeeId, serviceId: dto.serviceId } },
     });
     if (!employeeService || employeeService.isActive === false) {
@@ -144,7 +153,7 @@ export class CreateBookingHandler {
         // durationOptionId to be one of those owned rows — otherwise a client
         // could pass a service-default option id and be charged the inherited
         // base price instead of the practitioner's custom price.
-        const owned = await this.prisma.serviceDurationOption.findFirst({
+        const owned = await db.serviceDurationOption.findFirst({
           where: {
             serviceId: dto.serviceId,
             deliveryType,
@@ -168,14 +177,14 @@ export class CreateBookingHandler {
     let categoryName: string | null = null;
     let departmentName: string | null = null;
     if (service.categoryId) {
-      const category = await this.prisma.serviceCategory.findFirst({
+      const category = await db.serviceCategory.findFirst({
         where: { id: service.categoryId },
         select: { nameAr: true, departmentId: true },
       });
       if (category) {
         categoryName = category.nameAr;
         if (category.departmentId) {
-          const department = await this.prisma.department.findFirst({
+          const department = await db.department.findFirst({
             where: { id: category.departmentId },
             select: { nameAr: true },
           });
@@ -185,7 +194,7 @@ export class CreateBookingHandler {
     }
 
     if (bookingType && bookingType !== 'WALK_IN') {
-      const allowedConfigs = await this.prisma.serviceBookingConfig.findMany({
+      const allowedConfigs = await db.serviceBookingConfig.findMany({
         where: { serviceId: dto.serviceId, isActive: true },
         select: { deliveryType: true },
       });
@@ -197,14 +206,17 @@ export class CreateBookingHandler {
     }
 
     // Resolve price + duration via PriceResolverService (3-tier: employee override → duration option → service base).
-    const resolved = await this.priceResolver.resolve({
+    const priceParams: Parameters<PriceResolverService['resolve']>[0] = {
       serviceId: dto.serviceId,
       employeeServiceId: employeeService.id,
       durationOptionId: dto.durationOptionId ?? null,
       bookingType: bookingType ?? null,
       deliveryType: deliveryType ?? null,
       useCustomPricing: employeeService.useCustomPricing === true,
-    });
+    };
+    const resolved = dto.transaction
+      ? await this.priceResolver.resolve(priceParams, dto.transaction)
+      : await this.priceResolver.resolve(priceParams);
 
     const durationMins = resolved.durationMins;
     const price = resolved.price;
@@ -250,6 +262,7 @@ export class CreateBookingHandler {
       durationMins,
       bookingType,
       deliveryType,
+      transaction: dto.transaction,
     });
 
     let discountedPrice: number | null = null;
@@ -269,8 +282,54 @@ export class CreateBookingHandler {
 
     const initialStatus = needsOnlinePayment ? 'AWAITING_PAYMENT' : 'CONFIRMED';
 
-    const booking = await this.rlsTransaction.withTransaction(
-      async (tx) => {
+    const createInTransaction = async (tx: Prisma.TransactionClient) => {
+        // Global booking lock order: client -> employee/slot -> coupon -> booking number.
+        // Chat callers already hold the same client lock after locking the
+        // ChatOperation row; advisory xact locks are re-entrant in one tx.
+        const clientLockKey1 = hashToInt32('client_booking');
+        const clientLockKey2 = hashToInt32(dto.clientId);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${clientLockKey1}::int, ${clientLockKey2}::int)`;
+
+        if (dto.creationIdempotencyKey) {
+          const existing = await tx.booking.findUnique({
+            where: { creationIdempotencyKey: dto.creationIdempotencyKey },
+          });
+          if (existing) {
+            if (!this.matchesIdempotentShape(existing, {
+              ...dto,
+              scheduledAt,
+              bookingType,
+              deliveryType,
+              durationMins,
+              durationOptionId: resolved.durationOptionId || null,
+              price,
+              currency,
+              source: resolvedSource,
+            })) {
+              throw new ConflictException('Creation idempotency key belongs to another booking');
+            }
+            const invoice = await tx.invoice.findFirst({
+              where: { bookingId: existing.id },
+              select: { id: true },
+            });
+            return { ...existing, invoiceId: invoice?.id ?? null };
+          }
+        }
+
+        const clientConflict = await tx.booking.findFirst({
+          where: {
+            clientId: dto.clientId,
+            isHistoricalImport: false,
+            status: { in: [...ACTIVE_BOOKING_STATUSES] },
+            scheduledAt: { lt: endsAt },
+            endsAt: { gt: scheduledAt },
+          },
+          select: { id: true },
+        });
+        if (clientConflict) {
+          throw new ConflictException('Client already has an overlapping appointment');
+        }
+
         // CR-5: acquire advisory lock BEFORE the conflict check so that two
         // concurrent requests on the same employee+slot cannot both see "no
         // conflict" and both proceed. Lock key is scoped to
@@ -349,6 +408,7 @@ export class CreateBookingHandler {
             bookingType,
             deliveryType,
             source: resolvedSource,
+            creationIdempotencyKey: dto.creationIdempotencyKey,
             notes: dto.notes,
             // CONFIRMED bookings carry no expiry window — EXPIRE only acts on
             // unconfirmed states. AWAITING_PAYMENT gets a 15-minute window
@@ -434,8 +494,15 @@ export class CreateBookingHandler {
         });
 
         return { ...booking, invoiceId: invoice?.id ?? null };
-      },
-      { isolationLevel: 'Serializable' },
+      };
+
+    const booking = await (
+      dto.transaction
+        ? createInTransaction(dto.transaction)
+        : this.rlsTransaction.withTransaction(
+            createInTransaction,
+            { isolationLevel: 'Serializable' },
+          )
     ).catch(mapDbConflict);
 
     return booking;
@@ -449,6 +516,7 @@ export class CreateBookingHandler {
     durationMins: number;
     bookingType: string;
     deliveryType: string;
+    transaction?: Prisma.TransactionClient;
   }) {
     // durationOptionId intentionally omitted — durationMins is already the
     // effective duration (including any employee-service override) resolved by
@@ -463,11 +531,58 @@ export class CreateBookingHandler {
       durationMins: input.durationMins,
       bookingType: input.bookingType,
       deliveryType: input.deliveryType as DeliveryType,
+      transaction: input.transaction,
     });
 
     const scheduledMs = input.scheduledAt.getTime();
     if (!slots.some((slot) => slot.startTime.getTime() === scheduledMs)) {
       throw new BadRequestException('Selected booking time is not available');
     }
+  }
+
+  private matchesIdempotentShape(
+    existing: {
+      branchId: string;
+      clientId: string;
+      employeeId: string;
+      serviceId: string | null;
+      scheduledAt: Date;
+      durationMins: number;
+      durationOptionId: string | null;
+      bookingType: string;
+      deliveryType: string;
+      source: string;
+      price: Prisma.Decimal;
+      currency: string;
+      payAtClinic: boolean;
+      couponCode: string | null;
+      notes: string | null;
+    },
+    expected: Omit<CreateBookingCommand, 'durationOptionId' | 'bookingType' | 'deliveryType'> & {
+      scheduledAt: Date;
+      bookingType: string;
+      deliveryType: string;
+      durationMins: number;
+      durationOptionId: string | null;
+      price: number;
+      currency: string;
+      source: string;
+    },
+  ): boolean {
+    return existing.branchId === expected.branchId
+      && existing.clientId === expected.clientId
+      && existing.employeeId === expected.employeeId
+      && existing.serviceId === expected.serviceId
+      && existing.scheduledAt.getTime() === expected.scheduledAt.getTime()
+      && existing.durationMins === expected.durationMins
+      && existing.durationOptionId === expected.durationOptionId
+      && existing.bookingType === expected.bookingType
+      && existing.deliveryType === expected.deliveryType
+      && existing.source === expected.source
+      && Number(existing.price) === expected.price
+      && existing.currency === expected.currency
+      && existing.payAtClinic === (expected.payAtClinic ?? false)
+      && existing.couponCode === (expected.couponCode ?? null)
+      && (existing.notes ?? null) === (expected.notes ?? null);
   }
 }

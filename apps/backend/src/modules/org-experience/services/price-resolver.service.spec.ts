@@ -333,4 +333,21 @@ describe('PriceResolverService', () => {
     expect(result.price).toBe(200); // falls straight to Service.price
     expect(result.durationMins).toBe(60);
   });
+
+  it('reads pricing only from a supplied transaction client', async () => {
+    const prisma = buildPrisma();
+    const tx = buildPrisma({ durationOption: { ...mockDurationOption, price: 777 } });
+    const service = new PriceResolverService(prisma as never);
+
+    const result = await (service.resolve as unknown as (
+      params: Parameters<PriceResolverService['resolve']>[0],
+      transaction: typeof tx,
+    ) => ReturnType<PriceResolverService['resolve']>)({
+      serviceId: 'svc-1', employeeServiceId: null, durationOptionId: 'opt-1',
+    }, tx);
+
+    expect(result.price).toBe(777);
+    expect(prisma.serviceDurationOption.findFirst).not.toHaveBeenCalled();
+    expect(tx.serviceDurationOption.findFirst).toHaveBeenCalled();
+  });
 });

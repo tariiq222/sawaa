@@ -47,4 +47,30 @@ describe('AdministrativeOutputValidator', () => {
 
     expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
   });
+
+  it('accepts the exact public operation-card contract and rejects hidden identity fields', () => {
+    const operation = {
+      id: 'operation-1', type: 'CREATE_BOOKING', status: 'AWAITING_CONFIRMATION',
+      version: 0, requiredConfirmations: 1, confirmationCount: 0,
+      expiresAt: '2026-08-13T09:15:00.000Z', bookingId: null, errorCode: null,
+      summary: { action: 'CREATE_BOOKING', serviceName: 'جلسة إرشاد أسري' },
+    };
+    const valid = {
+      source: 'DETERMINISTIC_RENDERER',
+      body: 'راجع تفاصيل الحجز، ثم استخدم زر التأكيد أو الرفض.',
+      metadata: { action: 'CHAT_OPERATION', operation },
+    };
+    expect(validator.validate(valid, 'ar')).toEqual(valid);
+
+    const forged = {
+      ...valid,
+      metadata: {
+        action: 'CHAT_OPERATION',
+        operation: { ...operation, summary: { ...operation.summary, clientId: 'secret-client' } },
+      },
+    };
+    expect(validator.validate(forged, 'ar').metadata).toEqual({
+      action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE',
+    });
+  });
 });

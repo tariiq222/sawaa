@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { BookingType } from '@prisma/client';
 import type { ToolDefinition } from '../../../../infrastructure/ai/chat.adapter';
 import { SemanticSearchHandler } from '../../../ai/semantic-search/semantic-search.handler';
 import { GetPublicAvailabilityHandler } from '../../../bookings/availability/public/get-public-availability.handler';
@@ -8,6 +7,11 @@ import { GetPublicCatalogHandler } from '../../../org-experience/public-catalog/
 import { ListPublicEmployeesHandler } from '../../../people/employees/public/list-public-employees.handler';
 import { AdministrativeToolContext } from './administrative-tool-context';
 import type { AdministrativePublicMetadata } from './administrative-policy';
+import { ListOwnAppointmentsHandler } from '../operations/list-own-appointments.handler';
+import { PrepareBookingHandler } from '../operations/prepare-booking.handler';
+import { PrepareRescheduleHandler } from '../operations/prepare-reschedule.handler';
+import { PrepareCancellationHandler } from '../operations/prepare-cancellation.handler';
+import { toOperationCardMetadata } from '../operations/chat-operation-public.mapper';
 
 const ALLOWED_TOOL_NAMES = [
   'getCenterInfo',
@@ -16,17 +20,15 @@ const ALLOWED_TOOL_NAMES = [
   'getAvailability',
   'searchKnowledge',
   'handoffToReception',
+  'listOwnAppointments',
+  'prepareBooking',
+  'prepareReschedule',
+  'prepareCancellation',
 ] as const;
 
 type AllowedToolName = (typeof ALLOWED_TOOL_NAMES)[number];
 type FunctionToolDefinition = Extract<ToolDefinition, { type: 'function' }>;
 type PublicCatalogService = Awaited<ReturnType<GetPublicCatalogHandler['execute']>>['services'][number];
-
-const PERSONAL_BOOKING_TOOL_NAMES = new Set([
-  'createBooking',
-  'rescheduleBooking',
-  'cancelBooking',
-]);
 
 export type AdministrativeToolResult =
   | { ok: true; data: unknown; publicMetadata?: AdministrativePublicMetadata }
@@ -102,7 +104,6 @@ const DEFINITIONS: FunctionToolDefinition[] = [
           serviceId: { type: 'string' },
           branchId: { type: 'string' },
           durationOptionId: { type: 'string' },
-          bookingType: { type: 'string' },
           deliveryType: { type: 'string', enum: ['IN_PERSON', 'ONLINE'] },
         },
         required: ['employeeId', 'date'],
@@ -129,6 +130,60 @@ const DEFINITIONS: FunctionToolDefinition[] = [
       parameters: { ...objectSchema, properties: {}, required: [] },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'listOwnAppointments',
+      description: 'List appointments for the authenticated client, or present login for a guest.',
+      parameters: { ...objectSchema, properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'prepareBooking',
+      description: 'Prepare an immutable appointment quote and confirmation card. This never confirms the booking.',
+      parameters: {
+        ...objectSchema,
+        properties: {
+          branchId: { type: 'string' },
+          employeeId: { type: 'string' },
+          serviceId: { type: 'string' },
+          scheduledAt: { type: 'string', description: 'ISO 8601 appointment start.' },
+          durationOptionId: { type: 'string' },
+          deliveryType: { type: 'string', enum: ['IN_PERSON', 'ONLINE'] },
+        },
+        required: ['branchId', 'employeeId', 'serviceId', 'scheduledAt', 'deliveryType'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'prepareReschedule',
+      description: 'Prepare an owned appointment reschedule using its existing duration. This never confirms it.',
+      parameters: {
+        ...objectSchema,
+        properties: {
+          bookingId: { type: 'string' },
+          newScheduledAt: { type: 'string', description: 'ISO 8601 appointment start.' },
+        },
+        required: ['bookingId', 'newScheduledAt'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'prepareCancellation',
+      description: 'Prepare an owned appointment cancellation confirmation card. This never confirms it.',
+      parameters: {
+        ...objectSchema,
+        properties: { bookingId: { type: 'string' } },
+        required: ['bookingId'],
+      },
+    },
+  },
 ];
 
 @Injectable()
@@ -139,6 +194,10 @@ export class AdministrativeToolsService {
     private readonly employees: ListPublicEmployeesHandler,
     private readonly availability: GetPublicAvailabilityHandler,
     private readonly search: SemanticSearchHandler,
+    private readonly listOwnAppointments: ListOwnAppointmentsHandler,
+    private readonly prepareBooking: PrepareBookingHandler,
+    private readonly prepareReschedule: PrepareRescheduleHandler,
+    private readonly prepareCancellation: PrepareCancellationHandler,
   ) {}
 
   getDefinitions(): FunctionToolDefinition[] {
@@ -150,11 +209,6 @@ export class AdministrativeToolsService {
     rawArguments: string,
     context: AdministrativeToolContext,
   ): Promise<AdministrativeToolResult> {
-    if (PERSONAL_BOOKING_TOOL_NAMES.has(name)) {
-      return context.clientId
-        ? { ok: false, error: { code: 'TOOL_NOT_AVAILABLE' } }
-        : { ok: false, error: { code: 'AUTH_REQUIRED' } };
-    }
     if (!this.isAllowedToolName(name)) {
       return { ok: false, error: { code: 'TOOL_NOT_ALLOWED' } };
     }
@@ -198,7 +252,6 @@ export class AdministrativeToolsService {
               ...(this.optionalString(args.serviceId) ? { serviceId: String(args.serviceId) } : {}),
               ...(this.optionalString(args.branchId) ? { branchId: String(args.branchId) } : {}),
               ...(this.optionalString(args.durationOptionId) ? { durationOptionId: String(args.durationOptionId) } : {}),
-              ...(this.optionalBookingType(args.bookingType) ? { bookingType: this.optionalBookingType(args.bookingType) } : {}),
               ...(args.deliveryType === 'IN_PERSON' || args.deliveryType === 'ONLINE'
                 ? { deliveryType: args.deliveryType }
                 : {}),
@@ -216,6 +269,76 @@ export class AdministrativeToolsService {
             data: { intent: 'HANDOFF_TO_RECEPTION', optionOnly: true },
             publicMetadata: { action: 'OFFER_HANDOFF', reason: 'USER_REQUESTED' },
           };
+        case 'listOwnAppointments': {
+          const sourceMessageId = this.contextMessageId(context);
+          if (!sourceMessageId) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
+          const result = await this.listOwnAppointments.execute({
+            conversationId: context.conversationId,
+            clientId: context.clientId,
+            sourceMessageId,
+          });
+          if (result.kind === 'AUTH_REQUIRED') {
+            const publicMetadata = toOperationCardMetadata(result.operation);
+            return { ok: true, data: { operation: publicMetadata.operation }, publicMetadata };
+          }
+          return {
+            ok: true,
+            data: this.projectAppointments(result.appointments.items),
+          };
+        }
+        case 'prepareBooking': {
+          const sourceMessageId = this.contextMessageId(context);
+          const branchId = this.requiredString(args.branchId);
+          const employeeId = this.requiredString(args.employeeId);
+          const serviceId = this.requiredString(args.serviceId);
+          const scheduledAt = this.requiredString(args.scheduledAt);
+          const deliveryType = this.deliveryType(args.deliveryType);
+          if (!sourceMessageId || !branchId || !employeeId || !serviceId || !scheduledAt || !deliveryType) {
+            return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
+          }
+          const operation = await this.prepareBooking.execute({
+            conversationId: context.conversationId,
+            clientId: context.clientId,
+            sourceMessageId,
+            branchId,
+            employeeId,
+            serviceId,
+            scheduledAt,
+            ...(this.optionalString(args.durationOptionId)
+              ? { durationOptionId: this.optionalString(args.durationOptionId) }
+              : {}),
+            deliveryType,
+          });
+          return this.operationResult(operation);
+        }
+        case 'prepareReschedule': {
+          const sourceMessageId = this.contextMessageId(context);
+          const bookingId = this.requiredString(args.bookingId);
+          const newScheduledAt = this.requiredString(args.newScheduledAt);
+          if (!sourceMessageId || !bookingId || !newScheduledAt) {
+            return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
+          }
+          return this.operationResult(await this.prepareReschedule.execute({
+            conversationId: context.conversationId,
+            clientId: context.clientId,
+            sourceMessageId,
+            bookingId,
+            newScheduledAt,
+          }));
+        }
+        case 'prepareCancellation': {
+          const sourceMessageId = this.contextMessageId(context);
+          const bookingId = this.requiredString(args.bookingId);
+          if (!sourceMessageId || !bookingId) {
+            return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
+          }
+          return this.operationResult(await this.prepareCancellation.execute({
+            conversationId: context.conversationId,
+            clientId: context.clientId,
+            sourceMessageId,
+            bookingId,
+          }));
+        }
       }
     } catch {
       return { ok: false, error: { code: 'TOOL_FAILED' } };
@@ -245,16 +368,39 @@ export class AdministrativeToolsService {
     return this.requiredString(value) ?? undefined;
   }
 
-  private optionalBookingType(value: unknown): BookingType | 'ONLINE' | undefined {
-    switch (value) {
-      case BookingType.INDIVIDUAL:
-      case BookingType.WALK_IN:
-      case BookingType.GROUP:
-      case 'ONLINE':
-        return value;
-      default:
-        return undefined;
-    }
+  private deliveryType(value: unknown): 'IN_PERSON' | 'ONLINE' | null {
+    return value === 'IN_PERSON' || value === 'ONLINE' ? value : null;
+  }
+
+  private contextMessageId(context: AdministrativeToolContext): string | null {
+    return context.sourceMessageId && context.sourceMessageId.length > 0
+      ? context.sourceMessageId
+      : null;
+  }
+
+  private operationResult(operation: Parameters<typeof toOperationCardMetadata>[0]): AdministrativeToolResult {
+    const publicMetadata = toOperationCardMetadata(operation);
+    return { ok: true, data: { operation: publicMetadata.operation }, publicMetadata };
+  }
+
+  private projectAppointments(values: unknown[]): Array<Record<string, unknown>> {
+    return this.capSerializedArray(values.slice(0, MAX_LIST_ITEMS).map((value) => {
+      const item = this.asRecord(value);
+      return this.compact({
+        bookingId: this.text(item.id, 100),
+        status: this.text(item.status, 40),
+        scheduledAt: this.dateText(item.scheduledAt),
+        endsAt: this.dateText(item.endsAt),
+        durationMins: this.number(item.durationMins),
+        serviceName: this.text(item.serviceName, MAX_SHORT_TEXT_CHARS),
+        serviceNameAr: this.text(item.serviceNameAr, MAX_SHORT_TEXT_CHARS),
+        employeeName: this.text(item.employeeName, MAX_SHORT_TEXT_CHARS),
+        employeeNameAr: this.text(item.employeeNameAr, MAX_SHORT_TEXT_CHARS),
+        branchName: this.text(item.branchName, MAX_SHORT_TEXT_CHARS),
+        branchNameAr: this.text(item.branchNameAr, MAX_SHORT_TEXT_CHARS),
+        deliveryType: this.text(item.deliveryType, 20),
+      });
+    }));
   }
 
   private projectCenterInfo(value: unknown): Record<string, unknown> {

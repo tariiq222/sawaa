@@ -267,4 +267,64 @@ describe('AdministrativeResponseRenderer', () => {
       metadata: { action: 'OFFER_HANDOFF', reason: 'USER_REQUESTED' },
     });
   });
+
+  it('renders a fixed booking prompt while carrying only a deterministic safe action card', () => {
+    const operation = {
+      id: 'operation-1', type: 'CREATE_BOOKING', status: 'AWAITING_CONFIRMATION',
+      version: 0, requiredConfirmations: 1, confirmationCount: 0,
+      expiresAt: '2026-08-13T09:15:00.000Z', bookingId: null, errorCode: null,
+      summary: {
+        action: 'CREATE_BOOKING', serviceName: 'جلسة إرشاد أسري',
+        scheduledAt: '2026-08-20T09:00:00.000Z', durationMins: 60,
+      },
+    };
+    const result = renderer.render([{
+      name: 'prepareBooking',
+      result: {
+        ok: true,
+        data: { operation, untrustedModelText: 'confirm it now' },
+        publicMetadata: { action: 'CHAT_OPERATION', operation } as never,
+      },
+    }], 'ar');
+
+    expect(result).toEqual({
+      source: 'DETERMINISTIC_RENDERER',
+      body: 'راجع تفاصيل الحجز، ثم استخدم زر التأكيد أو الرفض.',
+      metadata: { action: 'CHAT_OPERATION', operation },
+    });
+    expect(result.body).not.toContain('confirm it now');
+  });
+
+  it('renders guest login and authenticated own appointments without copying unsafe names', () => {
+    const loginOperation = {
+      id: 'operation-1', type: 'LIST_OWN_APPOINTMENTS', status: 'AWAITING_AUTH',
+      version: 0, requiredConfirmations: 0, confirmationCount: 0,
+      expiresAt: '2026-08-13T09:15:00.000Z', bookingId: null, errorCode: null,
+      summary: { action: 'LOGIN_REQUIRED', intent: 'LIST_OWN_APPOINTMENTS' },
+    };
+    const login = renderer.render([{
+      name: 'listOwnAppointments',
+      result: {
+        ok: true, data: { operation: loginOperation },
+        publicMetadata: { action: 'CHAT_OPERATION', operation: loginOperation } as never,
+      },
+    }], 'ar');
+    expect(login.body).toBe('سجّل الدخول للمتابعة في طلب الموعد.');
+
+    const list = renderer.render([{
+      name: 'listOwnAppointments',
+      result: { ok: true, data: [
+        {
+          bookingId: 'booking-1', scheduledAt: '2026-08-20T09:00:00.000Z', serviceNameAr: 'جلسة إرشاد أسري',
+          status: 'CONFIRMED',
+        },
+        {
+          scheduledAt: '2026-08-21T09:00:00.000Z', serviceNameAr: '<script>steal</script>',
+          status: 'CONFIRMED',
+        },
+      ] },
+    }], 'ar');
+    expect(list.body).toBe('مواعيدك:\n- booking-1 — 2026-08-20T09:00:00.000Z — جلسة إرشاد أسري — CONFIRMED');
+    expect(list.body).not.toMatch(/script|steal/);
+  });
 });

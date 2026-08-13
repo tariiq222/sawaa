@@ -59,4 +59,21 @@ describe('GetBookingSettingsHandler', () => {
     expect(result.freeCancelBeforeHours).toBe(24);
     expect(result.maxReschedulesPerBooking).toBe(3);
   });
+
+  it('bypasses cache and reads only through a supplied transaction', async () => {
+    const prisma = buildPrisma();
+    const cache = buildCache();
+    const tx = {
+      bookingSettings: {
+        findFirst: jest.fn().mockResolvedValue({ ...dbSettings, branchId: 'branch-1', bufferMinutes: 15 }),
+      },
+    };
+    const handler = new GetBookingSettingsHandler(prisma as never, cache as never);
+
+    const result = await handler.execute({ branchId: 'branch-1', transaction: tx as never } as never);
+
+    expect(result.bufferMinutes).toBe(15);
+    expect(cache.getOrSet).not.toHaveBeenCalled();
+    expect(tx.bookingSettings.findFirst).toHaveBeenCalled();
+  });
 });
