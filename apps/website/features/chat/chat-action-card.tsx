@@ -15,6 +15,7 @@ interface ChatActionCardProps {
   onAcknowledge: (operationId: string, expectedVersion: number) => Promise<ChatOperation>;
   onConfirm: (operationId: string, expectedVersion: number) => Promise<ChatOperation>;
   onDecline: (operationId: string, expectedVersion: number) => Promise<ChatOperation>;
+  readOnly?: boolean;
 }
 
 export function ChatActionCard(props: ChatActionCardProps) {
@@ -83,7 +84,7 @@ export function ChatActionCard(props: ChatActionCardProps) {
             {terminalLabel}
           </p>
         )}
-        {operation.status === 'AWAITING_AUTH' && (
+        {!props.readOnly && operation.status === 'AWAITING_AUTH' && (
           <button
             type="button"
             onClick={() => props.onLoginRequired(operation.id)}
@@ -93,7 +94,7 @@ export function ChatActionCard(props: ChatActionCardProps) {
             {t('chat.operation.login')}
           </button>
         )}
-        {operation.status === 'AWAITING_EXISTING_BOOKING_ACK' && (
+        {!props.readOnly && operation.status === 'AWAITING_EXISTING_BOOKING_ACK' && (
           <button
             type="button"
             disabled={pending}
@@ -103,7 +104,7 @@ export function ChatActionCard(props: ChatActionCardProps) {
             {pending ? t('chat.operation.processing') : t('chat.operation.acknowledge')}
           </button>
         )}
-        {operation.status === 'AWAITING_CONFIRMATION' && (
+        {!props.readOnly && operation.status === 'AWAITING_CONFIRMATION' && (
           <div className="flex gap-2">
             <button
               type="button"

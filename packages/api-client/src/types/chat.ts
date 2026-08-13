@@ -48,6 +48,30 @@ export interface ChatConversationDetail extends ChatConversationSummary {
   isAiChat: boolean
 }
 
+/** A safe, client-owned conversation history item. It deliberately omits identities and internal metadata. */
+export interface ClientChatConversationSummary {
+  id: string
+  status: ChatConversationStatus
+  createdAt: string
+  updatedAt: string
+  lastMessageAt: string | null
+  lastMessage: {
+    preview: string
+    senderType: ChatSenderType
+    kind: ChatMessageKind
+  } | null
+}
+
+export interface ListClientChatConversationsQuery {
+  cursor?: string
+  limit?: number
+}
+
+export interface ClientChatConversationPage {
+  data: ClientChatConversationSummary[]
+  meta: ChatCursorMeta
+}
+
 export interface ChatOperationBookingSummary {
   action?: ChatOperationType | 'LOGIN_REQUIRED'
   scheduledAt?: string

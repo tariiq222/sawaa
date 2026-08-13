@@ -6,6 +6,7 @@ import {
   declineChatOperation,
   getCurrentClientChatConversation,
   getCurrentGuestChatConversation,
+  listClientChatConversations,
   listClientChatMessages,
   listGuestChatMessages,
   requestClientChatHandoff,
@@ -18,6 +19,7 @@ import {
 } from '@sawaa/api-client'
 import type {
   ChatConversationDetail,
+  ClientChatConversationPage,
   ChatMessage,
   ChatMessagePage,
   ChatOperation,
@@ -25,6 +27,7 @@ import type {
   CreateGuestChatConversationRequest,
   GuestChatHandoffRequest,
   ListChatMessagesQuery,
+  ListClientChatConversationsQuery,
   SendChatMessageRequest,
 } from '@sawaa/api-client'
 
@@ -53,6 +56,13 @@ export function getCurrentGuestChatConversationApi(): Promise<ChatConversationDe
 export function getCurrentClientChatConversationApi(): Promise<ChatConversationDetail> {
   ensureInitialised()
   return getCurrentClientChatConversation()
+}
+
+export function listClientChatConversationsApi(
+  query: ListClientChatConversationsQuery = {},
+): Promise<ClientChatConversationPage> {
+  ensureInitialised()
+  return listClientChatConversations(query)
 }
 
 export function claimGuestChatConversationApi(

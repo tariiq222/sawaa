@@ -19,6 +19,7 @@ interface ChatMessageListProps {
   onGuestHandoff: (identity: { guestName: string; guestPhone: string }) => Promise<void>;
   onClientHandoff: () => Promise<void>;
   onRetryAssistant: (messageId: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
 export function ChatMessageList(props: ChatMessageListProps) {
@@ -58,7 +59,7 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
   const isSystem = message.senderType === 'SYSTEM' || message.kind === 'SYSTEM_EVENT';
 
   if (message.kind === 'ACTION_CARD' && message.metadata?.action === 'CHAT_OPERATION') {
-    return <ChatActionCard key={`${message.metadata.operation.id}:${message.metadata.operation.version}`} operation={message.metadata.operation} {...props} />;
+    return <ChatActionCard key={`${message.metadata.operation.id}:${message.metadata.operation.version}`} operation={message.metadata.operation} readOnly={props.readOnly} {...props} />;
   }
 
   if (isSystem) {
@@ -76,10 +77,10 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
           : 'rounded-es-md border border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)]'
       }`}>
         <p className="whitespace-pre-wrap break-words">{message.body}</p>
-        {message.kind === 'TEXT' && message.metadata?.action === 'OFFER_HANDOFF' && (
+        {!props.readOnly && message.kind === 'TEXT' && message.metadata?.action === 'OFFER_HANDOFF' && (
           <HandoffOffer {...props} />
         )}
-        {message.kind === 'TEXT' && message.metadata?.action === 'ASSISTANT_RECOVERY' && (
+        {!props.readOnly && message.kind === 'TEXT' && message.metadata?.action === 'ASSISTANT_RECOVERY' && (
           <AssistantRecovery messageId={message.id} canRetry={message.metadata.canRetry} {...props} />
         )}
       </div>

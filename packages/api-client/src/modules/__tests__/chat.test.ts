@@ -4,6 +4,7 @@ import type {
   ChatConversationDetail,
   ChatMessage,
   ChatOperation,
+  ClientChatConversationPage,
 } from '../../types/chat'
 import {
   acknowledgeChatOperation,
@@ -13,6 +14,7 @@ import {
   declineChatOperation,
   getCurrentClientChatConversation,
   getCurrentGuestChatConversation,
+  listClientChatConversations,
   listClientChatMessages,
   listGuestChatMessages,
   requestClientChatHandoff,
@@ -106,6 +108,8 @@ describe('safe public chat contracts', () => {
     expectTypeOf<ChatMessage>().not.toHaveProperty('senderId')
     expectTypeOf<ChatOperation>().not.toHaveProperty('payload')
     expectTypeOf<ChatOperation>().not.toHaveProperty('prompt')
+    expectTypeOf<ClientChatConversationPage['data'][number]>().not.toHaveProperty('clientId')
+    expectTypeOf<ClientChatConversationPage['data'][number]>().not.toHaveProperty('guestTokenHash')
   })
 
   it('projects only the public conversation and action-card fields', async () => {
@@ -187,6 +191,9 @@ describe('chat routes and browser credentials', () => {
   it('uses the real guest and authenticated conversation/message routes', async () => {
     vi.mocked(fetch).mockImplementation(async (url) => {
       const path = String(url)
+      if (path.includes('/public/me/chat/conversations?')) {
+        return wrapped({ data: [], meta: { limit: 5, nextCursor: null, hasMore: false } })
+      }
       if (path.includes('/messages')) {
         return wrapped(path.includes('?')
           ? { data: [], meta: { limit: 5, nextCursor: null, hasMore: false } }
@@ -199,6 +206,7 @@ describe('chat routes and browser credentials', () => {
     await createGuestChatConversation({ guestName: 'سارة', language: 'ar' })
     await getCurrentGuestChatConversation()
     await getCurrentClientChatConversation()
+    await listClientChatConversations({ cursor: 'conversation/1', limit: 5 })
     await claimGuestChatConversation('conversation/1')
     await sendGuestChatMessage('conversation/1', { body: 'مرحبا', clientMessageId: 'message-1' })
     await sendClientChatMessage('conversation/1', { body: 'مرحبا', clientMessageId: 'message-2' })
@@ -212,6 +220,7 @@ describe('chat routes and browser credentials', () => {
       'http://api.test/api/v1/public/chat/conversations',
       'http://api.test/api/v1/public/chat/conversations/current',
       'http://api.test/api/v1/public/me/chat/conversations/current',
+      'http://api.test/api/v1/public/me/chat/conversations?cursor=conversation%2F1&limit=5',
       'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/claim',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/messages',
       'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/messages',

@@ -2,6 +2,7 @@ import { apiRequest, ensureCsrfToken, setApiRequestBaseUrl } from '../client'
 import type {
   ChatActionCardMessage,
   ChatConversationDetail,
+  ClientChatConversationPage,
   ChatHandoffOfferMetadata,
   ChatAssistantRecoveryMetadata,
   ChatMessage,
@@ -14,6 +15,7 @@ import type {
   CreateGuestChatConversationRequest,
   GuestChatHandoffRequest,
   ListChatMessagesQuery,
+  ListClientChatConversationsQuery,
   SendChatMessageRequest,
 } from '../types/chat'
 
@@ -36,6 +38,15 @@ export async function getCurrentGuestChatConversation(): Promise<ChatConversatio
 export async function getCurrentClientChatConversation(): Promise<ChatConversationDetail> {
   const result = await chatRequest<ChatConversationDetail>('/public/me/chat/conversations/current')
   return toConversationDetail(result)
+}
+
+export async function listClientChatConversations(
+  query: ListClientChatConversationsQuery = {},
+): Promise<ClientChatConversationPage> {
+  const result = await chatRequest<ClientChatConversationPage>(
+    `/public/me/chat/conversations${messageQuery(query)}`,
+  )
+  return toClientChatConversationPage(result)
 }
 
 export async function claimGuestChatConversation(
@@ -206,6 +217,30 @@ function toConversationDetail(value: ChatConversationDetail): ChatConversationDe
 function toChatMessagePage(value: ChatMessagePage): ChatMessagePage {
   return {
     data: value.data.map(toChatMessage),
+    meta: {
+      limit: value.meta.limit,
+      nextCursor: value.meta.nextCursor,
+      hasMore: value.meta.hasMore,
+    },
+  }
+}
+
+function toClientChatConversationPage(value: ClientChatConversationPage): ClientChatConversationPage {
+  return {
+    data: value.data.map((conversation) => ({
+      id: conversation.id,
+      status: conversation.status,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+      lastMessageAt: conversation.lastMessageAt,
+      lastMessage: conversation.lastMessage
+        ? {
+          preview: conversation.lastMessage.preview,
+          senderType: conversation.lastMessage.senderType,
+          kind: conversation.lastMessage.kind,
+        }
+        : null,
+    })),
     meta: {
       limit: value.meta.limit,
       nextCursor: value.meta.nextCursor,

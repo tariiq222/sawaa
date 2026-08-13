@@ -26,6 +26,7 @@ function renderList(
   messages: ChatMessage[],
   authenticated = false,
   callbackOverrides: Partial<typeof callbacks> = {},
+  readOnly = false,
 ) {
   render(
     <LocaleProvider locale="ar">
@@ -33,6 +34,7 @@ function renderList(
         messages={messages}
         isAuthenticated={authenticated}
         isLoading={false}
+        readOnly={readOnly}
         {...callbacks}
         {...callbackOverrides}
       />
@@ -134,6 +136,11 @@ describe('ChatMessageList', () => {
     expect(retry).toBeDisabled();
     expect(screen.getByRole('button', { name: 'التحويل إلى الاستقبال' })).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/provider|خطأ داخلي/i);
+  });
+
+  it('does not render history action controls in read-only mode', () => {
+    renderList([handoffMessage()], true, {}, true);
+    expect(screen.queryByRole('button', { name: 'التحويل إلى الاستقبال' })).toBeNull();
   });
 });
 

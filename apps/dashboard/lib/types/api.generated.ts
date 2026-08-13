@@ -4231,6 +4231,23 @@ export interface paths {
         patch: operations["PublicMeController_rescheduleBookingEndpoint_v1"];
         trace?: never;
     };
+    "/api/v1/public/me/chat/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the authenticated client chat conversation history */
+        get: operations["MyChatController_listConversationsForClient_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/me/chat/conversations/current": {
         parameters: {
             query?: never;
@@ -5238,6 +5255,33 @@ export interface components {
         ClientCancelBookingDto: {
             /** @description Reason for cancellation */
             reason?: string;
+        };
+        ClientChatConversationCursorMetaDto: {
+            hasMore: boolean;
+            limit: number;
+            /** Format: uuid */
+            nextCursor?: Record<string, never> | null;
+        };
+        ClientChatConversationSummaryDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            lastMessage?: components["schemas"]["ClientChatLastMessageDto"] | null;
+            /** Format: date-time */
+            lastMessageAt?: string | null;
+            /** @enum {string} */
+            status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ClientChatLastMessageDto: {
+            /** @enum {string} */
+            kind: "TEXT" | "ACTION_CARD" | "OPERATION_RESULT" | "SYSTEM_EVENT";
+            /** @description Whitespace-normalized safe message preview */
+            preview: string;
+            /** @enum {string} */
+            senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
         };
         /**
          * @description Client gender
@@ -6912,6 +6956,10 @@ export interface components {
         };
         /** @enum {string} */
         InvoiceStatus: "DRAFT" | "ISSUED" | "PAID" | "PARTIALLY_PAID" | "PARTIALLY_REFUNDED" | "VOID" | "REFUNDED";
+        ListClientChatConversationsResponseDto: {
+            data: components["schemas"]["ClientChatConversationSummaryDto"][];
+            meta: components["schemas"]["ClientChatConversationCursorMetaDto"];
+        };
         ListMetaDto: {
             /**
              * @description Whether a next page exists
@@ -29359,6 +29407,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MyChatController_listConversationsForClient_v1: {
+        parameters: {
+            query?: {
+                /** @description Cursor (conversation UUID) for keyset pagination */
+                cursor?: string;
+                /** @description Number of conversations to return */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Only conversations owned by the authenticated client */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListClientChatConversationsResponseDto"];
                 };
             };
             /** @description Validation failed */

@@ -167,6 +167,12 @@ function AiChatWidgetSession({
   }, [open, loadConversation]);
 
   useEffect(() => {
+    const openFromAccount = () => setOpen(true);
+    window.addEventListener('sawaa:open-administrative-chat', openFromAccount);
+    return () => window.removeEventListener('sawaa:open-administrative-chat', openFromAccount);
+  }, [setOpen]);
+
+  useEffect(() => {
     if (!open || !conversation) return;
     const interval = window.setInterval(() => {
       void loadMessages(conversation, authenticated).catch((pollError) => {

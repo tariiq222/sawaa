@@ -15,6 +15,7 @@ import { ConfirmOperationHandler } from '../../modules/comms/chat/operations/con
 import { DeclineOperationHandler } from '../../modules/comms/chat/operations/decline-operation.handler';
 import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
+import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
 
 describe('MyChatController (e2e)', () => {
   let app: INestApplication;
@@ -22,6 +23,7 @@ describe('MyChatController (e2e)', () => {
   const claim = { execute: jest.fn() };
   const send = { execute: jest.fn() };
   const list = { execute: jest.fn() };
+  const listConversations = { execute: jest.fn() };
   const handoff = { execute: jest.fn() };
   const acknowledge = { execute: jest.fn() };
   const confirm = { execute: jest.fn() };
@@ -37,6 +39,7 @@ describe('MyChatController (e2e)', () => {
         { provide: ClaimConversationHandler, useValue: claim },
         { provide: SendChatMessageHandler, useValue: send },
         { provide: ListChatMessagesHandler, useValue: list },
+        { provide: ListClientChatConversationsHandler, useValue: listConversations },
         { provide: RequestHandoffHandler, useValue: handoff },
         { provide: AcknowledgeExistingBookingHandler, useValue: acknowledge },
         { provide: ConfirmOperationHandler, useValue: confirm },
@@ -70,6 +73,21 @@ describe('MyChatController (e2e)', () => {
       .expect({ id: 'conv-1', clientId: 'client-a' });
 
     expect(current.execute).toHaveBeenCalledWith({ clientId: 'client-a' });
+  });
+
+  it('lists only history for the ClientSessionGuard identity and rejects a forged clientId query', async () => {
+    listConversations.execute.mockResolvedValue({ data: [], meta: { limit: 20, hasMore: false, nextCursor: null } });
+
+    await request(app.getHttpServer())
+      .get('/public/me/chat/conversations?clientId=client-b')
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .get('/public/me/chat/conversations?limit=20')
+      .expect(200)
+      .expect({ data: [], meta: { limit: 20, hasMore: false, nextCursor: null } });
+
+    expect(listConversations.execute).toHaveBeenCalledWith({ clientId: 'client-a', limit: 20 });
   });
 
   it('refuses to claim when the guest cookie is absent even with a client session', async () => {

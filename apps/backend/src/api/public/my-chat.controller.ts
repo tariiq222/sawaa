@@ -26,6 +26,8 @@ import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
 import { ChatMessageResponseDto, ClaimGuestConversationResponseDto } from '../../modules/comms/chat/messages/public-chat-response.dto';
+import { ListClientChatConversationsDto, ListClientChatConversationsResponseDto } from '../../modules/comms/chat/messages/list-client-chat-conversations.dto';
+import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -44,6 +46,7 @@ export class MyChatController {
     private readonly tokens: GuestChatTokenService,
     private readonly sendMessage: SendChatMessageHandler,
     private readonly listMessages: ListChatMessagesHandler,
+    private readonly listConversations: ListClientChatConversationsHandler,
     private readonly requestHandoff: RequestHandoffHandler,
     private readonly acknowledgeOperation: AcknowledgeExistingBookingHandler,
     private readonly confirmOperation: ConfirmOperationHandler,
@@ -51,6 +54,20 @@ export class MyChatController {
     private readonly resumeOperations: ResumeChatOperationsHandler,
     private readonly retryMessage: RetryAdministrativeMessageHandler,
   ) {}
+
+  @Get('conversations')
+  @ApiOperation({ summary: 'List the authenticated client chat conversation history' })
+  @ApiOkResponse({ type: ListClientChatConversationsResponseDto, description: 'Only conversations owned by the authenticated client' })
+  listConversationsForClient(
+    @Query() dto: ListClientChatConversationsDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return this.listConversations.execute({
+      clientId: session.id,
+      limit: dto.limit ?? 20,
+      ...(dto.cursor ? { cursor: dto.cursor } : {}),
+    });
+  }
 
   @Get('conversations/current')
   @ApiOperation({ summary: 'Get the authenticated client chat conversation' })

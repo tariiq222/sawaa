@@ -38,6 +38,10 @@ vi.mock('./profile-tab', () => ({
   ProfileTab: () => <div data-testid="profile-tab">profile</div>,
 }));
 
+vi.mock('@/features/chat/account-conversations-tab', () => ({
+  AccountConversationsTab: () => <div data-testid="account-conversations-tab">conversations</div>,
+}));
+
 import { AccountFeature } from './account-feature';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
@@ -97,16 +101,17 @@ describe('AccountFeature', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('renders all four tabs and shows the overview tab by default', () => {
+  it('renders all five tabs and shows the overview tab by default', () => {
     useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
     render(withLocale('en', <AccountFeature locale="en" />));
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(5);
     expect(tabs.map((el) => el.textContent)).toEqual([
       'Overview',
       'My Bookings',
       'Invoices & Payments',
+      'My Conversations',
       'Profile',
     ]);
     expect(screen.getByTestId('overview-tab')).toBeTruthy();
@@ -114,7 +119,7 @@ describe('AccountFeature', () => {
     expect(screen.getByRole('tab', { name: 'Overview' }).getAttribute('aria-selected')).toBe('true');
   });
 
-  it('switches tabs: bookings, invoices, profile', () => {
+  it('switches tabs: bookings, invoices, conversations, profile', () => {
     useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
     render(withLocale('en', <AccountFeature locale="en" />));
 
@@ -124,6 +129,9 @@ describe('AccountFeature', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Invoices & Payments' }));
     expect(screen.getByTestId('invoices-tab')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'My Conversations' }));
+    expect(screen.getByTestId('account-conversations-tab')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Profile' }));
     expect(screen.getByTestId('profile-tab')).toBeTruthy();
@@ -135,6 +143,7 @@ describe('AccountFeature', () => {
     expect(screen.getByRole('tab', { name: 'نظرة عامة' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'مواعيدي' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'الفواتير والمدفوعات' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'محادثاتي' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'الملف الشخصي' })).toBeTruthy();
   });
 

@@ -63,6 +63,20 @@ describe('ListChatMessagesHandler', () => {
     expect(tx.commsChatMessage.findMany).not.toHaveBeenCalled();
   });
 
+  it('reads client message history only after the locked owner predicate matches the authenticated client', async () => {
+    tx.commsChatMessage.findMany.mockResolvedValue([]);
+    const handler = new ListChatMessagesHandler(
+      access as unknown as ChatAccessService,
+      { withTransaction: jest.fn((work) => work(tx)) } as unknown as RlsTransactionService,
+    );
+
+    await handler.execute({ audience: 'client', conversationId: 'conversation-1', clientId: 'client-a', limit: 20 });
+
+    expect(tx.chatConversation.findFirst).toHaveBeenCalledWith({
+      where: { id: 'conversation-1', clientId: 'client-a' }, select: { id: true },
+    });
+  });
+
   it('does not read messages after a guest claim wins the shared conversation lock', async () => {
     tx.chatConversation.findFirst.mockResolvedValue(null);
     const handler = new ListChatMessagesHandler(

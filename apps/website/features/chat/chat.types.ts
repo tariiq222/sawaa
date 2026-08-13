@@ -1,6 +1,9 @@
 export type {
   ChatConversationSummary,
   ChatConversationDetail,
+  ClientChatConversationSummary,
+  ClientChatConversationPage,
+  ListClientChatConversationsQuery,
   ClaimedChatConversation,
   ChatConversationStatus,
   ChatSenderType,

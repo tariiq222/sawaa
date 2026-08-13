@@ -1015,6 +1015,107 @@
         },
         "type": "object"
       },
+      "ClientChatConversationCursorMetaDto": {
+        "properties": {
+          "hasMore": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "nextCursor": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "limit",
+          "hasMore"
+        ],
+        "type": "object"
+      },
+      "ClientChatConversationSummaryDto": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastMessage": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientChatLastMessageDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "lastMessageAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "OPEN",
+              "AI_ACTIVE",
+              "WAITING_FOR_STAFF",
+              "STAFF_ACTIVE",
+              "CLOSED"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "ClientChatLastMessageDto": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "TEXT",
+              "ACTION_CARD",
+              "OPERATION_RESULT",
+              "SYSTEM_EVENT"
+            ],
+            "type": "string"
+          },
+          "preview": {
+            "description": "Whitespace-normalized safe message preview",
+            "type": "string"
+          },
+          "senderType": {
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE",
+              "VISITOR",
+              "AI",
+              "STAFF",
+              "SYSTEM"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "preview",
+          "senderType",
+          "kind"
+        ],
+        "type": "object"
+      },
       "ClientGender": {
         "description": "Client gender",
         "enum": [
@@ -3366,6 +3467,24 @@
           "REFUNDED"
         ],
         "type": "string"
+      },
+      "ListClientChatConversationsResponseDto": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ClientChatConversationSummaryDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ClientChatConversationCursorMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
       },
       "ListMetaDto": {
         "properties": {
@@ -34319,6 +34438,95 @@
         "summary": "Reschedule a client booking",
         "tags": [
           "Public / Me"
+        ]
+      }
+    },
+    "/api/v1/public/me/chat/conversations": {
+      "get": {
+        "operationId": "MyChatController_listConversationsForClient_v1",
+        "parameters": [
+          {
+            "description": "Cursor (conversation UUID) for keyset pagination",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of conversations to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListClientChatConversationsResponseDto"
+                }
+              }
+            },
+            "description": "Only conversations owned by the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated client chat conversation history",
+        "tags": [
+          "Public / Chat"
         ]
       }
     },
