@@ -70,10 +70,25 @@ describe('EventBusService', () => {
   it('bridges a 1ebce257 legacy job but refuses to ACK an unknown rolling event', async () => {
     const handler = jest.fn();
     service.subscribe('legacy.event', 'consumer-a', handler);
-    await workers.get('domain-events')!({ name: 'legacy.event', data: event() });
-    expect(handler).toHaveBeenCalledWith(event());
+    const legacyEvent = event();
+    await workers.get('domain-events')!({ name: 'legacy.event', data: legacyEvent });
+    expect(handler).toHaveBeenCalledWith(legacyEvent);
     await expect(workers.get('domain-events')!({ name: 'new.event', data: event() }))
       .rejects.toThrow(NoEventConsumersRegisteredError);
+  });
+
+  it('unwraps a targeted 1ebce257 envelope and never broadcasts it to another consumer', async () => {
+    const selected = jest.fn();
+    const other = jest.fn();
+    service.subscribe('legacy.event', 'consumer-selected', selected);
+    service.subscribe('legacy.event', 'consumer-other', other);
+    const original = event();
+    await workers.get('domain-events')!({
+      name: 'legacy.event',
+      data: { eventName: 'legacy.event', consumerId: 'consumer-selected', event: original },
+    });
+    expect(selected).toHaveBeenCalledWith(original);
+    expect(other).not.toHaveBeenCalled();
   });
 
   it('fans out in registration order with a stable event job ID per isolated queue', async () => {

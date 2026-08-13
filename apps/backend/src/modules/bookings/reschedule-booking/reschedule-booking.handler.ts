@@ -128,6 +128,28 @@ export class RescheduleBookingHandler {
               durationMins,
               ...(revision === null ? {} : { zoomSyncRevision: revision }),
             },
+            ...(booking.deliveryType === 'ONLINE' || booking.zoomMeetingId
+              ? {
+                  extraWhere: {
+                    AND: [
+                      ...(booking.deliveryType === 'ONLINE' ? [{
+                        OR: [
+                          { zoomCreateLeaseOwner: null },
+                          { zoomCreateLeaseExpiresAt: null },
+                          { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+                        ],
+                      }] : []),
+                      ...(booking.zoomMeetingId ? [{
+                        OR: [
+                          { zoomSyncLeaseOwner: null },
+                          { zoomSyncLeaseExpiresAt: null },
+                          { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+                        ],
+                      }] : []),
+                    ],
+                  },
+                }
+              : {}),
           }),
           tx.bookingStatusLog.create({
             data: {

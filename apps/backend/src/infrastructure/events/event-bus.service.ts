@@ -130,9 +130,16 @@ export class EventBusService {
   private ensureLegacyBridgeWorker(): void {
     if (this.legacyWorker) return;
     this.legacyWorker = this.bullmq.createWorker(LEGACY_EVENT_QUEUE, async (job: Job) => {
-      const event = job.data as DomainEventEnvelope;
-      const consumers = this.handlersByEvent.get(job.name) ?? [];
-      if (consumers.length === 0) throw new NoEventConsumersRegisteredError(job.name);
+      const legacy = job.data as DomainEventEnvelope | ConsumerJobData & { consumerId?: string };
+      const eventName = 'eventName' in legacy ? legacy.eventName : job.name;
+      const event = 'event' in legacy ? legacy.event : legacy;
+      const targetedConsumer = 'consumerId' in legacy ? legacy.consumerId : undefined;
+      const consumers = targetedConsumer
+        ? [this.handlersByConsumer.get(targetedConsumer)].filter(
+          (consumer): consumer is RegisteredHandler => Boolean(consumer && consumer.eventName === eventName),
+        )
+        : this.handlersByEvent.get(eventName) ?? [];
+      if (consumers.length === 0) throw new NoEventConsumersRegisteredError(eventName);
       for (const consumer of consumers) await this.dispatch(consumer, event);
     });
   }

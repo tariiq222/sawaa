@@ -99,6 +99,28 @@ export class CancelBookingHandler {
           cancelledAt: new Date(),
           zoomMeetingStatus: booking.zoomMeetingId ? 'CANCELLED' : undefined,
         },
+        ...(booking.deliveryType === 'ONLINE' || booking.zoomMeetingId
+          ? {
+              extraWhere: {
+                AND: [
+                  ...(booking.deliveryType === 'ONLINE' ? [{
+                    OR: [
+                      { zoomCreateLeaseOwner: null },
+                      { zoomCreateLeaseExpiresAt: null },
+                      { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+                    ],
+                  }] : []),
+                  ...(booking.zoomMeetingId ? [{
+                    OR: [
+                      { zoomSyncLeaseOwner: null },
+                      { zoomSyncLeaseExpiresAt: null },
+                      { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+                    ],
+                  }] : []),
+                ],
+              },
+            }
+          : {}),
       });
       await tx.bookingStatusLog.create({
         data: {

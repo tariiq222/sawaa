@@ -52,6 +52,7 @@ function setup(row = desired) {
     },
     bookingZoomSync: {
       findUnique: jest.fn().mockResolvedValue(row),
+      findFirst: jest.fn().mockResolvedValue({ id: row.id }),
       update: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
@@ -95,6 +96,18 @@ describe('BookingZoomRescheduleHandler', () => {
     expect(zoom.updateMeeting).toHaveBeenCalledTimes(1);
     expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ revision: 0 }),
+    }));
+  });
+
+  it('supersedes an out-of-order revisionless legacy event instead of PATCHing stale desired state', async () => {
+    const legacy = { ...envelope, payload: { ...envelope.payload, revision: undefined } };
+    const { handler, zoom, prisma } = setup({ ...desired, revision: 0 });
+    prisma.bookingZoomSync.findFirst.mockResolvedValue({ id: 'newer-sync' });
+    await handler.handle(legacy);
+    expect(zoom.updateMeeting).not.toHaveBeenCalled();
+    expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: desired.id }),
+      data: expect.objectContaining({ status: 'SUPERSEDED' }),
     }));
   });
 

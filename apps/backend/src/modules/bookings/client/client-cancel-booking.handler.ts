@@ -103,6 +103,15 @@ export class ClientCancelBookingHandler {
           currentStatus: booking.status,
           actionLabel: 'cancel requested',
           data: { status: nextStatus, cancelNotes: cmd.reason ?? null },
+          ...(booking.deliveryType === 'ONLINE' ? {
+            extraWhere: {
+              OR: [
+                { zoomCreateLeaseOwner: null },
+                { zoomCreateLeaseExpiresAt: null },
+                { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+              ],
+            },
+          } : {}),
         });
         await tx.bookingStatusLog.create({
           data: {
@@ -149,6 +158,15 @@ export class ClientCancelBookingHandler {
           cancelNotes: cmd.reason ?? null,
           cancelledAt: new Date(),
         },
+        ...(booking.deliveryType === 'ONLINE' ? {
+          extraWhere: {
+            OR: [
+              { zoomCreateLeaseOwner: null },
+              { zoomCreateLeaseExpiresAt: null },
+              { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+            ],
+          },
+        } : {}),
       });
       await tx.bookingStatusLog.create({
         data: {

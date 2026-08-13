@@ -89,6 +89,15 @@ export class ApproveCancelBookingHandler {
             status: nextStatus,
             cancelledAt: new Date(),
           },
+          ...(booking.deliveryType === 'ONLINE' ? {
+            extraWhere: {
+              OR: [
+                { zoomCreateLeaseOwner: null },
+                { zoomCreateLeaseExpiresAt: null },
+                { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+              ],
+            },
+          } : {}),
         }),
         tx.bookingStatusLog.create({
           data: {

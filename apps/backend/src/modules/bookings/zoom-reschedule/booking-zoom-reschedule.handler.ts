@@ -38,6 +38,21 @@ export class BookingZoomRescheduleHandler {
     }
     if (sync.status === 'COMPLETED' || sync.status === 'SUPERSEDED') return;
 
+    // Pre-transition events had no revision. Multiple old PENDING rows share
+    // the backfilled zero, so only the newest durable desired state may touch
+    // Zoom; stale deliveries become explicitly superseded.
+    if (event.payload.revision === undefined) {
+      const newestLegacy = await this.prisma.bookingZoomSync.findFirst({
+        where: { bookingId: sync.bookingId, revision: 0 },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+      if (newestLegacy && newestLegacy.id !== sync.id) {
+        await this.markSuperseded(sync.id);
+        return;
+      }
+    }
+
     const latest = await this.prisma.booking.findUnique({
       where: { id: sync.bookingId },
       select: { id: true, zoomMeetingId: true, zoomSyncRevision: true },

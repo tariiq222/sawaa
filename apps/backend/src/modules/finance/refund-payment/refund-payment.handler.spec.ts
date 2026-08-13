@@ -275,6 +275,17 @@ describe('RefundPaymentHandler', () => {
       }));
     });
 
+    it('moves a provider response above this request target to MANUAL_REVIEW without accounting', async () => {
+      prisma.refundRequest.findUniqueOrThrow.mockResolvedValue(processing());
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(payment(40));
+      moyasar.createRefund.mockResolvedValue(providerRefund(80));
+      await handler.finalizeRefundFromCancellation({ refundRequestId: 'refund-1', idempotencyKey: 'refund:refund-1' });
+      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+      expect(prisma.refundRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: RefundStatus.MANUAL_REVIEW }),
+      }));
+    });
+
     it('never POSTs twice after a network-unknown call; cumulative GET reaching target finalizes', async () => {
       const unknown = processing({
         providerState: 'CALL_UNKNOWN',

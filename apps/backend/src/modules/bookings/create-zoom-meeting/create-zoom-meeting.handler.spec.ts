@@ -97,6 +97,16 @@ describe('CreateZoomMeetingHandler — durable provider reconciliation', () => {
     expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
   });
 
+  it('does not acquire a create lease or POST when cancellation wins between read and lease', async () => {
+    const h = buildHarness();
+    h.prisma.booking.updateMany.mockResolvedValueOnce({ count: 0 });
+    await h.handler.execute({ bookingId: 'booking-1' });
+    expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
+    expect(h.prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ status: { in: expect.arrayContaining([BookingStatus.CONFIRMED]) } }),
+    }));
+  });
+
   it('returns an existing completed meeting without acquiring a lease', async () => {
     const h = buildHarness({
       zoomMeetingId: 'existing',

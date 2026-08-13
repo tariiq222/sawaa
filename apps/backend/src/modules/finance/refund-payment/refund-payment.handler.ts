@@ -568,13 +568,16 @@ export class RefundPaymentHandler {
         if (
           providerRefund.id !== payment.gatewayRef
           || providerRefund.currency !== payment.currency
-          || providerRefund.refunded < target
+          // A cumulative amount above target is not attributable to this
+          // request (another refund may have landed concurrently/out of band).
+          // Only the exact baseline + requested amount is safe to account.
+          || providerRefund.refunded !== target
         ) {
           await this.markRefundManualReview(
             cmd.refundRequestId,
             leaseOwner,
             providerRefund.refunded,
-            'Provider response did not reach the expected cumulative refund; manual review required',
+            'Provider response is not exactly attributable to this refund; manual review required',
           );
           return;
         }

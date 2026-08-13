@@ -52,6 +52,7 @@ export class CreateZoomMeetingHandler {
     const acquired = await this.prisma.booking.updateMany({
       where: {
         id: cmd.bookingId,
+        status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
         OR: [
           { zoomCreateLeaseOwner: null },
           { zoomCreateLeaseExpiresAt: null },
@@ -136,7 +137,12 @@ export class CreateZoomMeetingHandler {
     }
 
     const armed = await this.prisma.booking.updateMany({
-      where: { id: booking.id, zoomCreateLeaseOwner: leaseOwner, zoomCreatePhase: BEFORE_CALL },
+      where: {
+        id: booking.id,
+        status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
+        zoomCreateLeaseOwner: leaseOwner,
+        zoomCreatePhase: BEFORE_CALL,
+      },
       data: { zoomCreatePhase: CALL_UNKNOWN, zoomMeetingStatus: ZoomMeetingStatus.PENDING, zoomMeetingError: null },
     });
     if (armed.count !== 1) {

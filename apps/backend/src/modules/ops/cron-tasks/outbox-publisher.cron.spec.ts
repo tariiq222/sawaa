@@ -65,6 +65,24 @@ describe('OutboxPublisherCron', () => {
     expect(eventBus.publish).toHaveBeenCalledWith(row.eventType, row.payload);
   });
 
+  it('keeps a failed PENDING_V2 event in its old-publisher-safe lane for retry', async () => {
+    const row = { id: 'evt-v2-retry', eventType: 'bookings.zoom.create_requested', attemptCount: 0, payload: { eventId: 'e-v2' } };
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValueOnce([{ acquired: true }]).mockResolvedValueOnce([row]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      outboxEvent: { updateMany: jest.fn(), update: jest.fn().mockResolvedValue({}) },
+    };
+    const cron = new OutboxPublisherCron(
+      prisma as never,
+      { publish: jest.fn().mockRejectedValue(new Error('queue unavailable')) } as never,
+      createMetricsMock() as never,
+    );
+    await cron.execute();
+    const update = (prisma.outboxEvent.update as jest.Mock).mock.calls[0][0];
+    expect(update.data).toEqual(expect.objectContaining({ attemptCount: 1 }));
+    expect(update.data.status).toBeUndefined();
+  });
+
   it('is a no-op when no pending events exist', async () => {
     const prisma = {
       $queryRaw: jest.fn()
