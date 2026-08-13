@@ -29,7 +29,13 @@ export class CloseConversationHandler {
         status: { not: ConversationStatus.CLOSED },
         ...(!isAdmin ? { assignedStaffUserId: command.actorUserId } : {}),
       },
-      data: { status: ConversationStatus.CLOSED, closedAt: new Date() },
+      data: {
+        status: ConversationStatus.CLOSED,
+        closedAt: new Date(),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
+      },
     });
     if (closed.count !== 1) throw new ConflictException('Conversation state changed before close');
     const current = await this.prisma.chatConversation.findUnique({ where: { id: command.conversationId } });

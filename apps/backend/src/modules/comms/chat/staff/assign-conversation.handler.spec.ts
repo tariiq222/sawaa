@@ -22,7 +22,7 @@ describe('AssignConversationHandler', () => {
     await handler.execute({ conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorRole: 'ADMIN' });
 
     expect(prisma.user.findFirst).toHaveBeenCalledWith({
-      where: { id: 'staff-b', isActive: true, role: { not: 'CLIENT' } },
+      where: { id: 'staff-b', isActive: true, role: { in: ['SUPER_ADMIN', 'ADMIN', 'RECEPTIONIST'] } },
       select: { id: true },
     });
     expect(prisma.chatConversation.updateMany).toHaveBeenCalledWith({
@@ -31,8 +31,21 @@ describe('AssignConversationHandler', () => {
         status: ConversationStatus.STAFF_ACTIVE,
         assignedStaffUserId: 'staff-b',
         staffClaimedAt: expect.any(Date),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
+  });
+
+  it.each(['SUPER_ADMIN', 'ADMIN', 'RECEPTIONIST'])('allows an active approved target role: %s', async (role) => {
+    prisma.user.findFirst.mockResolvedValue({ id: 'staff-b', role });
+    await expect(handler.execute({ conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorRole: 'ADMIN' })).resolves.toBeDefined();
+  });
+
+  it.each(['OWNER', 'ACCOUNTANT', 'EMPLOYEE', 'CLIENT'])('rejects target role %s', async (role) => {
+    prisma.user.findFirst.mockResolvedValue(null);
+    await expect(handler.execute({ conversationId: 'conv-1', targetStaffUserId: role, actorRole: 'ADMIN' })).rejects.toThrow(NotFoundException);
   });
 
   it('rejects arbitrary assignment by receptionists', async () => {

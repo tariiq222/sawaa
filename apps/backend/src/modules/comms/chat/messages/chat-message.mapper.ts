@@ -1,4 +1,4 @@
-import type { ChatMessageKind, CommsChatMessage, MessageSenderType } from '@prisma/client';
+import type { ChatMessageKind, MessageSenderType } from '@prisma/client';
 
 export interface ChatMessageResponse {
   id: string;
@@ -10,7 +10,7 @@ export interface ChatMessageResponse {
   createdAt: Date;
 }
 
-export function toChatMessageResponse(message: CommsChatMessage): ChatMessageResponse {
+export function toChatMessageResponse<T extends ChatMessageResponse>(message: T): ChatMessageResponse {
   return {
     id: message.id,
     conversationId: message.conversationId,

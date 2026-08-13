@@ -22,6 +22,9 @@ export class ClaimConversationHandler {
         status: ConversationStatus.STAFF_ACTIVE,
         assignedStaffUserId: command.staffUserId,
         staffClaimedAt: new Date(),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
     if (claimed.count !== 1) throw new ConflictException('Conversation is no longer available to claim');

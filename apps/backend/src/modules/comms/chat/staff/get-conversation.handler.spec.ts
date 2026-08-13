@@ -15,6 +15,9 @@ describe('staff conversation detail and messages', () => {
     prisma.chatConversation.findUnique.mockResolvedValue({ id: 'conv-1', status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-b' });
     await expect(access.assertReadAccess('conv-1', 'staff-a', 'RECEPTIONIST')).rejects.toThrow(ForbiddenException);
     await expect(access.assertReadAccess('conv-1', 'admin-a', 'ADMIN')).resolves.toEqual(expect.objectContaining({ id: 'conv-1' }));
+    for (const role of ['OWNER', 'ACCOUNTANT', 'EMPLOYEE', 'CLIENT']) {
+      await expect(access.assertReadAccess('conv-1', 'user-a', role)).rejects.toThrow(ForbiddenException);
+    }
   });
 
   it('returns safe detail and message projections without AI or metadata internals', async () => {
@@ -30,10 +33,10 @@ describe('staff conversation detail and messages', () => {
       metadata: { internal: true }, model: 'secret-model', tokensUsed: 999,
     };
     const prisma: any = {
-      chatConversation: { findUnique: jest.fn().mockResolvedValue(rawConversation) },
-      commsChatMessage: { findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([rawMessage]) },
+      chatConversation: { findFirst: jest.fn().mockResolvedValue(rawConversation) },
+      commsChatMessage: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([rawMessage]) },
     };
-    const access = { assertReadAccess: jest.fn().mockResolvedValue(rawConversation) };
+    const access = { buildReadWhere: jest.fn().mockReturnValue({ id: 'conv-1', OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] }) };
     const detail = new GetConversationHandler(prisma as PrismaService, access as unknown as StaffConversationAccessService);
     const messages = new ListConversationMessagesHandler(prisma as PrismaService, access as unknown as StaffConversationAccessService);
 
@@ -41,10 +44,34 @@ describe('staff conversation detail and messages', () => {
     const messageResult = await messages.execute({ conversationId: 'conv-1', staffUserId: 'staff-a', staffRole: 'RECEPTIONIST', limit: 20 });
 
     expect(detailResult).toEqual(expect.objectContaining({ guestName: 'سارة', guestPhone: '+966501234567' }));
+    expect(prisma.chatConversation.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'conv-1', OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] },
+    }));
     expect(messageResult.data).toEqual([{
       id: 'message-1', conversationId: 'conv-1', senderType: MessageSenderType.VISITOR,
       body: 'مرحبا', kind: ChatMessageKind.TEXT, clientMessageId: 'm-1', createdAt: rawMessage.createdAt,
     }]);
     expect(JSON.stringify({ detailResult, messageResult })).not.toMatch(/secret|metadata|model|tokensUsed/);
+    expect(prisma.commsChatMessage.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.not.objectContaining({ metadata: expect.anything(), model: expect.anything(), senderId: expect.anything() }),
+    }));
+  });
+
+  it('does not return detail or messages after reassignment wins before the data query', async () => {
+    const prisma: any = {
+      chatConversation: { findFirst: jest.fn().mockResolvedValue(null) },
+      commsChatMessage: { findFirst: jest.fn(), findMany: jest.fn() },
+    };
+    const access = { buildReadWhere: jest.fn().mockReturnValue({ id: 'conv-1', OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] }) };
+    const detail = new GetConversationHandler(prisma as PrismaService, access as unknown as StaffConversationAccessService);
+    const messages = new ListConversationMessagesHandler(prisma as PrismaService, access as unknown as StaffConversationAccessService);
+    await expect(detail.execute({ conversationId: 'conv-1', staffUserId: 'staff-a', staffRole: 'RECEPTIONIST' })).rejects.toThrow();
+    prisma.commsChatMessage.findMany.mockResolvedValue([]);
+    await expect(messages.execute({ conversationId: 'conv-1', staffUserId: 'staff-a', staffRole: 'RECEPTIONIST', limit: 20 })).resolves.toEqual(expect.objectContaining({ data: [] }));
+    expect(prisma.commsChatMessage.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        conversation: { is: { id: 'conv-1', OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] } },
+      }),
+    }));
   });
 });

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import { toChatMessageResponse, type ChatMessageResponse } from '../messages/chat-message.mapper';
 import { StaffConversationAccessService } from './staff-conversation-access.service';
+import { STAFF_MESSAGE_SELECT } from './staff-conversation.mapper';
 
 export interface ListConversationMessagesCommand {
   conversationId: string;
@@ -22,16 +23,28 @@ export class ListConversationMessagesHandler {
     data: ChatMessageResponse[];
     meta: { limit: number; nextCursor: string | null; hasMore: boolean };
   }> {
-    await this.access.assertReadAccess(command.conversationId, command.staffUserId, command.staffRole);
+    const conversationWhere = this.access.buildReadWhere(
+      command.conversationId,
+      command.staffUserId,
+      command.staffRole,
+    );
+    const messageWhere = {
+      conversationId: command.conversationId,
+      conversation: { is: conversationWhere },
+    };
     if (command.cursor) {
-      const cursor = await this.prisma.commsChatMessage.findUnique({ where: { id: command.cursor } });
-      if (!cursor || cursor.conversationId !== command.conversationId) {
+      const cursor = await this.prisma.commsChatMessage.findFirst({
+        where: { ...messageWhere, id: command.cursor },
+        select: { id: true },
+      });
+      if (!cursor) {
         throw new NotFoundException('Message cursor not found');
       }
     }
     const limit = Math.min(Math.max(command.limit, 1), 100);
     const rows = await this.prisma.commsChatMessage.findMany({
-      where: { conversationId: command.conversationId },
+      where: messageWhere,
+      select: STAFF_MESSAGE_SELECT,
       ...(command.cursor ? { cursor: { id: command.cursor }, skip: 1 } : {}),
       orderBy: [{ sequence: 'desc' }, { id: 'desc' }],
       take: limit + 1,

@@ -9,13 +9,16 @@ export class AdministrativeAssistantLeaseService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async acquire(conversationId: string, owner: string): Promise<boolean> {
+  async acquire(conversationId: string, owner: string, stateVersion: number): Promise<boolean> {
     const expiresAt = new Date(Date.now() + ASSISTANT_LEASE_MS);
     const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
       UPDATE "ChatConversation"
       SET "assistantLeaseOwner" = ${owner},
           "assistantLeaseExpiresAt" = ${expiresAt}
       WHERE "id" = ${conversationId}
+        AND "stateVersion" = ${stateVersion}
+        AND "isAiChat" = true
+        AND "status" = 'AI_ACTIVE'::"ConversationStatus"
         AND (
           "assistantLeaseOwner" IS NULL
           OR "assistantLeaseExpiresAt" IS NULL
@@ -26,7 +29,7 @@ export class AdministrativeAssistantLeaseService {
     return rows.length === 1;
   }
 
-  async renew(conversationId: string, owner: string): Promise<boolean> {
+  async renew(conversationId: string, owner: string, stateVersion: number): Promise<boolean> {
     const expiresAt = new Date(Date.now() + ASSISTANT_LEASE_MS);
     const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
       UPDATE "ChatConversation"
@@ -34,6 +37,9 @@ export class AdministrativeAssistantLeaseService {
       WHERE "id" = ${conversationId}
         AND "assistantLeaseOwner" = ${owner}
         AND "assistantLeaseExpiresAt" > now()
+        AND "stateVersion" = ${stateVersion}
+        AND "isAiChat" = true
+        AND "status" = 'AI_ACTIVE'::"ConversationStatus"
       RETURNING "id"
     `;
     return rows.length === 1;

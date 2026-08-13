@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConversationStatus, Prisma } from '@prisma/client';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConversationStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../../../infrastructure/database';
 import {
   STAFF_CONVERSATION_SELECT,
@@ -11,6 +11,7 @@ export type InboxAssignmentFilter = 'all' | 'me' | 'unassigned';
 
 export interface ListInboxCommand {
   staffUserId: string;
+  staffRole: string | null | undefined;
   limit: number;
   cursor?: string;
   status?: ConversationStatus;
@@ -32,7 +33,20 @@ export class ListInboxHandler {
 
   async execute(command: ListInboxCommand): Promise<ListInboxResult> {
     const search = command.search?.trim();
+    const isAdmin = command.staffRole === UserRole.ADMIN || command.staffRole === UserRole.SUPER_ADMIN;
+    if (!isAdmin && command.staffRole !== UserRole.RECEPTIONIST) {
+      throw new ForbiddenException('Conversation inbox is not available for this role');
+    }
+    const accessPredicate: Prisma.ChatConversationWhereInput | undefined = isAdmin
+      ? undefined
+      : {
+          OR: [
+            { assignedStaffUserId: null },
+            { assignedStaffUserId: command.staffUserId },
+          ],
+        };
     const where: Prisma.ChatConversationWhereInput = {
+      ...(accessPredicate ? { AND: [accessPredicate] } : {}),
       ...(command.status ? { status: command.status } : {}),
       ...(command.unreadOnly ? { staffUnreadCount: { gt: 0 } } : {}),
       ...(command.assigned === 'me' ? { assignedStaffUserId: command.staffUserId } : {}),

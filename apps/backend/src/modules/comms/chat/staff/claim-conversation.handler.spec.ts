@@ -38,6 +38,9 @@ describe('ClaimConversationHandler', () => {
         status: ConversationStatus.STAFF_ACTIVE,
         assignedStaffUserId: 'staff-a',
         staffClaimedAt: expect.any(Date),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
   });

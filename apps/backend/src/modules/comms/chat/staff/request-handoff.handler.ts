@@ -26,25 +26,45 @@ export class RequestHandoffHandler {
       ? await this.access.assertGuestAccess(command.conversationId, command.guestToken)
       : await this.access.assertClientAccess(command.conversationId, command.clientId);
 
-    if (conversation.status === ConversationStatus.WAITING_FOR_STAFF) return conversation;
-    if (conversation.status !== ConversationStatus.AI_ACTIVE) {
-      throw new ConflictException('Conversation cannot request reception in its current state');
-    }
-
     const contact = command.audience === 'guest'
       ? this.guestContact(command.guestName, command.guestPhone)
       : {};
+    const ownership = command.audience === 'guest'
+      ? { clientId: null, guestTokenHash: conversation.guestTokenHash }
+      : { clientId: command.clientId };
+    if (conversation.status !== ConversationStatus.AI_ACTIVE && conversation.status !== ConversationStatus.WAITING_FOR_STAFF) {
+      throw new ConflictException('Conversation cannot request reception in its current state');
+    }
+    if (conversation.status === ConversationStatus.WAITING_FOR_STAFF) {
+      const ownedWaiting = await this.prisma.chatConversation.findFirst({
+        where: { id: command.conversationId, status: ConversationStatus.WAITING_FOR_STAFF, ...ownership },
+      });
+      if (ownedWaiting) return ownedWaiting;
+      throw new ConflictException('Conversation ownership changed before reception request');
+    }
     const updated = await this.prisma.chatConversation.updateMany({
-      where: { id: command.conversationId, status: ConversationStatus.AI_ACTIVE },
+      where: { id: command.conversationId, status: ConversationStatus.AI_ACTIVE, ...ownership },
       data: {
         status: ConversationStatus.WAITING_FOR_STAFF,
         handoffRequestedAt: new Date(),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
         ...contact,
       },
     });
 
-    const current = await this.prisma.chatConversation.findUnique({ where: { id: command.conversationId } });
-    if (!current) throw new NotFoundException('Conversation not found');
+    const current = await this.prisma.chatConversation.findFirst({
+      where: { id: command.conversationId, status: ConversationStatus.WAITING_FOR_STAFF, ...ownership },
+    });
+    if (!current) {
+      const exists = await this.prisma.chatConversation.findUnique({
+        where: { id: command.conversationId },
+        select: { id: true },
+      });
+      if (!exists) throw new NotFoundException('Conversation not found');
+      throw new ConflictException('Conversation ownership or state changed before reception request');
+    }
     if (updated.count === 1 || current.status === ConversationStatus.WAITING_FOR_STAFF) return current;
     throw new ConflictException('Conversation cannot request reception in its current state');
   }

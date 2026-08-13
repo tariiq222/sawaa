@@ -18,6 +18,20 @@ export const STAFF_CONVERSATION_SELECT = {
   updatedAt: true,
 } as const satisfies Prisma.ChatConversationSelect;
 
+export const STAFF_MESSAGE_SELECT = {
+  id: true,
+  conversationId: true,
+  senderType: true,
+  body: true,
+  kind: true,
+  clientMessageId: true,
+  createdAt: true,
+} as const satisfies Prisma.CommsChatMessageSelect;
+
+export type StaffMessageProjection = Prisma.CommsChatMessageGetPayload<{
+  select: typeof STAFF_MESSAGE_SELECT;
+}>;
+
 export type StaffConversationResponse = Prisma.ChatConversationGetPayload<{
   select: typeof STAFF_CONVERSATION_SELECT;
 }>;

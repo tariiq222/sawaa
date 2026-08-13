@@ -90,4 +90,9 @@ describe('DashboardConversationsController (real CaslGuard)', () => {
       actorRole: 'ADMIN',
     });
   });
+
+  it('passes JWT role into inbox isolation', async () => {
+    await request(app.getHttpServer()).get('/dashboard/conversations?assigned=all').set('x-test-role', 'RECEPTIONIST').expect(200);
+    expect(handlers.list.execute).toHaveBeenCalledWith(expect.objectContaining({ staffUserId: 'staff-a', staffRole: 'RECEPTIONIST', assigned: 'all' }));
+  });
 });

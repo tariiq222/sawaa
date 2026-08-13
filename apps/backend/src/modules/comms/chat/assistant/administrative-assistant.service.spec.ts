@@ -34,6 +34,7 @@ const activeConversation = {
   language: 'ar',
   isAiChat: true,
   status: ConversationStatus.AI_ACTIVE,
+  stateVersion: 0,
 };
 
 function duplicateError(): Prisma.PrismaClientKnownRequestError {
@@ -540,6 +541,16 @@ describe('AdministrativeAssistantService', () => {
 
     await expect(service.processMessage(messageId)).resolves.toBeNull();
 
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('discards an old completion after AI to staff to AI ABA changes stateVersion', async () => {
+    tx.chatConversation.findUnique.mockResolvedValue({ ...activeConversation, stateVersion: 2 });
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(lease.acquire).toHaveBeenCalledWith(conversationId, expect.any(String), 0);
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
     expect(tx.chatConversation.updateMany).not.toHaveBeenCalled();
   });

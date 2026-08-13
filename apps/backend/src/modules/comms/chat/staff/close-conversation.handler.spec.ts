@@ -15,7 +15,13 @@ describe('staff CloseConversationHandler', () => {
     await handler.execute({ conversationId: 'conv-1', actorUserId: 'admin-a', actorRole: 'ADMIN' });
     expect(prisma.chatConversation.updateMany).toHaveBeenCalledWith({
       where: { id: 'conv-1', status: { not: ConversationStatus.CLOSED } },
-      data: { status: ConversationStatus.CLOSED, closedAt: expect.any(Date) },
+      data: {
+        status: ConversationStatus.CLOSED,
+        closedAt: expect.any(Date),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
+      },
     });
   });
 
@@ -34,7 +40,13 @@ describe('staff CloseConversationHandler', () => {
         status: { not: ConversationStatus.CLOSED },
         assignedStaffUserId: 'staff-a',
       },
-      data: { status: ConversationStatus.CLOSED, closedAt: expect.any(Date) },
+      data: {
+        status: ConversationStatus.CLOSED,
+        closedAt: expect.any(Date),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
+      },
     });
     await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'staff-b', actorRole: 'RECEPTIONIST' })).rejects.toThrow(ForbiddenException);
     prisma.chatConversation.findUnique.mockResolvedValue({ id: 'conv-1', status: ConversationStatus.CLOSED, assignedStaffUserId: 'staff-a' });

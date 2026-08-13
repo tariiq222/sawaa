@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConversationStatus, MessageSenderType, Prisma, type CommsChatMessage } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
+import { lockChatConversation } from '../conversation-lock.helper';
 import type { SendChatMessageDto } from './send-chat-message.dto';
 
 export type SendChatMessageCommand = SendChatMessageDto & (
@@ -21,6 +22,11 @@ export class SendChatMessageHandler {
   ) {}
 
   async execute(command: SendChatMessageCommand): Promise<CommsChatMessage> {
+    if (command.audience === 'staff') {
+      const existing = await this.findExistingMessage(command.conversationId, command.clientMessageId);
+      if (existing) return this.staffOwnedDuplicate(existing, command.staffUserId);
+    }
+
     const body = command.body.trim();
     const maxLength = this.config.getOrThrow<number>('CHAT_MAX_MESSAGE_LENGTH');
     if (body.length === 0 || body.length > maxLength) {
@@ -40,8 +46,10 @@ export class SendChatMessageHandler {
           });
     if (!conversation) throw new BadRequestException('Conversation is not assigned to this staff user');
 
-    const existing = await this.findExistingMessage(command.conversationId, command.clientMessageId);
-    if (existing) return existing;
+    if (command.audience !== 'staff') {
+      const existing = await this.findExistingMessage(command.conversationId, command.clientMessageId);
+      if (existing) return existing;
+    }
 
     if (conversation.status === ConversationStatus.CLOSED) {
       throw new BadRequestException('Cannot send message to a closed conversation');
@@ -55,6 +63,20 @@ export class SendChatMessageHandler {
 
     try {
       return await this.rlsTransaction.withTransaction(async (tx) => {
+        await lockChatConversation(tx, command.conversationId);
+        const existing = await tx.commsChatMessage.findUnique({
+          where: {
+            conversationId_clientMessageId: {
+              conversationId: command.conversationId,
+              clientMessageId: command.clientMessageId,
+            },
+          },
+        });
+        if (existing) {
+          return command.audience === 'staff'
+            ? this.staffOwnedDuplicate(existing, command.staffUserId)
+            : existing;
+        }
         const message = await tx.commsChatMessage.create({
           data: {
             conversationId: command.conversationId,
@@ -88,7 +110,11 @@ export class SendChatMessageHandler {
       if (!this.isDuplicateClientMessage(error)) throw error;
 
       const existing = await this.findExistingMessage(command.conversationId, command.clientMessageId);
-      if (existing) return existing;
+      if (existing) {
+        return command.audience === 'staff'
+          ? this.staffOwnedDuplicate(existing, command.staffUserId)
+          : existing;
+      }
       throw error;
     }
   }
@@ -101,5 +127,12 @@ export class SendChatMessageHandler {
     return this.prisma.commsChatMessage.findUnique({
       where: { conversationId_clientMessageId: { conversationId, clientMessageId } },
     });
+  }
+
+  private staffOwnedDuplicate(message: CommsChatMessage, staffUserId: string): CommsChatMessage {
+    if (message.senderType !== MessageSenderType.STAFF || message.senderId !== staffUserId) {
+      throw new ConflictException('Idempotency key belongs to another sender');
+    }
+    return message;
   }
 }

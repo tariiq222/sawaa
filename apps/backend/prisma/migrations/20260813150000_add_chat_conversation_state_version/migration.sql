@@ -1,0 +1,2 @@
+ALTER TABLE "ChatConversation"
+ADD COLUMN "stateVersion" INTEGER NOT NULL DEFAULT 0;

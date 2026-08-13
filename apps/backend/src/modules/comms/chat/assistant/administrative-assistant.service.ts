@@ -55,6 +55,7 @@ interface ActiveConversation {
   language: string;
   isAiChat: boolean;
   status: ConversationStatus;
+  stateVersion: number;
 }
 
 @Injectable()
@@ -83,7 +84,7 @@ export class AdministrativeAssistantService {
     if (!conversation) return null;
 
     const owner = randomUUID();
-    if (!await this.lease.acquire(conversation.id, owner)) return null;
+    if (!await this.lease.acquire(conversation.id, owner, conversation.stateVersion)) return null;
 
     let targetResponse: CommsChatMessage | null = null;
     let currentMessage = target;
@@ -107,7 +108,7 @@ export class AdministrativeAssistantService {
 
       for (const message of pending) {
         currentMessage = message;
-        if (!await this.lease.renew(conversation.id, owner)) throw new AssistantLeaseLost();
+        if (!await this.lease.renew(conversation.id, owner, conversation.stateVersion)) throw new AssistantLeaseLost();
         const response = await this.processInbound(message, conversation, owner);
         if (message.id === messageId) targetResponse = response;
       }
@@ -165,7 +166,7 @@ export class AdministrativeAssistantService {
 
     // The completion happens outside a database transaction. Confirm lease
     // ownership again immediately before the short persistence transaction.
-    if (!await this.lease.renew(conversation.id, leaseOwner)) throw new AssistantLeaseLost();
+    if (!await this.lease.renew(conversation.id, leaseOwner, conversation.stateVersion)) throw new AssistantLeaseLost();
 
     return this.persistResponse({
       messageId: inbound.id,
@@ -175,6 +176,7 @@ export class AdministrativeAssistantService {
       model,
       tokensUsed,
       latencyMs: Date.now() - startedAt,
+      stateVersion: conversation.stateVersion,
     });
   }
 
@@ -267,6 +269,7 @@ export class AdministrativeAssistantService {
     model: string | null;
     tokensUsed: number;
     latencyMs: number;
+    stateVersion: number;
   }): Promise<CommsChatMessage | null> {
     try {
       return await this.rlsTransaction.withTransaction(async (tx) => {
@@ -277,9 +280,13 @@ export class AdministrativeAssistantService {
 
         const conversation = await tx.chatConversation.findUnique({
           where: { id: input.conversationId },
-          select: { status: true, isAiChat: true },
+          select: { status: true, isAiChat: true, stateVersion: true },
         });
-        if (!conversation || !this.canUseAi(conversation)) throw new ConversationStatusChanged();
+        if (
+          !conversation
+          || !this.canUseAi(conversation)
+          || conversation.stateVersion !== input.stateVersion
+        ) throw new ConversationStatusChanged();
 
         const response = await tx.commsChatMessage.create({
           data: {
@@ -298,7 +305,12 @@ export class AdministrativeAssistantService {
           },
         });
         const updated = await tx.chatConversation.updateMany({
-          where: { id: input.conversationId, status: ConversationStatus.AI_ACTIVE, isAiChat: true },
+          where: {
+            id: input.conversationId,
+            status: ConversationStatus.AI_ACTIVE,
+            isAiChat: true,
+            stateVersion: input.stateVersion,
+          },
           data: { lastMessageAt: new Date(), clientUnreadCount: { increment: 1 } },
         });
         if (updated.count !== 1) throw new ConversationStatusChanged();
@@ -358,7 +370,7 @@ export class AdministrativeAssistantService {
   private async findActiveConversation(conversationId: string): Promise<ActiveConversation | null> {
     const conversation = await this.prisma.chatConversation.findUnique({
       where: { id: conversationId },
-      select: { id: true, clientId: true, language: true, isAiChat: true, status: true },
+      select: { id: true, clientId: true, language: true, isAiChat: true, status: true, stateVersion: true },
     });
     return conversation && this.canUseAi(conversation) ? conversation : null;
   }

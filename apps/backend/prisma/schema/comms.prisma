@@ -83,6 +83,7 @@ model ChatConversation {
   employeeId          String?
   isAiChat            Boolean            @default(false)
   status              ConversationStatus @default(AI_ACTIVE)
+  stateVersion        Int                @default(0)
   guestTokenHash      String?            @unique
   guestName           String?
   guestPhone          String?

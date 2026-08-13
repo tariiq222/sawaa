@@ -18,7 +18,11 @@ export class AssignConversationHandler {
     }
 
     const target = await this.prisma.user.findFirst({
-      where: { id: command.targetStaffUserId, isActive: true, role: { not: UserRole.CLIENT } },
+      where: {
+        id: command.targetStaffUserId,
+        isActive: true,
+        role: { in: [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECEPTIONIST] },
+      },
       select: { id: true },
     });
     if (!target) throw new NotFoundException('Active dashboard user not found');
@@ -32,6 +36,9 @@ export class AssignConversationHandler {
         status: ConversationStatus.STAFF_ACTIVE,
         assignedStaffUserId: target.id,
         staffClaimedAt: new Date(),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
     if (assigned.count !== 1) throw new ConflictException('Conversation cannot be assigned in its current state');

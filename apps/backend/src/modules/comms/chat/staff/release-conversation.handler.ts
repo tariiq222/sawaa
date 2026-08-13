@@ -18,6 +18,9 @@ export class ReleaseConversationHandler {
     if (conversation.status !== ConversationStatus.STAFF_ACTIVE) {
       throw new ConflictException('Only staff-active conversations can be released');
     }
+    if (!conversation.isAiChat) {
+      throw new ConflictException('Only AI conversations can be released to the assistant');
+    }
     const isAdmin = command.actorRole === UserRole.ADMIN || command.actorRole === UserRole.SUPER_ADMIN;
     if (!isAdmin && conversation.assignedStaffUserId !== command.actorUserId) {
       throw new ForbiddenException('Conversation is assigned to another staff user');
@@ -27,12 +30,16 @@ export class ReleaseConversationHandler {
       where: {
         id: command.conversationId,
         status: ConversationStatus.STAFF_ACTIVE,
+        isAiChat: true,
         ...(!isAdmin ? { assignedStaffUserId: command.actorUserId } : {}),
       },
       data: {
         status: ConversationStatus.AI_ACTIVE,
         assignedStaffUserId: null,
         staffClaimedAt: null,
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
     if (released.count !== 1) throw new ConflictException('Conversation state changed before release');

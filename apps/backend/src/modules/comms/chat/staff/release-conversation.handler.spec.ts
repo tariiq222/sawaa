@@ -11,7 +11,7 @@ describe('ReleaseConversationHandler', () => {
   ])('releases STAFF_ACTIVE to AI_ACTIVE for an assigned staff member or admin context: %j', async (actor) => {
     const prisma: any = {
       chatConversation: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'conv-1', status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-a' }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'conv-1', isAiChat: true, status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-a' }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
@@ -21,20 +21,36 @@ describe('ReleaseConversationHandler', () => {
       where: {
         id: 'conv-1',
         status: ConversationStatus.STAFF_ACTIVE,
+        isAiChat: true,
         ...(actor.actorRole === 'RECEPTIONIST' ? { assignedStaffUserId: 'staff-a' } : {}),
       },
       data: {
         status: ConversationStatus.AI_ACTIVE,
         assignedStaffUserId: null,
         staffClaimedAt: null,
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
+  });
+
+  it('never releases a legacy non-AI conversation into AI_ACTIVE', async () => {
+    const prisma: any = {
+      chatConversation: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'conv-1', isAiChat: false, status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-a' }),
+        updateMany: jest.fn(),
+      },
+    };
+    const handler = new ReleaseConversationHandler(prisma as PrismaService);
+    await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'admin-a', actorRole: 'ADMIN' })).rejects.toThrow(ConflictException);
+    expect(prisma.chatConversation.updateMany).not.toHaveBeenCalled();
   });
 
   it('does not release after ownership changes between authorization and update', async () => {
     const prisma: any = {
       chatConversation: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'conv-1', status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-a' }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'conv-1', isAiChat: true, status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-a' }),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
@@ -48,7 +64,7 @@ describe('ReleaseConversationHandler', () => {
   it('rejects an unassigned receptionist and a stale non-staff state', async () => {
     const prisma: any = {
       chatConversation: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'conv-1', status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-a' }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'conv-1', isAiChat: true, status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-a' }),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };

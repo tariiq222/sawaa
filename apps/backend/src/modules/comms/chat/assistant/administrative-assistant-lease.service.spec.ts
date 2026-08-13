@@ -22,12 +22,13 @@ describe('AdministrativeAssistantLeaseService', () => {
   it('acquires a stored lease atomically when it is free or expired', async () => {
     prisma.$queryRaw.mockResolvedValue([{ id: 'conversation-1' }]);
 
-    await expect(lease.acquire('conversation-1', 'worker-1')).resolves.toBe(true);
+    await expect(lease.acquire('conversation-1', 'worker-1', 7)).resolves.toBe(true);
 
     const [strings, owner, expiresAt, conversationId] = prisma.$queryRaw.mock.calls[0];
     expect(strings.join(' ')).toContain('UPDATE "ChatConversation"');
     expect(strings.join(' ')).toContain('"assistantLeaseExpiresAt" < now()');
     expect(strings.join(' ')).toContain('RETURNING "id"');
+    expect(strings.join(' ')).toContain('"stateVersion" =');
     expect(conversationId).toBe('conversation-1');
     expect(owner).toBe('worker-1');
     expect(expiresAt).toBeInstanceOf(Date);
@@ -36,7 +37,7 @@ describe('AdministrativeAssistantLeaseService', () => {
   it('returns false while another unexpired owner holds the lease', async () => {
     prisma.$queryRaw.mockResolvedValue([]);
 
-    await expect(lease.acquire('conversation-1', 'worker-2')).resolves.toBe(false);
+    await expect(lease.acquire('conversation-1', 'worker-2', 7)).resolves.toBe(false);
   });
 
   it('releases only the caller-owned lease and clears both stored fields', async () => {
@@ -55,10 +56,11 @@ describe('AdministrativeAssistantLeaseService', () => {
   it('renews only an owned unexpired lease', async () => {
     prisma.$queryRaw.mockResolvedValue([{ id: 'conversation-1' }]);
 
-    await expect(lease.renew('conversation-1', 'worker-1')).resolves.toBe(true);
+    await expect(lease.renew('conversation-1', 'worker-1', 7)).resolves.toBe(true);
 
     const [strings, expiresAt, conversationId, owner] = prisma.$queryRaw.mock.calls[0];
     expect(strings.join(' ')).toContain('"assistantLeaseExpiresAt" > now()');
+    expect(strings.join(' ')).toContain('"stateVersion" =');
     expect(expiresAt).toBeInstanceOf(Date);
     expect(conversationId).toBe('conversation-1');
     expect(owner).toBe('worker-1');

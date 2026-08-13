@@ -17,9 +17,8 @@ export class GetConversationHandler {
   ) {}
 
   async execute(command: GetConversationCommand) {
-    await this.access.assertReadAccess(command.conversationId, command.staffUserId, command.staffRole);
-    const conversation = await this.prisma.chatConversation.findUnique({
-      where: { id: command.conversationId },
+    const conversation = await this.prisma.chatConversation.findFirst({
+      where: this.access.buildReadWhere(command.conversationId, command.staffUserId, command.staffRole),
       select: STAFF_CONVERSATION_SELECT,
     });
     if (!conversation) throw new NotFoundException('Conversation not found');

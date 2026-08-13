@@ -51,9 +51,10 @@ export class DashboardConversationsController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'cursor', required: false })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  list(@Query() dto: ListInboxDto, @UserId() staffUserId: string) {
+  list(@Query() dto: ListInboxDto, @UserId() staffUserId: string, @CurrentUser() user: JwtUser) {
     return this.listInbox.execute({
       staffUserId,
+      staffRole: user.role,
       limit: dto.limit ?? 20,
       ...(dto.cursor ? { cursor: dto.cursor } : {}),
       ...(dto.status ? { status: dto.status } : {}),

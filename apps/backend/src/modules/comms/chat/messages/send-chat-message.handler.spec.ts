@@ -24,7 +24,8 @@ describe('SendChatMessageHandler', () => {
     chatConversation: { findFirst: jest.Mock };
   };
   let transaction: {
-    commsChatMessage: { create: jest.Mock };
+    $executeRaw: jest.Mock;
+    commsChatMessage: { findUnique: jest.Mock; create: jest.Mock };
     chatConversation: { updateMany: jest.Mock };
   };
   let rlsTransaction: { withTransaction: jest.Mock };
@@ -33,7 +34,11 @@ describe('SendChatMessageHandler', () => {
 
   beforeEach(() => {
     transaction = {
-      commsChatMessage: { create: jest.fn().mockResolvedValue({ id: 'message-1' }) },
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      commsChatMessage: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'message-1' }),
+      },
       chatConversation: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     };
     prisma = {
@@ -89,6 +94,10 @@ describe('SendChatMessageHandler', () => {
     expect(result).toEqual({ id: 'message-1' });
     expect(access.assertGuestAccess).toHaveBeenCalledWith(guestConversation.id, 'guest-token');
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
+    expect(transaction.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      transaction.commsChatMessage.create.mock.invocationCallOrder[0],
+    );
     expect(transaction.commsChatMessage.create).toHaveBeenCalledWith({
       data: {
         conversationId: guestConversation.id,
@@ -149,6 +158,39 @@ describe('SendChatMessageHandler', () => {
     });
   });
 
+  it('returns a staff duplicate only to its original sender', async () => {
+    prisma.commsChatMessage.findUnique.mockResolvedValue({
+      id: 'original', senderType: MessageSenderType.STAFF, senderId: 'staff-a', clientMessageId: 'staff-1',
+    });
+    await expect(handler.execute({
+      audience: 'staff', conversationId: guestConversation.id, staffUserId: 'staff-a', body: 'retry', clientMessageId: 'staff-1',
+    })).resolves.toEqual(expect.objectContaining({ id: 'original' }));
+    await expect(handler.execute({
+      audience: 'staff', conversationId: guestConversation.id, staffUserId: 'staff-b', body: 'steal', clientMessageId: 'staff-1',
+    })).rejects.toThrow('Idempotency key belongs to another sender');
+  });
+
+  it('returns the original staff message after release or reassignment only to the original sender', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue(null);
+    prisma.commsChatMessage.findUnique.mockResolvedValue({
+      id: 'original', senderType: MessageSenderType.STAFF, senderId: 'staff-a', clientMessageId: 'staff-1',
+    });
+    await expect(handler.execute({
+      audience: 'staff', conversationId: guestConversation.id, staffUserId: 'staff-a', body: 'retry', clientMessageId: 'staff-1',
+    })).resolves.toEqual(expect.objectContaining({ id: 'original' }));
+  });
+
+  it('checks a staff idempotency key before current state or retry-body validation', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue(null);
+    prisma.commsChatMessage.findUnique.mockResolvedValue({
+      id: 'original', senderType: MessageSenderType.STAFF, senderId: 'staff-a', clientMessageId: 'staff-1',
+    });
+    await expect(handler.execute({
+      audience: 'staff', conversationId: guestConversation.id, staffUserId: 'staff-a', body: ' ', clientMessageId: 'staff-1',
+    })).resolves.toEqual(expect.objectContaining({ id: 'original' }));
+    expect(prisma.chatConversation.findFirst).not.toHaveBeenCalled();
+  });
+
   it('does not allow a known conversation ID to bypass guest ownership', async () => {
     access.assertGuestAccess.mockRejectedValue(new NotFoundException('Conversation not found'));
 
@@ -193,5 +235,21 @@ describe('SendChatMessageHandler', () => {
 
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(transaction.chatConversation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('applies staff sender identity checks to the P2002 winning-message readback', async () => {
+    transaction.commsChatMessage.create.mockRejectedValue(knownRequestError());
+    prisma.commsChatMessage.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'other-staff-message',
+        senderType: MessageSenderType.STAFF,
+        senderId: 'staff-b',
+        clientMessageId: 'staff-race',
+      });
+
+    await expect(handler.execute({
+      audience: 'staff', conversationId: guestConversation.id, staffUserId: 'staff-a', body: 'hello', clientMessageId: 'staff-race',
+    })).rejects.toThrow('Idempotency key belongs to another sender');
   });
 });

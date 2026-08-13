@@ -32,6 +32,7 @@ describe('ListInboxHandler', () => {
 
     const result = await handler.execute({
       staffUserId: 'staff-a',
+      staffRole: 'RECEPTIONIST',
       limit: 20,
       status: ConversationStatus.WAITING_FOR_STAFF,
       unreadOnly: true,
@@ -43,6 +44,9 @@ describe('ListInboxHandler', () => {
 
     expect(prisma.chatConversation.findMany).toHaveBeenCalledWith({
       where: {
+        AND: [
+          { OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] },
+        ],
         status: ConversationStatus.WAITING_FOR_STAFF,
         staffUnreadCount: { gt: 0 },
         assignedStaffUserId: null,
@@ -75,16 +79,54 @@ describe('ListInboxHandler', () => {
       },
     };
     const handler = new ListInboxHandler(prisma as PrismaService);
-    await handler.execute({ staffUserId: 'staff-a', assigned: 'me', cursor: 'cursor-1', limit: 10 });
+    await handler.execute({ staffUserId: 'staff-a', staffRole: 'RECEPTIONIST', assigned: 'me', cursor: 'cursor-1', limit: 10 });
     expect(prisma.chatConversation.findFirst).toHaveBeenCalledWith({
-      where: { assignedStaffUserId: 'staff-a', id: 'cursor-1' },
+      where: {
+        AND: [{ OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] }],
+        assignedStaffUserId: 'staff-a',
+        id: 'cursor-1',
+      },
       select: { id: true },
     });
     expect(prisma.chatConversation.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { assignedStaffUserId: 'staff-a' },
+      where: {
+        AND: [{ OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] }],
+        assignedStaffUserId: 'staff-a',
+      },
       cursor: { id: 'cursor-1' },
       skip: 1,
       take: 11,
     }));
+  });
+
+  it.each(['all', undefined] as const)('never lets reception select another staff assignment for filter %s', async (assigned) => {
+    const prisma: any = {
+      chatConversation: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const handler = new ListInboxHandler(prisma as PrismaService);
+    await handler.execute({ staffUserId: 'staff-a', staffRole: 'RECEPTIONIST', assigned, search: '+966500000999', limit: 20 });
+    expect(prisma.chatConversation.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        AND: [{ OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] }],
+        OR: [
+          { guestName: { contains: '+966500000999', mode: 'insensitive' } },
+          { guestPhone: { contains: '+966500000999' } },
+        ],
+      }),
+    }));
+  });
+
+  it.each(['ADMIN', 'SUPER_ADMIN'])('lets %s use all assignments', async (staffRole) => {
+    const prisma: any = { chatConversation: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) } };
+    const handler = new ListInboxHandler(prisma as PrismaService);
+    await handler.execute({ staffUserId: 'admin-a', staffRole, assigned: 'all', limit: 20 });
+    expect(prisma.chatConversation.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+  });
+
+  it.each(['OWNER', 'ACCOUNTANT', 'EMPLOYEE', 'CLIENT'])('rejects non-Conversation role %s before querying', async (staffRole) => {
+    const prisma: any = { chatConversation: { findFirst: jest.fn(), findMany: jest.fn() } };
+    const handler = new ListInboxHandler(prisma as PrismaService);
+    await expect(handler.execute({ staffUserId: 'user-a', staffRole, assigned: 'all', limit: 20 })).rejects.toThrow();
+    expect(prisma.chatConversation.findMany).not.toHaveBeenCalled();
   });
 });
