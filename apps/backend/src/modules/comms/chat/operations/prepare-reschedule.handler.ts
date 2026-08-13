@@ -8,6 +8,7 @@ import {
 import { createHash } from 'node:crypto';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { ChatBookingQuoteService } from './chat-booking-quote.service';
+import { assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
 
 export interface PrepareRescheduleCommand {
   conversationId: string;
@@ -15,6 +16,7 @@ export interface PrepareRescheduleCommand {
   sourceMessageId: string;
   bookingId: string;
   newScheduledAt: string;
+  assistantFence?: AssistantOperationFence;
 }
 
 @Injectable()
@@ -54,6 +56,7 @@ export class PrepareRescheduleHandler {
         idempotencyKey,
         requiredConfirmations: 0,
         expiresAt,
+        assistantFence: command.assistantFence,
       });
     }
     const prepared = await this.quote.quoteReschedule({
@@ -71,6 +74,7 @@ export class PrepareRescheduleHandler {
       idempotencyKey,
       requiredConfirmations: 1,
       expiresAt,
+      assistantFence: command.assistantFence,
     });
   }
 
@@ -101,14 +105,16 @@ export class PrepareRescheduleHandler {
     idempotencyKey: string;
     requiredConfirmations: number;
     expiresAt: Date;
+    assistantFence?: AssistantOperationFence;
   }): Promise<ChatOperation> {
     try {
       return await this.rlsTransaction.withTransaction(async (tx) => {
+        await assertAssistantOperationFence(tx, data.conversationId, data.clientId, data.assistantFence);
         const existing = await tx.chatOperation.findUnique({ where: { idempotencyKey: data.idempotencyKey } });
         if (existing) return existing;
         return tx.chatOperation.create({
           data: {
-            ...data,
+            ...this.withoutFence(data),
             payload: data.payload as Prisma.InputJsonValue,
             summary: data.summary as Prisma.InputJsonValue,
           },
@@ -120,5 +126,10 @@ export class PrepareRescheduleHandler {
       if (!existing) throw error;
       return existing;
     }
+  }
+
+  private withoutFence<T extends { assistantFence?: AssistantOperationFence }>(data: T): Omit<T, 'assistantFence'> {
+    const { assistantFence: _fence, ...persisted } = data;
+    return persisted;
   }
 }

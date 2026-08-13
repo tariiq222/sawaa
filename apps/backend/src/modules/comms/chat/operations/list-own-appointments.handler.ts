@@ -11,11 +11,13 @@ import {
   ListClientBookingsHandler,
   type ListClientBookingsResult,
 } from '../../../bookings/client/list-client-bookings.handler';
+import { assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
 
 export interface ListOwnAppointmentsCommand {
   conversationId: string;
   clientId: string | null;
   sourceMessageId: string;
+  assistantFence?: AssistantOperationFence;
 }
 
 export type ListOwnAppointmentsResult =
@@ -50,6 +52,7 @@ export class ListOwnAppointmentsHandler {
       .digest('hex')}`;
     const expiresAt = new Date(Date.now() + 15 * 60_000);
     const createOrGet = async (tx: Prisma.TransactionClient) => {
+      await assertAssistantOperationFence(tx, command.conversationId, command.clientId, command.assistantFence);
       const existing = await tx.chatOperation.findUnique({ where: { idempotencyKey } });
       if (existing) return existing;
       return tx.chatOperation.create({

@@ -23,7 +23,6 @@ import { DeclineOperationHandler } from '../../modules/comms/chat/operations/dec
 import { OperationVersionDto } from '../../modules/comms/chat/operations/operation-version.dto';
 import { toPublicChatOperation } from '../../modules/comms/chat/operations/chat-operation-public.mapper';
 import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
-import { AdministrativeAssistantService } from '../../modules/comms/chat/assistant/administrative-assistant.service';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
 
@@ -49,7 +48,6 @@ export class MyChatController {
     private readonly confirmOperation: ConfirmOperationHandler,
     private readonly declineOperation: DeclineOperationHandler,
     private readonly resumeOperations: ResumeChatOperationsHandler,
-    private readonly assistant: AdministrativeAssistantService,
     private readonly retryMessage: RetryAdministrativeMessageHandler,
   ) {}
 
@@ -67,7 +65,7 @@ export class MyChatController {
   @ApiCreatedResponse({ description: 'Guest conversation claimed by the authenticated client' })
   async claim(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
-    @Body() _body: RetryAdministrativeMessageDto,
+    @Body() _body: ClaimGuestConversationDto,
     @ClientSession() session: { id: string },
     @Req() request: CookieRequest,
     @Res({ passthrough: true }) response: Response,
@@ -112,7 +110,6 @@ export class MyChatController {
       clientId: session.id,
       ...dto,
     });
-    await this.assistant.processMessage(message.id);
     return toChatMessageResponse(message);
   }
 
@@ -124,7 +121,7 @@ export class MyChatController {
   async retryMessageForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Param('messageId', ParseUUIDPipe) messageId: string,
-    @Body() _body: ClaimGuestConversationDto,
+    @Body() _body: RetryAdministrativeMessageDto,
     @ClientSession() session: { id: string },
   ) {
     return toChatMessageResponse(await this.retryMessage.execute({

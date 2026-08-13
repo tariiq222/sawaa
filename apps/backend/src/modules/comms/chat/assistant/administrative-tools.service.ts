@@ -276,6 +276,7 @@ export class AdministrativeToolsService {
             conversationId: context.conversationId,
             clientId: context.clientId,
             sourceMessageId,
+            ...this.assistantFence(context),
           });
           if (result.kind === 'AUTH_REQUIRED') {
             const publicMetadata = toOperationCardMetadata(result.operation);
@@ -308,6 +309,7 @@ export class AdministrativeToolsService {
               ? { durationOptionId: this.optionalString(args.durationOptionId) }
               : {}),
             deliveryType,
+            ...this.assistantFence(context),
           });
           return this.operationResult(operation);
         }
@@ -324,6 +326,7 @@ export class AdministrativeToolsService {
             sourceMessageId,
             bookingId,
             newScheduledAt,
+            ...this.assistantFence(context),
           }));
         }
         case 'prepareCancellation': {
@@ -337,6 +340,7 @@ export class AdministrativeToolsService {
             clientId: context.clientId,
             sourceMessageId,
             bookingId,
+            ...this.assistantFence(context),
           }));
         }
       }
@@ -347,6 +351,12 @@ export class AdministrativeToolsService {
 
   private isAllowedToolName(name: string): name is AllowedToolName {
     return (ALLOWED_TOOL_NAMES as readonly string[]).includes(name);
+  }
+
+  private assistantFence(context: AdministrativeToolContext) {
+    return context.stateVersion !== null && context.leaseOwner
+      ? { assistantFence: { stateVersion: context.stateVersion, leaseOwner: context.leaseOwner } }
+      : {};
   }
 
   private parseArguments(rawArguments: string): Record<string, unknown> | null {

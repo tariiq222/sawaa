@@ -29425,7 +29425,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RetryAdministrativeMessageDto"];
+                "application/json": components["schemas"]["ClaimGuestConversationDto"];
             };
         };
         responses: {
@@ -29669,7 +29669,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ClaimGuestConversationDto"];
+                "application/json": components["schemas"]["RetryAdministrativeMessageDto"];
             };
         };
         responses: {

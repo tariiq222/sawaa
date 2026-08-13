@@ -8,7 +8,9 @@ import { SendChatMessageHandler } from './send-chat-message.handler';
 const guestConversation = {
   id: '00000000-0000-4000-a000-000000000001',
   clientId: null,
+  isAiChat: true,
   status: ConversationStatus.AI_ACTIVE,
+  stateVersion: 0,
 };
 
 function knownRequestError(): Prisma.PrismaClientKnownRequestError {
@@ -25,21 +27,28 @@ describe('SendChatMessageHandler', () => {
   };
   let transaction: {
     $executeRaw: jest.Mock;
+    $queryRaw: jest.Mock;
     commsChatMessage: { findUnique: jest.Mock; create: jest.Mock };
-    chatConversation: { updateMany: jest.Mock };
+    chatConversation: { findFirst: jest.Mock; updateMany: jest.Mock };
+    outboxEvent: { create: jest.Mock };
   };
   let rlsTransaction: { withTransaction: jest.Mock };
-  let access: { assertGuestAccess: jest.Mock; assertClientAccess: jest.Mock };
+  let access: { assertGuestAccess: jest.Mock; assertClientAccess: jest.Mock; guestTokenHash: jest.Mock };
   let handler: SendChatMessageHandler;
 
   beforeEach(() => {
     transaction = {
       $executeRaw: jest.fn().mockResolvedValue(1),
+      $queryRaw: jest.fn().mockResolvedValue([]),
       commsChatMessage: {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 'message-1' }),
       },
-      chatConversation: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      chatConversation: {
+        findFirst: jest.fn().mockResolvedValue(guestConversation),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
     };
     prisma = {
       commsChatMessage: { findUnique: jest.fn() },
@@ -49,6 +58,7 @@ describe('SendChatMessageHandler', () => {
     access = {
       assertGuestAccess: jest.fn().mockResolvedValue(guestConversation),
       assertClientAccess: jest.fn().mockResolvedValue({ ...guestConversation, clientId: 'client-a' }),
+      guestTokenHash: jest.fn().mockReturnValue('guest-hash'),
     };
     handler = new SendChatMessageHandler(
       prisma as unknown as PrismaService,
@@ -92,7 +102,13 @@ describe('SendChatMessageHandler', () => {
     });
 
     expect(result).toEqual({ id: 'message-1' });
-    expect(access.assertGuestAccess).toHaveBeenCalledWith(guestConversation.id, 'guest-token');
+    expect(transaction.chatConversation.findFirst).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: guestConversation.id,
+        clientId: null,
+        guestTokenHash: expect.any(String),
+      }),
+    });
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(transaction.$executeRaw).toHaveBeenCalledTimes(1);
     expect(transaction.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
@@ -105,10 +121,28 @@ describe('SendChatMessageHandler', () => {
         senderId: null,
         body: 'مرحبا',
         clientMessageId: 'm-1',
+        metadata: expect.objectContaining({
+          assistantStatus: 'QUEUED',
+          dispatchAttempt: 0,
+          queuedAt: expect.any(String),
+        }),
       },
     });
+    expect(transaction.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        aggregateId: 'message-1',
+        eventType: 'comms.chat.assistant.processing_requested',
+        status: 'PENDING_V2',
+        deliveryLane: 'PENDING_V2',
+      }),
+    });
     expect(transaction.chatConversation.updateMany).toHaveBeenCalledWith({
-      where: { id: guestConversation.id, status: { not: ConversationStatus.CLOSED } },
+      where: {
+        id: guestConversation.id,
+        status: { not: ConversationStatus.CLOSED },
+        clientId: null,
+        guestTokenHash: 'guest-hash',
+      },
       data: {
         lastMessageAt: expect.any(Date),
         staffUnreadCount: { increment: 1 },
@@ -117,11 +151,14 @@ describe('SendChatMessageHandler', () => {
   });
 
   it('derives a CLIENT sender and authenticated senderId from the client access context', async () => {
+    transaction.chatConversation.findFirst.mockResolvedValue({ ...guestConversation, clientId: 'client-a' });
     await handler.execute({
       audience: 'client', conversationId: guestConversation.id, clientId: 'client-a', body: 'hello', clientMessageId: 'm-2',
     });
 
-    expect(access.assertClientAccess).toHaveBeenCalledWith(guestConversation.id, 'client-a');
+    expect(transaction.chatConversation.findFirst).toHaveBeenCalledWith({
+      where: { id: guestConversation.id, clientId: 'client-a' },
+    });
     expect(transaction.commsChatMessage.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ senderType: MessageSenderType.CLIENT, senderId: 'client-a' }),
     }));
@@ -192,40 +229,55 @@ describe('SendChatMessageHandler', () => {
   });
 
   it('does not allow a known conversation ID to bypass guest ownership', async () => {
-    access.assertGuestAccess.mockRejectedValue(new NotFoundException('Conversation not found'));
+    transaction.chatConversation.findFirst.mockResolvedValue(null);
 
     await expect(handler.execute({
       audience: 'guest', conversationId: guestConversation.id, guestToken: 'other-guest-token', body: 'hello', clientMessageId: 'm-3',
     })).rejects.toThrow(NotFoundException);
-    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
+    expect(transaction.commsChatMessage.create).not.toHaveBeenCalled();
+  });
+
+  it('revalidates guest ownership after the conversation lock so claim cannot race an insert', async () => {
+    transaction.chatConversation.findFirst.mockResolvedValue(null);
+
+    await expect(handler.execute({
+      audience: 'guest', conversationId: guestConversation.id, guestToken: 'guest-token', body: 'hello', clientMessageId: 'claim-race',
+    })).rejects.toThrow(NotFoundException);
+
+    expect(transaction.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.chatConversation.findFirst.mock.invocationCallOrder[0]).toBeGreaterThan(
+      transaction.$executeRaw.mock.invocationCallOrder[0],
+    );
+    expect(transaction.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(transaction.outboxEvent.create).not.toHaveBeenCalled();
   });
 
   it('blocks sending to a closed conversation while preserving owner read access for the list handler', async () => {
-    access.assertGuestAccess.mockResolvedValue({ ...guestConversation, status: ConversationStatus.CLOSED });
+    transaction.chatConversation.findFirst.mockResolvedValue({ ...guestConversation, status: ConversationStatus.CLOSED });
 
     await expect(handler.execute({
       audience: 'guest', conversationId: guestConversation.id, guestToken: 'guest-token', body: 'hello', clientMessageId: 'm-4',
     })).rejects.toThrow(BadRequestException);
-    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
+    expect(transaction.commsChatMessage.create).not.toHaveBeenCalled();
   });
 
   it('returns the original message on an ordinary duplicate without incrementing counters', async () => {
-    prisma.commsChatMessage.findUnique.mockResolvedValue({ id: 'original-message', body: 'hello' });
+    transaction.commsChatMessage.findUnique.mockResolvedValue({ id: 'original-message', body: 'hello' });
 
     await expect(handler.execute({
       audience: 'guest', conversationId: guestConversation.id, guestToken: 'guest-token', body: 'hello', clientMessageId: 'same-id',
     })).resolves.toEqual({ id: 'original-message', body: 'hello' });
 
-    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(transaction.chatConversation.updateMany).not.toHaveBeenCalled();
-    expect(prisma.commsChatMessage.findUnique).toHaveBeenCalledWith({
+    expect(transaction.commsChatMessage.findUnique).toHaveBeenCalledWith({
       where: { conversationId_clientMessageId: { conversationId: guestConversation.id, clientMessageId: 'same-id' } },
     });
   });
 
   it('reads back the winning message after a concurrent unique-index race instead of retrying AI-triggering work', async () => {
     transaction.commsChatMessage.create.mockRejectedValue(knownRequestError());
-    prisma.commsChatMessage.findUnique
+    transaction.commsChatMessage.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 'race-winner', clientMessageId: 'race-id' });
 
@@ -233,7 +285,7 @@ describe('SendChatMessageHandler', () => {
       audience: 'client', conversationId: guestConversation.id, clientId: 'client-a', body: 'hello', clientMessageId: 'race-id',
     })).resolves.toEqual({ id: 'race-winner', clientMessageId: 'race-id' });
 
-    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(2);
     expect(transaction.chatConversation.updateMany).not.toHaveBeenCalled();
   });
 

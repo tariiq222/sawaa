@@ -48,6 +48,7 @@ describe('AdministrativeAssistantService', () => {
   let prisma: {
     commsChatMessage: { findUnique: jest.Mock; findMany: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
     chatConversation: { findUnique: jest.Mock };
+    chatOperation: { deleteMany: jest.Mock };
   };
   let tx: {
     commsChatMessage: { findUnique: jest.Mock; create: jest.Mock };
@@ -82,6 +83,7 @@ describe('AdministrativeAssistantService', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       chatConversation: { findUnique: jest.fn().mockResolvedValue(activeConversation) },
+      chatOperation: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     };
     tx = {
       commsChatMessage: {
@@ -414,62 +416,107 @@ describe('AdministrativeAssistantService', () => {
     expect(lease.release).toHaveBeenCalledTimes(1);
   });
 
-  it('processes M1 then M2 when the M2 worker acquires the lease first', async () => {
+  it('rechecks the conversation lease after provider selection and before any identity-bound tool', async () => {
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: null,
+      toolCalls: [{ id: 'owned', function: { name: 'listOwnAppointments', arguments: '{}' } }],
+      tokensUsed: 2,
+      model: 'selector',
+    });
+    lease.renew.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(tools.execute).not.toHaveBeenCalled();
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+  });
+
+  it('compensates a prepared operation when handoff wins after the tool but before response CAS', async () => {
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: null,
+      toolCalls: [{ id: 'prepare', function: { name: 'prepareBooking', arguments: '{}' } }],
+      tokensUsed: 2,
+      model: 'selector',
+    }).mockResolvedValueOnce({ content: null, toolCalls: [], tokensUsed: 1, model: 'selector' });
+    tools.execute.mockResolvedValue({
+      ok: true,
+      data: { operation: { id: 'operation-1' } },
+      publicMetadata: { action: 'CHAT_OPERATION', operation: { id: 'operation-1' } },
+    });
+    lease.renew
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(tools.execute).toHaveBeenCalledTimes(1);
+    expect(prisma.chatOperation.deleteMany).toHaveBeenCalledWith({
+      where: { idempotencyKey: { startsWith: `chat:${messageId}:` } },
+    });
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+  });
+
+  it('processes only the event target and never implicitly retries an older failed inbound', async () => {
     const first = { ...inboundMessage, id: 'message-1', sequence: 1n, body: 'ما الخدمات؟' };
-    const second = { ...inboundMessage, id: 'message-2', sequence: 2n, body: 'ما المواعيد المتاحة؟' };
+    const second = { ...inboundMessage, id: 'message-2', sequence: 2n, body: 'ما المواعيد المتاحة؟', metadata: {
+      assistantStatus: 'QUEUED', assistantStateVersion: 0, assistantClientId: null,
+    } };
     prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
       if (where.responseForMessageId) return null;
       return second;
     });
-    prisma.commsChatMessage.findMany.mockImplementation(({ select }) => select.id
-      ? [first, second]
-      : [second, first]);
-    chat.completeWithTools
-      .mockResolvedValueOnce({ content: 'هذه خدماتنا.', toolCalls: [], tokensUsed: 2, model: 'm' })
-      .mockResolvedValueOnce({ content: 'هذه مواعيدنا.', toolCalls: [], tokensUsed: 2, model: 'm' });
+    prisma.commsChatMessage.findMany.mockReturnValue([second, first]);
+    chat.completeWithTools.mockResolvedValueOnce({ content: 'هذه مواعيدنا.', toolCalls: [], tokensUsed: 2, model: 'm' });
 
     const result = await service.processMessage('message-2');
 
-    expect(tx.commsChatMessage.create.mock.calls.map(([call]) => call.data.responseForMessageId)).toEqual([
-      'message-1',
-      'message-2',
-    ]);
+    expect(tx.commsChatMessage.create.mock.calls.map(([call]) => call.data.responseForMessageId)).toEqual(['message-2']);
     expect(result).toEqual(expect.objectContaining({ responseForMessageId: 'message-2' }));
     expect(lease.release).toHaveBeenCalledTimes(1);
   });
 
-  it('marks the currently failing earlier message retryable and does not mark the later target', async () => {
+  it('marks only the exact failing event target retryable', async () => {
     const first = { ...inboundMessage, id: 'message-1', sequence: 1n, body: 'ما الخدمات؟' };
-    const second = { ...inboundMessage, id: 'message-2', sequence: 2n, body: 'ما المواعيد المتاحة؟' };
+    const second = { ...inboundMessage, id: 'message-2', sequence: 2n, body: 'وش الخدمات عندكم؟' };
     prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
       if (where.responseForMessageId) return null;
       return second;
     });
-    prisma.commsChatMessage.findMany.mockImplementation(({ select }) => select.id
-      ? [first, second]
-      : [second, first]);
+    prisma.commsChatMessage.findMany.mockReturnValue([second, first]);
     chat.completeWithTools.mockRejectedValueOnce(new Error('provider failure'));
 
     await expect(service.processMessage('message-2')).resolves.toBeNull();
 
     expect(prisma.commsChatMessage.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ id: 'message-1', conversationId }),
+      where: expect.objectContaining({ id: 'message-2', conversationId }),
     }));
     expect(prisma.commsChatMessage.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ id: 'message-2' }),
+      where: expect.objectContaining({ id: 'message-1' }),
     }));
   });
 
-  it('stops before M2 when conversation status changes while saving M1', async () => {
-    const first = { ...inboundMessage, id: 'message-1', sequence: 1n, body: 'ما الخدمات؟' };
-    const second = { ...inboundMessage, id: 'message-2', sequence: 2n, body: 'ما المواعيد المتاحة؟' };
+  it('rejects a queued message from an earlier ownership epoch before provider or tools', async () => {
+    const stale = { ...inboundMessage, metadata: {
+      assistantStatus: 'QUEUED', assistantStateVersion: 0, assistantClientId: null,
+    } };
+    prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => where.responseForMessageId ? null : stale);
+    prisma.chatConversation.findUnique.mockResolvedValue({ ...activeConversation, stateVersion: 1, clientId: 'client-a' });
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(lease.acquire).not.toHaveBeenCalled();
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(tools.execute).not.toHaveBeenCalled();
+  });
+
+  it('does not persist the exact target when conversation status changes before response CAS', async () => {
+    const second = { ...inboundMessage, id: 'message-2', sequence: 2n, body: 'وش الخدمات عندكم؟' };
     prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
       if (where.responseForMessageId) return null;
       return second;
     });
-    prisma.commsChatMessage.findMany.mockImplementation(({ select }) => select.id
-      ? [first, second]
-      : [second, first]);
+    prisma.commsChatMessage.findMany.mockReturnValue([second]);
     tx.chatConversation.findUnique.mockResolvedValue({
       ...activeConversation,
       status: ConversationStatus.STAFF_ACTIVE,
@@ -797,6 +844,9 @@ describe('AdministrativeAssistantService', () => {
           assistantStatus: 'RETRYABLE_FAILURE',
           retryable: true,
           retryAttempts: 0,
+          dispatchAttempt: 0,
+          assistantStateVersion: 0,
+          assistantClientId: null,
         },
       },
     });

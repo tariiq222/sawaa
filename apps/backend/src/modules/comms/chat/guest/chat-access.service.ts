@@ -18,12 +18,16 @@ export class ChatAccessService {
     private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
+  guestTokenHash(guestToken: string): string {
+    return this.tokens.toStoredToken(guestToken).tokenHash;
+  }
+
   async assertGuestAccess(conversationId: string, guestToken: string): Promise<ChatConversation> {
     const conversation = await this.prisma.chatConversation.findFirst({
       where: {
         id: conversationId,
         clientId: null,
-        guestTokenHash: this.tokens.toStoredToken(guestToken).tokenHash,
+        guestTokenHash: this.guestTokenHash(guestToken),
       },
     });
     if (!conversation) throw new NotFoundException('Conversation not found');
@@ -42,7 +46,7 @@ export class ChatAccessService {
     const conversation = await this.prisma.chatConversation.findFirst({
       where: {
         clientId: null,
-        guestTokenHash: this.tokens.toStoredToken(guestToken).tokenHash,
+        guestTokenHash: this.guestTokenHash(guestToken),
         status: { not: ConversationStatus.CLOSED },
       },
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],

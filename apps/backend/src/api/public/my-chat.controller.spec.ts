@@ -14,7 +14,6 @@ import { AcknowledgeExistingBookingHandler } from '../../modules/comms/chat/oper
 import { ConfirmOperationHandler } from '../../modules/comms/chat/operations/confirm-operation.handler';
 import { DeclineOperationHandler } from '../../modules/comms/chat/operations/decline-operation.handler';
 import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
-import { AdministrativeAssistantService } from '../../modules/comms/chat/assistant/administrative-assistant.service';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 
 describe('MyChatController (e2e)', () => {
@@ -28,7 +27,6 @@ describe('MyChatController (e2e)', () => {
   const confirm = { execute: jest.fn() };
   const decline = { execute: jest.fn() };
   const resume = { execute: jest.fn().mockResolvedValue([]) };
-  const assistant = { processMessage: jest.fn() };
   const retry = { execute: jest.fn() };
 
   beforeAll(async () => {
@@ -44,7 +42,6 @@ describe('MyChatController (e2e)', () => {
         { provide: ConfirmOperationHandler, useValue: confirm },
         { provide: DeclineOperationHandler, useValue: decline },
         { provide: ResumeChatOperationsHandler, useValue: resume },
-        { provide: AdministrativeAssistantService, useValue: assistant },
         { provide: RetryAdministrativeMessageHandler, useValue: retry },
         { provide: GuestChatTokenService, useValue: { clearCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
       ],
@@ -153,7 +150,6 @@ describe('MyChatController (e2e)', () => {
       body: 'مرحبا',
       clientMessageId: '00000000-0000-4000-a000-000000000002',
     });
-    expect(assistant.processMessage).toHaveBeenCalledWith('message-1');
     expect(list.execute).toHaveBeenCalledWith({
       audience: 'client',
       conversationId: '00000000-0000-4000-a000-000000000001',

@@ -94,6 +94,8 @@ import { ConfirmOperationHandler } from './chat/operations/confirm-operation.han
 import { DeclineOperationHandler } from './chat/operations/decline-operation.handler';
 import { ResumeChatOperationsHandler } from './chat/operations/resume-chat-operations.handler';
 import { OnChatOperationsResumeRequestedHandler } from './chat/operations/on-chat-operations-resume-requested.handler';
+import { OnAdministrativeMessageProcessingRequestedHandler } from './chat/assistant/on-administrative-message-processing-requested.handler';
+import { AdministrativeAssistantRecoveryWorker } from './chat/assistant/administrative-assistant-recovery.worker';
 
 const handlers = [
   SendPushHandler,
@@ -171,6 +173,8 @@ const handlers = [
   DeclineOperationHandler,
   ResumeChatOperationsHandler,
   OnChatOperationsResumeRequestedHandler,
+  OnAdministrativeMessageProcessingRequestedHandler,
+  AdministrativeAssistantRecoveryWorker,
 ];
 
 const eventHandlers = [
@@ -213,6 +217,7 @@ export class CommsModule implements OnModuleInit {
     private readonly onPaymentCompletedStaff: OnPaymentCompletedStaffHandler,
     private readonly onClientEnrolledStaff: OnClientEnrolledStaffHandler,
     private readonly onChatOperationsResumeRequested: OnChatOperationsResumeRequestedHandler,
+    private readonly onAdministrativeMessageProcessingRequested: OnAdministrativeMessageProcessingRequestedHandler,
   ) {}
 
   onModuleInit(): void {
@@ -225,5 +230,6 @@ export class CommsModule implements OnModuleInit {
     this.onPaymentCompletedStaff.register(this.eventBus);
     this.onClientEnrolledStaff.register(this.eventBus);
     this.onChatOperationsResumeRequested.register();
+    this.onAdministrativeMessageProcessingRequested.register();
   }
 }

@@ -29,6 +29,7 @@ import { AdministrativeToolContext } from './administrative-tool-context';
 import {
   AdministrativeToolsService,
 } from './administrative-tools.service';
+import { readAdministrativeMessageState, readNonNegativeInteger } from './administrative-message-state';
 
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_CHARS = 12_000;
@@ -87,42 +88,26 @@ export class AdministrativeAssistantService {
 
     const conversation = await this.findActiveConversation(target.conversationId);
     if (!conversation) return null;
+    const state = readAdministrativeMessageState(target.metadata);
+    if (
+      readNonNegativeInteger(state.assistantStateVersion) !== conversation.stateVersion
+      || (state.assistantClientId ?? null) !== conversation.clientId
+    ) return null;
 
     const owner = randomUUID();
     if (!await this.lease.acquire(conversation.id, owner, conversation.stateVersion)) return null;
 
-    let targetResponse: CommsChatMessage | null = null;
-    let currentMessage = target;
     try {
-      const pending = await this.prisma.commsChatMessage.findMany({
-        where: {
-          conversationId: conversation.id,
-          sequence: { lte: target.sequence },
-          senderType: { in: [MessageSenderType.CLIENT, MessageSenderType.VISITOR] },
-        },
-        orderBy: { sequence: 'asc' },
-        select: {
-          id: true,
-          conversationId: true,
-          sequence: true,
-          senderType: true,
-          body: true,
-          metadata: true,
-        },
-      });
-
-      for (const message of pending) {
-        currentMessage = message;
-        if (!await this.lease.renew(conversation.id, owner, conversation.stateVersion)) throw new AssistantLeaseLost();
-        const response = await this.processInbound(message, conversation, owner);
-        if (response) await this.clearRetryableFailure(message);
-        if (message.id === messageId) targetResponse = response;
-      }
-
-      return targetResponse ?? this.findExistingResponse(messageId);
+      if (!await this.lease.renew(conversation.id, owner, conversation.stateVersion)) throw new AssistantLeaseLost();
+      const response = await this.processInbound(target, conversation, owner);
+      if (response) await this.clearRetryableFailure(target);
+      return response ?? this.findExistingResponse(messageId);
     } catch (error) {
-      if (error instanceof ConversationStatusChanged || error instanceof AssistantLeaseLost) return null;
-      if (await this.markRetryableFailure(currentMessage, conversation, owner)) {
+      if (error instanceof ConversationStatusChanged || error instanceof AssistantLeaseLost) {
+        await this.discardUnpublishedOperations(target.id);
+        return null;
+      }
+      if (await this.markRetryableFailure(target, conversation, owner)) {
         this.logger.warn('Administrative assistant attempt failed; the message remains retryable');
       }
       return null;
@@ -156,7 +141,18 @@ export class AdministrativeAssistantService {
       try {
         const selection = await this.runToolRounds(
           [{ role: 'system', content: buildAdministrativeSystemPrompt() }, ...history],
-          new AdministrativeToolContext(conversation.id, conversation.clientId, inbound.id),
+          new AdministrativeToolContext(
+            conversation.id,
+            conversation.clientId,
+            inbound.id,
+            conversation.stateVersion,
+            leaseOwner,
+          ),
+          async () => {
+            if (!await this.lease.renew(conversation.id, leaseOwner, conversation.stateVersion)) {
+              throw new AssistantLeaseLost();
+            }
+          },
         );
         const rendered = this.renderer.render(selection.executions, conversation.language);
         const validated = this.outputValidator.validate(rendered, conversation.language);
@@ -227,6 +223,7 @@ export class AdministrativeAssistantService {
   private async runToolRounds(
     messages: ChatMessage[],
     context: AdministrativeToolContext,
+    assertLeaseHealthy: () => Promise<void>,
   ): Promise<{
     executions: ExecutedAdministrativeTool[];
     model: string;
@@ -257,6 +254,7 @@ export class AdministrativeAssistantService {
       // are carried into the next selection round.
       messages.push({ role: 'assistant', content: '', toolCalls: result.toolCalls });
       for (const toolCall of result.toolCalls) {
+        await assertLeaseHealthy();
         const toolResult = await this.tools.execute(
           toolCall.function.name,
           toolCall.function.arguments,
@@ -356,6 +354,7 @@ export class AdministrativeAssistantService {
     leaseOwner: string,
   ): Promise<boolean> {
     const existingMetadata = this.readApprovedMetadata(inbound.metadata);
+    const messageState = readAdministrativeMessageState(inbound.metadata);
     const retryAttempts = this.readRetryAttempts(inbound.metadata);
     const leaseValidAt = new Date();
     try {
@@ -380,6 +379,9 @@ export class AdministrativeAssistantService {
             assistantStatus: 'RETRYABLE_FAILURE',
             retryable: true,
             retryAttempts,
+            dispatchAttempt: readNonNegativeInteger(messageState.dispatchAttempt),
+            assistantStateVersion: conversation.stateVersion,
+            assistantClientId: conversation.clientId,
           },
         },
       });
@@ -387,6 +389,16 @@ export class AdministrativeAssistantService {
     } catch {
       this.logger.warn('Could not mark the administrative assistant attempt as retryable');
       return false;
+    }
+  }
+
+  private async discardUnpublishedOperations(messageId: string): Promise<void> {
+    try {
+      await this.prisma.chatOperation.deleteMany({
+        where: { idempotencyKey: { startsWith: `chat:${messageId}:` } },
+      });
+    } catch {
+      this.logger.warn('Could not discard an administrative operation after the assistant epoch changed');
     }
   }
 

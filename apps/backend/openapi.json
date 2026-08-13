@@ -34278,7 +34278,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RetryAdministrativeMessageDto"
+                "$ref": "#/components/schemas/ClaimGuestConversationDto"
               }
             }
           },
@@ -34621,7 +34621,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClaimGuestConversationDto"
+                "$ref": "#/components/schemas/RetryAdministrativeMessageDto"
               }
             }
           },

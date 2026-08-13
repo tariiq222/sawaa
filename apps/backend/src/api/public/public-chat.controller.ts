@@ -15,7 +15,6 @@ import { SendChatMessageDto } from '../../modules/comms/chat/messages/send-chat-
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
 import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
 import { GuestRequestHandoffDto } from '../../modules/comms/chat/staff/request-handoff.dto';
-import { AdministrativeAssistantService } from '../../modules/comms/chat/assistant/administrative-assistant.service';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
 
@@ -32,7 +31,6 @@ export class PublicChatController {
     private readonly sendMessage: SendChatMessageHandler,
     private readonly listMessages: ListChatMessagesHandler,
     private readonly requestHandoff: RequestHandoffHandler,
-    private readonly assistant: AdministrativeAssistantService,
     private readonly retryMessage: RetryAdministrativeMessageHandler,
   ) {}
 
@@ -79,7 +77,6 @@ export class PublicChatController {
       guestToken,
       ...dto,
     });
-    await this.assistant.processMessage(message.id);
     return toChatMessageResponse(message);
   }
 

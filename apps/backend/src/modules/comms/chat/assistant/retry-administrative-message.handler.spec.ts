@@ -2,21 +2,20 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
 import { RlsTransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
-import { AdministrativeAssistantService } from './administrative-assistant.service';
 import { RetryAdministrativeMessageHandler } from './retry-administrative-message.handler';
 
 describe('RetryAdministrativeMessageHandler', () => {
   const conversationId = 'conversation-1';
   const messageId = 'message-1';
   let transaction: any;
-  let access: { assertGuestAccess: jest.Mock; assertClientAccess: jest.Mock };
-  let assistant: { processMessage: jest.Mock };
+  let access: { guestTokenHash: jest.Mock };
   let handler: RetryAdministrativeMessageHandler;
 
   beforeEach(() => {
     transaction = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
       $queryRaw: jest.fn().mockResolvedValue([]),
-      chatConversation: { findUnique: jest.fn().mockResolvedValue({ id: conversationId, status: ConversationStatus.AI_ACTIVE, isAiChat: true }) },
+      chatConversation: { findFirst: jest.fn().mockResolvedValue({ id: conversationId, clientId: null, status: ConversationStatus.AI_ACTIVE, isAiChat: true, stateVersion: 0 }) },
       commsChatMessage: {
         findUnique: jest.fn().mockResolvedValue({
           id: messageId, conversationId, senderType: MessageSenderType.VISITOR,
@@ -24,40 +23,41 @@ describe('RetryAdministrativeMessageHandler', () => {
         }),
         update: jest.fn().mockResolvedValue({ id: messageId }),
       },
+      outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
     };
-    access = {
-      assertGuestAccess: jest.fn().mockResolvedValue({ id: conversationId }),
-      assertClientAccess: jest.fn().mockResolvedValue({ id: conversationId }),
-    };
-    assistant = { processMessage: jest.fn().mockResolvedValue({ id: 'response-1', senderType: MessageSenderType.AI }) };
+    access = { guestTokenHash: jest.fn().mockReturnValue('guest-hash') };
     const rls = { withTransaction: jest.fn((work) => work(transaction)) };
     handler = new RetryAdministrativeMessageHandler(
       access as unknown as ChatAccessService,
       rls as unknown as RlsTransactionService,
-      assistant as unknown as AdministrativeAssistantService,
     );
   });
 
-  it('claims one retry atomically, then performs provider work after the transaction', async () => {
-    const order: string[] = [];
-    transaction.commsChatMessage.update.mockImplementation(async () => { order.push('commit'); return { id: messageId }; });
-    assistant.processMessage.mockImplementation(async () => { order.push('assistant'); return { id: 'response-1' }; });
-
+  it('claims one retry and stages durable processing atomically without provider work', async () => {
     await expect(handler.execute({ audience: 'guest', conversationId, messageId, guestToken: 'token' }))
-      .resolves.toEqual({ id: 'response-1' });
+      .resolves.toEqual({ id: messageId });
 
-    expect(access.assertGuestAccess).toHaveBeenCalledWith(conversationId, 'token');
-    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.chatConversation.findFirst).toHaveBeenCalledWith({
+      where: { id: conversationId, clientId: null, guestTokenHash: 'guest-hash' },
+      select: { id: true, clientId: true, status: true, isAiChat: true, stateVersion: true },
+    });
+    expect(transaction.$executeRaw).toHaveBeenCalledTimes(1);
     expect(transaction.commsChatMessage.update).toHaveBeenCalledWith({
       where: { id: messageId },
-      data: { metadata: { assistantStatus: 'RETRYING', retryable: false, retryAttempts: 1 } },
+      data: { metadata: expect.objectContaining({
+        assistantStatus: 'RETRYING', retryable: false, retryAttempts: 1,
+        dispatchAttempt: 1, queuedAt: expect.any(String),
+      }) },
     });
-    expect(assistant.processMessage).toHaveBeenCalledWith(messageId, { manualRetry: true });
-    expect(order).toEqual(['commit', 'assistant']);
+    expect(transaction.outboxEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      aggregateId: messageId,
+      eventType: 'comms.chat.assistant.processing_requested',
+      status: 'PENDING_V2', deliveryLane: 'PENDING_V2',
+    }) });
   });
 
-  it('enforces client ownership before reading the target message', async () => {
-    access.assertClientAccess.mockRejectedValue(new NotFoundException());
+  it('enforces client ownership inside the locked transaction before reading the target message', async () => {
+    transaction.chatConversation.findFirst.mockResolvedValue(null);
     await expect(handler.execute({ audience: 'client', conversationId, messageId, clientId: 'other-client' }))
       .rejects.toThrow(NotFoundException);
     expect(transaction.commsChatMessage.findUnique).not.toHaveBeenCalled();
@@ -66,10 +66,10 @@ describe('RetryAdministrativeMessageHandler', () => {
   it.each([ConversationStatus.WAITING_FOR_STAFF, ConversationStatus.STAFF_ACTIVE, ConversationStatus.CLOSED])(
     'rejects retry when conversation status is %s without provider work',
     async (status) => {
-      transaction.chatConversation.findUnique.mockResolvedValue({ id: conversationId, status, isAiChat: true });
+      transaction.chatConversation.findFirst.mockResolvedValue({ id: conversationId, clientId: 'client-a', status, isAiChat: true, stateVersion: 0 });
       await expect(handler.execute({ audience: 'client', conversationId, messageId, clientId: 'client-a' }))
         .rejects.toThrow(BadRequestException);
-      expect(assistant.processMessage).not.toHaveBeenCalled();
+      expect(transaction.outboxEvent.create).not.toHaveBeenCalled();
     },
   );
 
@@ -99,6 +99,17 @@ describe('RetryAdministrativeMessageHandler', () => {
     });
     await expect(handler.execute({ audience: 'guest', conversationId, messageId, guestToken: 'token' }))
       .rejects.toThrow(BadRequestException);
-    expect(assistant.processMessage).not.toHaveBeenCalled();
+    expect(transaction.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an old guest retry when claim wins before the locked ownership check', async () => {
+    transaction.chatConversation.findFirst.mockResolvedValue(null);
+
+    await expect(handler.execute({ audience: 'guest', conversationId, messageId, guestToken: 'old-token' }))
+      .rejects.toThrow(NotFoundException);
+
+    expect(transaction.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.commsChatMessage.findUnique).not.toHaveBeenCalled();
+    expect(transaction.outboxEvent.create).not.toHaveBeenCalled();
   });
 });

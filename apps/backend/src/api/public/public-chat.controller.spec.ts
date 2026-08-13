@@ -8,7 +8,6 @@ import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/ge
 import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
 import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
-import { AdministrativeAssistantService } from '../../modules/comms/chat/assistant/administrative-assistant.service';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { PublicChatController } from './public-chat.controller';
 
@@ -19,7 +18,6 @@ describe('PublicChatController (e2e)', () => {
   const send = { execute: jest.fn() };
   const list = { execute: jest.fn() };
   const handoff = { execute: jest.fn() };
-  const assistant = { processMessage: jest.fn() };
   const retry = { execute: jest.fn() };
 
   beforeAll(async () => {
@@ -31,7 +29,6 @@ describe('PublicChatController (e2e)', () => {
         { provide: SendChatMessageHandler, useValue: send },
         { provide: ListChatMessagesHandler, useValue: list },
         { provide: RequestHandoffHandler, useValue: handoff },
-        { provide: AdministrativeAssistantService, useValue: assistant },
         { provide: RetryAdministrativeMessageHandler, useValue: retry },
         { provide: GuestChatTokenService, useValue: { setCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public', maxAge: 30 * 24 * 60 * 60 * 1000 }) } },
       ],
@@ -108,7 +105,6 @@ describe('PublicChatController (e2e)', () => {
       body: 'مرحبا',
       clientMessageId: '00000000-0000-4000-a000-000000000002',
     });
-    expect(assistant.processMessage).toHaveBeenCalledWith('message-1');
   });
 
   it('retries only an existing guest-owned inbound message using the guest cookie', async () => {
