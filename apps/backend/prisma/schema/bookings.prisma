@@ -105,6 +105,15 @@ model Booking {
   zoomMeetingStatus      ZoomMeetingStatus?
   zoomMeetingError       String?
   zoomMeetingCreatedAt   DateTime?
+  // Durable Zoom creation state. CALL_UNKNOWN means a POST may have reached
+  // Zoom and must only be reconciled by GET; it must never be posted again.
+  zoomCreatePhase        String              @default("BEFORE_CALL")
+  zoomCreateLeaseOwner   String?
+  zoomCreateLeaseExpiresAt DateTime?          @db.Timestamptz(3)
+  zoomCreateAttemptCount Int                 @default(0)
+  zoomSyncRevision       Int                 @default(0)
+  zoomSyncLeaseOwner     String?
+  zoomSyncLeaseExpiresAt DateTime?            @db.Timestamptz(3)
 
   // ─── Snapshot fields (denormalized at booking creation for stable history) ───
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
@@ -139,6 +148,7 @@ model Booking {
   @@index([status, expiresAt])
   @@index([status, endsAt])
   @@index([status, scheduledAt])
+  @@index([zoomMeetingStatus, zoomCreateLeaseExpiresAt])
 }
 
 // ─── Program ────────────────────────────────────────────────────────────────
@@ -265,7 +275,8 @@ model BookingZoomSync {
   desiredTopic        String
   desiredStartAt      DateTime  @db.Timestamptz(3)
   desiredDurationMins Int
-  status              String    @default("PENDING") // PENDING | PROCESSING | COMPLETED
+  revision            Int       @default(0)
+  status              String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | SUPERSEDED
   attemptCount        Int       @default(0)
   lastAttemptAt       DateTime? @db.Timestamptz(3)
   lastError           String?
@@ -274,6 +285,7 @@ model BookingZoomSync {
   updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
 
   @@index([bookingId])
+  @@index([bookingId, revision])
   @@index([status, updatedAt])
 }
 

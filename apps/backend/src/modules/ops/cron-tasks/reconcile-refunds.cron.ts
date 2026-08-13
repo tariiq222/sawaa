@@ -11,9 +11,9 @@ const BATCH_SIZE = 100;
  *
  * Importantly this includes rows whose provider reference is still null: that
  * is the response-lost window, not proof that the provider was never called.
- * RefundPaymentHandler repeats the provider request with the persisted stable
- * idempotency key, or reconciles an already-known provider reference, and then
- * applies accounting under a PROCESSING -> COMPLETED CAS.
+ * RefundPaymentHandler issues POST at most once. A CALL_UNKNOWN row is resolved
+ * only with the provider's cumulative refunded amount; an unchanged or partial
+ * cumulative amount becomes MANUAL_REVIEW rather than risking a second refund.
  */
 @Injectable()
 export class ReconcileRefundsCron {

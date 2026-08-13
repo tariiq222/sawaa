@@ -209,6 +209,7 @@ export class ResumeChatOperationsHandler {
         return completedReplacement;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
+      if (!this.isTerminalResumeError(error)) throw error;
       return this.markFailed(operationId, command, this.publicErrorCode(error));
     }
   }
@@ -426,6 +427,13 @@ export class ResumeChatOperationsHandler {
       return 'REQUEST_NO_LONGER_AVAILABLE';
     }
     return 'RESUME_FAILED';
+  }
+
+  private isTerminalResumeError(error: unknown): boolean {
+    return error instanceof BadRequestException
+      || error instanceof ConflictException
+      || error instanceof ForbiddenException
+      || error instanceof NotFoundException;
   }
 
   private record(value: Prisma.JsonValue | undefined): Record<string, Prisma.JsonValue> {

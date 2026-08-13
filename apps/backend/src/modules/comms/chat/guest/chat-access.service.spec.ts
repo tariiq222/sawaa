@@ -21,6 +21,7 @@ describe('ChatAccessService', () => {
   } as unknown as ConfigService);
   let prisma: {
     chatConversation: { findFirst: jest.Mock; updateMany: jest.Mock; findUnique: jest.Mock };
+    outboxEvent: { create: jest.Mock };
     $transaction: jest.Mock;
   };
   let rlsTransaction: { withTransaction: jest.Mock };
@@ -29,6 +30,7 @@ describe('ChatAccessService', () => {
   beforeEach(() => {
     prisma = {
       chatConversation: { findFirst: jest.fn(), updateMany: jest.fn(), findUnique: jest.fn() },
+      outboxEvent: { create: jest.fn() },
       $transaction: jest.fn(),
     };
     rlsTransaction = { withTransaction: jest.fn() };
@@ -99,7 +101,11 @@ describe('ChatAccessService', () => {
       guestName: null,
       guestPhone: null,
     });
-    rlsTransaction.withTransaction.mockImplementation(async (work) => work({ chatConversation: { updateMany, findUnique } }));
+    const outboxCreate = jest.fn().mockResolvedValue({});
+    rlsTransaction.withTransaction.mockImplementation(async (work) => work({
+      chatConversation: { updateMany, findUnique },
+      outboxEvent: { create: outboxCreate },
+    }));
 
     const claimed = await service.claimGuestConversation({
       conversationId: guestConversation.id,
@@ -124,6 +130,20 @@ describe('ChatAccessService', () => {
         assistantLeaseOwner: null,
         assistantLeaseExpiresAt: null,
       },
+    });
+    expect(outboxCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: expect.any(String),
+        aggregateId: guestConversation.id,
+        eventType: 'comms.chat.operations.resume_requested',
+        payload: expect.objectContaining({
+          eventId: expect.any(String),
+          payload: {
+            conversationId: guestConversation.id,
+            clientId: 'client-a',
+          },
+        }),
+      }),
     });
   });
 

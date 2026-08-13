@@ -5,6 +5,7 @@ export interface BookingZoomRescheduleRequestedPayload {
   syncId: string;
   bookingId: string;
   zoomMeetingId: string;
+  revision: number;
 }
 
 export class BookingZoomRescheduleRequestedEvent extends BaseEvent<BookingZoomRescheduleRequestedPayload> {

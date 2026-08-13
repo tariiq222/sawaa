@@ -338,7 +338,7 @@ export class CreateBookingHandler {
             where: { creationIdempotencyKey: dto.creationIdempotencyKey },
           });
           if (existing) {
-            this.assertIdempotentIdentity(existing, dto);
+            await this.assertIdempotentIdentity(tx, existing, dto);
             const invoice = await tx.invoice.findFirst({
               where: { bookingId: existing.id },
               select: { id: true },
@@ -584,7 +584,7 @@ export class CreateBookingHandler {
         where: { creationIdempotencyKey: dto.creationIdempotencyKey! },
       });
       if (!existing) return null;
-      this.assertIdempotentIdentity(existing, dto);
+      await this.assertIdempotentIdentity(tx, existing, dto);
       const invoice = await tx.invoice.findFirst({
         where: { bookingId: existing.id },
         select: { id: true },
@@ -596,13 +596,18 @@ export class CreateBookingHandler {
       : this.rlsTransaction.withTransaction(lookup, { isolationLevel: 'Serializable' });
   }
 
-  private assertIdempotentIdentity(
+  private async assertIdempotentIdentity(
+    tx: Prisma.TransactionClient,
     existing: {
+      id: string;
       clientId: string;
       branchId: string;
       employeeId: string;
       serviceId: string | null;
       scheduledAt: Date;
+      endsAt: Date;
+      durationMins: number;
+      price: Prisma.Decimal | number;
       expiresAt: Date | null;
       durationOptionId: string | null;
       bookingType: string;
@@ -615,7 +620,7 @@ export class CreateBookingHandler {
       creationRequestHash: string | null;
     },
     dto: CreateBookingCommand,
-  ): void {
+  ): Promise<void> {
     const normalized = normalizeBookingTypes({
       bookingType: dto.bookingType,
       deliveryType: dto.deliveryType,
@@ -635,12 +640,54 @@ export class CreateBookingHandler {
       && (!dto.durationOptionId || (existing.durationOptionId ?? null) === dto.durationOptionId)
       && (!dto.currency || existing.currency === dto.currency)
       && (!dto.expiresAt || existing.expiresAt?.getTime() === dto.expiresAt.getTime());
-    if (
-      existing.clientId !== dto.clientId
-      || existing.creationRequestHash !== dto.creationRequestHash
-      || !stableShapeMatches
-    ) {
+    if (existing.clientId !== dto.clientId || !stableShapeMatches) {
       throw new ConflictException('Creation idempotency key belongs to another booking request');
+    }
+
+    if (existing.creationRequestHash === dto.creationRequestHash) return;
+    if (existing.creationRequestHash !== null) {
+      throw new ConflictException('Creation idempotency key belongs to another booking request');
+    }
+
+    // Rows created before creationRequestHash was introduced still carry the
+    // complete semantic request on Booking. Reconstruct that durable identity,
+    // compare it to the caller's immutable hash, then CAS-backfill. This runs
+    // under the client advisory lock and before mutable availability/settings
+    // checks, so a valid replay survives time, price and slot changes.
+    const persistedHash = bookingCreationRequestHash({
+      branchId: existing.branchId,
+      clientId: existing.clientId,
+      employeeId: existing.employeeId,
+      serviceId: existing.serviceId!,
+      scheduledAt: existing.scheduledAt,
+      endsAt: existing.endsAt,
+      durationMins: existing.durationMins,
+      durationOptionId: existing.durationOptionId,
+      bookingType: existing.bookingType,
+      deliveryType: existing.deliveryType,
+      price: existing.price.toString(),
+      currency: existing.currency,
+      source: existing.source,
+      expiresAt: existing.expiresAt,
+      payAtClinic: existing.payAtClinic,
+      couponCode: existing.couponCode,
+      notes: existing.notes,
+    });
+    if (persistedHash !== dto.creationRequestHash) {
+      throw new ConflictException('Creation idempotency key belongs to another booking request');
+    }
+    const backfilled = await tx.booking.updateMany({
+      where: { id: existing.id, creationRequestHash: null },
+      data: { creationRequestHash: dto.creationRequestHash },
+    });
+    if (backfilled.count !== 1) {
+      const raced = await tx.booking.findUnique({
+        where: { creationIdempotencyKey: dto.creationIdempotencyKey! },
+        select: { creationRequestHash: true },
+      });
+      if (raced?.creationRequestHash !== dto.creationRequestHash) {
+        throw new ConflictException('Creation idempotency key hash backfill raced with another request');
+      }
     }
   }
 

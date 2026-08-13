@@ -1,4 +1,5 @@
 import { OutboxPublisherCron } from './outbox-publisher.cron';
+import { NoEventConsumersRegisteredError } from '../../../infrastructure/events/event-bus.service';
 
 /** Mock AppMetricsService: labels() returns a fresh recorder per label set. */
 function createMetricsMock() {
@@ -199,6 +200,40 @@ describe('OutboxPublisherCron', () => {
     expect(updateCall.data.failedAt).toBeUndefined();
     expect(updateCall.data.status).toBeUndefined();
     // Still below MAX_ATTEMPTS — no terminal transition, no counter increment.
+    expect(metrics.outboxTerminalFailures.labels).not.toHaveBeenCalled();
+  });
+
+  it('leaves a rolling-version unknown event pending without consuming an attempt', async () => {
+    const rows = [{
+      id: 'evt-new-version', eventType: 'comms.chat.operations.resume_requested',
+      attemptCount: 4, payload: { eventId: 'new-event' },
+    }];
+    const prisma = {
+      $queryRaw: jest.fn()
+        .mockResolvedValueOnce([{ acquired: true }])
+        .mockResolvedValueOnce(rows),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      outboxEvent: {
+        updateMany: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const eventBus = {
+      publish: jest.fn().mockRejectedValue(
+        new NoEventConsumersRegisteredError('comms.chat.operations.resume_requested'),
+      ),
+    };
+    const metrics = createMetricsMock();
+
+    await new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never).execute();
+
+    expect(prisma.outboxEvent.update).toHaveBeenCalledWith({
+      where: { id: 'evt-new-version' },
+      data: { lockedUntil: null },
+    });
+    expect(prisma.outboxEvent.update).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ attemptCount: expect.any(Number) }),
+    }));
     expect(metrics.outboxTerminalFailures.labels).not.toHaveBeenCalled();
   });
 

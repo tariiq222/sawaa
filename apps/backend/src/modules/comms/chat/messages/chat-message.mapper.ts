@@ -38,6 +38,7 @@ export interface PublicChatOperationResultMetadata {
     | typeof ChatOperationStatus.DECLINED;
   bookingId?: string | null;
   outcome?: string;
+  syncPending?: boolean;
 }
 
 export type PublicChatMessageMetadata =
@@ -115,7 +116,12 @@ function toPublicMetadata(
     || typeof metadata.outcome !== 'string'
     || !OPERATION_RESULT_OUTCOMES.has(metadata.outcome)
   ) return null;
-  return { ...result, bookingId: metadata.bookingId, outcome: metadata.outcome };
+  return {
+    ...result,
+    bookingId: metadata.bookingId,
+    outcome: metadata.outcome,
+    ...(metadata.syncPending === true ? { syncPending: true } : {}),
+  };
 }
 
 function isSafeId(value: unknown): value is string {

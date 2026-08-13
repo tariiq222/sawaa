@@ -30,7 +30,9 @@ describe('OnPaymentFailedHandler', () => {
 
   it('should subscribe on register', () => {
     handler.register(eventBus as any);
-    expect(eventBus.subscribe).toHaveBeenCalledWith('finance.payment.failed', expect.any(Function));
+    expect(eventBus.subscribe).toHaveBeenCalledWith(
+      'finance.payment.failed', 'comms.payment-failed-notify.v1', expect.any(Function),
+    );
   });
 
   it('should send notification without push when disabled', async () => {

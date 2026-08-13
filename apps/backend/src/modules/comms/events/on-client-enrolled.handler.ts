@@ -17,7 +17,11 @@ export class OnClientEnrolledHandler {
   constructor(private readonly notify: SendNotificationHandler) {}
 
   register(eventBus: EventBusService): void {
-    eventBus.subscribe<ClientEnrolledPayload>('people.client.enrolled', (e) => this.handle(e));
+    eventBus.subscribe<ClientEnrolledPayload>(
+      'people.client.enrolled',
+      'comms.client-enrolled-notify.v1',
+      (e) => this.handle(e),
+    );
   }
 
   async handle(envelope: DomainEventEnvelope<ClientEnrolledPayload>): Promise<void> {

@@ -195,6 +195,7 @@ describe('ClientRescheduleBookingHandler', () => {
     prisma.booking.findUnique.mockResolvedValue({
       ...futureBooking,
       zoomMeetingId: 'zoom-123',
+      zoomSyncRevision: 4,
     });
     const zoomService = buildZoomService();
     const availability = buildAvailabilityHandler();
@@ -224,6 +225,7 @@ describe('ClientRescheduleBookingHandler', () => {
         desiredTopic: 'Booking book-1',
         eventId: stableEventId(`booking:book-1:zoom-reschedule:${sourceActionId}`),
         sourceActionId,
+        revision: 5,
       }),
     });
     expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
@@ -231,7 +233,7 @@ describe('ClientRescheduleBookingHandler', () => {
         eventType: 'bookings.zoom.reschedule_requested',
         id: stableEventId(`booking:book-1:zoom-reschedule:${sourceActionId}`),
         payload: expect.objectContaining({
-          payload: expect.objectContaining({ bookingId: 'book-1' }),
+          payload: expect.objectContaining({ bookingId: 'book-1', revision: 5 }),
         }),
       }),
     });

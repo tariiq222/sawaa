@@ -25,7 +25,11 @@ export class OnBookingReminderHandler {
   ) {}
 
   register(eventBus: EventBusService): void {
-    eventBus.subscribe<BookingReminderPayload>('ops.booking.reminder_due', (e) => this.handle(e));
+    eventBus.subscribe<BookingReminderPayload>(
+      'ops.booking.reminder_due',
+      'comms.booking-reminder.v1',
+      (e) => this.handle(e),
+    );
   }
 
   async handle(envelope: DomainEventEnvelope<BookingReminderPayload>): Promise<void> {

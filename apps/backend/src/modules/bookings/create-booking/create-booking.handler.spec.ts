@@ -58,6 +58,7 @@ const buildPrisma = () => {
     booking: {
       findFirst: jest.fn().mockResolvedValue(null),
       findUnique: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       create: jest.fn().mockResolvedValue(mockBooking),
       count: jest.fn().mockResolvedValue(0),
     },
@@ -1286,5 +1287,95 @@ describe('CreateBookingHandler', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('backfills a matching pre-migration null request hash before mutable preflight checks', async () => {
+    const originalTime = new Date('2026-08-20T10:00:00.000Z');
+    const requestHash = chatCreationHash(originalTime);
+    prisma.booking.findUnique.mockResolvedValue({
+      ...mockBooking,
+      scheduledAt: originalTime,
+      endsAt: new Date(originalTime.getTime() + 60 * 60_000),
+      durationMins: 60,
+      clientId: 'client-1', branchId: 'branch-1', employeeId: 'emp-1', serviceId: 'svc-1',
+      durationOptionId: null, bookingType: 'INDIVIDUAL', deliveryType: 'IN_PERSON',
+      price: 200, currency: 'SAR', source: 'AI_CHAT', expiresAt: null,
+      payAtClinic: false, couponCode: null, notes: null,
+      creationIdempotencyKey: 'operation-legacy', creationRequestHash: null,
+    });
+    prisma.invoice.findFirst.mockResolvedValue({ id: 'invoice-existing' });
+    settingsHandler.execute.mockRejectedValue(new Error('settings changed'));
+    priceResolver.resolve.mockRejectedValue(new Error('price changed'));
+    availabilityHandler.execute.mockRejectedValue(new Error('slot unavailable'));
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-21T10:00:00.000Z'));
+    try {
+      const result = await (handler.execute as unknown as (command: Record<string, unknown>) => Promise<Record<string, unknown>>)({
+        ...baseDto, scheduledAt: originalTime, source: 'AI_CHAT',
+        creationIdempotencyKey: 'operation-legacy', creationRequestHash: requestHash,
+      });
+
+      expect(result.id).toBe('book-1');
+      expect(prisma.booking.updateMany).toHaveBeenCalledWith({
+        where: { id: 'book-1', creationRequestHash: null },
+        data: { creationRequestHash: requestHash },
+      });
+      expect(settingsHandler.execute).not.toHaveBeenCalled();
+      expect(priceResolver.resolve).not.toHaveBeenCalled();
+      expect(availabilityHandler.execute).not.toHaveBeenCalled();
+      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('rejects a pre-migration null-hash row whose complete persisted shape differs', async () => {
+    const requestHash = chatCreationHash();
+    prisma.booking.findUnique.mockResolvedValue({
+      ...mockBooking,
+      endsAt: new Date(futureDate.getTime() + 90 * 60_000),
+      durationMins: 90,
+      clientId: 'client-1', branchId: 'branch-1', employeeId: 'emp-1', serviceId: 'svc-1',
+      durationOptionId: null, bookingType: 'INDIVIDUAL', deliveryType: 'IN_PERSON',
+      price: 200, currency: 'SAR', source: 'AI_CHAT', expiresAt: null,
+      payAtClinic: false, couponCode: null, notes: null,
+      creationIdempotencyKey: 'operation-legacy', creationRequestHash: null,
+    });
+
+    await expect((handler.execute as (command: Record<string, unknown>) => Promise<unknown>)({
+      ...baseDto, source: 'AI_CHAT',
+      creationIdempotencyKey: 'operation-legacy', creationRequestHash: requestHash,
+    })).rejects.toThrow(ConflictException);
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('recovers a P2002 race by validating and backfilling the winning legacy row', async () => {
+    const requestHash = chatCreationHash();
+    const legacyWinner = {
+      ...mockBooking,
+      endsAt: new Date(futureDate.getTime() + 60 * 60_000), durationMins: 60,
+      clientId: 'client-1', branchId: 'branch-1', employeeId: 'emp-1', serviceId: 'svc-1',
+      durationOptionId: null, bookingType: 'INDIVIDUAL', deliveryType: 'IN_PERSON',
+      price: 200, currency: 'SAR', source: 'AI_CHAT', expiresAt: null,
+      payAtClinic: false, couponCode: null, notes: null,
+      creationIdempotencyKey: 'operation-race', creationRequestHash: null,
+    };
+    prisma.booking.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(legacyWinner);
+    prisma.booking.create.mockRejectedValue({ code: 'P2002' });
+    prisma.invoice.findFirst.mockResolvedValue({ id: 'invoice-existing' });
+
+    const result = await (handler.execute as unknown as (command: Record<string, unknown>) => Promise<Record<string, unknown>>)({
+      ...baseDto, source: 'AI_CHAT',
+      creationIdempotencyKey: 'operation-race', creationRequestHash: requestHash,
+    });
+
+    expect(result.id).toBe('book-1');
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith({
+      where: { id: 'book-1', creationRequestHash: null },
+      data: { creationRequestHash: requestHash },
+    });
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
   });
 });

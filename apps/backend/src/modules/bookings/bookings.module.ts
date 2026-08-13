@@ -59,6 +59,7 @@ import { BookFromCreditHandler } from './book-from-credit/book-from-credit.handl
 import { GetMatchingCreditsHandler } from './get-matching-credits/get-matching-credits.handler';
 import { TransferCreditHandler } from './transfer-credit/transfer-credit.handler';
 import { BookingZoomRescheduleHandler } from './zoom-reschedule/booking-zoom-reschedule.handler';
+import { BookingZoomCreateRequestedHandler } from './create-zoom-meeting/booking-zoom-create-requested.handler';
 
 const handlers = [
   CreateBookingHandler,
@@ -110,6 +111,7 @@ const handlers = [
   GetMatchingCreditsHandler,
   TransferCreditHandler,
   BookingZoomRescheduleHandler,
+  BookingZoomCreateRequestedHandler,
 ];
 
 @Module({
@@ -130,6 +132,7 @@ export class BookingsModule implements OnModuleInit {
     private readonly depositPaidHandler: DepositPaidEventHandler,
     private readonly refundCompletedHandler: RefundCompletedEventHandler,
     private readonly bookingZoomRescheduleHandler: BookingZoomRescheduleHandler,
+    private readonly bookingZoomCreateRequestedHandler: BookingZoomCreateRequestedHandler,
   ) {}
 
   onModuleInit(): void {
@@ -137,5 +140,6 @@ export class BookingsModule implements OnModuleInit {
     this.depositPaidHandler.register();
     this.refundCompletedHandler.register();
     this.bookingZoomRescheduleHandler.register();
+    this.bookingZoomCreateRequestedHandler.register();
   }
 }

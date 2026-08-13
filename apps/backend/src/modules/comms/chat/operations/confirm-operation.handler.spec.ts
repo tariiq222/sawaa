@@ -66,6 +66,7 @@ function harness(overrides: Record<string, unknown> = {}, futureBooking: object 
     booking: {
       findFirst: jest.fn().mockResolvedValue(futureBooking),
       findUnique: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     bookingStatusLog: {
       findUnique: jest.fn().mockResolvedValue(null),
@@ -272,6 +273,34 @@ describe('ConfirmOperationHandler', () => {
     });
 
     expect(result).toMatchObject({ status: ChatOperationStatus.SUCCEEDED, bookingId: 'booking-recovered' });
+    expect(quote.quoteBooking).not.toHaveBeenCalled();
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it('backfills a matching legacy booking hash while recovering a crashed create operation', async () => {
+    const { handler, tx, quote, createBooking } = harness();
+    tx.booking.findUnique.mockResolvedValue({
+      id: 'booking-recovered', clientId: 'client-1',
+      branchId: bookingPayload.branchId, employeeId: bookingPayload.employeeId,
+      serviceId: bookingPayload.serviceId,
+      scheduledAt: new Date(bookingPayload.scheduledAt), endsAt: new Date(bookingPayload.endsAt),
+      durationMins: bookingPayload.durationMins, durationOptionId: bookingPayload.durationOptionId,
+      bookingType: bookingPayload.bookingType, deliveryType: bookingPayload.deliveryType,
+      price: bookingPayload.price, currency: bookingPayload.currency, source: 'AI_CHAT',
+      creationRequestHash: null,
+    });
+
+    const result = await handler.execute({
+      operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0,
+    });
+
+    expect(result).toMatchObject({ status: ChatOperationStatus.SUCCEEDED, bookingId: 'booking-recovered' });
+    expect(tx.booking.updateMany).toHaveBeenCalledWith({
+      where: { id: 'booking-recovered', creationRequestHash: null },
+      data: { creationRequestHash: bookingCreationRequestHash({
+        ...bookingPayload, clientId: 'client-1', source: 'AI_CHAT',
+      }) },
+    });
     expect(quote.quoteBooking).not.toHaveBeenCalled();
     expect(createBooking.execute).not.toHaveBeenCalled();
   });

@@ -180,7 +180,7 @@ export class ConfirmOperationHandler {
         where: { creationIdempotencyKey },
       });
       if (recovered) {
-        this.assertRecoveredCreation(payload, clientId, creationRequestHash, recovered);
+        await this.assertRecoveredCreation(tx, payload, clientId, creationRequestHash, recovered);
         return { bookingId: recovered.id, outcome: 'BOOKING_CREATED' };
       }
       if (operation.requiredConfirmations === 1) {
@@ -355,7 +355,7 @@ export class ConfirmOperationHandler {
         conversationId: operation.conversationId,
         senderType: MessageSenderType.SYSTEM,
         senderId: null,
-        body: this.resultBody(result.status, result.outcome),
+        body: this.resultBody(result.status, result.outcome, result.syncPending === true),
         kind: ChatMessageKind.OPERATION_RESULT,
         metadata: {
           operationId: operation.id,
@@ -398,11 +398,13 @@ export class ConfirmOperationHandler {
     }
   }
 
-  private assertRecoveredCreation(
+  private async assertRecoveredCreation(
+    tx: Prisma.TransactionClient,
     payload: Record<string, Prisma.JsonValue>,
     clientId: string,
     creationRequestHash: string,
     booking: {
+      id: string;
       clientId: string;
       branchId: string;
       employeeId: string;
@@ -418,7 +420,7 @@ export class ConfirmOperationHandler {
       source: string;
       creationRequestHash: string | null;
     },
-  ): void {
+  ): Promise<void> {
     const matches = booking.clientId === clientId
       && booking.branchId === this.string(payload, 'branchId')
       && booking.employeeId === this.string(payload, 'employeeId')
@@ -431,13 +433,35 @@ export class ConfirmOperationHandler {
       && booking.deliveryType === this.deliveryType(payload, 'deliveryType')
       && Number(booking.price) === this.number(payload, 'price')
       && booking.currency === this.string(payload, 'currency')
-      && booking.source === 'AI_CHAT'
-      && booking.creationRequestHash === creationRequestHash;
+      && booking.source === 'AI_CHAT';
     if (!matches) {
       throw new OperationExecutionError(
         'IDEMPOTENCY_CONFLICT',
         'Durable creation key belongs to a different booking',
       );
+    }
+    if (booking.creationRequestHash === creationRequestHash) return;
+    if (booking.creationRequestHash !== null) {
+      throw new OperationExecutionError(
+        'IDEMPOTENCY_CONFLICT',
+        'Durable creation key belongs to a different booking',
+      );
+    }
+    const backfilled = await tx.booking.updateMany({
+      where: { id: booking.id, creationRequestHash: null },
+      data: { creationRequestHash },
+    });
+    if (backfilled.count !== 1) {
+      const raced = await tx.booking.findUnique({
+        where: { id: booking.id },
+        select: { creationRequestHash: true },
+      });
+      if (raced?.creationRequestHash !== creationRequestHash) {
+        throw new OperationExecutionError(
+          'IDEMPOTENCY_CONFLICT',
+          'Durable creation key hash backfill raced with another request',
+        );
+      }
     }
   }
 
@@ -494,9 +518,13 @@ export class ConfirmOperationHandler {
     return 'BOOKING_CREATED';
   }
 
-  private resultBody(status: ChatOperationStatus, outcome: string): string {
+  private resultBody(status: ChatOperationStatus, outcome: string, syncPending = false): string {
     if (status === ChatOperationStatus.FAILED) return 'تعذر تنفيذ الإجراء. يمكنك إعداد الطلب من جديد.';
-    if (outcome === 'BOOKING_RESCHEDULED') return 'تمت إعادة جدولة الموعد بنجاح.';
+    if (outcome === 'BOOKING_RESCHEDULED') {
+      return syncPending
+        ? 'تمت إعادة جدولة الموعد، ويجري الآن مزامنة رابط الاجتماع عن بُعد.'
+        : 'تمت إعادة جدولة الموعد بنجاح.';
+    }
     if (outcome === 'BOOKING_CANCELLED') return 'تم إلغاء الموعد بنجاح.';
     if (outcome === 'CANCELLATION_REQUESTED') return 'تم تسجيل طلب إلغاء الموعد للمراجعة.';
     return 'تم تأكيد الحجز بنجاح.';

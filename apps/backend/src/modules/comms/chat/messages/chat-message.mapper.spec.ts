@@ -95,6 +95,7 @@ describe('toChatMessageResponse', () => {
         status: ChatOperationStatus.SUCCEEDED,
         bookingId: 'booking-1',
         outcome: 'BOOKING_CREATED',
+        syncPending: true,
         providerTrace: 'must-not-leak',
       },
     });
@@ -129,6 +130,7 @@ describe('toChatMessageResponse', () => {
       status: ChatOperationStatus.SUCCEEDED,
       bookingId: 'booking-1',
       outcome: 'BOOKING_CREATED',
+      syncPending: true,
     });
     expect(forgedCard).not.toHaveProperty('metadata');
   });

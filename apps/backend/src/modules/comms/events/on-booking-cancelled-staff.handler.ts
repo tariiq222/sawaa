@@ -25,7 +25,11 @@ export class OnBookingCancelledStaffHandler {
   ) {}
 
   register(eventBus: EventBusService): void {
-    eventBus.subscribe<BookingCancelledPayload>('bookings.booking.cancelled', (e) => this.handle(e));
+    eventBus.subscribe<BookingCancelledPayload>(
+      'bookings.booking.cancelled',
+      'comms.booking-cancelled-staff.v1',
+      (e) => this.handle(e),
+    );
   }
 
   async handle(envelope: DomainEventEnvelope<BookingCancelledPayload>): Promise<void> {

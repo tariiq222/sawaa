@@ -23,7 +23,11 @@ export class OnPaymentFailedHandler {
   ) {}
 
   register(eventBus: EventBusService): void {
-    eventBus.subscribe<PaymentFailedPayload>('finance.payment.failed', (e) => this.handle(e));
+    eventBus.subscribe<PaymentFailedPayload>(
+      'finance.payment.failed',
+      'comms.payment-failed-notify.v1',
+      (e) => this.handle(e),
+    );
   }
 
   async handle(envelope: DomainEventEnvelope<PaymentFailedPayload>): Promise<void> {

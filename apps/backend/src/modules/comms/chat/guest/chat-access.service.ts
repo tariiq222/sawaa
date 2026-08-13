@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { ConversationStatus, type ChatConversation } from '@prisma/client';
+import { ConversationStatus, Prisma, type ChatConversation } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { GuestChatTokenService } from './guest-chat-token.service';
+import { ChatOperationsResumeRequestedEvent } from '../operations/events/chat-operations-resume-requested.event';
 
 export interface ClaimGuestConversationCommand {
   conversationId: string;
@@ -87,6 +88,19 @@ export class ChatAccessService {
         where: { id: command.conversationId },
       });
       if (!conversation) throw new NotFoundException('Conversation not found');
+
+      const resumeEvent = new ChatOperationsResumeRequestedEvent({
+        conversationId: command.conversationId,
+        clientId: command.clientId,
+      });
+      await tx.outboxEvent.create({
+        data: {
+          id: resumeEvent.eventId,
+          aggregateId: command.conversationId,
+          eventType: resumeEvent.eventName,
+          payload: resumeEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      });
       return conversation;
     });
   }

@@ -48,6 +48,7 @@ export class ActivatePackagePurchaseHandler {
   register(): void {
     this.eventBus.subscribe<PaymentCompletedPayload>(
       'finance.payment.completed',
+      'finance.package-purchase-activate.v1',
       (envelope: DomainEventEnvelope<PaymentCompletedPayload>) => this.handle(envelope),
     );
   }

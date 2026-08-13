@@ -53,7 +53,8 @@ export class ZoomMeetingWorker implements OnModuleInit {
           // The handler persists FAILED + zoomMeetingError itself (same states
           // as the old inline path). Throw so BullMQ retries per the job's
           // attempts/backoff config; a later success overwrites to CREATED.
-          if (booking.zoomMeetingStatus === ZoomMeetingStatus.FAILED) {
+          if (booking.zoomMeetingStatus === ZoomMeetingStatus.FAILED
+            && booking.zoomCreatePhase !== 'MANUAL_REVIEW') {
             throw new Error(
               `Zoom meeting creation failed for booking ${bookingId}: ${booking.zoomMeetingError ?? 'unknown error'}`,
             );

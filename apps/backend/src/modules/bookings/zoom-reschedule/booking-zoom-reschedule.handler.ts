@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { ZoomMeetingService } from '../zoom-meeting.service';
@@ -31,67 +32,165 @@ export class BookingZoomRescheduleHandler {
       sync.id !== event.payload.syncId
       || sync.bookingId !== event.payload.bookingId
       || sync.zoomMeetingId !== event.payload.zoomMeetingId
+      || sync.revision !== event.payload.revision
     ) {
       throw new ConflictException('Zoom synchronization event does not match durable state');
     }
-    if (sync.status === 'COMPLETED') return;
+    if (sync.status === 'COMPLETED' || sync.status === 'SUPERSEDED') return;
 
-    await this.prisma.bookingZoomSync.update({
-      where: { id: sync.id },
+    const latest = await this.prisma.booking.findUnique({
+      where: { id: sync.bookingId },
+      select: { id: true, zoomMeetingId: true, zoomSyncRevision: true },
+    });
+    if (!latest) throw new NotFoundException('Booking for Zoom synchronization not found');
+    if (latest.zoomMeetingId !== sync.zoomMeetingId || latest.zoomSyncRevision !== sync.revision) {
+      await this.markSuperseded(sync.id);
+      return;
+    }
+
+    const leaseOwner = randomUUID();
+    const now = new Date();
+    const acquired = await this.prisma.booking.updateMany({
+      where: {
+        id: sync.bookingId,
+        zoomMeetingId: sync.zoomMeetingId,
+        zoomSyncRevision: sync.revision,
+        OR: [
+          { zoomSyncLeaseOwner: null },
+          { zoomSyncLeaseExpiresAt: null },
+          { zoomSyncLeaseExpiresAt: { lt: now } },
+        ],
+      },
       data: {
-        status: 'PROCESSING',
-        attemptCount: { increment: 1 },
-        lastAttemptAt: new Date(),
-        lastError: null,
+        zoomSyncLeaseOwner: leaseOwner,
+        zoomSyncLeaseExpiresAt: new Date(now.getTime() + 60_000),
       },
     });
+    if (acquired.count !== 1) {
+      throw new ConflictException('Zoom synchronization lease is already held');
+    }
+
+    let primaryError: unknown;
 
     try {
-      const current = await this.zoom.getMeeting(
-        event.payload.organizationId,
-        sync.zoomMeetingId,
-      );
-      const providerAlreadyCurrent =
-        current.topic === sync.desiredTopic
-        && current.durationMins === sync.desiredDurationMins
-        && new Date(current.startTime).getTime() === sync.desiredStartAt.getTime();
-
-      if (!providerAlreadyCurrent) {
-        await this.zoom.updateMeeting(
+      // The inner closure lets stale revisions stop their own work while the
+      // outer scope still releases the durable lease before returning.
+      await (async () => {
+        await this.prisma.bookingZoomSync.updateMany({
+          where: { id: sync.id, status: { notIn: ['COMPLETED', 'SUPERSEDED'] } },
+          data: {
+            status: 'PROCESSING',
+            attemptCount: { increment: 1 },
+            lastAttemptAt: new Date(),
+            lastError: null,
+          },
+        });
+        if (!await this.isCurrentRevision(sync.bookingId, sync.zoomMeetingId, sync.revision, leaseOwner)) {
+          await this.markSuperseded(sync.id);
+          return;
+        }
+        const current = await this.zoom.getMeeting(
           event.payload.organizationId,
           sync.zoomMeetingId,
-          {
-            topic: sync.desiredTopic,
-            startTime: sync.desiredStartAt.toISOString(),
-            durationMins: sync.desiredDurationMins,
-          },
         );
-      }
+        const providerAlreadyCurrent =
+          current.topic === sync.desiredTopic
+          && current.durationMins === sync.desiredDurationMins
+          && new Date(current.startTime).getTime() === sync.desiredStartAt.getTime();
 
-      await this.prisma.bookingZoomSync.updateMany({
-        where: { id: sync.id, status: { not: 'COMPLETED' } },
-        data: {
-          status: 'COMPLETED',
-          completedAt: new Date(),
-          lastError: null,
-        },
-      });
+        if (!providerAlreadyCurrent) {
+          if (!await this.isCurrentRevision(sync.bookingId, sync.zoomMeetingId, sync.revision, leaseOwner)) {
+            await this.markSuperseded(sync.id);
+            return;
+          }
+          await this.zoom.updateMeeting(
+            event.payload.organizationId,
+            sync.zoomMeetingId,
+            {
+              topic: sync.desiredTopic,
+              startTime: sync.desiredStartAt.toISOString(),
+              durationMins: sync.desiredDurationMins,
+            },
+          );
+        }
+
+        await this.prisma.bookingZoomSync.updateMany({
+          where: { id: sync.id, revision: sync.revision, status: { notIn: ['COMPLETED', 'SUPERSEDED'] } },
+          data: {
+            status: 'COMPLETED',
+            completedAt: new Date(),
+            lastError: null,
+          },
+        });
+      })();
     } catch (error) {
+      primaryError = error;
       try {
-        await this.prisma.bookingZoomSync.update({
-          where: { id: sync.id },
+        await this.prisma.bookingZoomSync.updateMany({
+          where: { id: sync.id, revision: sync.revision, status: 'PROCESSING' },
           data: {
             status: 'PENDING',
             lastError: 'Zoom synchronization failed; retry required',
           },
         });
       } catch (persistError) {
-        throw new AggregateError(
+        primaryError = new AggregateError(
           [error, persistError],
           'Zoom synchronization failed and retry state could not be persisted',
         );
       }
-      throw error;
     }
+
+    let releaseError: unknown;
+    try {
+      await this.prisma.booking.updateMany({
+        where: { id: sync.bookingId, zoomSyncLeaseOwner: leaseOwner },
+        data: { zoomSyncLeaseOwner: null, zoomSyncLeaseExpiresAt: null },
+      });
+    } catch (error) {
+      releaseError = error;
+    }
+    if (primaryError && releaseError) {
+      throw new AggregateError(
+        [primaryError, releaseError],
+        'Zoom synchronization failed and its lease could not be released',
+      );
+    }
+    if (primaryError) throw primaryError;
+    if (releaseError) throw releaseError;
+  }
+
+  private async isCurrentRevision(
+    bookingId: string,
+    zoomMeetingId: string,
+    revision: number,
+    leaseOwner: string,
+  ): Promise<boolean> {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        zoomMeetingId: true,
+        zoomSyncRevision: true,
+        zoomSyncLeaseOwner: true,
+        zoomSyncLeaseExpiresAt: true,
+      },
+    });
+    return Boolean(
+      booking
+      && booking.zoomMeetingId === zoomMeetingId
+      && booking.zoomSyncRevision === revision
+      && booking.zoomSyncLeaseOwner === leaseOwner,
+    );
+  }
+
+  private async markSuperseded(syncId: string): Promise<void> {
+    await this.prisma.bookingZoomSync.updateMany({
+      where: { id: syncId, status: { notIn: ['COMPLETED', 'SUPERSEDED'] } },
+      data: {
+        status: 'SUPERSEDED',
+        completedAt: new Date(),
+        lastError: null,
+      },
+    });
   }
 }

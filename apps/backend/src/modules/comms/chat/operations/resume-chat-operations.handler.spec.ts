@@ -284,6 +284,17 @@ describe('ResumeChatOperationsHandler', () => {
     });
   });
 
+  it('rethrows transient quote failures so the durable outbox consumer can retry', async () => {
+    const { handler, quote, prisma, original } = buildHarness();
+    quote.quoteBooking.mockRejectedValueOnce(new Error('database temporarily unavailable'));
+
+    await expect(handler.execute({ conversationId: 'conversation-1', clientId: 'client-1' }))
+      .rejects.toThrow('database temporarily unavailable');
+
+    expect(original.status).toBe(ChatOperationStatus.AWAITING_AUTH);
+    expect(prisma.commsChatMessage.create).not.toHaveBeenCalled();
+  });
+
   it.each([
     [ChatOperationType.RESCHEDULE_BOOKING, 'quoteReschedule', {
       intent: 'RESCHEDULE_BOOKING', request: { bookingId: 'booking-1', newScheduledAt: START.toISOString() },

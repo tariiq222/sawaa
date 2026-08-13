@@ -260,12 +260,12 @@ describe('MoyasarApiClient', () => {
       const result = await client.createRefund(ORG_ID, {
         paymentId: 'pay_123',
         amount: 500,
-        idempotencyKey: 'idem-refund-123',
-      });
+      } as never);
 
       expect(result).toEqual({
         id: 'pay_123',
         amount: 500,
+        refunded: 500,
         currency: 'SAR',
         status: 'refunded',
         paymentId: 'pay_123',
@@ -277,14 +277,12 @@ describe('MoyasarApiClient', () => {
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ amount: 500 }),
-          headers: expect.objectContaining({
-            'Idempotency-Key': 'idem-refund-123',
-            Authorization: 'Bearer sk_live_abc',
-            'Content-Type': 'application/json',
-          }),
+          headers: expect.not.objectContaining({ 'Idempotency-Key': expect.anything() }),
         }),
         15_000,
       );
+      const requestOptions = (fetchWithTimeout as jest.Mock).mock.calls.at(-1)[1];
+      expect(requestOptions.headers).not.toHaveProperty('Idempotency-Key');
     });
   });
 
@@ -323,13 +321,14 @@ describe('MoyasarApiClient', () => {
   });
 
   describe('getPaymentStatus', () => {
-    it('fetches GET /payments/:id and maps id, status, amount, currency', async () => {
+    it('fetches GET /payments/:id and retains cumulative refunded halalas', async () => {
       (fetchWithTimeout as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => ({
           id: 'pay_123',
           status: 'paid',
           amount: 12000,
+          refunded: 3500,
           currency: 'SAR',
         }),
       });
@@ -340,6 +339,7 @@ describe('MoyasarApiClient', () => {
         id: 'pay_123',
         status: 'paid',
         amount: 12000,
+        refunded: 3500,
         currency: 'SAR',
       });
 

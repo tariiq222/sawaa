@@ -37,6 +37,7 @@ export class SendInvoiceReceiptHandler {
   register(eventBus: EventBusService): void {
     eventBus.subscribe<InvoiceReceiptIssuedPayload>(
       'finance.invoice.receipt.issued',
+      'finance.invoice-receipt-send.v1',
       (envelope) => this.handle(envelope),
     );
   }

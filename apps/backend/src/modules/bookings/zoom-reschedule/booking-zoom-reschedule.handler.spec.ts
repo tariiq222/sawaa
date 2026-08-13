@@ -10,6 +10,7 @@ const envelope = {
     syncId: '11111111-1111-4111-8111-111111111111',
     bookingId: 'booking-1',
     zoomMeetingId: 'zoom-1',
+    revision: 1,
   },
 };
 
@@ -22,11 +23,33 @@ const desired = {
   desiredTopic: 'Booking booking-1',
   desiredStartAt: new Date('2026-08-20T10:00:00.000Z'),
   desiredDurationMins: 60,
+  revision: 1,
   status: 'PENDING',
 };
 
 function setup(row = desired) {
+  let bookingState = {
+    id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: row.revision,
+    zoomSyncLeaseOwner: null as string | null, zoomSyncLeaseExpiresAt: null as Date | null,
+  };
   const prisma = {
+    booking: {
+      findUnique: jest.fn().mockImplementation(async () => ({ ...bookingState })),
+      updateMany: jest.fn().mockImplementation(async ({ where, data }: any) => {
+        if (typeof data.zoomSyncLeaseOwner === 'string') {
+          if (bookingState.zoomSyncLeaseOwner !== null || where.zoomSyncRevision !== bookingState.zoomSyncRevision) {
+            return { count: 0 };
+          }
+          bookingState = { ...bookingState, ...data };
+          return { count: 1 };
+        }
+        if (data.zoomSyncLeaseOwner === null) {
+          if (where.zoomSyncLeaseOwner !== bookingState.zoomSyncLeaseOwner) return { count: 0 };
+          bookingState = { ...bookingState, zoomSyncLeaseOwner: null, zoomSyncLeaseExpiresAt: null };
+        }
+        return { count: 1 };
+      }),
+    },
     bookingZoomSync: {
       findUnique: jest.fn().mockResolvedValue(row),
       update: jest.fn().mockResolvedValue({}),
@@ -81,7 +104,7 @@ describe('BookingZoomRescheduleHandler', () => {
     await handler.handle(envelope);
     expect(zoom.updateMeeting).not.toHaveBeenCalled();
     expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith({
-      where: { id: desired.id, status: { not: 'COMPLETED' } },
+      where: { id: desired.id, revision: 1, status: { notIn: ['COMPLETED', 'SUPERSEDED'] } },
       data: expect.objectContaining({ status: 'COMPLETED', completedAt: expect.any(Date) }),
     });
   });
@@ -103,8 +126,8 @@ describe('BookingZoomRescheduleHandler', () => {
     const { handler, zoom, prisma } = setup();
     zoom.getMeeting.mockRejectedValue(new Error('Zoom 502 with secret data'));
     await expect(handler.handle(envelope)).rejects.toThrow('Zoom 502');
-    expect(prisma.bookingZoomSync.update).toHaveBeenCalledWith({
-      where: { id: desired.id },
+    expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith({
+      where: { id: desired.id, revision: 1, status: 'PROCESSING' },
       data: { status: 'PENDING', lastError: 'Zoom synchronization failed; retry required' },
     });
   });
@@ -120,14 +143,97 @@ describe('BookingZoomRescheduleHandler', () => {
         }
       : { id: 1, topic: 'old', startTime: '2026-08-19T10:00:00.000Z', durationMins: 30 });
     zoom.updateMeeting.mockImplementation(async () => { providerIsCurrent = true; });
-    prisma.bookingZoomSync.updateMany
-      .mockRejectedValueOnce(new Error('crash before DB finalize'))
-      .mockResolvedValueOnce({ count: 1 });
+    let failFinalize = true;
+    prisma.bookingZoomSync.updateMany.mockImplementation(async ({ data }: any) => {
+      if (data.status === 'COMPLETED' && failFinalize) {
+        failFinalize = false;
+        throw new Error('crash before DB finalize');
+      }
+      return { count: 1 };
+    });
 
     await expect(handler.handle(envelope)).rejects.toThrow('crash before DB finalize');
     await handler.handle(envelope);
 
     expect(zoom.updateMeeting).toHaveBeenCalledTimes(1);
-    expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledTimes(2);
+    expect(prisma.bookingZoomSync.updateMany.mock.calls.filter(
+      ([arg]: any[]) => arg.data.status === 'COMPLETED',
+    )).toHaveLength(2);
+  });
+
+  it('marks an older revision superseded before any provider read or mutation', async () => {
+    const { handler, zoom, prisma } = setup();
+    prisma.booking.findUnique.mockResolvedValue({
+      id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: 2,
+      zoomSyncLeaseOwner: null, zoomSyncLeaseExpiresAt: null,
+    });
+
+    await handler.handle(envelope);
+
+    expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith({
+      where: { id: desired.id, status: { notIn: ['COMPLETED', 'SUPERSEDED'] } },
+      data: expect.objectContaining({ status: 'SUPERSEDED', completedAt: expect.any(Date) }),
+    });
+    expect(zoom.getMeeting).not.toHaveBeenCalled();
+    expect(zoom.updateMeeting).not.toHaveBeenCalled();
+  });
+
+  it('does not call Zoom when another worker owns the current booking revision lease', async () => {
+    const { handler, zoom, prisma } = setup();
+    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(handler.handle(envelope)).rejects.toThrow('lease');
+
+    expect(zoom.getMeeting).not.toHaveBeenCalled();
+    expect(zoom.updateMeeting).not.toHaveBeenCalled();
+  });
+
+  it('cannot let a failed older revision revert a newer successful desired state on replay', async () => {
+    const revisionA = { ...desired, revision: 1, status: 'PENDING' };
+    const revisionB = {
+      ...desired,
+      id: '22222222-2222-4222-8222-222222222222',
+      eventId: '22222222-2222-4222-8222-222222222222',
+      sourceActionId: 'operation-2',
+      desiredStartAt: new Date('2026-08-21T10:00:00.000Z'),
+      revision: 2,
+      status: 'PENDING',
+    };
+    const eventB = {
+      ...envelope,
+      eventId: revisionB.eventId,
+      payload: { ...envelope.payload, syncId: revisionB.id, revision: 2 },
+    };
+    const { handler, zoom, prisma } = setup(revisionA);
+    let currentRevision = 1;
+    let leaseOwner: string | null = null;
+    prisma.booking.findUnique.mockImplementation(async () => ({
+      id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: currentRevision,
+      zoomSyncLeaseOwner: leaseOwner, zoomSyncLeaseExpiresAt: null,
+    }));
+    prisma.booking.updateMany.mockImplementation(async ({ where, data }: any) => {
+      if (typeof data.zoomSyncLeaseOwner === 'string') {
+        if (where.zoomSyncRevision !== currentRevision || leaseOwner !== null) return { count: 0 };
+        leaseOwner = data.zoomSyncLeaseOwner;
+      } else if (data.zoomSyncLeaseOwner === null && where.zoomSyncLeaseOwner === leaseOwner) {
+        leaseOwner = null;
+      }
+      return { count: 1 };
+    });
+    prisma.bookingZoomSync.findUnique.mockImplementation(async ({ where }: any) =>
+      where.eventId === revisionB.eventId ? revisionB : revisionA);
+    zoom.getMeeting
+      .mockRejectedValueOnce(new Error('transient Zoom failure for revision A'))
+      .mockResolvedValue({ id: 1, topic: 'old', startTime: '2026-08-19T10:00:00.000Z', durationMins: 30 });
+
+    await expect(handler.handle(envelope)).rejects.toThrow('revision A');
+    currentRevision = 2;
+    await handler.handle(eventB);
+    await handler.handle(envelope);
+
+    expect(zoom.updateMeeting).toHaveBeenCalledTimes(1);
+    expect(zoom.updateMeeting).toHaveBeenCalledWith('org-1', 'zoom-1', expect.objectContaining({
+      startTime: revisionB.desiredStartAt.toISOString(),
+    }));
   });
 });

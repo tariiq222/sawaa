@@ -92,6 +92,7 @@ import { AcknowledgeExistingBookingHandler } from './chat/operations/acknowledge
 import { ConfirmOperationHandler } from './chat/operations/confirm-operation.handler';
 import { DeclineOperationHandler } from './chat/operations/decline-operation.handler';
 import { ResumeChatOperationsHandler } from './chat/operations/resume-chat-operations.handler';
+import { OnChatOperationsResumeRequestedHandler } from './chat/operations/on-chat-operations-resume-requested.handler';
 
 const handlers = [
   SendPushHandler,
@@ -167,6 +168,7 @@ const handlers = [
   ConfirmOperationHandler,
   DeclineOperationHandler,
   ResumeChatOperationsHandler,
+  OnChatOperationsResumeRequestedHandler,
 ];
 
 const eventHandlers = [
@@ -208,6 +210,7 @@ export class CommsModule implements OnModuleInit {
     private readonly onBookingCancelledStaff: OnBookingCancelledStaffHandler,
     private readonly onPaymentCompletedStaff: OnPaymentCompletedStaffHandler,
     private readonly onClientEnrolledStaff: OnClientEnrolledStaffHandler,
+    private readonly onChatOperationsResumeRequested: OnChatOperationsResumeRequestedHandler,
   ) {}
 
   onModuleInit(): void {
@@ -219,5 +222,6 @@ export class CommsModule implements OnModuleInit {
     this.onBookingCancelledStaff.register(this.eventBus);
     this.onPaymentCompletedStaff.register(this.eventBus);
     this.onClientEnrolledStaff.register(this.eventBus);
+    this.onChatOperationsResumeRequested.register();
   }
 }

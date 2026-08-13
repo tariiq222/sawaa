@@ -171,13 +171,16 @@ enum RefundStatus {
   PROCESSING
   COMPLETED
   FAILED
+  MANUAL_REVIEW
 }
 
 enum RefundProviderState {
   NOT_CALLED
+  BEFORE_CALL
   CALL_UNKNOWN
   CONFIRMED
   FAILED
+  MANUAL_REVIEW
 }
 
 model RefundRequest {
@@ -195,14 +198,21 @@ model RefundRequest {
   processedBy  String?
   denialReason String?
   gatewayRef   String?
-  // Stable across BullMQ/outbox replay and sent to the provider on every
-  // attempt. sourceEventId binds cancellation events to one logical refund.
+  // Stable internal identity across BullMQ/outbox replay. Moyasar's refund
+  // endpoint has no documented idempotency contract, so this key is never
+  // forwarded to the provider. sourceEventId binds one cancellation event to
+  // one logical refund request.
   idempotencyKey       String?             @unique
   sourceEventId        String?             @unique @db.Uuid
-  providerState        RefundProviderState @default(NOT_CALLED)
+  providerState        RefundProviderState @default(BEFORE_CALL)
   providerAttemptCount Int                 @default(0)
   lastProviderAttemptAt DateTime?          @db.Timestamptz(3)
   lastProviderError    String?
+  providerLeaseOwner   String?
+  providerLeaseExpiresAt DateTime?         @db.Timestamptz(3)
+  baselineRefundedAmount Decimal?          @db.Decimal(12, 2)
+  targetCumulativeRefundedAmount Decimal?  @db.Decimal(12, 2)
+  observedCumulativeRefundedAmount Decimal? @db.Decimal(12, 2)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -211,6 +221,7 @@ model RefundRequest {
   @@index([status])
   @@index([status, createdAt])
   @@index([status, updatedAt])
+  @@index([status, providerLeaseExpiresAt])
   @@index([paymentId])
 }
 

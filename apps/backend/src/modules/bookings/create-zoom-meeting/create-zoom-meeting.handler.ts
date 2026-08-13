@@ -1,28 +1,29 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
+  Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
-import { ZoomCredentialsService } from '../../../infrastructure/zoom/zoom-credentials.service';
-import { ZoomMeetingStatus } from '@prisma/client';
+import { DeliveryType, ZoomMeetingStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { PrismaService } from '../../../infrastructure/database';
+import {
+  ZoomApiClient,
+  type ZoomMeetingResponse,
+  type ZoomMeetingState,
+} from '../../../infrastructure/zoom/zoom-api.client';
+import { ZoomCredentialsService } from '../../../infrastructure/zoom/zoom-credentials.service';
 
 export interface CreateZoomMeetingCommand {
   bookingId: string;
 }
 
-/** FNV-1a 32-bit hash → signed int32 (Postgres int4 range) */
-function hashToInt32(s: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
-  }
-  return h | 0;
-}
+const LEASE_MS = 60_000;
+const BEFORE_CALL = 'BEFORE_CALL';
+const CALL_UNKNOWN = 'CALL_UNKNOWN';
+const COMPLETED = 'COMPLETED';
+const MANUAL_REVIEW = 'MANUAL_REVIEW';
 
 @Injectable()
 export class CreateZoomMeetingHandler {
@@ -30,137 +31,234 @@ export class CreateZoomMeetingHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
     private readonly zoomApi: ZoomApiClient,
     private readonly zoomCredentials: ZoomCredentialsService,
   ) {}
 
   async execute(cmd: CreateZoomMeetingCommand) {
-    // Step 1: initial read outside tx — needed to derive the lock key
-    const booking = await this.prisma.booking.findFirst({
-      where: { id: cmd.bookingId },
+    const initial = await this.prisma.booking.findFirst({ where: { id: cmd.bookingId } });
+    if (!initial) throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
+    if (initial.deliveryType !== DeliveryType.ONLINE) {
+      throw new BadRequestException('Zoom meetings can only be created for ONLINE delivery bookings');
+    }
+    if (this.isCompleted(initial)) return initial;
+
+    const leaseOwner = randomUUID();
+    const now = new Date();
+    const acquired = await this.prisma.booking.updateMany({
+      where: {
+        id: cmd.bookingId,
+        OR: [
+          { zoomCreateLeaseOwner: null },
+          { zoomCreateLeaseExpiresAt: null },
+          { zoomCreateLeaseExpiresAt: { lt: now } },
+        ],
+      },
+      data: {
+        zoomCreateLeaseOwner: leaseOwner,
+        zoomCreateLeaseExpiresAt: new Date(now.getTime() + LEASE_MS),
+        zoomCreateAttemptCount: { increment: 1 },
+      },
     });
-    if (!booking) {
-      throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
+    if (acquired.count !== 1) {
+      // Another durable worker owns the provider call. It is safe for this
+      // duplicate delivery to acknowledge without touching Zoom.
+      return this.requireBooking(cmd.bookingId);
     }
 
-    // Step 2: delivery-type validation — Zoom is only for ONLINE delivery
-    if (booking.deliveryType !== 'ONLINE') {
-      throw new BadRequestException(
-        'Zoom meetings can only be created for ONLINE delivery bookings',
+    const booking = await this.prisma.booking.findUnique({ where: { id: cmd.bookingId } });
+    if (!booking) {
+      await this.release(leaseOwner, cmd.bookingId, 'Booking disappeared after lease acquisition');
+      throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
+    }
+    if (this.isCompleted(booking)) {
+      await this.release(leaseOwner, cmd.bookingId);
+      return booking;
+    }
+
+    const integration = await this.prisma.integration.findFirst({ where: { provider: 'zoom' } });
+    if (!integration?.isActive) {
+      return this.manualReview(cmd.bookingId, leaseOwner, 'Zoom integration is not configured for this clinic');
+    }
+    const ciphertext = (integration.config as { ciphertext?: string } | null)?.ciphertext;
+    if (!ciphertext) {
+      return this.manualReview(cmd.bookingId, leaseOwner, 'Zoom integration configuration is invalid');
+    }
+
+    let credentials: { zoomClientId: string; zoomClientSecret: string; zoomAccountId: string };
+    try {
+      credentials = this.zoomCredentials.decrypt(ciphertext, DEFAULT_ORG_ID);
+    } catch (error) {
+      return this.manualReview(
+        cmd.bookingId,
+        leaseOwner,
+        error instanceof Error ? error.message : 'Zoom integration configuration is invalid',
       );
     }
 
-    const key1 = hashToInt32(DEFAULT_ORG_ID);
-    const key2 = hashToInt32(booking.id);
+    let token: string;
+    try {
+      token = await this.zoomApi.getAccessToken(
+        DEFAULT_ORG_ID,
+        credentials.zoomClientId,
+        credentials.zoomClientSecret,
+        credentials.zoomAccountId,
+      );
+    } catch (error) {
+      // OAuth happens before the meeting POST, so releasing BEFORE_CALL makes
+      // a later retry safe.
+      await this.release(
+        leaseOwner,
+        cmd.bookingId,
+        error instanceof Error ? error.message : 'Zoom authentication failed',
+      );
+      throw error;
+    }
 
-    // Step 3: advisory-locked critical section
-    return this.rlsTransaction.withTransaction(async (tx) => {
-      // Acquire per-(org, booking) advisory lock before any read/write
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${key1}::int, ${key2}::int)`;
+    const settings = await this.prisma.organizationSettings.findFirst({ where: {} });
+    const timezone = settings?.timezone || 'Asia/Riyadh';
+    const topic = `Booking ${booking.id}`;
 
-      // Re-read booking now that lock is held
-      const freshBooking = await tx.booking.findFirst({
-        where: { id: cmd.bookingId },
-      });
-      if (!freshBooking) {
-        throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
-      }
+    if ((booking.zoomCreatePhase ?? BEFORE_CALL) === CALL_UNKNOWN) {
+      return this.reconcileUnknown(booking, leaseOwner, token, topic, timezone);
+    }
+    if ((booking.zoomCreatePhase ?? BEFORE_CALL) === MANUAL_REVIEW) {
+      await this.release(leaseOwner, booking.id);
+      return this.requireBooking(booking.id);
+    }
 
-      // Idempotency check on freshly-read booking
-      if (
-        freshBooking.zoomMeetingId &&
-        freshBooking.zoomMeetingStatus === ZoomMeetingStatus.CREATED
-      ) {
-        return freshBooking;
-      }
-
-      // Load zoom integration inside tx
-      const integration = await tx.integration.findFirst({
-        where: { provider: 'zoom' },
-      });
-      if (!integration || !integration.isActive) {
-        this.logger.warn(`Zoom integration not configured for booking ${freshBooking.id}`);
-        return tx.booking.update({
-          where: { id: cmd.bookingId },
-          data: {
-            zoomMeetingStatus: ZoomMeetingStatus.FAILED,
-            zoomMeetingError: 'Zoom integration is not configured for this clinic',
-          },
-        });
-      }
-
-      // Ciphertext validation
-      const config = integration.config as { ciphertext?: string } | null;
-      const ciphertext = config?.ciphertext;
-
-      if (!ciphertext) {
-        this.logger.error(`Zoom config missing ciphertext for org ${DEFAULT_ORG_ID}`);
-        return tx.booking.update({
-          where: { id: cmd.bookingId },
-          data: {
-            zoomMeetingStatus: ZoomMeetingStatus.FAILED,
-            zoomMeetingError: 'Zoom integration configuration is invalid',
-          },
-        });
-      }
-
-      // Decrypt → token → createMeeting → update
-      try {
-        const { zoomClientId, zoomClientSecret, zoomAccountId } =
-          this.zoomCredentials.decrypt<{
-            zoomClientId: string;
-            zoomClientSecret: string;
-            zoomAccountId: string;
-          }>(ciphertext, DEFAULT_ORG_ID);
-
-        const settings = await tx.organizationSettings.findFirst({
-          where: {},
-        });
-        const timezone = settings?.timezone || 'Asia/Riyadh';
-
-        const token = await this.zoomApi.getAccessToken(
-          DEFAULT_ORG_ID,
-          zoomClientId,
-          zoomClientSecret,
-          zoomAccountId,
-        );
-
-        const meeting = await this.zoomApi.createMeeting(
-          token,
-          {
-            topic: `Booking ${freshBooking.id}`,
-            startTime: freshBooking.scheduledAt.toISOString(),
-            durationMins: freshBooking.durationMins,
-          },
-          timezone,
-        );
-
-        return await tx.booking.update({
-          where: { id: cmd.bookingId },
-          data: {
-            zoomMeetingId: String(meeting.id),
-            zoomJoinUrl: meeting.join_url,
-            zoomHostUrl: meeting.start_url,
-            zoomStartUrl: meeting.start_url,
-            zoomMeetingStatus: ZoomMeetingStatus.CREATED,
-            zoomMeetingCreatedAt: new Date(),
-            zoomMeetingError: null,
-          },
-        });
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : 'Unknown error';
-        this.logger.error(
-          `Failed to create Zoom meeting for booking ${freshBooking.id}: ${message}`,
-        );
-        return await tx.booking.update({
-          where: { id: cmd.bookingId },
-          data: {
-            zoomMeetingStatus: ZoomMeetingStatus.FAILED,
-            zoomMeetingError: message,
-          },
-        });
-      }
+    const armed = await this.prisma.booking.updateMany({
+      where: { id: booking.id, zoomCreateLeaseOwner: leaseOwner, zoomCreatePhase: BEFORE_CALL },
+      data: { zoomCreatePhase: CALL_UNKNOWN, zoomMeetingStatus: ZoomMeetingStatus.PENDING, zoomMeetingError: null },
     });
+    if (armed.count !== 1) {
+      await this.release(leaseOwner, booking.id);
+      throw new Error(`Lost Zoom creation lease for booking ${booking.id} before provider call`);
+    }
+
+    let meeting: ZoomMeetingResponse;
+    try {
+      // Exactly one POST. Once armed CALL_UNKNOWN, every replay is GET-only.
+      meeting = await this.zoomApi.createMeeting(token, {
+        topic,
+        startTime: booking.scheduledAt.toISOString(),
+        durationMins: booking.durationMins,
+      }, timezone);
+    } catch (error) {
+      await this.release(
+        leaseOwner,
+        booking.id,
+        error instanceof Error ? error.message : 'Unknown Zoom create outcome',
+      );
+      throw error;
+    }
+
+    return this.finalize(booking.id, leaseOwner, meeting);
+  }
+
+  private async reconcileUnknown(
+    booking: { id: string; scheduledAt: Date; durationMins: number },
+    leaseOwner: string,
+    token: string,
+    topic: string,
+    timezone: string,
+  ) {
+    let meeting: (ZoomMeetingState & { join_url?: string; start_url?: string }) | null;
+    try {
+      meeting = await this.zoomApi.findMeetingByTopic(token, topic);
+      if (!meeting) {
+        return this.manualReview(
+          booking.id,
+          leaseOwner,
+          'Zoom create outcome is unknown and no matching meeting is visible; do not retry POST',
+        );
+      }
+      const desiredStart = booking.scheduledAt.toISOString();
+      if (new Date(meeting.startTime).toISOString() !== desiredStart
+        || meeting.durationMins !== booking.durationMins) {
+        await this.zoomApi.updateMeeting(token, String(meeting.id), {
+          topic,
+          startTime: desiredStart,
+          durationMins: booking.durationMins,
+        }, timezone);
+      }
+    } catch (error) {
+      await this.release(
+        leaseOwner,
+        booking.id,
+        error instanceof Error ? error.message : 'Zoom reconciliation failed',
+      );
+      throw error;
+    }
+    return this.finalize(booking.id, leaseOwner, {
+      id: meeting.id,
+      join_url: meeting.join_url ?? '',
+      start_url: meeting.start_url ?? '',
+    });
+  }
+
+  private async finalize(bookingId: string, leaseOwner: string, meeting: ZoomMeetingResponse) {
+    const finalized = await this.prisma.booking.updateMany({
+      where: { id: bookingId, zoomCreateLeaseOwner: leaseOwner, zoomCreatePhase: CALL_UNKNOWN },
+      data: {
+        zoomMeetingId: String(meeting.id),
+        zoomJoinUrl: meeting.join_url || null,
+        zoomHostUrl: meeting.start_url || null,
+        zoomStartUrl: meeting.start_url || null,
+        zoomMeetingStatus: ZoomMeetingStatus.CREATED,
+        zoomMeetingCreatedAt: new Date(),
+        zoomMeetingError: null,
+        zoomCreatePhase: COMPLETED,
+        zoomCreateLeaseOwner: null,
+        zoomCreateLeaseExpiresAt: null,
+      },
+    });
+    if (finalized.count !== 1) {
+      throw new Error(`Could not persist confirmed Zoom meeting for booking ${bookingId}`);
+    }
+    return this.requireBooking(bookingId);
+  }
+
+  private async manualReview(bookingId: string, leaseOwner: string, reason: string) {
+    this.logger.error(`Booking ${bookingId} Zoom creation requires manual review: ${reason}`);
+    await this.prisma.booking.updateMany({
+      where: { id: bookingId, zoomCreateLeaseOwner: leaseOwner },
+      data: {
+        zoomMeetingStatus: ZoomMeetingStatus.FAILED,
+        zoomMeetingError: reason,
+        zoomCreatePhase: MANUAL_REVIEW,
+        zoomCreateLeaseOwner: null,
+        zoomCreateLeaseExpiresAt: null,
+      },
+    });
+    return this.requireBooking(bookingId);
+  }
+
+  private async release(leaseOwner: string, bookingId: string, error?: string): Promise<void> {
+    const released = await this.prisma.booking.updateMany({
+      where: { id: bookingId, zoomCreateLeaseOwner: leaseOwner },
+      data: {
+        zoomCreateLeaseOwner: null,
+        zoomCreateLeaseExpiresAt: null,
+        ...(error ? { zoomMeetingError: error } : {}),
+      },
+    });
+    if (released.count !== 1) {
+      throw new Error(`Could not release Zoom creation lease for booking ${bookingId}`);
+    }
+  }
+
+  private isCompleted(booking: { zoomMeetingId?: string | null; zoomMeetingStatus?: ZoomMeetingStatus | null; zoomCreatePhase?: string | null }): boolean {
+    return Boolean(
+      booking.zoomMeetingId
+      && booking.zoomMeetingStatus === ZoomMeetingStatus.CREATED
+      && (booking.zoomCreatePhase === COMPLETED || !booking.zoomCreatePhase),
+    );
+  }
+
+  private async requireBooking(bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) throw new NotFoundException(`Booking ${bookingId} not found`);
+    return booking;
   }
 }

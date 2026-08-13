@@ -1,296 +1,209 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { BookingStatus, ZoomMeetingStatus } from '@prisma/client';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BookingStatus, DeliveryType, ZoomMeetingStatus } from '@prisma/client';
 import { CreateZoomMeetingHandler } from './create-zoom-meeting.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
-import { ZoomCredentialsService } from '../../../infrastructure/zoom/zoom-credentials.service';
 
-const buildPrisma = () => ({
-  booking: {
-    findFirst: jest.fn(),
-    update: jest.fn(),
-  },
-  integration: {
-    findFirst: jest.fn(),
-  },
-  organizationSettings: {
-    findFirst: jest.fn(),
-  },
-  $executeRaw: jest.fn().mockResolvedValue(undefined),
-});
+const NOW = new Date('2026-08-13T12:00:00.000Z');
 
-describe('CreateZoomMeetingHandler', () => {
-  let handler: CreateZoomMeetingHandler;
-  let prisma: ReturnType<typeof buildPrisma>;
-  let zoomApi: { getAccessToken: jest.Mock; createMeeting: jest.Mock };
-  let zoomCredentials: jest.Mocked<Partial<ZoomCredentialsService>>;
-  let txMock: ReturnType<typeof buildPrisma>;
-
-  beforeEach(async () => {
-    prisma = buildPrisma();
-    txMock = buildPrisma();
-
-    const rlsTransaction = {
-      withTransaction: jest
-        .fn()
-        .mockImplementation(async (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)),
-    };
-
-    zoomApi = {
-      getAccessToken: jest.fn().mockResolvedValue('token'),
-      createMeeting: jest.fn().mockResolvedValue({
-        id: 12345,
-        join_url: 'https://zoom.us/j/12345',
-        start_url: 'https://zoom.us/s/12345',
-      }),
-    };
-
-    zoomCredentials = {
-      decrypt: jest.fn().mockReturnValue({
-        zoomClientId: 'client-id',
-        zoomClientSecret: 'client-secret',
-        zoomAccountId: 'account-id',
-      }),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CreateZoomMeetingHandler,
-        { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
-        { provide: ZoomApiClient, useValue: zoomApi },
-        { provide: ZoomCredentialsService, useValue: zoomCredentials },
-      ],
-    }).compile();
-
-    handler = module.get<CreateZoomMeetingHandler>(CreateZoomMeetingHandler);
-  });
-
-  const bookingBase = {
+function buildHarness(overrides: Record<string, unknown> = {}) {
+  let booking = {
     id: 'booking-1',
-    bookingType: 'ONLINE' as const,
-    deliveryType: 'ONLINE' as const,
-    scheduledAt: new Date('2026-06-01T10:00:00Z'),
+    deliveryType: DeliveryType.ONLINE,
+    status: BookingStatus.CONFIRMED,
+    scheduledAt: new Date('2026-08-14T10:00:00.000Z'),
     durationMins: 60,
-    zoomMeetingId: null,
-    zoomMeetingStatus: null,
-    status: BookingStatus.PENDING,
-    clientId: 'client-1',
-    employeeId: 'emp-1',
-    branchId: 'branch-1',
-    serviceId: 'svc-1',
-    invoiceId: 'inv-1',
-    paymentId: null,
-    couponCode: null,
-    source: 'dashboard' as const,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    notes: null,
-    cancelledAt: null,
-    cancelledBy: null,
-    cancellationReason: null,
-    groupSessionId: null,
-    isGroup: false,
-    rescheduledCount: 0,
-    maxReschedules: null,
-    zoomJoinUrl: null,
-    zoomHostUrl: null,
-    zoomStartUrl: null,
-    zoomMeetingCreatedAt: null,
-    zoomMeetingError: null,
+    zoomMeetingId: null as string | null,
+    zoomMeetingStatus: null as ZoomMeetingStatus | null,
+    zoomMeetingError: null as string | null,
+    zoomCreatePhase: 'BEFORE_CALL',
+    zoomCreateLeaseOwner: null as string | null,
+    zoomCreateLeaseExpiresAt: null as Date | null,
+    zoomCreateAttemptCount: 0,
+    ...overrides,
   };
-
-  it('should throw NotFoundException when booking not found', async () => {
-    prisma.booking.findFirst.mockResolvedValue(null);
-    await expect(handler.execute({ bookingId: 'missing' })).rejects.toThrow(NotFoundException);
-  });
-
-  it('should throw BadRequestException when delivery type is not ONLINE', async () => {
-    prisma.booking.findFirst.mockResolvedValue({ ...bookingBase, deliveryType: 'IN_PERSON' });
-    await expect(handler.execute({ bookingId: bookingBase.id })).rejects.toThrow(BadRequestException);
-  });
-
-  it('should throw NotFoundException when booking not found inside tx', async () => {
-    prisma.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.booking.findFirst.mockResolvedValue(null);
-
-    await expect(handler.execute({ bookingId: bookingBase.id })).rejects.toThrow(NotFoundException);
-  });
-
-  it('should return existing booking when zoom meeting already created', async () => {
-    const existing = {
-      ...bookingBase,
-      zoomMeetingId: '12345',
-      zoomMeetingStatus: ZoomMeetingStatus.CREATED,
-    };
-    prisma.booking.findFirst.mockResolvedValue(existing);
-    txMock.booking.findFirst.mockResolvedValue(existing);
-
-    const result = await handler.execute({ bookingId: bookingBase.id });
-    expect(result).toEqual(existing);
-    expect(txMock.booking.update).not.toHaveBeenCalled();
-  });
-
-  it('should mark FAILED when Zoom integration not configured', async () => {
-    prisma.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.integration.findFirst.mockResolvedValue(null);
-
-    const updated = { ...bookingBase, zoomMeetingStatus: ZoomMeetingStatus.FAILED };
-    txMock.booking.update.mockResolvedValue(updated);
-
-    const result = await handler.execute({ bookingId: bookingBase.id });
-    expect(txMock.booking.update).toHaveBeenCalledWith({
-      where: { id: bookingBase.id },
-      data: {
-        zoomMeetingStatus: ZoomMeetingStatus.FAILED,
-        zoomMeetingError: 'Zoom integration is not configured for this clinic',
-      },
-    });
-    expect(result.zoomMeetingStatus).toBe(ZoomMeetingStatus.FAILED);
-  });
-
-  it('should mark FAILED when Zoom integration is inactive', async () => {
-    prisma.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.integration.findFirst.mockResolvedValue({ id: 'int-1', provider: 'zoom', isActive: false, config: {} });
-
-    const updated = { ...bookingBase, zoomMeetingStatus: ZoomMeetingStatus.FAILED };
-    txMock.booking.update.mockResolvedValue(updated);
-
-    await handler.execute({ bookingId: bookingBase.id });
-    expect(txMock.booking.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ zoomMeetingStatus: ZoomMeetingStatus.FAILED }),
-    }));
-  });
-
-  it('should mark FAILED when ciphertext is missing', async () => {
-    prisma.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.integration.findFirst.mockResolvedValue({ id: 'int-1', provider: 'zoom', isActive: true, config: {} });
-
-    const updated = { ...bookingBase, zoomMeetingStatus: ZoomMeetingStatus.FAILED };
-    txMock.booking.update.mockResolvedValue(updated);
-
-    await handler.execute({ bookingId: bookingBase.id });
-    expect(txMock.booking.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        zoomMeetingStatus: ZoomMeetingStatus.FAILED,
-        zoomMeetingError: 'Zoom integration configuration is invalid',
+  const bookingDelegate = {
+    findFirst: jest.fn(async () => booking),
+    findUnique: jest.fn(async () => booking),
+    updateMany: jest.fn(async ({ data }: { data: Record<string, unknown> }) => {
+      const next = { ...data } as Record<string, unknown>;
+      if (typeof next.zoomCreateAttemptCount === 'object') {
+        booking.zoomCreateAttemptCount += 1;
+        delete next.zoomCreateAttemptCount;
+      }
+      booking = { ...booking, ...next } as typeof booking;
+      return { count: 1 };
+    }),
+  };
+  const prisma = {
+    booking: bookingDelegate,
+    integration: {
+      findFirst: jest.fn().mockResolvedValue({
+        provider: 'zoom', isActive: true, config: { ciphertext: 'encrypted' },
       }),
-    }));
+    },
+    organizationSettings: {
+      findFirst: jest.fn().mockResolvedValue({ timezone: 'Asia/Riyadh' }),
+    },
+  };
+  const zoomApi = {
+    getAccessToken: jest.fn().mockResolvedValue('token'),
+    createMeeting: jest.fn().mockResolvedValue({
+      id: 12345,
+      join_url: 'https://zoom.us/j/12345',
+      start_url: 'https://zoom.us/s/12345',
+    }),
+    findMeetingByTopic: jest.fn().mockResolvedValue(null),
+  };
+  const credentials = {
+    decrypt: jest.fn().mockReturnValue({
+      zoomClientId: 'client-id',
+      zoomClientSecret: 'client-secret',
+      zoomAccountId: 'account-id',
+    }),
+  };
+  const handler = new CreateZoomMeetingHandler(
+    prisma as never,
+    zoomApi as never,
+    credentials as never,
+  );
+  return {
+    handler,
+    prisma,
+    zoomApi,
+    credentials,
+    booking: () => booking,
+    setBooking: (next: typeof booking) => { booking = next; },
+  };
+}
+
+describe('CreateZoomMeetingHandler — durable provider reconciliation', () => {
+  beforeEach(() => jest.useFakeTimers().setSystemTime(NOW));
+  afterEach(() => jest.useRealTimers());
+
+  it('rejects a missing booking', async () => {
+    const h = buildHarness();
+    h.prisma.booking.findFirst.mockResolvedValueOnce(null as never);
+    await expect(h.handler.execute({ bookingId: 'missing' })).rejects.toThrow(NotFoundException);
   });
 
-  it('should create Zoom meeting successfully', async () => {
-    prisma.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.integration.findFirst.mockResolvedValue({
-      id: 'int-1',
-      provider: 'zoom',
-      isActive: true,
-      config: { ciphertext: 'encrypted-data' },
-    });
-    txMock.organizationSettings.findFirst.mockResolvedValue({ timezone: 'Asia/Dubai' });
+  it('rejects a non-online booking', async () => {
+    const h = buildHarness({ deliveryType: DeliveryType.IN_PERSON });
+    await expect(h.handler.execute({ bookingId: 'booking-1' })).rejects.toThrow(BadRequestException);
+  });
 
-    const updated = {
-      ...bookingBase,
-      zoomMeetingId: '12345',
-      zoomJoinUrl: 'https://zoom.us/j/12345',
-      zoomHostUrl: 'https://zoom.us/s/12345',
-      zoomStartUrl: 'https://zoom.us/s/12345',
+  it('returns an existing completed meeting without acquiring a lease', async () => {
+    const h = buildHarness({
+      zoomMeetingId: 'existing',
       zoomMeetingStatus: ZoomMeetingStatus.CREATED,
-    };
-    txMock.booking.update.mockResolvedValue(updated);
-
-    const result = await handler.execute({ bookingId: bookingBase.id });
-
-    expect(zoomApi.getAccessToken).toHaveBeenCalledWith(expect.any(String), 'client-id', 'client-secret', 'account-id');
-    expect(zoomApi.createMeeting).toHaveBeenCalledWith(
-      'token',
-      expect.objectContaining({ topic: `Booking ${bookingBase.id}`, durationMins: 60 }),
-      'Asia/Dubai',
+      zoomCreatePhase: 'COMPLETED',
+    });
+    await expect(h.handler.execute({ bookingId: 'booking-1' })).resolves.toEqual(
+      expect.objectContaining({ zoomMeetingId: 'existing' }),
     );
-    expect(txMock.booking.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        zoomMeetingId: '12345',
-        zoomMeetingStatus: ZoomMeetingStatus.CREATED,
-        zoomMeetingError: null,
-      }),
-    }));
-    expect(result.zoomMeetingStatus).toBe(ZoomMeetingStatus.CREATED);
+    expect(h.prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
   });
 
-  it('should use default timezone when settings not found', async () => {
-    prisma.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.integration.findFirst.mockResolvedValue({
-      id: 'int-1',
-      provider: 'zoom',
-      isActive: true,
-      config: { ciphertext: 'encrypted-data' },
-    });
-    txMock.organizationSettings.findFirst.mockResolvedValue(null);
+  it('lets a concurrent lease loser exit without any provider call', async () => {
+    const h = buildHarness();
+    h.prisma.booking.updateMany.mockResolvedValueOnce({ count: 0 });
+    await h.handler.execute({ bookingId: 'booking-1' });
+    expect(h.zoomApi.getAccessToken).not.toHaveBeenCalled();
+    expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
+  });
 
-    const updated = {
-      ...bookingBase,
+  it('marks an unavailable integration for manual review without a provider call', async () => {
+    const h = buildHarness();
+    h.prisma.integration.findFirst.mockResolvedValueOnce(null);
+    await h.handler.execute({ bookingId: 'booking-1' });
+    expect(h.booking()).toEqual(expect.objectContaining({
+      zoomMeetingStatus: ZoomMeetingStatus.FAILED,
+      zoomCreatePhase: 'MANUAL_REVIEW',
+    }));
+    expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
+  });
+
+  it('persists CALL_UNKNOWN before one POST and finalizes the confirmed response', async () => {
+    const h = buildHarness();
+    await h.handler.execute({ bookingId: 'booking-1' });
+    const calls = h.prisma.booking.updateMany.mock.calls;
+    const unknownIndex = calls.findIndex(([arg]) => arg.data.zoomCreatePhase === 'CALL_UNKNOWN');
+    const completedIndex = calls.findIndex(([arg]) => arg.data.zoomCreatePhase === 'COMPLETED');
+    expect(unknownIndex).toBeGreaterThan(-1);
+    expect(completedIndex).toBeGreaterThan(unknownIndex);
+    expect(h.zoomApi.createMeeting).toHaveBeenCalledTimes(1);
+    expect(h.booking()).toEqual(expect.objectContaining({
       zoomMeetingId: '12345',
-      zoomJoinUrl: 'https://zoom.us/j/12345',
-      zoomHostUrl: 'https://zoom.us/s/12345',
-      zoomStartUrl: 'https://zoom.us/s/12345',
       zoomMeetingStatus: ZoomMeetingStatus.CREATED,
-    };
-    txMock.booking.update.mockResolvedValue(updated);
-
-    await handler.execute({ bookingId: bookingBase.id });
-    expect(zoomApi.createMeeting).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'Asia/Riyadh');
-  });
-
-  it('should mark FAILED when Zoom API throws', async () => {
-    prisma.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.integration.findFirst.mockResolvedValue({
-      id: 'int-1',
-      provider: 'zoom',
-      isActive: true,
-      config: { ciphertext: 'encrypted-data' },
-    });
-    txMock.organizationSettings.findFirst.mockResolvedValue(null);
-
-    zoomApi.createMeeting.mockRejectedValue(new Error('Zoom API error'));
-
-    const updated = { ...bookingBase, zoomMeetingStatus: ZoomMeetingStatus.FAILED };
-    txMock.booking.update.mockResolvedValue(updated);
-
-    const result = await handler.execute({ bookingId: bookingBase.id });
-    expect(txMock.booking.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        zoomMeetingStatus: ZoomMeetingStatus.FAILED,
-        zoomMeetingError: 'Zoom API error',
-      }),
+      zoomCreatePhase: 'COMPLETED',
     }));
-    expect(result.zoomMeetingStatus).toBe(ZoomMeetingStatus.FAILED);
   });
 
-  it('should handle non-Error thrown in catch block', async () => {
-    prisma.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.booking.findFirst.mockResolvedValue(bookingBase);
-    txMock.integration.findFirst.mockResolvedValue({
-      id: 'int-1',
-      provider: 'zoom',
-      isActive: true,
-      config: { ciphertext: 'encrypted-data' },
+  it('after an unknown POST timeout, replays GET-only and finalizes a discovered meeting', async () => {
+    const h = buildHarness();
+    h.zoomApi.createMeeting.mockRejectedValueOnce(new Error('socket timeout'));
+    await expect(h.handler.execute({ bookingId: 'booking-1' })).rejects.toThrow('socket timeout');
+    expect(h.booking().zoomCreatePhase).toBe('CALL_UNKNOWN');
+
+    h.zoomApi.findMeetingByTopic.mockResolvedValueOnce({
+      id: 9876,
+      join_url: 'https://zoom.us/j/9876',
+      start_url: 'https://zoom.us/s/9876',
+      topic: 'Booking booking-1',
+      startTime: '2026-08-14T10:00:00.000Z',
+      durationMins: 60,
     });
-    txMock.organizationSettings.findFirst.mockResolvedValue(null);
+    await h.handler.execute({ bookingId: 'booking-1' });
+    expect(h.zoomApi.createMeeting).toHaveBeenCalledTimes(1);
+    expect(h.booking()).toEqual(expect.objectContaining({
+      zoomMeetingId: '9876', zoomCreatePhase: 'COMPLETED',
+    }));
+  });
 
-    zoomApi.createMeeting!.mockRejectedValue('string-error');
+  it('never performs a second POST when GET cannot prove an unknown call succeeded', async () => {
+    const h = buildHarness({ zoomCreatePhase: 'CALL_UNKNOWN' });
+    await h.handler.execute({ bookingId: 'booking-1' });
+    expect(h.zoomApi.findMeetingByTopic).toHaveBeenCalledWith('token', 'Booking booking-1');
+    expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
+    expect(h.booking()).toEqual(expect.objectContaining({
+      zoomMeetingStatus: ZoomMeetingStatus.FAILED,
+      zoomCreatePhase: 'MANUAL_REVIEW',
+    }));
+  });
 
-    const updated = { ...bookingBase, zoomMeetingStatus: ZoomMeetingStatus.FAILED };
-    txMock.booking.update.mockResolvedValue(updated);
+  it('recovers a provider success after DB finalization crashes without another POST', async () => {
+    const h = buildHarness();
+    h.prisma.booking.updateMany
+      .mockImplementationOnce(async ({ data }) => {
+        h.setBooking({ ...h.booking(), ...data, zoomCreateAttemptCount: 1 });
+        return { count: 1 };
+      })
+      .mockImplementationOnce(async ({ data }) => {
+        h.setBooking({ ...h.booking(), ...data });
+        return { count: 1 };
+      })
+      .mockRejectedValueOnce(new Error('DB unavailable after provider response'));
+    await expect(h.handler.execute({ bookingId: 'booking-1' })).rejects.toThrow('DB unavailable');
 
-    await handler.execute({ bookingId: bookingBase.id });
-    expect(txMock.booking.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ zoomMeetingError: 'Unknown error' }),
+    h.zoomApi.findMeetingByTopic.mockResolvedValueOnce({
+      id: 12345,
+      join_url: 'https://zoom.us/j/12345',
+      start_url: 'https://zoom.us/s/12345',
+      topic: 'Booking booking-1',
+      startTime: '2026-08-14T10:00:00.000Z',
+      durationMins: 60,
+    });
+    await h.handler.execute({ bookingId: 'booking-1' });
+    expect(h.zoomApi.createMeeting).toHaveBeenCalledTimes(1);
+    expect(h.booking().zoomCreatePhase).toBe('COMPLETED');
+  });
+
+  it('releases a BEFORE_CALL lease when OAuth fails so a later retry remains safe', async () => {
+    const h = buildHarness();
+    h.zoomApi.getAccessToken.mockRejectedValueOnce(new Error('oauth down'));
+    await expect(h.handler.execute({ bookingId: 'booking-1' })).rejects.toThrow('oauth down');
+    expect(h.zoomApi.createMeeting).not.toHaveBeenCalled();
+    expect(h.booking()).toEqual(expect.objectContaining({
+      zoomCreatePhase: 'BEFORE_CALL', zoomCreateLeaseOwner: null,
     }));
   });
 });

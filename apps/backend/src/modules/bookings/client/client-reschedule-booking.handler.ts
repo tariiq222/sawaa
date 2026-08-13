@@ -148,11 +148,45 @@ export class ClientRescheduleBookingHandler {
       });
       if (conflict) throw new ConflictException('Employee already has a booking in the new time slot');
 
+      const providerLeaseGuards: Record<string, unknown>[] = [];
+      if (booking.zoomMeetingId) {
+        providerLeaseGuards.push({
+          OR: [
+            { zoomSyncLeaseOwner: null },
+            { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+          ],
+        });
+      }
+      if (booking.deliveryType === 'ONLINE') {
+        providerLeaseGuards.push({
+          OR: [
+            { zoomCreateLeaseOwner: null },
+            { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+          ],
+        });
+      }
+
       const updated = await updateBookingAtomically(tx, {
         bookingId: cmd.bookingId,
         currentStatus: booking.status,
         actionLabel: 'rescheduled',
-        data: { scheduledAt: newScheduledAt, endsAt: newEndsAt, durationMins },
+        data: {
+          scheduledAt: newScheduledAt,
+          endsAt: newEndsAt,
+          durationMins,
+          ...(booking.zoomMeetingId
+            ? { zoomSyncRevision: (booking.zoomSyncRevision ?? 0) + 1 }
+            : {}),
+        },
+        ...(providerLeaseGuards.length > 0
+          ? {
+              // Create and reschedule provider workers both own booking-scoped
+              // leases. A new desired time lands only after every relevant
+              // lease is released/expired, so an older provider call cannot
+              // race the newly committed schedule.
+              extraWhere: { AND: providerLeaseGuards },
+            }
+          : {}),
       });
       await tx.bookingStatusLog.create({
         data: {
@@ -176,6 +210,7 @@ export class ClientRescheduleBookingHandler {
       });
 
       if (booking.zoomMeetingId) {
+        const revision = (booking.zoomSyncRevision ?? 0) + 1;
         const sourceActionId = cmd.sourceActionId ?? zoomSyncEventId;
         await tx.bookingZoomSync.create({
           data: {
@@ -187,6 +222,7 @@ export class ClientRescheduleBookingHandler {
             desiredTopic: `Booking ${booking.id}`,
             desiredStartAt: newScheduledAt,
             desiredDurationMins: durationMins,
+            revision,
           },
         });
         const event = new BookingZoomRescheduleRequestedEvent({
@@ -194,6 +230,7 @@ export class ClientRescheduleBookingHandler {
           syncId: zoomSyncEventId,
           bookingId: booking.id,
           zoomMeetingId: booking.zoomMeetingId,
+          revision,
         }, zoomSyncEventId);
         await tx.outboxEvent.create({
           data: {

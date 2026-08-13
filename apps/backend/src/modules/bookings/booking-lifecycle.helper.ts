@@ -50,6 +50,7 @@ export async function updateBookingAtomically(
     currentStatus: BookingStatus;
     actionLabel: string;
     data: Prisma.BookingUpdateManyMutationInput;
+    extraWhere?: Prisma.BookingWhereInput;
   },
 ) {
   if (typeof tx.booking.updateMany !== 'function') {
@@ -60,7 +61,7 @@ export async function updateBookingAtomically(
   }
 
   const result = await tx.booking.updateMany({
-    where: { id: input.bookingId, status: input.currentStatus },
+    where: { id: input.bookingId, status: input.currentStatus, ...input.extraWhere },
     data: input.data,
   });
   if (result.count !== 1) {

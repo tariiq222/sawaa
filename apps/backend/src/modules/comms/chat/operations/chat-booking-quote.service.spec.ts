@@ -183,4 +183,16 @@ describe('ChatBookingQuoteService', () => {
       clientId: 'client-1', bookingId: 'booking-1', newScheduledAt: START.toISOString(),
     })).rejects.toThrow(BadRequestException);
   });
+
+  it('rejects cancellation preparation for an elapsed appointment', async () => {
+    const { service, db } = buildHarness();
+    db.booking.findUnique.mockResolvedValue({
+      id: 'booking-1', clientId: 'client-1', status: BookingStatus.CONFIRMED,
+      isHistoricalImport: false, scheduledAt: new Date('2026-08-13T08:59:59.999Z'),
+      bookingType: 'INDIVIDUAL', durationMins: 60, deliveryType: DeliveryType.IN_PERSON,
+    });
+
+    await expect(service.quoteCancellation({ clientId: 'client-1', bookingId: 'booking-1' }))
+      .rejects.toThrow('Only future appointments');
+  });
 });

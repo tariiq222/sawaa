@@ -287,6 +287,9 @@ export class ChatBookingQuoteService {
     if (!booking) throw new NotFoundException('Booking not found');
     if (booking.clientId !== input.clientId) throw new ForbiddenException('You do not own this booking');
     assertBookingIsMutable(booking);
+    if (booking.scheduledAt <= new Date()) {
+      throw new BadRequestException('Only future appointments can be cancelled in chat');
+    }
     if (booking.bookingType === BookingType.GROUP) {
       throw new ForbiddenException('Program enrollments can only be cancelled by staff');
     }
