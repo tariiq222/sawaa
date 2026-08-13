@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
+import { isProductionChatGuestTokenSecretPlaceholder } from './config/guest-chat-token-secret.policy';
 import { ConfigService } from '@nestjs/config';
 import { LoggingInterceptor, AuditInterceptor, RequestContextInterceptor } from './common/interceptors';
 import { PrismaService } from './infrastructure/database';
@@ -142,9 +143,13 @@ async function bootstrap(): Promise<void> {
       'SUPER_ADMIN_PASSWORD',
     ]) {
       const v = config.get<string>(key);
-      const isGuestTokenFixture =
-        key === 'CHAT_GUEST_TOKEN_SECRET' && /^(?:ci|test)-/i.test(v ?? '');
-      if (!v || isGuestTokenFixture || bannedPatterns.some((p) => p.test(v))) {
+      const isGuestTokenSecretPlaceholder =
+        key === 'CHAT_GUEST_TOKEN_SECRET' &&
+        isProductionChatGuestTokenSecretPlaceholder(v);
+      const isOtherSecretPlaceholder =
+        key !== 'CHAT_GUEST_TOKEN_SECRET' &&
+        bannedPatterns.some((pattern) => pattern.test(v ?? ''));
+      if (!v || isGuestTokenSecretPlaceholder || isOtherSecretPlaceholder) {
         throw new Error(
           `Refusing to boot: ${key} is missing or set to a known dev placeholder`,
         );

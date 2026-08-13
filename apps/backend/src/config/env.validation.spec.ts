@@ -1,4 +1,8 @@
 import { envValidationSchema } from './env.validation';
+import {
+  isProductionChatGuestTokenSecretPlaceholder,
+  NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES,
+} from './guest-chat-token-secret.policy';
 
 // Non-zero 32-byte key, base64 — `Buffer.alloc(32)` would be all-zero, which
 // the env validator (P0-14) rejects in production as trivially decryptable.
@@ -130,26 +134,53 @@ describe('envValidationSchema', () => {
     expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
   });
 
-  it.each([
-    'ci-chat-guest-token-secret-32chars-long',
-    'test-chat-guest-token-secret-for-e2e-only',
-  ])('rejects the non-production guest token fixture %s in production', (fixture) => {
-    const result = envValidationSchema.validate(
-      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: fixture },
-      { abortEarly: false },
-    );
-    expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
-  });
+  it.each(NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES)(
+    'rejects the non-production guest token fixture %s in production',
+    (fixture) => {
+      const result = envValidationSchema.validate(
+        { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: fixture },
+        { abortEarly: false },
+      );
+      expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+    },
+  );
 
-  it.each([
-    'ci-chat-guest-token-secret-32chars-long',
-    'test-chat-guest-token-secret-for-e2e-only',
-  ])('allows the non-production guest token fixture %s outside production', (fixture) => {
+  it.each(NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES)(
+    'allows the non-production guest token fixture %s outside production',
+    (fixture) => {
+      const result = envValidationSchema.validate(
+        buildDevEnv({ CHAT_GUEST_TOKEN_SECRET: fixture }),
+        { abortEarly: false },
+      );
+      expect(result.error).toBeUndefined();
+    },
+  );
+
+  it('allows a strong guest token secret that starts with testing in production', () => {
     const result = envValidationSchema.validate(
-      buildDevEnv({ CHAT_GUEST_TOKEN_SECRET: fixture }),
+      {
+        ...baseValidEnv,
+        CHAT_GUEST_TOKEN_SECRET: 'testing-is-a-valid-strong-guest-token-secret-32chars',
+      },
       { abortEarly: false },
     );
     expect(result.error).toBeUndefined();
+  });
+
+  it.each([
+    ...NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES,
+    'change-me-chat-guest-token-secret-123456',
+    'REPLACE_ME-chat-guest-token-secret-123456',
+  ])('identifies %s as a production guest token placeholder', (secret) => {
+    expect(isProductionChatGuestTokenSecretPlaceholder(secret)).toBe(true);
+  });
+
+  it('does not identify a strong testing-prefixed secret as a placeholder', () => {
+    expect(
+      isProductionChatGuestTokenSecretPlaceholder(
+        'testing-is-a-valid-strong-guest-token-secret-32chars',
+      ),
+    ).toBe(false);
   });
 
   it('allows production to boot when the optional WhatsApp integration is not configured', () => {
