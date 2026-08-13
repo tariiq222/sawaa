@@ -1,9 +1,16 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BookingStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import type { BookingZoomRescheduleRequestedPayload } from '../events/booking-zoom-reschedule-requested.event';
+
+const ZOOM_SYNC_ELIGIBLE_STATUSES: BookingStatus[] = [
+  BookingStatus.PENDING,
+  BookingStatus.CONFIRMED,
+  BookingStatus.DEPOSIT_PAID,
+];
 
 @Injectable()
 export class BookingZoomRescheduleHandler {
@@ -46,6 +53,7 @@ export class BookingZoomRescheduleHandler {
         zoomSyncRevision: true,
         scheduledAt: true,
         durationMins: true,
+        status: true,
       },
     });
     if (!latest) throw new NotFoundException('Booking for Zoom synchronization not found');
@@ -61,6 +69,7 @@ export class BookingZoomRescheduleHandler {
     if (
       latest.zoomMeetingId !== sync.zoomMeetingId
       || latest.zoomSyncRevision !== sync.revision
+      || !ZOOM_SYNC_ELIGIBLE_STATUSES.includes(latest.status)
       || !matchesLegacyDesiredState
     ) {
       await this.markSuperseded(sync.id);
@@ -74,6 +83,7 @@ export class BookingZoomRescheduleHandler {
         id: sync.bookingId,
         zoomMeetingId: sync.zoomMeetingId,
         zoomSyncRevision: sync.revision,
+        status: { in: ZOOM_SYNC_ELIGIBLE_STATUSES },
         OR: [
           { zoomSyncLeaseOwner: null },
           { zoomSyncLeaseExpiresAt: null },
@@ -138,6 +148,14 @@ export class BookingZoomRescheduleHandler {
           }
         });
 
+        // Cancellation/status transition is lifecycle-fenced by this lease in
+        // current writers, but older writes can race. Re-check it before the
+        // terminal sync state so a queued post-cancel event never succeeds.
+        if (!await this.isCurrentRevision(sync.bookingId, sync.zoomMeetingId, sync.revision, leaseOwner)) {
+          await this.markSuperseded(sync.id);
+          return;
+        }
+
         await this.prisma.bookingZoomSync.updateMany({
           where: { id: sync.id, revision: sync.revision, status: { notIn: ['COMPLETED', 'SUPERSEDED'] } },
           data: {
@@ -197,13 +215,15 @@ export class BookingZoomRescheduleHandler {
         zoomSyncRevision: true,
         zoomSyncLeaseOwner: true,
         zoomSyncLeaseExpiresAt: true,
+        status: true,
       },
     });
     return Boolean(
       booking
       && booking.zoomMeetingId === zoomMeetingId
       && booking.zoomSyncRevision === revision
-      && booking.zoomSyncLeaseOwner === leaseOwner,
+      && booking.zoomSyncLeaseOwner === leaseOwner
+      && ZOOM_SYNC_ELIGIBLE_STATUSES.includes(booking.status),
     );
   }
 

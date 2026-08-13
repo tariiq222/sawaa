@@ -1,4 +1,5 @@
 import { BookingZoomRescheduleHandler } from './booking-zoom-reschedule.handler';
+import { BookingStatus } from '@prisma/client';
 
 const envelope = {
   eventId: '11111111-1111-4111-8111-111111111111',
@@ -30,6 +31,7 @@ const desired = {
 function setup(row = desired) {
   let bookingState = {
     id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: row.revision,
+    status: BookingStatus.CONFIRMED,
     scheduledAt: row.desiredStartAt, durationMins: row.desiredDurationMins,
     zoomSyncLeaseOwner: null as string | null, zoomSyncLeaseExpiresAt: null as Date | null,
   };
@@ -96,6 +98,22 @@ describe('BookingZoomRescheduleHandler', () => {
     expect(zoom.updateMeeting).toHaveBeenCalledTimes(1);
     expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ revision: 0 }),
+    }));
+  });
+
+  it('supersedes a queued reschedule event after cancellation without calling Zoom', async () => {
+    const { handler, zoom, prisma } = setup();
+    prisma.booking.findUnique.mockResolvedValue({
+      id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: 1,
+      scheduledAt: desired.desiredStartAt, durationMins: desired.desiredDurationMins,
+      status: BookingStatus.CANCELLED,
+    });
+    await handler.handle(envelope);
+    expect(zoom.getMeeting).not.toHaveBeenCalled();
+    expect(zoom.updateMeeting).not.toHaveBeenCalled();
+    expect(prisma.bookingZoomSync.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: desired.id }),
+      data: expect.objectContaining({ status: 'SUPERSEDED' }),
     }));
   });
 
@@ -263,6 +281,7 @@ describe('BookingZoomRescheduleHandler', () => {
     prisma.booking.findUnique.mockImplementation(async () => ({
       id: 'booking-1', zoomMeetingId: 'zoom-1', zoomSyncRevision: currentRevision,
       zoomSyncLeaseOwner: leaseOwner, zoomSyncLeaseExpiresAt: null,
+      status: BookingStatus.CONFIRMED,
     }));
     prisma.booking.updateMany.mockImplementation(async ({ where, data }: any) => {
       if (typeof data.zoomSyncLeaseOwner === 'string') {
