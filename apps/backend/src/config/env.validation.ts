@@ -86,7 +86,7 @@ export const envValidationSchema = Joi.object({
   CHAT_GUEST_TOKEN_SECRET: Joi.string().min(32).required(),
   // Maximum text length accepted from web chat callers. Keep this independent
   // from WhatsApp's provider-specific outbound limit.
-  CHAT_MAX_MESSAGE_LENGTH: Joi.number().integer().min(1).max(10_000).default(4000),
+  CHAT_MAX_MESSAGE_LENGTH: Joi.number().integer().min(1).max(4000).default(4000),
 
   // License Server (Platform BC) — optional until Phase 3
   LICENSE_SERVER_URL: Joi.string().uri().allow('').optional(),

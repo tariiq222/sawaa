@@ -7,7 +7,7 @@ describe('toChatMessageResponse', () => {
       id: 'message-1',
       conversationId: 'conversation-1',
       senderType: MessageSenderType.AI,
-      senderId: null,
+      senderId: 'staff-internal-id',
       body: 'كيف يمكنني مساعدتك؟',
       kind: 'TEXT',
       clientMessageId: 'client-message-1',
@@ -25,11 +25,11 @@ describe('toChatMessageResponse', () => {
       id: 'message-1',
       conversationId: 'conversation-1',
       senderType: MessageSenderType.AI,
-      senderId: null,
       body: 'كيف يمكنني مساعدتك؟',
       kind: 'TEXT',
       clientMessageId: 'client-message-1',
       createdAt: new Date('2026-08-13T10:00:00.000Z'),
     });
+    expect(response).not.toHaveProperty('senderId');
   });
 });

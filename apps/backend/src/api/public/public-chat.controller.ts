@@ -8,8 +8,8 @@ import { CreateGuestConversationDto } from '../../modules/comms/chat/guest/creat
 import { CreateGuestConversationHandler } from '../../modules/comms/chat/guest/create-conversation.handler';
 import { CHAT_GUEST_COOKIE_NAME, GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat-token.service';
 import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/get-current-conversation.handler';
-import { ListMessagesDto } from '../../modules/comms/chat/list-messages.dto';
 import { toChatMessageResponse } from '../../modules/comms/chat/messages/chat-message.mapper';
+import { ListChatMessagesDto } from '../../modules/comms/chat/messages/list-chat-messages.dto';
 import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
 import { SendChatMessageDto } from '../../modules/comms/chat/messages/send-chat-message.dto';
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
@@ -79,7 +79,7 @@ export class PublicChatController {
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
   listMessagesForGuest(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
-    @Query() dto: ListMessagesDto,
+    @Query() dto: ListChatMessagesDto,
     @Req() request: CookieRequest,
   ) {
     const guestToken = this.requireGuestToken(request);

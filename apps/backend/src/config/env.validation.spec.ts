@@ -110,6 +110,20 @@ describe('envValidationSchema', () => {
     expect(result.error).toBeUndefined();
   });
 
+  it('accepts CHAT_MAX_MESSAGE_LENGTH=4000 and rejects 4001', () => {
+    const accepted = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_MAX_MESSAGE_LENGTH: '4000' },
+      { abortEarly: false },
+    );
+    const rejected = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_MAX_MESSAGE_LENGTH: '4001' },
+      { abortEarly: false },
+    );
+
+    expect(accepted.error).toBeUndefined();
+    expect(rejected.error?.details.some((detail) => detail.path.includes('CHAT_MAX_MESSAGE_LENGTH'))).toBe(true);
+  });
+
   it('rejects a missing CHAT_GUEST_TOKEN_SECRET at startup', () => {
     const result = envValidationSchema.validate(
       { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: undefined },

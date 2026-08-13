@@ -63,6 +63,22 @@ describe('SendChatMessageHandler', () => {
     expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
   });
 
+  it('accepts 4000 characters and rejects 4001 when CHAT_MAX_MESSAGE_LENGTH is 4000', async () => {
+    handler = new SendChatMessageHandler(
+      prisma as unknown as PrismaService,
+      access as unknown as ChatAccessService,
+      { getOrThrow: jest.fn().mockReturnValue(4000) } as unknown as ConfigService,
+      rlsTransaction as unknown as RlsTransactionService,
+    );
+
+    await expect(handler.execute({
+      audience: 'guest', conversationId: guestConversation.id, guestToken: 'guest-token', body: 'a'.repeat(4000), clientMessageId: 'max-length',
+    })).resolves.toEqual({ id: 'message-1' });
+    await expect(handler.execute({
+      audience: 'guest', conversationId: guestConversation.id, guestToken: 'guest-token', body: 'a'.repeat(4001), clientMessageId: 'too-long',
+    })).rejects.toThrow(BadRequestException);
+  });
+
   it('derives a VISITOR sender from guest access and updates message time and staff unread count in one transaction', async () => {
     const result = await handler.execute({
       audience: 'guest', conversationId: guestConversation.id, guestToken: 'guest-token', body: '  مرحبا  ', clientMessageId: 'm-1',

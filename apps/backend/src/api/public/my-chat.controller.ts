@@ -9,8 +9,8 @@ import { ClaimConversationHandler } from '../../modules/comms/chat/guest/claim-c
 import { ClaimGuestConversationDto } from '../../modules/comms/chat/guest/claim-guest-conversation.dto';
 import { CHAT_GUEST_COOKIE_NAME, GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat-token.service';
 import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/get-current-conversation.handler';
-import { ListMessagesDto } from '../../modules/comms/chat/list-messages.dto';
 import { toChatMessageResponse } from '../../modules/comms/chat/messages/chat-message.mapper';
+import { ListChatMessagesDto } from '../../modules/comms/chat/messages/list-chat-messages.dto';
 import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
 import { SendChatMessageDto } from '../../modules/comms/chat/messages/send-chat-message.dto';
 import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
@@ -86,7 +86,7 @@ export class MyChatController {
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
   listMessagesForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
-    @Query() dto: ListMessagesDto,
+    @Query() dto: ListChatMessagesDto,
     @ClientSession() session: { id: string },
   ) {
     return this.listMessages.execute({

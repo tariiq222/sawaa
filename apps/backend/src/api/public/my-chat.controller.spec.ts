@@ -91,7 +91,7 @@ describe('MyChatController (e2e)', () => {
   });
 
   it('sends and lists client messages using ClientSessionGuard identity rather than body identity', async () => {
-    send.execute.mockResolvedValue({ id: 'message-1', senderType: 'CLIENT', body: 'مرحبا' });
+    send.execute.mockResolvedValue({ id: 'message-1', senderType: 'CLIENT', senderId: 'client-a', body: 'مرحبا' });
     list.execute.mockResolvedValue({ data: [], meta: { limit: 20, hasMore: false, nextCursor: null } });
 
     await request(app.getHttpServer())

@@ -4,7 +4,6 @@ export interface ChatMessageResponse {
   id: string;
   conversationId: string;
   senderType: MessageSenderType;
-  senderId: string | null;
   body: string;
   kind: ChatMessageKind;
   clientMessageId: string | null;
@@ -16,7 +15,6 @@ export function toChatMessageResponse(message: CommsChatMessage): ChatMessageRes
     id: message.id,
     conversationId: message.conversationId,
     senderType: message.senderType,
-    senderId: message.senderId,
     body: message.body,
     kind: message.kind,
     clientMessageId: message.clientMessageId,
