@@ -24,6 +24,7 @@ export type ConversationMessageKind =
 export interface Conversation {
   id: string
   clientId: string | null
+  isAiChat: boolean
   status: ConversationStatus
   guestName: string | null
   guestPhone: string | null
@@ -70,8 +71,6 @@ export interface ConversationFilters {
   unreadOnly?: boolean
   assigned?: ConversationAssignmentFilter
   search?: string
-  from?: string
-  to?: string
   cursor?: string
   limit?: number
 }
@@ -89,4 +88,9 @@ export interface ReplyConversationPayload {
 export interface MarkConversationReadPayload {
   throughMessageId?: string
   throughSequence?: string
+}
+
+export interface MarkConversationReadResponse {
+  markedReadCount: number
+  readAt: string
 }

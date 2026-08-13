@@ -1,6 +1,6 @@
 "use client"
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import {
   fetchConversation,
   fetchConversationMessages,
@@ -16,12 +16,13 @@ import type {
 export const CONVERSATION_POLL_INTERVAL = 7_500
 
 export function useConversations(filters: ConversationFilters = {}) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: queryKeys.conversations.list(filters),
-    queryFn: () => fetchConversations(filters),
+    queryFn: ({ pageParam }) => fetchConversations(pageParam ? { ...filters, cursor: pageParam } : filters),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.meta.hasMore ? lastPage.meta.nextCursor : undefined,
     staleTime: 5_000,
     refetchInterval: CONVERSATION_POLL_INTERVAL,
-    placeholderData: keepPreviousData,
   })
 }
 
@@ -39,9 +40,14 @@ export function useConversationMessages(
   conversationId: string | null,
   filters: ConversationMessageFilters = { limit: 100 },
 ) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: queryKeys.conversations.messages(conversationId ?? "", filters),
-    queryFn: () => fetchConversationMessages(conversationId!, filters),
+    queryFn: ({ pageParam }) => fetchConversationMessages(
+      conversationId!,
+      pageParam ? { ...filters, cursor: pageParam } : filters,
+    ),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.meta.hasMore ? lastPage.meta.nextCursor : undefined,
     enabled: Boolean(conversationId),
     staleTime: 5_000,
     refetchInterval: CONVERSATION_POLL_INTERVAL,

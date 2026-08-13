@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+const route = vi.hoisted(() => ({ pathname: "/clients" }))
+
 vi.mock("@/components/locale-provider", () => ({
   useLocale: () => ({
     locale: "ar",
@@ -20,13 +22,13 @@ vi.mock("@/components/locale-provider", () => ({
 }))
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/clients",
+  usePathname: () => route.pathname,
 }))
 
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 
 describe("Breadcrumbs", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => { vi.clearAllMocks(); route.pathname = "/clients" })
 
   it("renders with custom items", () => {
     render(
@@ -52,6 +54,12 @@ describe("Breadcrumbs", () => {
     render(<Breadcrumbs />)
     expect(screen.getByText("الرئيسية")).toBeInTheDocument()
     expect(screen.getByText("المرضى")).toBeInTheDocument()
+  })
+
+  it("maps the conversations route to its navigation translation", () => {
+    route.pathname = "/conversations"
+    render(<Breadcrumbs />)
+    expect(screen.getByText("nav.conversations")).toBeInTheDocument()
   })
 
   it("renders nav element with aria-label", () => {

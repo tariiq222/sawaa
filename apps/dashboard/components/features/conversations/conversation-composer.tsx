@@ -8,17 +8,16 @@ import { MessageOutgoing02Icon } from "@hugeicons/core-free-icons"
 interface ConversationComposerProps {
   isPending: boolean
   t: (key: string) => string
-  onSend: (body: string) => void
+  onSend: (body: string) => Promise<boolean>
 }
 
 export function ConversationComposer({ isPending, t, onSend }: ConversationComposerProps) {
   const [body, setBody] = useState("")
 
-  const submit = () => {
+  const submit = async () => {
     const trimmed = body.trim()
     if (!trimmed || isPending) return
-    onSend(trimmed)
-    setBody("")
+    if (await onSend(trimmed)) setBody("")
   }
 
   return (
@@ -38,11 +37,11 @@ export function ConversationComposer({ isPending, t, onSend }: ConversationCompo
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault()
-              submit()
+              void submit()
             }
           }}
         />
-        <Button type="button" className="shrink-0" disabled={!body.trim() || isPending} onClick={submit}>
+        <Button type="button" className="shrink-0" disabled={!body.trim() || isPending} onClick={() => void submit()}>
           <HugeiconsIcon icon={MessageOutgoing02Icon} size={16} aria-hidden="true" />
           {t("conversations.composer.send")}
         </Button>

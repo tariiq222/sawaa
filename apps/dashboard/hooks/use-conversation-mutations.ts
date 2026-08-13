@@ -8,6 +8,7 @@ import {
   markConversationRead,
   releaseConversation,
   replyToConversation,
+  isConversationClaimConflict,
 } from "@/lib/api/conversations"
 import type { MarkConversationReadPayload } from "@/lib/types/conversations"
 import { queryKeys } from "@/lib/query-keys"
@@ -25,6 +26,9 @@ export function useConversationMutations() {
   const claim = useMutation({
     mutationFn: ({ conversationId }: { conversationId: string }) => claimConversation(conversationId),
     onSuccess: invalidate,
+    onError: (error) => {
+      if (isConversationClaimConflict(error)) void invalidate()
+    },
   })
   const reply = useMutation({
     mutationFn: ({ conversationId, body }: { conversationId: string; body: string }) =>

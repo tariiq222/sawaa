@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 export const STAFF_CONVERSATION_SELECT = {
   id: true,
   clientId: true,
+  isAiChat: true,
   status: true,
   guestName: true,
   guestPhone: true,
@@ -40,6 +41,7 @@ export function toStaffConversationResponse(value: StaffConversationResponse): S
   return {
     id: value.id,
     clientId: value.clientId,
+    isAiChat: value.isAiChat,
     status: value.status,
     guestName: value.guestName,
     guestPhone: value.guestPhone,

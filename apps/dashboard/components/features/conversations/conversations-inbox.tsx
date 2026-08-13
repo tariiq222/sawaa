@@ -28,27 +28,51 @@ export function ConversationsInbox() {
   const list = useConversations(filters)
   const mutations = useConversationMutations()
   const canManage = canDo("conversation", "manage")
+  const canUpdate = canDo("conversation", "update")
   const staff = useAssignableConversationStaff(canManage)
+  const markReadMutate = mutations.markRead.mutate
 
-  const listItems = list.data?.data ?? []
+  const listItems = list.data?.pages.flatMap((page) => page.data) ?? []
   const effectiveSelectedId = selectedId && listItems.some((item) => item.id === selectedId)
     ? selectedId
     : listItems[0]?.id ?? null
   const selectedDetail = useConversation(effectiveSelectedId)
   const selectedMessages = useConversationMessages(effectiveSelectedId)
-  const selected = selectedDetail.data ?? listItems.find((item) => item.id === effectiveSelectedId) ?? null
+  const selected = selectedDetail.data ?? null
+  const messageItems = useMemo(
+    () => selectedMessages.data?.pages.flatMap((page) => page.data) ?? [],
+    [selectedMessages.data?.pages],
+  )
   const latestOwnedMessage = useMemo(
-    () => selectedMessages.data?.data.find((message) => message.senderType === "CLIENT" || message.senderType === "VISITOR"),
-    [selectedMessages.data?.data],
+    () => messageItems.find((message) => message.senderType === "CLIENT" || message.senderType === "VISITOR"),
+    [messageItems],
   )
 
   useEffect(() => {
     if (!selected || selected.status !== "STAFF_ACTIVE" || selected.assignedStaffUserId !== user?.id || selected.staffUnreadCount < 1) return
     const marker = `${selected.id}:${latestOwnedMessage?.id ?? "all"}`
-    if (markedReadRef.current === marker || mutations.markRead.isPending) return
+    if (markedReadRef.current === marker) return
     markedReadRef.current = marker
-    mutations.markRead.mutate({ conversationId: selected.id, throughMessageId: latestOwnedMessage?.id })
-  }, [latestOwnedMessage?.id, mutations.markRead, selected, user?.id])
+    markReadMutate(
+      { conversationId: selected.id, throughMessageId: latestOwnedMessage?.id },
+      { onError: () => {
+        markedReadRef.current = null
+        setActionError(t("conversations.error.markRead"))
+      }, onSuccess: () => setActionError(null) },
+    )
+  }, [
+    latestOwnedMessage?.id,
+    markReadMutate,
+    selected,
+    selected?.assignedStaffUserId,
+    selected?.id,
+    selected?.staffUnreadCount,
+    selected?.status,
+    selected?.updatedAt,
+    selectedDetail.dataUpdatedAt,
+    t,
+    user?.id,
+  ])
 
   const pendingAction: ActionName | null = mutations.claim.isPending ? "claim"
     : mutations.reply.isPending ? "reply"
@@ -60,10 +84,12 @@ export function ConversationsInbox() {
     setActionError(null)
     try {
       await operation()
+      return true
     } catch (error) {
       setActionError(action === "claim" && isConversationClaimConflict(error)
         ? t("conversations.error.claimConflict")
         : t(`conversations.error.${action}`))
+      return false
     }
   }
 
@@ -79,18 +105,28 @@ export function ConversationsInbox() {
             filters={filters}
             isLoading={list.isLoading}
             error={list.error}
+            canManage={canManage}
+            hasNextPage={Boolean(list.hasNextPage)}
+            isFetchingNextPage={list.isFetchingNextPage}
             t={t}
             onFiltersChange={setFilters}
             onSelect={(id) => { setSelectedId(id); setActionError(null) }}
             onRetry={() => list.refetch()}
+            onLoadMore={() => void list.fetchNextPage()}
           />
           <ConversationDetail
             conversation={selected}
-            messages={selectedMessages.data?.data ?? []}
+            isDetailLoading={Boolean(effectiveSelectedId) && selectedDetail.isLoading}
+            detailError={selectedDetail.error}
+            messages={messageItems}
             isMessagesLoading={selectedMessages.isLoading}
             messagesError={selectedMessages.error}
+            hasOlderMessages={Boolean(selectedMessages.hasNextPage)}
+            isLoadingOlderMessages={selectedMessages.isFetchingNextPage}
+            onLoadOlderMessages={() => void selectedMessages.fetchNextPage()}
             currentUserId={user?.id}
             canManage={canManage}
+            canUpdate={canUpdate}
             staffUsers={staff.data ?? []}
             pendingAction={pendingAction}
             actionError={actionError}
@@ -101,7 +137,9 @@ export function ConversationsInbox() {
             }}
             onReply={(body) => {
               const id = requireSelected()
-              if (id) void run("reply", () => mutations.reply.mutateAsync({ conversationId: id, body }))
+              return id
+                ? run("reply", () => mutations.reply.mutateAsync({ conversationId: id, body }))
+                : Promise.resolve(false)
             }}
             onAssign={(targetStaffUserId) => {
               const id = requireSelected()

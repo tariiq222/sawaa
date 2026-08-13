@@ -11,7 +11,7 @@ const STATUSES: ConversationStatus[] = [
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
   OPEN: "bg-surface-muted text-muted-foreground",
-  WAITING_FOR_STAFF: "bg-warning/15 text-warning-foreground",
+  WAITING_FOR_STAFF: "bg-warning/15 text-warning",
   STAFF_ACTIVE: "bg-success/15 text-success",
   AI_ACTIVE: "bg-primary-ultra-light text-primary-dark",
   CLOSED: "bg-surface-muted text-muted-foreground",
@@ -23,10 +23,14 @@ interface ConversationListProps {
   filters: ConversationFilters
   isLoading: boolean
   error: Error | null
+  canManage: boolean
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
   t: (key: string) => string
   onFiltersChange: (filters: ConversationFilters) => void
   onSelect: (conversationId: string) => void
   onRetry: () => void
+  onLoadMore: () => void
 }
 
 function displayName(conversation: Conversation, t: (key: string) => string) {
@@ -70,6 +74,15 @@ export function ConversationList(props: ConversationListProps) {
             {t("conversations.filter.unread")}
           </FilterButton>
         </div>
+        {props.canManage && (
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("conversations.filter.assignment")}>
+            {(["all", "me", "unassigned"] as const).map((assigned) => (
+              <FilterButton key={assigned} active={(filters.assigned ?? "all") === assigned} onClick={() => update({ assigned })}>
+                {t(`conversations.filter.assignment.${assigned}`)}
+              </FilterButton>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-4 space-y-2">
@@ -117,6 +130,11 @@ export function ConversationList(props: ConversationListProps) {
             </button>
           )
         })}
+        {!isLoading && !error && props.hasNextPage && (
+          <Button variant="outline" className="w-full" disabled={props.isFetchingNextPage} onClick={props.onLoadMore}>
+            {t("conversations.loadMore")}
+          </Button>
+        )}
       </div>
     </aside>
   )

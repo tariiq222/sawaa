@@ -22,7 +22,7 @@ describe('staff conversation detail and messages', () => {
 
   it('returns safe detail and message projections without AI or metadata internals', async () => {
     const rawConversation = {
-      id: 'conv-1', clientId: null, status: ConversationStatus.STAFF_ACTIVE, guestName: 'سارة', guestPhone: '+966501234567',
+      id: 'conv-1', clientId: null, isAiChat: false, status: ConversationStatus.STAFF_ACTIVE, guestName: 'سارة', guestPhone: '+966501234567',
       language: 'ar', assignedStaffUserId: 'staff-a', handoffRequestedAt: null, staffClaimedAt: null, closedAt: null,
       staffUnreadCount: 1, clientUnreadCount: 0, lastMessageAt: null, createdAt: new Date(), updatedAt: new Date(),
       guestTokenHash: 'secret', assistantLeaseOwner: 'lease-secret',
@@ -43,7 +43,7 @@ describe('staff conversation detail and messages', () => {
     const detailResult = await detail.execute({ conversationId: 'conv-1', staffUserId: 'staff-a', staffRole: 'RECEPTIONIST' });
     const messageResult = await messages.execute({ conversationId: 'conv-1', staffUserId: 'staff-a', staffRole: 'RECEPTIONIST', limit: 20 });
 
-    expect(detailResult).toEqual(expect.objectContaining({ guestName: 'سارة', guestPhone: '+966501234567' }));
+    expect(detailResult).toEqual(expect.objectContaining({ guestName: 'سارة', guestPhone: '+966501234567', isAiChat: false }));
     expect(prisma.chatConversation.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'conv-1', OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] },
     }));

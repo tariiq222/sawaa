@@ -8,19 +8,23 @@
 - Claim HTTP 409 is preserved by the API and shown as a dedicated translated conflict state.
 - Replaced the WhatsApp sidebar entry with `nav.conversations`, `/conversations`, and `conversation:read`.
 - Did not reuse WhatsApp UI/API and did not modify backend guards or CASL.
-- Did not modify `apps/dashboard/lib/query-keys.ts` or `apps/dashboard/lib/translations.ts`.
+- The review round did not modify `apps/dashboard/lib/query-keys.ts` or `apps/dashboard/lib/translations.ts`; their previously requested registration was applied separately in `59d7957a`.
 
 ## Verification
 
-- Focused Vitest: 4 files, 27 tests passed.
+- Focused backend Jest: 4 files, 22 tests passed.
+- Focused dashboard Vitest: 6 files, 43 tests passed.
 - `pnpm --filter=dashboard i18n:verify`: passed.
 - `pnpm --filter=dashboard typecheck`: passed.
 - `pnpm --filter=dashboard lint`: passed with 11 pre-existing warnings and zero errors.
+- `git diff --check`: passed.
 - All new pages/components/hooks/API/types/translations are below their applicable 150/300/200/250/300 line limits.
 
-## Required central integration hunks
+## Historical central integration hunks (applied)
 
-Apply the following centrally after this commit. The translation hunk is required for the new page text to resolve at runtime. The query-key hunk plus hook migrations remove the temporary feature-local query-key factory.
+> Applied centrally in follow-up commit `59d7957a`; no additional central query-key or translation-assembly change is required by the review round below.
+
+The following hunks were applied in `59d7957a` and are retained here as integration history.
 
 ### `apps/dashboard/lib/query-keys.ts`
 
@@ -41,6 +45,18 @@ Apply the following centrally after this commit. The translation hunk is require
 +    staff: () => ["conversations", "assignable-staff"] as const,
 +  },
 ```
+
+## Review round
+
+- Added the existing safe `isAiChat` boolean to the staff conversation projection. Release is now offered only for confirmed AI conversations; legacy non-AI staff conversations never infer eligibility.
+- Claim conflicts invalidate the full conversation cache immediately on HTTP 409, causing active inbox/detail queries to refetch without waiting for polling.
+- Inbox and message queries now use cursor-aware infinite queries. Both surfaces expose load-more controls and preserve filters plus the 7.5-second polling interval.
+- Added explicit detail loading/error states; stale list summaries are no longer used to expose identity or actions while detail authorization is unresolved.
+- Added admin assignment filters, permission-aware update actions, admin close for AI-active conversations, and forbidden/error surfacing.
+- Mark-read uses the actual `{ markedReadCount, readAt }` response, clears its attempt marker on failure, surfaces the error, and retries on the next detail refresh.
+- Reply drafts are cleared only after a successful mutation. Failed replies preserve the text for retry.
+- Legacy `EMPLOYEE` messages render as outgoing staff messages, `/conversations` has a translated breadcrumb, and waiting status uses the existing `text-warning` token.
+- Runtime controller registration, OpenAPI regeneration, and dashboard E2E remain explicitly scoped to Task 12.
 
 ### `apps/dashboard/hooks/use-conversations.ts`
 

@@ -7,6 +7,7 @@ import type {
   ConversationMessageFilters,
   ConversationMessagesResponse,
   MarkConversationReadPayload,
+  MarkConversationReadResponse,
   ReplyConversationPayload,
 } from "@/lib/types/conversations"
 
@@ -59,8 +60,8 @@ export function closeConversation(conversationId: string): Promise<Conversation>
 export function markConversationRead(
   conversationId: string,
   payload: MarkConversationReadPayload = {},
-): Promise<Conversation> {
-  return api.post<Conversation>(endpoint(conversationId, "/read"), payload)
+): Promise<MarkConversationReadResponse> {
+  return api.post<MarkConversationReadResponse>(endpoint(conversationId, "/read"), payload)
 }
 
 export function isConversationClaimConflict(error: unknown): boolean {

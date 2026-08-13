@@ -9,6 +9,7 @@ describe('ListInboxHandler', () => {
         findMany: jest.fn().mockResolvedValue([{
           id: 'conv-1',
           clientId: null,
+          isAiChat: true,
           status: ConversationStatus.WAITING_FOR_STAFF,
           guestName: 'سارة',
           guestPhone: '+966501234567',
@@ -67,7 +68,7 @@ describe('ListInboxHandler', () => {
       ],
       take: 21,
     });
-    expect(result.data).toEqual([expect.objectContaining({ guestName: 'سارة', guestPhone: '+966501234567' })]);
+    expect(result.data).toEqual([expect.objectContaining({ guestName: 'سارة', guestPhone: '+966501234567', isAiChat: true })]);
     expect(JSON.stringify(result)).not.toMatch(/guestTokenHash|assistantLease|never-return/);
   });
 
