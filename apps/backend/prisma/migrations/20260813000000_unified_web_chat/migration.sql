@@ -58,11 +58,6 @@ ALTER TABLE "ChatConversation"
   ADD COLUMN "staffUnreadCount" INTEGER NOT NULL DEFAULT 0,
   ADD COLUMN "clientUnreadCount" INTEGER NOT NULL DEFAULT 0;
 
--- Closed conversations predate closedAt; retain their historical terminal time.
-UPDATE "ChatConversation"
-SET "closedAt" = "updatedAt"
-WHERE "status" = 'CLOSED' AND "closedAt" IS NULL;
-
 ALTER TABLE "CommsChatMessage"
   ADD COLUMN "kind" "ChatMessageKind" NOT NULL DEFAULT 'TEXT',
   ADD COLUMN "metadata" JSONB,
