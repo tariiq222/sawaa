@@ -167,6 +167,7 @@ export type {
   ChatOperationStatus,
   ChatConversationSummary,
   ChatConversationDetail,
+  ClientChatConversationDetail,
   ClientChatConversationSummary,
   ListClientChatConversationsQuery,
   ClientChatConversationPage,

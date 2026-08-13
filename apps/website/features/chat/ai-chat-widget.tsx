@@ -20,6 +20,7 @@ import {
   createGuestChatConversationApi,
   declineChatOperationApi,
   getCurrentClientChatConversationApi,
+  getClientChatConversationApi,
   getCurrentGuestChatConversationApi,
   listClientChatMessagesApi,
   listGuestChatMessagesApi,
@@ -38,7 +39,7 @@ import {
   readPendingChatResume,
   savePendingChatResume,
 } from './chat-resume';
-import type { ChatConversationDetail, ChatMessage, ChatOperation } from './chat.types';
+import type { ChatConversationSummary, ChatMessage, ChatOperation } from './chat.types';
 
 const MESSAGE_LIMIT = 50;
 
@@ -76,13 +77,14 @@ function AiChatWidgetSession({
   const closeRef = useRef<HTMLButtonElement>(null);
   const authenticated = authIdentity !== null;
   const requestGenerationRef = useRef(0);
-  const [conversation, setConversation] = useState<ChatConversationDetail | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [conversation, setConversation] = useState<ChatConversationSummary | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadMessages = useCallback(async (
-    current: ChatConversationDetail,
+    current: ChatConversationSummary,
     client: boolean,
     generation = requestGenerationRef.current,
     resumedOperations: ChatOperation[] | null = null,
@@ -102,37 +104,45 @@ function AiChatWidgetSession({
     requestGenerationRef.current = generation;
     setLoading(true);
     setError(null);
+    setConversation(null);
+    setMessages([]);
     const client = authenticated;
     try {
-      let current: ChatConversationDetail;
+      let current: ChatConversationSummary;
       let resumedOperations: ChatOperation[] | null = null;
-      const pendingResume = client ? readPendingChatResume() : null;
-      if (pendingResume) {
-        try {
-          const claimed = await claimGuestChatConversationApi(pendingResume);
-          current = claimed;
-          resumedOperations = claimed.resumedOperations ?? [];
-          clearPendingChatResume();
-        } catch {
-          if (generation === requestGenerationRef.current) setError(translate(locale, 'chat.error.claim'));
-          return;
-        }
+      const explicitConversationId = selectedConversationId;
+      if (explicitConversationId) {
+        if (!client) throw new Error('An account-selected conversation requires an authenticated client');
+        current = await getClientChatConversationApi(explicitConversationId);
       } else {
-        try {
-          current = client
-            ? await getCurrentClientChatConversationApi()
-            : await getCurrentGuestChatConversationApi();
-        } catch (currentError) {
-          const canBootstrap = currentError instanceof ApiError
-            && (currentError.status === 404 || (!client && currentError.status === 401));
-          if (!canBootstrap) throw currentError;
-          const guest = await createGuestChatConversationApi({ language: locale });
-          if (client) {
-            const claimed = await claimGuestChatConversationApi(guest.id);
+        const pendingResume = client ? readPendingChatResume() : null;
+        if (pendingResume) {
+          try {
+            const claimed = await claimGuestChatConversationApi(pendingResume);
             current = claimed;
             resumedOperations = claimed.resumedOperations ?? [];
-          } else {
-            current = guest;
+            clearPendingChatResume();
+          } catch {
+            if (generation === requestGenerationRef.current) setError(translate(locale, 'chat.error.claim'));
+            return;
+          }
+        } else {
+          try {
+            current = client
+              ? await getCurrentClientChatConversationApi()
+              : await getCurrentGuestChatConversationApi();
+          } catch (currentError) {
+            const canBootstrap = currentError instanceof ApiError
+              && (currentError.status === 404 || (!client && currentError.status === 401));
+            if (!canBootstrap) throw currentError;
+            const guest = await createGuestChatConversationApi({ language: locale });
+            if (client) {
+              const claimed = await claimGuestChatConversationApi(guest.id);
+              current = claimed;
+              resumedOperations = claimed.resumedOperations ?? [];
+            } else {
+              current = guest;
+            }
           }
         }
       }
@@ -145,7 +155,7 @@ function AiChatWidgetSession({
     } finally {
       if (generation === requestGenerationRef.current) setLoading(false);
     }
-  }, [authenticated, loadMessages, locale]);
+  }, [authenticated, loadMessages, locale, selectedConversationId]);
 
   useEffect(() => {
     const queryResume = typeof window !== 'undefined'
@@ -153,7 +163,10 @@ function AiChatWidgetSession({
     const fromLogin = consumeChatReopen() || queryResume;
     if (!fromLogin) return;
     if (queryResume) removeResumeQuery();
-    const timeout = window.setTimeout(() => setOpen(true), 0);
+    const timeout = window.setTimeout(() => {
+      setSelectedConversationId(null);
+      setOpen(true);
+    }, 0);
     return () => window.clearTimeout(timeout);
   }, [setOpen]);
 
@@ -167,7 +180,12 @@ function AiChatWidgetSession({
   }, [open, loadConversation]);
 
   useEffect(() => {
-    const openFromAccount = () => setOpen(true);
+    const openFromAccount = (event: Event) => {
+      const conversationId = (event as CustomEvent<{ conversationId?: unknown }>).detail?.conversationId;
+      if (typeof conversationId !== 'string' || conversationId.length === 0) return;
+      setSelectedConversationId(conversationId);
+      setOpen(true);
+    };
     window.addEventListener('sawaa:open-administrative-chat', openFromAccount);
     return () => window.removeEventListener('sawaa:open-administrative-chat', openFromAccount);
   }, [setOpen]);
@@ -185,6 +203,7 @@ function AiChatWidgetSession({
 
   function close() {
     setOpen(false);
+    setSelectedConversationId(null);
     window.setTimeout(() => launcherRef.current?.focus(), 0);
   }
 
@@ -332,7 +351,7 @@ function AiChatWidgetSession({
         type="button"
         aria-label={t('chat.launcher')}
         aria-expanded={open}
-        onClick={() => open ? close() : setOpen(true)}
+        onClick={() => open ? close() : (setSelectedConversationId(null), setOpen(true))}
         className={`grid size-14 place-items-center rounded-full bg-[var(--sw-secondary-700)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-lg)] transition-[transform,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:transform-none ${open ? 'pointer-events-none opacity-0 sm:pointer-events-auto sm:opacity-100' : ''}`}
       >
         {open ? <X size={22} aria-hidden="true" /> : <MessageCircle size={23} aria-hidden="true" />}

@@ -48,6 +48,11 @@ export interface ChatConversationDetail extends ChatConversationSummary {
   isAiChat: boolean
 }
 
+/** Safe detail returned only for an authenticated owner's selected conversation. */
+export interface ClientChatConversationDetail extends ChatConversationSummary {
+  isAiChat: boolean
+}
+
 /** A safe, client-owned conversation history item. It deliberately omits identities and internal metadata. */
 export interface ClientChatConversationSummary {
   id: string

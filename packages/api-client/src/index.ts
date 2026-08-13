@@ -33,6 +33,7 @@ export {
   createGuestChatConversation,
   getCurrentGuestChatConversation,
   getCurrentClientChatConversation,
+  getClientChatConversation,
   listClientChatConversations,
   claimGuestChatConversation,
   sendGuestChatMessage,

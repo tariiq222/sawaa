@@ -4265,6 +4265,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/me/chat/conversations/{conversationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one authenticated client-owned chat conversation */
+        get: operations["MyChatController_getConversationForClient_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/me/chat/conversations/{conversationId}/claim": {
         parameters: {
             query?: never;
@@ -5260,7 +5277,19 @@ export interface components {
             hasMore: boolean;
             limit: number;
             /** Format: uuid */
-            nextCursor?: Record<string, never> | null;
+            nextCursor?: string | null;
+        };
+        ClientChatConversationDetailDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            isAiChat: boolean;
+            language: string;
+            /** @enum {string} */
+            status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
+            /** Format: date-time */
+            updatedAt: string;
         };
         ClientChatConversationSummaryDto: {
             /** Format: date-time */
@@ -29544,6 +29573,74 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MyChatController_getConversationForClient_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Client conversation UUID */
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Safe detail for the authenticated client-owned conversation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientChatConversationDetailDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Conversation is not owned by the authenticated client or does not exist */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

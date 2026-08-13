@@ -4,14 +4,18 @@ import { ArrowLeft, ArrowRight, MessageCircle } from 'lucide-react';
 
 import { useLocale, useT } from '@/features/locale/locale-provider';
 import { ChatMessageList } from './chat-message-list';
-import type { ChatConversationStatus, ChatMessage, ChatOperation, ClientChatConversationSummary } from './chat.types';
+import type { ChatConversationStatus, ChatCursorMeta, ChatMessage, ChatOperation, ClientChatConversationSummary } from './chat.types';
 
 interface AccountConversationDetailProps {
   conversation: ClientChatConversationSummary;
   messages: ChatMessage[];
   isLoading: boolean;
+  isLoadingMore: boolean;
+  messageMeta: ChatCursorMeta | null;
   error: boolean;
   onBack: () => void;
+  onRetry: () => void;
+  onLoadMore: () => void;
   onContinue: () => void;
 }
 
@@ -56,21 +60,33 @@ export function AccountConversationDetail(props: AccountConversationDetailProps)
       </header>
 
       {props.error ? (
-        <p role="alert" className="p-5 text-sm font-semibold text-[var(--error)]">{t('account.conversations.loadError')}</p>
+        <div role="alert" className="p-5 text-sm font-semibold text-[var(--error)]">
+          <p>{t('account.conversations.loadError')}</p>
+          <button type="button" onClick={props.onRetry} className="mt-3 rounded-full px-3 py-2 text-sm font-bold text-[var(--sw-primary-700)] hover:bg-[var(--sw-primary-50)]">{t('account.retry')}</button>
+        </div>
       ) : (
-        <ChatMessageList
-          messages={props.messages}
-          isAuthenticated
-          isLoading={props.isLoading}
-          readOnly
-          onLoginRequired={() => undefined}
-          onAcknowledge={noOperation}
-          onConfirm={noOperation}
-          onDecline={noOperation}
-          onGuestHandoff={noAction}
-          onClientHandoff={noAction}
-          onRetryAssistant={noAction}
-        />
+        <>
+          {props.messageMeta?.hasMore && (
+            <div className="border-b border-[var(--sw-neutral-100)] px-4 py-2 text-center">
+              <button type="button" disabled={props.isLoadingMore} onClick={props.onLoadMore} className="rounded-full px-3 py-2 text-sm font-bold text-[var(--sw-primary-700)] hover:bg-[var(--sw-primary-50)] disabled:opacity-55">
+                {props.isLoadingMore ? t('common.loading') : t('account.conversations.loadOlder')}
+              </button>
+            </div>
+          )}
+          <ChatMessageList
+            messages={props.messages}
+            isAuthenticated
+            isLoading={props.isLoading}
+            readOnly
+            onLoginRequired={() => undefined}
+            onAcknowledge={noOperation}
+            onConfirm={noOperation}
+            onDecline={noOperation}
+            onGuestHandoff={noAction}
+            onClientHandoff={noAction}
+            onRetryAssistant={noAction}
+          />
+        </>
       )}
 
       {closed ? (

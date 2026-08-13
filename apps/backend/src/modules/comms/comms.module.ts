@@ -63,6 +63,7 @@ import { ClaimConversationHandler } from './chat/guest/claim-conversation.handle
 import { SendChatMessageHandler } from './chat/messages/send-chat-message.handler';
 import { ListChatMessagesHandler } from './chat/messages/list-chat-messages.handler';
 import { ListClientChatConversationsHandler } from './chat/messages/list-client-chat-conversations.handler';
+import { GetClientChatConversationHandler } from './chat/messages/get-client-chat-conversation.handler';
 import { AiModule } from '../ai/ai.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
@@ -147,6 +148,7 @@ const handlers = [
   SendChatMessageHandler,
   ListChatMessagesHandler,
   ListClientChatConversationsHandler,
+  GetClientChatConversationHandler,
   AdministrativeAssistantService,
   RetryAdministrativeMessageHandler,
   AdministrativeToolsService,

@@ -4,7 +4,7 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 export class ListClientChatConversationsDto {
-  @ApiPropertyOptional({ description: 'Cursor (conversation UUID) for keyset pagination', format: 'uuid' })
+  @ApiPropertyOptional({ type: String, description: 'Cursor (conversation UUID) for keyset pagination', format: 'uuid' })
   @IsOptional() @IsUUID() cursor?: string;
 
   @ApiPropertyOptional({ description: 'Number of conversations to return', example: 20, maximum: 100 })
@@ -26,9 +26,18 @@ export class ClientChatConversationSummaryDto {
   @ApiPropertyOptional({ type: ClientChatLastMessageDto, nullable: true }) lastMessage!: ClientChatLastMessageDto | null;
 }
 
+export class ClientChatConversationDetailDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() isAiChat!: boolean;
+  @ApiProperty({ enum: ConversationStatus }) status!: ConversationStatus;
+  @ApiProperty() language!: string;
+  @ApiProperty({ type: String, format: 'date-time' }) createdAt!: Date;
+  @ApiProperty({ type: String, format: 'date-time' }) updatedAt!: Date;
+}
+
 export class ClientChatConversationCursorMetaDto {
   @ApiProperty() limit!: number;
-  @ApiPropertyOptional({ format: 'uuid', nullable: true }) nextCursor!: string | null;
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) nextCursor!: string | null;
   @ApiProperty() hasMore!: boolean;
 }
 

@@ -1,10 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { Public } from '../../common/guards/jwt.guard';
-import { ApiStandardResponses } from '../../common/swagger';
+import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
 import { ClaimConversationHandler } from '../../modules/comms/chat/guest/claim-conversation.handler';
 import { ClaimGuestConversationDto } from '../../modules/comms/chat/guest/claim-guest-conversation.dto';
 import { CHAT_GUEST_COOKIE_NAME, GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat-token.service';
@@ -26,8 +26,9 @@ import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
 import { ChatMessageResponseDto, ClaimGuestConversationResponseDto } from '../../modules/comms/chat/messages/public-chat-response.dto';
-import { ListClientChatConversationsDto, ListClientChatConversationsResponseDto } from '../../modules/comms/chat/messages/list-client-chat-conversations.dto';
+import { ClientChatConversationDetailDto, ListClientChatConversationsDto, ListClientChatConversationsResponseDto } from '../../modules/comms/chat/messages/list-client-chat-conversations.dto';
 import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
+import { GetClientChatConversationHandler } from '../../modules/comms/chat/messages/get-client-chat-conversation.handler';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -47,6 +48,7 @@ export class MyChatController {
     private readonly sendMessage: SendChatMessageHandler,
     private readonly listMessages: ListChatMessagesHandler,
     private readonly listConversations: ListClientChatConversationsHandler,
+    private readonly getConversation: GetClientChatConversationHandler,
     private readonly requestHandoff: RequestHandoffHandler,
     private readonly acknowledgeOperation: AcknowledgeExistingBookingHandler,
     private readonly confirmOperation: ConfirmOperationHandler,
@@ -74,6 +76,18 @@ export class MyChatController {
   @ApiOkResponse({ description: 'Current conversation for the authenticated client' })
   current(@ClientSession() session: { id: string }) {
     return this.getCurrentConversation.execute({ clientId: session.id });
+  }
+
+  @Get('conversations/:conversationId')
+  @ApiOperation({ summary: 'Get one authenticated client-owned chat conversation' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiOkResponse({ type: ClientChatConversationDetailDto, description: 'Safe detail for the authenticated client-owned conversation' })
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'Conversation is not owned by the authenticated client or does not exist' })
+  getConversationForClient(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @ClientSession() session: { id: string },
+  ) {
+    return this.getConversation.execute({ clientId: session.id, conversationId });
   }
 
   @Post('conversations/:conversationId/claim')

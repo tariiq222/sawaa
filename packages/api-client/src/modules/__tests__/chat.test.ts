@@ -13,6 +13,7 @@ import {
   createGuestChatConversation,
   declineChatOperation,
   getCurrentClientChatConversation,
+  getClientChatConversation,
   getCurrentGuestChatConversation,
   listClientChatConversations,
   listClientChatMessages,
@@ -206,6 +207,7 @@ describe('chat routes and browser credentials', () => {
     await createGuestChatConversation({ guestName: 'سارة', language: 'ar' })
     await getCurrentGuestChatConversation()
     await getCurrentClientChatConversation()
+    await getClientChatConversation('conversation/selected')
     await listClientChatConversations({ cursor: 'conversation/1', limit: 5 })
     await claimGuestChatConversation('conversation/1')
     await sendGuestChatMessage('conversation/1', { body: 'مرحبا', clientMessageId: 'message-1' })
@@ -220,6 +222,7 @@ describe('chat routes and browser credentials', () => {
       'http://api.test/api/v1/public/chat/conversations',
       'http://api.test/api/v1/public/chat/conversations/current',
       'http://api.test/api/v1/public/me/chat/conversations/current',
+      'http://api.test/api/v1/public/me/chat/conversations/conversation%2Fselected',
       'http://api.test/api/v1/public/me/chat/conversations?cursor=conversation%2F1&limit=5',
       'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/claim',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/messages',

@@ -5,6 +5,7 @@ import {
   createGuestChatConversation,
   declineChatOperation,
   getCurrentClientChatConversation,
+  getClientChatConversation,
   getCurrentGuestChatConversation,
   listClientChatConversations,
   listClientChatMessages,
@@ -19,6 +20,7 @@ import {
 } from '@sawaa/api-client'
 import type {
   ChatConversationDetail,
+  ClientChatConversationDetail,
   ClientChatConversationPage,
   ChatMessage,
   ChatMessagePage,
@@ -34,6 +36,10 @@ import type {
 import { getApiBase } from '@/lib/api-base'
 
 let initialised = false
+
+export interface ChatReadRequestOptions {
+  signal?: AbortSignal;
+}
 
 function ensureInitialised(): void {
   if (initialised) return
@@ -58,11 +64,19 @@ export function getCurrentClientChatConversationApi(): Promise<ChatConversationD
   return getCurrentClientChatConversation()
 }
 
+export function getClientChatConversationApi(conversationId: string): Promise<ClientChatConversationDetail> {
+  ensureInitialised()
+  return getClientChatConversation(conversationId)
+}
+
 export function listClientChatConversationsApi(
   query: ListClientChatConversationsQuery = {},
+  requestOptions?: ChatReadRequestOptions,
 ): Promise<ClientChatConversationPage> {
   ensureInitialised()
-  return listClientChatConversations(query)
+  return requestOptions
+    ? listClientChatConversations(query, requestOptions)
+    : listClientChatConversations(query)
 }
 
 export function claimGuestChatConversationApi(
@@ -101,17 +115,23 @@ export function retryClientChatMessageApi(conversationId: string, messageId: str
 export function listGuestChatMessagesApi(
   conversationId: string,
   query: ListChatMessagesQuery = {},
+  requestOptions?: ChatReadRequestOptions,
 ): Promise<ChatMessagePage> {
   ensureInitialised()
-  return listGuestChatMessages(conversationId, query)
+  return requestOptions
+    ? listGuestChatMessages(conversationId, query, requestOptions)
+    : listGuestChatMessages(conversationId, query)
 }
 
 export function listClientChatMessagesApi(
   conversationId: string,
   query: ListChatMessagesQuery = {},
+  requestOptions?: ChatReadRequestOptions,
 ): Promise<ChatMessagePage> {
   ensureInitialised()
-  return listClientChatMessages(conversationId, query)
+  return requestOptions
+    ? listClientChatMessages(conversationId, query, requestOptions)
+    : listClientChatMessages(conversationId, query)
 }
 
 export function requestGuestChatHandoffApi(

@@ -16,6 +16,7 @@ import { DeclineOperationHandler } from '../../modules/comms/chat/operations/dec
 import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
+import { GetClientChatConversationHandler } from '../../modules/comms/chat/messages/get-client-chat-conversation.handler';
 
 describe('MyChatController (e2e)', () => {
   let app: INestApplication;
@@ -24,6 +25,7 @@ describe('MyChatController (e2e)', () => {
   const send = { execute: jest.fn() };
   const list = { execute: jest.fn() };
   const listConversations = { execute: jest.fn() };
+  const getConversation = { execute: jest.fn() };
   const handoff = { execute: jest.fn() };
   const acknowledge = { execute: jest.fn() };
   const confirm = { execute: jest.fn() };
@@ -40,6 +42,7 @@ describe('MyChatController (e2e)', () => {
         { provide: SendChatMessageHandler, useValue: send },
         { provide: ListChatMessagesHandler, useValue: list },
         { provide: ListClientChatConversationsHandler, useValue: listConversations },
+        { provide: GetClientChatConversationHandler, useValue: getConversation },
         { provide: RequestHandoffHandler, useValue: handoff },
         { provide: AcknowledgeExistingBookingHandler, useValue: acknowledge },
         { provide: ConfirmOperationHandler, useValue: confirm },
@@ -88,6 +91,17 @@ describe('MyChatController (e2e)', () => {
       .expect({ data: [], meta: { limit: 20, hasMore: false, nextCursor: null } });
 
     expect(listConversations.execute).toHaveBeenCalledWith({ clientId: 'client-a', limit: 20 });
+  });
+
+  it('gets only the exact guard-owned conversation without accepting browser identity', async () => {
+    getConversation.execute.mockResolvedValue({ id: '00000000-0000-4000-a000-000000000001', status: 'AI_ACTIVE' });
+    const url = '/public/me/chat/conversations/00000000-0000-4000-a000-000000000001';
+
+    await request(app.getHttpServer()).get(`${url}?clientId=client-b`).expect(200);
+    await request(app.getHttpServer()).get(url).expect(200).expect({ id: '00000000-0000-4000-a000-000000000001', status: 'AI_ACTIVE' });
+    expect(getConversation.execute).toHaveBeenCalledWith({
+      clientId: 'client-a', conversationId: '00000000-0000-4000-a000-000000000001',
+    });
   });
 
   it('refuses to claim when the guest cookie is absent even with a client session', async () => {

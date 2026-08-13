@@ -1,34 +1,47 @@
 'use client';
 
 import { MessageCircle, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLocale, useT } from '@/features/locale/locale-provider';
 import { listClientChatConversationsApi, listClientChatMessagesApi } from './chat.api';
 import { AccountConversationDetail } from './account-conversation-detail';
-import type { ChatMessage, ClientChatConversationSummary } from './chat.types';
+import type { ChatCursorMeta, ChatMessage, ClientChatConversationSummary } from './chat.types';
 
-const MESSAGE_LIMIT = 100;
+const CONVERSATION_LIMIT = 20;
+const MESSAGE_LIMIT = 50;
 
 export function AccountConversationsTab() {
   const t = useT();
   const locale = useLocale();
   const [conversations, setConversations] = useState<ClientChatConversationSummary[]>([]);
+  const [conversationMeta, setConversationMeta] = useState<ChatCursorMeta | null>(null);
   const [selected, setSelected] = useState<ClientChatConversationSummary | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageMeta, setMessageMeta] = useState<ChatCursorMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoadingMore, setDetailLoadingMore] = useState(false);
   const [error, setError] = useState(false);
   const [detailError, setDetailError] = useState(false);
+  const conversationAbortRef = useRef<AbortController | null>(null);
+  const detailAbortRef = useRef<AbortController | null>(null);
+  const detailGenerationRef = useRef(0);
 
   const loadConversations = useCallback(async () => {
     setLoading(true);
     setError(false);
+    let controller: AbortController | null = null;
     try {
-      const page = await listClientChatConversationsApi({ limit: 50 });
+      conversationAbortRef.current?.abort();
+      controller = new AbortController();
+      conversationAbortRef.current = controller;
+      const page = await listClientChatConversationsApi({ limit: CONVERSATION_LIMIT }, { signal: controller.signal });
       setConversations(page.data);
+      setConversationMeta(page.meta);
     } catch {
-      setError(true);
+      if (!controller?.signal.aborted) setError(true);
     } finally {
       setLoading(false);
     }
@@ -39,23 +52,60 @@ export function AccountConversationsTab() {
     return () => window.clearTimeout(timer);
   }, [loadConversations]);
 
+  const loadDetail = useCallback(async (conversation: ClientChatConversationSummary, cursor?: string) => {
+    detailAbortRef.current?.abort();
+    const controller = new AbortController();
+    detailAbortRef.current = controller;
+    const generation = detailGenerationRef.current + 1;
+    detailGenerationRef.current = generation;
+    if (cursor) setDetailLoadingMore(true);
+    else {
+      setDetailLoading(true);
+      setDetailError(false);
+      setMessages([]);
+      setMessageMeta(null);
+    }
+    try {
+      const page = await listClientChatMessagesApi(conversation.id, {
+        limit: MESSAGE_LIMIT,
+        ...(cursor ? { cursor } : {}),
+      }, { signal: controller.signal });
+      if (generation !== detailGenerationRef.current) return;
+      const ordered = [...page.data].reverse();
+      setMessages((current) => cursor ? [...ordered, ...current] : ordered);
+      setMessageMeta(page.meta);
+    } catch {
+      if (generation === detailGenerationRef.current && !controller.signal.aborted) setDetailError(true);
+    } finally {
+      if (generation === detailGenerationRef.current) {
+        setDetailLoading(false);
+        setDetailLoadingMore(false);
+      }
+    }
+  }, []);
+
   async function openConversation(conversation: ClientChatConversationSummary) {
     setSelected(conversation);
-    setMessages([]);
-    setDetailLoading(true);
-    setDetailError(false);
-    try {
-      const page = await listClientChatMessagesApi(conversation.id, { limit: MESSAGE_LIMIT });
-      setMessages([...page.data].reverse());
-    } catch {
-      setDetailError(true);
-    } finally {
-      setDetailLoading(false);
-    }
+    await loadDetail(conversation);
   }
 
   function continueInAssistant() {
-    window.dispatchEvent(new Event('sawaa:open-administrative-chat'));
+    if (!selected) return;
+    window.dispatchEvent(new CustomEvent('sawaa:open-administrative-chat', { detail: { conversationId: selected.id } }));
+  }
+
+  async function loadMoreConversations() {
+    if (!conversationMeta?.hasMore || !conversationMeta.nextCursor || loadingMoreConversations) return;
+    setLoadingMoreConversations(true);
+    try {
+      const page = await listClientChatConversationsApi({ limit: CONVERSATION_LIMIT, cursor: conversationMeta.nextCursor });
+      setConversations((current) => [...current, ...page.data.filter((next) => !current.some((existing) => existing.id === next.id))]);
+      setConversationMeta(page.meta);
+    } catch {
+      setError(true);
+    } finally {
+      setLoadingMoreConversations(false);
+    }
   }
 
   if (selected) {
@@ -64,8 +114,18 @@ export function AccountConversationsTab() {
         conversation={selected}
         messages={messages}
         isLoading={detailLoading}
+        isLoadingMore={detailLoadingMore}
+        messageMeta={messageMeta}
         error={detailError}
-        onBack={() => setSelected(null)}
+        onBack={() => {
+          detailAbortRef.current?.abort();
+          detailGenerationRef.current += 1;
+          setSelected(null);
+        }}
+        onRetry={() => void loadDetail(selected)}
+        onLoadMore={() => {
+          if (messageMeta?.nextCursor) void loadDetail(selected, messageMeta.nextCursor);
+        }}
         onContinue={continueInAssistant}
       />
     );
@@ -109,6 +169,13 @@ export function AccountConversationsTab() {
           </button>
         </li>
       ))}
+      {conversationMeta?.hasMore && (
+        <li className="pt-1 text-center">
+          <button type="button" disabled={loadingMoreConversations} onClick={() => void loadMoreConversations()} className="rounded-full px-4 py-2 text-sm font-bold text-[var(--sw-primary-700)] hover:bg-[var(--sw-primary-50)] disabled:opacity-55">
+            {loadingMoreConversations ? t('common.loading') : t('account.conversations.loadMore')}
+          </button>
+        </li>
+      )}
     </ul>
   );
 }

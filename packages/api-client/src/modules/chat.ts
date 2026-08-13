@@ -2,6 +2,7 @@ import { apiRequest, ensureCsrfToken, setApiRequestBaseUrl } from '../client'
 import type {
   ChatActionCardMessage,
   ChatConversationDetail,
+  ClientChatConversationDetail,
   ClientChatConversationPage,
   ChatHandoffOfferMetadata,
   ChatAssistantRecoveryMetadata,
@@ -40,11 +41,27 @@ export async function getCurrentClientChatConversation(): Promise<ChatConversati
   return toConversationDetail(result)
 }
 
+export async function getClientChatConversation(conversationId: string): Promise<ClientChatConversationDetail> {
+  const result = await chatRequest<ClientChatConversationDetail>(
+    `/public/me/chat/conversations/${encodeURIComponent(conversationId)}`,
+  )
+  return {
+    id: result.id,
+    isAiChat: result.isAiChat,
+    status: result.status,
+    language: result.language,
+    createdAt: result.createdAt,
+    updatedAt: result.updatedAt,
+  }
+}
+
 export async function listClientChatConversations(
   query: ListClientChatConversationsQuery = {},
+  requestOptions?: Pick<RequestInit, 'signal'>,
 ): Promise<ClientChatConversationPage> {
   const result = await chatRequest<ClientChatConversationPage>(
     `/public/me/chat/conversations${messageQuery(query)}`,
+    requestOptions,
   )
   return toClientChatConversationPage(result)
 }
@@ -109,9 +126,11 @@ export async function retryClientChatMessage(
 export async function listGuestChatMessages(
   conversationId: string,
   query: ListChatMessagesQuery = {},
+  requestOptions?: Pick<RequestInit, 'signal'>,
 ): Promise<ChatMessagePage> {
   const result = await chatRequest<ChatMessagePage>(
     `/public/chat/conversations/${encodeURIComponent(conversationId)}/messages${messageQuery(query)}`,
+    requestOptions,
   )
   return toChatMessagePage(result)
 }
@@ -119,9 +138,11 @@ export async function listGuestChatMessages(
 export async function listClientChatMessages(
   conversationId: string,
   query: ListChatMessagesQuery = {},
+  requestOptions?: Pick<RequestInit, 'signal'>,
 ): Promise<ChatMessagePage> {
   const result = await chatRequest<ChatMessagePage>(
     `/public/me/chat/conversations/${encodeURIComponent(conversationId)}/messages${messageQuery(query)}`,
+    requestOptions,
   )
   return toChatMessagePage(result)
 }
@@ -180,8 +201,8 @@ async function mutateOperation(
   return toChatOperation(result)
 }
 
-function chatRequest<T>(path: string): Promise<T> {
-  return apiRequest<T>(path, { credentials: 'include' })
+function chatRequest<T>(path: string, requestOptions: Pick<RequestInit, 'signal'> = {}): Promise<T> {
+  return apiRequest<T>(path, { ...requestOptions, credentials: 'include' })
 }
 
 async function chatMutation<T>(path: string, body: object): Promise<T> {

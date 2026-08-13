@@ -58,6 +58,45 @@ describe('ChatMessageList', () => {
     expect(document.querySelector('img')).toBeNull();
   });
 
+  it('distinguishes the client, administrative assistant, reception, system, and action outcomes', () => {
+    renderList([
+      { ...baseMessage, id: 'client', senderType: 'CLIENT', kind: 'TEXT', body: 'رسالة العميل' },
+      { ...baseMessage, id: 'assistant', senderType: 'AI', kind: 'TEXT', body: 'رد المساعد' },
+      { ...baseMessage, id: 'reception', senderType: 'EMPLOYEE', kind: 'TEXT', body: 'رد الاستقبال' },
+      { ...baseMessage, id: 'system', senderType: 'SYSTEM', kind: 'SYSTEM_EVENT', body: 'تحديث الحالة' },
+      {
+        ...baseMessage,
+        id: 'action',
+        senderType: 'AI',
+        kind: 'ACTION_CARD',
+        body: 'طلب إداري',
+        metadata: {
+          action: 'CHAT_OPERATION',
+          operation: {
+            id: 'operation-1', type: 'CREATE_BOOKING', status: 'AWAITING_CONFIRMATION', version: 1,
+            requiredConfirmations: 1, confirmationCount: 0, expiresAt: '2026-08-15T00:00:00.000Z', bookingId: null, errorCode: null,
+            summary: { serviceName: 'استشارة' },
+          },
+        },
+      },
+      {
+        ...baseMessage,
+        id: 'result',
+        senderType: 'AI',
+        kind: 'OPERATION_RESULT',
+        body: 'اكتمل الإجراء',
+        metadata: { operationId: 'operation-1', type: 'CREATE_BOOKING', status: 'SUCCEEDED', outcome: 'BOOKING_CREATED' },
+      },
+    ]);
+
+    expect(screen.getByLabelText('المستفيد')).toHaveTextContent('رسالة العميل');
+    expect(screen.getByLabelText('مساعد سواء الإداري')).toHaveTextContent('رد المساعد');
+    expect(screen.getByLabelText('فريق الاستقبال')).toHaveTextContent('رد الاستقبال');
+    expect(screen.getByLabelText('تحديث النظام')).toHaveTextContent('تحديث الحالة');
+    expect(screen.getByLabelText('إجراء مطلوب')).toHaveTextContent('استشارة');
+    expect(screen.getByLabelText('نتيجة الإجراء')).toHaveTextContent('اكتمل الإجراء');
+  });
+
   it('shows name and mobile fields only when a guest accepts handoff', () => {
     const handoff: ChatMessage = {
       ...baseMessage,

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   createGuest: vi.fn(),
   currentGuest: vi.fn(),
   currentClient: vi.fn(),
+  selectedClient: vi.fn(),
   claimGuest: vi.fn(),
   listGuest: vi.fn(),
   listClient: vi.fn(),
@@ -45,6 +46,7 @@ vi.mock('./chat.api', () => ({
   createGuestChatConversationApi: mocks.createGuest,
   getCurrentGuestChatConversationApi: mocks.currentGuest,
   getCurrentClientChatConversationApi: mocks.currentClient,
+  getClientChatConversationApi: mocks.selectedClient,
   claimGuestChatConversationApi: mocks.claimGuest,
   listGuestChatMessagesApi: mocks.listGuest,
   listClientChatMessagesApi: mocks.listClient,
@@ -93,6 +95,7 @@ describe('AiChatWidget', () => {
     mocks.currentGuest.mockResolvedValue(conversation);
     mocks.listGuest.mockResolvedValue({ data: [], meta: { limit: 50, nextCursor: null, hasMore: false } });
     mocks.currentClient.mockResolvedValue(conversation);
+    mocks.selectedClient.mockResolvedValue(conversation);
     mocks.listClient.mockResolvedValue({ data: [], meta: { limit: 50, nextCursor: null, hasMore: false } });
     mocks.createGuest.mockResolvedValue(conversation);
     mocks.claimGuest.mockResolvedValue(conversation);
@@ -303,5 +306,23 @@ describe('AiChatWidget', () => {
     act(() => poll?.());
 
     expect(await screen.findByText('Conversation updates paused. Try again.')).toBeTruthy();
+  });
+
+  it('opens exactly the in-memory account-selected conversation instead of falling back to current', async () => {
+    mocks.authIdentity = 'client-1';
+    mocks.isAuthenticated.mockReturnValue(true);
+    mocks.currentClient.mockResolvedValue({ ...conversation, id: 'conversation-current' });
+    mocks.selectedClient.mockResolvedValue({ ...conversation, id: 'conversation-a' });
+    mocks.listClient.mockResolvedValue({ data: [], meta: { limit: 50, nextCursor: null, hasMore: false } });
+    renderWidget('en');
+
+    act(() => window.dispatchEvent(new CustomEvent('sawaa:open-administrative-chat', {
+      detail: { conversationId: 'conversation-a' },
+    })));
+
+    await screen.findByRole('dialog', { name: 'Sawaa administrative assistant' });
+    await waitFor(() => expect(mocks.selectedClient).toHaveBeenCalledWith('conversation-a'));
+    expect(mocks.currentClient).not.toHaveBeenCalled();
+    expect(mocks.listClient).toHaveBeenCalledWith('conversation-a', { limit: 50 });
   });
 });

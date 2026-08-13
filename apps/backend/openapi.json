@@ -1026,12 +1026,53 @@
           "nextCursor": {
             "format": "uuid",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           }
         },
         "required": [
           "limit",
           "hasMore"
+        ],
+        "type": "object"
+      },
+      "ClientChatConversationDetailDto": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "isAiChat": {
+            "type": "boolean"
+          },
+          "language": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "OPEN",
+              "AI_ACTIVE",
+              "WAITING_FOR_STAFF",
+              "STAFF_ACTIVE",
+              "CLOSED"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "isAiChat",
+          "status",
+          "language",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
@@ -33127,6 +33168,7 @@
             "required": false,
             "schema": {
               "example": "00000000-0000-0000-0000-000000000000",
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -34590,6 +34632,94 @@
         ]
       }
     },
+    "/api/v1/public/me/chat/conversations/{conversationId}": {
+      "get": {
+        "operationId": "MyChatController_getConversationForClient_v1",
+        "parameters": [
+          {
+            "description": "Client conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatConversationDetailDto"
+                }
+              }
+            },
+            "description": "Safe detail for the authenticated client-owned conversation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Conversation is not owned by the authenticated client or does not exist"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one authenticated client-owned chat conversation",
+        "tags": [
+          "Public / Chat"
+        ]
+      }
+    },
     "/api/v1/public/me/chat/conversations/{conversationId}/claim": {
       "post": {
         "operationId": "MyChatController_claim_v1",
@@ -34780,6 +34910,7 @@
             "required": false,
             "schema": {
               "example": "00000000-0000-0000-0000-000000000000",
+              "format": "uuid",
               "type": "string"
             }
           },

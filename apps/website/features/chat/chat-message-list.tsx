@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bot, UserRound } from 'lucide-react';
+import { BadgeCheck, Bot, Headset, UserRound } from 'lucide-react';
 
 import { useT } from '@/features/locale/locale-provider';
 import type { ChatMessage, ChatOperation } from './chat.types';
@@ -54,28 +54,47 @@ export function ChatMessageList(props: ChatMessageListProps) {
 }
 
 function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
+  const t = useT();
   const { message } = props;
   const own = message.senderType === 'CLIENT' || message.senderType === 'VISITOR';
   const isSystem = message.senderType === 'SYSTEM' || message.kind === 'SYSTEM_EVENT';
+  const isReception = message.senderType === 'STAFF' || message.senderType === 'EMPLOYEE';
+  const isOperationResult = message.kind === 'OPERATION_RESULT';
+  const label = isOperationResult
+    ? t('chat.sender.result')
+    : own
+      ? t('chat.sender.client')
+      : isReception
+        ? t('chat.sender.reception')
+        : t('chat.sender.assistant');
 
   if (message.kind === 'ACTION_CARD' && message.metadata?.action === 'CHAT_OPERATION') {
-    return <ChatActionCard key={`${message.metadata.operation.id}:${message.metadata.operation.version}`} operation={message.metadata.operation} readOnly={props.readOnly} {...props} />;
+    return (
+      <section aria-label={t('chat.sender.action')}>
+        <ChatActionCard key={`${message.metadata.operation.id}:${message.metadata.operation.version}`} operation={message.metadata.operation} readOnly={props.readOnly} {...props} />
+      </section>
+    );
   }
 
   if (isSystem) {
-    return <p className="px-4 py-1 text-center text-xs leading-5 text-[var(--sw-neutral-500)]">{message.body}</p>;
+    return <p role="status" aria-label={t('chat.sender.system')} className="px-4 py-1 text-center text-xs leading-5 text-[var(--sw-neutral-500)]">{message.body}</p>;
   }
 
   return (
-    <article className={`flex items-end gap-2 ${own ? 'justify-end' : 'justify-start'}`}>
+    <article aria-label={label} className={`flex items-end gap-2 ${own ? 'justify-end' : 'justify-start'}`}>
       {!own && (
-        <span className="grid size-7 shrink-0 place-items-center rounded-xl bg-[var(--sw-primary-50)] text-[var(--sw-primary-700)]"><Bot size={14} aria-hidden="true" /></span>
+        <span className={`grid size-7 shrink-0 place-items-center rounded-xl ${isReception ? 'bg-[var(--sw-neutral-200)] text-[var(--sw-secondary-700)]' : isOperationResult ? 'bg-[var(--sw-primary-100)] text-[var(--sw-primary-700)]' : 'bg-[var(--sw-primary-50)] text-[var(--sw-primary-700)]'}`}>
+          {isReception ? <Headset size={14} aria-hidden="true" /> : isOperationResult ? <BadgeCheck size={14} aria-hidden="true" /> : <Bot size={14} aria-hidden="true" />}
+        </span>
       )}
       <div className={`max-w-[86%] rounded-3xl px-4 py-3 text-sm leading-6 shadow-[var(--sw-shadow-xs)] ${
         own
           ? 'rounded-ee-md bg-[var(--sw-secondary-700)] text-[var(--sw-neutral-0)]'
-          : 'rounded-es-md border border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)]'
+          : isReception
+            ? 'rounded-es-md border border-[var(--sw-neutral-200)] bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)]'
+            : 'rounded-es-md border border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)]'
       }`}>
+        <p className={`mb-1 text-xs font-extrabold ${own ? 'text-[var(--sw-neutral-100)]' : isReception ? 'text-[var(--sw-secondary-700)]' : 'text-[var(--sw-primary-700)]'}`}>{label}</p>
         <p className="whitespace-pre-wrap break-words">{message.body}</p>
         {!props.readOnly && message.kind === 'TEXT' && message.metadata?.action === 'OFFER_HANDOFF' && (
           <HandoffOffer {...props} />

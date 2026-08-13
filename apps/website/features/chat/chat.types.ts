@@ -1,6 +1,7 @@
 export type {
-  ChatConversationSummary,
   ChatConversationDetail,
+  ChatConversationSummary,
+  ClientChatConversationDetail,
   ClientChatConversationSummary,
   ClientChatConversationPage,
   ListClientChatConversationsQuery,
