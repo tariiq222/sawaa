@@ -44,12 +44,18 @@ const MAX_TOOL_ROUNDS = 4;
 const MAX_TOOL_CALLS_PER_ROUND = 3;
 const MAX_TOTAL_TOOL_CALLS = 8;
 const MAX_OUTPUT_TOKENS = 800;
-// Bound the prompt (system instructions, bounded history, and static tool
-// definitions) plus the provider output before any charged request is sent.
-// A request is refused near the daily limit rather than reserving an unknown
-// remainder that a single completion could exceed.
-const MAX_PROMPT_AND_TOOL_TOKENS = 16_000;
-const MAX_REQUEST_TOKEN_ALLOWANCE = MAX_PROMPT_AND_TOOL_TOKENS + MAX_OUTPUT_TOKENS;
+const MAX_PROVIDER_MESSAGE_BYTES = 24_000;
+const MAX_PROVIDER_SYSTEM_PROMPT_BYTES = 6_000;
+const MAX_PROVIDER_TOOL_DEFINITION_BYTES = 12_000;
+const MAX_PROVIDER_TOOL_RESULT_BYTES = 1_000;
+const MAX_PROVIDER_TOOL_ARGUMENT_BYTES = 2_000;
+const MAX_PROVIDER_MESSAGE_ENVELOPE_BYTES = 512;
+// UTF-8 bytes are a conservative upper bound for provider input tokens. The
+// message and definition bounds below are enforced immediately before every
+// provider call, so this reservation cannot be exceeded by accumulated tools.
+const MAX_REQUEST_TOKEN_ALLOWANCE = MAX_PROVIDER_MESSAGE_BYTES
+  + MAX_PROVIDER_TOOL_DEFINITION_BYTES
+  + MAX_OUTPUT_TOKENS;
 
 class ConversationStatusChanged extends Error {}
 class AssistantLeaseLost extends Error {}
@@ -288,13 +294,15 @@ export class AdministrativeAssistantService {
       let result: CompletionWithToolsResult;
       let reservation: ChatDailyTokenReservation | undefined;
       try {
+        const providerMessages = this.boundedProviderMessages(messages);
+        const definitions = this.boundedToolDefinitions();
         reservation = await this.limits.reserveDailyTokenBudget(
           usageIdentity,
           MAX_REQUEST_TOKEN_ALLOWANCE,
         );
         result = await this.chat.completeWithTools(
-          messages,
-          this.tools.getDefinitions(),
+          providerMessages,
+          definitions,
           { maxTokens: Math.min(MAX_OUTPUT_TOKENS, reservation.reservedTokens), temperature: 0.2 },
         );
         await this.limits.settleDailyTokenReservation(reservation, result.tokensUsed);
@@ -316,6 +324,9 @@ export class AdministrativeAssistantService {
 
       // Model prose is never trusted as content; only allowlisted tool choices
       // are carried into the next selection round.
+      if (result.toolCalls.some((call) => this.byteLength(call.function.arguments) > MAX_PROVIDER_TOOL_ARGUMENT_BYTES)) {
+        throw new AdministrativeLimitReached();
+      }
       messages.push({ role: 'assistant', content: '', toolCalls: result.toolCalls });
       for (const toolCall of result.toolCalls) {
         await assertLeaseHealthy();
@@ -328,12 +339,64 @@ export class AdministrativeAssistantService {
         executions.push({ name: toolCall.function.name, result: toolResult });
         messages.push({
           role: 'tool',
-          content: JSON.stringify({ ok: toolResult.ok, data: toolResult.ok ? toolResult.data : toolResult.error }),
+          content: this.truncateUtf8(
+            JSON.stringify({ ok: toolResult.ok, data: toolResult.ok ? toolResult.data : toolResult.error }),
+            MAX_PROVIDER_TOOL_RESULT_BYTES,
+          ),
           tool_call_id: toolCall.id,
         });
       }
     }
     throw new AdministrativeLimitReached();
+  }
+
+  private boundedToolDefinitions() {
+    const definitions = this.tools.getDefinitions();
+    if (this.byteLength(JSON.stringify(definitions)) > MAX_PROVIDER_TOOL_DEFINITION_BYTES) {
+      throw new AdministrativeLimitReached();
+    }
+    return definitions;
+  }
+
+  private boundedProviderMessages(messages: ChatMessage[]): ChatMessage[] {
+    const system = messages[0];
+    if (!system || system.role !== 'system' || this.byteLength(system.content) > MAX_PROVIDER_SYSTEM_PROMPT_BYTES) {
+      throw new AdministrativeLimitReached();
+    }
+    const bounded: ChatMessage[] = [system];
+    let used = this.messageBytes(system);
+    for (const message of messages.slice(1).reverse()) {
+      const bytes = this.messageBytes(message);
+      if (used + bytes > MAX_PROVIDER_MESSAGE_BYTES) continue;
+      bounded.push(message);
+      used += bytes;
+    }
+    return [bounded[0], ...bounded.slice(1).reverse()];
+  }
+
+  private messageBytes(message: ChatMessage): number {
+    return MAX_PROVIDER_MESSAGE_ENVELOPE_BYTES
+      + this.byteLength(message.content)
+      + this.byteLength(message.tool_call_id ?? '')
+      + this.byteLength(message.name ?? '')
+      + (message.toolCalls?.reduce((total, call) => total
+        + this.byteLength(call.id)
+        + this.byteLength(call.function.name)
+        + this.byteLength(call.function.arguments), 0) ?? 0);
+  }
+
+  private byteLength(value: string): number {
+    return Buffer.byteLength(value, 'utf8');
+  }
+
+  private truncateUtf8(value: string, maxBytes: number): string {
+    if (this.byteLength(value) <= maxBytes) return value;
+    let result = '';
+    for (const character of value) {
+      if (this.byteLength(result + character) > maxBytes) break;
+      result += character;
+    }
+    return result;
   }
 
   private async persistResponse(input: {

@@ -170,7 +170,7 @@ describe('AdministrativeAssistantService', () => {
   it('reserves the daily budget before provider use and settles it to actual tokens', async () => {
     await service.processMessage(messageId);
 
-    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash', 16_800);
+    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash', 36_800);
     expect(limits.reserveDailyTokenBudget.mock.invocationCallOrder[0])
       .toBeLessThan(chat.completeWithTools.mock.invocationCallOrder[0]);
     expect(limits.settleDailyTokenReservation).toHaveBeenCalledWith(
@@ -692,6 +692,40 @@ describe('AdministrativeAssistantService', () => {
     expect(tx.commsChatMessage.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ metadata: { action: 'OFFER_HANDOFF', reason: 'LIMIT_REACHED' } }),
     });
+  });
+
+  it('bounds all accumulated tool results before every provider round', async () => {
+    const calls = (offset: number, count: number) => Array.from({ length: count }, (_, index) => ({
+      id: `call-${offset + index}`,
+      function: { name: 'listServices', arguments: '{}' },
+    }));
+    chat.completeWithTools
+      .mockResolvedValueOnce({ content: null, toolCalls: calls(0, 3), tokensUsed: 3, model: 'test-model' })
+      .mockResolvedValueOnce({ content: null, toolCalls: calls(3, 3), tokensUsed: 3, model: 'test-model' })
+      .mockResolvedValueOnce({ content: null, toolCalls: calls(6, 2), tokensUsed: 3, model: 'test-model' })
+      .mockResolvedValueOnce({ content: null, toolCalls: [], tokensUsed: 3, model: 'test-model' });
+    tools.execute.mockResolvedValue({ ok: true, data: { payload: 'x'.repeat(10_000) } });
+
+    await service.processMessage(messageId);
+
+    expect(chat.completeWithTools).toHaveBeenCalledTimes(4);
+    for (const [providerMessages, definitions] of chat.completeWithTools.mock.calls) {
+      expect(Buffer.byteLength(JSON.stringify(providerMessages), 'utf8')).toBeLessThanOrEqual(24_000);
+      expect(Buffer.byteLength(JSON.stringify(definitions), 'utf8')).toBeLessThanOrEqual(12_000);
+    }
+    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledTimes(4);
+    expect(limits.reserveDailyTokenBudget).toHaveBeenLastCalledWith('guest:opaque-guest-hash', 36_800);
+  });
+
+  it('does not call the provider when static tool definitions exceed their reserved bound', async () => {
+    tools.getDefinitions.mockReturnValue([{ type: 'function', function: {
+      name: 'listServices', description: 'x'.repeat(12_001), parameters: {},
+    } }]);
+
+    await service.processMessage(messageId);
+
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(limits.reserveDailyTokenBudget).not.toHaveBeenCalled();
   });
 
   it('replaces malicious model output before saving', async () => {
