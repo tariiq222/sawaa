@@ -717,6 +717,31 @@ describe('AdministrativeAssistantService', () => {
     expect(limits.reserveDailyTokenBudget).toHaveBeenLastCalledWith('guest:opaque-guest-hash', 36_800);
   });
 
+  it('keeps maximum-size assistant tool-call groups with their results or omits the full group', async () => {
+    const calls = (offset: number, count: number) => Array.from({ length: count }, (_, index) => ({
+      id: `call-${offset + index}`,
+      function: { name: 'listServices', arguments: 'a'.repeat(2_000) },
+    }));
+    chat.completeWithTools
+      .mockResolvedValueOnce({ content: null, toolCalls: calls(0, 3), tokensUsed: 3, model: 'test-model' })
+      .mockResolvedValueOnce({ content: null, toolCalls: calls(3, 3), tokensUsed: 3, model: 'test-model' })
+      .mockResolvedValueOnce({ content: null, toolCalls: calls(6, 2), tokensUsed: 3, model: 'test-model' })
+      .mockResolvedValueOnce({ content: null, toolCalls: [], tokensUsed: 3, model: 'test-model' });
+    tools.execute.mockResolvedValue({ ok: true, data: { payload: 'x'.repeat(10_000) } });
+
+    await service.processMessage(messageId);
+
+    for (const [providerMessages] of chat.completeWithTools.mock.calls) {
+      expect(Buffer.byteLength(JSON.stringify(providerMessages), 'utf8')).toBeLessThanOrEqual(24_000);
+      const announcedToolIds = new Set(providerMessages.flatMap((message: any) =>
+        message.role === 'assistant' ? (message.toolCalls ?? []).map((call: any) => call.id) : [],
+      ));
+      for (const message of providerMessages.filter((item: any) => item.role === 'tool')) {
+        expect(announcedToolIds).toContain(message.tool_call_id);
+      }
+    }
+  });
+
   it('does not call the provider when static tool definitions exceed their reserved bound', async () => {
     tools.getDefinitions.mockReturnValue([{ type: 'function', function: {
       name: 'listServices', description: 'x'.repeat(12_001), parameters: {},

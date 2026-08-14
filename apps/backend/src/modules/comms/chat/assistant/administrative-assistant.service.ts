@@ -363,15 +363,48 @@ export class AdministrativeAssistantService {
     if (!system || system.role !== 'system' || this.byteLength(system.content) > MAX_PROVIDER_SYSTEM_PROMPT_BYTES) {
       throw new AdministrativeLimitReached();
     }
-    const bounded: ChatMessage[] = [system];
+    const groups = this.providerMessageGroups(messages.slice(1));
+    const bounded: ChatMessage[][] = [];
     let used = this.messageBytes(system);
-    for (const message of messages.slice(1).reverse()) {
-      const bytes = this.messageBytes(message);
+    for (const group of groups.reverse()) {
+      const bytes = group.reduce((total, message) => total + this.messageBytes(message), 0);
+      if (bytes > MAX_PROVIDER_MESSAGE_BYTES - this.messageBytes(system)) {
+        throw new AdministrativeLimitReached();
+      }
       if (used + bytes > MAX_PROVIDER_MESSAGE_BYTES) continue;
-      bounded.push(message);
+      bounded.push(group);
       used += bytes;
     }
-    return [bounded[0], ...bounded.slice(1).reverse()];
+    return [system, ...bounded.reverse().flat()];
+  }
+
+  private providerMessageGroups(messages: ChatMessage[]): ChatMessage[][] {
+    const groups: ChatMessage[][] = [];
+    for (let index = 0; index < messages.length; index += 1) {
+      const message = messages[index];
+      if (message.role === 'tool') throw new AdministrativeLimitReached();
+      if (message.role !== 'assistant' || !message.toolCalls?.length) {
+        groups.push([message]);
+        continue;
+      }
+      const expectedIds = new Set(message.toolCalls.map((call) => call.id));
+      const group = [message];
+      let resultCount = 0;
+      while (index + 1 < messages.length && messages[index + 1].role === 'tool') {
+        const result = messages[index + 1];
+        if (!result.tool_call_id || !expectedIds.delete(result.tool_call_id)) {
+          throw new AdministrativeLimitReached();
+        }
+        group.push(result);
+        resultCount += 1;
+        index += 1;
+      }
+      if (expectedIds.size !== 0 || resultCount !== message.toolCalls.length) {
+        throw new AdministrativeLimitReached();
+      }
+      groups.push(group);
+    }
+    return groups;
   }
 
   private messageBytes(message: ChatMessage): number {
