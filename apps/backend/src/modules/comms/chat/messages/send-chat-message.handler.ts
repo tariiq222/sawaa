@@ -26,6 +26,13 @@ export class SendChatMessageHandler {
   ) {}
 
   async execute(command: SendChatMessageCommand): Promise<CommsChatMessage> {
+    const rateLimitInput = command.audience === 'staff' ? undefined : {
+      identity: command.audience === 'guest'
+        ? `guest:${this.access.guestTokenHash(command.guestToken)}`
+        : `client:${command.clientId}`,
+      ipAddress: command.ipAddress ?? 'unknown',
+    };
+    let rateLimitConsumed = false;
     if (command.audience === 'staff') {
       const existing = await this.findExistingMessage(command.conversationId, command.clientMessageId);
       if (existing) return this.staffOwnedDuplicate(existing, command.staffUserId);
@@ -40,12 +47,8 @@ export class SendChatMessageHandler {
     if (command.audience !== 'staff') {
       const existing = await this.findOwnedExistingMessage(command);
       if (existing) return existing;
-      await this.limits.consumeMessage({
-        identity: command.audience === 'guest'
-          ? `guest:${this.access.guestTokenHash(command.guestToken)}`
-          : `client:${command.clientId}`,
-        ipAddress: command.ipAddress ?? 'unknown',
-      });
+      await this.limits.consumeMessage(rateLimitInput!);
+      rateLimitConsumed = true;
     }
 
     const staffConversation = command.audience === 'staff'
@@ -99,6 +102,7 @@ export class SendChatMessageHandler {
           },
         });
         if (existing) {
+          if (rateLimitConsumed) await this.refundRateLimit(rateLimitInput!);
           return command.audience === 'staff'
             ? this.staffOwnedDuplicate(existing, command.staffUserId)
             : existing;
@@ -166,6 +170,7 @@ export class SendChatMessageHandler {
         ? await this.findExistingMessage(command.conversationId, command.clientMessageId)
         : await this.findOwnedExistingMessage(command);
       if (existing) {
+        if (rateLimitConsumed && command.audience !== 'staff') await this.refundRateLimit(rateLimitInput!);
         return command.audience === 'staff'
           ? this.staffOwnedDuplicate(existing, command.staffUserId)
           : existing;
@@ -182,6 +187,15 @@ export class SendChatMessageHandler {
     return this.prisma.commsChatMessage.findUnique({
       where: { conversationId_clientMessageId: { conversationId, clientMessageId } },
     });
+  }
+
+  private async refundRateLimit(input: { identity: string; ipAddress: string }): Promise<void> {
+    try {
+      await this.limits.refundMessage(input);
+    } catch {
+      // A duplicate replay must not fail because best-effort quota refunding is
+      // temporarily unavailable. The normal minute TTL bounds any residual.
+    }
   }
 
   private findOwnedExistingMessage(

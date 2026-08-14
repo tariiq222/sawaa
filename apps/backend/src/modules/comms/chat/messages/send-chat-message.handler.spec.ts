@@ -34,7 +34,7 @@ describe('SendChatMessageHandler', () => {
   };
   let rlsTransaction: { withTransaction: jest.Mock };
   let access: { assertGuestAccess: jest.Mock; assertClientAccess: jest.Mock; guestTokenHash: jest.Mock };
-  let limits: { consumeMessage: jest.Mock };
+  let limits: { consumeMessage: jest.Mock; refundMessage: jest.Mock };
   let handler: SendChatMessageHandler;
 
   beforeEach(() => {
@@ -61,7 +61,10 @@ describe('SendChatMessageHandler', () => {
       assertClientAccess: jest.fn().mockResolvedValue({ ...guestConversation, clientId: 'client-a' }),
       guestTokenHash: jest.fn().mockReturnValue('guest-hash'),
     };
-    limits = { consumeMessage: jest.fn().mockResolvedValue(undefined) };
+    limits = {
+      consumeMessage: jest.fn().mockResolvedValue(undefined),
+      refundMessage: jest.fn().mockResolvedValue(undefined),
+    };
     handler = new SendChatMessageHandler(
       prisma as unknown as PrismaService,
       access as unknown as ChatAccessService,
@@ -306,7 +309,7 @@ describe('SendChatMessageHandler', () => {
     expect(transaction.commsChatMessage.create).not.toHaveBeenCalled();
   });
 
-  it('reads back the winning message after a concurrent unique-index race instead of retrying AI-triggering work', async () => {
+  it('refunds a concurrent duplicate race so the same clientMessageId consumes rate quota only once', async () => {
     transaction.commsChatMessage.create.mockRejectedValue(knownRequestError());
     transaction.commsChatMessage.findUnique
       .mockResolvedValueOnce(null)
@@ -318,6 +321,10 @@ describe('SendChatMessageHandler', () => {
 
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(2);
     expect(transaction.chatConversation.updateMany).not.toHaveBeenCalled();
+    expect(limits.consumeMessage).toHaveBeenCalledTimes(1);
+    expect(limits.refundMessage).toHaveBeenCalledWith({
+      identity: 'client:client-a', ipAddress: 'unknown',
+    });
   });
 
   it('applies staff sender identity checks to the P2002 winning-message readback', async () => {

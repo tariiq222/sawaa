@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
 import { RlsTransactionService } from '../../../infrastructure/database';
 import { assertConversationAccess } from './assert-conversation-access.helper';
@@ -33,8 +33,8 @@ export class CloseConversationHandler {
       if (conversation.status === ConversationStatus.CLOSED) {
         return conversation;
       }
-      const closed = await tx.chatConversation.update({
-        where: { id: cmd.conversationId },
+      const changed = await tx.chatConversation.updateMany({
+        where: { id: cmd.conversationId, status: { not: ConversationStatus.CLOSED } },
         data: {
           status: ConversationStatus.CLOSED,
           closedAt: new Date(),
@@ -43,12 +43,18 @@ export class CloseConversationHandler {
           assistantLeaseExpiresAt: null,
         },
       });
+      const current = await tx.chatConversation.findFirst({ where: { id: cmd.conversationId } });
+      if (!current) throw new NotFoundException('Conversation not found');
+      if (changed.count !== 1) {
+        if (current.status === ConversationStatus.CLOSED) return current;
+        throw new ConflictException('Conversation changed before it could be closed');
+      }
       await this.audit.record({
         action: 'CONVERSATION_CLOSED',
         conversationId: cmd.conversationId,
         ...(cmd.requesterUserId ? { actorUserId: cmd.requesterUserId } : {}),
       }, tx);
-      return closed;
+      return current;
     });
   }
 }

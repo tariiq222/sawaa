@@ -43,3 +43,9 @@ The retention fail-isolation test intentionally logs a simulated `db lock timeou
 - Handoff CAS and `HANDOFF_REQUESTED` audit are in one RLS transaction, so an audit failure rolls the transition back and a retry can emit the event. The legacy dashboard close path and operation acknowledge/decline/resume outcomes also write exactly one ID-only semantic audit event in their state transaction.
 
 Security follow-up verification: **12 focused suites passed, 163 tests passed**; backend typecheck passed; backend lint passed with the same 0 errors and 7 unrelated warnings; `git diff --check` passed. The focused Jest aggregation emitted the repository's existing worker-teardown warning after all suites passed.
+
+## Conservative-limit follow-up
+
+- Provider work now reserves a fixed `16,800`-token worst-case allowance per request (bounded prompt/history/tool allowance plus the 800-token output ceiling). A near-cap request is rejected before the provider is called; the provider output ceiling is constrained by the reservation. Settlement only returns unused allowance and never increases a daily counter above its pre-reserved cap. Timeouts and other ambiguous provider failures retain their reservation through the daily TTL.
+- Message identity and IP rate increments now share one Redis Lua transaction, avoiding a partially accepted dual-key increment. A unique-index duplicate race refunds its accepted rate reservation before returning the durable winning message, so concurrent retries of the same client message do not consume the quota twice.
+- Legacy close now uses a conditional `updateMany` CAS. Only a successful count of one writes `CONVERSATION_CLOSED`; a concurrent loser returns the already-closed record without a duplicate audit event.

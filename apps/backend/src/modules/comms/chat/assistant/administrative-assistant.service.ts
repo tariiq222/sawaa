@@ -44,6 +44,12 @@ const MAX_TOOL_ROUNDS = 4;
 const MAX_TOOL_CALLS_PER_ROUND = 3;
 const MAX_TOTAL_TOOL_CALLS = 8;
 const MAX_OUTPUT_TOKENS = 800;
+// Bound the prompt (system instructions, bounded history, and static tool
+// definitions) plus the provider output before any charged request is sent.
+// A request is refused near the daily limit rather than reserving an unknown
+// remainder that a single completion could exceed.
+const MAX_PROMPT_AND_TOOL_TOKENS = 16_000;
+const MAX_REQUEST_TOKEN_ALLOWANCE = MAX_PROMPT_AND_TOOL_TOKENS + MAX_OUTPUT_TOKENS;
 
 class ConversationStatusChanged extends Error {}
 class AssistantLeaseLost extends Error {}
@@ -281,25 +287,20 @@ export class AdministrativeAssistantService {
       await assertLeaseHealthy();
       let result: CompletionWithToolsResult;
       let reservation: ChatDailyTokenReservation | undefined;
-      let providerCompleted = false;
       try {
-        reservation = await this.limits.reserveDailyTokenBudget(usageIdentity);
+        reservation = await this.limits.reserveDailyTokenBudget(
+          usageIdentity,
+          MAX_REQUEST_TOKEN_ALLOWANCE,
+        );
         result = await this.chat.completeWithTools(
           messages,
           this.tools.getDefinitions(),
-          { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.2 },
+          { maxTokens: Math.min(MAX_OUTPUT_TOKENS, reservation.reservedTokens), temperature: 0.2 },
         );
-        providerCompleted = true;
         await this.limits.settleDailyTokenReservation(reservation, result.tokensUsed);
       } catch (error) {
-        if (reservation && !providerCompleted) {
-          try {
-            await this.limits.releaseDailyTokenReservation(reservation);
-          } catch {
-            // Retaining a failed-call reservation is safe; it cannot permit
-            // excess provider work and expires at the UTC day boundary.
-          }
-        }
+        // Once completeWithTools is attempted, transport/provider errors can
+        // be ambiguous about billing. Retain the reservation through its TTL.
         if (error instanceof ChatDailyBudgetExceeded) throw new AdministrativeLimitReached();
         throw error;
       }

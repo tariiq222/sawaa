@@ -8,6 +8,7 @@ const buildPrisma = () => ({
   chatConversation: {
     findFirst: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
   commsChatMessage: {
     create: jest.fn(),
@@ -81,14 +82,16 @@ describe('CloseConversationHandler', () => {
   it('closes an open conversation', async () => {
     const conv = { id: conversationId, status: ConversationStatus.OPEN };
     const updated = { ...conv, status: ConversationStatus.CLOSED };
-    prisma.chatConversation.findFirst.mockResolvedValue(conv);
-    prisma.chatConversation.update.mockResolvedValue(updated);
+    prisma.chatConversation.findFirst
+      .mockResolvedValueOnce(conv)
+      .mockResolvedValueOnce(updated);
+    prisma.chatConversation.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await handler.execute({ conversationId });
 
     expect(result).toEqual(updated);
-    expect(prisma.chatConversation.update).toHaveBeenCalledWith({
-      where: { id: conversationId },
+    expect(prisma.chatConversation.updateMany).toHaveBeenCalledWith({
+      where: { id: conversationId, status: { not: ConversationStatus.CLOSED } },
       data: {
         status: ConversationStatus.CLOSED,
         closedAt: expect.any(Date),
@@ -106,7 +109,7 @@ describe('CloseConversationHandler', () => {
     const result = await handler.execute({ conversationId });
 
     expect(result).toEqual(conv);
-    expect(prisma.chatConversation.update).not.toHaveBeenCalled();
+    expect(prisma.chatConversation.updateMany).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when not found', async () => {

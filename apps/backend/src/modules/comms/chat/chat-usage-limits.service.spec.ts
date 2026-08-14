@@ -32,9 +32,9 @@ describe('ChatUsageLimitsService', () => {
       ipAddress: '203.0.113.42',
     });
 
-    expect(client.eval).toHaveBeenCalledTimes(2);
+    expect(client.eval).toHaveBeenCalledTimes(1);
     const identityKey = client.eval.mock.calls[0][2] as string;
-    const ipKey = client.eval.mock.calls[1][2] as string;
+    const ipKey = client.eval.mock.calls[0][3] as string;
     expect(identityKey).toMatch(/^chat:rate:identity:[a-f0-9]{64}$/);
     expect(ipKey).toMatch(/^chat:rate:ip:[a-f0-9]{64}$/);
     expect(`${identityKey}${ipKey}`).not.toContain('client-sensitive-123');
@@ -42,7 +42,7 @@ describe('ChatUsageLimitsService', () => {
   });
 
   it('rejects when either the opaque identity or IP exceeds the minute limit', async () => {
-    client.eval.mockResolvedValueOnce(3).mockResolvedValueOnce(1);
+    client.eval.mockResolvedValueOnce(0);
 
     const error = await service
       .consumeMessage({
@@ -55,41 +55,57 @@ describe('ChatUsageLimitsService', () => {
     expect((error as HttpException).getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
   });
 
-  it('atomically reserves the remaining daily budget under an opaque UTC-day key before a provider call', async () => {
+  it('atomically reserves a defined request allowance under an opaque UTC-day key before a provider call', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-08-14T12:00:00.000Z'));
     try {
-      client.eval.mockResolvedValueOnce(1_000);
+      client.eval.mockResolvedValueOnce(500);
 
-      const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123');
+      const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123', 500);
 
       const call = client.eval.mock.calls[0];
       expect(call[2]).toMatch(/^chat:tokens:2026-08-14:[a-f0-9]{64}$/);
       expect(call[2]).not.toContain('client-sensitive-123');
-      expect(call.slice(3)).toEqual(['1000', '43200']);
-      expect(reservation.reservedTokens).toBe(1_000);
+      expect(call.slice(3)).toEqual(['1000', '500', '43200']);
+      expect(reservation.reservedTokens).toBe(500);
     } finally {
       jest.useRealTimers();
     }
   });
 
   it('rejects the second concurrent reservation before it can call a provider', async () => {
-    client.eval.mockResolvedValueOnce(1_000).mockResolvedValueOnce(0);
+    client.eval.mockResolvedValueOnce(500).mockResolvedValueOnce(0);
 
-    const first = service.reserveDailyTokenBudget('guest:opaque-token-hash');
-    const second = service.reserveDailyTokenBudget('guest:opaque-token-hash');
+    const first = service.reserveDailyTokenBudget('guest:opaque-token-hash', 500);
+    const second = service.reserveDailyTokenBudget('guest:opaque-token-hash', 500);
 
-    await expect(first).resolves.toEqual(expect.objectContaining({ reservedTokens: 1_000 }));
+    await expect(first).resolves.toEqual(expect.objectContaining({ reservedTokens: 500 }));
     await expect(second).rejects.toBeInstanceOf(ChatDailyBudgetExceeded);
   });
 
   it('reconciles a reservation to actual provider tokens without exposing the raw identity', async () => {
-    client.eval.mockResolvedValueOnce(1_000).mockResolvedValueOnce(12);
-    const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123');
+    client.eval.mockResolvedValueOnce(500).mockResolvedValueOnce(12);
+    const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123', 500);
 
     await service.settleDailyTokenReservation(reservation, 12);
 
     const settle = client.eval.mock.calls[1];
     expect(settle[2]).toMatch(/^chat:tokens:2026-08-14:[a-f0-9]{64}$/);
-    expect(settle.slice(3)).toEqual(['1000', '12']);
+    expect(settle.slice(3)).toEqual(['500', '12']);
+  });
+
+  it('does not settle an actual total above its reservation, retaining the capped allowance', async () => {
+    client.eval.mockResolvedValueOnce(500);
+    const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123', 500);
+
+    await service.settleDailyTokenReservation(reservation, 501);
+
+    expect(client.eval).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a near-cap allowance before any provider work can start', async () => {
+    client.eval.mockResolvedValueOnce(0);
+
+    await expect(service.reserveDailyTokenBudget('client:client-sensitive-123', 1_000))
+      .rejects.toBeInstanceOf(ChatDailyBudgetExceeded);
   });
 });

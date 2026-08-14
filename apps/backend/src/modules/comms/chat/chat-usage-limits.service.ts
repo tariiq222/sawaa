@@ -5,34 +5,48 @@ import { RedisService } from '../../../infrastructure/cache/redis.service';
 
 const RATE_WINDOW_SECONDS = 60;
 
-const INCREMENT_WITH_EXPIRY = `
-local total = redis.call('INCRBY', KEYS[1], ARGV[1])
-if total == tonumber(ARGV[1]) then
-  redis.call('EXPIRE', KEYS[1], ARGV[2])
-end
-return total
-`;
-
-const RESERVE_REMAINING_DAILY_BUDGET = `
-local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+const CONSUME_MESSAGE_RATE_LIMIT = `
 local limit = tonumber(ARGV[1])
-if current >= limit then
+local ttl = tonumber(ARGV[2])
+local identity = redis.call('INCR', KEYS[1])
+if identity == 1 then redis.call('EXPIRE', KEYS[1], ttl) end
+local ip = redis.call('INCR', KEYS[2])
+if ip == 1 then redis.call('EXPIRE', KEYS[2], ttl) end
+if identity > limit or ip > limit then
+  redis.call('DECR', KEYS[1])
+  redis.call('DECR', KEYS[2])
   return 0
 end
-local reserved = limit - current
-redis.call('INCRBY', KEYS[1], reserved)
-if current == 0 then
-  redis.call('EXPIRE', KEYS[1], ARGV[2])
+return 1
+`;
+
+const REFUND_MESSAGE_RATE_LIMIT = `
+for index = 1, 2 do
+  local remaining = redis.call('DECR', KEYS[index])
+  if remaining <= 0 then redis.call('DEL', KEYS[index]) end
 end
-return reserved
+return 1
+`;
+
+const RESERVE_DAILY_BUDGET = `
+local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+local limit = tonumber(ARGV[1])
+local requested = tonumber(ARGV[2])
+if requested <= 0 or current + requested > limit then
+  return 0
+end
+redis.call('INCRBY', KEYS[1], requested)
+if current == 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[3])
+end
+return requested
 `;
 
 const SETTLE_DAILY_TOKEN_RESERVATION = `
 local reserved = tonumber(ARGV[1])
 local actual = tonumber(ARGV[2])
-local delta = actual - reserved
-if delta ~= 0 then
-  redis.call('INCRBY', KEYS[1], delta)
+if actual > 0 and actual < reserved then
+  redis.call('DECRBY', KEYS[1], reserved - actual)
 end
 return redis.call('GET', KEYS[1])
 `;
@@ -56,27 +70,44 @@ export class ChatUsageLimitsService {
   ) {}
 
   async consumeMessage(input: { identity: string; ipAddress: string }): Promise<void> {
-    const client = this.redis.getClient();
-    const [identityCount, ipCount] = await Promise.all([
-      client.eval(INCREMENT_WITH_EXPIRY, 1, this.minuteKey('identity', input.identity), '1', String(RATE_WINDOW_SECONDS)),
-      client.eval(INCREMENT_WITH_EXPIRY, 1, this.minuteKey('ip', input.ipAddress), '1', String(RATE_WINDOW_SECONDS)),
-    ]);
-    const limit = this.config.getOrThrow<number>('CHAT_RATE_LIMIT_PER_MINUTE');
-    if (Number(identityCount) > limit || Number(ipCount) > limit) {
-      throw new HttpException('Chat message rate limit reached', HttpStatus.TOO_MANY_REQUESTS);
-    }
+    const accepted = Number(await this.redis.getClient().eval(
+      CONSUME_MESSAGE_RATE_LIMIT,
+      2,
+      this.minuteKey('identity', input.identity),
+      this.minuteKey('ip', input.ipAddress),
+      String(this.config.getOrThrow<number>('CHAT_RATE_LIMIT_PER_MINUTE')),
+      String(RATE_WINDOW_SECONDS),
+    ));
+    if (accepted === 1) return;
+    throw new HttpException('Chat message rate limit reached', HttpStatus.TOO_MANY_REQUESTS);
   }
 
-  async reserveDailyTokenBudget(identity: string): Promise<ChatDailyTokenReservation> {
+  async refundMessage(input: { identity: string; ipAddress: string }): Promise<void> {
+    await this.redis.getClient().eval(
+      REFUND_MESSAGE_RATE_LIMIT,
+      2,
+      this.minuteKey('identity', input.identity),
+      this.minuteKey('ip', input.ipAddress),
+    );
+  }
+
+  async reserveDailyTokenBudget(
+    identity: string,
+    requestedTokens: number,
+  ): Promise<ChatDailyTokenReservation> {
+    if (!Number.isSafeInteger(requestedTokens) || requestedTokens <= 0) {
+      throw new ChatDailyBudgetExceeded();
+    }
     const key = this.dailyTokenKey(identity);
     const reservedTokens = Number(await this.redis.getClient().eval(
-      RESERVE_REMAINING_DAILY_BUDGET,
+      RESERVE_DAILY_BUDGET,
       1,
       key,
       String(this.config.getOrThrow<number>('CHAT_DAILY_TOKEN_BUDGET')),
+      String(requestedTokens),
       String(this.secondsUntilUtcDayEnd()),
     ));
-    if (!Number.isSafeInteger(reservedTokens) || reservedTokens <= 0) {
+    if (!Number.isSafeInteger(reservedTokens) || reservedTokens !== requestedTokens) {
       throw new ChatDailyBudgetExceeded();
     }
     return { key, reservedTokens };
@@ -86,9 +117,9 @@ export class ChatUsageLimitsService {
     reservation: ChatDailyTokenReservation,
     actualTokens: number,
   ): Promise<void> {
-    // A provider response without a positive, safe total is not evidence that
-    // the provider was free. Keep the full reservation in that case.
-    if (!Number.isSafeInteger(actualTokens) || actualTokens <= 0) return;
+    // A provider response without a positive, bounded total is not evidence
+    // that any reservation is safe to release. Retain it through the UTC TTL.
+    if (!Number.isSafeInteger(actualTokens) || actualTokens <= 0 || actualTokens > reservation.reservedTokens) return;
     await this.redis.getClient().eval(
       SETTLE_DAILY_TOKEN_RESERVATION,
       1,

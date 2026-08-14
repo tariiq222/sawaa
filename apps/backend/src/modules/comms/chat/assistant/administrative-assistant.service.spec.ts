@@ -170,7 +170,7 @@ describe('AdministrativeAssistantService', () => {
   it('reserves the daily budget before provider use and settles it to actual tokens', async () => {
     await service.processMessage(messageId);
 
-    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash');
+    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash', 16_800);
     expect(limits.reserveDailyTokenBudget.mock.invocationCallOrder[0])
       .toBeLessThan(chat.completeWithTools.mock.invocationCallOrder[0]);
     expect(limits.settleDailyTokenReservation).toHaveBeenCalledWith(
@@ -185,6 +185,14 @@ describe('AdministrativeAssistantService', () => {
     await service.processMessage(messageId);
 
     expect(chat.completeWithTools).not.toHaveBeenCalled();
+  });
+
+  it('retains a reservation when the provider timeout leaves charging ambiguous', async () => {
+    chat.completeWithTools.mockRejectedValueOnce(new Error('provider timeout'));
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(limits.releaseDailyTokenReservation).not.toHaveBeenCalled();
   });
 
   it('does not process queued assistant work when web chat is disabled', async () => {
