@@ -184,6 +184,19 @@
         ],
         "type": "object"
       },
+      "AssignConversationDto": {
+        "properties": {
+          "targetStaffUserId": {
+            "description": "Active dashboard user UUID to assign",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetStaffUserId"
+        ],
+        "type": "object"
+      },
       "AssignEmployeeToBranchDto": {
         "properties": {
           "employeeId": {
@@ -3630,6 +3643,21 @@
         "required": [
           "apiKey"
         ],
+        "type": "object"
+      },
+      "MarkConversationReadDto": {
+        "properties": {
+          "throughMessageId": {
+            "description": "Owned message UUID through which messages are marked read",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "throughSequence": {
+            "description": "Highest owned message sequence to mark as read",
+            "example": "42",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "MarkReadDto": {
@@ -12498,6 +12526,779 @@
           }
         ],
         "summary": "Send a test SMS via the configured provider",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/conversations": {
+      "get": {
+        "operationId": "DashboardConversationsController_list_v1",
+        "parameters": [
+          {
+            "description": "Conversation status filter",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "OPEN",
+                "AI_ACTIVE",
+                "WAITING_FOR_STAFF",
+                "STAFF_ACTIVE",
+                "CLOSED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return conversations with unread staff messages only",
+            "in": "query",
+            "name": "unreadOnly",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Assignment filter",
+            "in": "query",
+            "name": "assigned",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "me",
+                "unassigned"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Search guest name or phone",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "example": "سارة",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Conversation creation start date",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2026-08-01T00:00:00.000Z",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Conversation creation end date",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2026-08-31T23:59:59.000Z",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Conversation UUID keyset cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000001",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of conversations to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List reception chat inbox conversations",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/conversations/{conversationId}": {
+      "get": {
+        "operationId": "DashboardConversationsController_get_v1",
+        "parameters": [
+          {
+            "description": "Conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a reception chat conversation",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/conversations/{conversationId}/assign": {
+      "post": {
+        "operationId": "DashboardConversationsController_assign_v1",
+        "parameters": [
+          {
+            "description": "Conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignConversationDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Assign a reception conversation to a dashboard user",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/conversations/{conversationId}/claim": {
+      "post": {
+        "operationId": "DashboardConversationsController_claim_v1",
+        "parameters": [
+          {
+            "description": "Conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Claim a waiting reception conversation",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/conversations/{conversationId}/close": {
+      "post": {
+        "operationId": "DashboardConversationsController_close_v1",
+        "parameters": [
+          {
+            "description": "Conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Close a reception conversation",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/conversations/{conversationId}/messages": {
+      "get": {
+        "operationId": "DashboardConversationsController_messages_v1",
+        "parameters": [
+          {
+            "description": "Conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Cursor (message UUID) for keyset pagination",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of web chat messages to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List reception chat conversation messages",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardConversationsController_reply_v1",
+        "parameters": [
+          {
+            "description": "Conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendChatMessageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reply to an assigned reception conversation",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/conversations/{conversationId}/read": {
+      "post": {
+        "operationId": "DashboardConversationsController_read_v1",
+        "parameters": [
+          {
+            "description": "Conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkConversationReadDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark owned visitor and client messages as read",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/conversations/{conversationId}/release": {
+      "post": {
+        "operationId": "DashboardConversationsController_release_v1",
+        "parameters": [
+          {
+            "description": "Conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Release a staff conversation back to the assistant",
         "tags": [
           "Dashboard / Comms"
         ]

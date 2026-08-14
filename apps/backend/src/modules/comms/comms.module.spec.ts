@@ -9,9 +9,12 @@ import { DependenciesScanner } from '@nestjs/core/scanner';
 import { Test } from '@nestjs/testing';
 import { ClsModule } from 'nestjs-cls';
 import { AiInfraModule } from '../../infrastructure/ai';
+import { DashboardConversationsController } from '../../api/dashboard/conversations.controller';
 import { CommsModule } from './comms.module';
 import { PeopleModule } from '../people/people.module';
 import { IdentityModule } from '../identity/identity.module';
+import { OnAdministrativeMessageProcessingRequestedHandler } from './chat/assistant/on-administrative-message-processing-requested.handler';
+import { OnChatOperationsResumeRequestedHandler } from './chat/operations/on-chat-operations-resume-requested.handler';
 
 function resolveForwardRef(value: unknown): unknown {
   return value && typeof value === 'object' && 'forwardRef' in value
@@ -30,6 +33,15 @@ describe('CommsModule runtime import graph', () => {
 
     expect(commsImports.map(resolveForwardRef)).toContain(PeopleModule);
     expect(identityImports.map(resolveForwardRef)).toContain(CommsModule);
+  });
+
+  it('registers the unified dashboard controller and its event consumers once', () => {
+    const controllers = Reflect.getMetadata(MODULE_METADATA.CONTROLLERS, CommsModule) as unknown[];
+    const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, CommsModule) as unknown[];
+
+    expect(controllers.filter((controller) => controller === DashboardConversationsController)).toHaveLength(1);
+    expect(providers.filter((provider) => provider === OnAdministrativeMessageProcessingRequestedHandler)).toHaveLength(1);
+    expect(providers.filter((provider) => provider === OnChatOperationsResumeRequestedHandler)).toHaveLength(1);
   });
 
   it('scans and compiles the complete CommsModule dependency graph', async () => {

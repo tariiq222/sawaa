@@ -1,5 +1,6 @@
 import { forwardRef, Module, OnModuleInit } from '@nestjs/common';
 import { DashboardCommsController } from '../../api/dashboard/comms.controller';
+import { DashboardConversationsController } from '../../api/dashboard/conversations.controller';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { MailModule } from '../../infrastructure/mail/mail.module';
@@ -212,7 +213,7 @@ const eventHandlers = [
     OrgExperienceModule,
     forwardRef(() => PeopleModule),
   ],
-  controllers: [DashboardCommsController],
+  controllers: [DashboardCommsController, DashboardConversationsController],
   providers: [...handlers, ...eventHandlers],
   exports: [...handlers, NotificationChannelModule],
 })
