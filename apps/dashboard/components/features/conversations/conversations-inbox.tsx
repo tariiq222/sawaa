@@ -19,12 +19,13 @@ import { ConversationList } from "./conversation-list"
 type ActionName = "claim" | "reply" | "assign" | "release" | "close"
 
 export function ConversationsInbox() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { user, canDo } = useAuth()
   const [filters, setFilters] = useState<ConversationFilters>({ assigned: "all", limit: 50 })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const markedReadRef = useRef<string | null>(null)
+  const pendingReadMarkersRef = useRef(new Set<string>())
+  const completedReadMarkersRef = useRef(new Set<string>())
   const list = useConversations(filters)
   const mutations = useConversationMutations()
   const canManage = canDo("conversation", "manage")
@@ -51,14 +52,18 @@ export function ConversationsInbox() {
   useEffect(() => {
     if (!selected || selected.status !== "STAFF_ACTIVE" || selected.assignedStaffUserId !== user?.id || selected.staffUnreadCount < 1) return
     const marker = `${selected.id}:${latestOwnedMessage?.id ?? "all"}`
-    if (markedReadRef.current === marker) return
-    markedReadRef.current = marker
+    if (pendingReadMarkersRef.current.has(marker) || completedReadMarkersRef.current.has(marker)) return
+    pendingReadMarkersRef.current.add(marker)
     markReadMutate(
       { conversationId: selected.id, throughMessageId: latestOwnedMessage?.id },
       { onError: () => {
-        markedReadRef.current = null
+        pendingReadMarkersRef.current.delete(marker)
         setActionError(t("conversations.error.markRead"))
-      }, onSuccess: () => setActionError(null) },
+      }, onSuccess: () => {
+        pendingReadMarkersRef.current.delete(marker)
+        completedReadMarkersRef.current.add(marker)
+        setActionError(null)
+      } },
     )
   }, [
     latestOwnedMessage?.id,
@@ -105,7 +110,7 @@ export function ConversationsInbox() {
             filters={filters}
             isLoading={list.isLoading}
             error={list.error}
-            canManage={canManage}
+            locale={locale}
             hasNextPage={Boolean(list.hasNextPage)}
             isFetchingNextPage={list.isFetchingNextPage}
             t={t}

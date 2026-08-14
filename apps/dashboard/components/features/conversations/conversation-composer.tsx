@@ -15,9 +15,12 @@ export function ConversationComposer({ isPending, t, onSend }: ConversationCompo
   const [body, setBody] = useState("")
 
   const submit = async () => {
+    const submittedBody = body
     const trimmed = body.trim()
     if (!trimmed || isPending) return
-    if (await onSend(trimmed)) setBody("")
+    if (await onSend(trimmed)) {
+      setBody((currentBody) => currentBody === submittedBody ? "" : currentBody)
+    }
   }
 
   return (

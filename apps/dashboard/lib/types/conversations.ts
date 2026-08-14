@@ -71,6 +71,8 @@ export interface ConversationFilters {
   unreadOnly?: boolean
   assigned?: ConversationAssignmentFilter
   search?: string
+  from?: string
+  to?: string
   cursor?: string
   limit?: number
 }

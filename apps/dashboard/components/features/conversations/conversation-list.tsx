@@ -1,13 +1,8 @@
 "use client"
 
-import { Button, Input, Skeleton } from "@sawaa/ui"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Search01Icon } from "@hugeicons/core-free-icons"
+import { Button, Skeleton } from "@sawaa/ui"
 import type { Conversation, ConversationFilters, ConversationStatus } from "@/lib/types/conversations"
-
-const STATUSES: ConversationStatus[] = [
-  "WAITING_FOR_STAFF", "STAFF_ACTIVE", "AI_ACTIVE", "CLOSED",
-]
+import { ConversationFilterControls } from "./conversation-filters"
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
   OPEN: "bg-surface-muted text-muted-foreground",
@@ -23,7 +18,7 @@ interface ConversationListProps {
   filters: ConversationFilters
   isLoading: boolean
   error: Error | null
-  canManage: boolean
+  locale: "ar" | "en"
   hasNextPage: boolean
   isFetchingNextPage: boolean
   t: (key: string) => string
@@ -37,53 +32,18 @@ function displayName(conversation: Conversation, t: (key: string) => string) {
   return conversation.guestName?.trim() || conversation.guestPhone || t("conversations.guest")
 }
 
-function formatTime(value: string | null) {
+function formatTime(value: string | null, locale: "ar" | "en") {
   if (!value) return "—"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
-  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(date)
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-nu-latn" : "en-US", { hour: "2-digit", minute: "2-digit" }).format(date)
 }
 
 export function ConversationList(props: ConversationListProps) {
   const { conversations, selectedId, filters, isLoading, error, t } = props
-  const update = (next: Partial<ConversationFilters>) => props.onFiltersChange({ ...filters, ...next, cursor: undefined })
-
   return (
     <aside className="min-w-0 border-b border-border/70 bg-surface-muted/20 p-4 lg:border-e lg:border-b-0">
-      <div className="space-y-3">
-        <div className="relative">
-          <HugeiconsIcon icon={Search01Icon} size={16} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <Input
-            value={filters.search ?? ""}
-            className="bg-surface-solid ps-9"
-            aria-label={t("conversations.search")}
-            placeholder={t("conversations.search")}
-            onChange={(event) => update({ search: event.target.value || undefined })}
-          />
-        </div>
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("conversations.filter.label")}>
-          <FilterButton active={!filters.status} onClick={() => update({ status: undefined })}>
-            {t("conversations.filter.all")}
-          </FilterButton>
-          {STATUSES.map((status) => (
-            <FilterButton key={status} active={filters.status === status} onClick={() => update({ status })}>
-              {t(`conversations.status.${status}`)}
-            </FilterButton>
-          ))}
-          <FilterButton active={filters.unreadOnly === true} onClick={() => update({ unreadOnly: filters.unreadOnly ? undefined : true })}>
-            {t("conversations.filter.unread")}
-          </FilterButton>
-        </div>
-        {props.canManage && (
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("conversations.filter.assignment")}>
-            {(["all", "me", "unassigned"] as const).map((assigned) => (
-              <FilterButton key={assigned} active={(filters.assigned ?? "all") === assigned} onClick={() => update({ assigned })}>
-                {t(`conversations.filter.assignment.${assigned}`)}
-              </FilterButton>
-            ))}
-          </div>
-        )}
-      </div>
+      <ConversationFilterControls filters={filters} t={t} onChange={props.onFiltersChange} />
 
       <div className="mt-4 space-y-2">
         {isLoading && Array.from({ length: 5 }, (_, index) => (
@@ -117,7 +77,7 @@ export function ConversationList(props: ConversationListProps) {
                   <p className="truncate text-sm font-semibold text-foreground">{name}</p>
                   {conversation.guestPhone && <p dir="ltr" className="mt-1 text-start text-xs text-muted-foreground">{conversation.guestPhone}</p>}
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatTime(conversation.lastMessageAt)}</span>
+                <time dateTime={conversation.lastMessageAt ?? undefined} className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatTime(conversation.lastMessageAt, props.locale)}</time>
               </div>
               <div className="mt-3 flex items-center justify-between gap-2">
                 <span className={`rounded-full px-2 py-1 text-xs ${STATUS_CLASSES[conversation.status]}`}>{t(`conversations.status.${conversation.status}`)}</span>
@@ -137,13 +97,5 @@ export function ConversationList(props: ConversationListProps) {
         )}
       </div>
     </aside>
-  )
-}
-
-function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button type="button" aria-pressed={active} onClick={onClick} className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface-solid text-muted-foreground hover:border-primary/40"}`}>
-      {children}
-    </button>
   )
 }

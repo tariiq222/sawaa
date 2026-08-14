@@ -13,7 +13,7 @@
 ## Verification
 
 - Focused backend Jest: 4 files, 22 tests passed.
-- Focused dashboard Vitest: 6 files, 43 tests passed.
+- Focused dashboard Vitest: 7 files, 50 tests passed.
 - `pnpm --filter=dashboard i18n:verify`: passed.
 - `pnpm --filter=dashboard typecheck`: passed.
 - `pnpm --filter=dashboard lint`: passed with 11 pre-existing warnings and zero errors.
@@ -52,11 +52,20 @@ The following hunks were applied in `59d7957a` and are retained here as integrat
 - Claim conflicts invalidate the full conversation cache immediately on HTTP 409, causing active inbox/detail queries to refetch without waiting for polling.
 - Inbox and message queries now use cursor-aware infinite queries. Both surfaces expose load-more controls and preserve filters plus the 7.5-second polling interval.
 - Added explicit detail loading/error states; stale list summaries are no longer used to expose identity or actions while detail authorization is unresolved.
-- Added admin assignment filters, permission-aware update actions, admin close for AI-active conversations, and forbidden/error surfacing.
+- Added backend-supported assignment filters for reception and administrators, permission-aware update actions, admin close for AI-active conversations, and forbidden/error surfacing.
 - Mark-read uses the actual `{ markedReadCount, readAt }` response, clears its attempt marker on failure, surfaces the error, and retries on the next detail refresh.
 - Reply drafts are cleared only after a successful mutation. Failed replies preserve the text for retry.
 - Legacy `EMPLOYEE` messages render as outgoing staff messages, `/conversations` has a translated breadcrumb, and waiting status uses the existing `text-warning` token.
 - Runtime controller registration, OpenAPI regeneration, and dashboard E2E remain explicitly scoped to Task 12.
+
+## Final review fixes
+
+- Conversation reply drafts are scoped by conversation identity. Switching from conversation A to B starts with an empty composer.
+- Async reply completion clears only the exact submitted draft; text typed while the request is pending is preserved, and failures retain the submitted draft.
+- The sidebar footer now derives its `/conversations` shortcut from permission-filtered navigation and no longer links to `/whatsapp`.
+- Restored the backend-supported `from` and `to` filter contract and exposed inclusive UTC date controls. Reception staff can use the safe `all`, `me`, and `unassigned` assignment filters supported by the backend access predicate.
+- Conversation timestamps use the selected Arabic or English locale.
+- Automatic mark-read tracks pending and completed markers independently, preventing a duplicate request when switching A → B → A while the first request is still in flight.
 
 ### `apps/dashboard/hooks/use-conversations.ts`
 

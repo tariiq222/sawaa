@@ -15,6 +15,8 @@ export const arConversations: Record<string, string> = {
   "conversations.filter.assignment.all": "كل الإسنادات",
   "conversations.filter.assignment.me": "مسندة لي",
   "conversations.filter.assignment.unassigned": "غير مسندة",
+  "conversations.filter.from": "من تاريخ",
+  "conversations.filter.to": "إلى تاريخ",
   "conversations.loadMore": "تحميل المزيد",
   "conversations.status.OPEN": "قديمة",
   "conversations.status.AI_ACTIVE": "مع المساعد",

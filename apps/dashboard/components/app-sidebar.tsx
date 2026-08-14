@@ -4,7 +4,6 @@ import Link from "next/link"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   CustomerService01Icon,
-  Book02Icon,
   Add01Icon,
 } from "@hugeicons/core-free-icons"
 import { SawaaMark } from "@/components/brand/sawaa-mark"
@@ -44,6 +43,9 @@ export function AppSidebar() {
     navigate,
     prefetchItem,
   } = useSidebarNav()
+  const conversationShortcut = filteredGroups
+    .flatMap((group) => group.items)
+    .find((item) => item.href === "/conversations")
 
   return (
     <>
@@ -138,19 +140,19 @@ export function AppSidebar() {
               <TooltipContent side="top">{t("nav.support")}</TooltipContent>
             </Tooltip>
 
-            <Tooltip>
+            {conversationShortcut && <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/whatsapp"
-                  aria-label={t("nav.whatsapp")}
+                  href={conversationShortcut.href}
+                  aria-label={t(conversationShortcut.titleKey)}
                   onClick={isMobile ? () => setOpenMobile(false) : undefined}
                   className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60 transition-colors"
                 >
-                  <HugeiconsIcon icon={Book02Icon} size={18} />
+                  <HugeiconsIcon icon={conversationShortcut.icon} size={18} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="top">{t("nav.whatsapp")}</TooltipContent>
-            </Tooltip>
+              <TooltipContent side="top">{t(conversationShortcut.titleKey)}</TooltipContent>
+            </Tooltip>}
           </div>
         </SidebarFooter>
       </Sidebar>

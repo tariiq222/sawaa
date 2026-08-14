@@ -89,7 +89,7 @@ export function ConversationDetail(props: ConversationDetailProps) {
         {!props.isMessagesLoading && !props.messagesError && [...props.messages].reverse().map((message) => <MessageBubble key={message.id} message={message} t={t} />)}
       </div>
 
-      {canReply && <ConversationComposer isPending={props.pendingAction === "reply"} t={t} onSend={props.onReply} />}
+      {canReply && <ConversationComposer key={conversation.id} isPending={props.pendingAction === "reply"} t={t} onSend={props.onReply} />}
     </section>
   )
 }

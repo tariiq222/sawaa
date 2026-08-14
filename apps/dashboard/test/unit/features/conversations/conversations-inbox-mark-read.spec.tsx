@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Conversation } from "@/lib/types/conversations"
 
@@ -23,26 +23,30 @@ const mocks = vi.hoisted(() => {
   }
   return {
     conversation,
-    detailData: conversation,
+    conversations: [conversation],
+    details: { [conversation.id]: conversation } as Record<string, Conversation>,
     markRead: { isPending: false, mutate: vi.fn() },
     t: (key: string) => key,
   }
 })
 
-vi.mock("@/components/locale-provider", () => ({ useLocale: () => ({ t: mocks.t }) }))
+vi.mock("@/components/locale-provider", () => ({ useLocale: () => ({ t: mocks.t, locale: "ar" }) }))
 vi.mock("@/components/providers/auth-provider", () => ({
   useAuth: () => ({ user: { id: "staff-1" }, canDo: () => false }),
 }))
 vi.mock("@/hooks/use-conversations", () => ({
   useConversations: () => ({
-    data: { pages: [{ data: [mocks.conversation], meta: { hasMore: false, nextCursor: null, limit: 50 } }] },
+    data: { pages: [{ data: mocks.conversations, meta: { hasMore: false, nextCursor: null, limit: 50 } }] },
     isLoading: false, error: null, hasNextPage: false, isFetchingNextPage: false,
     refetch: vi.fn(), fetchNextPage: vi.fn(),
   }),
-  useConversation: () => ({ data: mocks.detailData, dataUpdatedAt: Date.parse(mocks.detailData.updatedAt), isLoading: false, error: null }),
-  useConversationMessages: () => ({
+  useConversation: (conversationId: string) => {
+    const data = mocks.details[conversationId]
+    return { data, dataUpdatedAt: data ? Date.parse(data.updatedAt) : 0, isLoading: false, error: null }
+  },
+  useConversationMessages: (conversationId: string) => ({
     data: { pages: [{ data: [{
-      id: "message-1", conversationId: "conversation-1", senderType: "VISITOR", body: "مرحباً",
+      id: `message-${conversationId}`, conversationId, senderType: "VISITOR", body: "مرحباً",
       kind: "TEXT", clientMessageId: "client-1", createdAt: "2026-08-14T06:00:00.000Z",
     }], meta: { hasMore: false, nextCursor: null, limit: 100 } }] },
     isLoading: false, error: null, hasNextPage: false, isFetchingNextPage: false, fetchNextPage: vi.fn(),
@@ -64,7 +68,8 @@ import { ConversationsInbox } from "@/components/features/conversations/conversa
 
 describe("ConversationsInbox mark-read recovery", () => {
   beforeEach(() => {
-    mocks.detailData = mocks.conversation
+    mocks.conversations = [mocks.conversation]
+    mocks.details = { [mocks.conversation.id]: mocks.conversation }
     mocks.markRead.mutate.mockReset()
     mocks.markRead.mutate.mockImplementation((_input, options) => options?.onError?.(new Error("network")))
   })
@@ -77,10 +82,28 @@ describe("ConversationsInbox mark-read recovery", () => {
     await waitFor(() => expect(mocks.markRead.mutate).toHaveBeenCalledTimes(1))
     expect(screen.getByRole("alert")).toHaveTextContent("conversations.error.markRead")
 
-    mocks.detailData = { ...mocks.conversation, updatedAt: "2026-08-14T06:00:08.000Z" }
+    mocks.details = { [mocks.conversation.id]: { ...mocks.conversation, updatedAt: "2026-08-14T06:00:08.000Z" } }
     rerender(<ConversationsInbox />)
 
     await waitFor(() => expect(mocks.markRead.mutate).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument())
+  })
+
+  it("does not duplicate a pending mark-read when switching away and back", async () => {
+    const second = { ...mocks.conversation, id: "conversation-2", guestName: "نورة" }
+    mocks.conversations = [mocks.conversation, second]
+    mocks.details = { [mocks.conversation.id]: mocks.conversation, [second.id]: second }
+    mocks.markRead.mutate.mockImplementation(() => undefined)
+    render(<ConversationsInbox />)
+    await waitFor(() => expect(mocks.markRead.mutate).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole("button", { name: /نورة/ }))
+    await waitFor(() => expect(mocks.markRead.mutate).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /سارة/ }))
+      await Promise.resolve()
+    })
+
+    expect(mocks.markRead.mutate).toHaveBeenCalledTimes(2)
   })
 })

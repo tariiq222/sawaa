@@ -15,6 +15,8 @@ export const enConversations: Record<string, string> = {
   "conversations.filter.assignment.all": "All assignments",
   "conversations.filter.assignment.me": "Assigned to me",
   "conversations.filter.assignment.unassigned": "Unassigned",
+  "conversations.filter.from": "From date",
+  "conversations.filter.to": "To date",
   "conversations.loadMore": "Load more",
   "conversations.status.OPEN": "Legacy",
   "conversations.status.AI_ACTIVE": "With assistant",

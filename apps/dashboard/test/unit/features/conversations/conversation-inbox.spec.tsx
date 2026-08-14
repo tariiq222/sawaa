@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Conversation } from "@/lib/types/conversations"
 import { ConversationList } from "@/components/features/conversations/conversation-list"
 import { ConversationDetail } from "@/components/features/conversations/conversation-detail"
+import { ConversationComposer } from "@/components/features/conversations/conversation-composer"
 
 const labels: Record<string, string> = {
   "conversations.loading": "جارٍ تحميل المحادثات",
@@ -16,6 +17,8 @@ const labels: Record<string, string> = {
   "conversations.filter.assignment.all": "كل الإسنادات",
   "conversations.filter.assignment.me": "مسندة لي",
   "conversations.filter.assignment.unassigned": "غير مسندة",
+  "conversations.filter.from": "من تاريخ",
+  "conversations.filter.to": "إلى تاريخ",
   "conversations.loadMore": "تحميل المزيد",
   "conversations.status.WAITING_FOR_STAFF": "بانتظار الاستقبال",
   "conversations.status.STAFF_ACTIVE": "مع موظف استقبال",
@@ -74,7 +77,7 @@ describe("ConversationList", () => {
         filters={{}}
         isLoading={false}
         error={null}
-        canManage={false}
+        locale="ar"
         hasNextPage={false}
         isFetchingNextPage={false}
         t={t}
@@ -105,7 +108,7 @@ describe("ConversationList", () => {
         filters={{}}
         isLoading={false}
         error={null}
-        canManage={false}
+        locale="ar"
         hasNextPage={false}
         isFetchingNextPage={false}
         t={t}
@@ -121,7 +124,8 @@ describe("ConversationList", () => {
   it("covers loading, error, and empty states", () => {
     const props = {
       conversations: [], selectedId: null, filters: {}, t,
-      canManage: false, hasNextPage: false, isFetchingNextPage: false,
+      hasNextPage: false, isFetchingNextPage: false,
+      locale: "ar" as const,
       onFiltersChange: vi.fn(), onSelect: vi.fn(), onRetry: vi.fn(), onLoadMore: vi.fn(),
     }
     const { rerender } = render(<ConversationList {...props} isLoading error={null} />)
@@ -137,13 +141,55 @@ describe("ConversationList", () => {
   it("offers assignment filters to administrators and loads additional cursor pages", () => {
     const onFiltersChange = vi.fn()
     const onLoadMore = vi.fn()
-    render(<ConversationList conversations={[conversation()]} selectedId={null} filters={{ assigned: "all" }} isLoading={false} error={null} canManage hasNextPage isFetchingNextPage={false} t={t} onFiltersChange={onFiltersChange} onSelect={vi.fn()} onRetry={vi.fn()} onLoadMore={onLoadMore} />)
+    render(<ConversationList conversations={[conversation()]} selectedId={null} filters={{ assigned: "all" }} isLoading={false} error={null} locale="ar" hasNextPage isFetchingNextPage={false} t={t} onFiltersChange={onFiltersChange} onSelect={vi.fn()} onRetry={vi.fn()} onLoadMore={onLoadMore} />)
 
     fireEvent.click(screen.getByRole("button", { name: "مسندة لي" }))
     fireEvent.click(screen.getByRole("button", { name: "تحميل المزيد" }))
 
     expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ assigned: "me" }))
     expect(onLoadMore).toHaveBeenCalled()
+  })
+
+  it("offers assignment and inclusive date filters to reception staff", () => {
+    const onFiltersChange = vi.fn()
+    render(<ConversationList conversations={[]} selectedId={null} filters={{}} isLoading={false} error={null} locale="ar" hasNextPage={false} isFetchingNextPage={false} t={t} onFiltersChange={onFiltersChange} onSelect={vi.fn()} onRetry={vi.fn()} onLoadMore={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "مسندة لي" }))
+    fireEvent.change(screen.getByLabelText("من تاريخ"), { target: { value: "2026-08-01" } })
+    fireEvent.change(screen.getByLabelText("إلى تاريخ"), { target: { value: "2026-08-31" } })
+
+    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ assigned: "me" }))
+    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ from: "2026-08-01T00:00:00.000Z" }))
+    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ to: "2026-08-31T23:59:59.999Z" }))
+  })
+
+  it("formats the latest-message time with the selected locale", () => {
+    const shared = { conversations: [conversation()], selectedId: null, filters: {}, isLoading: false, error: null, hasNextPage: false, isFetchingNextPage: false, t, onFiltersChange: vi.fn(), onSelect: vi.fn(), onRetry: vi.fn(), onLoadMore: vi.fn() }
+    const { container, rerender } = render(<ConversationList {...shared} locale="ar" />)
+    const arabicTime = container.querySelector("time")?.textContent
+
+    rerender(<ConversationList {...shared} locale="en" />)
+    expect(container.querySelector("time")?.textContent).not.toBe(arabicTime)
+  })
+})
+
+describe("ConversationComposer", () => {
+  it("keeps text typed after an in-flight submission succeeds", async () => {
+    let resolveSend!: (sent: boolean) => void
+    const onSend = vi.fn(() => new Promise<boolean>((resolve) => { resolveSend = resolve }))
+    const { rerender } = render(<ConversationComposer isPending={false} t={t} onSend={onSend} />)
+    const composer = screen.getByLabelText("الرد")
+    fireEvent.change(composer, { target: { value: "المسودة المرسلة" } })
+    fireEvent.click(screen.getByRole("button", { name: "إرسال" }))
+
+    rerender(<ConversationComposer isPending t={t} onSend={onSend} />)
+    fireEvent.change(composer, { target: { value: "مسودة جديدة" } })
+    await act(async () => {
+      resolveSend(true)
+      await Promise.resolve()
+    })
+
+    expect(composer).toHaveValue("مسودة جديدة")
   })
 })
 
@@ -184,6 +230,16 @@ describe("ConversationDetail", () => {
     expect(composer).toHaveValue("رد مهم")
     fireEvent.click(screen.getByRole("button", { name: "إرسال" }))
     await waitFor(() => expect(composer).toHaveValue(""))
+  })
+
+  it("does not carry a draft when switching conversations", () => {
+    const base = { isDetailLoading: false, detailError: null, messages: [], isMessagesLoading: false, messagesError: null, hasOlderMessages: false, isLoadingOlderMessages: false, onLoadOlderMessages: vi.fn(), canManage: false, canUpdate: true, staffUsers: [], pendingAction: null as null, actionError: null, t, ...handlers }
+    const { rerender } = render(<ConversationDetail {...base} conversation={conversation({ id: "conversation-a", status: "STAFF_ACTIVE" })} />)
+    fireEvent.change(screen.getByLabelText("الرد"), { target: { value: "مسودة أ" } })
+
+    rerender(<ConversationDetail {...base} conversation={conversation({ id: "conversation-b", status: "STAFF_ACTIVE" })} />)
+
+    expect(screen.getByLabelText("الرد")).toHaveValue("")
   })
 
   it("renders legacy EMPLOYEE messages as outgoing staff messages", () => {

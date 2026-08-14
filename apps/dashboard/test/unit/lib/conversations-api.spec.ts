@@ -37,6 +37,8 @@ describe("conversations API", () => {
       assigned: "unassigned" as const,
       unreadOnly: true,
       search: "سارة",
+      from: "2026-08-01T00:00:00.000Z",
+      to: "2026-08-31T23:59:59.999Z",
       cursor: "conversation-1",
       limit: 25,
     }
