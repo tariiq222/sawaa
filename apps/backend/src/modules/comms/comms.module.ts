@@ -100,6 +100,7 @@ import { OnAdministrativeMessageProcessingRequestedHandler } from './chat/assist
 import { AdministrativeAssistantRecoveryWorker } from './chat/assistant/administrative-assistant-recovery.worker';
 import { ChatAuditService } from './chat/chat-audit.service';
 import { ChatUsageLimitsService } from './chat/chat-usage-limits.service';
+import { WebChatAvailabilityService, WebChatEnabledGuard } from './chat/web-chat-availability.service';
 
 const handlers = [
   SendPushHandler,
@@ -145,6 +146,8 @@ const handlers = [
   GuestChatTokenService,
   ChatAuditService,
   ChatUsageLimitsService,
+  WebChatAvailabilityService,
+  WebChatEnabledGuard,
   ChatAccessService,
   CreateGuestConversationHandler,
   GetCurrentConversationHandler,

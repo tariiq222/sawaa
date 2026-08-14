@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { CreateGuestConversationHandler } from '../../modules/comms/chat/guest/create-conversation.handler';
@@ -10,6 +11,7 @@ import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-c
 import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { PublicChatController } from './public-chat.controller';
+import { WebChatAvailabilityService, WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availability.service';
 
 describe('PublicChatController (e2e)', () => {
   let app: INestApplication;
@@ -19,6 +21,7 @@ describe('PublicChatController (e2e)', () => {
   const list = { execute: jest.fn() };
   const handoff = { execute: jest.fn() };
   const retry = { execute: jest.fn() };
+  let webChatEnabled = true;
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -30,6 +33,9 @@ describe('PublicChatController (e2e)', () => {
         { provide: ListChatMessagesHandler, useValue: list },
         { provide: RequestHandoffHandler, useValue: handoff },
         { provide: RetryAdministrativeMessageHandler, useValue: retry },
+        { provide: ConfigService, useValue: { get: (key: string) => key === 'WEB_CHAT_ENABLED' ? webChatEnabled : undefined } },
+        WebChatAvailabilityService,
+        WebChatEnabledGuard,
         { provide: GuestChatTokenService, useValue: { setCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public', maxAge: 30 * 24 * 60 * 60 * 1000 }) } },
       ],
     }).compile();
@@ -40,7 +46,21 @@ describe('PublicChatController (e2e)', () => {
   });
 
   afterAll(async () => app.close());
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => {
+    webChatEnabled = true;
+    jest.clearAllMocks();
+  });
+
+  it('returns 404 without invoking chat handlers when WEB_CHAT_ENABLED is false', async () => {
+    webChatEnabled = false;
+
+    await request(app.getHttpServer())
+      .post('/public/chat/conversations')
+      .send({ guestName: 'Guest A' })
+      .expect(404);
+
+    expect(create.execute).not.toHaveBeenCalled();
+  });
 
   it('creates a guest conversation, sets a secure cookie, and never returns its raw token or hash', async () => {
     create.execute.mockResolvedValue({

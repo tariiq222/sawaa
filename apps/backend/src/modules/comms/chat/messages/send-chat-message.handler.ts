@@ -38,6 +38,8 @@ export class SendChatMessageHandler {
     }
 
     if (command.audience !== 'staff') {
+      const existing = await this.findOwnedExistingMessage(command);
+      if (existing) return existing;
       await this.limits.consumeMessage({
         identity: command.audience === 'guest'
           ? `guest:${this.access.guestTokenHash(command.guestToken)}`

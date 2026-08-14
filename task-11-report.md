@@ -34,3 +34,12 @@ The retention fail-isolation test intentionally logs a simulated `db lock timeou
 - No live Redis or destructive database operation.
 - No deployment.
 - No WhatsApp retention, environment, or configuration removal.
+
+## Security follow-up
+
+- `WEB_CHAT_ENABLED=false` is now an API-level 404 gate for all guest and authenticated web-chat routes. The assistant worker also stops before lease acquisition or provider use; health and CSRF bootstrap routes are outside this gate.
+- Daily token accounting now atomically reserves the remaining opaque Redis budget before each provider call, reconciles the reservation to the provider's actual usage, and releases it only when the provider call did not complete. Concurrent calls cannot both reserve the same remaining budget; an unknown usage or Redis-settlement failure conservatively retains the reservation until the UTC-day TTL.
+- Nonstaff message idempotency lookup occurs before Redis throttling, so a persisted duplicate replays even during a Redis outage. New work remains limited by opaque HMAC identity and IP keys.
+- Handoff CAS and `HANDOFF_REQUESTED` audit are in one RLS transaction, so an audit failure rolls the transition back and a retry can emit the event. The legacy dashboard close path and operation acknowledge/decline/resume outcomes also write exactly one ID-only semantic audit event in their state transaction.
+
+Security follow-up verification: **12 focused suites passed, 163 tests passed**; backend typecheck passed; backend lint passed with the same 0 errors and 7 unrelated warnings; `git diff --check` passed. The focused Jest aggregation emitted the repository's existing worker-teardown warning after all suites passed.

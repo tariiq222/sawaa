@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
-import { PrismaService } from '../../../../infrastructure/database';
+import { RlsTransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
 import { RequestHandoffHandler } from './request-handoff.handler';
 
@@ -18,6 +18,7 @@ describe('RequestHandoffHandler', () => {
   let access: { assertGuestAccess: jest.Mock; assertClientAccess: jest.Mock };
   let handler: RequestHandoffHandler;
   let audit: { record: jest.Mock };
+  let rlsTransaction: { withTransaction: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -42,8 +43,9 @@ describe('RequestHandoffHandler', () => {
       assertClientAccess: jest.fn().mockResolvedValue({ ...conversation, clientId: 'client-a' }),
     };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
+    rlsTransaction = { withTransaction: jest.fn().mockImplementation((work) => work(prisma)) };
     handler = new RequestHandoffHandler(
-      prisma as unknown as PrismaService,
+      rlsTransaction as unknown as RlsTransactionService,
       access as unknown as ChatAccessService,
       audit as never,
     );
@@ -79,7 +81,8 @@ describe('RequestHandoffHandler', () => {
     expect(JSON.stringify(prisma.chatConversation.updateMany.mock.calls)).not.toMatch(/reason|risk|tag/i);
     expect(audit.record).toHaveBeenCalledWith({
       action: 'HANDOFF_REQUESTED', conversationId: conversation.id,
-    });
+    }, prisma);
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
   });
 
   it('derives authenticated client identity and never writes guest contact fields', async () => {
@@ -137,6 +140,21 @@ describe('RequestHandoffHandler', () => {
       audience: 'guest', conversationId: conversation.id, guestToken: 'guest-token', guestName: 'سارة', guestPhone: '+966501234567',
     })).resolves.toEqual(expect.objectContaining({ status: ConversationStatus.WAITING_FOR_STAFF }));
     expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('rolls back an unaudited handoff so a retry can write the one semantic event', async () => {
+    audit.record.mockRejectedValueOnce(new Error('audit write failed'));
+
+    await expect(handler.execute({
+      audience: 'guest', conversationId: conversation.id, guestToken: 'guest-token', guestName: 'سارة', guestPhone: '+966501234567',
+    })).rejects.toThrow('audit write failed');
+
+    await expect(handler.execute({
+      audience: 'guest', conversationId: conversation.id, guestToken: 'guest-token', guestName: 'سارة', guestPhone: '+966501234567',
+    })).resolves.toEqual(expect.objectContaining({ status: ConversationStatus.WAITING_FOR_STAFF }));
+
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(2);
+    expect(audit.record).toHaveBeenCalledTimes(2);
   });
 
   it.each([

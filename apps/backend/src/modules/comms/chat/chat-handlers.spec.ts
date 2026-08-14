@@ -72,7 +72,10 @@ describe('CloseConversationHandler', () => {
 
   beforeEach(() => {
     prisma = buildPrisma();
-    handler = new CloseConversationHandler(prisma as never);
+    handler = new CloseConversationHandler(
+      { withTransaction: (work: (tx: typeof prisma) => unknown) => work(prisma) } as never,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
   });
 
   it('closes an open conversation', async () => {
@@ -89,6 +92,9 @@ describe('CloseConversationHandler', () => {
       data: {
         status: ConversationStatus.CLOSED,
         closedAt: expect.any(Date),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
       },
     });
   });

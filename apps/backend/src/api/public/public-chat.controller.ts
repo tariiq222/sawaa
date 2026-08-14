@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
@@ -18,11 +18,13 @@ import { GuestRequestHandoffDto } from '../../modules/comms/chat/staff/request-h
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
 import { ChatMessageResponseDto } from '../../modules/comms/chat/messages/public-chat-response.dto';
+import { WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availability.service';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
 @ApiTags('Public / Chat')
 @ApiPublicResponses()
+@UseGuards(WebChatEnabledGuard)
 @Controller('public/chat')
 export class PublicChatController {
   constructor(

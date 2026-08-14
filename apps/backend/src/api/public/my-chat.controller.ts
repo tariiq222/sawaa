@@ -29,13 +29,14 @@ import { ChatMessageResponseDto, ClaimGuestConversationResponseDto } from '../..
 import { ClientChatConversationDetailDto, ListClientChatConversationsDto, ListClientChatConversationsResponseDto } from '../../modules/comms/chat/messages/list-client-chat-conversations.dto';
 import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
 import { GetClientChatConversationHandler } from '../../modules/comms/chat/messages/get-client-chat-conversation.handler';
+import { WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availability.service';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
 @ApiTags('Public / Chat')
 @ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
+@UseGuards(WebChatEnabledGuard, ClientSessionGuard)
 @Public()
 @Controller('public/me/chat')
 export class MyChatController {

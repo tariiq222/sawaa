@@ -31,7 +31,12 @@ import {
   AdministrativeToolsService,
 } from './administrative-tools.service';
 import { readAdministrativeMessageState, readNonNegativeInteger } from './administrative-message-state';
-import { ChatDailyBudgetExceeded, ChatUsageLimitsService } from '../chat-usage-limits.service';
+import {
+  ChatDailyBudgetExceeded,
+  ChatUsageLimitsService,
+  type ChatDailyTokenReservation,
+} from '../chat-usage-limits.service';
+import { WebChatAvailabilityService } from '../web-chat-availability.service';
 
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_CHARS = 12_000;
@@ -77,12 +82,14 @@ export class AdministrativeAssistantService {
     private readonly renderer: AdministrativeResponseRenderer,
     private readonly outputValidator: AdministrativeOutputValidator,
     private readonly limits: ChatUsageLimitsService,
+    private readonly webChatAvailability: WebChatAvailabilityService,
   ) {}
 
   async processMessage(
     messageId: string,
     options: { manualRetry?: boolean; dispatchAttempt?: number } = {},
   ): Promise<CommsChatMessage | null> {
+    if (!this.webChatAvailability.isEnabled()) return null;
     const existing = await this.findExistingResponse(messageId);
     if (existing) return existing;
 
@@ -273,15 +280,26 @@ export class AdministrativeAssistantService {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
       await assertLeaseHealthy();
       let result: CompletionWithToolsResult;
+      let reservation: ChatDailyTokenReservation | undefined;
+      let providerCompleted = false;
       try {
-        await this.limits.assertDailyTokenBudget(usageIdentity);
+        reservation = await this.limits.reserveDailyTokenBudget(usageIdentity);
         result = await this.chat.completeWithTools(
           messages,
           this.tools.getDefinitions(),
           { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.2 },
         );
-        await this.limits.recordTokenUsage(usageIdentity, result.tokensUsed);
+        providerCompleted = true;
+        await this.limits.settleDailyTokenReservation(reservation, result.tokensUsed);
       } catch (error) {
+        if (reservation && !providerCompleted) {
+          try {
+            await this.limits.releaseDailyTokenReservation(reservation);
+          } catch {
+            // Retaining a failed-call reservation is safe; it cannot permit
+            // excess provider work and expires at the UTC day boundary.
+          }
+        }
         if (error instanceof ChatDailyBudgetExceeded) throw new AdministrativeLimitReached();
         throw error;
       }

@@ -20,7 +20,7 @@ type ConversationAuditEvent =
     };
 
 type OperationAuditEvent = {
-  action: 'OPERATION_CONFIRMED' | 'OPERATION_SUCCEEDED' | 'OPERATION_FAILED';
+  action: 'OPERATION_ACKNOWLEDGED' | 'OPERATION_CONFIRMED' | 'OPERATION_SUCCEEDED' | 'OPERATION_FAILED' | 'OPERATION_DECLINED';
   conversationId: string;
   operationId: string;
 };

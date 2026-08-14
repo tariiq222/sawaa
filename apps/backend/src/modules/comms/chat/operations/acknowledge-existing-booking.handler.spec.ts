@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { ChatOperationStatus, ChatOperationType } from '@prisma/client';
 import { AcknowledgeExistingBookingHandler } from './acknowledge-existing-booking.handler';
+import { ChatAuditService } from '../chat-audit.service';
 
 const baseOperation: any = {
   id: 'operation-1', conversationId: 'conversation-1', clientId: 'client-1',
@@ -39,9 +40,11 @@ function harness(overrides: Record<string, unknown> = {}, conversationOwned = tr
     },
   };
   const rls = { withTransaction: jest.fn((fn) => fn(tx)) };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   return {
-    handler: new AcknowledgeExistingBookingHandler(rls as never),
+    handler: new AcknowledgeExistingBookingHandler(rls as never, audit as unknown as ChatAuditService),
     tx,
+    audit,
     getOperation: () => operation,
   };
 }
@@ -51,7 +54,7 @@ describe('AcknowledgeExistingBookingHandler', () => {
   afterEach(() => jest.useRealTimers());
 
   it('uses a row lock and CAS to record the first confirmation separately', async () => {
-    const { handler, tx } = harness();
+    const { handler, tx, audit } = harness();
 
     const result = await handler.execute({ operationId: 'operation-1', clientId: 'client-1', expectedVersion: 0 });
 
@@ -71,10 +74,13 @@ describe('AcknowledgeExistingBookingHandler', () => {
       status: ChatOperationStatus.AWAITING_CONFIRMATION,
       confirmationCount: 1, version: 1, requiredConfirmations: 2,
     });
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'OPERATION_ACKNOWLEDGED', conversationId: 'conversation-1', operationId: 'operation-1',
+    }, tx);
   });
 
   it('returns the already-acknowledged state on a repeated click without incrementing again', async () => {
-    const { handler, tx } = harness({
+    const { handler, tx, audit } = harness({
       status: ChatOperationStatus.AWAITING_CONFIRMATION,
       confirmationCount: 1,
       version: 1,
@@ -84,6 +90,7 @@ describe('AcknowledgeExistingBookingHandler', () => {
 
     expect(result).toMatchObject({ confirmationCount: 1, version: 1 });
     expect(tx.chatOperation.updateMany).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
   });
 
   it('expires an acknowledged operation at the exact boundary instead of returning it as confirmable', async () => {

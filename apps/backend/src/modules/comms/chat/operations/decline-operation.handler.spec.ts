@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { ChatMessageKind, ChatOperationStatus, ChatOperationType } from '@prisma/client';
 import { DeclineOperationHandler } from './decline-operation.handler';
+import { ChatAuditService } from '../chat-audit.service';
 
 function harness() {
   let operation: any = {
@@ -31,9 +32,14 @@ function harness() {
     },
     commsChatMessage: { create: jest.fn().mockResolvedValue({ id: 'message-1' }) },
   };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   return {
-    handler: new DeclineOperationHandler({ withTransaction: (fn: (db: typeof tx) => unknown) => fn(tx) } as never),
+    handler: new DeclineOperationHandler(
+      { withTransaction: (fn: (db: typeof tx) => unknown) => fn(tx) } as never,
+      audit as unknown as ChatAuditService,
+    ),
     tx,
+    audit,
     setOperation: (value: Record<string, unknown>) => { operation = { ...operation, ...value }; },
   };
 }
@@ -43,7 +49,7 @@ describe('DeclineOperationHandler', () => {
   afterEach(() => jest.useRealTimers());
 
   it('declines with CAS and writes one public-safe result message', async () => {
-    const { handler, tx } = harness();
+    const { handler, tx, audit } = harness();
     const result = await handler.execute({ operationId: 'operation-1', clientId: 'client-1', expectedVersion: 0 });
 
     expect(result).toMatchObject({ status: ChatOperationStatus.DECLINED, version: 1, resultMessageId: 'message-1' });
@@ -54,14 +60,18 @@ describe('DeclineOperationHandler', () => {
         status: ChatOperationStatus.DECLINED,
       },
     }) });
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'OPERATION_DECLINED', conversationId: 'conversation-1', operationId: 'operation-1',
+    }, tx);
   });
 
   it('returns the same declined result on a repeated click without another message', async () => {
-    const { handler, tx, setOperation } = harness();
+    const { handler, tx, audit, setOperation } = harness();
     setOperation({ status: ChatOperationStatus.DECLINED, version: 1, resultMessageId: 'message-1' });
     const result = await handler.execute({ operationId: 'operation-1', clientId: 'client-1', expectedVersion: 0 });
     expect(result.resultMessageId).toBe('message-1');
     expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
   });
 
   it('enforces ownership and optimistic version', async () => {

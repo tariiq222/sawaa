@@ -17,6 +17,7 @@ import {
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { ACTIVE_BOOKING_STATUSES } from '../../../bookings/active-booking-statuses';
 import { lockChatConversation } from '../conversation-lock.helper';
+import { ChatAuditService } from '../chat-audit.service';
 import { lockChatOperation } from './acknowledge-existing-booking.handler';
 import { toOperationCardMetadata } from './chat-operation-public.mapper';
 import {
@@ -64,6 +65,7 @@ export class ResumeChatOperationsHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly quote: ChatBookingQuoteService,
+    private readonly audit: ChatAuditService,
   ) {}
 
   async execute(command: ResumeChatOperationsCommand): Promise<ChatOperation[]> {
@@ -183,6 +185,14 @@ export class ResumeChatOperationsHandler {
               data: { resultMessageId: message.id },
             })
           : replacement;
+
+        if (isImmediateResult) {
+          await this.audit.record({
+            action: 'OPERATION_SUCCEEDED',
+            conversationId: original.conversationId,
+            operationId: completedReplacement.id,
+          }, tx);
+        }
 
         await tx.chatOperation.update({
           where: { id: original.id },
@@ -392,6 +402,11 @@ export class ResumeChatOperationsHandler {
           clientUnreadCount: { increment: 1 },
         },
       });
+      await this.audit.record({
+        action: 'OPERATION_FAILED',
+        conversationId: original.conversationId,
+        operationId: failed.id,
+      }, tx);
       return failed;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }

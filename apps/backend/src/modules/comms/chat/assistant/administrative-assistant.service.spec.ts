@@ -13,6 +13,8 @@ import { AdministrativeOutputValidator } from './administrative-output-validator
 import { AdministrativeResponseRenderer } from './administrative-response-renderer';
 import { AdministrativeScopeGate } from './administrative-scope-gate';
 import { AdministrativeToolsService } from './administrative-tools.service';
+import { ChatDailyBudgetExceeded } from '../chat-usage-limits.service';
+import { WebChatAvailabilityService } from '../web-chat-availability.service';
 
 const messageId = '00000000-0000-4000-a000-000000000010';
 const conversationId = '00000000-0000-4000-a000-000000000020';
@@ -61,7 +63,12 @@ describe('AdministrativeAssistantService', () => {
   let chat: { completeWithTools: jest.Mock; isAvailable: jest.Mock };
   let tools: { getDefinitions: jest.Mock; execute: jest.Mock };
   let lease: { acquire: jest.Mock; renew: jest.Mock; release: jest.Mock };
-  let limits: { assertDailyTokenBudget: jest.Mock; recordTokenUsage: jest.Mock };
+  let limits: {
+    reserveDailyTokenBudget: jest.Mock;
+    settleDailyTokenReservation: jest.Mock;
+    releaseDailyTokenReservation: jest.Mock;
+  };
+  let webChatAvailability: { isEnabled: jest.Mock };
   let service: AdministrativeAssistantService;
 
   beforeAll(() => {
@@ -140,9 +147,11 @@ describe('AdministrativeAssistantService', () => {
       release: jest.fn().mockResolvedValue(undefined),
     };
     limits = {
-      assertDailyTokenBudget: jest.fn().mockResolvedValue(undefined),
-      recordTokenUsage: jest.fn().mockResolvedValue(undefined),
+      reserveDailyTokenBudget: jest.fn().mockResolvedValue({ key: 'chat:tokens:opaque', reservedTokens: 1000 }),
+      settleDailyTokenReservation: jest.fn().mockResolvedValue(undefined),
+      releaseDailyTokenReservation: jest.fn().mockResolvedValue(undefined),
     };
+    webChatAvailability = { isEnabled: jest.fn().mockReturnValue(true) };
     const scopeGate = new AdministrativeScopeGate();
     service = new AdministrativeAssistantService(
       prisma as unknown as PrismaService,
@@ -154,14 +163,37 @@ describe('AdministrativeAssistantService', () => {
       new AdministrativeResponseRenderer(),
       new AdministrativeOutputValidator(),
       limits as never,
+      webChatAvailability as unknown as WebChatAvailabilityService,
     );
   });
 
-  it('checks and records the daily budget under an opaque conversation identity', async () => {
+  it('reserves the daily budget before provider use and settles it to actual tokens', async () => {
     await service.processMessage(messageId);
 
-    expect(limits.assertDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash');
-    expect(limits.recordTokenUsage).toHaveBeenCalledWith('guest:opaque-guest-hash', 12);
+    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash');
+    expect(limits.reserveDailyTokenBudget.mock.invocationCallOrder[0])
+      .toBeLessThan(chat.completeWithTools.mock.invocationCallOrder[0]);
+    expect(limits.settleDailyTokenReservation).toHaveBeenCalledWith(
+      { key: 'chat:tokens:opaque', reservedTokens: 1000 },
+      12,
+    );
+  });
+
+  it('does not call the provider when atomic daily budget reservation is exhausted', async () => {
+    limits.reserveDailyTokenBudget.mockRejectedValueOnce(new ChatDailyBudgetExceeded());
+
+    await service.processMessage(messageId);
+
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+  });
+
+  it('does not process queued assistant work when web chat is disabled', async () => {
+    webChatAvailability.isEnabled.mockReturnValue(false);
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(lease.acquire).not.toHaveBeenCalled();
   });
 
   it('answers out-of-scope input deterministically without invoking AI or tools', async () => {

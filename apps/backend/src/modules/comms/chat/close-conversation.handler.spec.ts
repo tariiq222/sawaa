@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { RlsTransactionService } from '../../../infrastructure/database';
 import { CloseConversationHandler } from './close-conversation.handler';
+import { ChatAuditService } from './chat-audit.service';
 
 describe('CloseConversationHandler', () => {
   let handler: CloseConversationHandler;
@@ -10,17 +11,20 @@ describe('CloseConversationHandler', () => {
     chatConversation: { findFirst: jest.Mock; update: jest.Mock };
     employee: { findFirst: jest.Mock };
   };
+  let audit: { record: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
       chatConversation: { findFirst: jest.fn(), update: jest.fn() },
       employee: { findFirst: jest.fn() },
     };
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CloseConversationHandler,
-        { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: (work: (tx: unknown) => unknown) => work(prisma) } },
+        { provide: ChatAuditService, useValue: audit },
       ],
     }).compile();
 
@@ -34,6 +38,7 @@ describe('CloseConversationHandler', () => {
       handler.execute({ conversationId: '00000000-0000-0000-0000-000000000001' }),
     ).rejects.toThrow();
     expect(prisma.chatConversation.update).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
   });
 
   it('returns the existing row unchanged when already CLOSED (idempotent)', async () => {
@@ -83,5 +88,8 @@ describe('CloseConversationHandler', () => {
         assistantLeaseExpiresAt: null,
       },
     });
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'CONVERSATION_CLOSED', conversationId: 'c1',
+    }, prisma);
   });
 });

@@ -127,8 +127,8 @@ describe('SendChatMessageHandler', () => {
         guestTokenHash: expect.any(String),
       }),
     });
-    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
-    expect(transaction.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(2);
+    expect(transaction.$executeRaw).toHaveBeenCalledTimes(2);
     expect(transaction.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
       transaction.commsChatMessage.create.mock.invocationCallOrder[0],
     );
@@ -291,6 +291,19 @@ describe('SendChatMessageHandler', () => {
     expect(transaction.commsChatMessage.findUnique).toHaveBeenCalledWith({
       where: { conversationId_clientMessageId: { conversationId: guestConversation.id, clientMessageId: 'same-id' } },
     });
+    expect(limits.consumeMessage).not.toHaveBeenCalled();
+  });
+
+  it('replays a persisted nonstaff duplicate before Redis limits, even when Redis is unavailable', async () => {
+    transaction.commsChatMessage.findUnique.mockResolvedValue({ id: 'original-message', body: 'hello' });
+    limits.consumeMessage.mockRejectedValue(new Error('redis unavailable'));
+
+    await expect(handler.execute({
+      audience: 'guest', conversationId: guestConversation.id, guestToken: 'guest-token', body: 'hello', clientMessageId: 'same-id',
+    })).resolves.toEqual({ id: 'original-message', body: 'hello' });
+
+    expect(limits.consumeMessage).not.toHaveBeenCalled();
+    expect(transaction.commsChatMessage.create).not.toHaveBeenCalled();
   });
 
   it('reads back the winning message after a concurrent unique-index race instead of retrying AI-triggering work', async () => {

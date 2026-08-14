@@ -15,6 +15,7 @@ import {
 import { RlsTransactionService } from '../../../../infrastructure/database';
 import { lockChatConversation } from '../conversation-lock.helper';
 import { assertOperationOwnership, lockChatOperation } from './acknowledge-existing-booking.handler';
+import { ChatAuditService } from '../chat-audit.service';
 
 export interface DeclineOperationCommand {
   operationId: string;
@@ -24,7 +25,10 @@ export interface DeclineOperationCommand {
 
 @Injectable()
 export class DeclineOperationHandler {
-  constructor(private readonly rlsTransaction: RlsTransactionService) {}
+  constructor(
+    private readonly rlsTransaction: RlsTransactionService,
+    private readonly audit: ChatAuditService,
+  ) {}
 
   execute(command: DeclineOperationCommand): Promise<ChatOperation> {
     return this.rlsTransaction.withTransaction(async (tx) => {
@@ -93,10 +97,16 @@ export class DeclineOperationHandler {
           clientUnreadCount: { increment: 1 },
         },
       });
-      return tx.chatOperation.update({
+      const declined = await tx.chatOperation.update({
         where: { id: operation.id },
         data: { resultMessageId: message.id },
       });
+      await this.audit.record({
+        action: 'OPERATION_DECLINED',
+        conversationId: operation.conversationId,
+        operationId: operation.id,
+      }, tx);
+      return declined;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }

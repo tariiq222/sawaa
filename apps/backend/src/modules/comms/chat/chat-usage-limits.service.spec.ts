@@ -5,13 +5,12 @@ import { ChatDailyBudgetExceeded, ChatUsageLimitsService } from './chat-usage-li
 
 describe('ChatUsageLimitsService', () => {
   const secret = 'test-chat-limit-hmac-secret-with-32-bytes';
-  let client: { eval: jest.Mock; get: jest.Mock };
+  let client: { eval: jest.Mock };
   let service: ChatUsageLimitsService;
 
   beforeEach(() => {
     client = {
       eval: jest.fn().mockResolvedValue(1),
-      get: jest.fn().mockResolvedValue(null),
     };
     const redis = {
       getClient: jest.fn(() => client),
@@ -56,31 +55,41 @@ describe('ChatUsageLimitsService', () => {
     expect((error as HttpException).getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
   });
 
-  it('tracks actual daily tokens under an opaque UTC-day key and expires it at day end', async () => {
+  it('atomically reserves the remaining daily budget under an opaque UTC-day key before a provider call', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-08-14T12:00:00.000Z'));
     try {
-      client.eval.mockResolvedValueOnce(250);
+      client.eval.mockResolvedValueOnce(1_000);
 
-      await service.recordTokenUsage('client:client-sensitive-123', 250);
+      const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123');
 
       const call = client.eval.mock.calls[0];
       expect(call[2]).toMatch(/^chat:tokens:2026-08-14:[a-f0-9]{64}$/);
       expect(call[2]).not.toContain('client-sensitive-123');
-      expect(call.slice(3)).toEqual(['250', '43200']);
+      expect(call.slice(3)).toEqual(['1000', '43200']);
+      expect(reservation.reservedTokens).toBe(1_000);
     } finally {
       jest.useRealTimers();
     }
   });
 
-  it('blocks a model call once the configured daily token budget is exhausted', async () => {
-    client.get.mockResolvedValue('1000');
+  it('rejects the second concurrent reservation before it can call a provider', async () => {
+    client.eval.mockResolvedValueOnce(1_000).mockResolvedValueOnce(0);
 
-    await expect(service.assertDailyTokenBudget('guest:opaque-token-hash')).rejects.toBeInstanceOf(ChatDailyBudgetExceeded);
+    const first = service.reserveDailyTokenBudget('guest:opaque-token-hash');
+    const second = service.reserveDailyTokenBudget('guest:opaque-token-hash');
+
+    await expect(first).resolves.toEqual(expect.objectContaining({ reservedTokens: 1_000 }));
+    await expect(second).rejects.toBeInstanceOf(ChatDailyBudgetExceeded);
   });
 
-  it('records an over-budget provider result before rejecting further work', async () => {
-    client.eval.mockResolvedValueOnce(1_050);
+  it('reconciles a reservation to actual provider tokens without exposing the raw identity', async () => {
+    client.eval.mockResolvedValueOnce(1_000).mockResolvedValueOnce(12);
+    const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123');
 
-    await expect(service.recordTokenUsage('client:client-sensitive-123', 100)).rejects.toBeInstanceOf(ChatDailyBudgetExceeded);
+    await service.settleDailyTokenReservation(reservation, 12);
+
+    const settle = client.eval.mock.calls[1];
+    expect(settle[2]).toMatch(/^chat:tokens:2026-08-14:[a-f0-9]{64}$/);
+    expect(settle.slice(3)).toEqual(['1000', '12']);
   });
 });

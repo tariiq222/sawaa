@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
@@ -17,6 +18,7 @@ import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations
 import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
 import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
 import { GetClientChatConversationHandler } from '../../modules/comms/chat/messages/get-client-chat-conversation.handler';
+import { WebChatAvailabilityService, WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availability.service';
 
 describe('MyChatController (e2e)', () => {
   let app: INestApplication;
@@ -32,6 +34,7 @@ describe('MyChatController (e2e)', () => {
   const decline = { execute: jest.fn() };
   const resume = { execute: jest.fn().mockResolvedValue([]) };
   const retry = { execute: jest.fn() };
+  let webChatEnabled = true;
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -49,6 +52,9 @@ describe('MyChatController (e2e)', () => {
         { provide: DeclineOperationHandler, useValue: decline },
         { provide: ResumeChatOperationsHandler, useValue: resume },
         { provide: RetryAdministrativeMessageHandler, useValue: retry },
+        { provide: ConfigService, useValue: { get: (key: string) => key === 'WEB_CHAT_ENABLED' ? webChatEnabled : undefined } },
+        WebChatAvailabilityService,
+        WebChatEnabledGuard,
         { provide: GuestChatTokenService, useValue: { clearCookieOptions: jest.fn().mockReturnValue({ httpOnly: true, sameSite: 'lax', secure: false, path: '/api/v1/public' }) } },
       ],
     })
@@ -65,7 +71,21 @@ describe('MyChatController (e2e)', () => {
   });
 
   afterAll(async () => app.close());
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => {
+    webChatEnabled = true;
+    jest.clearAllMocks();
+  });
+
+  it('returns 404 without invoking authenticated chat operations when WEB_CHAT_ENABLED is false', async () => {
+    webChatEnabled = false;
+
+    await request(app.getHttpServer())
+      .post('/public/me/chat/operations/00000000-0000-4000-a000-000000000001/confirm')
+      .send({ expectedVersion: 0 })
+      .expect(404);
+
+    expect(confirm.execute).not.toHaveBeenCalled();
+  });
 
   it('loads a claimed current conversation using ClientSessionGuard identity', async () => {
     current.execute.mockResolvedValue({ id: 'conv-1', clientId: 'client-a' });

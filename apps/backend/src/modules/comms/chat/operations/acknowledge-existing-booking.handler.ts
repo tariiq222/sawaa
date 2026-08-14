@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ChatOperationStatus, Prisma, type ChatOperation } from '@prisma/client';
 import { RlsTransactionService } from '../../../../infrastructure/database';
+import { ChatAuditService } from '../chat-audit.service';
 
 const TERMINAL_STATUSES = new Set<ChatOperationStatus>([
   ChatOperationStatus.SUCCEEDED,
@@ -39,7 +40,10 @@ export function assertOperationOwnership(
 
 @Injectable()
 export class AcknowledgeExistingBookingHandler {
-  constructor(private readonly rlsTransaction: RlsTransactionService) {}
+  constructor(
+    private readonly rlsTransaction: RlsTransactionService,
+    private readonly audit: ChatAuditService,
+  ) {}
 
   execute(command: AcknowledgeExistingBookingCommand): Promise<ChatOperation> {
     return this.rlsTransaction.withTransaction(async (tx) => {
@@ -89,7 +93,13 @@ export class AcknowledgeExistingBookingHandler {
         },
       });
       if (updated.count !== 1) throw new ConflictException('Operation changed concurrently');
-      return (await tx.chatOperation.findUnique({ where: { id: operation.id } }))!;
+      const acknowledged = (await tx.chatOperation.findUnique({ where: { id: operation.id } }))!;
+      await this.audit.record({
+        action: 'OPERATION_ACKNOWLEDGED',
+        conversationId: operation.conversationId,
+        operationId: operation.id,
+      }, tx);
+      return acknowledged;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }

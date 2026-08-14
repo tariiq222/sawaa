@@ -6,6 +6,7 @@ import {
   DeliveryType,
 } from '@prisma/client';
 import { ChatBookingQuoteService } from './chat-booking-quote.service';
+import { ChatAuditService } from '../chat-audit.service';
 import { ResumeChatOperationsHandler } from './resume-chat-operations.handler';
 
 const NOW = new Date('2026-08-13T09:00:00.000Z');
@@ -158,12 +159,14 @@ function buildHarness(input: {
   const rls = {
     withTransaction: jest.fn((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
   };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const handler = new ResumeChatOperationsHandler(
     prisma as never,
     rls as never,
     quote as unknown as ChatBookingQuoteService,
+    audit as unknown as ChatAuditService,
   );
-  return { handler, prisma, quote, operations, original };
+  return { handler, prisma, quote, audit, operations, original };
 }
 
 describe('ResumeChatOperationsHandler', () => {
@@ -232,7 +235,7 @@ describe('ResumeChatOperationsHandler', () => {
   });
 
   it('expires an elapsed guest intent without quoting or creating a card', async () => {
-    const { handler, quote, prisma } = buildHarness({
+    const { handler, quote, prisma, audit } = buildHarness({
       operation: guestOperation({ expiresAt: NOW }),
     });
 
@@ -244,7 +247,7 @@ describe('ResumeChatOperationsHandler', () => {
   });
 
   it('resumes list-own with no model arguments and writes one safe terminal result', async () => {
-    const { handler, quote, prisma } = buildHarness({
+    const { handler, quote, prisma, audit } = buildHarness({
       operation: guestOperation({
         type: ChatOperationType.LIST_OWN_APPOINTMENTS,
         payload: { intent: 'LIST_OWN_APPOINTMENTS', request: {} },
@@ -266,10 +269,13 @@ describe('ResumeChatOperationsHandler', () => {
         metadata: expect.objectContaining({ outcome: 'APPOINTMENTS_LISTED' }),
       }),
     });
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'OPERATION_SUCCEEDED', conversationId: 'conversation-1', operationId: resumed!.id,
+    }, prisma);
   });
 
   it('keeps the claimed conversation and emits a safe failed result when availability changed', async () => {
-    const { handler, quote, prisma } = buildHarness();
+    const { handler, quote, prisma, audit } = buildHarness();
     quote.quoteBooking.mockRejectedValueOnce(new BadRequestException('slot unavailable'));
 
     const [failed] = await handler.execute({ conversationId: 'conversation-1', clientId: 'client-1' });
@@ -282,6 +288,9 @@ describe('ResumeChatOperationsHandler', () => {
     expect(prisma.commsChatMessage.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ metadata: expect.objectContaining({ outcome: 'OPERATION_FAILED' }) }),
     });
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'OPERATION_FAILED', conversationId: 'conversation-1', operationId: failed!.id,
+    }, prisma);
   });
 
   it('rethrows transient quote failures so the durable outbox consumer can retry', async () => {
