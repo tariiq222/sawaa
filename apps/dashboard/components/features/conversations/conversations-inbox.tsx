@@ -24,7 +24,7 @@ export function ConversationsInbox() {
   const [filters, setFilters] = useState<ConversationFilters>({ assigned: "all", limit: 50 })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const pendingReadMarkersRef = useRef(new Set<string>())
+  const pendingReadConversationIdsRef = useRef(new Set<string>())
   const completedReadMarkersRef = useRef(new Set<string>())
   const list = useConversations(filters)
   const mutations = useConversationMutations()
@@ -50,17 +50,17 @@ export function ConversationsInbox() {
   )
 
   useEffect(() => {
-    if (!selected || selected.status !== "STAFF_ACTIVE" || selected.assignedStaffUserId !== user?.id || selected.staffUnreadCount < 1) return
+    if (!selected || selectedMessages.isLoading || selected.status !== "STAFF_ACTIVE" || selected.assignedStaffUserId !== user?.id || selected.staffUnreadCount < 1) return
     const marker = `${selected.id}:${latestOwnedMessage?.id ?? "all"}`
-    if (pendingReadMarkersRef.current.has(marker) || completedReadMarkersRef.current.has(marker)) return
-    pendingReadMarkersRef.current.add(marker)
+    if (pendingReadConversationIdsRef.current.has(selected.id) || completedReadMarkersRef.current.has(marker)) return
+    pendingReadConversationIdsRef.current.add(selected.id)
     markReadMutate(
       { conversationId: selected.id, throughMessageId: latestOwnedMessage?.id },
       { onError: () => {
-        pendingReadMarkersRef.current.delete(marker)
+        pendingReadConversationIdsRef.current.delete(selected.id)
         setActionError(t("conversations.error.markRead"))
       }, onSuccess: () => {
-        pendingReadMarkersRef.current.delete(marker)
+        pendingReadConversationIdsRef.current.delete(selected.id)
         completedReadMarkersRef.current.add(marker)
         setActionError(null)
       } },
@@ -75,6 +75,7 @@ export function ConversationsInbox() {
     selected?.status,
     selected?.updatedAt,
     selectedDetail.dataUpdatedAt,
+    selectedMessages.isLoading,
     t,
     user?.id,
   ])

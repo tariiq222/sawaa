@@ -13,7 +13,7 @@
 ## Verification
 
 - Focused backend Jest: 4 files, 22 tests passed.
-- Focused dashboard Vitest: 7 files, 50 tests passed.
+- Focused dashboard Vitest: 7 files, 51 tests passed.
 - `pnpm --filter=dashboard i18n:verify`: passed.
 - `pnpm --filter=dashboard typecheck`: passed.
 - `pnpm --filter=dashboard lint`: passed with 11 pre-existing warnings and zero errors.
@@ -65,7 +65,7 @@ The following hunks were applied in `59d7957a` and are retained here as integrat
 - The sidebar footer now derives its `/conversations` shortcut from permission-filtered navigation and no longer links to `/whatsapp`.
 - Restored the backend-supported `from` and `to` filter contract and exposed inclusive UTC date controls. Reception staff can use the safe `all`, `me`, and `unassigned` assignment filters supported by the backend access predicate.
 - Conversation timestamps use the selected Arabic or English locale.
-- Automatic mark-read tracks pending and completed markers independently, preventing a duplicate request when switching A → B → A while the first request is still in flight.
+- Automatic mark-read waits for the message page before choosing `throughMessageId`, tracks one in-flight request per conversation, and keeps completed message-generation markers independently. This prevents both A → B → A duplicates and the initial detail-before-messages `all` → message-ID race.
 
 ### `apps/dashboard/hooks/use-conversations.ts`
 

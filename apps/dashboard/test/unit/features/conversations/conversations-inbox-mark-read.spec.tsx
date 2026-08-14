@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => {
     conversation,
     conversations: [conversation],
     details: { [conversation.id]: conversation } as Record<string, Conversation>,
+    messagesReady: true,
     markRead: { isPending: false, mutate: vi.fn() },
     t: (key: string) => key,
   }
@@ -45,11 +46,11 @@ vi.mock("@/hooks/use-conversations", () => ({
     return { data, dataUpdatedAt: data ? Date.parse(data.updatedAt) : 0, isLoading: false, error: null }
   },
   useConversationMessages: (conversationId: string) => ({
-    data: { pages: [{ data: [{
+    data: mocks.messagesReady ? { pages: [{ data: [{
       id: `message-${conversationId}`, conversationId, senderType: "VISITOR", body: "مرحباً",
       kind: "TEXT", clientMessageId: "client-1", createdAt: "2026-08-14T06:00:00.000Z",
-    }], meta: { hasMore: false, nextCursor: null, limit: 100 } }] },
-    isLoading: false, error: null, hasNextPage: false, isFetchingNextPage: false, fetchNextPage: vi.fn(),
+    }], meta: { hasMore: false, nextCursor: null, limit: 100 } }] } : undefined,
+    isLoading: !mocks.messagesReady, error: null, hasNextPage: false, isFetchingNextPage: false, fetchNextPage: vi.fn(),
   }),
   useAssignableConversationStaff: () => ({ data: [] }),
 }))
@@ -70,6 +71,7 @@ describe("ConversationsInbox mark-read recovery", () => {
   beforeEach(() => {
     mocks.conversations = [mocks.conversation]
     mocks.details = { [mocks.conversation.id]: mocks.conversation }
+    mocks.messagesReady = true
     mocks.markRead.mutate.mockReset()
     mocks.markRead.mutate.mockImplementation((_input, options) => options?.onError?.(new Error("network")))
   })
@@ -105,5 +107,22 @@ describe("ConversationsInbox mark-read recovery", () => {
     })
 
     expect(mocks.markRead.mutate).toHaveBeenCalledTimes(2)
+  })
+
+  it("waits for messages before marking detail read so all does not race the latest message", async () => {
+    mocks.messagesReady = false
+    mocks.markRead.mutate.mockImplementation(() => undefined)
+    const { rerender } = render(<ConversationsInbox />)
+    await act(async () => { await Promise.resolve() })
+    expect(mocks.markRead.mutate).not.toHaveBeenCalled()
+
+    mocks.messagesReady = true
+    rerender(<ConversationsInbox />)
+
+    await waitFor(() => expect(mocks.markRead.mutate).toHaveBeenCalledTimes(1))
+    expect(mocks.markRead.mutate).toHaveBeenCalledWith(
+      { conversationId: "conversation-1", throughMessageId: "message-conversation-1" },
+      expect.any(Object),
+    )
   })
 })
