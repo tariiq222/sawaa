@@ -41,6 +41,7 @@ describe('API Client (lib/api.ts)', () => {
     return Promise.resolve({
       ok: true,
       status: 200,
+      headers: new Headers(),
       json: () => Promise.resolve({ success: true, data }),
     })
   }
@@ -51,6 +52,7 @@ describe('API Client (lib/api.ts)', () => {
       ok: false,
       status,
       statusText: message,
+      headers: new Headers(),
       json: () => Promise.resolve(body),
       clone: function() { return response },
     }
@@ -68,6 +70,7 @@ describe('API Client (lib/api.ts)', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
+      headers: new Headers(),
       json: () => Promise.resolve({ success: true, data: { id: 1 } }),
     })
 
@@ -84,6 +87,7 @@ describe('API Client (lib/api.ts)', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
+      headers: new Headers(),
       json: () => Promise.resolve({ success: true, data: {} }),
     })
 
@@ -103,6 +107,7 @@ describe('API Client (lib/api.ts)', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
+      headers: new Headers(),
       json: () => Promise.resolve({ success: true, data: { accessToken: 'tok' } }),
     })
 
@@ -122,6 +127,7 @@ describe('API Client (lib/api.ts)', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
+      headers: new Headers(),
       json: () => Promise.resolve({ success: true, data: [] }),
     })
 
@@ -156,7 +162,12 @@ describe('API Client (lib/api.ts)', () => {
       makeErrorResponse(401, 'AUTH_INVALID_CREDENTIALS', 'Invalid email or password'),
     )
     // Stub refresh to fail (avoid retry loop in this test)
-    fetchMock.mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({}) })
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      headers: new Headers(),
+      json: () => Promise.resolve({}),
+    })
 
     try {
       await api.post('/auth/login', { email: 'x', password: 'y' })
@@ -176,6 +187,7 @@ describe('API Client (lib/api.ts)', () => {
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
+      headers: new Headers(),
       json: () => Promise.reject(new Error('not json')),
       clone: function() { return response500 },
     }
@@ -204,6 +216,7 @@ describe('API Client (lib/api.ts)', () => {
     const response401 = {
       ok: false,
       status: 401,
+      headers: new Headers(),
       json: () => Promise.resolve({}),
       clone: function() { return response401 },
     }
@@ -212,6 +225,7 @@ describe('API Client (lib/api.ts)', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
+      headers: new Headers(),
       json: () => Promise.resolve({ data: { accessToken: 'new-token', expiresIn: 900 } }),
     })
     // Retry of original call succeeds
@@ -232,6 +246,7 @@ describe('API Client (lib/api.ts)', () => {
     const response401_1 = {
       ok: false,
       status: 401,
+      headers: new Headers(),
       json: () => Promise.resolve({}),
       clone: function() { return response401_1 },
     }
@@ -240,6 +255,7 @@ describe('API Client (lib/api.ts)', () => {
     const response401_2 = {
       ok: false,
       status: 401,
+      headers: new Headers(),
       json: () => Promise.resolve({}),
       clone: function() { return response401_2 },
     }
@@ -263,12 +279,14 @@ describe('API Client (lib/api.ts)', () => {
     const response401_a = {
       ok: false,
       status: 401,
+      headers: new Headers(),
       json: () => Promise.resolve({}),
       clone: function() { return response401_a },
     }
     const response401_b = {
       ok: false,
       status: 401,
+      headers: new Headers(),
       json: () => Promise.resolve({}),
       clone: function() { return response401_b },
     }
@@ -279,6 +297,7 @@ describe('API Client (lib/api.ts)', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        headers: new Headers(),
         json: () => Promise.resolve({ data: { accessToken: 'refreshed', expiresIn: 900 } }),
       })
       // Retries succeed
