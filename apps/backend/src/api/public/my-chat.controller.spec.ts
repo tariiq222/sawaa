@@ -179,6 +179,7 @@ describe('MyChatController (e2e)', () => {
       audience: 'client',
       conversationId: '00000000-0000-4000-a000-000000000001',
       clientId: 'client-a',
+      ipAddress: expect.any(String),
       body: 'مرحبا',
       clientMessageId: '00000000-0000-4000-a000-000000000002',
     });

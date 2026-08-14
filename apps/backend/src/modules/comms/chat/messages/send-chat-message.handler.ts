@@ -7,10 +7,11 @@ import { lockChatConversation } from '../conversation-lock.helper';
 import type { SendChatMessageDto } from './send-chat-message.dto';
 import { queuedAdministrativeMessageState } from '../assistant/administrative-message-state';
 import { stageAdministrativeMessageProcessing } from '../assistant/administrative-message-processing-requested.event';
+import { ChatUsageLimitsService } from '../chat-usage-limits.service';
 
 export type SendChatMessageCommand = SendChatMessageDto & (
-  | { audience: 'guest'; conversationId: string; guestToken: string }
-  | { audience: 'client'; conversationId: string; clientId: string }
+  | { audience: 'guest'; conversationId: string; guestToken: string; ipAddress?: string }
+  | { audience: 'client'; conversationId: string; clientId: string; ipAddress?: string }
   | { audience: 'staff'; conversationId: string; staffUserId: string }
 );
 
@@ -21,6 +22,7 @@ export class SendChatMessageHandler {
     private readonly access: ChatAccessService,
     private readonly config: ConfigService,
     private readonly rlsTransaction: RlsTransactionService,
+    private readonly limits: ChatUsageLimitsService,
   ) {}
 
   async execute(command: SendChatMessageCommand): Promise<CommsChatMessage> {
@@ -33,6 +35,15 @@ export class SendChatMessageHandler {
     const maxLength = this.config.getOrThrow<number>('CHAT_MAX_MESSAGE_LENGTH');
     if (body.length === 0 || body.length > maxLength) {
       throw new BadRequestException(`Message body must be between 1 and ${maxLength} characters`);
+    }
+
+    if (command.audience !== 'staff') {
+      await this.limits.consumeMessage({
+        identity: command.audience === 'guest'
+          ? `guest:${this.access.guestTokenHash(command.guestToken)}`
+          : `client:${command.clientId}`,
+        ipAddress: command.ipAddress ?? 'unknown',
+      });
     }
 
     const staffConversation = command.audience === 'staff'

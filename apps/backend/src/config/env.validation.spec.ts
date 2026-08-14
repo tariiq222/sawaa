@@ -124,6 +124,33 @@ describe('envValidationSchema', () => {
     expect(rejected.error?.details.some((detail) => detail.path.includes('CHAT_MAX_MESSAGE_LENGTH'))).toBe(true);
   });
 
+  it('applies safe defaults for the complete web-chat runtime contract', () => {
+    const result = envValidationSchema.validate(baseValidEnv, { abortEarly: false });
+
+    expect(result.error).toBeUndefined();
+    expect(result.value).toEqual(expect.objectContaining({
+      WEB_CHAT_ENABLED: false,
+      CHAT_MAX_MESSAGE_LENGTH: 4000,
+      CHAT_RATE_LIMIT_PER_MINUTE: 20,
+      CHAT_DAILY_TOKEN_BUDGET: 100000,
+      CHAT_GUEST_SESSION_DAYS: 30,
+      RETENTION_CHAT_DAYS: 365,
+    }));
+  });
+
+  it.each([
+    ['CHAT_RATE_LIMIT_PER_MINUTE', '0'],
+    ['CHAT_DAILY_TOKEN_BUDGET', '0'],
+    ['CHAT_GUEST_SESSION_DAYS', '0'],
+    ['RETENTION_CHAT_DAYS', '0'],
+  ])('rejects a non-positive %s', (key, value) => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, [key]: value },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((detail) => detail.path.includes(key))).toBe(true);
+  });
+
   it('rejects a missing CHAT_GUEST_TOKEN_SECRET at startup', () => {
     const result = envValidationSchema.validate(
       { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: undefined },

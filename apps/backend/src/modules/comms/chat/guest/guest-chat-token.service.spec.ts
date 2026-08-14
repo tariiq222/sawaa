@@ -7,8 +7,16 @@ describe('GuestChatTokenService', () => {
 
   beforeEach(() => {
     service = new GuestChatTokenService({
-      getOrThrow: jest.fn().mockReturnValue(secret),
+      getOrThrow: jest.fn((key: string) => key === 'CHAT_GUEST_SESSION_DAYS' ? 30 : secret),
     } as unknown as ConfigService);
+  });
+
+  it('uses the configured guest-session lifetime for the cookie', () => {
+    const configured = new GuestChatTokenService({
+      getOrThrow: jest.fn((key: string) => key === 'CHAT_GUEST_SESSION_DAYS' ? 7 : secret),
+    } as unknown as ConfigService);
+
+    expect(configured.setCookieOptions('production').maxAge).toBe(7 * 24 * 60 * 60 * 1000);
   });
 
   it('generates a random token with at least 32 bytes of entropy', () => {

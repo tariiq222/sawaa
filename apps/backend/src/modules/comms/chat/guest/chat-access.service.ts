@@ -4,6 +4,7 @@ import { PrismaService, RlsTransactionService } from '../../../../infrastructure
 import { GuestChatTokenService } from './guest-chat-token.service';
 import { ChatOperationsResumeRequestedEvent } from '../operations/events/chat-operations-resume-requested.event';
 import { lockChatConversation } from '../conversation-lock.helper';
+import { ChatAuditService } from '../chat-audit.service';
 
 export interface ClaimGuestConversationCommand {
   conversationId: string;
@@ -17,6 +18,7 @@ export class ChatAccessService {
     private readonly prisma: PrismaService,
     private readonly tokens: GuestChatTokenService,
     private readonly rlsTransaction: RlsTransactionService,
+    private readonly audit: ChatAuditService,
   ) {}
 
   guestTokenHash(guestToken: string): string {
@@ -109,6 +111,11 @@ export class ChatAccessService {
           payload: resumeEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
         },
       });
+      await this.audit.record({
+        action: 'GUEST_CLAIMED',
+        conversationId: command.conversationId,
+        clientId: command.clientId,
+      }, tx);
       return conversation;
     });
   }

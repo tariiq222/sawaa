@@ -3,6 +3,7 @@ import { ConversationStatus, type ChatConversation } from '@prisma/client';
 import { SAUDI_PHONE_REGEX } from '@sawaa/shared/validators/phone';
 import { PrismaService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
+import { ChatAuditService } from '../chat-audit.service';
 
 export type RequestHandoffCommand =
   | {
@@ -19,6 +20,7 @@ export class RequestHandoffHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ChatAccessService,
+    private readonly audit: ChatAuditService,
   ) {}
 
   async execute(command: RequestHandoffCommand): Promise<ChatConversation> {
@@ -57,6 +59,9 @@ export class RequestHandoffHandler {
     const current = await this.prisma.chatConversation.findFirst({
       where: { id: command.conversationId, status: ConversationStatus.WAITING_FOR_STAFF, ...ownership },
     });
+    if (updated.count === 1) {
+      await this.audit.record({ action: 'HANDOFF_REQUESTED', conversationId: command.conversationId });
+    }
     if (!current) {
       const exists = await this.prisma.chatConversation.findUnique({
         where: { id: command.conversationId },

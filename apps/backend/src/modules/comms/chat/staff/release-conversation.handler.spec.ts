@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
-import { PrismaService } from '../../../../infrastructure/database';
+import { RlsTransactionService } from '../../../../infrastructure/database';
 import { ReleaseConversationHandler } from './release-conversation.handler';
 
 describe('ReleaseConversationHandler', () => {
@@ -15,7 +15,10 @@ describe('ReleaseConversationHandler', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    const handler = new ReleaseConversationHandler(prisma as PrismaService);
+    const handler = new ReleaseConversationHandler(
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
     await handler.execute({ conversationId: 'conv-1', ...actor });
     expect(prisma.chatConversation.updateMany).toHaveBeenCalledWith({
       where: {
@@ -42,7 +45,10 @@ describe('ReleaseConversationHandler', () => {
         updateMany: jest.fn(),
       },
     };
-    const handler = new ReleaseConversationHandler(prisma as PrismaService);
+    const handler = new ReleaseConversationHandler(
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
     await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'admin-a', actorRole: 'ADMIN' })).rejects.toThrow(ConflictException);
     expect(prisma.chatConversation.updateMany).not.toHaveBeenCalled();
   });
@@ -54,7 +60,10 @@ describe('ReleaseConversationHandler', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
-    const handler = new ReleaseConversationHandler(prisma as PrismaService);
+    const handler = new ReleaseConversationHandler(
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
     await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'staff-a', actorRole: 'RECEPTIONIST' })).rejects.toThrow(ConflictException);
     expect(prisma.chatConversation.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ assignedStaffUserId: 'staff-a' }),
@@ -68,7 +77,10 @@ describe('ReleaseConversationHandler', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
-    const handler = new ReleaseConversationHandler(prisma as PrismaService);
+    const handler = new ReleaseConversationHandler(
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
     await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'staff-b', actorRole: 'RECEPTIONIST' })).rejects.toThrow(ForbiddenException);
     prisma.chatConversation.findUnique.mockResolvedValue({ id: 'conv-1', status: ConversationStatus.WAITING_FOR_STAFF, assignedStaffUserId: null });
     await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'admin-a', actorRole: 'ADMIN' })).rejects.toThrow(ConflictException);

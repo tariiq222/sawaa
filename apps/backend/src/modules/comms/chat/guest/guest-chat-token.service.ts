@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 export const CHAT_GUEST_COOKIE_NAME = 'sawaa_chat_guest';
-const GUEST_CHAT_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface IssuedGuestChatToken {
   rawToken: string;
@@ -41,7 +41,7 @@ export class GuestChatTokenService {
       sameSite: 'lax' as const,
       secure: nodeEnv === 'production',
       path: '/api/v1/public',
-      maxAge: GUEST_CHAT_COOKIE_MAX_AGE_MS,
+      maxAge: this.config.getOrThrow<number>('CHAT_GUEST_SESSION_DAYS') * DAY_MS,
     };
   }
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiBearerAuth, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ClientSession } from '../../common/auth/client-session.decorator';
@@ -135,11 +135,13 @@ export class MyChatController {
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: SendChatMessageDto,
     @ClientSession() session: { id: string },
+    @Ip() ipAddress: string,
   ) {
     const message = await this.sendMessage.execute({
       audience: 'client',
       conversationId,
       clientId: session.id,
+      ipAddress,
       ...dto,
     });
     return toChatMessageResponse(message);

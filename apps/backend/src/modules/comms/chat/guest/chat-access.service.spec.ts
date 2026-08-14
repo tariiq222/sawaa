@@ -26,6 +26,7 @@ describe('ChatAccessService', () => {
   };
   let rlsTransaction: { withTransaction: jest.Mock };
   let service: ChatAccessService;
+  let audit: { record: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -34,10 +35,12 @@ describe('ChatAccessService', () => {
       $transaction: jest.fn(),
     };
     rlsTransaction = { withTransaction: jest.fn() };
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
     service = new ChatAccessService(
       prisma as unknown as PrismaService,
       tokenService,
       rlsTransaction as unknown as RlsTransactionService,
+      audit as never,
     );
   });
 
@@ -148,6 +151,11 @@ describe('ChatAccessService', () => {
         }),
       }),
     });
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'GUEST_CLAIMED',
+      conversationId: guestConversation.id,
+      clientId: 'client-a',
+    }, expect.any(Object));
   });
 
   it('refuses a claim when the guest cookie no longer owns an unclaimed conversation', async () => {
@@ -162,5 +170,6 @@ describe('ChatAccessService', () => {
       guestToken: 'guest-a',
       clientId: 'client-a',
     })).rejects.toThrow(ForbiddenException);
+    expect(audit.record).not.toHaveBeenCalled();
   });
 });

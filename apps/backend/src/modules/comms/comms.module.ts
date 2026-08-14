@@ -98,6 +98,8 @@ import { ResumeChatOperationsHandler } from './chat/operations/resume-chat-opera
 import { OnChatOperationsResumeRequestedHandler } from './chat/operations/on-chat-operations-resume-requested.handler';
 import { OnAdministrativeMessageProcessingRequestedHandler } from './chat/assistant/on-administrative-message-processing-requested.handler';
 import { AdministrativeAssistantRecoveryWorker } from './chat/assistant/administrative-assistant-recovery.worker';
+import { ChatAuditService } from './chat/chat-audit.service';
+import { ChatUsageLimitsService } from './chat/chat-usage-limits.service';
 
 const handlers = [
   SendPushHandler,
@@ -141,6 +143,8 @@ const handlers = [
   ListTenantDeliveryLogsHandler,
   ListSmsDeliveriesHandler,
   GuestChatTokenService,
+  ChatAuditService,
+  ChatUsageLimitsService,
   ChatAccessService,
   CreateGuestConversationHandler,
   GetCurrentConversationHandler,

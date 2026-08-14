@@ -17,6 +17,7 @@ describe('RequestHandoffHandler', () => {
   let prisma: { chatConversation: { updateMany: jest.Mock; findFirst: jest.Mock; findUnique: jest.Mock } };
   let access: { assertGuestAccess: jest.Mock; assertClientAccess: jest.Mock };
   let handler: RequestHandoffHandler;
+  let audit: { record: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -40,9 +41,11 @@ describe('RequestHandoffHandler', () => {
       assertGuestAccess: jest.fn().mockResolvedValue(conversation),
       assertClientAccess: jest.fn().mockResolvedValue({ ...conversation, clientId: 'client-a' }),
     };
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
     handler = new RequestHandoffHandler(
       prisma as unknown as PrismaService,
       access as unknown as ChatAccessService,
+      audit as never,
     );
   });
 
@@ -74,6 +77,9 @@ describe('RequestHandoffHandler', () => {
       },
     });
     expect(JSON.stringify(prisma.chatConversation.updateMany.mock.calls)).not.toMatch(/reason|risk|tag/i);
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'HANDOFF_REQUESTED', conversationId: conversation.id,
+    });
   });
 
   it('derives authenticated client identity and never writes guest contact fields', async () => {
@@ -130,6 +136,7 @@ describe('RequestHandoffHandler', () => {
     await expect(handler.execute({
       audience: 'guest', conversationId: conversation.id, guestToken: 'guest-token', guestName: 'سارة', guestPhone: '+966501234567',
     })).resolves.toEqual(expect.objectContaining({ status: ConversationStatus.WAITING_FOR_STAFF }));
+    expect(audit.record).not.toHaveBeenCalled();
   });
 
   it.each([

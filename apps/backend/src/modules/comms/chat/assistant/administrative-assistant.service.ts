@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import {
   ChatAdapter,
   type ChatMessage,
+  type CompletionWithToolsResult,
 } from '../../../../infrastructure/ai/chat.adapter';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { AdministrativeAssistantLeaseService } from './administrative-assistant-lease.service';
@@ -30,6 +31,7 @@ import {
   AdministrativeToolsService,
 } from './administrative-tools.service';
 import { readAdministrativeMessageState, readNonNegativeInteger } from './administrative-message-state';
+import { ChatDailyBudgetExceeded, ChatUsageLimitsService } from '../chat-usage-limits.service';
 
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_CHARS = 12_000;
@@ -54,6 +56,7 @@ interface InboundMessage {
 interface ActiveConversation {
   id: string;
   clientId: string | null;
+  guestTokenHash: string | null;
   language: string;
   isAiChat: boolean;
   status: ConversationStatus;
@@ -73,6 +76,7 @@ export class AdministrativeAssistantService {
     private readonly scopeGate: AdministrativeScopeGate,
     private readonly renderer: AdministrativeResponseRenderer,
     private readonly outputValidator: AdministrativeOutputValidator,
+    private readonly limits: ChatUsageLimitsService,
   ) {}
 
   async processMessage(
@@ -174,6 +178,9 @@ export class AdministrativeAssistantService {
               throw new AssistantLeaseLost();
             }
           },
+          conversation.clientId
+            ? `client:${conversation.clientId}`
+            : `guest:${conversation.guestTokenHash ?? conversation.id}`,
         );
         const rendered = this.renderer.render(selection.executions, conversation.language);
         const validated = this.outputValidator.validate(rendered, conversation.language);
@@ -252,6 +259,7 @@ export class AdministrativeAssistantService {
     messages: ChatMessage[],
     context: AdministrativeToolContext,
     assertLeaseHealthy: () => Promise<void>,
+    usageIdentity: string,
   ): Promise<{
     executions: ExecutedAdministrativeTool[];
     model: string;
@@ -264,11 +272,19 @@ export class AdministrativeAssistantService {
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
       await assertLeaseHealthy();
-      const result = await this.chat.completeWithTools(
-        messages,
-        this.tools.getDefinitions(),
-        { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.2 },
-      );
+      let result: CompletionWithToolsResult;
+      try {
+        await this.limits.assertDailyTokenBudget(usageIdentity);
+        result = await this.chat.completeWithTools(
+          messages,
+          this.tools.getDefinitions(),
+          { maxTokens: MAX_OUTPUT_TOKENS, temperature: 0.2 },
+        );
+        await this.limits.recordTokenUsage(usageIdentity, result.tokensUsed);
+      } catch (error) {
+        if (error instanceof ChatDailyBudgetExceeded) throw new AdministrativeLimitReached();
+        throw error;
+      }
       tokensUsed += result.tokensUsed;
       model = result.model;
       if (result.toolCalls.length === 0) return { executions, model, tokensUsed };
@@ -524,7 +540,7 @@ export class AdministrativeAssistantService {
   private async findActiveConversation(conversationId: string): Promise<ActiveConversation | null> {
     const conversation = await this.prisma.chatConversation.findUnique({
       where: { id: conversationId },
-      select: { id: true, clientId: true, language: true, isAiChat: true, status: true, stateVersion: true },
+      select: { id: true, clientId: true, guestTokenHash: true, language: true, isAiChat: true, status: true, stateVersion: true },
     });
     return conversation && this.canUseAi(conversation) ? conversation : null;
   }

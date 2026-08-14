@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
@@ -70,12 +70,14 @@ export class PublicChatController {
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: SendChatMessageDto,
     @Req() request: CookieRequest,
+    @Ip() ipAddress: string,
   ) {
     const guestToken = this.requireGuestToken(request);
     const message = await this.sendMessage.execute({
       audience: 'guest',
       conversationId,
       guestToken,
+      ipAddress,
       ...dto,
     });
     return toChatMessageResponse(message);

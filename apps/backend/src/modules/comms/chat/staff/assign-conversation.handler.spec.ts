@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
-import { PrismaService } from '../../../../infrastructure/database';
+import { RlsTransactionService } from '../../../../infrastructure/database';
 import { AssignConversationHandler } from './assign-conversation.handler';
 
 describe('AssignConversationHandler', () => {
@@ -15,11 +15,14 @@ describe('AssignConversationHandler', () => {
         findUnique: jest.fn().mockResolvedValue({ id: 'conv-1', status: ConversationStatus.STAFF_ACTIVE, assignedStaffUserId: 'staff-b' }),
       },
     };
-    handler = new AssignConversationHandler(prisma as PrismaService);
+    handler = new AssignConversationHandler(
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
   });
 
   it('lets an admin assign an active dashboard user with a conditional state transition', async () => {
-    await handler.execute({ conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorRole: 'ADMIN' });
+    await handler.execute({ conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorUserId: 'admin-a', actorRole: 'ADMIN' });
 
     expect(prisma.user.findFirst).toHaveBeenCalledWith({
       where: { id: 'staff-b', isActive: true, role: { in: ['SUPER_ADMIN', 'ADMIN', 'RECEPTIONIST'] } },
@@ -40,17 +43,17 @@ describe('AssignConversationHandler', () => {
 
   it.each(['SUPER_ADMIN', 'ADMIN', 'RECEPTIONIST'])('allows an active approved target role: %s', async (role) => {
     prisma.user.findFirst.mockResolvedValue({ id: 'staff-b', role });
-    await expect(handler.execute({ conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorRole: 'ADMIN' })).resolves.toBeDefined();
+    await expect(handler.execute({ conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorUserId: 'admin-a', actorRole: 'ADMIN' })).resolves.toBeDefined();
   });
 
   it.each(['OWNER', 'ACCOUNTANT', 'EMPLOYEE', 'CLIENT'])('rejects target role %s', async (role) => {
     prisma.user.findFirst.mockResolvedValue(null);
-    await expect(handler.execute({ conversationId: 'conv-1', targetStaffUserId: role, actorRole: 'ADMIN' })).rejects.toThrow(NotFoundException);
+    await expect(handler.execute({ conversationId: 'conv-1', targetStaffUserId: role, actorUserId: 'admin-a', actorRole: 'ADMIN' })).rejects.toThrow(NotFoundException);
   });
 
   it('rejects arbitrary assignment by receptionists', async () => {
     await expect(handler.execute({
-      conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorRole: 'RECEPTIONIST',
+      conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorUserId: 'staff-a', actorRole: 'RECEPTIONIST',
     })).rejects.toThrow(ForbiddenException);
     expect(prisma.user.findFirst).not.toHaveBeenCalled();
   });
@@ -58,14 +61,14 @@ describe('AssignConversationHandler', () => {
   it('rejects inactive, missing, or client targets', async () => {
     prisma.user.findFirst.mockResolvedValue(null);
     await expect(handler.execute({
-      conversationId: 'conv-1', targetStaffUserId: 'missing', actorRole: 'SUPER_ADMIN',
+      conversationId: 'conv-1', targetStaffUserId: 'missing', actorUserId: 'root-a', actorRole: 'SUPER_ADMIN',
     })).rejects.toThrow(NotFoundException);
   });
 
   it('rejects a stale or closed conversation transition', async () => {
     prisma.chatConversation.updateMany.mockResolvedValue({ count: 0 });
     await expect(handler.execute({
-      conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorRole: 'ADMIN',
+      conversationId: 'conv-1', targetStaffUserId: 'staff-b', actorUserId: 'admin-a', actorRole: 'ADMIN',
     })).rejects.toThrow(ConflictException);
   });
 });

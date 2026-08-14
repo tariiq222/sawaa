@@ -146,10 +146,11 @@ export class DashboardConversationsController {
   async assign(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: AssignConversationDto,
+    @UserId() actorUserId: string,
     @CurrentUser() user: JwtUser,
   ) {
     return toStaffConversationResponse(await this.assignConversation.execute({
-      conversationId, targetStaffUserId: dto.targetStaffUserId, actorRole: user.role,
+      conversationId, targetStaffUserId: dto.targetStaffUserId, actorUserId, actorRole: user.role,
     }));
   }
 

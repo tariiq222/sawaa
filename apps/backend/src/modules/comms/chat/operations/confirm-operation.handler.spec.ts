@@ -96,11 +96,12 @@ function harness(overrides: Record<string, unknown> = {}, futureBooking: object 
   const createBooking = { execute: jest.fn().mockResolvedValue({ id: 'booking-1' }) };
   const reschedule = { execute: jest.fn() };
   const cancellation = { execute: jest.fn() };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const handler = new ConfirmOperationHandler(
     rls as never, quote as never, createBooking as never,
-    reschedule as never, cancellation as never,
+    reschedule as never, cancellation as never, audit as never,
   );
-  return { handler, tx, rls, quote, createBooking, reschedule, cancellation, getOperation: () => operation };
+  return { handler, tx, rls, quote, createBooking, reschedule, cancellation, audit, getOperation: () => operation };
 }
 
 function applyData(current: any, data: any) {
@@ -117,7 +118,7 @@ describe('ConfirmOperationHandler', () => {
   afterEach(() => jest.useRealTimers());
 
   it('revalidates the immutable quote and creates once using operation identity only', async () => {
-    const { handler, tx, quote, createBooking } = harness();
+    const { handler, tx, quote, createBooking, audit } = harness();
 
     const result = await handler.execute({
       operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0,
@@ -156,6 +157,9 @@ describe('ConfirmOperationHandler', () => {
         assistantLeaseExpiresAt: null,
       }),
     });
+    expect(audit.record.mock.calls.map(([event]) => event.action)).toEqual([
+      'OPERATION_CONFIRMED', 'OPERATION_SUCCEEDED',
+    ]);
   });
 
   it('requires the separate acknowledgement before confirming an additional booking', async () => {
@@ -193,12 +197,13 @@ describe('ConfirmOperationHandler', () => {
     ChatOperationStatus.FAILED,
     ChatOperationStatus.EXPIRED,
   ])('does not re-execute terminal state %s', async (status) => {
-    const { handler, createBooking } = harness({ status, bookingId: status === ChatOperationStatus.SUCCEEDED ? 'booking-1' : null });
+    const { handler, createBooking, audit } = harness({ status, bookingId: status === ChatOperationStatus.SUCCEEDED ? 'booking-1' : null });
     const result = await handler.execute({
       operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0,
     });
     expect(result.status).toBe(status);
     expect(createBooking.execute).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
   });
 
   it('rejects operation ownership IDOR before mutation', async () => {
@@ -210,7 +215,7 @@ describe('ConfirmOperationHandler', () => {
   });
 
   it('fails safely when the fresh quote differs from the immutable payload', async () => {
-    const { handler, quote, createBooking, tx } = harness();
+    const { handler, quote, createBooking, tx, audit } = harness();
     quote.quoteBooking.mockResolvedValue({ payload: { ...bookingPayload, price: 301 }, summary: {} });
 
     const result = await handler.execute({
@@ -227,6 +232,9 @@ describe('ConfirmOperationHandler', () => {
       kind: ChatMessageKind.OPERATION_RESULT,
       metadata: expect.objectContaining({ status: ChatOperationStatus.FAILED }),
     }) });
+    expect(audit.record.mock.calls.map(([event]) => event.action)).toEqual([
+      'OPERATION_CONFIRMED', 'OPERATION_FAILED',
+    ]);
   });
 
   it('requires a new prepare when a future active booking appears after the one-confirmation quote', async () => {

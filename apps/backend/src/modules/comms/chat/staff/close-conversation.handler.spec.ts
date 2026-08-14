@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
-import { PrismaService } from '../../../../infrastructure/database';
+import { RlsTransactionService } from '../../../../infrastructure/database';
 import { CloseConversationHandler } from './close-conversation.handler';
 
 describe('staff CloseConversationHandler', () => {
@@ -11,7 +11,10 @@ describe('staff CloseConversationHandler', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    const handler = new CloseConversationHandler(prisma as PrismaService);
+    const handler = new CloseConversationHandler(
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
     await handler.execute({ conversationId: 'conv-1', actorUserId: 'admin-a', actorRole: 'ADMIN' });
     expect(prisma.chatConversation.updateMany).toHaveBeenCalledWith({
       where: { id: 'conv-1', status: { not: ConversationStatus.CLOSED } },
@@ -32,7 +35,10 @@ describe('staff CloseConversationHandler', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    const handler = new CloseConversationHandler(prisma as PrismaService);
+    const handler = new CloseConversationHandler(
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
     await handler.execute({ conversationId: 'conv-1', actorUserId: 'staff-a', actorRole: 'RECEPTIONIST' });
     expect(prisma.chatConversation.updateMany).toHaveBeenCalledWith({
       where: {

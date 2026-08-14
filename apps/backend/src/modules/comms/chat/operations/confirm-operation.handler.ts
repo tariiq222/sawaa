@@ -23,6 +23,7 @@ import { hashToInt32 } from '../../../bookings/booking-lifecycle.helper';
 import { ACTIVE_BOOKING_STATUSES } from '../../../bookings/active-booking-statuses';
 import { bookingCreationRequestHash } from '../../../bookings/create-booking/creation-request-hash';
 import { lockChatConversation } from '../conversation-lock.helper';
+import { ChatAuditService } from '../chat-audit.service';
 import { assertOperationOwnership, lockChatOperation } from './acknowledge-existing-booking.handler';
 import {
   ChatBookingQuoteService,
@@ -64,6 +65,7 @@ export class ConfirmOperationHandler {
     private readonly createBooking: CreateBookingHandler,
     private readonly rescheduleBooking: ClientRescheduleBookingHandler,
     private readonly cancelBooking: ClientCancelBookingHandler,
+    private readonly audit: ChatAuditService,
   ) {}
 
   async execute(command: ConfirmOperationCommand): Promise<ChatOperation> {
@@ -127,13 +129,16 @@ export class ConfirmOperationHandler {
         executionStarted = true;
 
         const mutation = await this.executeMutation(tx, operation);
+        await this.audit.record({
+          action: 'OPERATION_CONFIRMED', conversationId: operation.conversationId, operationId: operation.id,
+        }, tx);
         const messageId = await this.writeResultMessage(tx, operation, {
           status: ChatOperationStatus.SUCCEEDED,
           bookingId: mutation.bookingId,
           outcome: mutation.outcome,
           syncPending: mutation.syncPending,
         });
-        return tx.chatOperation.update({
+        const succeeded = await tx.chatOperation.update({
           where: { id: operation.id },
           data: {
             status: ChatOperationStatus.SUCCEEDED,
@@ -143,6 +148,10 @@ export class ConfirmOperationHandler {
             errorCode: null,
           },
         });
+        await this.audit.record({
+          action: 'OPERATION_SUCCEEDED', conversationId: operation.conversationId, operationId: operation.id,
+        }, tx);
+        return succeeded;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
       return completed;
@@ -333,7 +342,7 @@ export class ConfirmOperationHandler {
         bookingId: null,
         outcome: 'OPERATION_FAILED',
       });
-      return tx.chatOperation.update({
+      const failed = await tx.chatOperation.update({
         where: { id: operation.id },
         data: {
           status: ChatOperationStatus.FAILED,
@@ -343,6 +352,13 @@ export class ConfirmOperationHandler {
           version: { increment: 1 },
         },
       });
+      await this.audit.record({
+        action: 'OPERATION_CONFIRMED', conversationId: operation.conversationId, operationId: operation.id,
+      }, tx);
+      await this.audit.record({
+        action: 'OPERATION_FAILED', conversationId: operation.conversationId, operationId: operation.id,
+      }, tx);
+      return failed;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 

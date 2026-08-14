@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ConversationStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 
@@ -25,6 +26,8 @@ const DEFAULTS = {
   notificationDeliveryLogDays: 90,
   /** WhatsApp content and phone-number conversation records. */
   whatsappDays: 365,
+  /** Closed web-chat conversations, measured from their explicit close time. */
+  chatDays: 365,
 } as const;
 
 /**
@@ -56,6 +59,18 @@ export class DataRetentionCron {
       const now = Date.now();
 
       const tasks: Array<{ table: string; run: () => Promise<{ count: number }> }> = [
+        {
+          table: 'ChatConversation',
+          run: () => {
+            const cutoff = new Date(now - this.days('RETENTION_CHAT_DAYS', DEFAULTS.chatDays) * DAY_MS);
+            return this.prisma.chatConversation.deleteMany({
+              where: {
+                status: ConversationStatus.CLOSED,
+                closedAt: { lt: cutoff },
+              },
+            });
+          },
+        },
         {
           table: 'OtpCode',
           run: () => {

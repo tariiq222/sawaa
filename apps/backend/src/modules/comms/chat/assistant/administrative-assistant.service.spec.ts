@@ -31,6 +31,7 @@ const inboundMessage = {
 const activeConversation = {
   id: conversationId,
   clientId: null,
+  guestTokenHash: 'opaque-guest-hash',
   language: 'ar',
   isAiChat: true,
   status: ConversationStatus.AI_ACTIVE,
@@ -60,6 +61,7 @@ describe('AdministrativeAssistantService', () => {
   let chat: { completeWithTools: jest.Mock; isAvailable: jest.Mock };
   let tools: { getDefinitions: jest.Mock; execute: jest.Mock };
   let lease: { acquire: jest.Mock; renew: jest.Mock; release: jest.Mock };
+  let limits: { assertDailyTokenBudget: jest.Mock; recordTokenUsage: jest.Mock };
   let service: AdministrativeAssistantService;
 
   beforeAll(() => {
@@ -137,6 +139,10 @@ describe('AdministrativeAssistantService', () => {
       renew: jest.fn().mockResolvedValue(true),
       release: jest.fn().mockResolvedValue(undefined),
     };
+    limits = {
+      assertDailyTokenBudget: jest.fn().mockResolvedValue(undefined),
+      recordTokenUsage: jest.fn().mockResolvedValue(undefined),
+    };
     const scopeGate = new AdministrativeScopeGate();
     service = new AdministrativeAssistantService(
       prisma as unknown as PrismaService,
@@ -147,7 +153,15 @@ describe('AdministrativeAssistantService', () => {
       scopeGate,
       new AdministrativeResponseRenderer(),
       new AdministrativeOutputValidator(),
+      limits as never,
     );
+  });
+
+  it('checks and records the daily budget under an opaque conversation identity', async () => {
+    await service.processMessage(messageId);
+
+    expect(limits.assertDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash');
+    expect(limits.recordTokenUsage).toHaveBeenCalledWith('guest:opaque-guest-hash', 12);
   });
 
   it('answers out-of-scope input deterministically without invoking AI or tools', async () => {

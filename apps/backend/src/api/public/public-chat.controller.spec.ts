@@ -102,6 +102,7 @@ describe('PublicChatController (e2e)', () => {
       audience: 'guest',
       conversationId: '00000000-0000-4000-a000-000000000001',
       guestToken: 'guest-a',
+      ipAddress: expect.any(String),
       body: 'مرحبا',
       clientMessageId: '00000000-0000-4000-a000-000000000002',
     });

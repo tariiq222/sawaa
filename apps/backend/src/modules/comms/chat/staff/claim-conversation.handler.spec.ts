@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
-import { PrismaService } from '../../../../infrastructure/database';
+import { RlsTransactionService } from '../../../../infrastructure/database';
 import { ClaimConversationHandler } from './claim-conversation.handler';
 
 describe('ClaimConversationHandler', () => {
@@ -18,7 +18,9 @@ describe('ClaimConversationHandler', () => {
         })),
       },
     };
-    const handler = new ClaimConversationHandler(prisma as unknown as PrismaService);
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const rls = { withTransaction: jest.fn((work) => work(prisma)) };
+    const handler = new ClaimConversationHandler(rls as unknown as RlsTransactionService, audit as never);
 
     const results = await Promise.allSettled([
       handler.execute({ conversationId: 'conv-1', staffUserId: 'staff-a' }),
@@ -43,5 +45,6 @@ describe('ClaimConversationHandler', () => {
         assistantLeaseExpiresAt: null,
       },
     });
+    expect(audit.record).toHaveBeenCalledTimes(1);
   });
 });

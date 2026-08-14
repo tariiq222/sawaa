@@ -12,6 +12,7 @@ const buildPrisma = () => ({
     .mockResolvedValueOnce([{ acquired: true }])
     .mockResolvedValue([]),
   $executeRaw: jest.fn().mockResolvedValue(1),
+  chatConversation: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
   otpCode: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
   activityLog: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
   notification: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
@@ -34,12 +35,35 @@ describe('DataRetentionCron', () => {
     await expect(cron.execute()).resolves.not.toThrow();
 
     expect(prisma.otpCode.deleteMany).toHaveBeenCalledTimes(1);
+    expect(prisma.chatConversation.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.activityLog.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.notification.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.smsDelivery.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.notificationDeliveryLog.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.whatsappMessage.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.whatsappConversation.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('purges only explicitly closed chats whose closedAt is strictly older than the configured cutoff', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-14T00:00:00.000Z'));
+    const prisma = buildPrisma();
+    const cron = new DataRetentionCron(
+      prisma as never,
+      buildConfig({ RETENTION_CHAT_DAYS: '10' }) as never,
+    );
+
+    try {
+      await cron.execute();
+
+      expect(prisma.chatConversation.deleteMany).toHaveBeenCalledWith({
+        where: {
+          status: 'CLOSED',
+          closedAt: { lt: new Date('2026-08-04T00:00:00.000Z') },
+        },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('keys each table on the correct timestamp field', async () => {

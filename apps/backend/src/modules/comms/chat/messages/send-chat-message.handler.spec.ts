@@ -34,6 +34,7 @@ describe('SendChatMessageHandler', () => {
   };
   let rlsTransaction: { withTransaction: jest.Mock };
   let access: { assertGuestAccess: jest.Mock; assertClientAccess: jest.Mock; guestTokenHash: jest.Mock };
+  let limits: { consumeMessage: jest.Mock };
   let handler: SendChatMessageHandler;
 
   beforeEach(() => {
@@ -60,11 +61,13 @@ describe('SendChatMessageHandler', () => {
       assertClientAccess: jest.fn().mockResolvedValue({ ...guestConversation, clientId: 'client-a' }),
       guestTokenHash: jest.fn().mockReturnValue('guest-hash'),
     };
+    limits = { consumeMessage: jest.fn().mockResolvedValue(undefined) };
     handler = new SendChatMessageHandler(
       prisma as unknown as PrismaService,
       access as unknown as ChatAccessService,
       { getOrThrow: jest.fn().mockReturnValue(10) } as unknown as ConfigService,
       rlsTransaction as unknown as RlsTransactionService,
+      limits as never,
     );
   });
 
@@ -86,6 +89,7 @@ describe('SendChatMessageHandler', () => {
       access as unknown as ChatAccessService,
       { getOrThrow: jest.fn().mockReturnValue(4000) } as unknown as ConfigService,
       rlsTransaction as unknown as RlsTransactionService,
+      limits as never,
     );
 
     await expect(handler.execute({
@@ -94,6 +98,20 @@ describe('SendChatMessageHandler', () => {
     await expect(handler.execute({
       audience: 'guest', conversationId: guestConversation.id, guestToken: 'guest-token', body: 'a'.repeat(4001), clientMessageId: 'too-long',
     })).rejects.toThrow(BadRequestException);
+  });
+
+  it('rate-limits guest messages by opaque guest hash and request IP before persistence', async () => {
+    await handler.execute({
+      audience: 'guest', conversationId: guestConversation.id, guestToken: 'raw-token',
+      ipAddress: '203.0.113.42', body: 'hello', clientMessageId: 'rate-1',
+    });
+
+    expect(limits.consumeMessage).toHaveBeenCalledWith({
+      identity: 'guest:guest-hash',
+      ipAddress: '203.0.113.42',
+    });
+    expect(limits.consumeMessage.mock.invocationCallOrder[0])
+      .toBeLessThan(transaction.commsChatMessage.create.mock.invocationCallOrder[0]);
   });
 
   it('derives a VISITOR sender from guest access and updates message time and staff unread count in one transaction', async () => {

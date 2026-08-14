@@ -87,6 +87,7 @@ describe('DashboardConversationsController (real CaslGuard)', () => {
     expect(handlers.assign.execute).toHaveBeenCalledWith({
       conversationId: '00000000-0000-4000-a000-000000000001',
       targetStaffUserId: '00000000-0000-4000-a000-000000000002',
+      actorUserId: 'staff-a',
       actorRole: 'ADMIN',
     });
   });
