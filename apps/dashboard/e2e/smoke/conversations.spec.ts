@@ -29,6 +29,14 @@ test.describe("website conversation reception flow", () => {
     await expect(page.getByText(reply)).toBeVisible()
 
     await page.getByRole("button", { name: /إعادة للمساعد|return to assistant/i }).click()
+
+    // A receptionist deliberately cannot close a conversation after it has
+    // returned to AI_ACTIVE. Continue as an administrator to verify the
+    // permitted terminal transition without widening receptionist rights.
+    await loginAs(page, "admin")
+    await page.goto("/conversations", { waitUntil: "domcontentloaded" })
+    await expectAuthenticatedShell(page)
+    await page.getByRole("button", { name: new RegExp(conversationName!, "i") }).click()
     await page.getByRole("button", { name: /إغلاق المحادثة|close conversation/i }).click()
     await expect(page.getByText(/هذه المحادثة مغلقة|this conversation is closed/i)).toBeVisible()
   })

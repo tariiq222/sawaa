@@ -22,3 +22,7 @@
 - The guarded real-Postgres two-session/race harness was not run: `REAL_E2E_DATABASE_URL` is unset. No non-disposable database was touched.
 - Redis outbox/lease recovery was not run against live Redis for the same isolated-harness boundary.
 - Dashboard Playwright smoke was not run: the backend at `localhost:5200` did not answer within two seconds, no compose configuration is present in this worktree, and `PW_CHAT_CONVERSATION_NAME` is unset. The committed test will run once a disposable seeded conversation and the normal backend/dashboard services are supplied.
+
+## Follow-up smoke correction
+
+- The reception flow returns a conversation to `AI_ACTIVE`, where the product deliberately hides Close from a receptionist. The smoke therefore switches to the existing admin persona before its terminal close assertion; it does not widen receptionist permissions. `playwright --list`, focused ESLint, and `git diff --check` passed after this correction.
