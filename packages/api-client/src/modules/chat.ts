@@ -202,7 +202,11 @@ async function mutateOperation(
 }
 
 function chatRequest<T>(path: string, requestOptions: Pick<RequestInit, 'signal'> = {}): Promise<T> {
-  return apiRequest<T>(path, { ...requestOptions, credentials: 'include' })
+  // Chat message state changes asynchronously after the inbound message is
+  // persisted (for example when the assistant becomes retryable). Browsers
+  // are otherwise allowed to validate a cached GET with the old ETag and
+  // return 304, leaving the widget unaware of the new public recovery card.
+  return apiRequest<T>(path, { ...requestOptions, cache: 'no-store', credentials: 'include' })
 }
 
 async function chatMutation<T>(path: string, body: object): Promise<T> {

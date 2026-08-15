@@ -21,7 +21,6 @@ const SHARED_ADMIN_OWNER_RULES: readonly Rule[] = [
   { action: 'manage', subject: 'Branch' },
   { action: 'manage', subject: 'Integration' },
   { action: 'manage', subject: 'Coupon' },
-  { action: 'manage', subject: 'WhatsappConversation' },
 ];
 
 const ADMIN_RULES: readonly Rule[] = [
@@ -46,7 +45,6 @@ export const BUILT_IN: Record<string, readonly Rule[]> = {
     { action: 'read', subject: 'Service' },
     { action: 'read', subject: 'Category' },
     { action: 'read', subject: 'Branch' },
-    { action: 'manage', subject: 'WhatsappConversation' },
     { action: ['read', 'update'], subject: 'Conversation' },
   ],
   ACCOUNTANT: [

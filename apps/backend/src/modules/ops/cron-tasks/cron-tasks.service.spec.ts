@@ -26,7 +26,7 @@ describe('CronTasksService', () => {
   let mockBullMq: jest.Mocked<BullMqService>;
   let mockConfig: jest.Mocked<ConfigService>;
   let mockEmailFactory: jest.Mocked<EmailProviderFactory>;
-  let mockQueue: { add: jest.Mock };
+  let mockQueue: { add: jest.Mock; removeRepeatable: jest.Mock };
   let mockWorker: { on: jest.Mock; close: jest.Mock };
   let workerEventHandlers: Map<string, Function>;
   let mockBookingAutocomplete: jest.Mocked<BookingAutocompleteCron>;
@@ -45,7 +45,10 @@ describe('CronTasksService', () => {
 
   beforeEach(() => {
     workerEventHandlers = new Map();
-    mockQueue = { add: jest.fn().mockResolvedValue(undefined) };
+    mockQueue = {
+      add: jest.fn().mockResolvedValue(undefined),
+      removeRepeatable: jest.fn().mockResolvedValue(true),
+    };
     mockWorker = {
       on: jest.fn((event: string, handler: Function) => {
         workerEventHandlers.set(event, handler);
@@ -134,7 +137,7 @@ describe('CronTasksService', () => {
   });
 
   describe('onModuleInit', () => {
-    it('calls registerRepeatingJobs and registerWorker', () => {
+    it('calls registerRepeatingJobs and registerWorker', async () => {
       const registerRepeatingJobsSpy = jest.spyOn(
         service as any,
         'registerRepeatingJobs',
@@ -144,7 +147,7 @@ describe('CronTasksService', () => {
         'registerWorker',
       );
 
-      service.onModuleInit();
+      await service.onModuleInit();
 
       expect(registerRepeatingJobsSpy).toHaveBeenCalledTimes(1);
       expect(registerWorkerSpy).toHaveBeenCalledTimes(1);
@@ -201,10 +204,15 @@ describe('CronTasksService', () => {
   });
 
   describe('registerRepeatingJobs', () => {
-    it('adds all jobs to the queue with correct cron patterns', () => {
-      (service as any).registerRepeatingJobs();
+    it('adds all jobs to the queue with correct cron patterns', async () => {
+      await (service as any).registerRepeatingJobs();
 
       expect(mockBullMq.getQueue).toHaveBeenCalledWith('ops-cron');
+      expect(mockQueue.removeRepeatable).toHaveBeenCalledWith(
+        CRON_JOBS.OUTBOX_PUBLISHER,
+        { pattern: '*/1 * * * *' },
+        `repeat:${CRON_JOBS.OUTBOX_PUBLISHER}`,
+      );
       expect(mockQueue.add).toHaveBeenCalledTimes(13);
 
       const expectedJobs = [
@@ -219,7 +227,6 @@ describe('CronTasksService', () => {
         { name: CRON_JOBS.ORPHAN_AUDIT, cron: '0 2 * * 0' },
         { name: CRON_JOBS.RECONCILE_REFUNDS, cron: '*/15 * * * *' },
         { name: CRON_JOBS.RECONCILE_PAYMENTS, cron: '*/15 * * * *' },
-        { name: CRON_JOBS.OUTBOX_PUBLISHER, cron: '*/1 * * * *' },
         { name: CRON_JOBS.AUTHENTICA_BALANCE_CHECK, cron: '0 8 * * *' },
       ];
 
@@ -237,6 +244,27 @@ describe('CronTasksService', () => {
           }),
         );
       }
+
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        CRON_JOBS.OUTBOX_PUBLISHER,
+        {},
+        expect.objectContaining({
+          repeat: { every: 5_000 },
+          jobId: `repeat:${CRON_JOBS.OUTBOX_PUBLISHER}`,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 30_000 },
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 500 },
+        }),
+      );
+    });
+
+    it('does not register any schedule when exact legacy cleanup fails', async () => {
+      mockQueue.removeRepeatable.mockRejectedValueOnce(new Error('redis unavailable'));
+
+      await (service as any).registerRepeatingJobs();
+
+      expect(mockQueue.add).not.toHaveBeenCalled();
     });
   });
 

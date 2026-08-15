@@ -37,14 +37,10 @@ const baseValidEnv = {
   JWT_CLIENT_ACCESS_TTL: '15m',
   CHAT_GUEST_TOKEN_SECRET: 'a-very-long-and-secure-chat-guest-token-secret',
   MOYASAR_ENCRYPTION_KEY: base64_44,
+  AI_PROVIDER_ENCRYPTION_KEY: base64_44,
   SMS_PROVIDER_ENCRYPTION_KEY: base64_44,
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
   EMAIL_PROVIDER_ENCRYPTION_KEY: base64_44,
-  WHATSAPP_PROVIDER_ENCRYPTION_KEY: base64_44,
-  WHATSAPP_EVOLUTION_BASE_URL: 'https://evolution.example.com',
-  WHATSAPP_EVOLUTION_INSTANCE_NAME: 'sawaa-main',
-  WHATSAPP_EVOLUTION_API_KEY: 'evolution-api-key-123', // gitleaks:allow -- test fixture
-  WHATSAPP_EVOLUTION_WEBHOOK_SECRET: 'evolution-webhook-secret-123',
   PLATFORM_SETTINGS_KEY: 'a'.repeat(64),
   SUPER_ADMIN_PASSWORD: 'SuperSecurePassword123!',
   THROTTLER_DISABLED: 'false',
@@ -80,14 +76,24 @@ const buildDevEnv = (overrides: Record<string, string | undefined> = {}) => ({
   JWT_CLIENT_ACCESS_SECRET: 'a-very-long-and-secure-client-access-secret',
   CHAT_GUEST_TOKEN_SECRET: 'a-very-long-and-secure-chat-guest-token-secret',
   MOYASAR_ENCRYPTION_KEY: base64_44,
+  AI_PROVIDER_ENCRYPTION_KEY: base64_44,
   SMS_PROVIDER_ENCRYPTION_KEY: base64_44,
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
   EMAIL_PROVIDER_ENCRYPTION_KEY: base64_44,
-  WHATSAPP_PROVIDER_ENCRYPTION_KEY: base64_44,
   ...overrides,
 });
 
 describe('envValidationSchema', () => {
+  it('requires a valid 32-byte AI provider encryption key', () => {
+    const invalid = envValidationSchema.validate({ AI_PROVIDER_ENCRYPTION_KEY: '' }, { abortEarly: false });
+    expect(invalid.error?.details.some((d) => d.path.includes('AI_PROVIDER_ENCRYPTION_KEY'))).toBe(true);
+  });
+
+  it('accepts the known non-zero 32-byte AI provider test key', () => {
+    const result = envValidationSchema.validate({ AI_PROVIDER_ENCRYPTION_KEY: base64_44 }, { abortEarly: false });
+    expect(result.error?.details.some((d) => d.path.includes('AI_PROVIDER_ENCRYPTION_KEY'))).toBe(false);
+  });
+
   let originalNodeEnv: string | undefined;
 
   beforeEach(() => {
@@ -237,31 +243,6 @@ describe('envValidationSchema', () => {
         'testing-is-a-valid-strong-guest-token-secret-32chars',
       ),
     ).toBe(false);
-  });
-
-  it('allows production to boot when the optional WhatsApp integration is not configured', () => {
-    process.env.NODE_ENV = 'production';
-    const env = {
-      ...baseValidEnv,
-      WHATSAPP_PROVIDER_ENCRYPTION_KEY: undefined,
-      WHATSAPP_EVOLUTION_BASE_URL: undefined,
-      WHATSAPP_EVOLUTION_API_KEY: undefined,
-      WHATSAPP_EVOLUTION_WEBHOOK_SECRET: undefined,
-    };
-    const result = envValidationSchema.validate(env, { abortEarly: false });
-    expect(result.error).toBeUndefined();
-  });
-
-  it('rejects a partial WhatsApp configuration in production', () => {
-    process.env.NODE_ENV = 'production';
-    const env = {
-      ...baseValidEnv,
-      WHATSAPP_PROVIDER_ENCRYPTION_KEY: undefined,
-      WHATSAPP_EVOLUTION_API_KEY: undefined,
-      WHATSAPP_EVOLUTION_WEBHOOK_SECRET: undefined,
-    };
-    const result = envValidationSchema.validate(env, { abortEarly: false });
-    expect(result.error).toBeDefined();
   });
 
   it('passes with minimal development env', () => {

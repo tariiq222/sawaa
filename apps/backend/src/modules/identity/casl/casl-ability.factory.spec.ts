@@ -170,4 +170,13 @@ describe('CaslAbilityFactory', () => {
     });
     expect(ability.can('manage', 'User')).toBe(true);
   });
+
+  it('does not grant the retired WhatsApp conversation subject from built-in roles', () => {
+    const ability = factory.buildForUser({
+      role: 'ADMIN',
+      customRole: null,
+      systemRolePermissions: null,
+    });
+    expect(ability.can('manage', 'WhatsappConversation')).toBe(false);
+  });
 });

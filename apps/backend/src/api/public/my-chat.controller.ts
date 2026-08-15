@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, HttpStatus, Ip, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiBearerAuth, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ClientSession } from '../../common/auth/client-session.decorator';
@@ -166,6 +166,7 @@ export class MyChatController {
   }
 
   @Get('conversations/:conversationId/messages')
+  @Header('Cache-Control', 'no-store, max-age=0')
   @ApiOperation({ summary: 'List messages as the authenticated client' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
   listMessagesForClient(

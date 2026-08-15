@@ -1,7 +1,8 @@
 /**
  * Per-request middleware:
- *   1. Sets a cryptographic nonce in the CSP header (no 'unsafe-inline',
- *      no 'unsafe-eval' — Next.js stamps the nonce on its injected scripts).
+ *   1. Sets a cryptographic nonce in the CSP header. Production does not allow
+ *      'unsafe-inline' or 'unsafe-eval'; local Next.js development needs the
+ *      latter for React Refresh.
  *   2. Redirects unauthenticated users away from /account, /booking/confirm.
  *   3. Redirects authenticated users away from the auth pages to /account.
  *
@@ -37,8 +38,8 @@ const SENTRY_ORIGIN = process.env.SENTRY_URL || 'https://errors.webvue.pro'
 /**
  * Build the CSP for this request.
  *
- * - script-src drops 'unsafe-inline' and 'unsafe-eval' in favor of a
- *   per-request nonce. 'strict-dynamic' propagates trust to scripts
+ * - script-src drops 'unsafe-inline' and, outside local development,
+ *   'unsafe-eval' in favor of a per-request nonce. 'strict-dynamic' propagates trust to scripts
  *   loaded by the nonced root script (Next.js's chunk loader), which
  *   removes the need for per-chunk nonces.
  * - style-src still allows 'unsafe-inline' because Next.js injects
@@ -49,9 +50,10 @@ const SENTRY_ORIGIN = process.env.SENTRY_URL || 'https://errors.webvue.pro'
  */
 function buildCsp(nonce: string): string {
   const api = apiOrigin()
+  const developmentEval = process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${developmentEval}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",

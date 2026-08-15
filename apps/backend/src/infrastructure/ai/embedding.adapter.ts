@@ -24,7 +24,7 @@ export class EmbeddingAdapter implements IEmbeddingService, OnModuleInit {
       this.logger.warn('OPENAI_API_KEY not set — EmbeddingAdapter disabled');
       return;
     }
-    this.client = new OpenAI({ apiKey });
+    this.client = new OpenAI({ apiKey, timeout: 30_000, maxRetries: 0 });
     this.logger.log(`EmbeddingAdapter ready (model: ${this.model})`);
   }
 

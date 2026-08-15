@@ -7,6 +7,7 @@ import { AdministrativeToolContext } from './administrative-tool-context';
 import {
   type AdministrativeServiceProjection,
   AdministrativeToolsService,
+  parseHandoffSummary,
 } from './administrative-tools.service';
 
 type Assert<T extends true> = T;
@@ -20,6 +21,21 @@ type HasNoSyntheticServiceName = Assert<
 >;
 
 describe('AdministrativeToolsService', () => {
+  it.each([
+    'COMPLAINT', 'FINANCIAL_EXCEPTION', 'UNAVAILABLE_APPOINTMENT', 'USER_REQUESTED',
+  ] as const)('projects %s handoff details into the closed summary contract', (category) => {
+    expect(parseHandoffSummary({ category, requestSummary: 'طلب خدمة', desiredOutcome: 'مساعدة الاستقبال' })).toEqual({
+      category, requestSummary: 'طلب خدمة', desiredOutcome: 'مساعدة الاستقبال',
+    });
+  });
+
+  it.each([
+    { risk: 'high' }, { clinicalAnalysis: 'تشخيص' }, { rawProviderPayload: 'secret' },
+    { staffUserId: 'staff-1' }, { unknownMetadata: true },
+  ])('rejects unsafe or unknown handoff metadata: %j', (extra) => {
+    expect(parseHandoffSummary({ category: 'OTHER', requestSummary: 'طلب', desiredOutcome: 'حل', ...extra })).toBeNull();
+  });
+
   const seededServices = [
     { nameAr: 'جلسة إرشاد أسري', nameEn: 'Family Session' },
     { nameAr: 'جلسة استشارة زوجية', nameEn: 'Marriage Counseling Session' },
@@ -94,20 +110,31 @@ describe('AdministrativeToolsService', () => {
 
     expect(definitions.map((definition) => definition.function.name)).toEqual([
       'getCenterInfo',
+      'getServiceDetails',
+      'compareServices',
+      'getPractitionerDetails',
       'listServices',
       'listPractitioners',
       'getAvailability',
-      'searchKnowledge',
-      'handoffToReception',
+      'searchPublishedKnowledge',
       'listOwnAppointments',
       'prepareBooking',
       'prepareReschedule',
       'prepareCancellation',
+      'replyToCustomer',
     ]);
+    const finalReply = definitions.find((definition) => definition.function.name === 'replyToCustomer');
+    expect(finalReply?.function.parameters).toMatchObject({ additionalProperties: false });
+    expect(JSON.stringify(finalReply?.function.parameters)).not.toContain('clientId');
     expect(JSON.stringify(definitions)).not.toMatch(/clientId|phone|newDurationMins|recurr|periodic|confirmBooking|declineBooking/);
     expect(JSON.stringify(definitions)).not.toMatch(
       /diagnos|assessment|triage|clinical|medical|risk|emergency|suicid|تشخيص|تقييم|خطر|طوارئ/i,
     );
+    expect(definitions.map((definition) => definition.function.name)).not.toContain('prepareReceptionHandoff');
+    expect(definitions.find((item) => item.function.name === 'listServices')?.function.description)
+      .toContain('resolve a customer-named service');
+    expect(definitions.find((item) => item.function.name === 'getAvailability')?.function.description)
+      .toContain('only use a startTime returned by this tool');
   });
 
   it('rejects every tool name outside the closed allowlist', async () => {
@@ -120,6 +147,16 @@ describe('AdministrativeToolsService', () => {
     expect(result).toEqual({ ok: false, error: { code: 'TOOL_NOT_ALLOWED' } });
     expect(catalog.execute).not.toHaveBeenCalled();
     expect(search.execute).not.toHaveBeenCalled();
+
+    await expect(service.execute(
+      'prepareReceptionHandoff',
+      JSON.stringify({
+        category: 'FINANCIAL_EXCEPTION',
+        requestSummary: 'العميل متردد من السعر',
+        desiredOutcome: 'التواصل مع الاستقبال',
+      }),
+      new AdministrativeToolContext('conversation-1', null),
+    )).resolves.toEqual({ ok: false, error: { code: 'TOOL_NOT_ALLOWED' } });
   });
 
   it('keeps executable booking tools outside the closed allowlist', async () => {
@@ -211,7 +248,7 @@ describe('AdministrativeToolsService', () => {
 
     await expect(service.execute('getCenterInfo', '{}', context)).resolves.toEqual({
       ok: true,
-      data: { organizationNameAr: 'مركز سواء' },
+      data: { id: 'center-public', organizationNameAr: 'مركز سواء' },
     });
     await expect(service.execute('listServices', '{}', context)).resolves.toEqual({
       ok: true,
@@ -232,8 +269,12 @@ describe('AdministrativeToolsService', () => {
     )).resolves.toEqual({
       ok: true,
       data: [{
+        id: 'slot-9936fea6f5a7670a8ed0',
+        employeeId: 'employee-1',
         startTime: '2026-08-14T09:00:00.000Z',
         endTime: '2026-08-14T10:00:00.000Z',
+        localStart: '2026-08-14 12:00',
+        timezone: 'Asia/Riyadh',
       }],
     });
     await expect(service.execute(
@@ -262,6 +303,16 @@ describe('AdministrativeToolsService', () => {
       data: { intent: 'HANDOFF_TO_RECEPTION', optionOnly: true },
       publicMetadata: { action: 'OFFER_HANDOFF', reason: 'USER_REQUESTED' },
     });
+  });
+
+  it('parses replyToCustomer without performing any side effect', async () => {
+    await expect(service.execute('replyToCustomer', JSON.stringify({
+      reply: 'حياك الله، كيف أقدر أخدمك؟', intent: 'SMALL_TALK', journeyStage: 'EXPLORING',
+    }), new AdministrativeToolContext('conversation-1', null))).resolves.toMatchObject({
+      ok: true, data: { reply: 'حياك الله، كيف أقدر أخدمك؟', intent: 'SMALL_TALK' },
+    });
+    expect(catalog.execute).not.toHaveBeenCalled();
+    expect(prepareBooking.execute).not.toHaveBeenCalled();
   });
 
   it('projects and caps catalog results instead of returning raw handler payloads', async () => {
@@ -329,9 +380,8 @@ describe('AdministrativeToolsService', () => {
 
     const data = (result as { ok: true; data: Array<Record<string, unknown>> }).data;
     expect(data).toHaveLength(5);
-    expect(data[0]).toEqual({ content: `knowledge-0-${'x'.repeat(988)}`, similarity: 0.9 });
-    expect(JSON.stringify(result)).not.toContain('chunk-0');
-    expect(JSON.stringify(result)).not.toContain('document-0');
+    expect(data[0]).toMatchObject({ id: 'chunk-0', documentId: 'document-0', similarity: 0.9 });
+    expect(data[0].content).toMatch(/^knowledge-0-x+$/);
     expect(JSON.stringify(result)).not.toContain('private');
   });
 });

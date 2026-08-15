@@ -22,7 +22,7 @@ describe('SemanticSearchHandler', () => {
           provide: EmbeddingAdapter,
           useValue: {
             isAvailable: jest.fn().mockReturnValue(true),
-            embed: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
+            embed: jest.fn().mockResolvedValue([Array.from({ length: 1536 }, () => 0.1)]),
           },
         },
       ],
@@ -36,10 +36,16 @@ describe('SemanticSearchHandler', () => {
     const result = await handler.execute({ query: 'test' });
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe('Test');
+    expect((handler as any).prisma.$queryRawUnsafe.mock.calls[0][0]).toContain('kd."isPublished" = true');
   });
 
   it('should throw when embedding not available', async () => {
     (embedding.isAvailable as jest.Mock).mockReturnValue(false);
+    await expect(handler.execute({ query: 'test' })).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects vectors with the wrong pgvector dimension', async () => {
+    (embedding.embed as jest.Mock).mockResolvedValue([[0.1, 0.2]]);
     await expect(handler.execute({ query: 'test' })).rejects.toThrow(BadRequestException);
   });
 
@@ -52,5 +58,18 @@ describe('SemanticSearchHandler', () => {
       expect.anything(),
       expect.anything(),
     );
+    const call = prisma.$queryRawUnsafe.mock.calls[0];
+    expect(call[0]).toContain('dc."documentId" = $3');
+    expect(call.slice(1)).toEqual([expect.any(String), 5, 'd1']);
+  });
+
+  it('clamps pagination limits and keeps old/unpublished chunks outside the SQL result', async () => {
+    const prisma = (handler as any).prisma;
+    await handler.execute({ query: 'test', topK: 0 });
+    expect(prisma.$queryRawUnsafe.mock.calls[0][2]).toBe(1);
+    const sql = prisma.$queryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).toContain('kd."isPublished" = true');
+    expect(sql).toContain("kd.status = 'EMBEDDED'");
+    expect(sql).toContain('dc."indexedContentHash" = kd."contentHash"');
   });
 });

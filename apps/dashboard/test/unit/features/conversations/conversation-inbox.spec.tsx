@@ -40,6 +40,12 @@ const labels: Record<string, string> = {
   "conversations.detail.loading": "جارٍ تحميل تفاصيل المحادثة",
   "conversations.detail.error": "تعذّر تحميل تفاصيل المحادثة",
   "conversations.detail.loadOlder": "تحميل رسائل أقدم",
+  "conversations.detail.handoffSummary": "ملخص التحويل",
+  "conversations.detail.handoffCategory": "التصنيف",
+  "conversations.detail.requestSummary": "الطلب",
+  "conversations.detail.desiredOutcome": "النتيجة المطلوبة",
+  "conversations.detail.acceptableAlternatives": "البدائل المقبولة",
+  "conversations.detail.handoffCategory.COMPLAINT": "شكوى",
   "conversations.composer.label": "الرد",
   "conversations.composer.placeholder": "اكتب ردك",
   "conversations.composer.send": "إرسال",
@@ -170,6 +176,17 @@ describe("ConversationList", () => {
 
     rerender(<ConversationList {...shared} locale="en" />)
     expect(container.querySelector("time")?.textContent).not.toBe(arabicTime)
+  })
+})
+
+describe("ConversationDetail handoff summary", () => {
+  it("renders the safe projected summary before the transcript", () => {
+    render(<ConversationDetail conversation={conversation({ handoffSummary: {
+      category: "COMPLAINT", requestSummary: "<شكوى>", desiredOutcome: "متابعة", acceptableAlternatives: ["رسالة"],
+    } })} isDetailLoading={false} detailError={null} messages={[{ id: "m1", conversationId: "conversation-1", senderType: "CLIENT", body: "نص السجل", kind: "TEXT", clientMessageId: null, createdAt: "2026-08-14T06:00:00.000Z" }]} isMessagesLoading={false} messagesError={null} hasOlderMessages={false} isLoadingOlderMessages={false} onLoadOlderMessages={vi.fn()} canManage={false} canUpdate={false} staffUsers={[]} pendingAction={null} actionError={null} t={t} onClaim={vi.fn()} onReply={vi.fn()} onAssign={vi.fn()} onRelease={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByRole("region", { name: "ملخص التحويل" })).toBeInTheDocument()
+    expect(screen.getByText("<شكوى>")).toBeInTheDocument()
+    expect(screen.getByText("نص السجل")).toBeInTheDocument()
   })
 })
 

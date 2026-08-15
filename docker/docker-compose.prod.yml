@@ -92,14 +92,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      AI_PROVIDER_ENCRYPTION_KEY: ${AI_PROVIDER_ENCRYPTION_KEY}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
       OPENROUTER_CHAT_MODEL: ${OPENROUTER_CHAT_MODEL:-anthropic/claude-3.5-haiku}
 
-      # WhatsApp Evolution API (backend-owned; never expose these to dashboard users)
-      WHATSAPP_EVOLUTION_BASE_URL: ${WHATSAPP_EVOLUTION_BASE_URL}
-      WHATSAPP_EVOLUTION_INSTANCE_NAME: ${WHATSAPP_EVOLUTION_INSTANCE_NAME:-sawaa-main}
-      WHATSAPP_EVOLUTION_API_KEY: ${WHATSAPP_EVOLUTION_API_KEY}
-      WHATSAPP_EVOLUTION_WEBHOOK_SECRET: ${WHATSAPP_EVOLUTION_WEBHOOK_SECRET}
 
       # Single-company mode. Tenant isolation jobs/workflows are legacy Sawaa SaaS.
       TENANT_ENFORCEMENT: "${TENANT_ENFORCEMENT:-off}"

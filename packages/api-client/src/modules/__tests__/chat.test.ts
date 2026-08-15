@@ -166,6 +166,20 @@ describe('safe public chat contracts', () => {
       /must-not-leak|guestTokenHash|senderId|clientId|prompt|payload|model/,
     )
   })
+
+  it('disables browser caching for asynchronous assistant message polling', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(wrapped({
+      data: [],
+      meta: { limit: 20, nextCursor: null, hasMore: false },
+    }))
+
+    await listGuestChatMessages('conversation-1')
+
+    expect(vi.mocked(fetch).mock.calls[0]?.[1]).toEqual(expect.objectContaining({
+      cache: 'no-store',
+      credentials: 'include',
+    }))
+  })
 })
 
 describe('chat routes and browser credentials', () => {

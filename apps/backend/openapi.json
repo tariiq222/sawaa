@@ -31,6 +31,113 @@
         ],
         "type": "object"
       },
+      "AiProviderConfigResponseDto": {
+        "properties": {
+          "connectionStatus": {
+            "type": "string"
+          },
+          "hasCredential": {
+            "type": "boolean"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "lastTestErrorCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "lastTestOk": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "lastTestedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "maxTokens": {
+            "type": "number"
+          },
+          "model": {
+            "type": "string"
+          },
+          "provider": {
+            "enum": [
+              "OPENROUTER",
+              "OPENAI"
+            ],
+            "type": "string"
+          },
+          "temperature": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "temperature",
+          "maxTokens",
+          "isEnabled",
+          "connectionStatus",
+          "lastTestedAt",
+          "lastTestOk",
+          "lastTestErrorCode",
+          "hasCredential"
+        ],
+        "type": "object"
+      },
+      "AiProviderModelSuggestionDto": {
+        "properties": {
+          "allowCustom": {
+            "type": "boolean"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "provider": {
+            "enum": [
+              "OPENROUTER",
+              "OPENAI"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "models",
+          "allowCustom"
+        ],
+        "type": "object"
+      },
+      "AiProviderTestResponseDto": {
+        "properties": {
+          "errorCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "persisted": {
+            "type": "boolean"
+          },
+          "testedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "errorCode",
+          "testedAt",
+          "persisted"
+        ],
+        "type": "object"
+      },
       "ApiErrorDto": {
         "properties": {
           "code": {
@@ -1847,6 +1954,53 @@
         ],
         "type": "object"
       },
+      "CreateDocumentDto": {
+        "properties": {
+          "content": {
+            "description": "Plain-text body for manual entries",
+            "maxLength": 50000,
+            "nullable": true,
+            "type": "string"
+          },
+          "isPublished": {
+            "default": false,
+            "description": "Draft state; publication timestamps are server-owned",
+            "example": false,
+            "type": "boolean"
+          },
+          "metadata": {
+            "description": "Arbitrary JSON metadata",
+            "example": {
+              "source": "admin"
+            },
+            "type": "object"
+          },
+          "sourceRef": {
+            "description": "HTTPS source URL for URL entries",
+            "maxLength": 2000,
+            "nullable": true,
+            "type": "string"
+          },
+          "sourceType": {
+            "enum": [
+              "manual",
+              "url"
+            ],
+            "example": "manual",
+            "type": "string"
+          },
+          "title": {
+            "description": "Document title",
+            "example": "Clinic FAQ",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "sourceType"
+        ],
+        "type": "object"
+      },
       "CreateEmailTemplateDto": {
         "properties": {
           "blocks": {
@@ -3525,6 +3679,248 @@
         ],
         "type": "string"
       },
+      "KnowledgeDocumentDetailResponseDto": {
+        "properties": {
+          "chunks": {
+            "items": {
+              "properties": {
+                "chunkIndex": {
+                  "type": "number"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "tokenCount": {
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "content": {
+            "maxLength": 50000,
+            "nullable": true,
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "lastIndexErrorCode": {
+            "nullable": true,
+            "type": "object"
+          },
+          "lastIndexedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "object"
+          },
+          "metadata": {
+            "nullable": true,
+            "type": "object"
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "object"
+          },
+          "sourceRef": {
+            "nullable": true,
+            "type": "object"
+          },
+          "sourceType": {
+            "enum": [
+              "manual",
+              "url"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "EMBEDDED",
+              "FAILED"
+            ],
+            "example": "PENDING",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "sourceType",
+          "sourceRef",
+          "status",
+          "isPublished",
+          "publishedAt",
+          "lastIndexedAt",
+          "lastIndexErrorCode",
+          "metadata",
+          "createdAt",
+          "updatedAt",
+          "content",
+          "chunks"
+        ],
+        "type": "object"
+      },
+      "KnowledgeDocumentPageResponseDto": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeDocumentSummaryResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "properties": {
+              "limit": {
+                "type": "number"
+              },
+              "page": {
+                "type": "number"
+              },
+              "total": {
+                "type": "number"
+              },
+              "totalPages": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "total",
+              "page",
+              "limit",
+              "totalPages"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "KnowledgeDocumentSummaryResponseDto": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "lastIndexErrorCode": {
+            "nullable": true,
+            "type": "object"
+          },
+          "lastIndexedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "object"
+          },
+          "metadata": {
+            "nullable": true,
+            "type": "object"
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "object"
+          },
+          "sourceRef": {
+            "nullable": true,
+            "type": "object"
+          },
+          "sourceType": {
+            "enum": [
+              "manual",
+              "url"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "EMBEDDED",
+              "FAILED"
+            ],
+            "example": "PENDING",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "sourceType",
+          "sourceRef",
+          "status",
+          "isPublished",
+          "publishedAt",
+          "lastIndexedAt",
+          "lastIndexErrorCode",
+          "metadata",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "KnowledgeReindexResponseDto": {
+        "properties": {
+          "contentHash": {
+            "type": "string"
+          },
+          "documentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "eventId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "PENDING"
+            ],
+            "example": "PENDING",
+            "type": "string"
+          }
+        },
+        "required": [
+          "documentId",
+          "contentHash",
+          "eventId",
+          "status"
+        ],
+        "type": "object"
+      },
       "ListClientChatConversationsResponseDto": {
         "properties": {
           "data": {
@@ -3916,10 +4312,6 @@
         },
         "type": "object"
       },
-      "Object": {
-        "properties": {},
-        "type": "object"
-      },
       "OnboardEmployeeDto": {
         "properties": {
           "avatarUrl": {
@@ -4200,8 +4592,7 @@
               "Role",
               "Service",
               "Setting",
-              "User",
-              "WhatsappConversation"
+              "User"
             ],
             "example": "Booking",
             "type": "string"
@@ -5181,18 +5572,6 @@
         ],
         "type": "object"
       },
-      "StaffReplyDto": {
-        "properties": {
-          "message": {
-            "example": "موعدك تأكد — الدفع عند الاستقبال",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "type": "object"
-      },
       "SubmitIntakeResponseDto": {
         "properties": {
           "answers": {
@@ -5275,6 +5654,51 @@
         },
         "required": [
           "apiToken"
+        ],
+        "type": "object"
+      },
+      "TestAiProviderConfigDto": {
+        "properties": {
+          "candidateApiKey": {
+            "description": "Write-only candidate API key. Never returned or persisted unless saveCredential is true.",
+            "type": "string",
+            "writeOnly": true
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "maxTokens": {
+            "default": 800,
+            "maximum": 32000,
+            "minimum": 1,
+            "type": "number"
+          },
+          "model": {
+            "example": "openai/gpt-4o-mini",
+            "type": "string"
+          },
+          "provider": {
+            "enum": [
+              "OPENROUTER",
+              "OPENAI"
+            ],
+            "type": "string"
+          },
+          "saveCredential": {
+            "description": "Persist the candidate only after the bounded test succeeds.",
+            "type": "boolean"
+          },
+          "temperature": {
+            "default": 0.4,
+            "maximum": 2,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "candidateApiKey"
         ],
         "type": "object"
       },
@@ -5798,12 +6222,37 @@
       },
       "UpdateDocumentDto": {
         "properties": {
+          "content": {
+            "description": "Plain-text document body",
+            "maxLength": 50000,
+            "nullable": true,
+            "type": "string"
+          },
+          "isPublished": {
+            "description": "Publication state; publication timestamps are server-owned",
+            "nullable": true,
+            "type": "boolean"
+          },
           "metadata": {
             "description": "Arbitrary JSON metadata",
             "example": {
               "source": "admin"
             },
             "type": "object"
+          },
+          "sourceRef": {
+            "description": "HTTPS source URL",
+            "maxLength": 2000,
+            "nullable": true,
+            "type": "string"
+          },
+          "sourceType": {
+            "enum": [
+              "manual",
+              "url"
+            ],
+            "nullable": true,
+            "type": "string"
           },
           "title": {
             "description": "Document title",
@@ -6358,6 +6807,41 @@
         ],
         "type": "object"
       },
+      "UpsertAiProviderConfigDto": {
+        "properties": {
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "maxTokens": {
+            "default": 800,
+            "maximum": 32000,
+            "minimum": 1,
+            "type": "number"
+          },
+          "model": {
+            "example": "openai/gpt-4o-mini",
+            "type": "string"
+          },
+          "provider": {
+            "enum": [
+              "OPENROUTER",
+              "OPENAI"
+            ],
+            "type": "string"
+          },
+          "temperature": {
+            "default": 0.4,
+            "maximum": 2,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "provider",
+          "model"
+        ],
+        "type": "object"
+      },
       "UpsertBookingSettingsDto": {
         "properties": {
           "autoCompleteAfterHours": {
@@ -6817,102 +7301,6 @@
         ],
         "type": "object"
       },
-      "UpsertWhatsappAgentConfigDto": {
-        "properties": {
-          "activeDays": {
-            "description": "0=Sunday..6=Saturday (Saudi week)",
-            "example": [
-              0,
-              1,
-              2,
-              3,
-              4
-            ],
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "aiApiKey": {
-            "description": "OpenRouter (or OpenAI-compatible) API key. Empty string clears the stored key.",
-            "example": "sk-or-v1-...",
-            "type": "string"
-          },
-          "aiMaxTokens": {
-            "example": 800,
-            "maximum": 4000,
-            "minimum": 50,
-            "type": "number"
-          },
-          "aiModel": {
-            "example": "anthropic/claude-3.5-haiku",
-            "type": "string"
-          },
-          "aiTemperature": {
-            "example": 0.4,
-            "maximum": 2,
-            "minimum": 0,
-            "type": "number"
-          },
-          "businessHoursOnly": {
-            "default": false,
-            "type": "boolean"
-          },
-          "defaultLanguage": {
-            "enum": [
-              "ar",
-              "en"
-            ],
-            "example": "ar",
-            "type": "string"
-          },
-          "greetingAr": {
-            "example": "أهلاً! كيف أقدر أساعدك؟",
-            "type": "string"
-          },
-          "greetingEn": {
-            "example": "Hi! How can I help?",
-            "type": "string"
-          },
-          "systemPromptAr": {
-            "example": "أنت مساعد سوا...",
-            "type": "string"
-          },
-          "systemPromptEn": {
-            "example": "You are Sawaa assistant...",
-            "type": "string"
-          }
-        },
-        "required": [
-          "aiModel",
-          "aiTemperature",
-          "aiMaxTokens",
-          "systemPromptAr",
-          "systemPromptEn",
-          "defaultLanguage"
-        ],
-        "type": "object"
-      },
-      "UpsertWhatsappConfigDto": {
-        "properties": {
-          "isActive": {
-            "default": true,
-            "type": "boolean"
-          },
-          "provider": {
-            "enum": [
-              "META_CLOUD",
-              "EVOLUTION_API"
-            ],
-            "example": "EVOLUTION_API",
-            "type": "string"
-          }
-        },
-        "required": [
-          "provider"
-        ],
-        "type": "object"
-      },
       "UpsertZoomConfigDto": {
         "properties": {
           "zoomAccountId": {
@@ -7058,22 +7446,6 @@
           "transferRef": {
             "description": "Bank transfer reference number (required when approving)",
             "example": "TRF-20260501-001",
-            "type": "string"
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "type": "object"
-      },
-      "WhatsappControlDto": {
-        "properties": {
-          "action": {
-            "enum": [
-              "start",
-              "stop",
-              "restart"
-            ],
             "type": "string"
           }
         },
@@ -8130,7 +8502,6 @@
                 "EMBEDDED",
                 "FAILED"
               ],
-              "example": "ACTIVE",
               "type": "string"
             }
           },
@@ -8158,40 +8529,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "data": {
-                      "items": {
-                        "properties": {
-                          "createdAt": {
-                            "format": "date-time",
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "status": {
-                            "type": "string"
-                          },
-                          "title": {
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "page": {
-                      "type": "number"
-                    },
-                    "total": {
-                      "type": "number"
-                    },
-                    "totalPages": {
-                      "type": "number"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/KnowledgeDocumentPageResponseDto"
                 }
               }
             },
@@ -8244,6 +8582,81 @@
           }
         ],
         "summary": "List knowledge-base documents",
+        "tags": [
+          "Dashboard / AI"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardAiController_createDocument_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDocumentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDocumentSummaryResponseDto"
+                }
+              }
+            },
+            "description": "Created knowledge-base document"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a knowledge-base document",
         "tags": [
           "Dashboard / AI"
         ]
@@ -8341,26 +8754,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "content": {
-                      "type": "string"
-                    },
-                    "createdAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "title": {
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/KnowledgeDocumentDetailResponseDto"
                 }
               }
             },
@@ -8521,6 +8915,512 @@
           }
         ],
         "summary": "Update a knowledge-base document",
+        "tags": [
+          "Dashboard / AI"
+        ]
+      }
+    },
+    "/api/v1/dashboard/ai/knowledge-base/{id}/publish": {
+      "post": {
+        "operationId": "DashboardAiController_publishDocument_v1",
+        "parameters": [
+          {
+            "description": "Document UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDocumentSummaryResponseDto"
+                }
+              }
+            },
+            "description": "Published document"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish a knowledge-base document",
+        "tags": [
+          "Dashboard / AI"
+        ]
+      }
+    },
+    "/api/v1/dashboard/ai/knowledge-base/{id}/reindex": {
+      "post": {
+        "operationId": "DashboardAiController_reindexDocument_v1",
+        "parameters": [
+          {
+            "description": "Document UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeReindexResponseDto"
+                }
+              }
+            },
+            "description": "Reindex request accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Request knowledge-base document reindexing",
+        "tags": [
+          "Dashboard / AI"
+        ]
+      }
+    },
+    "/api/v1/dashboard/ai/knowledge-base/{id}/unpublish": {
+      "post": {
+        "operationId": "DashboardAiController_unpublishDocument_v1",
+        "parameters": [
+          {
+            "description": "Document UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDocumentSummaryResponseDto"
+                }
+              }
+            },
+            "description": "Unpublished document"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unpublish a knowledge-base document",
+        "tags": [
+          "Dashboard / AI"
+        ]
+      }
+    },
+    "/api/v1/dashboard/ai/provider-config": {
+      "get": {
+        "operationId": "DashboardAiController_getAiProviderConfigEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiProviderConfigResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the safe AI provider configuration projection",
+        "tags": [
+          "Dashboard / AI"
+        ]
+      },
+      "put": {
+        "operationId": "DashboardAiController_upsertAiProviderConfigEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertAiProviderConfigDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiProviderConfigResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Enablement requires a matching successful test"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update AI provider settings without accepting a credential",
+        "tags": [
+          "Dashboard / AI"
+        ]
+      }
+    },
+    "/api/v1/dashboard/ai/provider-config/models": {
+      "get": {
+        "operationId": "DashboardAiController_getAiProviderModels_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AiProviderModelSuggestionDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List safe curated AI provider model suggestions",
+        "tags": [
+          "Dashboard / AI"
+        ]
+      }
+    },
+    "/api/v1/dashboard/ai/provider-config/test": {
+      "post": {
+        "operationId": "DashboardAiController_testAiProviderConfigEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestAiProviderConfigDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiProviderTestResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid provider candidate or model"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Test a write-only candidate AI provider credential",
         "tags": [
           "Dashboard / AI"
         ]
@@ -17391,347 +18291,6 @@
         "summary": "Remove a role from a user",
         "tags": [
           "Dashboard / Identity"
-        ]
-      }
-    },
-    "/api/v1/dashboard/integrations/whatsapp": {
-      "delete": {
-        "operationId": "WhatsappIntegrationsController_reset_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Erase WhatsApp credentials and disconnect the agent",
-        "tags": [
-          "Dashboard / WhatsApp Integration"
-        ]
-      },
-      "get": {
-        "operationId": "WhatsappIntegrationsController_get_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get WhatsApp integration status (no secrets returned)",
-        "tags": [
-          "Dashboard / WhatsApp Integration"
-        ]
-      },
-      "put": {
-        "operationId": "WhatsappIntegrationsController_upsert_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertWhatsappConfigDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create or update WhatsApp Cloud API credentials",
-        "tags": [
-          "Dashboard / WhatsApp Integration"
-        ]
-      }
-    },
-    "/api/v1/dashboard/integrations/whatsapp/test": {
-      "post": {
-        "operationId": "WhatsappIntegrationsController_test_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "error": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "ok": {
-                      "type": "boolean"
-                    },
-                    "phoneNumber": {
-                      "nullable": true,
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "WhatsApp credential test result"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Verify Evolution API credentials by fetching connection state",
-        "tags": [
-          "Dashboard / WhatsApp Integration"
-        ]
-      }
-    },
-    "/api/v1/dashboard/integrations/whatsapp/unlink": {
-      "post": {
-        "operationId": "WhatsappIntegrationsController_unlink_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "logoutOk": {
-                      "type": "boolean"
-                    },
-                    "unlinked": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Unlink result"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Disconnect the WhatsApp number while preserving Evolution API configuration and conversation history",
-        "tags": [
-          "Dashboard / WhatsApp Integration"
         ]
       }
     },
@@ -28740,841 +29299,6 @@
         ]
       }
     },
-    "/api/v1/dashboard/whatsapp/agent-config": {
-      "get": {
-        "operationId": "WhatsappAgentController_getAgentConfigEndpoint_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get WhatsApp AI agent config (model, prompts, defaults)",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      },
-      "patch": {
-        "operationId": "WhatsappAgentController_upsertAgentConfigEndpoint_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertWhatsappAgentConfigDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update WhatsApp AI agent config",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/control": {
-      "post": {
-        "operationId": "WhatsappAgentController_controlEndpoint_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WhatsappControlDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Start, stop, or restart the WhatsApp agent",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/conversations": {
-      "get": {
-        "operationId": "WhatsappAgentController_listConversationsEndpoint_v1",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "status",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Filter conversations by whether the AI created a WhatsApp booking for the client",
-            "in": "query",
-            "name": "bookingFilter",
-            "required": false,
-            "schema": {
-              "enum": [
-                "BOOKED",
-                "NOT_BOOKED"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "unread",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "staffTakeover",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "deliveryFailure",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "from",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "to",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "staffUserId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "sort",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List WhatsApp conversations (live monitoring)",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/conversations/{id}": {
-      "get": {
-        "operationId": "WhatsappAgentController_getConversationEndpoint_v1",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get a WhatsApp conversation with all messages",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/conversations/{id}/close": {
-      "post": {
-        "operationId": "WhatsappAgentController_closeConversationEndpoint_v1",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Close a conversation and release staff takeover",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/conversations/{id}/read": {
-      "post": {
-        "operationId": "WhatsappAgentController_markConversationReadEndpoint_v1",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Mark WhatsApp customer messages as read",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/conversations/{id}/release": {
-      "post": {
-        "operationId": "WhatsappAgentController_releaseTakeoverEndpoint_v1",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Return a WhatsApp conversation to the AI agent",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/conversations/{id}/reply": {
-      "post": {
-        "operationId": "WhatsappAgentController_staffReplyEndpoint_v1",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StaffReplyDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Send a message as staff (hand takeover)",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/qr": {
-      "get": {
-        "operationId": "WhatsappAgentController_getQrEndpoint_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get the current WhatsApp QR code for pairing (Baileys only)",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
-    "/api/v1/dashboard/whatsapp/status": {
-      "get": {
-        "operationId": "WhatsappAgentController_getStatusEndpoint_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get WhatsApp agent runtime status (connection, uptime, counters)",
-        "tags": [
-          "Dashboard / WhatsApp Agent"
-        ]
-      }
-    },
     "/api/v1/health": {
       "get": {
         "operationId": "PublicHealthController_check_v1",
@@ -37213,58 +36937,6 @@
         "summary": "Verify an email-verification token",
         "tags": [
           "Public / Identity"
-        ]
-      }
-    },
-    "/api/v1/public/whatsapp/webhook": {
-      "post": {
-        "operationId": "WhatsappWebhookController_handle_v1",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "ok": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "description": "Missing raw body or invalid payload shape"
-          },
-          "401": {
-            "description": "Signature verification failed or webhook secret not configured"
-          }
-        },
-        "summary": "Receive an authenticated Evolution API message webhook.",
-        "tags": [
-          "Public / WhatsApp Webhook"
         ]
       }
     }

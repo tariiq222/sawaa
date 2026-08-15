@@ -77,6 +77,8 @@ export function ConversationDetail(props: ConversationDetailProps) {
       {conversation.status === "CLOSED" && <StateNote>{t("conversations.detail.closed")}</StateNote>}
       {props.actionError && <p role="alert" className="mt-4 rounded-lg border border-error/30 bg-error-soft/40 p-3 text-sm text-error">{props.actionError}</p>}
 
+      {conversation.handoffSummary && <HandoffSummaryCard summary={conversation.handoffSummary} t={t} />}
+
       <div className="my-4 min-h-80 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border/70 bg-surface-muted/20 p-4">
         {props.hasOlderMessages && (
           <Button variant="outline" size="sm" className="mx-auto flex" disabled={props.isLoadingOlderMessages} onClick={props.onLoadOlderMessages}>
@@ -92,6 +94,18 @@ export function ConversationDetail(props: ConversationDetailProps) {
       {canReply && <ConversationComposer key={conversation.id} isPending={props.pendingAction === "reply"} t={t} onSend={props.onReply} />}
     </section>
   )
+}
+
+function HandoffSummaryCard({ summary, t }: { summary: NonNullable<Conversation["handoffSummary"]>; t: (key: string) => string }) {
+  return <section aria-label={t("conversations.detail.handoffSummary")} className="mt-4 rounded-xl border border-warning/30 bg-warning-soft/30 p-4">
+    <h3 className="text-sm font-semibold text-foreground">{t("conversations.detail.handoffSummary")}</h3>
+    <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+      <div><dt className="text-xs text-muted-foreground">{t("conversations.detail.handoffCategory")}</dt><dd className="mt-0.5 text-foreground">{t(`conversations.detail.handoffCategory.${summary.category}`)}</dd></div>
+      <div><dt className="text-xs text-muted-foreground">{t("conversations.detail.requestSummary")}</dt><dd className="mt-0.5 whitespace-pre-wrap text-foreground">{summary.requestSummary}</dd></div>
+      <div><dt className="text-xs text-muted-foreground">{t("conversations.detail.desiredOutcome")}</dt><dd className="mt-0.5 whitespace-pre-wrap text-foreground">{summary.desiredOutcome}</dd></div>
+      {summary.acceptableAlternatives && <div><dt className="text-xs text-muted-foreground">{t("conversations.detail.acceptableAlternatives")}</dt><dd className="mt-0.5 whitespace-pre-wrap text-foreground">{summary.acceptableAlternatives.join("، ")}</dd></div>}
+    </dl>
+  </section>
 }
 
 function MessageBubble({ message, t }: { message: ConversationMessage; t: (key: string) => string }) {

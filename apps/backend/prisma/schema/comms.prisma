@@ -79,27 +79,29 @@ model Notification {
 }
 
 model ChatConversation {
-  id                  String             @id @default(uuid())
-  clientId            String?
-  employeeId          String?
-  isAiChat            Boolean            @default(false)
-  status              ConversationStatus @default(AI_ACTIVE)
-  stateVersion        Int                @default(0)
-  guestTokenHash      String?            @unique
-  guestName           String?
-  guestPhone          String?
-  language            String             @default("ar")
-  assignedStaffUserId String?
-  handoffRequestedAt  DateTime?
-  staffClaimedAt      DateTime?
-  closedAt            DateTime?
-  staffUnreadCount    Int                @default(0)
-  clientUnreadCount   Int                @default(0)
-  assistantLeaseOwner String?
+  id                      String             @id @default(uuid())
+  clientId                String?
+  employeeId              String?
+  isAiChat                Boolean            @default(false)
+  status                  ConversationStatus @default(AI_ACTIVE)
+  stateVersion            Int                @default(0)
+  guestTokenHash          String?            @unique
+  guestName               String?
+  guestPhone              String?
+  language                String             @default("ar")
+  assignedStaffUserId     String?
+  handoffRequestedAt      DateTime?
+  staffClaimedAt          DateTime?
+  closedAt                DateTime?
+  staffUnreadCount        Int                @default(0)
+  clientUnreadCount       Int                @default(0)
+  customerContext         Json?
+  customerContextVersion  Int                @default(0)
+  assistantLeaseOwner     String?
   assistantLeaseExpiresAt DateTime?
-  lastMessageAt       DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  lastMessageAt           DateTime?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 
   messages   CommsChatMessage[]
   operations ChatOperation[]
@@ -136,32 +138,32 @@ model CommsChatMessage {
 }
 
 model ChatOperation {
-  id                    String              @id @default(uuid())
-  conversationId        String
-  conversation          ChatConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  clientId              String?
-  type                  ChatOperationType
-  status                ChatOperationStatus
-  payload               Json
-  summary               Json
-  idempotencyKey        String              @unique
-  requiredConfirmations Int
-  confirmationCount     Int                 @default(0)
-  version               Int                 @default(0)
-  expiresAt             DateTime
-  confirmedAt           DateTime?
-  executedAt            DateTime?
-  bookingId             String?
-  resultMessageId       String?             @unique
-  errorCode             String?
+  id                     String              @id @default(uuid())
+  conversationId         String
+  conversation           ChatConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  clientId               String?
+  type                   ChatOperationType
+  status                 ChatOperationStatus
+  payload                Json
+  summary                Json
+  idempotencyKey         String              @unique
+  requiredConfirmations  Int
+  confirmationCount      Int                 @default(0)
+  version                Int                 @default(0)
+  expiresAt              DateTime
+  confirmedAt            DateTime?
+  executedAt             DateTime?
+  bookingId              String?
+  resultMessageId        String?             @unique
+  errorCode              String?
   // Set once a guest intent has been revalidated after conversation claim.
   // The result-message key prevents double-claim/resume from creating cards.
-  authResumedAt         DateTime?
-  authResumeMessageId   String?             @unique
+  authResumedAt          DateTime?
+  authResumeMessageId    String?             @unique
   resumedFromOperationId String?             @unique
-  resumedOperationId    String?              @unique
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  resumedOperationId     String?             @unique
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   @@index([conversationId, status, createdAt])
   @@index([clientId, status, createdAt])

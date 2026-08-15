@@ -85,8 +85,7 @@ export const envValidationSchema = Joi.object({
   // conversation tokens. Required at boot; never fall back to a shared dev key.
   WEB_CHAT_ENABLED: Joi.boolean().default(false),
   CHAT_GUEST_TOKEN_SECRET: Joi.string().min(32).required(),
-  // Maximum text length accepted from web chat callers. Keep this independent
-  // from WhatsApp's provider-specific outbound limit.
+  // Maximum text length accepted from web chat callers.
   CHAT_MAX_MESSAGE_LENGTH: Joi.number().integer().min(1).max(4000).default(4000),
   CHAT_RATE_LIMIT_PER_MINUTE: Joi.number().integer().min(1).max(600).default(20),
   CHAT_DAILY_TOKEN_BUDGET: Joi.number().integer().min(1).default(100_000),
@@ -118,6 +117,12 @@ export const envValidationSchema = Joi.object({
   OPENROUTER_BASE_URL: Joi.string().uri().default('https://openrouter.ai/api/v1'),
   OPENROUTER_CHAT_MODEL: Joi.string().default('anthropic/claude-3.5-haiku'),
 
+  // AI provider credential envelope key — required at boot; base64 of exactly 32 random bytes.
+  AI_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).custom((value, helpers) => {
+    if (Buffer.from(value, 'base64').length !== 32) return helpers.error('any.invalid');
+    return value;
+  }).required(),
+
   // Moyasar AES-256-GCM master key — REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
   // HKDF combines this key with SINGLE_TENANT_CONTEXT_ID to wrap credentials at rest.
   MOYASAR_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
@@ -128,27 +133,7 @@ export const envValidationSchema = Joi.object({
   ZOOM_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
   // Email provider master key — 32 raw bytes base64-encoded (ASCII length 44).
   EMAIL_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
-  // WhatsApp provider master key — 32 raw bytes base64-encoded (ASCII length 44).
-  // Encrypts Meta Cloud API credentials (accessToken, businessAccountId, phoneNumberId)
-  // and the webhook verify token. Same HKDF + SINGLE_TENANT_CONTEXT_ID pattern as the
-  // other provider keys.
-  WHATSAPP_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).optional(),
-  // Evolution API is server-owned. These values must never come from the dashboard.
-  WHATSAPP_EVOLUTION_BASE_URL: Joi.when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().uri({ scheme: ['https'] }).optional(),
-    otherwise: Joi.string().uri().allow('').optional(),
-  }),
-  WHATSAPP_EVOLUTION_INSTANCE_NAME: Joi.string().default('sawaa-main'),
-  WHATSAPP_EVOLUTION_API_KEY: Joi.string().min(8).allow('').optional(),
-  WHATSAPP_EVOLUTION_WEBHOOK_SECRET: Joi.string().min(16).allow('').optional(),
   SMS_WEBHOOK_URL_BASE: Joi.string().uri().allow('').optional(),
-
-  // WhatsApp agent runtime — optional until WhatsApp module is enabled.
-  WHATSAPP_SESSION_DIR: Joi.string().allow('').optional(),
-  WHATSAPP_AI_MAX_HISTORY_MESSAGES: Joi.number().integer().min(0).max(100).default(20),
-  WHATSAPP_MAX_MESSAGE_LENGTH: Joi.number().integer().min(280).default(4000),
-  WHATSAPP_RATE_LIMIT_PER_PHONE_PER_HOUR: Joi.number().integer().min(1).default(60),
 
   // Super-admin bootstrap password. Must be changed before production.
   // Min 16 chars; placeholder values ('Admin@2026', 'admin', 'password') rejected in production.
@@ -250,24 +235,6 @@ export const envValidationSchema = Joi.object({
   // running app with a known JWT secret is far worse than a non-running app.
   .custom((value, helpers) => {
     if (value.NODE_ENV !== 'production') return value;
-    const whatsappKeys = [
-      'WHATSAPP_PROVIDER_ENCRYPTION_KEY',
-      'WHATSAPP_EVOLUTION_BASE_URL',
-      'WHATSAPP_EVOLUTION_API_KEY',
-      'WHATSAPP_EVOLUTION_WEBHOOK_SECRET',
-    ];
-    const configuredWhatsappKeys = whatsappKeys.filter((key) => {
-      const setting = value[key];
-      return typeof setting === 'string' && setting.trim().length > 0;
-    });
-    if (
-      configuredWhatsappKeys.length > 0 &&
-      configuredWhatsappKeys.length !== whatsappKeys.length
-    ) {
-      return helpers.error('any.invalid', {
-        message: 'WhatsApp integration must provide all four settings or none',
-      });
-    }
     const placeholderSubstrings = ['change-me', 'CHANGE_ME', 'REPLACE_ME', 'REPLACE_WITH', 'dev-', 'sk_test_'];
     const sensitiveKeys = [
       'JWT_ACCESS_SECRET',
@@ -279,9 +246,6 @@ export const envValidationSchema = Joi.object({
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
       'MOYASAR_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
-      'WHATSAPP_PROVIDER_ENCRYPTION_KEY',
-      'WHATSAPP_EVOLUTION_API_KEY',
-      'WHATSAPP_EVOLUTION_WEBHOOK_SECRET',
       'AUTHENTICA_API_KEY',
       'PLATFORM_SETTINGS_KEY',
     ];

@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { BadgeCheck, Bot, Headset, UserRound } from 'lucide-react';
+import { BadgeCheck, Headset, UserRound } from 'lucide-react';
 
 import { useT } from '@/features/locale/locale-provider';
 import type { ChatMessage, ChatOperation } from './chat.types';
 import { ChatActionCard } from './chat-action-card';
 import { GuestHandoffForm } from './guest-handoff-form';
+import { SawaaAiIcon } from './sawaa-ai-icon';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -21,6 +22,11 @@ interface ChatMessageListProps {
   onRetryAssistant: (messageId: string) => Promise<void>;
   readOnly?: boolean;
 }
+
+const LEGACY_OUT_OF_SCOPE_MESSAGES = new Set([
+  'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+  'Sorry, my role is limited to administrative information about the center and its services. I can offer the option to contact reception.',
+]);
 
 export function ChatMessageList(props: ChatMessageListProps) {
   const t = useT();
@@ -40,7 +46,7 @@ export function ChatMessageList(props: ChatMessageListProps) {
     <div aria-live="polite" className="flex-1 space-y-3 overflow-y-auto bg-[var(--sw-neutral-50)] p-4">
       {props.messages.length === 0 && (
         <div className="mx-auto max-w-xs py-10 text-center">
-          <span className="mx-auto mb-3 grid size-10 place-items-center rounded-2xl bg-[var(--sw-primary-50)] text-[var(--sw-primary-700)]"><Bot size={19} aria-hidden="true" /></span>
+          <span className="mx-auto mb-3 block w-fit"><SawaaAiIcon size="md" /></span>
           <p className="font-bold text-[var(--sw-secondary-700)]">{t('chat.empty.title')}</p>
           <p className="mt-1 text-sm leading-6 text-[var(--sw-neutral-500)]">{t('chat.empty.body')}</p>
         </div>
@@ -60,6 +66,9 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
   const isSystem = message.senderType === 'SYSTEM' || message.kind === 'SYSTEM_EVENT';
   const isReception = message.senderType === 'STAFF' || message.senderType === 'EMPLOYEE';
   const isOperationResult = message.kind === 'OPERATION_RESULT';
+  const body = !own && LEGACY_OUT_OF_SCOPE_MESSAGES.has(message.body)
+    ? t('chat.outOfScope')
+    : message.body;
   const label = isOperationResult
     ? t('chat.sender.result')
     : own
@@ -77,14 +86,14 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
   }
 
   if (isSystem && !isOperationResult) {
-    return <p role="status" aria-label={t('chat.sender.system')} className="px-4 py-1 text-center text-xs leading-5 text-[var(--sw-neutral-500)]">{message.body}</p>;
+    return <p role="status" aria-label={t('chat.sender.system')} className="px-4 py-1 text-center text-xs leading-5 text-[var(--sw-neutral-500)]">{body}</p>;
   }
 
   return (
     <article aria-label={label} className={`flex items-end gap-2 ${own ? 'justify-end' : 'justify-start'}`}>
       {!own && (
         <span className={`grid size-7 shrink-0 place-items-center rounded-xl ${isReception ? 'bg-[var(--sw-neutral-200)] text-[var(--sw-secondary-700)]' : isOperationResult ? 'bg-[var(--sw-primary-100)] text-[var(--sw-primary-700)]' : 'bg-[var(--sw-primary-50)] text-[var(--sw-primary-700)]'}`}>
-          {isReception ? <Headset size={14} aria-hidden="true" /> : isOperationResult ? <BadgeCheck size={14} aria-hidden="true" /> : <Bot size={14} aria-hidden="true" />}
+          {isReception ? <Headset size={14} aria-hidden="true" /> : isOperationResult ? <BadgeCheck size={14} aria-hidden="true" /> : <SawaaAiIcon size="sm" />}
         </span>
       )}
       <div className={`max-w-[86%] rounded-3xl px-4 py-3 text-sm leading-6 shadow-[var(--sw-shadow-xs)] ${
@@ -95,7 +104,7 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
             : 'rounded-es-md border border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)]'
       }`}>
         <p className={`mb-1 text-xs font-extrabold ${own ? 'text-[var(--sw-neutral-100)]' : isReception ? 'text-[var(--sw-secondary-700)]' : 'text-[var(--sw-primary-700)]'}`}>{label}</p>
-        <p className="whitespace-pre-wrap break-words">{message.body}</p>
+        <p className="whitespace-pre-wrap break-words">{body}</p>
         {!props.readOnly && message.kind === 'TEXT' && message.metadata?.action === 'OFFER_HANDOFF' && (
           <HandoffOffer {...props} />
         )}

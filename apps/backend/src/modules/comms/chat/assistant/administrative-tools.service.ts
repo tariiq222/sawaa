@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import type { ToolDefinition } from '../../../../infrastructure/ai/chat.adapter';
 import { SemanticSearchHandler } from '../../../ai/semantic-search/semantic-search.handler';
 import { GetPublicAvailabilityHandler } from '../../../bookings/availability/public/get-public-availability.handler';
@@ -12,18 +13,26 @@ import { PrepareBookingHandler } from '../operations/prepare-booking.handler';
 import { PrepareRescheduleHandler } from '../operations/prepare-reschedule.handler';
 import { PrepareCancellationHandler } from '../operations/prepare-cancellation.handler';
 import { toOperationCardMetadata } from '../operations/chat-operation-public.mapper';
+import { parseSawaaAgentDecision } from './sawaa-agent-decision';
 
 const ALLOWED_TOOL_NAMES = [
   'getCenterInfo',
   'listServices',
   'listPractitioners',
   'getAvailability',
-  'searchKnowledge',
-  'handoffToReception',
+  'getServiceDetails',
+  'compareServices',
+  'getPractitionerDetails',
+  'searchPublishedKnowledge',
   'listOwnAppointments',
   'prepareBooking',
   'prepareReschedule',
   'prepareCancellation',
+  'replyToCustomer',
+  // Compatibility aliases accepted only for internal callers; they are not
+  // exposed in DEFINITIONS and therefore cannot be selected by the model.
+  'searchKnowledge',
+  'handoffToReception',
 ] as const;
 
 type AllowedToolName = (typeof ALLOWED_TOOL_NAMES)[number];
@@ -58,6 +67,58 @@ const MAX_DESCRIPTION_CHARS = 300;
 const MAX_KNOWLEDGE_CONTENT_CHARS = 1_000;
 const MAX_TOOL_RESULT_CHARS = 10_000;
 
+export type HandoffSummary = {
+  category: 'USER_REQUESTED' | 'COMPLAINT' | 'FINANCIAL_EXCEPTION' | 'UNAVAILABLE_APPOINTMENT' | 'OTHER';
+  requestSummary: string;
+  desiredOutcome: string;
+  serviceId?: string;
+  practitionerId?: string;
+  acceptableAlternatives?: string[];
+};
+
+const HANDOFF_CATEGORIES = new Set<HandoffSummary['category']>([
+  'USER_REQUESTED', 'COMPLAINT', 'FINANCIAL_EXCEPTION', 'UNAVAILABLE_APPOINTMENT', 'OTHER',
+]);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FORBIDDEN_HANDOFF_KEY = /clinical|diagnos|treatment|therapy|symptom|risk|emergency|provider|raw|staff|employee|user|metadata|tag|internal/i;
+const FORBIDDEN_HANDOFF_CONTENT = /clinical|diagnos|treatment|therapy|symptom|risk|emergency|provider|raw payload|prompt|secret|token|password|تشخيص|سريري|علاجي|أعراض|خطر|طوارئ|مزود|تعليمات النظام|مفتاح|كلمة المرور|بيانات الدخول/i;
+
+/** Projects model/request input into the only handoff data reception may see. */
+export function parseHandoffSummary(value: unknown): HandoffSummary | null {
+  if (!isPlainObject(value)) return null;
+  const allowed = ['category', 'requestSummary', 'desiredOutcome', 'serviceId', 'practitionerId', 'acceptableAlternatives'];
+  const keys = Object.keys(value);
+  if (keys.some((key) => !allowed.includes(key) || FORBIDDEN_HANDOFF_KEY.test(key))) return null;
+  const category = value.category;
+  const requestSummary = boundedHandoffText(value.requestSummary, 300);
+  const desiredOutcome = boundedHandoffText(value.desiredOutcome, 200);
+  if (typeof category !== 'string' || !HANDOFF_CATEGORIES.has(category as HandoffSummary['category']) || !requestSummary || !desiredOutcome) return null;
+  const result: HandoffSummary = { category: category as HandoffSummary['category'], requestSummary, desiredOutcome };
+  for (const key of ['serviceId', 'practitionerId'] as const) {
+    if (value[key] !== undefined && (typeof value[key] !== 'string' || !UUID.test(value[key]))) return null;
+    if (value[key] !== undefined) result[key] = value[key];
+  }
+  if (value.acceptableAlternatives !== undefined) {
+    if (!Array.isArray(value.acceptableAlternatives) || value.acceptableAlternatives.length > 5) return null;
+    const alternatives = value.acceptableAlternatives.map((item) => boundedHandoffText(item, 120));
+    if (alternatives.some((item): item is null => item === null)) return null;
+    result.acceptableAlternatives = alternatives as string[];
+  }
+  return result;
+}
+
+function boundedHandoffText(value: unknown, maxChars: number): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed && Array.from(trimmed).length <= maxChars && !FORBIDDEN_HANDOFF_CONTENT.test(trimmed) ? trimmed : null;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 const DEFINITIONS: FunctionToolDefinition[] = [
   {
     type: 'function',
@@ -70,11 +131,38 @@ const DEFINITIONS: FunctionToolDefinition[] = [
   {
     type: 'function',
     function: {
+      name: 'getServiceDetails',
+      description: 'Get one active public service by id.',
+      parameters: { ...objectSchema, properties: { serviceId: { type: 'string' } }, required: ['serviceId'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'compareServices',
+      description: 'Compare two or three active public services by id.',
+      parameters: { ...objectSchema, properties: { serviceIds: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string' } } }, required: ['serviceIds'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getPractitionerDetails',
+      description: 'Get one active public practitioner by id.',
+      parameters: { ...objectSchema, properties: { practitionerId: { type: 'string' } }, required: ['practitionerId'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'listServices',
-      description: 'List public services, optionally limited to a category.',
+      description: 'List public services and their exact IDs. Use this to resolve a customer-named service before preparing a booking.',
       parameters: {
         ...objectSchema,
-        properties: { categoryId: { type: 'string' } },
+        properties: {
+          categoryId: { type: 'string' },
+          query: { type: 'string', description: 'Customer-provided Arabic or English service name.' },
+        },
         required: [],
       },
     },
@@ -83,10 +171,13 @@ const DEFINITIONS: FunctionToolDefinition[] = [
     type: 'function',
     function: {
       name: 'listPractitioners',
-      description: 'List public practitioners, optionally limited to a service.',
+      description: 'List public practitioners and their exact IDs, service IDs, and branch IDs. Use this to resolve a customer-named practitioner before preparing a booking.',
       parameters: {
         ...objectSchema,
-        properties: { serviceId: { type: 'string' } },
+        properties: {
+          serviceId: { type: 'string' },
+          query: { type: 'string', description: 'Customer-provided Arabic or English practitioner name.' },
+        },
         required: [],
       },
     },
@@ -95,7 +186,7 @@ const DEFINITIONS: FunctionToolDefinition[] = [
     type: 'function',
     function: {
       name: 'getAvailability',
-      description: 'Get public available times for one practitioner on one date.',
+      description: 'Get trusted available slots for one practitioner on one date. A booking may only use a startTime returned by this tool.',
       parameters: {
         ...objectSchema,
         properties: {
@@ -113,21 +204,13 @@ const DEFINITIONS: FunctionToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'searchKnowledge',
+      name: 'searchPublishedKnowledge',
       description: 'Search the center administrative knowledge base.',
       parameters: {
         ...objectSchema,
         properties: { query: { type: 'string' } },
         required: ['query'],
       },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'handoffToReception',
-      description: 'Present the option to contact reception without assigning or transferring the conversation.',
-      parameters: { ...objectSchema, properties: {}, required: [] },
     },
   },
   {
@@ -142,7 +225,7 @@ const DEFINITIONS: FunctionToolDefinition[] = [
     type: 'function',
     function: {
       name: 'prepareBooking',
-      description: 'Prepare an immutable appointment quote and confirmation card. This never confirms the booking.',
+      description: 'Prepare an immutable appointment quote and confirmation card after service, practitioner, branch, modality, and an available slot are resolved. This never confirms the booking.',
       parameters: {
         ...objectSchema,
         properties: {
@@ -184,6 +267,29 @@ const DEFINITIONS: FunctionToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'replyToCustomer',
+      description: 'Return the single validated, side-effect-free final reply to the customer.',
+      parameters: {
+        ...objectSchema,
+        properties: {
+          reply: { type: 'string' },
+          intent: { type: 'string', enum: ['SMALL_TALK', 'DISCOVER_SERVICE', 'COMPARE_OPTIONS', 'PRICE_OBJECTION', 'BOOKING', 'MANAGE_APPOINTMENT', 'HANDOFF', 'OUTSIDE_CENTER'] },
+          journeyStage: { type: 'string', enum: ['EXPLORING', 'COMPARING', 'READY_TO_BOOK', 'HANDOFF'] },
+          factsUsed: {
+            type: 'array',
+            description: 'Cite every trusted tool used for factual claims. Use an empty recordIds array only when that tool returned an empty list.',
+            items: { type: 'object', additionalProperties: false, properties: { tool: { type: 'string' }, recordIds: { type: 'array', items: { type: 'string' } } }, required: ['tool', 'recordIds'] },
+          },
+          contextPatch: { type: 'object', additionalProperties: false, properties: { journeyStage: { type: 'string', enum: ['EXPLORING', 'COMPARING', 'READY_TO_BOOK', 'HANDOFF'] }, serviceInterestIds: { type: 'array', items: { type: 'string' } }, practitionerPreferenceIds: { type: 'array', items: { type: 'string' } }, modality: { type: 'string', enum: ['IN_PERSON', 'ONLINE'] }, preferredDays: { type: 'array', items: { type: 'string' } }, preferredTimeWindow: { type: 'string' }, budgetConcern: { type: 'boolean' }, selectedServiceId: { type: 'string' }, selectedPractitionerId: { type: 'string' } }, required: [] },
+          handoffDraft: { type: 'object', additionalProperties: false, properties: { category: { type: 'string', enum: ['USER_REQUESTED', 'COMPLAINT', 'FINANCIAL_EXCEPTION', 'UNAVAILABLE_APPOINTMENT', 'OTHER'] }, requestSummary: { type: 'string' }, desiredOutcome: { type: 'string' }, serviceId: { type: 'string' }, practitionerId: { type: 'string' }, acceptableAlternatives: { type: 'array', items: { type: 'string' } } }, required: ['category', 'requestSummary', 'desiredOutcome'] },
+        },
+        required: ['reply', 'intent', 'journeyStage'],
+      },
+    },
+  },
 ];
 
 @Injectable()
@@ -216,6 +322,11 @@ export class AdministrativeToolsService {
     const args = this.parseArguments(rawArguments);
     if (!args) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
 
+    if (name === 'replyToCustomer') {
+      const decision = parseSawaaAgentDecision(args);
+      return decision ? { ok: true, data: decision } : { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
+    }
+
     try {
       switch (name) {
         case 'getCenterInfo':
@@ -223,22 +334,51 @@ export class AdministrativeToolsService {
         case 'listServices': {
           const result = await this.catalog.execute();
           const categoryId = this.optionalString(args.categoryId);
+          const query = this.optionalString(args.query);
+          const services = result.services.filter((service) =>
+            (!categoryId || service.categoryId === categoryId)
+            && (!query || this.matchesLocalizedQuery(query, service.nameAr, service.nameEn)));
           return {
             ok: true,
-            data: categoryId
-              ? this.projectServices(result.services.filter((service) => service.categoryId === categoryId))
-              : this.projectServices(result.services),
+            data: this.projectServices(services),
           };
+        }
+        case 'getServiceDetails': {
+          const serviceId = this.requiredString(args.serviceId);
+          if (!serviceId) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
+          const result = await this.catalog.execute();
+          const service = result.services.find((item) => item.id === serviceId);
+          return service ? { ok: true, data: this.projectServices([service]) } : { ok: true, data: [] };
+        }
+        case 'compareServices': {
+          const ids = args.serviceIds;
+          if (!Array.isArray(ids) || ids.length < 2 || ids.length > 3 || new Set(ids).size !== ids.length || ids.some((id) => !this.requiredString(id))) {
+            return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
+          }
+          const result = await this.catalog.execute();
+          const requested = ids as string[];
+          const services = requested
+            .map((id) => result.services.find((item) => item.id === id))
+            .filter((item): item is PublicCatalogService => Boolean(item));
+          return services.length === requested.length ? { ok: true, data: this.projectServices(services) } : { ok: true, data: [] };
         }
         case 'listPractitioners': {
           const result = await this.employees.execute();
           const serviceId = this.optionalString(args.serviceId);
+          const query = this.optionalString(args.query);
           return {
             ok: true,
-            data: serviceId
-              ? this.projectPractitioners(result.filter((employee) => employee.serviceIds.includes(serviceId)))
-              : this.projectPractitioners(result),
+            data: this.projectPractitioners(result.filter((employee) =>
+              (!serviceId || employee.serviceIds.includes(serviceId))
+              && (!query || this.matchesLocalizedQuery(query, employee.nameAr, employee.nameEn)))),
           };
+        }
+        case 'getPractitionerDetails': {
+          const practitionerId = this.requiredString(args.practitionerId);
+          if (!practitionerId) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
+          const result = await this.employees.execute();
+          const practitioner = result.find((employee) => employee.id === practitionerId);
+          return practitioner ? { ok: true, data: this.projectPractitioners([practitioner]) } : { ok: true, data: [] };
         }
         case 'getAvailability': {
           const employeeId = this.requiredString(args.employeeId);
@@ -255,20 +395,28 @@ export class AdministrativeToolsService {
               ...(args.deliveryType === 'IN_PERSON' || args.deliveryType === 'ONLINE'
                 ? { deliveryType: args.deliveryType }
                 : {}),
-            })),
+            }), {
+              employeeId,
+              date,
+              serviceId: this.optionalString(args.serviceId),
+              branchId: this.optionalString(args.branchId),
+              deliveryType: this.deliveryType(args.deliveryType),
+            }),
           };
         }
+        case 'searchPublishedKnowledge':
         case 'searchKnowledge': {
           const query = this.requiredString(args.query);
           if (!query) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
           return { ok: true, data: this.projectKnowledge(await this.search.execute({ query, topK: 5 })) };
         }
-        case 'handoffToReception':
+        case 'handoffToReception': {
           return {
             ok: true,
             data: { intent: 'HANDOFF_TO_RECEPTION', optionOnly: true },
             publicMetadata: { action: 'OFFER_HANDOFF', reason: 'USER_REQUESTED' },
           };
+        }
         case 'listOwnAppointments': {
           const sourceMessageId = this.contextMessageId(context);
           if (!sourceMessageId) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } };
@@ -424,6 +572,7 @@ export class AdministrativeToolsService {
   private projectCenterInfo(value: unknown): Record<string, unknown> {
     const item = this.asRecord(value);
     return this.compact({
+      id: 'center-public',
       organizationNameAr: this.text(item.organizationNameAr, MAX_SHORT_TEXT_CHARS),
       organizationNameEn: this.text(item.organizationNameEn, MAX_SHORT_TEXT_CHARS),
       productTagline: this.text(item.productTagline, MAX_DESCRIPTION_CHARS),
@@ -470,24 +619,79 @@ export class AdministrativeToolsService {
     }));
   }
 
-  private projectAvailability(values: unknown[]): Array<Record<string, unknown>> {
+  private projectAvailability(
+    values: unknown[],
+    context: {
+      employeeId: string;
+      date: string;
+      serviceId?: string;
+      branchId?: string;
+      deliveryType: 'IN_PERSON' | 'ONLINE' | null;
+    },
+  ): Array<Record<string, unknown>> {
     return this.capSerializedArray(values.slice(0, MAX_LIST_ITEMS).map((value) => {
       const item = this.asRecord(value);
+      const startTime = this.dateText(item.startTime);
+      const endTime = this.dateText(item.endTime);
       return this.compact({
-        startTime: this.dateText(item.startTime),
-        endTime: this.dateText(item.endTime),
+        id: startTime && endTime ? this.slotId(context.employeeId, context.date, startTime, endTime) : null,
+        employeeId: context.employeeId,
+        serviceId: context.serviceId,
+        branchId: context.branchId,
+        deliveryType: context.deliveryType,
+        startTime,
+        endTime,
+        localStart: startTime ? this.riyadhLocalTime(startTime) : null,
+        timezone: 'Asia/Riyadh',
       });
     }));
+  }
+
+  private matchesLocalizedQuery(query: string, ...candidates: unknown[]): boolean {
+    const normalizedQuery = this.normalizedLookupText(query);
+    return normalizedQuery.length > 0 && candidates.some((candidate) => {
+      const normalizedCandidate = this.normalizedLookupText(candidate);
+      return normalizedCandidate.length > 0
+        && (normalizedCandidate.includes(normalizedQuery) || normalizedQuery.includes(normalizedCandidate));
+    });
+  }
+
+  private normalizedLookupText(value: unknown): string {
+    return typeof value === 'string'
+      ? value.normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase()
+      : '';
+  }
+
+  private riyadhLocalTime(value: string): string | null {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Riyadh',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+    const year = get('year'); const month = get('month'); const day = get('day');
+    const hour = get('hour'); const minute = get('minute');
+    return year && month && day && hour && minute
+      ? `${year}-${month}-${day} ${hour}:${minute}`
+      : null;
   }
 
   private projectKnowledge(values: unknown[]): Array<Record<string, unknown>> {
     return this.capSerializedArray(values.slice(0, MAX_KNOWLEDGE_ITEMS).map((value) => {
       const item = this.asRecord(value);
       return this.compact({
+        id: this.text(item.chunkId, 100),
+        documentId: this.text(item.documentId, 100),
         content: this.text(item.content, MAX_KNOWLEDGE_CONTENT_CHARS),
         similarity: this.number(item.similarity),
       });
     }));
+  }
+
+  private slotId(employeeId: string, date: string, startTime: string, endTime: string): string {
+    return `slot-${createHash('sha256').update(`${employeeId}|${date}|${startTime}|${endTime}`).digest('hex').slice(0, 20)}`;
   }
 
   private capSerializedArray<T extends object>(values: T[]): T[] {

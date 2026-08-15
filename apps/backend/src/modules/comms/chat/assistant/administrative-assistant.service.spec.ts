@@ -8,9 +8,18 @@ import {
 import { ChatAdapter } from '../../../../infrastructure/ai';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { AdministrativeAssistantLeaseService } from './administrative-assistant-lease.service';
-import { AdministrativeAssistantService } from './administrative-assistant.service';
+import {
+  AdministrativeAssistantService,
+  isDiscoveryCompleteBookingRequest,
+  isTrustedCompleteBookingCall,
+  nextCompleteBookingTool,
+  resolveCompleteBookingToolArguments,
+} from './administrative-assistant.service';
 import { AdministrativeOutputValidator } from './administrative-output-validator';
-import { AdministrativeResponseRenderer } from './administrative-response-renderer';
+import {
+  AdministrativeResponseRenderer,
+  type ExecutedAdministrativeTool,
+} from './administrative-response-renderer';
 import { AdministrativeScopeGate } from './administrative-scope-gate';
 import { AdministrativeToolsService } from './administrative-tools.service';
 import { ChatDailyBudgetExceeded } from '../chat-usage-limits.service';
@@ -47,6 +56,109 @@ function duplicateError(): Prisma.PrismaClientKnownRequestError {
   });
 }
 
+describe('complete booking tool routing', () => {
+  it('recognizes a discovery-complete Saudi Arabic booking request across recent customer turns', () => {
+    expect(isDiscoveryCompleteBookingRequest([
+      { role: 'user', content: 'أبي أحجز جلسة إرشاد أسري أونلاين مع د. سارة يوم الأحد 16 أغسطس 2026 الساعة 10 صباحًا.' },
+      { role: 'assistant', content: 'وش نوع الدعم اللي تبحث عنه؟' },
+      { role: 'user', content: 'كل التفاصيل فوق، جهّز الحجز.' },
+    ])).toBe(true);
+  });
+
+  it('does not force booking tools when a material booking detail is missing', () => {
+    expect(isDiscoveryCompleteBookingRequest([
+      { role: 'user', content: 'أبي أحجز جلسة إرشاد أسري أونلاين.' },
+    ])).toBe(false);
+  });
+
+  it('requires the trusted booking tools in order and stops forcing after preparation', () => {
+    const executions: Array<{ name: string; result: { ok: boolean } }> = [];
+    expect(nextCompleteBookingTool(executions)).toBe('listServices');
+    executions.push({ name: 'listServices', result: { ok: true } });
+    expect(nextCompleteBookingTool(executions)).toBe('listPractitioners');
+    executions.push({ name: 'listPractitioners', result: { ok: true } });
+    expect(nextCompleteBookingTool(executions)).toBe('getAvailability');
+    executions.push({ name: 'getAvailability', result: { ok: true } });
+    expect(nextCompleteBookingTool(executions)).toBe('prepareBooking');
+    executions.push({ name: 'prepareBooking', result: { ok: true } });
+    expect(nextCompleteBookingTool(executions)).toBeNull();
+  });
+
+  it('retries a required booking tool when its last execution failed', () => {
+    expect(nextCompleteBookingTool([
+      { name: 'listServices', result: { ok: false } },
+    ])).toBe('listServices');
+  });
+
+  it('accepts only the named practitioner and exact requested Riyadh-local slot', () => {
+    const messages = [{
+      role: 'user' as const,
+      content: 'أبي أحجز جلسة إرشاد أسري أونلاين مع د. سارة القحطاني يوم الأحد 16 أغسطس 2026 الساعة 10 صباحًا.',
+    }];
+    const executions: ExecutedAdministrativeTool[] = [
+      { name: 'listServices', result: { ok: true as const, data: [
+        { id: 'service-family', nameAr: 'جلسة إرشاد أسري' },
+      ] } },
+      { name: 'listPractitioners', result: { ok: true as const, data: [
+        { id: 'employee-sara', nameAr: 'د. سارة القحطاني', serviceIds: ['service-family'], branchIds: ['branch-main'] },
+        { id: 'employee-noura', nameAr: 'د. نورة الشهري', serviceIds: ['service-family'], branchIds: ['branch-main'] },
+      ] } },
+      { name: 'getAvailability', result: { ok: true as const, data: [
+        {
+          id: 'slot-1', employeeId: 'employee-sara', serviceId: 'service-family',
+          deliveryType: 'ONLINE', startTime: '2026-08-16T07:00:00.000Z',
+          endTime: '2026-08-16T08:00:00.000Z', localStart: '2026-08-16 10:00',
+        },
+      ] } },
+    ];
+    const valid = {
+      branchId: 'branch-main', employeeId: 'employee-sara', serviceId: 'service-family',
+      scheduledAt: '2026-08-16T07:00:00.000Z', deliveryType: 'ONLINE',
+    };
+
+    expect(isTrustedCompleteBookingCall(JSON.stringify(valid), executions, messages)).toBe(true);
+    expect(isTrustedCompleteBookingCall(JSON.stringify({ ...valid, employeeId: 'employee-noura' }), executions, messages)).toBe(false);
+    expect(isTrustedCompleteBookingCall(JSON.stringify({ ...valid, scheduledAt: '2026-08-16T10:00:00.000Z' }), executions, messages)).toBe(false);
+  });
+
+  it('resolves complete booking arguments only from named catalog records and the exact local slot', () => {
+    const messages = [{
+      role: 'user' as const,
+      content: 'أبي أحجز جلسة إرشاد أسري أونلاين مع د. سارة القحطاني يوم الأحد 16 أغسطس 2026 الساعة 10 صباحًا.',
+    }];
+    const executions: ExecutedAdministrativeTool[] = [
+      { name: 'listServices', result: { ok: true as const, data: [
+        { id: 'service-family', nameAr: 'جلسة إرشاد أسري' },
+        { id: 'service-couple', nameAr: 'استشارة زوجية' },
+      ] } },
+      { name: 'listPractitioners', result: { ok: true as const, data: [
+        { id: 'employee-sara', nameAr: 'د. سارة القحطاني', serviceIds: ['service-family'], branchIds: ['branch-main'] },
+        { id: 'employee-noura', nameAr: 'د. نورة الشهري', serviceIds: ['service-family'], branchIds: ['branch-main'] },
+      ] } },
+    ];
+
+    expect(JSON.parse(resolveCompleteBookingToolArguments(
+      'getAvailability', '{"employeeId":"employee-noura"}', executions, messages,
+    ))).toEqual({
+      employeeId: 'employee-sara', serviceId: 'service-family', branchId: 'branch-main',
+      date: '2026-08-16', deliveryType: 'ONLINE',
+    });
+
+    executions.push({ name: 'getAvailability', result: { ok: true as const, data: [
+      {
+        employeeId: 'employee-sara', serviceId: 'service-family', deliveryType: 'ONLINE',
+        startTime: '2026-08-16T07:00:00.000Z', localStart: '2026-08-16 10:00',
+      },
+    ] } });
+    expect(JSON.parse(resolveCompleteBookingToolArguments(
+      'prepareBooking', '{"employeeId":"employee-noura"}', executions, messages,
+    ))).toEqual({
+      branchId: 'branch-main', employeeId: 'employee-sara', serviceId: 'service-family',
+      scheduledAt: '2026-08-16T07:00:00.000Z', deliveryType: 'ONLINE',
+    });
+  });
+});
+
 describe('AdministrativeAssistantService', () => {
   let prisma: {
     commsChatMessage: { findUnique: jest.Mock; findMany: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
@@ -68,7 +180,8 @@ describe('AdministrativeAssistantService', () => {
     settleDailyTokenReservation: jest.Mock;
     releaseDailyTokenReservation: jest.Mock;
   };
-  let webChatAvailability: { isEnabled: jest.Mock };
+  let webChatAvailability: { isEnabled: jest.Mock; getProcessingReadiness: jest.Mock; isProcessingReady: jest.Mock };
+  let requestHandoff: { execute: jest.Mock };
   let service: AdministrativeAssistantService;
 
   beforeAll(() => {
@@ -151,7 +264,12 @@ describe('AdministrativeAssistantService', () => {
       settleDailyTokenReservation: jest.fn().mockResolvedValue(undefined),
       releaseDailyTokenReservation: jest.fn().mockResolvedValue(undefined),
     };
-    webChatAvailability = { isEnabled: jest.fn().mockReturnValue(true) };
+    webChatAvailability = {
+      isEnabled: jest.fn().mockReturnValue(true),
+      getProcessingReadiness: jest.fn().mockResolvedValue({ configVersion: 1, testedConfigHash: 'tested-hash' }),
+      isProcessingReady: jest.fn().mockResolvedValue(true),
+    };
+    requestHandoff = { execute: jest.fn().mockResolvedValue({ ...activeConversation, status: ConversationStatus.WAITING_FOR_STAFF }) };
     const scopeGate = new AdministrativeScopeGate();
     service = new AdministrativeAssistantService(
       prisma as unknown as PrismaService,
@@ -164,6 +282,7 @@ describe('AdministrativeAssistantService', () => {
       new AdministrativeOutputValidator(),
       limits as never,
       webChatAvailability as unknown as WebChatAvailabilityService,
+      requestHandoff as never,
     );
   });
 
@@ -204,6 +323,73 @@ describe('AdministrativeAssistantService', () => {
     expect(lease.acquire).not.toHaveBeenCalled();
   });
 
+  it('marks the persisted inbound message retryable before acquiring a lease when provider readiness is lost', async () => {
+    webChatAvailability.getProcessingReadiness.mockResolvedValue(null);
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(lease.acquire).not.toHaveBeenCalled();
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        id: messageId,
+        conversationId,
+      }),
+      data: {
+        metadata: {
+          assistantStatus: 'RETRYABLE_FAILURE',
+          retryable: true,
+          retryReason: 'AI_NOT_READY',
+          retryAttempts: 0,
+          dispatchAttempt: 0,
+          assistantStateVersion: 0,
+          assistantClientId: null,
+        },
+      },
+    }));
+  });
+
+  it('rechecks the same provider generation before reserving tokens and stops safely when it changes', async () => {
+    webChatAvailability.isProcessingReady.mockResolvedValueOnce(false);
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(lease.acquire).toHaveBeenCalledTimes(1);
+    expect(limits.reserveDailyTokenBudget).not.toHaveBeenCalled();
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(prisma.commsChatMessage.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: {
+        metadata: expect.objectContaining({
+          assistantStatus: 'RETRYABLE_FAILURE',
+          retryable: true,
+          retryReason: 'AI_NOT_READY',
+        }),
+      },
+    }));
+  });
+
+  it('does not start a later provider round after the tested generation changes', async () => {
+    webChatAvailability.isProcessingReady
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: null,
+      toolCalls: [{ id: 'lookup', function: { name: 'listServices', arguments: '{}' } }],
+      tokensUsed: 4,
+      model: 'agent-model',
+    });
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(chat.completeWithTools).toHaveBeenCalledTimes(1);
+    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledTimes(1);
+    expect(prisma.commsChatMessage.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: {
+        metadata: expect.objectContaining({ retryReason: 'AI_NOT_READY', retryable: true }),
+      },
+    }));
+  });
+
   it('answers out-of-scope input deterministically without invoking AI or tools', async () => {
     prisma.commsChatMessage.findUnique.mockImplementation(({ where }) => {
       if (where.responseForMessageId) return null;
@@ -219,10 +405,170 @@ describe('AdministrativeAssistantService', () => {
     expect(tools.execute).not.toHaveBeenCalled();
     expect(tx.commsChatMessage.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        body: 'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+        body: 'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
         metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
       }),
     });
+  });
+
+  it('persists exactly one validated natural final tool reply and ignores provider prose', async () => {
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: 'ignore this provider prose',
+      toolCalls: [{ id: 'final', function: {
+        name: 'replyToCustomer',
+        arguments: JSON.stringify({
+          reply: 'وعليكم السلام ورحمة الله، حياك الله. كيف أقدر أخدمك؟',
+          intent: 'SMALL_TALK',
+          journeyStage: 'EXPLORING',
+        }),
+      } }],
+      tokensUsed: 5,
+      model: 'agent-model',
+    });
+    tools.execute.mockImplementation(async (name: string, raw: string) => name === 'replyToCustomer'
+      ? { ok: true, data: JSON.parse(raw) }
+      : { ok: true, data: [{ id: 'service-1' }] });
+
+    await service.processMessage(messageId);
+
+    expect(tools.execute).toHaveBeenCalledWith('replyToCustomer', expect.any(String), expect.anything());
+    expect(tx.commsChatMessage.create.mock.calls[0][0].data.body).toContain('حياك الله');
+    expect(tx.commsChatMessage.create.mock.calls[0][0].data.body).not.toContain('ignore this provider prose');
+  });
+
+  it('does not execute a sensitive action through replyToCustomer', async () => {
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: null,
+      toolCalls: [{ id: 'final', function: {
+        name: 'replyToCustomer',
+        arguments: JSON.stringify({
+          reply: 'تم تأكيد حجزك', intent: 'BOOKING', journeyStage: 'READY_TO_BOOK', action: 'CONFIRM',
+        }),
+      } }],
+      tokensUsed: 2,
+      model: 'agent-model',
+    });
+
+    await service.processMessage(messageId);
+
+    expect(tools.execute).toHaveBeenCalledTimes(1);
+    expect(tools.execute).toHaveBeenCalledWith('replyToCustomer', expect.any(String), expect.anything());
+    expect(tx.commsChatMessage.create.mock.calls[0][0].data.body).toContain('تعذر');
+  });
+
+  it.each([
+    { reply: 'التشخيص هو القلق، خذ هذا العلاج.', intent: 'OUTSIDE_CENTER', journeyStage: 'EXPLORING' },
+    { reply: 'سعر الجلسة 200 ريال.', intent: 'PRICE_OBJECTION', journeyStage: 'COMPARING' },
+    { reply: 'الخدمة هي جلسة أسرية.', intent: 'DISCOVER_SERVICE', journeyStage: 'EXPLORING', factsUsed: [{ tool: 'replyToCustomer', recordIds: ['service-1'] }] },
+  ])('falls back for unsafe or self-proven final decisions: %#', async (decision) => {
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: 'untrusted prose',
+      toolCalls: [{ id: 'final', function: { name: 'replyToCustomer', arguments: JSON.stringify(decision) } }],
+      tokensUsed: 2,
+      model: 'agent-model',
+    });
+    tools.execute.mockImplementation(async (name: string, raw: string) => name === 'replyToCustomer'
+      ? { ok: true, data: JSON.parse(raw) }
+      : { ok: true, data: [] });
+
+    await service.processMessage(messageId);
+
+    expect(tx.commsChatMessage.create.mock.calls[0][0].data.body).toBe(
+      'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
+    );
+  });
+
+  it('persists a grounded factual service reply only from an earlier read-only tool result', async () => {
+    chat.completeWithTools
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{ id: 'services', function: { name: 'listServices', arguments: '{}' } }],
+        tokensUsed: 2,
+        model: 'agent-model',
+      })
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{ id: 'final', function: { name: 'replyToCustomer', arguments: JSON.stringify({
+          reply: 'الخدمة المتاحة هي جلسة إرشاد أسري.',
+          intent: 'DISCOVER_SERVICE', journeyStage: 'EXPLORING',
+          factsUsed: [{ tool: 'listServices', recordIds: ['service-1'] }],
+        }) } }],
+        tokensUsed: 2,
+        model: 'agent-model',
+      });
+    tools.execute.mockImplementation(async (name: string, raw: string) => name === 'replyToCustomer'
+      ? { ok: true, data: JSON.parse(raw) }
+      : { ok: true, data: [{ id: 'service-1', nameAr: 'جلسة إرشاد أسري' }] });
+
+    await service.processMessage(messageId);
+
+    expect(tx.commsChatMessage.create.mock.calls[0][0].data.body).toContain('جلسة إرشاد أسري');
+  });
+
+  it('routes an accepted HANDOFF decision through the handler before any AI reply is persisted', async () => {
+    prisma.chatConversation.findUnique.mockResolvedValue({
+      ...activeConversation, guestName: 'سارة', guestPhone: '+966501234567', customerContext: null, customerContextVersion: 0,
+    });
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: null,
+      toolCalls: [{ id: 'final', function: { name: 'replyToCustomer', arguments: JSON.stringify({
+        reply: 'تم استلام طلبك وتحويله لفريق الاستقبال، وبيتواصلون معك خلال أوقات عمل المركز.',
+        intent: 'HANDOFF', journeyStage: 'HANDOFF',
+        handoffDraft: {
+          category: 'COMPLAINT', requestSummary: 'تأخر الرد على طلب الموعد', desiredOutcome: 'متابعة من الاستقبال',
+          acceptableAlternatives: ['رسالة من المركز'],
+        },
+      }) } }],
+      tokensUsed: 2, model: 'agent-model',
+    });
+    tools.execute.mockImplementation(async (_name: string, raw: string) => ({ ok: true, data: JSON.parse(raw) }));
+
+    await expect(service.processMessage(messageId)).resolves.toBeNull();
+
+    expect(requestHandoff.execute).toHaveBeenCalledWith(expect.objectContaining({
+      audience: 'assistant', conversationId, guestName: 'سارة', guestPhone: '+966501234567',
+      handoffSummary: {
+        category: 'COMPLAINT', requestSummary: 'تأخر الرد على طلب الموعد', desiredOutcome: 'متابعة من الاستقبال',
+        acceptableAlternatives: ['رسالة من المركز'],
+      },
+    }));
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+  });
+
+  it('does not persist contextPatch when the final reply is rejected by output safety', async () => {
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: null,
+      toolCalls: [{ id: 'final', function: { name: 'replyToCustomer', arguments: JSON.stringify({
+        reply: 'أشخص حالتك وأعطيك علاجًا.', intent: 'OUTSIDE_CENTER', journeyStage: 'EXPLORING',
+        contextPatch: { budgetConcern: true },
+      }) } }],
+      tokensUsed: 2,
+      model: 'agent-model',
+    });
+    tools.execute.mockImplementation(async (_name: string, raw: string) => ({ ok: true, data: JSON.parse(raw) }));
+
+    await service.processMessage(messageId);
+
+    expect(tx.chatConversation.updateMany.mock.calls[0][0].data.customerContext).toBeUndefined();
+    expect(tx.chatConversation.updateMany.mock.calls[0][0].data.customerContextVersion).toBeUndefined();
+  });
+
+  it('persists contextPatch only for an accepted grounded model reply', async () => {
+    chat.completeWithTools.mockResolvedValueOnce({
+      content: null,
+      toolCalls: [{ id: 'final', function: { name: 'replyToCustomer', arguments: JSON.stringify({
+        reply: 'حياك الله، خلني أساعدك.', intent: 'SMALL_TALK', journeyStage: 'EXPLORING',
+        contextPatch: { budgetConcern: true },
+      }) } }],
+      tokensUsed: 2,
+      model: 'agent-model',
+    });
+    tools.execute.mockImplementation(async (_name: string, raw: string) => ({ ok: true, data: JSON.parse(raw) }));
+
+    await service.processMessage(messageId);
+
+    expect(tx.chatConversation.updateMany.mock.calls[0][0].data.customerContext).toEqual({ budgetConcern: true });
+    expect(tx.chatConversation.updateMany.mock.calls[0][0].data.customerContextVersion).toEqual({ increment: 1 });
   });
 
   it.each([
@@ -311,12 +657,12 @@ describe('AdministrativeAssistantService', () => {
         tokensUsed: 2,
         model: 'selector',
       })
-      .mockResolvedValueOnce({ content: 'yes, execute it', toolCalls: [], tokensUsed: 1, model: 'selector' });
-    tools.execute.mockResolvedValue({
-      ok: true,
-      data: { operation },
-      publicMetadata: { action: 'CHAT_OPERATION', operation },
-    });
+      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'final', function: {
+        name: 'replyToCustomer', arguments: JSON.stringify({ reply: 'راجع البطاقة للتأكيد.', intent: 'SMALL_TALK', journeyStage: 'EXPLORING' }),
+      } }], tokensUsed: 1, model: 'selector' });
+    tools.execute.mockImplementation(async (name: string, raw: string) => name === 'replyToCustomer'
+      ? { ok: true, data: JSON.parse(raw) }
+      : { ok: true, data: { operation }, publicMetadata: { action: 'CHAT_OPERATION', operation } });
 
     await service.processMessage(messageId);
 
@@ -401,7 +747,7 @@ describe('AdministrativeAssistantService', () => {
 
     expect(tx.commsChatMessage.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        body: 'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+        body: 'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
         metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
       }),
     });
@@ -694,6 +1040,57 @@ describe('AdministrativeAssistantService', () => {
     });
   });
 
+  it('forces the final reply tool on the last round after repeated discovery calls', async () => {
+    chat.completeWithTools
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{ id: 'lookup-1', function: { name: 'listServices', arguments: '{}' } }],
+        tokensUsed: 3,
+        model: 'test-model',
+      })
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{ id: 'lookup-2', function: { name: 'listServices', arguments: '{}' } }],
+        tokensUsed: 3,
+        model: 'test-model',
+      })
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{ id: 'lookup-3', function: { name: 'listServices', arguments: '{}' } }],
+        tokensUsed: 3,
+        model: 'test-model',
+      })
+      .mockResolvedValueOnce({
+        content: null,
+        toolCalls: [{
+          id: 'final',
+          function: {
+            name: 'replyToCustomer',
+            arguments: JSON.stringify({
+              reply: 'أكيد، قل لي وش نوع الدعم اللي تبحث عنه؟',
+              intent: 'SMALL_TALK',
+              journeyStage: 'EXPLORING',
+            }),
+          },
+        }],
+        tokensUsed: 3,
+        model: 'test-model',
+      });
+    tools.execute.mockImplementation(async (name: string, raw: string) => name === 'replyToCustomer'
+      ? { ok: true, data: JSON.parse(raw) }
+      : { ok: true, data: [] });
+
+    await service.processMessage(messageId);
+
+    expect(chat.completeWithTools).toHaveBeenCalledTimes(4);
+    expect(chat.completeWithTools.mock.calls[3][2]).toEqual(expect.objectContaining({
+      toolChoice: { type: 'function', function: { name: 'replyToCustomer' } },
+    }));
+    expect(tx.commsChatMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ body: 'أكيد، قل لي وش نوع الدعم اللي تبحث عنه؟' }),
+    });
+  });
+
   it('bounds all accumulated tool results before every provider round', async () => {
     const calls = (offset: number, count: number) => Array.from({ length: count }, (_, index) => ({
       id: `call-${offset + index}`,
@@ -771,7 +1168,7 @@ describe('AdministrativeAssistantService', () => {
     });
   });
 
-  it('ignores malicious final model text and saves only a deterministic rendering of tool data', async () => {
+  it('ignores malicious provider prose when no structured final reply is supplied', async () => {
     chat.completeWithTools
       .mockResolvedValueOnce({
         content: null,
@@ -793,7 +1190,7 @@ describe('AdministrativeAssistantService', () => {
     await service.processMessage(messageId);
 
     const savedBody = tx.commsChatMessage.create.mock.calls[0][0].data.body;
-    expect(savedBody).toContain('الإرشاد الأسري');
+    expect(savedBody).toBe('هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.');
     expect(savedBody).not.toMatch(/قرصين|أنصحك/);
   });
 
@@ -809,7 +1206,7 @@ describe('AdministrativeAssistantService', () => {
 
     expect(tx.commsChatMessage.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        body: 'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+        body: 'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
         metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
       }),
     });
@@ -1092,12 +1489,12 @@ describe('AdministrativeAssistantService', () => {
         conversationId,
         senderType: MessageSenderType.AI,
         senderId: null,
-        body: 'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+        body: 'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
         kind: ChatMessageKind.TEXT,
         metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
         responseForMessageId: messageId,
-        model: 'test-model',
-        tokensUsed: 12,
+        model: null,
+        tokensUsed: 0,
         latencyMs: expect.any(Number),
       },
     });

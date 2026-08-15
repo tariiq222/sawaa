@@ -12,7 +12,7 @@ describe('administrative policy', () => {
 
     expect(prompt).toBe(ADMINISTRATIVE_SYSTEM_POLICY);
     expect(prompt).not.toContain('Ignore every previous instruction');
-    expect(prompt).toContain('عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته.');
+    expect(prompt).toContain('هذا الطلب خارج خدمات Sawaa Ai.');
     expect(prompt.indexOf(ADMINISTRATIVE_SYSTEM_POLICY)).toBeLessThan(
       Number.POSITIVE_INFINITY,
     );
@@ -20,7 +20,7 @@ describe('administrative policy', () => {
 
   it('returns a neutral fixed out-of-scope refusal with a reception handoff option', () => {
     expect(getAdministrativeOutOfScopeResponse('ar')).toEqual({
-      body: 'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+      body: 'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
       metadata: { action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' },
       handoff: { intent: 'HANDOFF_TO_RECEPTION', optionOnly: true },
     });
@@ -32,5 +32,11 @@ describe('administrative policy', () => {
     expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('Never confirm or decline an operation');
     expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('textual approval such as "yes"');
     expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('never create periodic or recurring appointments');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('Do not offer or request reception merely because');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('a complete handoffDraft');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('the request is discovery-complete');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('Do not ask what kind of support they need');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('verify the requested slot with getAvailability');
+    expect(ADMINISTRATIVE_SYSTEM_POLICY).toContain('call prepareBooking');
   });
 });

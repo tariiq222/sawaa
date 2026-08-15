@@ -58,62 +58,62 @@ enum ZoomMeetingStatus {
 // ─── Booking ─────────────────────────────────────────────────────────────────
 
 model Booking {
-  id                     String              @id @default(uuid())
-  branchId               String
-  clientId               String
-  employeeId             String
-  serviceId              String? // null for GROUP bookings (use programId instead)
-  bookingType            BookingType         @default(INDIVIDUAL)
+  id                       String              @id @default(uuid())
+  branchId                 String
+  clientId                 String
+  employeeId               String
+  serviceId                String? // null for GROUP bookings (use programId instead)
+  bookingType              BookingType         @default(INDIVIDUAL)
   // DB-???: deliveryType — required delivery channel; bookingType now models appointment shape only.
-  deliveryType           DeliveryType
+  deliveryType             DeliveryType
   // Origin of the booking (front desk vs public website). Existing rows backfill to RECEPTION.
-  source                 BookingSource       @default(RECEPTION)
-  creationIdempotencyKey String?             @unique
+  source                   BookingSource       @default(RECEPTION)
+  creationIdempotencyKey   String?             @unique
   // Canonical immutable command hash paired with creationIdempotencyKey.
   // Nullable keeps every legacy/no-key caller backward compatible.
-  creationRequestHash    String?
-  status                 BookingStatus       @default(PENDING)
+  creationRequestHash      String?
+  status                   BookingStatus       @default(PENDING)
   // Historical Booknetic rows preserve their source status but must never be
   // processed by live autocomplete/no-show automation.
-  isHistoricalImport     Boolean             @default(false)
-  scheduledAt            DateTime
-  endsAt                 DateTime // scheduledAt + durationMins — stored for overlap index queries
-  durationMins           Int
+  isHistoricalImport       Boolean             @default(false)
+  scheduledAt              DateTime
+  endsAt                   DateTime // scheduledAt + durationMins — stored for overlap index queries
+  durationMins             Int
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  price                  Decimal             @db.Decimal(12, 2)
-  currency               String              @default("SAR")
-  notes                  String?
-  cancelReason           CancellationReason?
-  cancelNotes            String?
-  cancelledAt            DateTime?
-  confirmedAt            DateTime?
-  checkedInAt            DateTime?
-  completedAt            DateTime?
-  noShowAt               DateTime?
-  expiresAt              DateTime?
-  durationOptionId       String? // cross-BC ref to ServiceDurationOption — plain string, no FK
-  programId              String? // set for GROUP bookings only; null for individual bookings
-  packageCreditId        String? // cross-BC ref to PackageCredit — plain string, no FK; set when this booking consumes session-package credit
-  payAtClinic            Boolean             @default(false)
-  couponCode             String?
+  price                    Decimal             @db.Decimal(12, 2)
+  currency                 String              @default("SAR")
+  notes                    String?
+  cancelReason             CancellationReason?
+  cancelNotes              String?
+  cancelledAt              DateTime?
+  confirmedAt              DateTime?
+  checkedInAt              DateTime?
+  completedAt              DateTime?
+  noShowAt                 DateTime?
+  expiresAt                DateTime?
+  durationOptionId         String? // cross-BC ref to ServiceDurationOption — plain string, no FK
+  programId                String? // set for GROUP bookings only; null for individual bookings
+  packageCreditId          String? // cross-BC ref to PackageCredit — plain string, no FK; set when this booking consumes session-package credit
+  payAtClinic              Boolean             @default(false)
+  couponCode               String?
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  discountedPrice        Decimal?            @db.Decimal(12, 2)
-  zoomMeetingId          String?
-  zoomJoinUrl            String?
-  zoomHostUrl            String?
-  zoomStartUrl           String?
-  zoomMeetingStatus      ZoomMeetingStatus?
-  zoomMeetingError       String?
-  zoomMeetingCreatedAt   DateTime?
+  discountedPrice          Decimal?            @db.Decimal(12, 2)
+  zoomMeetingId            String?
+  zoomJoinUrl              String?
+  zoomHostUrl              String?
+  zoomStartUrl             String?
+  zoomMeetingStatus        ZoomMeetingStatus?
+  zoomMeetingError         String?
+  zoomMeetingCreatedAt     DateTime?
   // Durable Zoom creation state. CALL_UNKNOWN means a POST may have reached
   // Zoom and must only be reconciled by GET; it must never be posted again.
-  zoomCreatePhase        String              @default("BEFORE_CALL")
-  zoomCreateLeaseOwner   String?
-  zoomCreateLeaseExpiresAt DateTime?          @db.Timestamptz(3)
-  zoomCreateAttemptCount Int                 @default(0)
-  zoomSyncRevision       Int                 @default(0)
-  zoomSyncLeaseOwner     String?
-  zoomSyncLeaseExpiresAt DateTime?            @db.Timestamptz(3)
+  zoomCreatePhase          String              @default("BEFORE_CALL")
+  zoomCreateLeaseOwner     String?
+  zoomCreateLeaseExpiresAt DateTime?           @db.Timestamptz(3)
+  zoomCreateAttemptCount   Int                 @default(0)
+  zoomSyncRevision         Int                 @default(0)
+  zoomSyncLeaseOwner       String?
+  zoomSyncLeaseExpiresAt   DateTime?           @db.Timestamptz(3)
 
   // ─── Snapshot fields (denormalized at booking creation for stable history) ───
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.

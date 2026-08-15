@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { middleware } from './middleware';
 
@@ -11,6 +11,8 @@ function makeRequest(pathname: string, opts: { authed?: boolean } = {}): NextReq
 }
 
 describe('middleware', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   describe('unauthenticated user', () => {
     it('redirects /account to /login with redirect query', () => {
       const res = middleware(makeRequest('/account'));
@@ -70,6 +72,17 @@ describe('middleware', () => {
   });
 
   describe('CSP nonce', () => {
+    it("allows Next.js development evaluation locally without weakening production", () => {
+      vi.stubEnv('NODE_ENV', 'development');
+      const developmentCsp = middleware(makeRequest('/')).headers.get('content-security-policy') ?? '';
+      expect(developmentCsp).toContain("script-src 'self'");
+      expect(developmentCsp).toContain("'unsafe-eval'");
+
+      vi.stubEnv('NODE_ENV', 'production');
+      const productionCsp = middleware(makeRequest('/')).headers.get('content-security-policy') ?? '';
+      expect(productionCsp).not.toContain("'unsafe-eval'");
+    });
+
     it('emits a Content-Security-Policy header on every non-redirect response', () => {
       const res = middleware(makeRequest('/therapists'));
       const csp = res.headers.get('content-security-policy');

@@ -36,7 +36,6 @@ export const arNav: Record<string, string> = {
   "nav.reports": "التقارير",
   "nav.notifications": "الإشعارات",
   "nav.contactMessages": "رسائل التواصل",
-  "nav.whatsapp": "محادثات واتساب",
   "nav.conversations": "محادثات العملاء",
   "nav.ratings": "التقييمات",
   "nav.activityLog": "سجل النشاط",

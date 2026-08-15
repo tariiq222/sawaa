@@ -7,12 +7,16 @@ import type {
   AdministrativeServiceProjection,
   AdministrativeToolResult,
 } from './administrative-tools.service';
+import type { SawaaAgentDecision } from './sawaa-agent-decision';
 
 const MAX_RENDERED_CHARS = 2_000;
 const MAX_LABEL_CHARS = 80;
 const MAX_RAW_LABEL_CHARS = 240;
 const MAX_LABEL_TOKENS = 8;
 const MAX_SERVICE_NAME_TOKENS = 6;
+const EMPTY_RESULT_DEFEATIST_REPLY = /(?:عذر[ًاا]?|لا\s+(?:استطيع|أستطيع|يمكنني)|لم\s+(?:استطع|أستطع)|غير\s+قادر|\b(?:sorry|unable|cannot|can\s*not|can't)\b)/iu;
+const FACTUAL_INTENTS = new Set(['DISCOVER_SERVICE', 'COMPARE_OPTIONS', 'PRICE_OBJECTION', 'BOOKING', 'MANAGE_APPOINTMENT']);
+const TRUSTED_EMPTY_LIST_TOOLS = new Set(['listServices', 'listPractitioners', 'getAvailability', 'listOwnAppointments']);
 
 const PROHIBITED_LABEL_TOKENS = new Set([
   'تعليمات', 'التعليمات', 'اسرار', 'الاسرار', 'سر', 'السر', 'برومبت', 'البرومبت',
@@ -96,14 +100,26 @@ export interface ExecutedAdministrativeTool {
 }
 
 export interface RenderedAdministrativeResponse {
-  source: 'DETERMINISTIC_RENDERER';
+  source: 'DETERMINISTIC_RENDERER' | 'MODEL_DECISION';
   body: string;
   metadata: AdministrativePublicMetadata | null;
+  grounded?: boolean;
+  acceptedModelDecision?: boolean;
+}
+
+export interface GroundedAdministrativeDecision {
+  decision: SawaaAgentDecision;
+  grounded: boolean;
 }
 
 @Injectable()
 export class AdministrativeResponseRenderer {
-  render(executions: ExecutedAdministrativeTool[], language: string): RenderedAdministrativeResponse {
+  render(
+    executions: ExecutedAdministrativeTool[],
+    language: string,
+    decision?: SawaaAgentDecision,
+  ): RenderedAdministrativeResponse {
+    if (decision) return this.renderDecision(decision, executions, language);
     const english = language.toLowerCase().startsWith('en');
     const sections: string[] = [];
     let metadata: AdministrativePublicMetadata | null = null;
@@ -127,20 +143,143 @@ export class AdministrativeResponseRenderer {
     };
   }
 
+  private renderDecision(
+    decision: SawaaAgentDecision,
+    executions: ExecutedAdministrativeTool[],
+    language: string,
+  ): RenderedAdministrativeResponse {
+    // Application-owned operation cards are already backed by a validated,
+    // durable operation. A malformed or poorly cited model epilogue must not
+    // hide that trusted action from the customer.
+    const deterministic = this.render(executions, language);
+    if (deterministic.metadata && executions.some((execution) =>
+      execution.name === 'prepareReceptionHandoff'
+      || execution.name === 'handoffToReception'
+      || execution.name === 'prepareBooking'
+      || execution.name === 'prepareReschedule'
+      || execution.name === 'prepareCancellation'
+      || execution.name === 'listOwnAppointments'
+    )) return deterministic;
+
+    const grounded = this.isGrounded(decision, executions);
+    if (!grounded) {
+      // A small model may omit the explicit `recordIds: []` citation after a
+      // trusted list tool returns no rows. Never expose its ungrounded prose,
+      // but keep the valid customer-service conversation in scope with a
+      // claim-free deterministic question.
+      if (FACTUAL_INTENTS.has(decision.intent) && this.hasTrustedEmptyList(executions)) {
+        return this.emptyListConversationFallback(language, decision.intent);
+      }
+      return this.fallback(language);
+    }
+
+    // Deterministic operation cards and handoff options remain authoritative;
+    // the model's final text cannot replace an application-owned action.
+    const emptyTrustedResult = decision.factsUsed?.some((fact) => fact.recordIds.length === 0
+      && executions.some((execution) => execution.name === fact.tool
+        && execution.result.ok
+        && Array.isArray(execution.result.data)
+        && execution.result.data.length === 0)) === true;
+    const body = emptyTrustedResult && EMPTY_RESULT_DEFEATIST_REPLY.test(decision.reply)
+      ? (language.toLowerCase().startsWith('en')
+          ? 'Absolutely—let me understand what you need so I can guide you well. What kind of support are you looking for?'
+          : 'أكيد، خلّني أفهم احتياجك أكثر عشان أوجّهك صح. وش نوع الدعم اللي تبحث عنه؟')
+      : decision.reply;
+    return {
+      source: 'MODEL_DECISION',
+      body,
+      metadata: null,
+      grounded: true,
+    };
+  }
+
+  private isGrounded(decision: SawaaAgentDecision, executions: ExecutedAdministrativeTool[]): boolean {
+    if (!decision.factsUsed?.length) return !FACTUAL_INTENTS.has(decision.intent);
+    const finalIndex = executions.findIndex((item) => item.name === 'replyToCustomer');
+    const readonlyTools = new Set([
+      'getCenterInfo', 'listServices', 'getServiceDetails', 'compareServices', 'listPractitioners',
+      'getPractitionerDetails', 'getAvailability', 'searchPublishedKnowledge', 'listOwnAppointments',
+    ]);
+    return decision.factsUsed.every((fact) => {
+      if (!readonlyTools.has(fact.tool) || fact.tool === 'replyToCustomer') return false;
+      const executionIndex = executions.findIndex((item) => item.name === fact.tool && item.result.ok);
+      const execution = executionIndex >= 0 ? executions[executionIndex] : undefined;
+      if (finalIndex >= 0 && executionIndex >= finalIndex) return false;
+      if (!execution || !execution.result.ok) return false;
+      if (fact.recordIds.length === 0) {
+        return Array.isArray(execution.result.data) && execution.result.data.length === 0;
+      }
+      const ids = this.collectRecordIds(execution.result.data);
+      return fact.recordIds.every((id) => ids.has(id));
+    });
+  }
+
+  private collectRecordIds(value: unknown, output = new Set<string>()): Set<string> {
+    if (Array.isArray(value)) {
+      for (const item of value) this.collectRecordIds(item, output);
+      return output;
+    }
+    if (!value || typeof value !== 'object') return output;
+    for (const [key, nested] of Object.entries(value)) {
+      if ((key === 'id' || key.endsWith('Id') || key.endsWith('Ids')) && typeof nested === 'string') output.add(nested);
+      else if (key.endsWith('Ids') && Array.isArray(nested)) {
+        for (const id of nested) if (typeof id === 'string') output.add(id);
+      } else this.collectRecordIds(nested, output);
+    }
+    return output;
+  }
+
+  private fallback(language: string): RenderedAdministrativeResponse {
+    return { source: 'DETERMINISTIC_RENDERER', ...getAdministrativeFallbackResponse(language, 'OUT_OF_SCOPE') };
+  }
+
+  private hasTrustedEmptyList(executions: ExecutedAdministrativeTool[]): boolean {
+    return executions.some((execution) => TRUSTED_EMPTY_LIST_TOOLS.has(execution.name)
+      && execution.result.ok
+      && Array.isArray(execution.result.data)
+      && execution.result.data.length === 0);
+  }
+
+  private emptyListConversationFallback(
+    language: string,
+    intent: SawaaAgentDecision['intent'],
+  ): RenderedAdministrativeResponse {
+    const english = language.toLowerCase().startsWith('en');
+    const body = intent === 'PRICE_OBJECTION'
+      ? (english
+          ? 'Absolutely, price matters. What approximate budget works for you so I can guide you toward the closest option?'
+          : 'أكيد، السعر مهم. وش الميزانية التقريبية المناسبة لك عشان نوجّهك للخيار الأقرب؟')
+      : intent === 'MANAGE_APPOINTMENT'
+        ? (english
+            ? 'I can help with your appointment. Would you like to view it, reschedule it, or request cancellation?'
+            : 'أقدر أساعدك في موعدك. تبي تعرض مواعيدك أو تعيد الجدولة أو تطلب الإلغاء؟')
+        : (english
+            ? 'Absolutely—let me understand what you need so I can guide you well. What kind of support are you looking for?'
+            : 'أكيد، خلّني أفهم احتياجك أكثر عشان أوجّهك صح. وش نوع الدعم اللي تبحث عنه؟');
+    return { source: 'DETERMINISTIC_RENDERER', body, metadata: null };
+  }
+
   private renderTool(name: string, data: unknown, english: boolean): string | null {
     switch (name) {
       case 'getCenterInfo':
         return this.renderCenter(data, english);
       case 'listServices':
         return this.renderServices(data, english);
+      case 'getServiceDetails':
+      case 'compareServices':
+        return this.renderServices(data, english);
       case 'listPractitioners':
+        return this.renderPractitioners(data, english);
+      case 'getPractitionerDetails':
         return this.renderPractitioners(data, english);
       case 'getAvailability':
         return this.renderAvailability(data, english);
+      case 'searchPublishedKnowledge':
       case 'searchKnowledge':
         // Knowledge-base fields are intentionally non-renderable in Task 4.
         // They are untrusted free text regardless of apparent scope.
         return null;
+      case 'prepareReceptionHandoff':
       case 'handoffToReception':
         return english
           ? 'I can offer the option to contact reception.'

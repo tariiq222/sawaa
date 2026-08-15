@@ -3,6 +3,107 @@ import { AdministrativeResponseRenderer } from './administrative-response-render
 describe('AdministrativeResponseRenderer', () => {
   const renderer = new AdministrativeResponseRenderer();
 
+  it('renders a validated natural Saudi final reply and ignores provider prose', () => {
+    const result = renderer.render([], 'ar', {
+      reply: 'وعليكم السلام ورحمة الله، حياك الله في مركز سواء. كيف أقدر أخدمك؟',
+      intent: 'SMALL_TALK',
+      journeyStage: 'EXPLORING',
+    });
+    expect(result.body).toContain('حياك الله');
+    expect(result.source).toBe('MODEL_DECISION');
+  });
+
+  it('rejects a final decision whose service fact is not in the current tool ledger', () => {
+    const result = renderer.render([], 'ar', {
+      reply: 'سعر الجلسة 200 ريال',
+      intent: 'PRICE_OBJECTION',
+      journeyStage: 'COMPARING',
+      factsUsed: [{ tool: 'listServices', recordIds: ['service-not-returned'] }],
+    });
+    expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
+  });
+
+  it('accepts a price claim only when the referenced service record is current', () => {
+    const result = renderer.render([{
+      name: 'listServices',
+      result: { ok: true, data: [{ id: 'service-1', nameAr: 'جلسة إرشاد أسري', showPrice: true, price: 200 }] },
+    }], 'ar', {
+      reply: 'أفهم عليك، خلني أوضح لك الخيارات المتاحة.',
+      intent: 'PRICE_OBJECTION',
+      journeyStage: 'COMPARING',
+      factsUsed: [{ tool: 'listServices', recordIds: ['service-1'] }],
+    });
+    expect(result.body).toBe('أفهم عليك، خلني أوضح لك الخيارات المتاحة.');
+    expect(result.source).toBe('MODEL_DECISION');
+  });
+
+  it('accepts a conversational discovery reply grounded by an empty trusted catalog result', () => {
+    const result = renderer.render([{
+      name: 'listServices',
+      result: { ok: true, data: [] },
+    }], 'ar', {
+      reply: 'أكيد، خلني أفهم احتياجك أكثر. وش نوع الدعم اللي تبحث عنه؟',
+      intent: 'DISCOVER_SERVICE',
+      journeyStage: 'EXPLORING',
+      factsUsed: [{ tool: 'listServices', recordIds: [] }],
+    });
+
+    expect(result).toEqual({
+      source: 'MODEL_DECISION',
+      body: 'أكيد، خلني أفهم احتياجك أكثر. وش نوع الدعم اللي تبحث عنه؟',
+      metadata: null,
+      grounded: true,
+    });
+  });
+
+  it('keeps an empty-catalog price conversation in scope when the model omits the empty citation', () => {
+    const result = renderer.render([{
+      name: 'listServices',
+      result: { ok: true, data: [] },
+    }], 'ar', {
+      reply: 'أقدر أرشح لك جلسة أسرية بسعر مناسب.',
+      intent: 'PRICE_OBJECTION',
+      journeyStage: 'COMPARING',
+    });
+
+    expect(result).toEqual({
+      source: 'DETERMINISTIC_RENDERER',
+      body: 'أكيد، السعر مهم. وش الميزانية التقريبية المناسبة لك عشان نوجّهك للخيار الأقرب؟',
+      metadata: null,
+    });
+    expect(result.body).not.toMatch(/خارج خدمات|جلسة أسرية|سعر مناسب/u);
+  });
+
+  it('replaces defeatist empty-catalog wording with a Saudi discovery question', () => {
+    const result = renderer.render([{
+      name: 'listServices',
+      result: { ok: true, data: [] },
+    }], 'ar', {
+      reply: 'يبدو أنني لا أستطيع الحصول على معلومات عن الخدمات حاليًا. هل ترغب في التواصل مع الاستقبال؟',
+      intent: 'DISCOVER_SERVICE',
+      journeyStage: 'EXPLORING',
+      factsUsed: [{ tool: 'listServices', recordIds: [] }],
+    });
+
+    expect(result.body).toBe('أكيد، خلّني أفهم احتياجك أكثر عشان أوجّهك صح. وش نوع الدعم اللي تبحث عنه؟');
+    expect(result.source).toBe('MODEL_DECISION');
+    expect(result.metadata).toBeNull();
+  });
+
+  it('rejects an empty fact citation when the trusted tool returned records', () => {
+    const result = renderer.render([{
+      name: 'listServices',
+      result: { ok: true, data: [{ id: 'service-1', nameAr: 'جلسة إرشاد أسري' }] },
+    }], 'ar', {
+      reply: 'عندنا خيارات مناسبة لك.',
+      intent: 'DISCOVER_SERVICE',
+      journeyStage: 'EXPLORING',
+      factsUsed: [{ tool: 'listServices', recordIds: [] }],
+    });
+
+    expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
+  });
+
   // Characterization fixture copied from prisma/seeds/sawa-clinics-demo.ts.
   // These are the real public nameAr/nameEn pairs consumed by the catalog contract.
   const seededServices = [
@@ -64,7 +165,7 @@ describe('AdministrativeResponseRenderer', () => {
     }], 'en');
 
     expect(result.body).toBe(
-      'Sorry, my role is limited to administrative information about the center and its services. I can offer the option to contact reception.',
+      'This request is outside Sawaa Ai services. I can help with center services, practitioners, prices, appointments, and bookings, or connect you with reception.',
     );
     expect(result.body).not.toContain('Family & Couples Session');
   });
@@ -107,7 +208,7 @@ describe('AdministrativeResponseRenderer', () => {
     }], 'ar');
 
     expect(result.body).toBe(
-      'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+      'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
     );
     for (const label of malicious) expect(result.body).not.toContain(label);
   });
@@ -210,7 +311,7 @@ describe('AdministrativeResponseRenderer', () => {
     }], 'ar');
 
     expect(result.body).toBe(
-      'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+      'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
     );
     expect(result.body).not.toContain(content);
     expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
@@ -223,7 +324,7 @@ describe('AdministrativeResponseRenderer', () => {
     }], 'ar');
 
     expect(result.body).toBe(
-      'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+      'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
     );
     expect(result.metadata).toEqual({ action: 'OFFER_HANDOFF', reason: 'OUT_OF_SCOPE' });
   });
@@ -293,6 +394,25 @@ describe('AdministrativeResponseRenderer', () => {
       metadata: { action: 'CHAT_OPERATION', operation },
     });
     expect(result.body).not.toContain('confirm it now');
+
+    const ungroundedEpilogue = renderer.render([{
+      name: 'prepareBooking',
+      result: {
+        ok: true,
+        data: { operation },
+        publicMetadata: { action: 'CHAT_OPERATION', operation } as never,
+      },
+    }], 'ar', {
+      reply: 'تم الحجز نهائيًا',
+      intent: 'BOOKING',
+      journeyStage: 'READY_TO_BOOK',
+      factsUsed: [{ tool: 'listServices', recordIds: ['invented-service'] }],
+    });
+    expect(ungroundedEpilogue).toEqual({
+      source: 'DETERMINISTIC_RENDERER',
+      body: 'راجع تفاصيل الحجز، ثم استخدم زر التأكيد أو الرفض.',
+      metadata: { action: 'CHAT_OPERATION', operation },
+    });
   });
 
   it('renders guest login and authenticated own appointments without copying unsafe names', () => {

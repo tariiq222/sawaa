@@ -23,7 +23,6 @@ import { OrgExperienceModule } from "./modules/org-experience/org-experience.mod
 import { FinanceModule } from "./modules/finance/finance.module";
 import { BookingsModule } from "./modules/bookings/bookings.module";
 import { ZoomModule } from "./modules/integrations/zoom/zoom.module";
-import { WhatsappModule } from "./modules/integrations/whatsapp/whatsapp.module";
 
 import { OpsModule } from "./modules/ops/ops.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
@@ -80,7 +79,6 @@ import { TelemetryModule } from "./infrastructure/telemetry/telemetry.module";
     FinanceModule,
     BookingsModule,
     ZoomModule,
-    WhatsappModule,
 
     OpsModule,
     DashboardModule,

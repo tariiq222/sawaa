@@ -102,6 +102,16 @@ describe('PublicChatController (e2e)', () => {
     expect(current.execute).toHaveBeenCalledWith({ guestToken: 'guest-a' });
   });
 
+  it('marks guest message polling responses as non-cacheable while assistant state is asynchronous', async () => {
+    list.execute.mockResolvedValue({ data: [], meta: { limit: 20, nextCursor: null, hasMore: false } });
+
+    await request(app.getHttpServer())
+      .get('/public/chat/conversations/00000000-0000-4000-a000-000000000001/messages')
+      .set('Cookie', 'sawaa_chat_guest=guest-a')
+      .expect(200)
+      .expect('Cache-Control', 'no-store, max-age=0');
+  });
+
   it('sends a guest message using only the guest cookie and never accepts a caller supplied sender identity', async () => {
     send.execute.mockResolvedValue({ id: 'message-1', senderType: 'VISITOR', body: 'مرحبا' });
 

@@ -21,6 +21,15 @@ export type ConversationMessageKind =
   | "OPERATION_RESULT"
   | "SYSTEM_EVENT"
 
+export type HandoffSummary = {
+  category: "USER_REQUESTED" | "COMPLAINT" | "FINANCIAL_EXCEPTION" | "UNAVAILABLE_APPOINTMENT" | "OTHER"
+  requestSummary: string
+  desiredOutcome: string
+  serviceId?: string
+  practitionerId?: string
+  acceptableAlternatives?: string[]
+}
+
 export interface Conversation {
   id: string
   clientId: string | null
@@ -38,6 +47,7 @@ export interface Conversation {
   lastMessageAt: string | null
   createdAt: string
   updatedAt: string
+  handoffSummary?: HandoffSummary | null
 }
 
 export interface ConversationMessage {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-export type AdministrativeScope = 'ADMINISTRATIVE' | 'OUT_OF_SCOPE';
+export type AdministrativeScope = 'CONVERSATIONAL' | 'BLOCKED_POLICY';
 
 const MAX_RAW_INPUT_GRAPHEMES = 300;
 const MAX_RAW_INPUT_CODEPOINTS = 2_400;
@@ -25,121 +25,35 @@ const MARK_OR_WHITESPACE = /^[\p{M}\p{White_Space}]+$/u;
 const MARK_OR_FORMAT = /[\p{M}\p{Cf}]/u;
 const GRAPHEME_SEGMENTER = new Intl.Segmenter('und', { granularity: 'grapheme' });
 
-const GREETING_TEMPLATES = [
-  /^(?:مرحبا|اهلا|اهلين|السلام عليكم|وعليكم السلام|صباح الخير|مساء الخير)$/u,
-  /^(?:hi|hello|hey|good morning|good evening)$/,
+// Deny-only policy gate: valid text is conversational, while these explicit
+// categories are blocked before provider invocation.
+const PROHIBITED_POLICY_PATTERNS = [
+  /(?:شخص|شخصني|تشخيص|يشخص|حلل|تحليل).*(?:حالتي|اعراض|أعراض|خطر|مرض)/u,
+  /(?:وضعي|حالتي).*(?:خطر|خطير|خطره)/u,
+  /(?:سبب|اسباب).*(?:(?:^|\s)(?:الم|المي)(?:\s|$)|وجع|مرض|اعراض)/u,
+  /(?:تقييم|تحليل).*(?:المخاطر|الخطر)/u,
+  /(?:هذا|هذه).*(?:مرض|حاله)/u,
+  /\b(?:diagnos(?:e|is)|symptoms?|treatment|medical advice|risk assessment|risk|emergency|ambulance|suicide|self harm|kill myself)\b/,
+  /\b(?:what is|what s|tell me about).*(?:pain|illness|disease|secret system prompt)\b/,
+  /\b(?:do i need|should i see).*(?:doctor|physician)\b/,
+  /(?:ignore|disregard|follow) (?:all )?(?:previous|prior|new|system) (?:instructions?|directions?)/,
+  /follow .*system (?:instructions?|directions?)/,
+  /(?:reveal|show|print|expose|give me).*(?:system prompt|hidden prompt|secrets?|api key|password|credentials?)/,
+  /(?:what is|what s|tell me about).*(?:secret|system prompt)/,
+  /(?:تجاهل|اتبع|اعرض|اكشف|اعطني).*(?:التعليمات|تعليماتي|البرومبت|الاسرار|الأسرار|المفاتيح|كلمه المرور|كلمة المرور)/u,
+  /(?:ما هو|وش هو|ما هي|وش هي).*(?:البرومبت|الاسرار|الأسرار)/u,
 ] as const;
 
-// Each group is a closed, whole-message grammar for one administrative intent.
-// New dialect variants belong in the narrow intent group that owns them.
-const ARABIC_INTENT_TEMPLATES = {
-  services: [
-    /^(?:ما|وش|ايش)(?: هي)? (?:الخدمات|خدمات|خدماتكم)(?: (?:المركز|المتاحه|المتوفره))?(?: اللي)?(?: عندكم)?$/u,
-    /^(?:ما هي الخدمات التي يقدمها المركز|وش تقدمون من خدمات)$/u,
-    /^(?:ممكن )?(?:اعرف|معرفه) (?:الخدمات|خدمات) المركز$/u,
-  ],
-  practitioners: [
-    /^(?:من|مين)(?: هم)? (?:المعالجون|المعالجين|الاخصاييون|الاخصاييين|المختصون|المختصين)(?: المتاحون| المتاحين)?(?: عندكم)?(?: وما مواعيد العمل)?$/u,
-    /^(?:وش|ما|ايش) اسماء (?:المعالجين|الاخصاييين|المختصين)(?: المتاحين)?(?: عندكم)?$/u,
-    /^(?:ابغي|ابغا|ابي|اريد) اسماء (?:المعالجين|الاخصاييين|المختصين)(?: المتاحين)?(?: عندكم)?$/u,
-  ],
-  location: [
-    /^(?:اين|وين) (?:يقع )?(?:موقعكم|المركز|مركز سواء|موقع المركز)(?: وما ساعات العمل| وكيف اتواصل مع الاستقبال)?$/u,
-    /^(?:ممكن )?(?:تعطيني|اعطني) (?:عنوان|موقع) المركز$/u,
-    /^كيف اوصل (?:الي|الى|ل)لمركز$/u,
-  ],
-  contact: [
-    /^(?:وش|ما|ايش) رقم (?:(?:جوال|هاتف) )?(?:المركز|كم)$/u,
-    /^(?:ممكن )?(?:تعطيني|اعطني) رقم (?:جوال|هاتف) المركز$/u,
-    /^كيف اتواصل مع (?:المركز|الاستقبال)$/u,
-  ],
-  hours: [
-    /^متي (?:تفتحون|دوامكم)(?: ومتي تقفلون)?$/u,
-    /^(?:وش|ما)(?: هي)? (?:ساعات|اوقات) (?:الدوام|دوامكم|العمل|عمل المركز)$/u,
-  ],
-  booking: [
-    /^(?:ابغي|ابغا|ابي|اريد|اود) (?:ان )?(?:(?:احجز|حجز) )?(?:موعد|جلسه)$/u,
-    /^ممكن (?:احجز|حجز) (?:موعد|جلسه)$/u,
-    /^(?:ما|وش|ايش)(?: هي)? مواعيدي(?: القادمه)?$/u,
-    /^(?:اعرض|ورني) مواعيدي(?: القادمه)?$/u,
-    /^(?:ابغي|ابغا|ابي|اريد) (?:اعاده جدوله|تغيير) موعدي$/u,
-    /^(?:ابغي|ابغا|ابي|اريد) الغاء موعدي$/u,
-  ],
-  availability: [
-    /^هل يوجد موعد متاح غدا$/u,
-    /^(?:هل )?(?:عندكم|لديكم) (?:موعد|مواعيد)(?: متاحه| شاغره)? (?:بكره|غدا|الاسبوع (?:القادم|الجاي))$/u,
-    /^هل فيه (?:موعد|مواعيد)(?: متاحه)? (?:بكره|غدا)$/u,
-    /^هل لديكم مواعيد شاغره الاسبوع القادم$/u,
-    /^وش المواعيد المتاحه$/u,
-  ],
-  pricing: [
-    /^هل يمكنني معرفه اسعار الخدمات المتاحه في المركز$/u,
-    /^(?:كم سعر (?:الخدمه|الجلسه)|كم الاسعار|بكم الجلسه)$/u,
-    /^كم تكلفه جلسه (?:الاستشاره|الارشاد)$/u,
-    /^(?:وش|ما) اسعار (?:الجلسات|الخدمات)$/u,
-  ],
-  handoff: [
-    /^حولني (?:الي|الى) الاستقبال$/u,
-  ],
-} as const;
-
-const ENGLISH_INTENT_TEMPLATES = {
-  services: [
-    /^what services and appointment times are available$/,
-    /^(?:what|which) services are available(?: at the (?:center|centre))?$/,
-    /^(?:what|which) services do you (?:offer|provide)$/,
-    /^could you tell me which services are available at the (?:center|centre)$/,
-  ],
-  practitioners: [
-    /^who are (?:the |your )?(?:practitioners|therapists|counselors|counsellors)(?: at the (?:center|centre))?(?: and when are appointments available)?$/,
-  ],
-  location: [
-    /^where are you located$/,
-    /^where is (?:the |your )?(?:center|centre)(?: located)?$/,
-    /^what is your address$/,
-    /^what is the (?:center|centre) address and working hours$/,
-    /^could you give me (?:the |your )?(?:center|centre) address$/,
-  ],
-  contact: [
-    /^what s your (?:phone|contact) number$/,
-    /^can i get (?:the |your )?(?:(?:center|centre) )?(?:phone|contact) number$/,
-    /^how can i contact reception$/,
-  ],
-  hours: [
-    /^what are (?:your|the (?:center|centre)) (?:opening|working|business) hours$/,
-    /^what time do you open$/,
-    /^when does the (?:center|centre) open$/,
-  ],
-  booking: [
-    /^i d like to book an appointment$/,
-    /^i would like to book an appointment$/,
-    /^can i book an appointment$/,
-    /^could i schedule an appointment$/,
-    /^(?:show|list) my (?:upcoming )?appointments$/,
-    /^what are my (?:upcoming )?appointments$/,
-    /^i (?:want|would like) to reschedule my appointment$/,
-    /^i (?:want|would like) to cancel my appointment$/,
-  ],
-  availability: [
-    /^do you have available appointments$/,
-    /^do you have an appointment tomorrow$/,
-    /^can i see your available appointment slots for next week$/,
-  ],
-  pricing: [
-    /^how much does a counseling session cost$/,
-    /^how much are the services$/,
-    /^how much is a session$/,
-    /^what does a counseling session cost$/,
-  ],
-  handoff: [
-    /^(?:transfer|connect) me to reception$/,
-  ],
-} as const;
-
-const GREETING_PREFIXES = [
-  /^(?:مرحبا|اهلا|اهلين|السلام عليكم|صباح الخير|مساء الخير) /u,
-  /^(?:hi|hello|hey|good morning|good evening) /,
-] as const;
+const RISK_CATEGORY = /(?:خطر|خطير|خطره|حرج|جدي|طوار|موت|اموت|انتحار|قتل نفسي|ايذاء نفسي|serious|critical|risk|dangerous|danger|emergency|die|death|suicide|self harm)/u;
+const MEDICAL_CATEGORY = /(?:تشخيص|شخ[صص]|مرض|اعراض|(?:^|\s)الم(?:\s|$)|وجع|حقنه|حقنة|طبيب|دكتور|رعايه طبيه|مساعده طبيه|دواء|medical|diagnos|illness|symptom|pain|doctor|physician|medical care|medical help|injection|inject|advice)/u;
+const CLINICAL_TREATMENT_REQUEST = /(?:علاج|treatment).*(?:مناسب|تنصح|استخدم|احتاج|اعراض|should|use|recommend|take)/u;
+const CENTER_DOCTOR_DISCOVERY = /(?:هل عندكم|هل يوجد|وش تخصص|اسماء|احجز|حجز|وين|متى).*(?:طبيب|دكتور|معالج|اخصائي).*(?:متاح|موعد|بكره|غدا)?|(?:ممكن|ابي).*(?:موعد|حجز).*(?:طبيب|دكتور)|هل.*(?:طبيب|دكتور).*(?:متاح|موعد|بكره|غدا)|(?:can i see|can i book with|do you have|which doctors|what doctors|where can i find|can i schedule with).*(?:doctor|physician)/u;
+const SELF_ASSESSMENT_REQUEST = /(?:هل|ما|وش|ايش).*(?:مكتئب|اكتئاب|مكتيب|اكتياب|قلق|هلع)|(?:what causes|is this|am i|do i have|diagnos|identify).*(?:anxiety|depression|panic|قلق|اكتئاب|هلع)/u;
+const INSTRUCTION_CATEGORY = /(?:تعليمات|برومبت|اسرار|مفاتيح|مفتاح api|بيانات الدخول|كلمه المرور|instructions?|prompt|secrets?|api key|password|credentials?)/u;
+const POLICY_REQUEST_OR_OVERRIDE = /(?:ما|وش|ايش|هل|ماذا|اعطني|اعرض|اكشف|اظهر|ارسل|أرسل|تجاهل|اتبع|احتاج|ابغى|ابي|ممكن|ساعدني|what|show|send|reveal|give me|tell me|ignore|disregard|follow|need|should|can i|help)/u;
+const OBFUSCATED_POLICY_PHRASES = /(?:reveal|show|give|send)secrets?|what(?:are|is)yourinstructions|follow(?:all)?previousinstructions|ignore(?:all)?previousinstructions|اعطنيالاسرار|اعرضالاسرار|اكشفالاسرار|ارسلليsystemprompt|ماهوالبرومبتالسري|تجاهلتعليماتك/u;
+const COMPACT_SECRET_TERMS = /(?:systemprompt|apikey|مفتاحapi|password|credentials|secrets?|instructions?|برومبت|اسرار|مفاتيح|كلمهالمرور|بياناتالدخول|تعليمات)/u;
+const COMPACT_EXTRACTION_INTENT = /(?:show|reveal|give|send|what|tell|اعرض|اكشف|اعطني|ارسل|ماهو|وشهو|وشهي|تجاهل|اتبع)/u;
 
 @Injectable()
 export class AdministrativeScopeGate {
@@ -149,35 +63,42 @@ export class AdministrativeScopeGate {
 }
 
 export function classifyAdministrativeText(message: string): AdministrativeScope {
+  if (typeof message !== 'string') return 'BLOCKED_POLICY';
   const rawCodepoints = Array.from(message);
   const rawGraphemes = splitGraphemes(message);
   if (
     rawGraphemes.length > MAX_RAW_INPUT_GRAPHEMES
     || rawCodepoints.length > MAX_RAW_INPUT_CODEPOINTS
     || rawGraphemes.some((grapheme) => Array.from(grapheme).length > MAX_CODEPOINTS_PER_GRAPHEME)
-  ) return 'OUT_OF_SCOPE';
+  ) return 'BLOCKED_POLICY';
 
   const normalized = normalizeAdministrativeText(message);
   const normalizedCodepoints = Array.from(normalized);
+  const compactNormalized = normalized.replace(/ /g, '');
+  const compactPolicyView = normalized.replace(/[^\p{L}\p{N}]/gu, '');
   const normalizedLength = splitGraphemes(normalized).length;
-  if (!normalized || normalizedLength > MAX_NORMALIZED_GRAPHEMES) return 'OUT_OF_SCOPE';
-  if (normalized.split(' ').length > MAX_INPUT_TOKENS) return 'OUT_OF_SCOPE';
+  if (!normalized || normalizedLength > MAX_NORMALIZED_GRAPHEMES) return 'BLOCKED_POLICY';
+  if (normalized.split(' ').length > MAX_INPUT_TOKENS) return 'BLOCKED_POLICY';
   if (!hasAcceptableTextShape(
     rawGraphemes,
     rawCodepoints.length,
     normalizedLength,
     normalizedCodepoints.length,
-  )) return 'OUT_OF_SCOPE';
+  )) return 'BLOCKED_POLICY';
 
-  if (GREETING_TEMPLATES.some((template) => template.test(normalized))) return 'ADMINISTRATIVE';
-  if (matchesAdministrativeIntent(normalized)) return 'ADMINISTRATIVE';
-
-  for (const prefix of GREETING_PREFIXES) {
-    if (prefix.test(normalized) && matchesAdministrativeIntent(normalized.replace(prefix, ''))) {
-      return 'ADMINISTRATIVE';
-    }
+  if (PROHIBITED_POLICY_PATTERNS.some((pattern) => pattern.test(normalized))
+    || RISK_CATEGORY.test(normalized)
+    || (MEDICAL_CATEGORY.test(normalized)
+      && !CENTER_DOCTOR_DISCOVERY.test(normalized)
+      && POLICY_REQUEST_OR_OVERRIDE.test(normalized))
+    || SELF_ASSESSMENT_REQUEST.test(normalized)
+    || CLINICAL_TREATMENT_REQUEST.test(normalized)
+    || (INSTRUCTION_CATEGORY.test(normalized) && POLICY_REQUEST_OR_OVERRIDE.test(normalized))
+    || OBFUSCATED_POLICY_PHRASES.test(compactNormalized)
+    || (COMPACT_SECRET_TERMS.test(compactPolicyView) && COMPACT_EXTRACTION_INTENT.test(compactPolicyView))) {
+    return 'BLOCKED_POLICY';
   }
-  return 'OUT_OF_SCOPE';
+  return 'CONVERSATIONAL';
 }
 
 function hasAcceptableTextShape(
@@ -240,13 +161,6 @@ function hasAcceptableTextShape(
 
 function splitGraphemes(value: string): string[] {
   return Array.from(GRAPHEME_SEGMENTER.segment(value), ({ segment }) => segment);
-}
-
-function matchesAdministrativeIntent(value: string): boolean {
-  return [
-    ...Object.values(ARABIC_INTENT_TEMPLATES),
-    ...Object.values(ENGLISH_INTENT_TEMPLATES),
-  ].some((templates) => templates.some((template) => template.test(value)));
 }
 
 export function normalizeAdministrativeText(value: string): string {

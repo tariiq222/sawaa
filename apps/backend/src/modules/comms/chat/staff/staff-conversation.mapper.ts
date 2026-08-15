@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { parseHandoffSummary, type HandoffSummary } from '../assistant/administrative-tools.service';
 
 export const STAFF_CONVERSATION_SELECT = {
   id: true,
@@ -17,6 +18,7 @@ export const STAFF_CONVERSATION_SELECT = {
   lastMessageAt: true,
   createdAt: true,
   updatedAt: true,
+  customerContext: true,
 } as const satisfies Prisma.ChatConversationSelect;
 
 export const STAFF_MESSAGE_SELECT = {
@@ -33,11 +35,13 @@ export type StaffMessageProjection = Prisma.CommsChatMessageGetPayload<{
   select: typeof STAFF_MESSAGE_SELECT;
 }>;
 
-export type StaffConversationResponse = Prisma.ChatConversationGetPayload<{
+type StaffConversationRow = Prisma.ChatConversationGetPayload<{
   select: typeof STAFF_CONVERSATION_SELECT;
 }>;
 
-export function toStaffConversationResponse(value: StaffConversationResponse): StaffConversationResponse {
+export type StaffConversationResponse = Omit<StaffConversationRow, 'customerContext'> & { handoffSummary: HandoffSummary | null };
+
+export function toStaffConversationResponse(value: StaffConversationRow): StaffConversationResponse {
   return {
     id: value.id,
     clientId: value.clientId,
@@ -55,5 +59,10 @@ export function toStaffConversationResponse(value: StaffConversationResponse): S
     lastMessageAt: value.lastMessageAt,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
+    handoffSummary: parseHandoffSummary(
+      value.customerContext && typeof value.customerContext === 'object' && !Array.isArray(value.customerContext)
+        ? value.customerContext.handoffSummary
+        : undefined,
+    ),
   };
 }

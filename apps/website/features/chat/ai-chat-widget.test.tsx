@@ -103,11 +103,26 @@ describe('AiChatWidget', () => {
 
   afterEach(() => vi.restoreAllMocks());
 
+  it('inherits Sawaa design tokens without taking on page-level theme layout', () => {
+    renderWidget('ar');
+
+    const launcher = screen.getByRole('button', { name: 'فتح Sawaa Ai' });
+    const tokenScope = launcher.closest('.theme-sawaa-tokens');
+    expect(tokenScope).toBeTruthy();
+    expect(tokenScope).not.toHaveClass('theme-sawaa');
+    expect(tokenScope).toHaveClass('right-4', 'sm:right-6');
+    expect(tokenScope).not.toHaveClass('end-4', 'sm:end-6');
+    const icon = launcher.querySelector('[data-ai-chat-icon="ai-chat-bubble"]');
+    expect(icon).toBeTruthy();
+    expect(icon).toHaveTextContent('AI');
+    expect(icon?.querySelector('.lucide-message-circle')).toBeTruthy();
+  });
+
   it('bootstraps a first guest when current returns 401 because no guest cookie exists', async () => {
     mocks.currentGuest.mockRejectedValue(new ApiError(401, 'Guest chat cookie is required', {}, 'UNAUTHORIZED'));
     renderWidget('ar');
 
-    fireEvent.click(screen.getByRole('button', { name: 'فتح مساعد سواء الإداري' }));
+    fireEvent.click(screen.getByRole('button', { name: 'فتح Sawaa Ai' }));
 
     await waitFor(() => expect(mocks.createGuest).toHaveBeenCalledWith({ language: 'ar' }));
     expect(mocks.listGuest).toHaveBeenCalledWith('conversation-1', { limit: 50 });
@@ -116,13 +131,15 @@ describe('AiChatWidget', () => {
 
   it('opens an accessible Arabic RTL administrative shell and focuses its close control', async () => {
     renderWidget('ar');
-    const launcher = screen.getByRole('button', { name: 'فتح مساعد سواء الإداري' });
+    const launcher = screen.getByRole('button', { name: 'فتح Sawaa Ai' });
     launcher.focus();
     fireEvent.click(launcher);
 
-    const dialog = await screen.findByRole('dialog', { name: 'مساعد سواء الإداري' });
+    const dialog = await screen.findByRole('dialog', { name: 'Sawaa Ai' });
     expect(dialog).toHaveAttribute('dir', 'rtl');
     expect(dialog.className).toContain('sm:w-[26rem]');
+    expect(dialog).toHaveClass('sm:right-6');
+    expect(dialog).not.toHaveClass('sm:end-6');
     expect(dialog.className).toContain('motion-reduce:transition-none');
     const close = screen.getByRole('button', { name: 'إغلاق المحادثة' });
     await waitFor(() => expect(close).toHaveFocus());
@@ -133,14 +150,14 @@ describe('AiChatWidget', () => {
     expect(close).toHaveFocus();
     fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
     expect(composer).toHaveFocus();
-    expect(screen.getByText('للمعلومات والخدمات الإدارية فقط، وليس للتقييم أو الاستشارة العلاجية.')).toBeTruthy();
+    expect(screen.getByText('خدمة عملاء ذكية لخدمات المركز والمعالجين والمواعيد والحجوزات.')).toBeTruthy();
   });
 
   it('uses English LTR labels and restores launcher focus when Escape closes the dialog', async () => {
     renderWidget('en');
-    const launcher = screen.getByRole('button', { name: 'Open Sawaa administrative assistant' });
+    const launcher = screen.getByRole('button', { name: 'Open Sawaa Ai' });
     fireEvent.click(launcher);
-    const dialog = await screen.findByRole('dialog', { name: 'Sawaa administrative assistant' });
+    const dialog = await screen.findByRole('dialog', { name: 'Sawaa Ai' });
 
     expect(dialog).toHaveAttribute('dir', 'ltr');
     await waitFor(() => expect(mocks.listGuest).toHaveBeenCalledTimes(1));
@@ -182,7 +199,7 @@ describe('AiChatWidget', () => {
     markChatForReopen();
     renderWidget('ar');
 
-    await screen.findByRole('dialog', { name: 'مساعد سواء الإداري' });
+    await screen.findByRole('dialog', { name: 'Sawaa Ai' });
     await waitFor(() => expect(mocks.currentClient).toHaveBeenCalledTimes(1));
     expect(await screen.findByText('التأكيد النهائي')).toBeTruthy();
     expect(window.sessionStorage.length).toBe(0);
@@ -198,7 +215,7 @@ describe('AiChatWidget', () => {
   it('removes the one-shot chat resume query while preserving other query parameters', async () => {
     window.history.replaceState(null, '', '/?foo=1&chat=resume');
     renderWidget('en');
-    await screen.findByRole('dialog', { name: 'Sawaa administrative assistant' });
+    await screen.findByRole('dialog', { name: 'Sawaa Ai' });
     expect(window.location.search).toBe('?foo=1');
   });
 
@@ -249,7 +266,7 @@ describe('AiChatWidget', () => {
     mocks.currentGuest.mockRejectedValue(new ApiError(401, 'Guest chat cookie is required', {}, 'UNAUTHORIZED'));
     mocks.createGuest.mockReturnValue(new Promise((resolve) => { resolveGuest = resolve; }));
     renderWidget('en');
-    fireEvent.click(screen.getByRole('button', { name: 'Open Sawaa administrative assistant' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open Sawaa Ai' }));
     expect(await screen.findByText('A private message')).toBeTruthy();
 
     act(() => {
@@ -299,7 +316,7 @@ describe('AiChatWidget', () => {
       return 1 as unknown as ReturnType<typeof setInterval>;
     });
     renderWidget('en');
-    fireEvent.click(screen.getByRole('button', { name: 'Open Sawaa administrative assistant' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open Sawaa Ai' }));
     await waitFor(() => expect(mocks.listClient).toHaveBeenCalledTimes(1));
     mocks.listClient.mockRejectedValueOnce(new Error('network down'));
 
@@ -320,7 +337,7 @@ describe('AiChatWidget', () => {
       detail: { conversationId: 'conversation-a' },
     })));
 
-    await screen.findByRole('dialog', { name: 'Sawaa administrative assistant' });
+    await screen.findByRole('dialog', { name: 'Sawaa Ai' });
     await waitFor(() => expect(mocks.selectedClient).toHaveBeenCalledWith('conversation-a'));
     expect(mocks.currentClient).not.toHaveBeenCalled();
     expect(mocks.listClient).toHaveBeenCalledWith('conversation-a', { limit: 50 });

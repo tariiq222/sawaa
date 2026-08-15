@@ -44,7 +44,6 @@ async function bootstrap(): Promise<void> {
       req.path.startsWith('/api/v1/auth') ||
       req.path.startsWith('/api/v1/public/sms/webhooks') ||
       req.path.startsWith('/api/v1/public/payment-webhook') ||
-      req.path.startsWith('/api/v1/public/whatsapp') ||
       req.path.startsWith('/api/v1/public/health') ||
       req.path.startsWith('/api/v1/public/metrics')
     ) {

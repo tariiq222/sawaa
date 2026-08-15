@@ -1,7 +1,7 @@
 'use client';
 
 import { ApiError } from '@sawaa/api-client';
-import { Bot, MessageCircle, ShieldCheck, X } from 'lucide-react';
+import { ShieldCheck, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -33,6 +33,7 @@ import {
 } from './chat.api';
 import { ChatComposer } from './chat-composer';
 import { ChatMessageList } from './chat-message-list';
+import { SawaaAiIcon } from './sawaa-ai-icon';
 import {
   clearPendingChatResume,
   consumeChatReopen,
@@ -291,7 +292,7 @@ function AiChatWidgetSession({
   const closed = conversation?.status === 'CLOSED';
 
   return (
-    <div className="fixed bottom-4 end-4 z-50 sm:bottom-6 sm:end-6">
+    <div className="theme-sawaa-tokens fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6">
       {open && (
         <div
           ref={dialogRef}
@@ -300,11 +301,11 @@ function AiChatWidgetSession({
           aria-label={t('chat.title')}
           dir={locale === 'ar' ? 'rtl' : 'ltr'}
           onKeyDown={handleDialogKeyDown}
-          className="fixed inset-x-3 bottom-3 flex h-[min(42rem,calc(100dvh-1.5rem))] flex-col overflow-hidden rounded-[1.75rem] border border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-xl)] transition-[opacity,transform] sm:inset-x-auto sm:bottom-24 sm:end-6 sm:h-[min(40rem,calc(100dvh-8rem))] sm:w-[26rem] motion-reduce:transition-none motion-reduce:transform-none"
+          className="fixed inset-x-3 bottom-3 flex h-[min(42rem,calc(100dvh-1.5rem))] flex-col overflow-hidden rounded-[1.75rem] border border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-xl)] transition-[opacity,transform] sm:inset-x-auto sm:bottom-24 sm:right-6 sm:h-[min(40rem,calc(100dvh-8rem))] sm:w-[26rem] motion-reduce:transition-none motion-reduce:transform-none"
         >
           <header className="shrink-0 border-b border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] px-4 py-3">
             <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-2xl bg-[var(--sw-primary-50)] text-[var(--sw-primary-700)]" aria-hidden="true"><Bot size={19} /></span>
+              <SawaaAiIcon size="md" />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-sm font-extrabold text-[var(--sw-secondary-700)]">{t('chat.title')}</h2>
                 <p className="mt-0.5 flex items-center gap-1 text-[0.68rem] leading-4 text-[var(--sw-neutral-500)]">
@@ -352,9 +353,11 @@ function AiChatWidgetSession({
         aria-label={t('chat.launcher')}
         aria-expanded={open}
         onClick={() => open ? close() : (setSelectedConversationId(null), setOpen(true))}
-        className={`grid size-14 place-items-center rounded-full bg-[var(--sw-secondary-700)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-lg)] transition-[transform,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:transform-none ${open ? 'pointer-events-none opacity-0 sm:pointer-events-auto sm:opacity-100' : ''}`}
+        className={`grid size-14 place-items-center rounded-[1.15rem] border border-[var(--sw-primary-100)] bg-[var(--sw-neutral-0)] text-[var(--sw-primary-600)] shadow-[var(--sw-shadow-lg)] transition-[transform,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:transform-none ${open ? 'pointer-events-none opacity-0 sm:pointer-events-auto sm:opacity-100' : ''}`}
       >
-        {open ? <X size={22} aria-hidden="true" /> : <MessageCircle size={23} aria-hidden="true" />}
+        {open
+          ? <X size={22} aria-hidden="true" />
+          : <SawaaAiIcon size="lg" />}
       </button>
     </div>
   );

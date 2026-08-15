@@ -58,6 +58,21 @@ describe('ChatMessageList', () => {
     expect(document.querySelector('img')).toBeNull();
   });
 
+  it('updates the retired administrative fallback when rendering existing history', () => {
+    renderList([{
+      ...baseMessage,
+      id: 'legacy-fallback',
+      senderType: 'AI',
+      kind: 'TEXT',
+      body: 'عذرًا، يقتصر دوري على المعلومات الإدارية عن المركز وخدماته. يمكنني عرض خيار التحويل إلى الاستقبال.',
+    }]);
+
+    expect(screen.getByLabelText('Sawaa Ai')).toHaveTextContent(
+      'هذا الطلب خارج خدمات Sawaa Ai. أقدر أساعدك في خدمات المركز والمعالجين والأسعار والمواعيد والحجوزات، أو تحويلك إلى الاستقبال.',
+    );
+    expect(screen.queryByText(/المعلومات الإدارية/)).toBeNull();
+  });
+
   it('distinguishes the client, administrative assistant, reception, system, and action outcomes', () => {
     renderList([
       { ...baseMessage, id: 'client', senderType: 'CLIENT', kind: 'TEXT', body: 'رسالة العميل' },
@@ -90,7 +105,7 @@ describe('ChatMessageList', () => {
     ]);
 
     expect(screen.getByLabelText('المستفيد')).toHaveTextContent('رسالة العميل');
-    expect(screen.getByLabelText('مساعد سواء الإداري')).toHaveTextContent('رد المساعد');
+    expect(screen.getByLabelText('Sawaa Ai')).toHaveTextContent('رد المساعد');
     expect(screen.getByLabelText('فريق الاستقبال')).toHaveTextContent('رد الاستقبال');
     expect(screen.getByLabelText('تحديث النظام')).toHaveTextContent('تحديث الحالة');
     expect(screen.getByLabelText('إجراء مطلوب')).toHaveTextContent('استشارة');
@@ -155,7 +170,7 @@ describe('ChatMessageList', () => {
     const onClientHandoff = vi.fn().mockResolvedValue(undefined);
     renderList([handoffMessage()], true, { onClientHandoff });
     fireEvent.click(screen.getByRole('button', { name: 'التحويل إلى الاستقبال' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('تم تحويل الطلب إلى فريق الاستقبال.');
+    expect(await screen.findByRole('status')).toHaveTextContent('تم استلام طلبك وتحويله لفريق الاستقبال، وبيتواصلون معك خلال أوقات عمل المركز.');
   });
 
   it('offers a bounded assistant retry and reception handoff without provider details', () => {
@@ -168,7 +183,7 @@ describe('ChatMessageList', () => {
       body: 'ساعات العمل؟',
       metadata: { action: 'ASSISTANT_RECOVERY', canRetry: true },
     }], false, { onRetryAssistant });
-    const retry = screen.getByRole('button', { name: 'إعادة محاولة المساعد' });
+    const retry = screen.getByRole('button', { name: 'إعادة محاولة Sawaa Ai' });
     fireEvent.click(retry);
     fireEvent.click(retry);
     expect(onRetryAssistant).toHaveBeenCalledTimes(1);

@@ -219,7 +219,8 @@ export interface paths {
         /** List knowledge-base documents */
         get: operations["DashboardAiController_listDocuments_v1"];
         put?: never;
-        post?: never;
+        /** Create a knowledge-base document */
+        post: operations["DashboardAiController_createDocument_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -243,6 +244,109 @@ export interface paths {
         head?: never;
         /** Update a knowledge-base document */
         patch: operations["DashboardAiController_updateDocument_v1"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/ai/knowledge-base/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish a knowledge-base document */
+        post: operations["DashboardAiController_publishDocument_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/ai/knowledge-base/{id}/reindex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request knowledge-base document reindexing */
+        post: operations["DashboardAiController_reindexDocument_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/ai/knowledge-base/{id}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unpublish a knowledge-base document */
+        post: operations["DashboardAiController_unpublishDocument_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/ai/provider-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the safe AI provider configuration projection */
+        get: operations["DashboardAiController_getAiProviderConfigEndpoint_v1"];
+        /** Update AI provider settings without accepting a credential */
+        put: operations["DashboardAiController_upsertAiProviderConfigEndpoint_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/ai/provider-config/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List safe curated AI provider model suggestions */
+        get: operations["DashboardAiController_getAiProviderModels_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/ai/provider-config/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test a write-only candidate AI provider credential */
+        post: operations["DashboardAiController_testAiProviderConfigEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/dashboard/bookings": {
@@ -1570,59 +1674,6 @@ export interface paths {
         post?: never;
         /** Remove a role from a user */
         delete: operations["DashboardIdentityController_removeRoleEndpoint_v1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/integrations/whatsapp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get WhatsApp integration status (no secrets returned) */
-        get: operations["WhatsappIntegrationsController_get_v1"];
-        /** Create or update WhatsApp Cloud API credentials */
-        put: operations["WhatsappIntegrationsController_upsert_v1"];
-        post?: never;
-        /** Erase WhatsApp credentials and disconnect the agent */
-        delete: operations["WhatsappIntegrationsController_reset_v1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/integrations/whatsapp/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Verify Evolution API credentials by fetching connection state */
-        post: operations["WhatsappIntegrationsController_test_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/integrations/whatsapp/unlink": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Disconnect the WhatsApp number while preserving Evolution API configuration and conversation history */
-        post: operations["WhatsappIntegrationsController_unlink_v1"];
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3007,177 +3058,6 @@ export interface paths {
         };
         /** Get top-performing employees by revenue (current month) */
         get: operations["DashboardStatsController_topPerformers_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/agent-config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get WhatsApp AI agent config (model, prompts, defaults) */
-        get: operations["WhatsappAgentController_getAgentConfigEndpoint_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update WhatsApp AI agent config */
-        patch: operations["WhatsappAgentController_upsertAgentConfigEndpoint_v1"];
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/control": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Start, stop, or restart the WhatsApp agent */
-        post: operations["WhatsappAgentController_controlEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/conversations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List WhatsApp conversations (live monitoring) */
-        get: operations["WhatsappAgentController_listConversationsEndpoint_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/conversations/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a WhatsApp conversation with all messages */
-        get: operations["WhatsappAgentController_getConversationEndpoint_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/conversations/{id}/close": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Close a conversation and release staff takeover */
-        post: operations["WhatsappAgentController_closeConversationEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/conversations/{id}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Mark WhatsApp customer messages as read */
-        post: operations["WhatsappAgentController_markConversationReadEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/conversations/{id}/release": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Return a WhatsApp conversation to the AI agent */
-        post: operations["WhatsappAgentController_releaseTakeoverEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/conversations/{id}/reply": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Send a message as staff (hand takeover) */
-        post: operations["WhatsappAgentController_staffReplyEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/qr": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get the current WhatsApp QR code for pairing (Baileys only) */
-        get: operations["WhatsappAgentController_getQrEndpoint_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/whatsapp/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get WhatsApp agent runtime status (connection, uptime, counters) */
-        get: operations["WhatsappAgentController_getStatusEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4828,23 +4708,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/public/whatsapp/webhook": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Receive an authenticated Evolution API message webhook. */
-        post: operations["WhatsappWebhookController_handle_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4870,6 +4733,33 @@ export interface components {
              * @example National Day
              */
             nameEn?: string;
+        };
+        AiProviderConfigResponseDto: {
+            connectionStatus: string;
+            hasCredential: boolean;
+            isEnabled: boolean;
+            lastTestErrorCode: string | null;
+            lastTestOk: boolean | null;
+            /** Format: date-time */
+            lastTestedAt: string | null;
+            maxTokens: number;
+            model: string;
+            /** @enum {string} */
+            provider: "OPENROUTER" | "OPENAI";
+            temperature: number;
+        };
+        AiProviderModelSuggestionDto: {
+            allowCustom: boolean;
+            models: string[];
+            /** @enum {string} */
+            provider: "OPENROUTER" | "OPENAI";
+        };
+        AiProviderTestResponseDto: {
+            errorCode: string | null;
+            ok: boolean;
+            persisted: boolean;
+            /** Format: date-time */
+            testedAt: string | null;
         };
         ApiErrorDto: {
             /**
@@ -5984,6 +5874,35 @@ export interface components {
              * @example 0
              */
             sortOrder?: number;
+        };
+        CreateDocumentDto: {
+            /** @description Plain-text body for manual entries */
+            content?: string | null;
+            /**
+             * @description Draft state; publication timestamps are server-owned
+             * @default false
+             * @example false
+             */
+            isPublished: boolean;
+            /**
+             * @description Arbitrary JSON metadata
+             * @example {
+             *       "source": "admin"
+             *     }
+             */
+            metadata?: Record<string, never>;
+            /** @description HTTPS source URL for URL entries */
+            sourceRef?: string | null;
+            /**
+             * @example manual
+             * @enum {string}
+             */
+            sourceType: "manual" | "url";
+            /**
+             * @description Document title
+             * @example Clinic FAQ
+             */
+            title: string;
         };
         CreateEmailTemplateDto: {
             /** @description Block tree (source of truth — when present, htmlBody is rendered from this) */
@@ -7129,6 +7048,82 @@ export interface components {
         };
         /** @enum {string} */
         InvoiceStatus: "DRAFT" | "ISSUED" | "PAID" | "PARTIALLY_PAID" | "PARTIALLY_REFUNDED" | "VOID" | "REFUNDED";
+        KnowledgeDocumentDetailResponseDto: {
+            chunks: {
+                chunkIndex?: number;
+                /** Format: uuid */
+                id?: string;
+                tokenCount?: number;
+            }[];
+            content: Record<string, never> | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            isPublished: boolean;
+            lastIndexErrorCode: Record<string, never> | null;
+            /** Format: date-time */
+            lastIndexedAt: Record<string, never> | null;
+            metadata: Record<string, never> | null;
+            /** Format: date-time */
+            publishedAt: Record<string, never> | null;
+            sourceRef: Record<string, never> | null;
+            /** @enum {string} */
+            sourceType: "manual" | "url";
+            /**
+             * @example PENDING
+             * @enum {string}
+             */
+            status: "PENDING" | "EMBEDDED" | "FAILED";
+            title: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        KnowledgeDocumentPageResponseDto: {
+            data: components["schemas"]["KnowledgeDocumentSummaryResponseDto"][];
+            meta?: {
+                limit: number;
+                page: number;
+                total: number;
+                totalPages: number;
+            };
+        };
+        KnowledgeDocumentSummaryResponseDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            isPublished: boolean;
+            lastIndexErrorCode: Record<string, never> | null;
+            /** Format: date-time */
+            lastIndexedAt: Record<string, never> | null;
+            metadata: Record<string, never> | null;
+            /** Format: date-time */
+            publishedAt: Record<string, never> | null;
+            sourceRef: Record<string, never> | null;
+            /** @enum {string} */
+            sourceType: "manual" | "url";
+            /**
+             * @example PENDING
+             * @enum {string}
+             */
+            status: "PENDING" | "EMBEDDED" | "FAILED";
+            title: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        KnowledgeReindexResponseDto: {
+            contentHash: string;
+            /** Format: uuid */
+            documentId: string;
+            /** Format: uuid */
+            eventId: Record<string, never> | null;
+            /**
+             * @example PENDING
+             * @enum {string}
+             */
+            status: "PENDING";
+        };
         ListClientChatConversationsResponseDto: {
             data: components["schemas"]["ClientChatConversationSummaryDto"][];
             meta: components["schemas"]["ClientChatConversationCursorMetaDto"];
@@ -7391,7 +7386,6 @@ export interface components {
              */
             invoiceId?: string;
         };
-        Object: Record<string, never>;
         OnboardEmployeeDto: {
             /**
              * @description Avatar image URL
@@ -7534,7 +7528,7 @@ export interface components {
              * @example Booking
              * @enum {string}
              */
-            subject: "Booking" | "Branch" | "Category" | "Client" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User" | "WhatsappConversation";
+            subject: "Booking" | "Branch" | "Category" | "Client" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
         };
         PreviewEmailTemplateDto: {
             /**
@@ -8099,10 +8093,6 @@ export interface components {
              */
             user: string;
         };
-        StaffReplyDto: {
-            /** @example موعدك تأكد — الدفع عند الاستقبال */
-            message: string;
-        };
         SubmitIntakeResponseDto: {
             /**
              * @description Answers keyed by field ID. Values are a string (TEXT/TEXTAREA/NUMBER/DATE/SELECT/RADIO) or string[] (CHECKBOX).
@@ -8162,6 +8152,21 @@ export interface components {
         TaqnyatCredentialsDto: {
             /** @description Taqnyat API token (Bearer) */
             apiToken: string;
+        };
+        TestAiProviderConfigDto: {
+            /** @description Write-only candidate API key. Never returned or persisted unless saveCredential is true. */
+            candidateApiKey: string;
+            isEnabled?: boolean;
+            /** @default 800 */
+            maxTokens: number;
+            /** @example openai/gpt-4o-mini */
+            model: string;
+            /** @enum {string} */
+            provider: "OPENROUTER" | "OPENAI";
+            /** @description Persist the candidate only after the bounded test succeeds. */
+            saveCredential?: boolean;
+            /** @default 0.4 */
+            temperature: number;
         };
         TestEmailConfigDto: {
             /**
@@ -8555,6 +8560,10 @@ export interface components {
             sortOrder?: number;
         };
         UpdateDocumentDto: {
+            /** @description Plain-text document body */
+            content?: string | null;
+            /** @description Publication state; publication timestamps are server-owned */
+            isPublished?: boolean | null;
             /**
              * @description Arbitrary JSON metadata
              * @example {
@@ -8562,6 +8571,10 @@ export interface components {
              *     }
              */
             metadata?: Record<string, never>;
+            /** @description HTTPS source URL */
+            sourceRef?: string | null;
+            /** @enum {string|null} */
+            sourceType?: "manual" | "url" | null;
             /**
              * @description Document title
              * @example Clinic FAQ
@@ -8953,6 +8966,17 @@ export interface components {
              */
             url: string;
         };
+        UpsertAiProviderConfigDto: {
+            isEnabled?: boolean;
+            /** @default 800 */
+            maxTokens: number;
+            /** @example openai/gpt-4o-mini */
+            model: string;
+            /** @enum {string} */
+            provider: "OPENROUTER" | "OPENAI";
+            /** @default 0.4 */
+            temperature: number;
+        };
         UpsertBookingSettingsDto: {
             /**
              * @description Hours after booking start to auto-complete the booking
@@ -9322,54 +9346,6 @@ export interface components {
             taqnyat?: components["schemas"]["TaqnyatCredentialsDto"];
             unifonic?: components["schemas"]["UnifonicCredentialsDto"];
         };
-        UpsertWhatsappAgentConfigDto: {
-            /**
-             * @description 0=Sunday..6=Saturday (Saudi week)
-             * @example [
-             *       0,
-             *       1,
-             *       2,
-             *       3,
-             *       4
-             *     ]
-             */
-            activeDays?: string[];
-            /**
-             * @description OpenRouter (or OpenAI-compatible) API key. Empty string clears the stored key.
-             * @example sk-or-v1-...
-             */
-            aiApiKey?: string;
-            /** @example 800 */
-            aiMaxTokens: number;
-            /** @example anthropic/claude-3.5-haiku */
-            aiModel: string;
-            /** @example 0.4 */
-            aiTemperature: number;
-            /** @default false */
-            businessHoursOnly: boolean;
-            /**
-             * @example ar
-             * @enum {string}
-             */
-            defaultLanguage: "ar" | "en";
-            /** @example أهلاً! كيف أقدر أساعدك؟ */
-            greetingAr?: string;
-            /** @example Hi! How can I help? */
-            greetingEn?: string;
-            /** @example أنت مساعد سوا... */
-            systemPromptAr: string;
-            /** @example You are Sawaa assistant... */
-            systemPromptEn: string;
-        };
-        UpsertWhatsappConfigDto: {
-            /** @default true */
-            isActive: boolean;
-            /**
-             * @example EVOLUTION_API
-             * @enum {string}
-             */
-            provider: "META_CLOUD" | "EVOLUTION_API";
-        };
         UpsertZoomConfigDto: {
             /** @example your_account_id */
             zoomAccountId?: string;
@@ -9455,10 +9431,6 @@ export interface components {
              * @example TRF-20260501-001
              */
             transferRef?: string;
-        };
-        WhatsappControlDto: {
-            /** @enum {string} */
-            action: "start" | "stop" | "restart";
         };
     };
     responses: never;
@@ -10225,19 +10197,67 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data?: {
-                            /** Format: date-time */
-                            createdAt?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            status?: string;
-                            title?: string;
-                        }[];
-                        page?: number;
-                        total?: number;
-                        totalPages?: number;
-                    };
+                    "application/json": components["schemas"]["KnowledgeDocumentPageResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardAiController_createDocument_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDocumentDto"];
+            };
+        };
+        responses: {
+            /** @description Created knowledge-base document */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocumentSummaryResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -10296,15 +10316,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        content?: string;
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        status?: string;
-                        title?: string;
-                    };
+                    "application/json": components["schemas"]["KnowledgeDocumentDetailResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -10481,6 +10493,407 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardAiController_publishDocument_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Document UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocumentSummaryResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardAiController_reindexDocument_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Document UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reindex request accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeReindexResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardAiController_unpublishDocument_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Document UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unpublished document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocumentSummaryResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardAiController_getAiProviderConfigEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderConfigResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardAiController_upsertAiProviderConfigEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertAiProviderConfigDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderConfigResponseDto"];
+                };
+            };
+            /** @description Enablement requires a matching successful test */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardAiController_getAiProviderModels_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderModelSuggestionDto"][];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardAiController_testAiProviderConfigEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestAiProviderConfigDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderTestResponseDto"];
+                };
+            };
+            /** @description Invalid provider candidate or model */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
             };
             /** @description Unhandled server error */
             500: {
@@ -16954,288 +17367,6 @@ export interface operations {
             };
             /** @description User or role not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappIntegrationsController_get_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappIntegrationsController_upsert_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertWhatsappConfigDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappIntegrationsController_reset_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappIntegrationsController_test_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description WhatsApp credential test result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        error?: string | null;
-                        ok?: boolean;
-                        phoneNumber?: string | null;
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappIntegrationsController_unlink_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Unlink result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        logoutOk?: boolean;
-                        unlinked?: boolean;
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25412,625 +25543,6 @@ export interface operations {
             };
         };
     };
-    WhatsappAgentController_getAgentConfigEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_upsertAgentConfigEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertWhatsappAgentConfigDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_controlEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WhatsappControlDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_listConversationsEndpoint_v1: {
-        parameters: {
-            query: {
-                status: string;
-                /** @description Filter conversations by whether the AI created a WhatsApp booking for the client */
-                bookingFilter?: "BOOKED" | "NOT_BOOKED";
-                search: string;
-                unread: string;
-                staffTakeover: string;
-                deliveryFailure: string;
-                from: string;
-                to: string;
-                staffUserId: string;
-                sort: string;
-                page: string;
-                pageSize: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_getConversationEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_closeConversationEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_markConversationReadEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_releaseTakeoverEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_staffReplyEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StaffReplyDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_getQrEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    WhatsappAgentController_getStatusEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     PublicHealthController_check_v1: {
         parameters: {
             query?: never;
@@ -31579,47 +31091,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
-            };
-        };
-    };
-    WhatsappWebhookController_handle_v1: {
-        parameters: {
-            query?: never;
-            header: {
-                authorization: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Object"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok?: boolean;
-                    };
-                };
-            };
-            /** @description Missing raw body or invalid payload shape */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Signature verification failed or webhook secret not configured */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };

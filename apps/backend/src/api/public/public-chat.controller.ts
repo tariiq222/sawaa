@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, HttpStatus, Ip, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
@@ -106,6 +106,7 @@ export class PublicChatController {
 
   @Public()
   @Get('conversations/:conversationId/messages')
+  @Header('Cache-Control', 'no-store, max-age=0')
   @ApiOperation({ summary: 'List messages as a guest chat owner' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
   listMessagesForGuest(
