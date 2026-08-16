@@ -4,9 +4,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Phone, Mail } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
-import { useT } from '@/features/locale/locale-provider';
+import { useLocale, useT } from '@/features/locale/locale-provider';
 import { PAYMENT_METHODS, SITE } from '../../lib/constants';
-import type { SupportGroup } from '@/features/site-content/public';
+import type { SupportGroup } from '@/features/support-groups/support-groups.api';
 
 const navLinks = [
   { key: 'nav.home', href: '/' },
@@ -17,13 +17,14 @@ const navLinks = [
   { key: 'nav.contact', href: '/contact' },
 ] as const;
 
-export interface FooterClinic {
+export interface FooterService {
   id: string;
   nameAr: string;
+  nameEn: string | null;
 }
 
 interface FooterProps {
-  clinics?: FooterClinic[];
+  services?: FooterService[];
   supportGroups?: SupportGroup[];
 }
 
@@ -68,8 +69,9 @@ function ColumnHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Footer({ clinics = [], supportGroups = [] }: FooterProps) {
+export function Footer({ services = [], supportGroups = [] }: FooterProps) {
   const t = useT();
+  const locale = useLocale();
   const branding = useBranding();
   const brandName = branding.organizationNameAr || SITE.name;
   const tagline = branding.productTagline || SITE.desc;
@@ -191,15 +193,19 @@ export function Footer({ clinics = [], supportGroups = [] }: FooterProps) {
             </ul>
           </div>
 
-          {clinics.length > 0 ? (
+          {services.length > 0 ? (
             <div>
-              <ColumnHeader>{t('footer.clinics')}</ColumnHeader>
+              <ColumnHeader>{t('footer.services')}</ColumnHeader>
               <ul className="space-y-3">
-                {clinics.map((c) => (
-                  <li key={c.id}>
-                    <span className="text-[0.813rem]" style={{ color: 'var(--sw-neutral-500)' }}>
-                      {c.nameAr}
-                    </span>
+                {services.map((service) => (
+                  <li key={service.id}>
+                    <Link
+                      href={`/booking?serviceId=${encodeURIComponent(service.id)}`}
+                      className="text-[0.813rem] transition hover:text-[var(--sw-primary-700)]"
+                      style={{ color: 'var(--sw-neutral-500)' }}
+                    >
+                      {locale === 'en' ? service.nameEn?.trim() || service.nameAr : service.nameAr}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -209,18 +215,24 @@ export function Footer({ clinics = [], supportGroups = [] }: FooterProps) {
           <div>
             <ColumnHeader>{t('footer.supportGroups')}</ColumnHeader>
             <ul className="space-y-3">
-              {(supportGroups.length > 0 ? supportGroups : []).map((g) => (
-                <li key={g.slug}>
+              {supportGroups.map((program) => {
+                const name =
+                  locale === 'en'
+                    ? program.nameEn?.trim() || program.nameAr
+                    : program.nameAr;
+                return (
+                <li key={program.id}>
                   <Link
-                    href="/support-groups"
-                    aria-label={g.name}
+                    href={`/support-groups/${encodeURIComponent(program.id)}`}
+                    aria-label={name}
                     className="text-[0.813rem] transition"
                     style={{ color: 'var(--sw-neutral-500)' }}
                   >
-                    {g.name}
+                    {name}
                   </Link>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
 

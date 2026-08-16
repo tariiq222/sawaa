@@ -5796,6 +5796,11 @@ export interface components {
              */
             notes?: string;
             /**
+             * @description Confirm the booking now and collect payment at the center
+             * @example true
+             */
+            payAtClinic?: boolean;
+            /**
              * @description Service ID
              * @example 00000000-0000-0000-0000-000000000001
              */

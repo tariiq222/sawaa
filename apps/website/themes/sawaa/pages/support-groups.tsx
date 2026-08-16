@@ -6,18 +6,24 @@ import {
   CalendarDays,
   Tag,
 } from 'lucide-react';
-import { getPublicGroupSessions, type SupportGroup } from '@/features/support-groups/support-groups.api';
+import {
+  getPublicGroupSessionsResult,
+  type SupportGroup,
+} from '@/features/support-groups/support-groups.api';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { halalasToSarNumber } from '@/lib/money';
 
 export async function SawaaSupportGroupsPage() {
   const locale = await getLocale();
-  const programs = await getPublicGroupSessions().catch(() => [] as SupportGroup[]);
+  const result = await getPublicGroupSessionsResult();
+  const programs = result.programs;
   const t = (key: MessageKey) => translate(locale, key);
 
-  const total = programs.length;
-  const totalSeats = programs.reduce((sum, p) => sum + Math.max(0, p.maxParticipants - p.enrolledCount), 0);
+  const total = result.status === 'success' ? programs.length : null;
+  const totalSeats = result.status === 'success'
+    ? programs.reduce((sum, p) => sum + Math.max(0, p.maxParticipants - p.enrolledCount), 0)
+    : null;
 
   return (
     <>
@@ -25,7 +31,12 @@ export async function SawaaSupportGroupsPage() {
 
       <section className="relative pb-24 md:pb-28 -mt-6">
         <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
-          <GroupsGrid programs={programs} locale={locale} t={t} />
+          <GroupsGrid
+            programs={programs}
+            locale={locale}
+            t={t}
+            loadFailed={result.status === 'error'}
+          />
         </div>
       </section>
 
@@ -36,8 +47,8 @@ export async function SawaaSupportGroupsPage() {
 
 interface HeroProps {
   t: (key: MessageKey) => string;
-  total: number;
-  totalSeats: number;
+  total: number | null;
+  totalSeats: number | null;
 }
 
 function GroupsHero({ t, total, totalSeats }: HeroProps) {
@@ -86,8 +97,8 @@ function GroupsHero({ t, total, totalSeats }: HeroProps) {
           className="mt-14 md:mt-20 pt-10 grid grid-cols-1 sm:grid-cols-3 gap-y-8 sm:gap-x-12"
           style={{ borderTop: '1px solid color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }}
         >
-          <Stat value={String(total).padStart(2, '0')} label={t('supportGroups.statTotal')} />
-          <Stat value={String(totalSeats).padStart(2, '0')} label={t('supportGroups.statServices')} withDivider />
+          <Stat value={total === null ? '—' : String(total).padStart(2, '0')} label={t('supportGroups.statTotal')} />
+          <Stat value={totalSeats === null ? '—' : String(totalSeats).padStart(2, '0')} label={t('supportGroups.statServices')} withDivider />
           <Stat icon={<BadgeCheck className="w-7 h-7" strokeWidth={1.6} aria-hidden />} label={t('clinics.statLicensed')} withDivider />
         </div>
       </div>
@@ -146,9 +157,10 @@ interface GridProps {
   programs: SupportGroup[];
   locale: 'ar' | 'en';
   t: (key: MessageKey) => string;
+  loadFailed: boolean;
 }
 
-function GroupsGrid({ programs, locale, t }: GridProps) {
+function GroupsGrid({ programs, locale, t, loadFailed }: GridProps) {
   if (programs.length === 0) {
     return (
       <div className="flex justify-center mt-8">
@@ -159,11 +171,11 @@ function GroupsGrid({ programs, locale, t }: GridProps) {
           <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: 'var(--sw-primary-50)' }}>
             <Users className="w-6 h-6" style={{ color: 'var(--sw-primary-600)' }} />
           </div>
-          <h3 className="text-base font-extrabold mb-2" style={{ color: 'var(--sw-secondary-700)' }}>
-            {t('supportGroups.emptyTitle')}
-          </h3>
+          <h2 className="text-base font-extrabold mb-2" style={{ color: 'var(--sw-secondary-700)' }}>
+            {t(loadFailed ? 'supportGroups.loadFailedTitle' : 'supportGroups.emptyTitle')}
+          </h2>
           <p className="text-sm leading-relaxed" style={{ color: 'var(--sw-neutral-500)' }}>
-            {t('supportGroups.empty')}
+            {t(loadFailed ? 'supportGroups.loadFailed' : 'supportGroups.empty')}
           </p>
         </div>
       </div>
@@ -171,21 +183,25 @@ function GroupsGrid({ programs, locale, t }: GridProps) {
   }
 
   const intl = locale === 'ar' ? 'ar' : 'en-US';
-  const fmtMoney = (halalas: number) =>
-    new Intl.NumberFormat(intl, { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(
-      halalasToSarNumber(halalas),
-    );
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
       {programs.map((p, i) => {
         const href = `/support-groups/${encodeURIComponent(p.id)}`;
-        const name = locale === 'en' && p.nameEn ? p.nameEn : p.nameAr;
-        const description =
-          (locale === 'en' && p.publicDescriptionEn) ||
-          p.publicDescriptionAr ||
-          p.descriptionAr ||
-          t('supportGroups.defaultDescription');
+        const name = locale === 'en' ? p.nameEn?.trim() || p.nameAr : p.nameAr;
+        const description = locale === 'en'
+          ? p.publicDescriptionEn?.trim() ||
+            p.descriptionEn?.trim() ||
+            p.publicDescriptionAr?.trim() ||
+            p.descriptionAr?.trim() ||
+            t('supportGroups.defaultDescription')
+          : p.publicDescriptionAr?.trim() ||
+            p.descriptionAr?.trim() ||
+            t('supportGroups.defaultDescription');
+        const price = new Intl.NumberFormat(intl, {
+          style: 'currency',
+          currency: p.currency || 'SAR',
+          maximumFractionDigits: 0,
+        }).format(halalasToSarNumber(Number(p.price)));
         const seatsLeft = Math.max(0, p.maxParticipants - p.enrolledCount);
         const isFull = seatsLeft === 0;
         return (
@@ -245,7 +261,7 @@ function GroupsGrid({ programs, locale, t }: GridProps) {
               <span aria-hidden className="w-px self-stretch" style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }} />
               <Meter
                 icon={<Tag className="w-3.5 h-3.5" />}
-                value={fmtMoney(Number(p.price))}
+                value={price}
               />
             </div>
 
@@ -286,10 +302,10 @@ function NotSureCTA({ t }: { t: (key: MessageKey) => string }) {
           <div className="relative z-10 grid md:grid-cols-12 gap-6 md:gap-10 items-center">
             <div className="md:col-span-8">
               <h2 className="font-extrabold tracking-tight text-white mb-3" style={{ fontSize: 'clamp(1.5rem, 3vw, 2.125rem)', lineHeight: 1.2, letterSpacing: '-0.015em' }}>
-                {t('clinics.notSure.title')}
+                {t('supportGroups.notSure.title')}
               </h2>
               <p className="leading-[1.85] text-[0.9375rem] md:text-[1rem]" style={{ color: 'rgba(255,255,255,0.78)', maxWidth: '52ch' }}>
-                {t('clinics.notSure.body')}
+                {t('supportGroups.notSure.body')}
               </p>
             </div>
             <div className="md:col-span-4 md:flex md:justify-end">
@@ -298,7 +314,7 @@ function NotSureCTA({ t }: { t: (key: MessageKey) => string }) {
                 className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
                 style={{ color: 'var(--sw-secondary-700)', boxShadow: 'var(--sw-shadow-md)' }}
               >
-                {t('clinics.notSure.cta')}
+                {t('supportGroups.notSure.cta')}
                 <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
               </Link>
             </div>

@@ -170,6 +170,24 @@ describe('booking.api', () => {
       const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
       expect(body).not.toHaveProperty('durationOptionId');
     });
+
+    it('serializes payAtClinic as a boolean for at-center bookings', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse({ data: { id: 'bk-center', status: 'CONFIRMED', invoiceId: null } }),
+      );
+
+      await createBooking({
+        serviceId: 'svc1',
+        employeeId: 'emp1',
+        branchId: 'br1',
+        startsAt: '2026-07-01T10:00:00.000Z',
+        deliveryType: 'ONLINE',
+        payAtClinic: true,
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(body.payAtClinic).toBe(true);
+    });
   });
 
   describe('initPayment', () => {

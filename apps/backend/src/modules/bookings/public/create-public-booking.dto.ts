@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingType, DeliveryType } from '@prisma/client';
@@ -55,4 +55,12 @@ export class CreatePublicBookingDto {
 
   @ApiPropertyOptional({ description: 'Additional notes for the booking', example: 'First visit' })
   @IsOptional() @IsString() notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Confirm the booking now and collect payment at the center',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  payAtClinic?: boolean;
 }

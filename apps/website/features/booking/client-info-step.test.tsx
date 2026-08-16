@@ -326,6 +326,61 @@ describe('ClientInfoStep', () => {
     expect(onSubmitInfo).toHaveBeenCalled();
   });
 
+  it('defaults to online payment and submits payAtClinic=false', () => {
+    useCurrentClientMock.mockReturnValue({
+      client: fakeClient,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const onSubmitInfo = vi.fn();
+    render(
+      withLocale(
+        <ClientInfoStep
+          slot={slot}
+          service={service}
+          employee={employee}
+          onSubmitInfo={onSubmitInfo}
+          isSubmitting={false}
+        />,
+      ),
+    );
+
+    expect(screen.getByRole('radio', { name: /Online payment/i })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: /Confirm.*Pay/i }));
+
+    expect(onSubmitInfo).toHaveBeenCalledWith(false);
+  });
+
+  it('selects pay at the center and submits payAtClinic=true', () => {
+    useCurrentClientMock.mockReturnValue({
+      client: fakeClient,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const onSubmitInfo = vi.fn();
+    render(
+      withLocale(
+        <ClientInfoStep
+          slot={slot}
+          service={service}
+          employee={employee}
+          onSubmitInfo={onSubmitInfo}
+          isSubmitting={false}
+        />,
+        'ar',
+      ),
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: /الدفع في المركز/i }));
+    expect(screen.getByRole('radio', { name: /الدفع في المركز/i })).toBeChecked();
+    expect(screen.queryByText(/دفع آمن ومشفّر عبر ميسر/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /تأكيد الحجز/i }));
+
+    expect(onSubmitInfo).toHaveBeenCalledWith(true);
+  });
+
   it('disables the confirm button while isSubmitting is true', () => {
     useCurrentClientMock.mockReturnValue({
       client: fakeClient,

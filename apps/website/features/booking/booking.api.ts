@@ -24,6 +24,8 @@ export interface AuthedBookingPayload {
   bookingType?: 'INDIVIDUAL' | 'WALK_IN' | 'GROUP';
   couponCode?: string;
   notes?: string;
+  /** Confirm immediately and collect payment at the center. */
+  payAtClinic?: boolean;
 }
 
 /**

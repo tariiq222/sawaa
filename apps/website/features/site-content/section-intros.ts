@@ -10,7 +10,7 @@ export interface SectionIntro {
 
 export type SectionIntroKey =
   | 'features'
-  | 'clinics'
+  | 'services'
   | 'supportGroups'
   | 'team'
   | 'testimonials'
@@ -20,7 +20,7 @@ export type SectionIntroKey =
 
 export interface HomeSectionIntros {
   features: SectionIntro;
-  clinics: SectionIntro;
+  services: SectionIntro;
   supportGroups: SectionIntro;
   team: SectionIntro;
   testimonials: SectionIntro;
@@ -37,19 +37,19 @@ export const SECTION_INTRO_DEFAULTS: HomeSectionIntros = {
     titleSuffix: 'في مكان واحد',
     subtitle: 'نقدم خدمات متكاملة تجمع بين الاستشارات النفسية والأسرية وعلاج الإدمان',
   },
-  clinics: {
-    tag: 'عياداتنا',
-    titlePrefix: 'عيادات',
-    titleHighlight: 'متخصصة',
+  services: {
+    tag: 'خدماتنا',
+    titlePrefix: 'خدمات',
+    titleHighlight: 'متاحة للحجز',
     titleSuffix: '',
-    subtitle: 'كل عيادة صُممت لتغطية احتياج محدد',
+    subtitle: 'اختر الخدمة المناسبة لاحتياجك، وتعرّف على مدتها وتكلفتها، ثم أكمل الحجز مع أحد مختصينا.',
   },
   supportGroups: {
-    tag: 'مجموعات الدعم',
-    titlePrefix: 'مجموعات دعم',
-    titleHighlight: 'متخصصة',
+    tag: 'البرامج الجماعية',
+    titlePrefix: 'برامج جماعية',
+    titleHighlight: 'تنمو معك',
     titleSuffix: '',
-    subtitle: 'بيئة آمنة للمشاركة والتعافي مع مجموعة صغيرة بإشراف متخصصين',
+    subtitle: 'استكشف البرامج المنشورة من المركز، وتعرّف على موعدها ومدتها ومقاعدها قبل الانضمام.',
   },
   team: {
     tag: 'فريقنا',
@@ -96,19 +96,19 @@ export const SECTION_INTRO_DEFAULTS_EN: HomeSectionIntros = {
     titleSuffix: 'in one place',
     subtitle: 'We offer integrated services combining psychological & family counseling and addiction recovery',
   },
-  clinics: {
-    tag: 'Our Clinics',
-    titlePrefix: 'Specialized',
-    titleHighlight: 'clinics',
+  services: {
+    tag: 'Our Services',
+    titlePrefix: 'Services',
+    titleHighlight: 'available to book',
     titleSuffix: '',
-    subtitle: 'Each clinic is designed to address a specific need at the highest quality',
+    subtitle: 'Choose the service that fits your needs, review its duration and price, then continue booking with one of our specialists.',
   },
   supportGroups: {
-    tag: 'Support Groups',
-    titlePrefix: 'Specialized',
-    titleHighlight: 'support groups',
+    tag: 'Group Programs',
+    titlePrefix: 'Group programs',
+    titleHighlight: 'that grow with you',
     titleSuffix: '',
-    subtitle: 'A safe space to share and recover in a small group led by specialists',
+    subtitle: 'Explore programs published by the center, including schedules, duration, and available seats.',
   },
   team: {
     tag: 'Our Team',

@@ -140,6 +140,37 @@ describe('PublicBookingsController (e2e)', () => {
         }),
       );
     });
+
+    it('accepts payAtClinic as a boolean and forwards it with the authenticated client', async () => {
+      mockCreateBooking.execute.mockResolvedValue({
+        id: 'booking-at-center',
+        status: 'CONFIRMED',
+        invoiceId: null,
+      });
+
+      await request(app.getHttpServer())
+        .post('/public/bookings')
+        .set('Authorization', 'Bearer fake-client-session')
+        .send({ ...validBooking, payAtClinic: true })
+        .expect(201);
+
+      expect(mockCreateBooking.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: 'client-1',
+          payAtClinic: true,
+        }),
+      );
+    });
+
+    it('rejects a string payAtClinic value instead of coercing it', async () => {
+      await request(app.getHttpServer())
+        .post('/public/bookings')
+        .set('Authorization', 'Bearer fake-client-session')
+        .send({ ...validBooking, payAtClinic: 'true' })
+        .expect(400);
+
+      expect(mockCreateBooking.execute).not.toHaveBeenCalled();
+    });
   });
 });
 

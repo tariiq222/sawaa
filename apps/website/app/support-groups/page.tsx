@@ -9,8 +9,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return buildPageMetadata({
     branding,
     path: '/support-groups',
-    titleAr: 'الدعم الجماعي',
-    descriptionAr: 'برامج دعم جماعي يقودها مختصون في مركز سواء — مساحة آمنة للتعافي المشترك والدعم المجتمعي.',
+    titleAr: 'البرامج الجماعية',
+    descriptionAr: 'برامج جماعية منشورة من مركز سواء، بمواعيد ومقاعد واضحة وبإشراف مختصين.',
+    titleEn: 'Group Programs',
+    descriptionEn: 'Group programs published by Sawaa with clear schedules, capacity, and specialist supervision.',
   });
 }
 

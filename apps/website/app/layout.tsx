@@ -3,7 +3,6 @@ import { BrandingProvider, BrandingStyle, getPublicBrandingForSsr } from '@/feat
 import { QueryProvider } from '@/providers/query-provider';
 import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
-import { CookieConsentBanner } from '@/components/consent/cookie-consent-banner';
 import { AnalyticsLoader } from '@/components/analytics/analytics-loader';
 import { FloatingWhatsApp } from '@/components/cta/floating-whatsapp';
 import './globals.css';
@@ -126,7 +125,6 @@ export default async function RootLayout({
           <LocaleProvider locale={locale}>
             <BrandingProvider branding={branding}>
               {children}
-              <CookieConsentBanner />
               <AnalyticsLoader />
               <FloatingWhatsApp
                 phone={branding.contactPhone ?? ''}

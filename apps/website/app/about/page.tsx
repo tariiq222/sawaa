@@ -115,7 +115,7 @@ export default async function AboutRoute() {
               </li>
               <li>
                 <strong style={{ color: 'var(--sw-secondary-700)' }}>البرامج الجماعية:</strong>{' '}
-                جلسات دعم جماعية (دعم الأزمات، التعافي، الأمومة).
+                برامج بإشراف مختصين (دعم الأزمات، التعافي، الأمومة).
               </li>
             </ul>
           </section>

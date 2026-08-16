@@ -17,10 +17,6 @@ export {
   resolveFaqItems,
   FAQ_DEFAULTS,
 } from './faq-items';
-export {
-  resolveSupportGroups,
-  SUPPORT_GROUP_DEFAULTS,
-} from './support-groups';
 export type {
   HeroContent,
   StatsItem,
@@ -38,4 +34,3 @@ export type {
 } from './feature-cards';
 export type { BlogPost } from './blog-posts';
 export type { FaqItem } from './faq-items';
-export type { SupportGroup } from './support-groups';
