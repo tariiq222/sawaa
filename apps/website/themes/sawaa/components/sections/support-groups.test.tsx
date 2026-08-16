@@ -99,4 +99,15 @@ describe('Group programs home section', () => {
       '/support-groups',
     );
   });
+
+  it('renders the homepage section on the midnight palette with an inverse header', async () => {
+    render(await SupportGroups({ intro, items: [program] }));
+
+    const section = screen.getByRole('heading', { name: /shared progress/ }).closest('section');
+    expect(section).toHaveClass('sw-section-midnight');
+    expect(screen.getByRole('heading', { name: /shared progress/ }).parentElement).toHaveAttribute(
+      'data-tone',
+      'inverse',
+    );
+  });
 });

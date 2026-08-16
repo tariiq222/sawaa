@@ -30,10 +30,11 @@ export async function SupportGroups({ intro, items, loadFailed = false }: Props)
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
 
   return (
-    <section id="support-groups" className="sw-section-sky relative py-20 md:py-24">
+    <section id="support-groups" className="sw-section-midnight relative py-20 md:py-24">
       <div className="mx-auto max-w-[1260px] px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <SectionHeader
+            tone="inverse"
             tag={intro.tag}
             tagIcon={<Users aria-hidden className="h-3.5 w-3.5" />}
             title={<IntroTitle intro={intro} />}
@@ -118,8 +119,7 @@ function ProgramCard({ program, locale }: { program: SupportGroup; locale: 'ar' 
 
   return (
     <article
-      className="group relative h-full overflow-hidden rounded-2xl bg-white p-5 transition duration-300 hover:-translate-y-1 sm:p-6"
-      style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
+      className="sw-home-support-card group relative h-full overflow-hidden rounded-2xl bg-white p-5 transition duration-300 hover:-translate-y-1 sm:p-6"
     >
       <div
         aria-hidden

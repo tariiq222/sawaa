@@ -86,6 +86,16 @@ describe('Navbar mobile menu dialog keyboard focus', () => {
     expect(document.body.style.overflow).toBe('hidden');
   });
 
+  it('uses the high-contrast booking treatment inside the mobile dialog', () => {
+    render(wrap('ar', <Navbar />));
+    openMenu();
+    const booking = within(screen.getByRole('dialog')).getByRole('link', {
+      name: 'احجز موعدك',
+    });
+    expect(booking).toHaveClass('sw-home-nav-cta');
+    expect(booking).not.toHaveStyle({ color: '#fff' });
+  });
+
   it('closes on Escape, restores focus to the trigger and unlocks body scroll', () => {
     render(wrap('ar', <Navbar />));
     const open = openMenu();

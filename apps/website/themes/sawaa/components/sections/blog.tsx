@@ -38,11 +38,7 @@ export async function Blog({ intro, items }: Props) {
             <AnimatedSection key={p.slug} delay={i * 80}>
               <Link href={`/blog/${p.slug}`} className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2">
               <article
-                className="group h-full bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5"
-                style={{
-                  border: '1px solid var(--sw-neutral-100)',
-                  boxShadow: 'var(--sw-shadow-xs)',
-                }}
+                className="sw-home-blog-card group h-full bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5"
               >
                 <div
                   className="h-[180px] sm:h-[200px] md:h-[220px] relative overflow-hidden"

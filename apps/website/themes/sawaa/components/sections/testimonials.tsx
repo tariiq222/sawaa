@@ -47,17 +47,12 @@ export async function Testimonials({ intro, items }: Props) {
             return (
               <AnimatedSection key={t.id} delay={i * 80}>
                 <div
-                  className="group relative h-full bg-white rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1.5 flex flex-col"
-                  style={{
-                    border: '1px solid var(--sw-neutral-100)',
-                    boxShadow: 'var(--sw-shadow-xs)',
-                  }}
+                  className="sw-home-testimonial-card group relative h-full bg-white rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1.5 flex flex-col"
                 >
                   <div
-                    className="absolute top-6 end-6 w-11 h-11 rounded-full flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity"
-                    style={{ background: 'var(--sw-primary-50)' }}
+                    className="sw-home-testimonial-quote absolute top-6 end-6 w-11 h-11 rounded-full flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity"
                   >
-                    <Quote className="w-5 h-5" style={{ color: 'var(--sw-primary-600)' }} />
+                    <Quote className="w-5 h-5" />
                   </div>
 
                   <div className="flex gap-1 mb-5">
@@ -71,8 +66,8 @@ export async function Testimonials({ intro, items }: Props) {
                     ))}
                   </div>
                   <p
-                    className="leading-[1.85] mb-7 font-medium flex-1"
-                    style={{ color: 'var(--sw-secondary-700)', fontSize: '0.938rem' }}
+                    className="sw-home-testimonial-copy leading-[1.85] mb-7 font-medium flex-1"
+                    style={{ fontSize: '0.938rem' }}
                   >
                     {t.text}
                   </p>
