@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getPublicGroupSessions,
+  getPublicGroupSessionsResult,
   getPublicGroupSession,
   bookGroupSession,
   type SupportGroup,
@@ -76,6 +77,23 @@ describe('support-groups.api (programs backend)', () => {
     it('falls back to an empty list on non-ok response', async () => {
       fetchMock.mockResolvedValue({ ok: false, status: 503 });
       await expect(getPublicGroupSessions()).resolves.toEqual([]);
+    });
+  });
+
+  describe('getPublicGroupSessionsResult', () => {
+    it('distinguishes a successful empty catalog from an API failure', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ programs: [] }) })
+        .mockResolvedValueOnce({ ok: false, status: 503 });
+
+      await expect(getPublicGroupSessionsResult()).resolves.toEqual({
+        programs: [],
+        status: 'success',
+      });
+      await expect(getPublicGroupSessionsResult()).resolves.toEqual({
+        programs: [],
+        status: 'error',
+      });
     });
   });
 

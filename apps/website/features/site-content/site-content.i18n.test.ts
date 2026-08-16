@@ -46,7 +46,11 @@ describe('resolveHeroContent — locale', () => {
 describe('resolveSectionIntros — locale', () => {
   it('returns Arabic defaults under the ar locale', () => {
     const intros = resolveSectionIntros('ar');
-    expect(intros.clinics.tag).toBe('عياداتنا');
+    expect(intros.services.tag).toBe('خدماتنا');
+    expect(intros.services.titlePrefix).toBe('خدمات');
+    expect(intros.services.titleHighlight).toBe('متاحة للحجز');
+    expect(intros.supportGroups.tag).toBe('البرامج الجماعية');
+    expect(intros.supportGroups.titlePrefix).toBe('برامج جماعية');
     expect(intros.blog.titleHighlight).toBe('ونصائح');
   });
 
@@ -56,14 +60,18 @@ describe('resolveSectionIntros — locale', () => {
 
   it('returns English defaults under the en locale', () => {
     const intros = resolveSectionIntros('en');
-    expect(intros.clinics.tag).toBe('Our Clinics');
+    expect(intros.services.tag).toBe('Our Services');
+    expect(intros.services.titlePrefix).toBe('Services');
+    expect(intros.services.titleHighlight).toBe('available to book');
+    expect(intros.supportGroups.tag).toBe('Group Programs');
+    expect(intros.supportGroups.titlePrefix).toBe('Group programs');
     expect(intros.blog.titleHighlight).toBe('& tips');
   });
 
   it('returns all 8 section keys', () => {
     const intros = resolveSectionIntros('ar');
     const keys: (keyof typeof intros)[] = [
-      'features', 'clinics', 'supportGroups', 'team',
+      'features', 'services', 'supportGroups', 'team',
       'testimonials', 'blog', 'faq', 'cta',
     ];
     for (const key of keys) {
@@ -75,7 +83,7 @@ describe('resolveSectionIntros — locale', () => {
   it('returns distinct values for ar and en locales', () => {
     const ar = resolveSectionIntros('ar');
     const en = resolveSectionIntros('en');
-    expect(ar.clinics.tag).not.toBe(en.clinics.tag);
+    expect(ar.services.tag).not.toBe(en.services.tag);
     expect(ar.blog.titleHighlight).not.toBe(en.blog.titleHighlight);
   });
 });

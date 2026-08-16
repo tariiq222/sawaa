@@ -3,7 +3,6 @@ import { BrandingProvider, BrandingStyle, getPublicBrandingForSsr } from '@/feat
 import { QueryProvider } from '@/providers/query-provider';
 import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
-import { CookieConsentBanner } from '@/components/consent/cookie-consent-banner';
 import { AnalyticsLoader } from '@/components/analytics/analytics-loader';
 import { AiChatWidget } from '@/features/chat/ai-chat-widget';
 import './globals.css';
@@ -126,7 +125,6 @@ export default async function RootLayout({
           <LocaleProvider locale={locale}>
             <BrandingProvider branding={branding}>
               {children}
-              <CookieConsentBanner />
               <AnalyticsLoader />
               {process.env.NEXT_PUBLIC_WEB_CHAT_ENABLED === 'true' && <AiChatWidget />}
             </BrandingProvider>

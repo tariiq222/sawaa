@@ -9,7 +9,7 @@ export interface Theme {
   pages: {
     home: ComponentType;
     therapists: ComponentType<{ initialSpecialty?: string | null }>;
-    clinics: ComponentType;
+    services: ComponentType;
     contact: ComponentType;
     burnoutTest: ComponentType;
     booking: ComponentType;

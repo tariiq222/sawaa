@@ -28,10 +28,12 @@ interface ClientInfoStepProps {
   selectedPriceHalalas?: number;
   /** @deprecated back is handled by the wizard header — kept for compatibility */
   onBack?: () => void;
-  /** Confirm + pay. The client is authenticated via the session cookie; no info is passed. */
-  onSubmitInfo: () => void;
+  /** Confirm the booking using the selected collection path. */
+  onSubmitInfo: (payAtClinic: boolean) => void;
   isSubmitting: boolean;
 }
+
+type WebsitePaymentMethod = 'ONLINE' | 'AT_CENTER';
 
 const fieldLabelClass = 'block text-[0.8125rem] font-bold mb-2';
 const fieldLabelStyle = {
@@ -73,6 +75,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<WebsitePaymentMethod>('ONLINE');
   const phoneInputId = useId();
   const passwordInputId = useId();
 
@@ -130,6 +133,8 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
     maximumFractionDigits: 2,
   }).format(halalasToSarNumber(grossWithVat(effectivePrice, vatRate)));
   const vatPercent = Math.round(vatRate * 100);
+  const isPaidBooking = effectivePrice > 0;
+  const payAtClinic = isPaidBooking && paymentMethod === 'AT_CENTER';
 
   const isAuthed = client !== null;
 
@@ -396,9 +401,67 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               </span>
             </div>
 
+            {isPaidBooking && (
+              <fieldset className="flex flex-col gap-2.5 pt-1">
+                <legend
+                  className="mb-2 text-xs font-extrabold"
+                  style={{ color: 'var(--sw-secondary-700)' }}
+                >
+                  {t('booking.paymentMethod.title')}
+                </legend>
+
+                {(
+                  [
+                    {
+                      value: 'ONLINE' as const,
+                      label: t('booking.paymentMethod.online'),
+                      description: t('booking.paymentMethod.onlineDesc'),
+                    },
+                    {
+                      value: 'AT_CENTER' as const,
+                      label: t('booking.paymentMethod.atCenter'),
+                      description: t('booking.paymentMethod.atCenterDesc'),
+                    },
+                  ]
+                ).map((option) => {
+                  const selected = paymentMethod === option.value;
+                  return (
+                    <label
+                      key={option.value}
+                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3.5 transition-all"
+                      style={{
+                        border: selected
+                          ? '1.5px solid var(--primary)'
+                          : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)',
+                        boxShadow: selected ? 'var(--sw-shadow-xs)' : 'none',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="booking-payment-method"
+                        value={option.value}
+                        checked={selected}
+                        onChange={() => setPaymentMethod(option.value)}
+                        disabled={isSubmitting}
+                        className="h-4 w-4 shrink-0 accent-[var(--primary)]"
+                      />
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="text-sm font-bold" style={{ color: 'var(--sw-secondary-700)' }}>
+                          {option.label}
+                        </span>
+                        <span className="text-xs leading-relaxed" style={{ color: 'var(--sw-body)' }}>
+                          {option.description}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </fieldset>
+            )}
+
             <button
               type="button"
-              onClick={() => onSubmitInfo()}
+              onClick={() => onSubmitInfo(payAtClinic)}
               disabled={isSubmitting}
               className="mt-1 inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99]"
               style={{
@@ -422,7 +485,9 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                 </>
               ) : (
                 <>
-                  {t('booking.confirmAndPay')}
+                  {payAtClinic || !isPaidBooking
+                    ? t('booking.confirmBooking')
+                    : t('booking.confirmAndPay')}
                   <svg viewBox="0 0 16 16" className="h-4 w-4 -scale-x-100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M6 4l4 4-4 4" />
                     <path d="M2 8h12" />
@@ -431,16 +496,18 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               )}
             </button>
 
-            <p
-              className="flex items-center justify-center gap-1.5 text-[0.6875rem] font-medium"
-              style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 48%, transparent)' }}
-            >
-              <svg viewBox="0 0 14 14" className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="2.5" y="6" width="9" height="6" rx="1.5" />
-                <path d="M4.5 6V4.5a2.5 2.5 0 1 1 5 0V6" />
-              </svg>
-              {isAr ? 'دفع آمن ومشفّر عبر ميسر' : 'Secure encrypted payment via Moyasar'}
-            </p>
+            {!payAtClinic && isPaidBooking && (
+              <p
+                className="flex items-center justify-center gap-1.5 text-[0.6875rem] font-medium"
+                style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 48%, transparent)' }}
+              >
+                <svg viewBox="0 0 14 14" className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="2.5" y="6" width="9" height="6" rx="1.5" />
+                  <path d="M4.5 6V4.5a2.5 2.5 0 1 1 5 0V6" />
+                </svg>
+                {t('booking.paymentMethod.secureMoyasar')}
+              </p>
+            )}
           </section>
         </>
       )}

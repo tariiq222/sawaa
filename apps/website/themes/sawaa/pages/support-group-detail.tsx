@@ -25,11 +25,6 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
 
   const program = await getPublicGroupSession(id).catch(() => null);
 
-  const fmtMoney = (halalas: number) =>
-    new Intl.NumberFormat(intl, { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(
-      halalasToSarNumber(halalas),
-    );
-
   if (!program) {
     return (
       <section className="sw-section-mint relative overflow-hidden -mt-[88px] pt-[120px] pb-20">
@@ -50,12 +45,21 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
     );
   }
 
-  const name = locale === 'en' && program.nameEn ? program.nameEn : program.nameAr;
-  const description =
-    (locale === 'en' && program.publicDescriptionEn) ||
-    program.publicDescriptionAr ||
-    program.descriptionAr ||
-    t('supportGroups.defaultDescription');
+  const name = locale === 'en' ? program.nameEn?.trim() || program.nameAr : program.nameAr;
+  const description = locale === 'en'
+    ? program.publicDescriptionEn?.trim() ||
+      program.descriptionEn?.trim() ||
+      program.publicDescriptionAr?.trim() ||
+      program.descriptionAr?.trim() ||
+      t('supportGroups.defaultDescription')
+    : program.publicDescriptionAr?.trim() ||
+      program.descriptionAr?.trim() ||
+      t('supportGroups.defaultDescription');
+  const price = new Intl.NumberFormat(intl, {
+    style: 'currency',
+    currency: program.currency || 'SAR',
+    maximumFractionDigits: 0,
+  }).format(halalasToSarNumber(Number(program.price)));
   const seatsLeft = Math.max(0, program.maxParticipants - program.enrolledCount);
   const isFull = seatsLeft === 0;
   const pct =
@@ -121,7 +125,7 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
                 <FactRow
                   icon={<Tag className="w-4 h-4" />}
                   label={t('supportGroups.detail.price')}
-                  value={fmtMoney(Number(program.price))}
+                  value={price}
                   last
                 />
               </div>
@@ -147,7 +151,7 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
               <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.8125rem]" style={{ color: 'var(--sw-neutral-600)' }}>
                   <span className="font-extrabold" style={{ color: 'var(--sw-primary-700)' }}>
-                    {fmtMoney(Number(program.price))}
+                    {price}
                   </span>
                 </div>
 

@@ -26,7 +26,7 @@ export const SITE = {
 export const NAV_LINKS = [
   { label: 'الرئيسية', href: '/' },
   { label: 'المعالجون', href: '/therapists' },
-  { label: 'مجموعات الدعم', href: '/support-groups' },
+  { label: 'البرامج الجماعية', href: '/support-groups' },
   { label: 'اختبار الإرهاق', href: '/burnout-test' },
   { label: 'اتصل بنا', href: '/contact' },
 ];

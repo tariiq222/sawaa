@@ -1,19 +1,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, ChevronDown } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import type { HeroContent } from '@/features/site-content/public';
-import { getLocale } from '@/features/locale/public';
-import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { AnimatedSection } from '../ui/animated-section';
 
 interface Props {
   content: HeroContent;
 }
 
-export async function Hero({ content }: Props) {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
-
+export function Hero({ content }: Props) {
   return (
     <section
       id="hero"
@@ -32,13 +27,7 @@ export async function Hero({ content }: Props) {
       />
 
       {/* Readability overlay */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(to top, color-mix(in srgb, var(--sw-secondary-900) 80%, transparent) 0%, color-mix(in srgb, var(--sw-secondary-900) 45%, transparent) 45%, color-mix(in srgb, var(--sw-secondary-900) 25%, transparent) 100%)',
-        }}
-      />
+      <div className="sw-home-hero-overlay absolute inset-0" />
 
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-5 sm:px-6 md:px-8">
@@ -47,10 +36,10 @@ export async function Hero({ content }: Props) {
             className="inline-flex items-center gap-2 text-[0.75rem] font-bold px-5 py-2.5 rounded-full mb-6 overflow-hidden"
             style={{
               color: '#fff',
-              background: 'rgba(255,255,255,0.14)',
+              background: 'rgba(251,246,237,0.14)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
-              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.25)',
+              boxShadow: 'inset 0 0 0 1px rgba(217,190,138,0.46)',
             }}
           >
             <span className="relative flex w-2 h-2 overflow-hidden">
@@ -65,7 +54,7 @@ export async function Hero({ content }: Props) {
             style={{ fontSize: 'clamp(2.25rem, 6vw, 4.25rem)' }}
           >
             {content.titlePrefix.trim()}{' '}
-            <span style={{ color: 'var(--sw-primary-300)' }}>
+            <span style={{ color: 'var(--sw-home-mint)' }}>
               {content.titleHighlight.trim()}
             </span>{' '}
             <span className="block">{content.titleSuffix.trim()}</span>
@@ -81,12 +70,11 @@ export async function Hero({ content }: Props) {
           <div className="flex gap-3.5 justify-center flex-wrap">
             <Link
               href={content.ctaPrimaryHref}
-              className="group inline-flex items-center gap-2.5 font-bold px-8 py-4 rounded-full transition-all hover:-translate-y-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+              className="sw-home-primary-cta group inline-flex items-center gap-2.5 font-bold px-8 py-4 rounded-full transition-all hover:-translate-y-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
               style={{
                 background: 'var(--sw-primary-500)',
-                color: '#fff',
+                color: 'var(--sw-home-midnight)',
                 fontSize: '0.938rem',
-                boxShadow: 'var(--sw-shadow-primary-lg)',
               }}
             >
               {content.ctaPrimaryText}
@@ -96,23 +84,6 @@ export async function Hero({ content }: Props) {
         </AnimatedSection>
       </div>
 
-      {/* Scroll-down discover button */}
-      <a
-        href="#features"
-        aria-label={t('hero.discoverMore')}
-        className="group absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/80 transition-colors hover:text-white rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-      >
-        <span className="text-xs font-bold">{t('hero.discover')}</span>
-        <span
-          className="w-9 h-9 rounded-full flex items-center justify-center sw-nudge"
-          style={{
-            background: 'rgba(255,255,255,0.14)',
-            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3)',
-          }}
-        >
-          <ChevronDown className="w-4 h-4" />
-        </span>
-      </a>
     </section>
   );
 }

@@ -60,9 +60,21 @@ export interface BookGroupSessionResponse {
   invoiceId?: string | null;
 }
 
+export interface PublicProgramsResult {
+  programs: SupportGroup[];
+  status: 'success' | 'error';
+}
+
 export async function getPublicGroupSessions(
   departmentId?: string,
 ): Promise<SupportGroup[]> {
+  const result = await getPublicGroupSessionsResult(departmentId);
+  return result.programs;
+}
+
+export async function getPublicGroupSessionsResult(
+  departmentId?: string,
+): Promise<PublicProgramsResult> {
   const base = getApiBase();
   const url = departmentId
     ? `${base}/public/programs?departmentId=${encodeURIComponent(departmentId)}`
@@ -77,14 +89,14 @@ export async function getPublicGroupSessions(
         message: '[programs] fetch failed — using empty list',
         data: { status: res.status },
       });
-      return [];
+      return { programs: [], status: 'error' };
     }
     const data = await res.json();
     const list = (data?.programs ?? data) as Array<Record<string, unknown>>;
-    return list.map(mapProgramToSupportGroup);
+    return { programs: list.map(mapProgramToSupportGroup), status: 'success' };
   } catch (err) {
     Sentry.captureException(err, { tags: { area: 'support-groups' } });
-    return [];
+    return { programs: [], status: 'error' };
   }
 }
 

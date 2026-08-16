@@ -13,8 +13,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return buildPageMetadata({
     branding,
     path: '/support-groups',
-    titleAr: 'الدعم الجماعي',
-    descriptionAr: 'تفاصيل برنامج الدعم الجماعي والجلسات المتاحة في مركز سواء.',
+    titleAr: 'البرامج الجماعية',
+    descriptionAr: 'تفاصيل البرامج الجماعية ومواعيدها ومقاعدها المتاحة في مركز سواء.',
+    titleEn: 'Group Programs',
+    descriptionEn: 'Group program details, schedules, and available seats at Sawaa Center.',
   });
 }
 

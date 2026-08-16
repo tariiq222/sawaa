@@ -399,7 +399,7 @@ model OrganizationSettings {
   reminderBeforeMinutes  Int       @default(60)
   bookingFlowOrder       String    @default("service_first")
   paymentMoyasarEnabled  Boolean   @default(true)
-  paymentAtClinicEnabled Boolean   @default(false)
+  paymentAtClinicEnabled Boolean   @default(true)
   // Manual payment-recording methods shown in the bookings "record payment"
   // dialog. Cash is on by default; the rest are opt-in from settings.
   payMethodCashEnabled   Boolean   @default(true)

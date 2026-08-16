@@ -32,6 +32,22 @@ function openMenu() {
 }
 
 describe('Navbar mobile menu dialog keyboard focus', () => {
+  it('links customers to the services directory instead of clinics', () => {
+    render(wrap('ar', <Navbar />));
+    expect(screen.getByRole('menuitem', { name: 'الخدمات' })).toHaveAttribute(
+      'href',
+      '/services',
+    );
+  });
+
+  it('labels the dashboard-backed programs as group programs', () => {
+    render(wrap('ar', <Navbar />));
+    expect(screen.getByRole('menuitem', { name: 'البرامج الجماعية' })).toHaveAttribute(
+      'href',
+      '/support-groups',
+    );
+  });
+
   it('opens a named dialog and moves focus to the close button', () => {
     render(wrap('ar', <Navbar />));
     openMenu();
@@ -68,6 +84,16 @@ describe('Navbar mobile menu dialog keyboard focus', () => {
     expect(document.body.style.overflow).toBe('');
     openMenu();
     expect(document.body.style.overflow).toBe('hidden');
+  });
+
+  it('uses the high-contrast booking treatment inside the mobile dialog', () => {
+    render(wrap('ar', <Navbar />));
+    openMenu();
+    const booking = within(screen.getByRole('dialog')).getByRole('link', {
+      name: 'احجز موعدك',
+    });
+    expect(booking).toHaveClass('sw-home-nav-cta');
+    expect(booking).not.toHaveStyle({ color: '#fff' });
   });
 
   it('closes on Escape, restores focus to the trigger and unlocks body scroll', () => {

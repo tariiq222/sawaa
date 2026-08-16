@@ -123,6 +123,25 @@ describe('CreatePublicBookingHandler', () => {
       );
     });
 
+    it('forwards payAtClinic to the core booking handler for online-source bookings', async () => {
+      const prisma = buildPrisma({ mainBranch: null, fallbackBranch: null });
+      const mockDelegate = buildMockCreateBookingHandler();
+      const handler = new CreatePublicBookingHandler(prisma as never, mockDelegate as never);
+
+      await handler.execute({
+        ...baseCommand,
+        branchId: EXPLICIT_BRANCH_ID,
+        payAtClinic: true,
+      });
+
+      expect(mockDelegate.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: 'ONLINE',
+          payAtClinic: true,
+        }),
+      );
+    });
+
     it('clientId always comes from the command, never gets overridden', async () => {
       const prisma = buildPrisma({ mainBranch: null, fallbackBranch: null });
       const mockDelegate = buildMockCreateBookingHandler();

@@ -2590,6 +2590,11 @@
             "example": "First visit",
             "type": "string"
           },
+          "payAtClinic": {
+            "description": "Confirm the booking now and collect payment at the center",
+            "example": true,
+            "type": "boolean"
+          },
           "serviceId": {
             "description": "Service ID",
             "example": "00000000-0000-0000-0000-000000000001",

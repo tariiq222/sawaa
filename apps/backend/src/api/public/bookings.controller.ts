@@ -69,6 +69,7 @@ export class PublicBookingsController {
       deliveryType: dto.deliveryType,
       couponCode: dto.couponCode,
       notes: dto.notes,
+      payAtClinic: dto.payAtClinic,
     });
   }
 }
@@ -142,4 +143,3 @@ export class PublicProgramsController {
     });
   }
 }
-

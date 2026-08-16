@@ -13,7 +13,7 @@ import { SITE } from '../../lib/constants';
 const navLinks = [
   { key: 'nav.home', href: '/' },
   { key: 'nav.therapists', href: '/therapists' },
-  { key: 'nav.clinics', href: '/clinics' },
+  { key: 'nav.services', href: '/services' },
   { key: 'nav.supportGroups', href: '/support-groups' },
   { key: 'nav.contact', href: '/contact' },
 ] as const;
@@ -86,11 +86,10 @@ export function Navbar() {
         }}
       />
       <nav
-        className="sw-nav-glass fixed top-4 left-1/2 z-[1000] w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-[1260px] rounded-full px-3 py-2 flex items-center justify-between transition-all duration-300"
+        className="sw-nav-glass sw-home-nav fixed top-4 left-1/2 z-[1000] w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-[1260px] rounded-full px-3 py-2 flex items-center justify-between transition-all duration-300"
+        data-scrolled={scrolled}
         style={{
           transform: 'translateX(-50%)',
-          background: scrolled ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.62)',
-          border: '1px solid rgba(255,255,255,0.5)',
         }}
         aria-label={t('nav.ariaPrimary')}
       >
@@ -140,10 +139,9 @@ export function Navbar() {
           </Link>
           <Link
             href="/booking"
-            className="inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="sw-home-nav-cta inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all text-white hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-500)',
-              color: '#fff',
               boxShadow: 'var(--sw-shadow-primary)',
             }}
           >
@@ -205,10 +203,9 @@ export function Navbar() {
           <Link
             href="/booking"
             onClick={() => setMobileOpen(false)}
-            className="mt-5 inline-flex items-center gap-2 font-bold px-9 py-4 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="sw-home-nav-cta mt-5 inline-flex items-center gap-2 font-bold px-9 py-4 rounded-full text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-500)',
-              color: '#fff',
               boxShadow: 'var(--sw-shadow-primary)',
             }}
           >

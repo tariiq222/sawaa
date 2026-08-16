@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 // jsdom does not implement scrollIntoView; the DateStrip's useEffect calls it
 // when the slot screen mounts (same shim as features/booking/date-strip.test.tsx).
@@ -12,8 +12,11 @@ Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? vi.fn();
  * queryFn actually forwards it to getPublicAvailabilityDays.
  */
 
-const { queryFns, EMPLOYEE, OTHER_EMPLOYEE, SERVICE, BRANCH, OPTION } = vi.hoisted(() => {
+const { queryFns, runtimeState, EMPLOYEE, OTHER_EMPLOYEE, SERVICE, BRANCH, OPTION, SLOT } = vi.hoisted(() => {
   const queryFns = new Map<string, (() => unknown) | undefined>();
+  const runtimeState = {
+    slots: [] as Array<{ startTime: string; endTime: string }>,
+  };
 
   const employee = (id: string, name: string) => ({
     id,
@@ -88,7 +91,21 @@ const { queryFns, EMPLOYEE, OTHER_EMPLOYEE, SERVICE, BRANCH, OPTION } = vi.hoist
     label: null,
   };
 
-  return { queryFns, EMPLOYEE: employee('emp-1', 'أحمد'), OTHER_EMPLOYEE: employee('emp-2', 'سارة'), SERVICE: service, BRANCH: branch, OPTION: option };
+  const slot = {
+    startTime: '2026-08-20T14:00:00.000Z',
+    endTime: '2026-08-20T14:45:00.000Z',
+  };
+
+  return {
+    queryFns,
+    runtimeState,
+    EMPLOYEE: employee('emp-1', 'أحمد'),
+    OTHER_EMPLOYEE: employee('emp-2', 'سارة'),
+    SERVICE: service,
+    BRANCH: branch,
+    OPTION: option,
+    SLOT: slot,
+  };
 });
 
 let searchParams = new URLSearchParams();
@@ -107,6 +124,9 @@ vi.mock('@tanstack/react-query', () => ({
     if (key[1] === 'employees') return { data: [EMPLOYEE, OTHER_EMPLOYEE], isLoading: false, error: null };
     if (key[1] === 'catalog') return { data: { services: [SERVICE], categories: [], vatRate: 0 }, isLoading: false, error: null };
     if (key[1] === 'branches') return { data: [BRANCH], isLoading: false, error: null };
+    if (key[1] === 'availability' && key[2] !== 'days') {
+      return { data: runtimeState.slots, isLoading: false, error: null };
+    }
     return { data: [], isLoading: false, error: null };
   },
 }));
@@ -128,11 +148,52 @@ vi.mock('@/features/booking/booking.api', () => ({
   initPayment: vi.fn(),
 }));
 
+vi.mock('@/features/booking/client-info-step', () => ({
+  ClientInfoStep: ({
+    onSubmitInfo,
+  }: {
+    onSubmitInfo: (payAtClinic: boolean) => Promise<void>;
+  }) => (
+    <div>
+      <button type="button" onClick={() => void onSubmitInfo(true)}>
+        Submit at center
+      </button>
+      <button type="button" onClick={() => void onSubmitInfo(false)}>
+        Submit online
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('@/features/payment/payment-redirect', () => ({
+  PaymentRedirect: ({ redirectUrl }: { redirectUrl: string }) => (
+    <div>Redirecting to {redirectUrl}</div>
+  ),
+}));
+
 import BookingWizardPage from './page';
-import { getPublicAvailabilityDays, getPublicAvailability } from '@/features/booking/booking.api';
+import {
+  createBooking,
+  getPublicAvailabilityDays,
+  getPublicAvailability,
+  initPayment,
+} from '@/features/booking/booking.api';
 
 const daysMock = getPublicAvailabilityDays as ReturnType<typeof vi.fn>;
 const slotsMock = getPublicAvailability as ReturnType<typeof vi.fn>;
+const createBookingMock = createBooking as ReturnType<typeof vi.fn>;
+const initPaymentMock = initPayment as ReturnType<typeof vi.fn>;
+
+async function advanceToInfoStep() {
+  fireEvent.click(await waitFor(() => screen.getByRole('radio', { name: /جلسة فردية/ })));
+  fireEvent.click(await waitFor(() => screen.getByRole('radio', { name: /سارة/ })));
+  fireEvent.click(await waitFor(() => screen.getByRole('button', { name: /أونلاين/ })));
+  const slotGroup = await waitFor(() =>
+    screen.getByRole('radiogroup', { name: /اختر الوقت|Select Time/i }),
+  );
+  fireEvent.click(within(slotGroup).getByRole('radio'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Submit at center' })).toBeTruthy());
+}
 
 describe('/booking wizard — date-strip days probe context', () => {
   beforeEach(() => {
@@ -140,10 +201,13 @@ describe('/booking wizard — date-strip days probe context', () => {
     routerPush.mockReset();
     routerBack.mockReset();
     queryFns.clear();
+    runtimeState.slots = [];
     daysMock.mockReset();
     daysMock.mockResolvedValue([]);
     slotsMock.mockReset();
     slotsMock.mockResolvedValue([]);
+    createBookingMock.mockReset();
+    initPaymentMock.mockReset();
   });
 
   it('forwards the selected duration option + delivery type to the days probe (same context as slot fetch)', async () => {
@@ -193,5 +257,49 @@ describe('/booking wizard — date-strip days probe context', () => {
         deliveryType: 'ONLINE',
       }),
     );
+  });
+
+  it('confirms a pay-at-center booking without initializing Moyasar', async () => {
+    runtimeState.slots = [SLOT];
+    createBookingMock.mockResolvedValue({
+      id: 'booking-center',
+      status: 'CONFIRMED',
+      invoiceId: null,
+    });
+
+    render(<BookingWizardPage />);
+    await advanceToInfoStep();
+    fireEvent.click(screen.getByRole('button', { name: 'Submit at center' }));
+
+    await waitFor(() => {
+      expect(createBookingMock).toHaveBeenCalledWith(
+        expect.objectContaining({ payAtClinic: true }),
+      );
+    });
+    expect(initPaymentMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps online payment on the Moyasar initialization path', async () => {
+    runtimeState.slots = [SLOT];
+    createBookingMock.mockResolvedValue({
+      id: 'booking-online',
+      status: 'AWAITING_PAYMENT',
+      invoiceId: 'invoice-online',
+    });
+    initPaymentMock.mockResolvedValue({
+      paymentId: 'payment-online',
+      redirectUrl: 'https://checkout.moyasar.com/pay/payment-online',
+    });
+
+    render(<BookingWizardPage />);
+    await advanceToInfoStep();
+    fireEvent.click(screen.getByRole('button', { name: 'Submit online' }));
+
+    await waitFor(() => {
+      expect(createBookingMock).toHaveBeenCalledWith(
+        expect.objectContaining({ payAtClinic: false }),
+      );
+    });
+    await waitFor(() => expect(initPaymentMock).toHaveBeenCalledWith('invoice-online'));
   });
 });

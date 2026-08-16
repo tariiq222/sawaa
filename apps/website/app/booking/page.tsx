@@ -1222,7 +1222,7 @@ function BookingWizardInner() {
                       return svcOpt != null ? Number(svcOpt.price) : undefined;
                     })()}
                     onBack={() => dispatch({ type: 'SELECT_EMPLOYEE', employee })}
-                    onSubmitInfo={async () => {
+                    onSubmitInfo={async (payAtClinic) => {
                       dispatchUi({ type: 'SUBMIT_START' });
                       try {
                         if (!effectiveBranchId) {
@@ -1236,6 +1236,7 @@ function BookingWizardInner() {
                           startsAt: slot.startTime,
                           durationOptionId: selectedChoice?.durationOptionId,
                           deliveryType: selectedChoice?.deliveryType,
+                          payAtClinic,
                         });
                         const outcome = resolveBookingSubmitOutcome(booking);
                         if (outcome.kind === 'failure') {

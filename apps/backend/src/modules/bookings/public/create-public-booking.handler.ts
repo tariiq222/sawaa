@@ -45,6 +45,7 @@ export class CreatePublicBookingHandler {
       deliveryType: command.deliveryType,
       couponCode: command.couponCode,
       notes: command.notes,
+      payAtClinic: command.payAtClinic,
       source: 'ONLINE',
     };
 

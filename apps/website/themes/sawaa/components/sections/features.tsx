@@ -23,11 +23,23 @@ interface Tone {
   ring: string;
 }
 
-const TONE: Tone = {
-  bg: 'var(--sw-primary-50)',
-  text: 'var(--sw-primary-600)',
-  ring: 'color-mix(in srgb, var(--primary) 15%, transparent)',
-};
+const TONES: readonly Tone[] = [
+  {
+    bg: 'var(--sw-primary-50)',
+    text: 'var(--sw-primary-700)',
+    ring: 'color-mix(in srgb, var(--primary) 18%, transparent)',
+  },
+  {
+    bg: 'color-mix(in srgb, var(--sw-home-sand) 24%, white)',
+    text: 'color-mix(in srgb, var(--sw-home-sand) 58%, var(--sw-home-midnight))',
+    ring: 'color-mix(in srgb, var(--sw-home-sand) 25%, transparent)',
+  },
+  {
+    bg: 'color-mix(in srgb, var(--sw-home-midnight) 8%, white)',
+    text: 'var(--sw-home-midnight)',
+    ring: 'color-mix(in srgb, var(--sw-home-midnight) 12%, transparent)',
+  },
+];
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Activity,
@@ -44,7 +56,7 @@ function resolveIcon(name: string): LucideIcon {
 
 export function Features({ intro, cards }: Props) {
   return (
-    <section id="features" className="py-20 md:py-24 relative sw-section-cream">
+    <section id="features" className="sw-home-feature-bridge">
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <SectionHeader
@@ -57,16 +69,12 @@ export function Features({ intro, cards }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {cards.map((card, i) => {
-            const tone = TONE;
+            const tone = TONES[i % TONES.length];
             const Icon = resolveIcon(card.icon) ?? Sparkles;
             return (
               <AnimatedSection key={`${card.label}-${i}`} delay={i * 80}>
                 <div
-                  className="h-full bg-white rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 flex flex-col"
-                  style={{
-                    border: '1px solid var(--sw-neutral-100)',
-                    boxShadow: 'var(--sw-shadow-xs)',
-                  }}
+                  className="sw-home-feature-card h-full bg-white rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 flex flex-col"
                 >
                   <div
                     className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"

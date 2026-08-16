@@ -157,6 +157,7 @@ async function main() {
     await prisma.organizationSettings.create({
       data: {
         paymentMoyasarEnabled: true,
+        paymentAtClinicEnabled: true,
         contactPhone: '0558446605',
         contactEmail: 'support@sawaa.sa',
       },
@@ -165,6 +166,7 @@ async function main() {
     await prisma.organizationSettings.updateMany({
       data: {
         paymentMoyasarEnabled: true,
+        paymentAtClinicEnabled: true,
         contactPhone: '0558446605',
         contactEmail: 'support@sawaa.sa',
       },

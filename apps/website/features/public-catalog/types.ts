@@ -22,6 +22,23 @@ export interface PublicServiceCategory {
   iconBgColor: string | null;
 }
 
+export type PublicDeliveryType = 'IN_PERSON' | 'ONLINE';
+
+export interface PublicServiceDurationOption {
+  id: string;
+  label: string | null;
+  durationMins: number;
+  price: string;
+  sortOrder: number;
+}
+
+export interface PublicServiceBookingConfig {
+  id: string;
+  deliveryType: PublicDeliveryType;
+  price: string;
+  durationMins: number;
+}
+
 export interface PublicService {
   id: string;
   categoryId: string | null;
@@ -37,6 +54,8 @@ export interface PublicService {
   iconBgColor: string | null;
   showPrice?: boolean;
   showDuration?: boolean;
+  durationOptions?: PublicServiceDurationOption[];
+  bookingConfigs?: PublicServiceBookingConfig[];
 }
 
 export interface PublicCatalog {

@@ -1,24 +1,30 @@
 import { listPublicEmployees } from '@/features/therapists/public';
-import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
+import {
+  getPublicCatalog,
+  selectBookableClinicServices,
+} from '@/features/public-catalog/public';
 import { listPublicTestimonials } from '@/features/testimonials/public';
+import {
+  getPublicGroupSessionsResult,
+  type SupportGroup,
+  type PublicProgramsResult,
+} from '@/features/support-groups/support-groups.api';
 import {
   resolveFeatureCards,
   resolveHeroContent,
   resolveSectionIntros,
   resolveBlogPosts,
   resolveFaqItems,
-  resolveSupportGroups,
   type FeatureCards,
   type HeroContent,
   type HomeSectionIntros,
   type BlogPost,
   type FaqItem,
-  type SupportGroup,
 } from '@/features/site-content/public';
 import type { PublicEmployee } from '@sawaa/api-client';
 import { getLocale } from '@/features/locale/public';
 import { Blog } from '../components/sections/blog';
-import { Clinics, type ClinicItem } from '../components/sections/clinics';
+import { Services } from '../components/sections/services';
 import dynamic from 'next/dynamic';
 
 const FAQ = dynamic(() => import('../components/sections/faq').then((m) => m.FAQ), {
@@ -40,12 +46,16 @@ async function safeFetch<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 export async function SawaaHomePage() {
-  const [locale, [therapists, catalog, testimonials]] = await Promise.all([
+  const [locale, [therapists, catalog, testimonials, programsResult]] = await Promise.all([
     getLocale(),
     Promise.all([
       safeFetch<PublicEmployee[]>(() => listPublicEmployees(), []),
       safeFetch(() => getPublicCatalog(), { departments: [], categories: [], services: [] }),
       safeFetch(() => listPublicTestimonials(6), []),
+      safeFetch<PublicProgramsResult>(() => getPublicGroupSessionsResult(), {
+        programs: [] as SupportGroup[],
+        status: 'error',
+      }),
     ]),
   ]);
   // NOTE: getPublicCatalog is also called by SawaaLayout for the footer clinics;
@@ -57,40 +67,18 @@ export async function SawaaHomePage() {
   const featureCards: FeatureCards = resolveFeatureCards();
   const blogPosts: BlogPost[] = resolveBlogPosts();
   const faqItems: FaqItem[] = resolveFaqItems();
-  const supportGroups: SupportGroup[] = resolveSupportGroups();
-
-  const clinicsDept = findDepartment(catalog.departments, { ar: ['عيادات'], en: ['clinic'] });
-  const clinics: ClinicItem[] = clinicsDept
-    ? catalog.categories
-        .filter((c) => c.departmentId === clinicsDept.id)
-        .filter((c) => {
-          // Hide clinics with no bookable services/therapists — they'd dead-end on the booking wizard.
-          const categoryServiceIds = new Set(
-            catalog.services.filter((s) => s.categoryId === c.id).map((s) => s.id),
-          );
-          if (categoryServiceIds.size === 0) return false;
-          return therapists.some((th) =>
-            th.serviceIds.some((id) => categoryServiceIds.has(id)),
-          );
-        })
-        .map((c) => ({
-          id: c.id,
-          nameAr: c.nameAr,
-          nameEn: c.nameEn,
-          descriptionAr: null,
-          descriptionEn: null,
-          icon: c.iconName ?? null,
-          image: c.imageUrl ?? null,
-          iconBgColor: c.iconBgColor ?? null,
-        }))
-    : [];
+  const services = selectBookableClinicServices(catalog, therapists);
 
   return (
     <>
       <Hero content={hero} />
       <Features intro={intros.features} cards={featureCards} />
-      <Clinics clinics={clinics} intro={intros.clinics} />
-      <SupportGroups intro={intros.supportGroups} items={supportGroups} />
+      <Services services={services} intro={intros.services} vatRate={catalog.vatRate ?? 0} />
+      <SupportGroups
+        intro={intros.supportGroups}
+        items={programsResult.programs}
+        loadFailed={programsResult.status === 'error'}
+      />
       <Team therapists={therapists} intro={intros.team} />
       <Testimonials intro={intros.testimonials} items={testimonials} />
       <Blog intro={intros.blog} items={blogPosts} />
