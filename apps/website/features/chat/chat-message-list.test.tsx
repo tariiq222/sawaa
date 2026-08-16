@@ -45,6 +45,16 @@ function renderList(
 describe('ChatMessageList', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('renders an assistant welcome bubble when the message list is empty', () => {
+    renderList([]);
+
+    const welcomeBubble = screen.getByLabelText('Sawaa Ai');
+    expect(welcomeBubble).toHaveTextContent('أهلاً، أنا Sawaa Ai');
+    expect(welcomeBubble).toHaveTextContent(
+      'مساعد إداري في مركز سواء. أعرّفك بالمركز وخدماتنا وأسعارها، وأعرض المعالجين والمواعيد، وأساعدك في الحجز. اكتب سؤالك وسأبدأ من هناك.',
+    );
+  });
+
   it('renders server text as inert text instead of executable markup', () => {
     renderList([{
       ...baseMessage,
@@ -104,7 +114,9 @@ describe('ChatMessageList', () => {
       },
     ]);
 
-    expect(screen.getByLabelText('المستفيد')).toHaveTextContent('رسالة العميل');
+    const clientBubble = screen.getByLabelText('المستفيد');
+    expect(clientBubble).toHaveTextContent('رسالة العميل');
+    expect(clientBubble).not.toHaveTextContent('المستفيد');
     expect(screen.getByLabelText('Sawaa Ai')).toHaveTextContent('رد المساعد');
     expect(screen.getByLabelText('فريق الاستقبال')).toHaveTextContent('رد الاستقبال');
     expect(screen.getByLabelText('تحديث النظام')).toHaveTextContent('تحديث الحالة');

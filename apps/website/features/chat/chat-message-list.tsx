@@ -45,11 +45,16 @@ export function ChatMessageList(props: ChatMessageListProps) {
   return (
     <div aria-live="polite" className="flex-1 space-y-3 overflow-y-auto bg-[var(--sw-neutral-50)] p-4">
       {props.messages.length === 0 && (
-        <div className="mx-auto max-w-xs py-10 text-center">
-          <span className="mx-auto mb-3 block w-fit"><SawaaAiIcon size="md" /></span>
-          <p className="font-bold text-[var(--sw-secondary-700)]">{t('chat.empty.title')}</p>
-          <p className="mt-1 text-sm leading-6 text-[var(--sw-neutral-500)]">{t('chat.empty.body')}</p>
-        </div>
+        <article aria-label={t('chat.sender.assistant')} className="flex items-end justify-start gap-2">
+          <span className="grid size-7 shrink-0 place-items-center rounded-xl bg-[var(--sw-primary-50)] text-[var(--sw-primary-700)]">
+            <SawaaAiIcon size="sm" />
+          </span>
+          <div className="max-w-[86%] rounded-3xl rounded-es-md border border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] px-4 py-3 text-sm leading-6 text-[var(--sw-secondary-700)] shadow-[var(--sw-shadow-xs)]">
+            <p className="mb-1 text-xs font-extrabold text-[var(--sw-primary-700)]">{t('chat.sender.assistant')}</p>
+            <p className="font-bold">{t('chat.empty.title')}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words">{t('chat.empty.body')}</p>
+          </div>
+        </article>
       )}
       {props.messages.map((message) => (
         <MessageItem key={message.id} message={message} {...props} />
@@ -103,7 +108,9 @@ function MessageItem(props: ChatMessageListProps & { message: ChatMessage }) {
             ? 'rounded-es-md border border-[var(--sw-neutral-200)] bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)]'
             : 'rounded-es-md border border-[var(--sw-neutral-100)] bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)]'
       }`}>
-        <p className={`mb-1 text-xs font-extrabold ${own ? 'text-[var(--sw-neutral-100)]' : isReception ? 'text-[var(--sw-secondary-700)]' : 'text-[var(--sw-primary-700)]'}`}>{label}</p>
+        {!own && (
+          <p className={`mb-1 text-xs font-extrabold ${isReception ? 'text-[var(--sw-secondary-700)]' : 'text-[var(--sw-primary-700)]'}`}>{label}</p>
+        )}
         <p className="whitespace-pre-wrap break-words">{body}</p>
         {!props.readOnly && message.kind === 'TEXT' && message.metadata?.action === 'OFFER_HANDOFF' && (
           <HandoffOffer {...props} />
