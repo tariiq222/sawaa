@@ -8,6 +8,7 @@ const ignoredDirs = new Set([
   '.git',
   '.turbo',
   '.next',
+  '.worktrees',
   'node_modules',
   'dist',
   'build',
