@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import * as Sentry from '@sentry/nextjs'
 
 /**
  * global-error.tsx renders OUTSIDE the provider tree (no LocaleProvider).
@@ -37,7 +36,13 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    Sentry.captureException(error)
+    let cancelled = false
+    void import('@sentry/nextjs').then((Sentry) => {
+      if (!cancelled) Sentry.captureException(error)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [error])
 
   const s = getLocaleStrings()
