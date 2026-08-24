@@ -119,14 +119,35 @@ test.describe('Booking Create Wizard — user flow', () => {
     await expect(clientBtn).toBeVisible({ timeout: 10_000 });
     await clientBtn.click();
 
+    // 4b. Track section auto-opens (the new unified booking POS adds a first
+    //     step: CLINICS / GROUP / PACKAGES). Pick CLINICS so the department,
+    //     category, service, employee sections mount. Scope to the track
+    //     section via its `data-section` attribute so the CLINICS track card
+    //     can NEVER be confused with the downstream department card — both
+    //     cards contain the substring 'عيادات', so a non-scoped locator would
+    //     resolve to the track card and never click the department. The track
+    //     card is a `<button>` whose only text inside the track section is
+    //     'عيادات' (CLINICS is the first of three cards).
+    const trackCard = posContainer
+      .locator('[data-section="track"]')
+      .getByRole('button', { name: /عيادات/ })
+      .first();
+    await expect(trackCard, 'CLINICS track card should be visible').toBeVisible({
+      timeout: 10_000,
+    });
+    await trackCard.click();
+
     // 5. Department section auto-opens — pick the clinic department. Its real
     //    seeded name is 'عيادات سواء' / 'Sawa Clinics' (fixtures/seed.ts ensures
     //    it exists), so match by substring — NOT an exact /^عيادات$/ which never
-    //    matches it. Scope to the POS container so we don't match the sidebar
-    //    nav. The card is a `<button disabled={bookableCategoriesCount === 0}>`,
-    //    and Playwright `.click()` waits for the enabled state; assert it's
-    //    enabled first so a seed regression fails fast instead of hanging.
+    //    matches it. Scope to the department section via its `data-section`
+    //    attribute (defence in depth — the track card now also matches
+    //    'عيادات', and scoping removes any ambiguity). The card is a `<button
+    //    disabled={bookableCategoriesCount === 0}>`, and Playwright `.click()`
+    //    waits for the enabled state; assert it's enabled first so a seed
+    //    regression fails fast instead of hanging.
     const deptBtn = posContainer
+      .locator('[data-section="department"]')
       .getByRole('button', { name: /عيادات|clinic/i })
       .first();
     await expect(deptBtn).toBeVisible({ timeout: 10_000 });

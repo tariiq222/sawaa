@@ -158,11 +158,16 @@ test.describe("Booking types and multiplicity", () => {
       type: "group",
     })
 
-    // The type surfaces as an icon whose aria-label is the i18n type label
-    // (bookings.col.type.* → "حضوري" / "مباشرة" / "جماعي"), matched via getByLabel.
-    await expectSeededBookingRow(page, individualBooking, /حضوري|In-person/i)
-    await expectSeededBookingRow(page, walkInBooking, /مباشرة|Walk-in/i)
-    await expectSeededBookingRow(page, groupBooking, /جماعي|group/i)
+    // The booking type surfaces as a small badge inside the row's
+    // booking-number column. Each indicator carries:
+    //   - aria-label = translated type label (bookings.col.type.{inPerson|walkIn|group})
+    //   - data-booking-type = normalized lowercase code from the row.type field
+    // That pair lets E2E distinguish the booking type (in_person / walk_in /
+    // group) from the delivery channel (IN_PERSON / ONLINE) which is rendered
+    // by a separate adjacent icon.
+    await expectSeededBookingRow(page, individualBooking, "in_person", /حضوري|In-person/i)
+    await expectSeededBookingRow(page, walkInBooking, "walk_in", /مباشرة|Walk-in/i)
+    await expectSeededBookingRow(page, groupBooking, "group", /جماعي|Group/i)
   })
 })
 
@@ -192,21 +197,31 @@ async function createBookableService(
 async function expectSeededBookingRow(
   page: Page,
   _booking: SeededBooking,
-  typeLabel: RegExp
+  bookingTypeAttr: "in_person" | "walk_in" | "group",
+  typeLabel: RegExp,
 ) {
   // Search by client name (the booking-number search does not match the UUID).
   // All three seeded bookings share one client, so disambiguate the row by the
-  // type icon's aria-label.
+  // booking-type indicator inside the booking-number column.
   const search = page.getByPlaceholder("بحث بالاسم، رقم الحجز...")
   await expect(search).toBeVisible({ timeout: 10_000 })
   await search.fill(clientFullName())
+  // Row-scope the indicator so a polluted DB row or debounce timing cannot
+  // satisfy the assertion with the wrong booking. The seeded client is the
+  // same across all three bookings, so disambiguate per row by finding the
+  // row that contains BOTH the client name AND the expected booking-type
+  // indicator. Assert the row is visible, then assert the indicator inside
+  // that row carries the expected aria-label.
+  const indicatorSelector = `[data-booking-type="${bookingTypeAttr}"]`
   const row = page
     .getByRole("row")
     .filter({ hasText: clientFullName() })
-    .filter({ has: page.getByLabel(typeLabel) })
+    .filter({ has: page.locator(indicatorSelector) })
     .first()
   await expect(row).toBeVisible({ timeout: 20_000 })
-  await expect(row.getByLabel(typeLabel).first()).toBeVisible()
+  const indicator = row.locator(indicatorSelector).first()
+  await expect(indicator).toBeVisible({ timeout: 5_000 })
+  await expect(indicator).toHaveAttribute("aria-label", typeLabel)
 }
 
 async function expectBookingContract(

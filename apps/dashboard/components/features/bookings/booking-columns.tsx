@@ -2,7 +2,15 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Globe02Icon, Store01Icon, Building02Icon, Video01Icon } from "@hugeicons/core-free-icons"
+import {
+  Globe02Icon,
+  Store01Icon,
+  Building02Icon,
+  Video01Icon,
+  UserIcon,
+  WalkingIcon,
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback, Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
@@ -40,6 +48,26 @@ const deliveryIconConfig: Record<string, { icon: typeof Building02Icon; labelKey
   IN_PERSON: { icon: Building02Icon, labelKey: "bookings.col.type.inPerson" },
 }
 
+/* Booking-type icon — distinct from the delivery channel so receptionists can
+   tell at a glance whether a row is an individual appointment, a walk-in, or a
+   group session. Keys are the API-normalized lowercase codes used in the row's
+   `type` field (e.g. "in_person" / "walk_in" / "group"); uppercase variants
+   are handled defensively in the cell renderer. */
+const bookingTypeIconConfig: Record<
+  string,
+  { icon: typeof UserIcon; labelKey: string }
+> = {
+  in_person: { icon: UserIcon,       labelKey: "bookings.col.type.inPerson" },
+  walk_in:   { icon: WalkingIcon,    labelKey: "bookings.col.type.walkIn" },
+  group:     { icon: UserGroupIcon,  labelKey: "bookings.col.type.group" },
+}
+
+function normalizeBookingType(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const lower = raw.toLowerCase()
+  return bookingTypeIconConfig[lower] ? lower : null
+}
+
 /* Source icon — colored chip so the channel reads at a glance.
    RECEPTION → primary (teal, in-clinic), ONLINE → info (blue, web). */
 const sourceIconConfig: Record<string, { icon: typeof Store01Icon; labelKey: string; tone: string }> = {
@@ -74,25 +102,44 @@ export function getBookingColumns(
       header: "#",
       cell: ({ row }) => {
         const source = sourceIconConfig[row.original.source]
-        const type = deliveryIconConfig[row.original.deliveryType ?? "IN_PERSON"]
-        const typeLabel = type ? t(type.labelKey) : ""
+        const delivery = deliveryIconConfig[row.original.deliveryType ?? "IN_PERSON"]
+        const deliveryLabel = delivery ? t(delivery.labelKey) : ""
+        const bookingTypeKey = normalizeBookingType(row.original.type)
+        const bookingType = bookingTypeKey
+          ? bookingTypeIconConfig[bookingTypeKey]
+          : null
+        const bookingTypeLabel = bookingType ? t(bookingType.labelKey) : ""
         return (
           <div className="flex flex-col items-start gap-1.5">
             <span className="text-[13px] font-medium font-numeric text-muted-foreground">
               #{row.original.bookingNumber.toString().padStart(4, "0")}
             </span>
             <div className="flex items-center gap-1.5">
-              {type && (
+              {delivery && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
                       className="inline-flex size-5 items-center justify-center rounded-md bg-muted text-muted-foreground"
-                      aria-label={typeLabel}
+                      aria-label={deliveryLabel}
                     >
-                      <HugeiconsIcon icon={type.icon} size={12} strokeWidth={2.4} />
+                      <HugeiconsIcon icon={delivery.icon} size={12} strokeWidth={2.4} />
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent side="top">{typeLabel}</TooltipContent>
+                  <TooltipContent side="top">{deliveryLabel}</TooltipContent>
+                </Tooltip>
+              )}
+              {bookingType && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className="inline-flex size-5 items-center justify-center rounded-md bg-primary-ultra-light text-primary border border-primary/20"
+                      aria-label={bookingTypeLabel}
+                      data-booking-type={bookingTypeKey}
+                    >
+                      <HugeiconsIcon icon={bookingType.icon} size={12} strokeWidth={2.4} />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{bookingTypeLabel}</TooltipContent>
                 </Tooltip>
               )}
               {source && (

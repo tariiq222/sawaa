@@ -140,24 +140,33 @@ async function clickReceptionAction(
 }
 
 /**
- * Assert that the detail-sheet status-log section ("سجل الحالات") shows an
- * entry whose toStatus badge text matches `toStatusArText`. We scope the
- * locator to the dialog because the same Arabic string can appear elsewhere
- * (e.g. header status badge), and the status log renders each entry as a
- * separate row with the toStatus label.
+ * Assert the detail sheet's status-log section renders the requested
+ * toStatus. The detail sheet surfaces the timeline inside a Tabs panel
+ * keyed `statusLog` (i18n: "سجل الموعد" / "Activity log") — clicking that
+ * tab swaps the visible panel from the default Details to the timeline.
+ * Scoping to the tabpanel rather than the dialog header badge ensures we
+ * observe the log entry, not just the current-status pill.
  */
 async function expectStatusLogContainsToStatus(
   page: import('@playwright/test').Page,
   toStatusArText: string,
 ): Promise<void> {
   const dialog = page.locator('[role="dialog"]')
-  await expect(dialog.getByText('سجل الحالات')).toBeVisible({ timeout: 5_000 })
-  // The log section header is a <p> followed by the entries; find the toStatus
-  // badge text within the dialog. There may be multiple matches (e.g. the
-  // header StatusBadge also shows the current status); assert that the dialog
-  // has at least one occurrence of the toStatus text AND a sibling arrow + a
-  // fromStatus badge (only present in log entries, not in the header badge).
-  await expect(dialog.getByText(toStatusArText).first()).toBeVisible({
+  // Click the status-log tab inside the open dialog. TabsTrigger renders as
+  // role="tab" with the tab text inside; the tabpanel is the actual log.
+  const statusLogTab = dialog.getByRole('tab', {
+    name: /سجل الموعد|Activity log/i,
+  })
+  await expect(statusLogTab).toBeVisible({ timeout: 5_000 })
+  await statusLogTab.click()
+  // The Radix Tabs panel for `statusLog` is rendered as [role="tabpanel"].
+  // Wait for it to mount so subsequent text assertions target the timeline
+  // (not the prior Details panel).
+  const tabpanel = dialog.locator('[role="tabpanel"]').filter({
+    hasText: toStatusArText,
+  })
+  await expect(tabpanel).toBeVisible({ timeout: 5_000 })
+  await expect(tabpanel.getByText(toStatusArText).first()).toBeVisible({
     timeout: 5_000,
   })
 }

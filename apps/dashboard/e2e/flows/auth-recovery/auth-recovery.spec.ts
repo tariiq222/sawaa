@@ -19,7 +19,7 @@
  * validation only — the actual perform-password-reset POST requires a real
  * reset token which is sent over email.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 // Warm the auth recovery route table before tests start so the page goto +
 // heading queries don't trip on cold Turbopack compiles of the (public)
@@ -34,6 +34,46 @@ test.beforeAll(async ({ browser }) => {
     await context.close()
   }
 })
+
+/**
+ * Fill a password input deterministically:
+ *   1. Wait for the controlled input to be visible AND not disabled.
+ *   2. Focus the input via real keyboard interaction (Tab/Click).
+ *   3. Clear the value with select-all + delete to reset controlled state.
+ *   4. Type each character with `pressSequentially` so React's onChange
+ *      observers receive every keystroke.
+ *   5. Assert the DOM `value` matches the requested string before returning.
+ *
+ * Why not `locator.fill()`?
+ *   Playwright's `fill()` clears-and-sets via the input element's `value`
+ *   descriptor in one atomic op. React's controlled-input onChange may run
+ *   asynchronously after hydration; if hydration hasn't finished the
+ *   synthetic change event is dropped and the input silently stays empty.
+ *   Real keystrokes are processed synchronously per character, so once
+ *   hydration is live the value lands.
+ *
+ * We still wait for `toBeEditable()` (not disabled) BEFORE we type — that
+ * covers the hydration gate because the input is rendered before hydration
+ * finishes but is wired into React state only after hydration. We then
+ * poll-read the DOM value until it matches what we typed, so a slow
+ * hydrate-then-render cycle never races against our assertion.
+ */
+async function typePasswordDeterministically(
+  page: Page,
+  inputId: '#new-password' | '#confirm-password',
+  value: string,
+): Promise<void> {
+  const input = page.locator(inputId)
+  await expect(input).toBeVisible({ timeout: 15_000 })
+  await expect(input).toBeEditable({ timeout: 15_000 })
+  await input.focus()
+  await page.keyboard.press('ControlOrMeta+A')
+  await page.keyboard.press('Delete')
+  await input.pressSequentially(value, { delay: 8 })
+  // Assert the DOM value matches before moving on; in practice this resolves
+  // immediately because pressSequentially awaits the keystroke events.
+  await expect(input).toHaveValue(value, { timeout: 5_000 })
+}
 
 test.describe('Auth recovery flows', () => {
   // Cold dev-server compiles can push loginAs's `expectAuthenticatedShell`
@@ -138,9 +178,11 @@ test.describe('Auth recovery flows', () => {
       const submitButton = page.locator('form button[type="submit"]')
       await expect(submitButton).toBeDisabled()
 
-      // Filling both fields enables the submit.
-      await newPasswordInput.fill('Test1234')
-      await confirmInput.fill('Test1234')
+      // Type into both fields via pressSequentially; assert the value lands
+      // before checking the submit button enables. This protects against
+      // the hydration race where controlled inputs drop `fill()`.
+      await typePasswordDeterministically(page, '#new-password', 'Test1234')
+      await typePasswordDeterministically(page, '#confirm-password', 'Test1234')
       await expect(submitButton).toBeEnabled()
     })
 
@@ -151,13 +193,10 @@ test.describe('Auth recovery flows', () => {
 
       // Wait for React to hydrate the form before filling — the page reaches
       // domcontentloaded before the useState/useEffect handlers are wired up,
-      // and filling before hydration silently drops the input.
-      const newPasswordInput = page.locator('#new-password')
-      const confirmInput = page.locator('#confirm-password')
-      await expect(newPasswordInput).toBeVisible({ timeout: 10_000 })
-      await expect(confirmInput).toBeVisible({ timeout: 10_000 })
-      await newPasswordInput.fill('Test1234')
-      await confirmInput.fill('Different1')
+      // and filling before hydration silently drops the input. We pair the
+      // visibility wait with the deterministic keyboard typing helper.
+      await typePasswordDeterministically(page, '#new-password', 'Test1234')
+      await typePasswordDeterministically(page, '#confirm-password', 'Different1')
 
       const submitButton = page.locator('form button[type="submit"]')
       await expect(submitButton).toBeEnabled({ timeout: 5_000 })
@@ -170,7 +209,7 @@ test.describe('Auth recovery flows', () => {
           .getByText(/غير متطابقتين|do not match/i)
           .first(),
       ).toBeVisible({ timeout: 5_000 })
-      await expect(newPasswordInput).toBeVisible()
+      await expect(page.locator('#new-password')).toBeVisible()
     })
 
     test('reset-password form rejects a weak password', async ({ page }) => {
@@ -178,13 +217,9 @@ test.describe('Auth recovery flows', () => {
         waitUntil: 'domcontentloaded',
       })
 
-      const newPasswordInput = page.locator('#new-password')
-      const confirmInput = page.locator('#confirm-password')
-      await expect(newPasswordInput).toBeVisible({ timeout: 10_000 })
-      await expect(confirmInput).toBeVisible({ timeout: 10_000 })
       // 8 chars but no uppercase + no digit — fails the strong-password schema.
-      await newPasswordInput.fill('weakpass')
-      await confirmInput.fill('weakpass')
+      await typePasswordDeterministically(page, '#new-password', 'weakpass')
+      await typePasswordDeterministically(page, '#confirm-password', 'weakpass')
 
       const submitButton = page.locator('form button[type="submit"]')
       await expect(submitButton).toBeEnabled({ timeout: 5_000 })
@@ -198,7 +233,7 @@ test.describe('Auth recovery flows', () => {
           .getByText(/8 أحرف|at least 8 characters/i)
           .first(),
       ).toBeVisible({ timeout: 5_000 })
-      await expect(newPasswordInput).toBeVisible()
+      await expect(page.locator('#new-password')).toBeVisible()
     })
   })
 })

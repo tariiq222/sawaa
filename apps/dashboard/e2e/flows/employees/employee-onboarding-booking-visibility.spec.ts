@@ -250,16 +250,30 @@ async function openBookingWizardForService(page: Page, input: {
   await searchInput.fill(input.clientName)
   await page.locator('button').filter({ hasText: input.clientName }).first().click()
 
-  // Booking wizard chain: department → category → service. Each step renders a
-  // WizardCard (`<button disabled={...}>`); Playwright `.click()` waits for the
-  // ENABLED state, so a disabled card hangs the test until the suite timeout.
-  // The e2e seed guarantees the clinic department ('عيادات سواء' / 'Sawa Clinics')
-  // exists, holds the "Test Category", and that the category has a bookable
-  // service — so the targeted cards are enabled. Match by the seeded names
-  // (substring, not an exact /^عيادات$/ which never matches the real name) and
-  // assert each card is enabled before clicking, turning a silent 120s hang into
-  // a fast, descriptive failure if the seed regresses.
+  // Booking wizard chain: track → department → category → service. After the
+  // client is picked, the unified booking POS auto-opens the track step (CLINICS /
+  // GROUP / PACKAGES). Each step renders a WizardCard (`<button disabled={...}>`);
+  // Playwright `.click()` waits for the ENABLED state, so a disabled card hangs
+  // the test until the suite timeout. Scope the track and department selectors
+  // via their `data-section` attributes — both cards contain the substring
+  // 'عيادات' (CLINICS track + clinic department) so a non-scoped locator would
+  // resolve to the track card and never click the department. The e2e seed
+  // guarantees the clinic department ('عيادات سواء' / 'Sawa Clinics') exists,
+  // holds the "Test Category", and that the category has a bookable service —
+  // so the targeted cards are enabled. Assert each card is enabled before
+  // clicking, turning a silent 120s hang into a fast, descriptive failure if
+  // the seed regresses.
+  const trackCard = posContainer
+    .locator('[data-section="track"]')
+    .getByRole('button', { name: /عيادات/ })
+    .first()
+  await expect(trackCard, 'CLINICS track card should be visible').toBeVisible({
+    timeout: 10_000,
+  })
+  await trackCard.click()
+
   const departmentCard = posContainer
+    .locator('[data-section="department"]')
     .getByRole('button', { name: /عيادات|clinic/i })
     .first()
   await expect(departmentCard, 'clinic department card should be enabled').toBeEnabled()

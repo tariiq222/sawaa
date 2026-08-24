@@ -34,14 +34,19 @@ import {
 } from "../../fixtures/seed"
 
 const SERVICE_PRICE_HALALAS = 28_000
-// A dashboard-confirmed booking auto-creates its invoice (bookings.booking.
-// confirmed → BookingConfirmedHandler), which uses the default VAT rate of 0%
-// (create-invoice.handler.ts: DEFAULT_VAT_RATE = 0). So the invoice total equals
-// the booking subtotal — 28000 halalas, displayed as 280.00. The seed's
-// createInvoice() is idempotent and returns this existing invoice rather than
-// creating a second one (one booking has exactly one invoice).
-const JOURNEY_TOTAL_HALALAS = SERVICE_PRICE_HALALAS
-const JOURNEY_TOTAL_AR_OR_EN = /٢٨٠(?:٫|\.)٠٠|280(?:\.|٫)00|280/
+// The dashboard POS creates a pay-at-clinic booking (`payAtClinic: true`),
+// so create-booking.handler.ts skips inline invoice creation
+// (`if (!dto.payAtClinic && price > 0)`) and the booking-confirmed event
+// the BookingConfirmedHandler subscribes to is never fired (create-booking
+// emits `bookings.booking.created`, not `bookings.booking.confirmed`).
+// The seed's idempotent createInvoice() therefore CREATES the invoice
+// here with the requested vatRate=0.15, producing total = 28000 * 1.15
+// = 32200 halalas, displayed as 322.00.
+const JOURNEY_TOTAL_HALALAS = 32_200
+// Match only fully-formed 322.00 / ٣٢٢٫٠٠ representations; a bare `322`
+// substring would also match booking numbers, IDs, and unrelated cells, so
+// the display assertion is scoped to the complete currency form.
+const JOURNEY_TOTAL_AR_OR_EN = /٣٢٢(?:٫|\.)٠٠|322(?:\.|٫)00/
 
 let token = ""
 let branchId = ""
@@ -106,10 +111,10 @@ test.describe("Full system user journey", () => {
 
     await expectBookingVisibleInList(page, booking.id, clientFullName())
 
-    // The POS already created (and auto-invoiced) the booking, so this resolves
-    // to that auto-created invoice via the seed's idempotent createInvoice().
-    // The requested vatRate is moot — the auto-invoice uses the product default
-    // (0%), so total == subtotal == SERVICE_PRICE_HALALAS.
+    // Pay-at-clinic bookings skip inline invoice creation, so the seed's
+    // createInvoice() CREATES the invoice with the requested vatRate=0.15
+    // here (the 409 idempotency path doesn't apply because no auto-invoice
+    // exists yet). Total = 28000 * 1.15 = 32200 halalas.
     invoice = await createInvoice(token, {
       bookingId: booking.id,
       branchId,
@@ -168,15 +173,32 @@ async function createBookingFromDashboardPos(page: Page): Promise<SeededBooking>
   await pos.locator("input[placeholder*='ابحث'], input[placeholder*='Search']").first().fill(client.lastName)
   await pos.getByRole("button", { name: new RegExp(escapeRegex(clientFullName())) }).click()
 
-  // The POS wizard is a strict chain: client → department → category → service.
-  // After picking the client, walk the department and category steps before the
-  // service can appear. The seed (fixtures/seed.ts) ensures the clinic
-  // department ('عيادات سواء' / 'Sawa Clinics') exists, holds the shared "Test
-  // Category", and that the seeded service makes the category bookable — so each
-  // WizardCard (`<button disabled={...}>`) is enabled. Assert enabled before
-  // clicking so a seed regression fails fast instead of hanging on a disabled
-  // card until the suite timeout.
-  const departmentCard = pos.getByRole("button", { name: /عيادات|clinic/i }).first()
+  // The unified POS wizard is a strict chain: client → track → department →
+  // category → service. After picking the client, the POS auto-opens the track
+  // step (CLINICS / GROUP / PACKAGES). Pick CLINICS so the department, category,
+  // service sections actually mount. Scope to the track section via its
+  // `data-section` attribute so the CLINICS track card can never be confused
+  // with the department card — both contain the substring 'عيادات', so a
+  // non-scoped locator would resolve to the track card and never click the
+  // department.
+  const trackCard = pos
+    .locator('[data-section="track"]')
+    .getByRole("button", { name: /عيادات/ })
+    .first()
+  await expect(trackCard, "CLINICS track card should be visible").toBeVisible({ timeout: 10_000 })
+  await trackCard.click()
+
+  // Department step — same scoping discipline (`data-section="department"`).
+  // The seed (fixtures/seed.ts) ensures the clinic department ('عيادات سواء' /
+  // 'Sawa Clinics') exists, holds the shared "Test Category", and that the
+  // seeded service makes the category bookable — so each WizardCard
+  // (`<button disabled={...}>`) is enabled. Assert enabled before clicking so a
+  // seed regression fails fast instead of hanging on a disabled card until the
+  // suite timeout.
+  const departmentCard = pos
+    .locator('[data-section="department"]')
+    .getByRole("button", { name: /عيادات|clinic/i })
+    .first()
   await expect(departmentCard, "clinic department card should be enabled").toBeEnabled({ timeout: 10_000 })
   await departmentCard.click()
 
@@ -205,8 +227,28 @@ async function createBookingFromDashboardPos(page: Page): Promise<SeededBooking>
   await expect(timeButton).toBeVisible({ timeout: 20_000 })
   await timeButton.click()
 
-  const payAtClinic = pos.getByRole("button", { name: /الدفع في العيادة|Pay at Clinic/i })
-  await payAtClinic.click()
+  // Collection-timing radiogroup: after the unified booking POS, the prior
+  // 'الدفع في العيادة' toggle is a `<button role="radio">` inside a
+  // `role="radiogroup"` (aria-label = `توقيت التحصيل`). The pay-at-clinic option
+  // is the default selection — assert it is aria-checked BEFORE we click, so a
+  // regression to the prior single-button toggle surfaces immediately instead
+  // of silently clicking the wrong element. Scope to the radiogroup inside the
+  // POS container so we don't match a same-named radio anywhere else on the
+  // page (the bookings-list filter row, the credit/package path, etc.).
+  const collectionTimingGroup = pos
+    .locator('[role="radiogroup"][aria-label*="التحصيل"]')
+    .first()
+  await expect(collectionTimingGroup).toBeVisible({ timeout: 10_000 })
+
+  const payAtClinicRadio = collectionTimingGroup.getByRole("radio", {
+    name: /الدفع في العيادة|Pay at Clinic/i,
+  })
+  // Default state — protects the invariant that existing reception bookings
+  // keep being invoiced as they are today.
+  await expect(payAtClinicRadio).toHaveAttribute("aria-checked", "true", {
+    timeout: 5_000,
+  })
+  await payAtClinicRadio.click()
 
   const createResponsePromise = page.waitForResponse(
     (response) =>
