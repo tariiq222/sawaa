@@ -156,33 +156,39 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
                 {nearest && typeMeta && (
                   <div
                     data-testid="step-employee-nearest-slot"
-                    className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums"
+                    className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground tabular-nums"
                   >
-                    <HugeiconsIcon
-                      icon={typeMeta.icon}
-                      size={14}
-                      className="shrink-0 text-primary/70"
-                    />
-                    <span className="font-medium text-foreground/80">
-                      {t(typeMeta.labelKey)}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <HugeiconsIcon
+                        icon={typeMeta.icon}
+                        size={14}
+                        className="shrink-0 text-primary/70"
+                      />
+                      <span className="truncate font-medium text-foreground/80">
+                        {t(typeMeta.labelKey)}
+                      </span>
                     </span>
-                    <span aria-hidden="true">·</span>
-                    <span>
-                      {isToday
-                        ? t("bookings.wizard.step.employee.availableToday")
-                        : t("bookings.wizard.step.employee.nextAvailable")}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span aria-hidden="true">·</span>
+                      <span className="truncate">
+                        {isToday
+                          ? t("bookings.wizard.step.employee.availableToday")
+                          : t("bookings.wizard.step.employee.nextAvailable")}
+                      </span>
                     </span>
                     {!isToday && (
-                      <>
+                      <span className="flex min-w-0 items-center gap-1.5">
                         <span aria-hidden="true">·</span>
-                        <span className="text-foreground/70">
+                        <span className="whitespace-nowrap text-foreground/70">
                           {formatLocalizedDate(nearest.date, locale)}
                         </span>
-                      </>
+                      </span>
                     )}
-                    <span aria-hidden="true">·</span>
-                    <span className="font-semibold text-foreground/90">
-                      {nearest.time}
+                    <span className="flex items-center gap-1.5">
+                      <span aria-hidden="true">·</span>
+                      <span className="whitespace-nowrap font-semibold text-foreground/90">
+                        {nearest.time}
+                      </span>
                     </span>
                   </div>
                 )}

@@ -570,6 +570,7 @@ export const enServices: Record<string, string> = {
   "packages.sell.branchPlaceholder": "Select a branch",
   "packages.sell.noBranches": "No active branches.",
   "packages.sell.paymentMethod": "Payment method",
+  "packages.sell.collectPackagePrice": "Collect package price",
   "packages.sell.method.cash": "Cash",
   "packages.sell.method.bankTransfer": "Bank transfer",
   "packages.sell.method.mada": "mada",

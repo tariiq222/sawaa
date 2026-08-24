@@ -13,6 +13,7 @@ describe('useBookingFormState', () => {
     expect(s.date).toBeNull()
     expect(s.startTime).toBeNull()
     expect(s.payAtClinic).toBe(true)
+    expect(s.collectionMethod).toBe('CASH')
     expect(result.current.isComplete).toBe(false)
   })
 
@@ -100,6 +101,26 @@ describe('useBookingFormState', () => {
     expect(result.current.state.clientId).toBe('cli-1')
     act(() => { result.current.setCouponCode(null) })
     expect(result.current.state.couponCode).toBeNull()
+  })
+
+  // W2-T2 — collection-method default + setter for the
+  // "تحصيل الآن" path. Default must be "CASH" so the shared
+  // PaymentMethodPicker has a stable seed before settings load.
+  it('default collectionMethod is CASH so the picker has a stable seed', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    expect(result.current.state.collectionMethod).toBe('CASH')
+  })
+
+  it('setCollectionMethod updates the manual method without affecting other fields', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    act(() => {
+      result.current.selectClient('cli-1', 'Sara')
+      result.current.setCollectionMethod('BANK_TRANSFER')
+    })
+    expect(result.current.state.collectionMethod).toBe('BANK_TRANSFER')
+    expect(result.current.state.clientId).toBe('cli-1')
+    act(() => { result.current.setCollectionMethod('MADA') })
+    expect(result.current.state.collectionMethod).toBe('MADA')
   })
 
   it('selectDeliveryType resets date and time but preserves other fields', () => {
@@ -227,5 +248,155 @@ describe('useBookingFormState', () => {
       categoryBookingMode: 'SERVICES', serviceId: 's1', employeeId: 'e1',
       durationOptionId: 'd1', deliveryType: null, date: null, startTime: null,
     }))
+  })
+
+  // Phase 6 — three-track booking wizard state machine.
+
+  it('selectTrack clears every downstream selection but preserves client', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    act(() => {
+      result.current.selectClient('c1', 'Sara')
+      result.current.selectDepartment('d1', 'Family')
+      result.current.selectCategory('cat1', 'Marriage', 'SERVICES')
+      result.current.selectService('s1', 'Counseling')
+      result.current.selectEmployee('e1', 'Ahmad')
+      result.current.selectDeliveryType('IN_PERSON')
+      result.current.selectDate('2026-06-01')
+      result.current.selectTime('09:00')
+      result.current.selectProgram('p1', 'Parenting')
+      result.current.applyPackageCreditTarget(
+        {
+          departmentId: 'd2', departmentName: 'dept2',
+          categoryId: 'cat2', categoryName: 'cat2', categoryBookingMode: 'SERVICES',
+          serviceId: 's2', serviceName: 'svc2',
+          employeeId: 'e2', employeeName: 'emp2',
+          durationOptionId: 'dur2',
+        },
+        'pkg-purchase-1',
+      )
+    })
+    act(() => result.current.selectTrack('GROUP'))
+    const s = result.current.state
+    expect(s.track).toBe('GROUP')
+    expect(s.clientId).toBe('c1')
+    expect(s.departmentId).toBeNull()
+    expect(s.categoryId).toBeNull()
+    expect(s.serviceId).toBeNull()
+    expect(s.employeeId).toBeNull()
+    expect(s.deliveryType).toBeNull()
+    expect(s.date).toBeNull()
+    expect(s.startTime).toBeNull()
+    expect(s.programId).toBeNull()
+    expect(s.programName).toBeNull()
+    expect(s.packagePurchaseId).toBeNull()
+  })
+
+  it('selectProgram sets programId + programName without touching other fields', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    act(() => {
+      result.current.selectClient('c1', 'Sara')
+      result.current.selectService('s1', 'Counseling')
+    })
+    act(() => result.current.selectProgram('prog-1', 'Parenting Bootcamp'))
+    const s = result.current.state
+    expect(s.programId).toBe('prog-1')
+    expect(s.programName).toBe('Parenting Bootcamp')
+    expect(s.clientId).toBe('c1')
+    expect(s.serviceId).toBe('s1')
+  })
+
+  it('isComplete is true for GROUP track with clientId + programId only', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    act(() => {
+      result.current.selectClient('c1', 'Sara')
+      result.current.selectProgram('prog-1', 'Parenting')
+    })
+    // Flip track to GROUP via selectTrack (which clears programId!) — so
+    // set the programId after the track is set instead.
+    act(() => result.current.reset())
+    act(() => {
+      // simulate the real wizard: selectTrack(GROUP) then selectProgram
+      result.current.selectTrack('GROUP')
+      result.current.selectClient('c1', 'Sara')
+      result.current.selectProgram('prog-1', 'Parenting')
+    })
+    expect(result.current.state.track).toBe('GROUP')
+    expect(result.current.isComplete).toBe(true)
+  })
+
+  it('isComplete is false for CLINICS track when only clientId + programId are set', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    act(() => {
+      result.current.selectClient('c1', 'Sara')
+      result.current.selectProgram('prog-1', 'Parenting')
+    })
+    expect(result.current.state.track).toBeNull()
+    expect(result.current.isComplete).toBe(false)
+  })
+
+  it('applyPackageCreditTarget fills the credit triple AND sets packagePurchaseId', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    act(() => result.current.selectClient('c1', 'Sara'))
+    act(() =>
+      result.current.applyPackageCreditTarget(
+        {
+          departmentId: 'dep1', departmentName: 'قسم',
+          categoryId: 'cat1', categoryName: 'عيادة', categoryBookingMode: 'SERVICES',
+          serviceId: 's1', serviceName: 'خدمة',
+          employeeId: 'e1', employeeName: 'موظف',
+          durationOptionId: 'd1',
+        },
+        'pkg-7',
+      ),
+    )
+    const s = result.current.state
+    expect(s).toEqual(expect.objectContaining({
+      packagePurchaseId: 'pkg-7',
+      departmentId: 'dep1',
+      serviceId: 's1',
+      employeeId: 'e1',
+      durationOptionId: 'd1',
+      deliveryType: null,
+      date: null,
+      startTime: null,
+    }))
+  })
+
+  it('selectClient clears programId/programName/packagePurchaseId but preserves track', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    act(() => {
+      result.current.selectTrack('GROUP')
+      result.current.selectProgram('prog-1', 'Parenting')
+    })
+    expect(result.current.state.track).toBe('GROUP')
+    expect(result.current.state.programId).toBe('prog-1')
+
+    // Pre-seed a package purchase id so we can prove it gets cleared too.
+    act(() =>
+      result.current.applyPackageCreditTarget(
+        {
+          departmentId: 'dep1', departmentName: 'd',
+          categoryId: 'cat1', categoryName: 'c', categoryBookingMode: 'SERVICES',
+          serviceId: 's1', serviceName: 'svc',
+          employeeId: 'e1', employeeName: 'emp',
+          durationOptionId: 'd1',
+        },
+        'pkg-1',
+      ),
+    )
+    expect(result.current.state.packagePurchaseId).toBe('pkg-1')
+
+    act(() => result.current.selectClient('c2', 'Nora'))
+
+    const s = result.current.state
+    expect(s.track).toBe('GROUP') // preserved
+    expect(s.clientId).toBe('c2')
+    expect(s.clientName).toBe('Nora')
+    expect(s.programId).toBeNull()
+    expect(s.programName).toBeNull()
+    expect(s.packagePurchaseId).toBeNull()
+    // Downstream picks from the credit triple must also be cleared.
+    expect(s.serviceId).toBeNull()
+    expect(s.employeeId).toBeNull()
   })
 })

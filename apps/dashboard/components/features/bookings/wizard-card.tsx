@@ -31,7 +31,7 @@ export function WizardCard({
       disabled={disabled}
       title={disabled ? disabledReason : undefined}
       className={cn(
-        "group relative w-full rounded-2xl border border-border bg-surface",
+        "group relative w-full min-w-0 overflow-hidden rounded-2xl border border-border bg-surface",
         "px-5 py-4 text-end transition-all duration-150",
         "hover:border-primary/60 hover:bg-primary/5 hover:shadow-md",
         "active:scale-[0.97]",

@@ -27,13 +27,15 @@ import { useBookingMutations } from "@/hooks/use-bookings"
 
 /* ─── Mocked locale ──────────────────────────────────────────────────────── */
 
-const { toastError } = vi.hoisted(() => ({
+const { toastError, toastSuccess } = vi.hoisted(() => ({
   toastError: vi.fn(),
+  toastSuccess: vi.fn(),
 }))
 
 vi.mock("sonner", () => ({
   toast: {
     error: toastError,
+    success: toastSuccess,
   },
 }))
 
@@ -190,6 +192,7 @@ const makeCompleteState = (overrides = {}) => ({
   state: {
     clientId: "cli-1",
     clientName: "Sara",
+    track: "CLINICS" as const,
     departmentId: "dep-1",
     departmentName: "Family",
     categoryId: "cat-1",
@@ -204,13 +207,18 @@ const makeCompleteState = (overrides = {}) => ({
     type: "IN_PERSON" as const,
     date: "2026-06-01",
     startTime: "09:00",
+    programId: null,
+    programName: null,
+    packagePurchaseId: null,
     payAtClinic: false,
+    collectionMethod: "CASH" as const,
     couponCode: null,
     ...overrides,
   },
   isComplete: true,
   reset: vi.fn(),
   selectClient: vi.fn(),
+  selectTrack: vi.fn(),
   selectDepartment: vi.fn(),
   selectCategory: vi.fn(),
   selectService: vi.fn(),
@@ -218,17 +226,32 @@ const makeCompleteState = (overrides = {}) => ({
   selectDeliveryType: vi.fn(),
   selectType: vi.fn(),
   selectDurationOption: vi.fn(),
-  applyCreditTarget: vi.fn(),
   selectDate: vi.fn(),
   selectTime: vi.fn(),
+  selectProgram: vi.fn(),
   setPayAtClinic: vi.fn(),
+  setCollectionMethod: vi.fn(),
   setCouponCode: vi.fn(),
+  applyCreditTarget: vi.fn(),
+  applyPackageCreditTarget: vi.fn(),
 })
 
 /* ─── Shared mock factories ──────────────────────────────────────────────── */
 
-const { createMut } = vi.hoisted(() => ({
+const { createMut, ensureInvoiceMut, recordMut, bookFromCreditMut } = vi.hoisted(() => ({
   createMut: {
+    mutateAsync: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+    isPending: false,
+  },
+  ensureInvoiceMut: {
+    mutateAsync: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+    isPending: false,
+  },
+  recordMut: {
+    mutateAsync: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+    isPending: false,
+  },
+  bookFromCreditMut: {
     mutateAsync: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
     isPending: false,
   },
@@ -248,6 +271,17 @@ vi.mock("@/hooks/use-branches", () => ({
 
 vi.mock("@/hooks/use-organization-settings", () => ({
   useBookingSettings: vi.fn(() => ({ data: { maxAdvanceBookingDays: 90 } })),
+  // `undefined` data signals "still loading" — use-booking-pos-submit
+  // must NOT force payAtClinic in that case (see booking-pos.tsx comment).
+  usePaymentSettings: vi.fn(() => ({ data: undefined })),
+}))
+
+vi.mock("@/hooks/use-payments", () => ({
+  useRecordPaymentMutations: vi.fn(() => ({ recordMut, ensureInvoiceMut })),
+}))
+
+vi.mock("@/hooks/use-credit-bookings", () => ({
+  useBookFromCredit: vi.fn(() => bookFromCreditMut),
 }))
 
 vi.mock("@/lib/api/services", () => ({
@@ -284,6 +318,13 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
   beforeEach(() => {
     vi.clearAllMocks()
     createMut.mutateAsync.mockResolvedValue({ id: "bk-new" })
+    // Default collect-now sequence returns a zero-outstanding invoice so
+    // the W2-T2 PAID branch in use-booking-pos-submit completes without
+    // firing the paymentRecordFailed toast. Tests that want to exercise
+    // the recordPayment path can override this in `mockResolvedValueOnce`.
+    ensureInvoiceMut.mutateAsync.mockResolvedValue({ id: "inv-stub", outstanding: 0 })
+    recordMut.mutateAsync.mockResolvedValue({ id: "pay-stub" })
+    bookFromCreditMut.mutateAsync.mockResolvedValue({ id: "bk-credit" })
   })
 
   it("confirm button click calls createMut.mutateAsync with all required payload fields", async () => {

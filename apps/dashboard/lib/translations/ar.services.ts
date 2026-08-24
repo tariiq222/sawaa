@@ -570,6 +570,7 @@ export const arServices: Record<string, string> = {
   "packages.sell.branchPlaceholder": "اختر فرعاً",
   "packages.sell.noBranches": "لا توجد فروع نشطة.",
   "packages.sell.paymentMethod": "طريقة الدفع",
+  "packages.sell.collectPackagePrice": "تحصيل ثمن الباقة",
   "packages.sell.method.cash": "نقداً",
   "packages.sell.method.bankTransfer": "تحويل بنكي",
   "packages.sell.method.mada": "مدى",

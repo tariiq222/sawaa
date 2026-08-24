@@ -90,10 +90,23 @@ describe("BookingSummary — submit blocking & interactions", () => {
     startTime: null,
     servicePriceHalalas: null as number | null,
     payAtClinic: false,
+    collectionMethod: "CASH" as const,
+    hideCollectionTiming: false,
+    paymentSettings: undefined as
+      | undefined
+      | {
+          paymentMoyasarEnabled: boolean
+          paymentAtClinicEnabled: boolean
+          payMethodCashEnabled: boolean
+          payMethodBankEnabled: boolean
+          payMethodMadaEnabled: boolean
+          payMethodTabbyEnabled: boolean
+        },
     couponCode: null as string | null,
     submitting: false,
     isComplete: false,
     onTogglePayAtClinic: vi.fn(),
+    onChangeCollectionMethod: vi.fn(),
     onCouponChange: vi.fn(),
     onSubmit: vi.fn(),
   }
@@ -143,14 +156,6 @@ describe("BookingSummary — submit blocking & interactions", () => {
     expect(btn).toBeDisabled()
   })
 
-  it("pay-at-clinic toggle is rendered and clickable", () => {
-    const toggle = vi.fn()
-    render(<BookingSummary {...defaultProps} onTogglePayAtClinic={toggle} />)
-    const option = screen.getByText("bookings.wizard.step.confirm.payAtClinic")
-    fireEvent.click(option)
-    expect(toggle).toHaveBeenCalledWith(true)
-  })
-
   it("coupon input calls onCouponChange on type", () => {
     const change = vi.fn()
     render(<BookingSummary {...defaultProps} onCouponChange={change} />)
@@ -167,10 +172,137 @@ describe("BookingSummary — submit blocking & interactions", () => {
     expect(change).toHaveBeenCalledWith(null)
   })
 
-  it("pay-at-clinic option shows selected state visually", () => {
-    const { container } = render(<BookingSummary {...defaultProps} payAtClinic />)
-    const option = container.querySelector(".bg-primary\\/5")
-    expect(option).not.toBeNull()
+  // W2-T2 — radiogroup behaviour for the collection-timing group.
+
+  it("pay-at-clinic option shows selected state via aria-checked", () => {
+    render(<BookingSummary {...defaultProps} payAtClinic />)
+    const atClinic = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.payAtClinic",
+    })
+    expect(atClinic.getAttribute("aria-checked")).toBe("true")
+  })
+
+  it("renders an explicit collection-timing radiogroup with two options", () => {
+    render(<BookingSummary {...defaultProps} />)
+    // Both options must exist as a proper radiogroup with role=radio.
+    const now = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.collectionNow",
+    })
+    const atClinic = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.payAtClinic",
+    })
+    expect(now).toBeInTheDocument()
+    expect(atClinic).toBeInTheDocument()
+    // Radiogroup wrapper exists with the section title as its accessible name.
+    expect(
+      screen.getByRole("radiogroup", {
+        name: "bookings.wizard.step.confirm.collectionTimingHeader",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("selects 'تحصيل الآن' (payAtClinic=false) reveals the shared PaymentMethodPicker", () => {
+    const toggle = vi.fn()
+    render(<BookingSummary {...defaultProps} onTogglePayAtClinic={toggle} />)
+    const now = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.collectionNow",
+    })
+    fireEvent.click(now)
+    expect(toggle).toHaveBeenCalledWith(false)
+  })
+
+  it("selects 'الدفع في العيادة' (payAtClinic=true) keeps pay-at-clinic", () => {
+    const toggle = vi.fn()
+    render(<BookingSummary {...defaultProps} payAtClinic onTogglePayAtClinic={toggle} />)
+    const atClinic = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.payAtClinic",
+    })
+    fireEvent.click(atClinic)
+    // Radiogroup semantics: each radio's onSelect fires with its own
+    // value (true for pay-at-clinic), independent of the current state.
+    // Clicking the already-selected option re-selects it — it does NOT
+    // flip the boolean (a separate switch widget would).
+    expect(toggle).toHaveBeenCalledWith(true)
+  })
+
+  it("default selection is 'الدفع في العيادة' so existing reception bookings are invoiced as today", () => {
+    render(<BookingSummary {...defaultProps} payAtClinic />)
+    const atClinic = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.payAtClinic",
+    }) as HTMLButtonElement
+    const now = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.collectionNow",
+    }) as HTMLButtonElement
+    expect(atClinic.getAttribute("aria-checked")).toBe("true")
+    expect(now.getAttribute("aria-checked")).toBe("false")
+  })
+
+  it("renders PaymentMethodPicker only when payAtClinic=false; default hides it", () => {
+    const { rerender } = render(<BookingSummary {...defaultProps} payAtClinic />)
+    // With payAtClinic=true there must be no method-picker radiogroup;
+    // its aria-label is the "collection method" label.
+    expect(
+      screen.queryByRole("radiogroup", {
+        name: "bookings.wizard.step.confirm.collectionMethodLabel",
+      }),
+    ).toBeNull()
+
+    rerender(<BookingSummary {...defaultProps} payAtClinic={false} />)
+    // With payAtClinic=false the shared picker becomes visible.
+    expect(
+      screen.getByRole("radiogroup", {
+        name: "bookings.wizard.step.confirm.collectionMethodLabel",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("disables 'الدفع في العيادة' when paymentAtClinicEnabled=false (and shows the hint)", () => {
+    render(
+      <BookingSummary
+        {...defaultProps}
+        payAtClinic
+        paymentSettings={{
+          paymentMoyasarEnabled: false,
+          paymentAtClinicEnabled: false,
+          payMethodCashEnabled: true,
+          payMethodBankEnabled: false,
+          payMethodMadaEnabled: false,
+          payMethodTabbyEnabled: false,
+        }}
+      />,
+    )
+    const atClinic = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.payAtClinic",
+    }) as HTMLButtonElement
+    expect(atClinic).toBeDisabled()
+    // Hint text rendered
+    expect(
+      screen.getAllByText("bookings.wizard.step.confirm.payAtClinicDisabledHint").length,
+    ).toBeGreaterThan(0)
+  })
+
+  it("does not force or disable anything while paymentSettings is undefined", () => {
+    render(<BookingSummary {...defaultProps} payAtClinic paymentSettings={undefined} />)
+    const atClinic = screen.getByRole("radio", {
+      name: "bookings.wizard.step.confirm.payAtClinic",
+    }) as HTMLButtonElement
+    // Preserves today's behavior until settings land.
+    expect(atClinic).not.toBeDisabled()
+  })
+
+  it("hides the whole collection-timing group when hideCollectionTiming=true (package/credit path)", () => {
+    render(<BookingSummary {...defaultProps} hideCollectionTiming />)
+    expect(
+      screen.queryByRole("radiogroup", {
+        name: "bookings.wizard.step.confirm.collectionTimingHeader",
+      }),
+    ).toBeNull()
+    // No method picker either.
+    expect(
+      screen.queryByRole("radiogroup", {
+        name: "bookings.wizard.step.confirm.collectionMethodLabel",
+      }),
+    ).toBeNull()
   })
 
   it("calls onSubmit when confirm button is clicked while isComplete is true", () => {

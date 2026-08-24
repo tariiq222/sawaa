@@ -5,6 +5,9 @@ import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { cn } from "@/lib/utils"
+import type { PaymentSettings } from "@/lib/api/organization-settings"
+import type { PayMethod } from "@/components/features/shared/payment-method-picker"
+import { CollectionTimingSection } from "./collection-timing-section"
 
 /* ─── Props ─── */
 
@@ -19,10 +22,22 @@ interface BookingSummaryProps {
   /** Selected service price in halalas (1 SAR = 100). */
   servicePriceHalalas: number | null
   payAtClinic: boolean
+  collectionMethod: PayMethod
+  /** W2-T2 — when true the whole collection-timing radiogroup (and the
+   *  shared PaymentMethodPicker) is hidden. Used by the package-credit
+   *  wizard path, which is zero-priced and pre-paid. */
+  hideCollectionTiming: boolean
+  /** W2-T2 — current payment settings (loaded via `usePaymentSettings`
+   *  by booking-pos.tsx). `undefined` means the request is still in
+   *  flight; the collection-timing section treats that as "do not
+   *  force anything" so today's behavior is preserved until settings
+   *  land. */
+  paymentSettings: PaymentSettings | undefined
   couponCode: string | null
   submitting: boolean
   isComplete: boolean
   onTogglePayAtClinic: (value: boolean) => void
+  onChangeCollectionMethod: (next: PayMethod) => void
   onCouponChange: (code: string | null) => void
   onSubmit: () => void
 }
@@ -67,45 +82,6 @@ function SummaryRow({ label, value }: SummaryRowProps) {
   )
 }
 
-/* ─── Pay at clinic option ─── */
-
-interface PayAtClinicOptionProps {
-  selected: boolean
-  label: string
-  description: string
-  onSelect: () => void
-}
-
-function PayAtClinicOption({ selected, label, description, onSelect }: PayAtClinicOptionProps) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "flex w-full items-center gap-3 rounded-xl border p-4 text-start transition-all",
-        selected
-          ? "border-primary/40 bg-primary/5"
-          : "border-border bg-surface hover:bg-muted/50",
-      )}
-    >
-      {/* Radio indicator */}
-      <div
-        className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-          selected ? "border-primary" : "border-muted-foreground/40",
-        )}
-      >
-        {selected && <div className="size-2.5 rounded-full bg-primary" />}
-      </div>
-
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-semibold text-foreground">{label}</span>
-        <span className="text-xs text-muted-foreground">{description}</span>
-      </div>
-    </button>
-  )
-}
-
 /* ─── Main component ─── */
 
 export function BookingSummary({
@@ -118,10 +94,14 @@ export function BookingSummary({
   startTime,
   servicePriceHalalas,
   payAtClinic,
+  collectionMethod,
+  hideCollectionTiming,
+  paymentSettings,
   couponCode,
   submitting,
   isComplete,
   onTogglePayAtClinic,
+  onChangeCollectionMethod,
   onCouponChange,
   onSubmit,
 }: BookingSummaryProps) {
@@ -197,13 +177,19 @@ export function BookingSummary({
 
       <hr className="border-border" />
 
-      {/* Pay at clinic */}
-      <PayAtClinicOption
-        selected={payAtClinic}
-        label={t("bookings.wizard.step.confirm.payAtClinic")}
-        description={t("bookings.wizard.step.confirm.payAtClinicDescription")}
-        onSelect={() => onTogglePayAtClinic(!payAtClinic)}
-      />
+      {/* Collection-timing radiogroup + (when collect-now) the shared
+          PaymentMethodPicker. Hidden entirely on the credit/package
+          path — those bookings are zero-priced and pre-paid, so any
+          collection UI there would be misleading. */}
+      {!hideCollectionTiming && (
+        <CollectionTimingSection
+          payAtClinic={payAtClinic}
+          onChangePayAtClinic={onTogglePayAtClinic}
+          collectionMethod={collectionMethod}
+          onChangeCollectionMethod={onChangeCollectionMethod}
+          paymentSettings={paymentSettings}
+        />
+      )}
 
       {/* Coupon code */}
       <div className="flex flex-col gap-2">

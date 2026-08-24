@@ -38,23 +38,24 @@ export function StepDepartment({ onSelect }: StepDepartmentProps) {
 
   if (isLoading) return <StepDepartmentSkeleton />
 
-  const departments = data?.items ?? []
+  // Hide junk "track" Department rows (e.g. "جماعية" / "باقات") the center
+  // created without any bookable categories. Only an explicit zero count is
+  // hidden — undefined (older payloads) is still rendered so we don't break
+  // backends that haven't shipped the field yet.
+  const departments = (data?.items ?? []).filter(
+    (department) => department.bookableCategoriesCount !== 0,
+  )
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {departments.map((department) => {
         const name =
           locale === "ar" ? department.nameAr : (department.nameEn || department.nameAr)
-        // bookableCategoriesCount is optional on older payloads; only disable
-        // when the backend explicitly reports zero bookable categories.
-        const isEmpty = department.bookableCategoriesCount === 0
 
         return (
           <WizardCard
             key={department.id}
             onClick={() => onSelect(department.id, name)}
-            disabled={isEmpty}
-            disabledReason={t("bookings.pos.disabled.department")}
             className="px-4 py-3.5"
           >
             <div className="flex items-center gap-3 text-start">

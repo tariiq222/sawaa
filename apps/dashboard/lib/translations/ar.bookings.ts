@@ -1,3 +1,4 @@
+// EXCEPTION: translation-file size limit (300) exceeded — bookings module owns all booking wizard + POS strings and cannot be split without breaking parity-script module pairing, approved 2026-08-23
 /**
  * Arabic translations — Bookings module
  */
@@ -307,8 +308,15 @@ export const arBookings: Record<string, string> = {
   "bookings.wizard.step.confirm.payAtClinicDescription": "ادفع عند الزيارة",
   "bookings.wizard.step.confirm.summaryHeader": "ملخص الحجز",
   "bookings.wizard.step.confirm.paymentHeader": "طريقة الدفع",
+  "bookings.wizard.step.confirm.collectionTimingHeader": "توقيت التحصيل",
+  "bookings.wizard.step.confirm.collectionNow": "تحصيل الآن",
+  "bookings.wizard.step.confirm.collectionNowDescription": "تسجيل الدفعة فوراً عند إنشاء الحجز",
+  "bookings.wizard.step.confirm.payAtClinicDisabledHint": "الدفع في العيادة معطّل من إعدادات المنشأة — يُحصَّل المبلغ الآن",
+  "bookings.wizard.step.confirm.collectionMethodLabel": "طريقة التحصيل",
   "bookings.wizard.step.confirm.couponHeader": "كوبون الخصم",
   "bookings.wizard.step.confirm.couponPlaceholder": "أدخل رمز الكوبون (اختياري)",
+  "bookings.wizard.step.confirm.paymentRecordFailed": "تم إنشاء الحجز لكن تعذّر تسجيل الدفعة — سجّل الدفعة من شاشة تفاصيل الحجز",
+  "bookings.wizard.step.confirm.paymentRecorded": "تم تسجيل الدفعة بنجاح",
   "bookings.wizard.step.scheduling.pickEmployee": "اختر ممارساً لعرض الأوقات المتاحة",
   "bookings.wizard.back": "رجوع",
   "bookings.wizard.close": "إغلاق",
@@ -338,6 +346,48 @@ export const arBookings: Record<string, string> = {
   "bookings.pos.summary.servicePrice": "السعر",
   "bookings.pos.confirm": "تأكيد الحجز",
   "bookings.pos.missingPrefix": "أكمل أولاً",
+
+  // booking POS — wizard tracks (clinics / group / packages)
+  "bookings.pos.section.track": "مسار الحجز",
+  "bookings.pos.section.package": "الباقة",
+  "bookings.pos.section.program": "البرنامج الجماعي",
+
+  "bookings.pos.track.clinics": "عيادات",
+  "bookings.pos.track.clinics.desc": "جلسة فردية في إحدى العيادات",
+  "bookings.pos.track.group": "جماعية",
+  "bookings.pos.track.group.desc": "تسجيل المستفيد في برنامج جماعي",
+  "bookings.pos.track.packages": "باقات",
+  "bookings.pos.track.packages.desc": "استخدام رصيد باقة قائمة أو شراء باقة جديدة",
+
+  "bookings.pos.package.existing.title": "باقات المستفيد النشطة",
+  "bookings.pos.package.existing.empty": "لا توجد باقات نشطة لهذا المستفيد",
+  "bookings.pos.package.remaining": "المتبقي {remaining} من {total}",
+  "bookings.pos.package.use": "احجز من هذا البند",
+  "bookings.pos.package.unavailable": "غير متاح",
+  "bookings.pos.package.buyNew": "شراء باقة جديدة",
+  "bookings.pos.package.catalog.title": "الباقات المتاحة",
+  "bookings.pos.package.catalog.empty": "لا توجد باقات متاحة للبيع",
+  "bookings.pos.package.confirmPurchase": "تأكيد الشراء وتحصيل المبلغ",
+  "bookings.pos.package.purchasing": "جارٍ إتمام الشراء…",
+  "bookings.pos.package.purchase.success": "تم شراء الباقة وتحصيل المبلغ",
+  "bookings.pos.package.purchase.error": "تعذّر إتمام شراء الباقة",
+  "bookings.pos.package.pickFirstSession": "اختر بند الباقة للموعد الأول",
+  "bookings.pos.package.itemsCount": "{count} بنود",
+  "bookings.pos.package.flexibleHint": "بند مرن — أكمل الحجز من مسار العيادات وسيُخصم من رصيد الباقة تلقائياً",
+  "bookings.pos.package.finalPrice": "السعر النهائي",
+
+  "bookings.pos.program.empty": "لا توجد برامج جماعية متاحة للتسجيل",
+  "bookings.pos.program.seats": "{enrolled} من {max} مشارك",
+  "bookings.pos.program.full": "اكتمل العدد",
+  "bookings.pos.program.notScheduled": "لم يُحدَّد موعد البدء بعد",
+  "bookings.pos.program.startDate": "يبدأ في",
+  "bookings.pos.program.enrolling": "جارٍ التسجيل…",
+  "bookings.pos.program.enroll.success": "تم تسجيل المستفيد في البرنامج",
+  "bookings.pos.program.enroll.error": "تعذّر تسجيل المستفيد في البرنامج",
+
+  "bookings.pos.hint.needTrack": "اختر مسار الحجز أولاً",
+  "bookings.pos.hint.needClient": "اختر المستفيد أولاً",
+  "bookings.pos.hint.needPackage": "اختر بند الباقة أولاً",
 
   // booking-columns (list table)
   "bookings.col.header.client": "المريض",

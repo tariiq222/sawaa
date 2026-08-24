@@ -20,9 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sawaa/ui"
-import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
+import {
+  PaymentMethodPicker,
+  resolveActiveMethod,
+  type PayMethod,
+} from "@/components/features/shared/payment-method-picker"
 import { useRecordPaymentMutations } from "@/hooks/use-payments"
 import { useDiscountReasons } from "@/hooks/use-discount-reasons"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
@@ -36,14 +40,13 @@ interface RecordPaymentDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-type PayMethod = "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY"
-
-const METHOD_OPTIONS: { value: PayMethod; labelKey: string; settingKey: "payMethodCashEnabled" | "payMethodBankEnabled" | "payMethodMadaEnabled" | "payMethodTabbyEnabled" }[] = [
-  { value: "CASH", labelKey: "bookings.recordPayment.method.cash", settingKey: "payMethodCashEnabled" },
-  { value: "BANK_TRANSFER", labelKey: "bookings.recordPayment.method.bankTransfer", settingKey: "payMethodBankEnabled" },
-  { value: "MADA", labelKey: "bookings.recordPayment.method.mada", settingKey: "payMethodMadaEnabled" },
-  { value: "TABBY", labelKey: "bookings.recordPayment.method.tabby", settingKey: "payMethodTabbyEnabled" },
-]
+/** `bookings.recordPayment.method.*` namespace, owned by the record-payment flow. */
+const RECORD_PAYMENT_METHOD_LABEL_KEYS: Record<PayMethod, string> = {
+  CASH: "bookings.recordPayment.method.cash",
+  BANK_TRANSFER: "bookings.recordPayment.method.bankTransfer",
+  MADA: "bookings.recordPayment.method.mada",
+  TABBY: "bookings.recordPayment.method.tabby",
+}
 
 export function RecordPaymentDialog({ booking, open, onOpenChange }: RecordPaymentDialogProps) {
   const { t } = useLocale()
@@ -67,13 +70,6 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
   const { data: reasons = [] } = useDiscountReasons()
   const { data: paymentSettings } = usePaymentSettings()
 
-  // Methods the clinic has enabled in settings. Cash is the safe fallback so the
-  // dialog is never actionless while settings load.
-  const enabledMethods = useMemo(() => {
-    const list = METHOD_OPTIONS.filter((m) => paymentSettings?.[m.settingKey])
-    return list.length > 0 ? list : METHOD_OPTIONS.filter((m) => m.value === "CASH")
-  }, [paymentSettings])
-
   // Pay-at-clinic bookings carry no invoice until completion. Materialise a DRAFT
   // one on open so reception can record an upfront payment against it.
   const [ensured, setEnsured] = useState<BookingInvoice | null>(booking.invoice)
@@ -92,9 +88,12 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
   const subtotalSar = halalasToSar(invoice?.subtotal ?? 0)
   const vatRate = invoice?.vatRate ?? 0
 
-  const [method, setMethod] = useState<PayMethod>(enabledMethods[0]?.value ?? "CASH")
+  // Initial state matches the original behavior: with paymentSettings undefined
+  // at first render, the shared helper resolves enabled methods to [CASH], so
+  // seeding with "CASH" produces the same DOM and submission path.
+  const [method, setMethod] = useState<PayMethod>("CASH")
   // If the selected method gets disabled (settings load late), fall back to the first enabled one.
-  const activeMethod = enabledMethods.some((m) => m.value === method) ? method : (enabledMethods[0]?.value ?? "CASH")
+  const activeMethod = resolveActiveMethod(paymentSettings, method)
   const [discountSar, setDiscountSar] = useState("")
   const [discountReasonId, setDiscountReasonId] = useState("")
   // null = follow the payable total automatically; a string = user typed an explicit amount.
@@ -160,28 +159,13 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
 
               <div className="flex flex-col gap-2">
                 <Label>{t("bookings.recordPayment.method")}</Label>
-                <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t("bookings.recordPayment.method")}>
-                  {enabledMethods.map((m) => {
-                    const selected = activeMethod === m.value
-                    return (
-                      <button
-                        key={m.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => setMethod(m.value)}
-                        className={cn(
-                          "rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors",
-                          selected
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-surface text-foreground hover:bg-muted",
-                        )}
-                      >
-                        {t(m.labelKey)}
-                      </button>
-                    )
-                  })}
-                </div>
+                <PaymentMethodPicker
+                  paymentSettings={paymentSettings}
+                  method={method}
+                  onChange={setMethod}
+                  labelKeys={RECORD_PAYMENT_METHOD_LABEL_KEYS}
+                  ariaLabel={t("bookings.recordPayment.method")}
+                />
               </div>
 
               <div className="flex flex-col gap-2">

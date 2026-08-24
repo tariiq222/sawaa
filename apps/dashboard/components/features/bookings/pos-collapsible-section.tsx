@@ -9,7 +9,10 @@ import { cn } from "@/lib/utils"
 
 export type SectionId =
   | "client"
+  | "track"
   | "department"
+  | "package"
+  | "program"
   | "category"
   | "service"
   | "employee"
@@ -18,12 +21,15 @@ export type SectionId =
 
 const STEP_NUMBERS: Record<SectionId, number> = {
   client: 1,
-  department: 2,
-  category: 3,
-  service: 4,
-  employee: 5,
-  typeDuration: 6,
-  datetime: 7,
+  track: 2,
+  department: 3,
+  package: 3,
+  program: 3,
+  category: 4,
+  service: 5,
+  employee: 6,
+  typeDuration: 7,
+  datetime: 8,
 }
 
 /* ─── Collapsible section ─── */

@@ -1,3 +1,4 @@
+// EXCEPTION: translation-file size limit (300) exceeded — bookings module owns all booking wizard + POS strings and cannot be split without breaking parity-script module pairing, approved 2026-08-23
 /**
  * English translations — Bookings module
  */
@@ -307,8 +308,15 @@ export const enBookings: Record<string, string> = {
   "bookings.wizard.step.confirm.payAtClinicDescription": "Pay when you visit",
   "bookings.wizard.step.confirm.summaryHeader": "Booking Summary",
   "bookings.wizard.step.confirm.paymentHeader": "Payment Method",
+  "bookings.wizard.step.confirm.collectionTimingHeader": "Collection Timing",
+  "bookings.wizard.step.confirm.collectionNow": "Collect Now",
+  "bookings.wizard.step.confirm.collectionNowDescription": "Record the payment immediately on booking creation",
+  "bookings.wizard.step.confirm.payAtClinicDisabledHint": "Pay at Clinic is disabled in the clinic settings — the amount will be collected now",
+  "bookings.wizard.step.confirm.collectionMethodLabel": "Collection method",
   "bookings.wizard.step.confirm.couponHeader": "Discount Coupon",
   "bookings.wizard.step.confirm.couponPlaceholder": "Enter coupon code (optional)",
+  "bookings.wizard.step.confirm.paymentRecordFailed": "Booking was created but the payment was not recorded — please record the payment from the booking details screen",
+  "bookings.wizard.step.confirm.paymentRecorded": "Payment recorded successfully",
   "bookings.wizard.step.scheduling.pickEmployee": "Select a practitioner to see available times",
   "bookings.wizard.back": "Back",
   "bookings.wizard.close": "Close",
@@ -338,6 +346,48 @@ export const enBookings: Record<string, string> = {
   "bookings.pos.summary.servicePrice": "Price",
   "bookings.pos.confirm": "Confirm Booking",
   "bookings.pos.missingPrefix": "Complete first",
+
+  // booking POS — wizard tracks (clinics / group / packages)
+  "bookings.pos.section.track": "Booking Track",
+  "bookings.pos.section.package": "Package",
+  "bookings.pos.section.program": "Group Program",
+
+  "bookings.pos.track.clinics": "Clinics",
+  "bookings.pos.track.clinics.desc": "An individual session at one of our clinics",
+  "bookings.pos.track.group": "Group",
+  "bookings.pos.track.group.desc": "Enrol the client in a group program",
+  "bookings.pos.track.packages": "Packages",
+  "bookings.pos.track.packages.desc": "Use an existing package credit or buy a new package",
+
+  "bookings.pos.package.existing.title": "Client's Active Packages",
+  "bookings.pos.package.existing.empty": "No active packages for this client",
+  "bookings.pos.package.remaining": "{remaining} of {total} remaining",
+  "bookings.pos.package.use": "Book from this credit",
+  "bookings.pos.package.unavailable": "Unavailable",
+  "bookings.pos.package.buyNew": "Buy a new package",
+  "bookings.pos.package.catalog.title": "Available Packages",
+  "bookings.pos.package.catalog.empty": "No packages available for purchase",
+  "bookings.pos.package.confirmPurchase": "Confirm purchase & collect payment",
+  "bookings.pos.package.purchasing": "Completing purchase…",
+  "bookings.pos.package.purchase.success": "Package purchased and payment collected",
+  "bookings.pos.package.purchase.error": "Could not complete the package purchase",
+  "bookings.pos.package.pickFirstSession": "Choose a package item for the first session",
+  "bookings.pos.package.itemsCount": "{count} items",
+  "bookings.pos.package.flexibleHint": "Flexible credit — complete the booking from the Clinics track and it will be deducted from the package balance automatically.",
+  "bookings.pos.package.finalPrice": "Final price",
+
+  "bookings.pos.program.empty": "No group programs open for enrolment",
+  "bookings.pos.program.seats": "{enrolled} of {max} participants",
+  "bookings.pos.program.full": "Full",
+  "bookings.pos.program.notScheduled": "Start date not yet scheduled",
+  "bookings.pos.program.startDate": "Starts on",
+  "bookings.pos.program.enrolling": "Enrolling…",
+  "bookings.pos.program.enroll.success": "Client enrolled in the program",
+  "bookings.pos.program.enroll.error": "Could not enrol the client in the program",
+
+  "bookings.pos.hint.needTrack": "Select a booking track first",
+  "bookings.pos.hint.needClient": "Select a client first",
+  "bookings.pos.hint.needPackage": "Select a package item first",
 
   // booking-columns (list table)
   "bookings.col.header.client": "Client",
