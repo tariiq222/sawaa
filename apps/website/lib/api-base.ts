@@ -13,3 +13,18 @@ export function getApiBase(): string {
   const trimmed = origin.replace(/\/+$/, '');
   return trimmed.endsWith(API_PREFIX) ? trimmed : `${trimmed}${API_PREFIX}`;
 }
+
+/**
+ * Origin (no path) of the API server. Use for `<link rel="preconnect">` so
+ * the browser can warm up the TLS/DNS handshake before the first fetch.
+ * Falls back to the same env chain as `getApiBase` then to the local
+ * backend default.
+ */
+export function getApiOrigin(): string {
+  const base = getApiBase();
+  try {
+    return new URL(base).origin;
+  } catch {
+    return DEFAULT_ORIGIN;
+  }
+}

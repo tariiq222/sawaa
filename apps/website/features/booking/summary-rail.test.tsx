@@ -98,7 +98,7 @@ describe('SummaryRail', () => {
     expect(screen.getByText('Time')).toBeTruthy();
   });
 
-  it('shows the service name and total when service is set', () => {
+  it('shows only the service name and NO total/duration when service is set without a choice, even if resolvedPriceHalalas is supplied', () => {
     render(
       withLocale(
         <SummaryRail
@@ -112,10 +112,51 @@ describe('SummaryRail', () => {
         />,
       ),
     );
+    // Service name renders.
     expect(screen.getByText('Consultation')).toBeTruthy();
-    // 10000 halalas = 100 SAR; Intl.NumberFormat in en-US with only
-    // maximumFractionDigits:2 trims trailing zeros → "100", not "100.00".
+    // No duration subline — the user has not committed a choice yet.
+    expect(screen.queryByText(/min/)).toBeNull();
+    // No total — even though resolvedPriceHalalas is set, no choice means
+    // the summary must suppress price/VAT/total.
+    expect(screen.queryByText('100')).toBeNull();
+    expect(screen.queryByText(/SAR/)).toBeNull();
+    expect(screen.queryByText(/incl\. VAT/)).toBeNull();
+  });
+
+  it('shows the chosen duration + delivery + total once a choice is committed', () => {
+    const serviceWithConfig: Service = {
+      ...service,
+      bookingConfigs: [
+        { id: 'cfg1', deliveryType: 'IN_PERSON', price: 10000, durationMins: 60 },
+      ],
+    } as Service & {
+      bookingConfigs?: Array<{
+        id: string;
+        deliveryType: 'IN_PERSON' | 'ONLINE';
+        price: number | string;
+        durationMins: number;
+      }>;
+    };
+    render(
+      withLocale(
+        <SummaryRail
+          showBranch={false}
+          branch={null}
+          service={serviceWithConfig}
+          choice={{ durationOptionId: 'cfg1', deliveryType: 'IN_PERSON' }}
+          employee={null}
+          slot={null}
+          resolvedPriceHalalas={10000}
+        />,
+      ),
+    );
+    // Duration subline now renders.
+    expect(screen.getByText(/60 min/)).toBeTruthy();
+    // Delivery type subline now renders.
+    expect(screen.getByText(/In-person/)).toBeTruthy();
+    // Total renders.
     expect(screen.getByText('100')).toBeTruthy();
+    expect(screen.getByText(/SAR/)).toBeTruthy();
   });
 
   it('shows the branch row when showBranch=true and branch is set', () => {
@@ -169,7 +210,7 @@ describe('SummaryRail', () => {
     expect(screen.getByText('Dr. Layla')).toBeTruthy();
   });
 
-  it('shows the pending date when pendingDateIso is set but slot is null', () => {
+  it('does NOT show a browsed date on the time row when only the date is provided (no committed slot)', () => {
     render(
       withLocale(
         <SummaryRail
@@ -179,12 +220,15 @@ describe('SummaryRail', () => {
           choice={null}
           employee={null}
           slot={null}
-          pendingDateIso="2026-07-01"
+          // pendingDateIso prop was removed; even if a caller still passes it
+          // it is silently ignored. The Time row stays empty until a real
+          // slot is committed.
+          {...({ pendingDateIso: '2026-07-01' } as Record<string, unknown>)}
         />,
       ),
     );
-    // The date should render in the slot row.
-    expect(screen.getByText(/July/)).toBeTruthy();
+    expect(screen.queryByText(/July/)).toBeNull();
+    expect(screen.queryByText(/2026/)).toBeNull();
   });
 
   it('shows the chosen slot time when slot is selected', () => {
@@ -203,6 +247,8 @@ describe('SummaryRail', () => {
     // TZ is pinned to UTC → 2026-07-01T14:00:00.000Z renders as "02:00 PM" in
     // the en-US locale. Assert the time sub-line exactly.
     expect(screen.getByText('02:00 PM')).toBeTruthy();
+    // The date subline renders too — weekday + day + month.
+    expect(screen.getByText(/July/)).toBeTruthy();
   });
 
   it('does not render edit affordances when onEdit is undefined', () => {

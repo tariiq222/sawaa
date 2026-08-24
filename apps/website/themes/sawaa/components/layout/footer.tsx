@@ -4,29 +4,21 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Phone, Mail } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
-import { useLocale, useT } from '@/features/locale/locale-provider';
+import { useT } from '@/features/locale/locale-provider';
 import { PAYMENT_METHODS, SITE } from '../../lib/constants';
-import type { SupportGroup } from '@/features/support-groups/support-groups.api';
 
 const navLinks = [
-  { key: 'nav.home', href: '/' },
-  { key: 'nav.therapists', href: '/therapists' },
-  { key: 'nav.supportGroups', href: '/support-groups' },
-  { key: 'nav.burnout', href: '/burnout-test' },
-  { key: 'nav.about', href: '/about' },
   { key: 'nav.contact', href: '/contact' },
+  { key: 'footer.privacy', href: '/privacy' },
+  { key: 'footer.terms', href: '/terms' },
 ] as const;
 
-export interface FooterService {
-  id: string;
-  nameAr: string;
-  nameEn: string | null;
-}
-
-interface FooterProps {
-  services?: FooterService[];
-  supportGroups?: SupportGroup[];
-}
+const socialLinks = [
+  { label: 'TikTok', href: SITE.social.tiktok },
+  { label: 'X', href: SITE.social.x },
+  { label: 'Instagram', href: SITE.social.instagram },
+  { label: 'YouTube', href: SITE.social.youtube },
+] as const;
 
 function SocialIcon({
   href,
@@ -43,7 +35,7 @@ function SocialIcon({
       target="_blank"
       aria-label={label}
       rel="noopener noreferrer"
-      className="w-10 h-10 rounded-xl flex items-center justify-center transition hover:-translate-y-0.5"
+      className="w-8 h-8 rounded-lg flex items-center justify-center transition hover:-translate-y-0.5"
       style={{
         background: 'var(--sw-primary-50)',
         color: 'var(--sw-primary-600)',
@@ -51,6 +43,16 @@ function SocialIcon({
     >
       <span className="w-[18px] h-[18px] flex items-center justify-center">{children}</span>
     </a>
+  );
+}
+
+function Marker() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+      style={{ background: 'var(--sw-primary-500)' }}
+    />
   );
 }
 
@@ -69,9 +71,8 @@ function ColumnHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Footer({ services = [], supportGroups = [] }: FooterProps) {
+export function Footer() {
   const t = useT();
-  const locale = useLocale();
   const branding = useBranding();
   const brandName = branding.organizationNameAr || SITE.name;
   const tagline = branding.productTagline || SITE.desc;
@@ -93,7 +94,7 @@ export function Footer({ services = [], supportGroups = [] }: FooterProps) {
       />
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8 relative">
         <div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-10 pb-12 border-b"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 pb-12 border-b"
           style={{ borderColor: 'var(--sw-neutral-100)' }}
         >
           <div>
@@ -115,7 +116,7 @@ export function Footer({ services = [], supportGroups = [] }: FooterProps) {
               </b>
             </div>
             <p
-              className="text-[0.813rem] leading-relaxed mb-6"
+              className="text-[0.813rem] leading-relaxed mb-5"
               style={{ color: 'var(--sw-neutral-500)' }}
             >
               {tagline}
@@ -150,95 +151,42 @@ export function Footer({ services = [], supportGroups = [] }: FooterProps) {
             <ul className="space-y-3">
               {navLinks.map((l) => (
                 <li key={l.href}>
-                  <a
+                  <Link
                     href={l.href}
                     aria-label={t(l.key)}
-                    className="text-[0.813rem] transition"
-                    style={{ color: 'var(--sw-neutral-500)' }}
+                    className="inline-flex items-center gap-2 text-[0.813rem] transition-colors duration-200 text-[var(--sw-neutral-500)] hover:text-[var(--sw-primary-600)] focus-visible:text-[var(--sw-primary-600)] focus-visible:outline-none focus-visible:underline focus-visible:underline-offset-[3px]"
                   >
+                    <Marker />
                     {t(l.key)}
-                  </a>
+                  </Link>
                 </li>
               ))}
-              <li>
-                <Link
-                  href="/booking"
-                  aria-label={t('nav.booking')}
-                  className="text-[0.813rem] transition"
-                  style={{ color: 'var(--sw-neutral-500)' }}
-                >
-                  {t('nav.booking')}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/privacy"
-                  aria-label={t('footer.privacy')}
-                  className="text-[0.813rem] transition"
-                  style={{ color: 'var(--sw-neutral-500)' }}
-                >
-                  {t('footer.privacy')}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/terms"
-                  aria-label={t('footer.terms')}
-                  className="text-[0.813rem] transition"
-                  style={{ color: 'var(--sw-neutral-500)' }}
-                >
-                  {t('footer.terms')}
-                </Link>
-              </li>
             </ul>
           </div>
 
-          {services.length > 0 ? (
-            <div>
-              <ColumnHeader>{t('footer.services')}</ColumnHeader>
-              <ul className="space-y-3">
-                {services.map((service) => (
-                  <li key={service.id}>
-                    <Link
-                      href={`/booking?serviceId=${encodeURIComponent(service.id)}`}
-                      className="text-[0.813rem] transition hover:text-[var(--sw-primary-700)]"
-                      style={{ color: 'var(--sw-neutral-500)' }}
-                    >
-                      {locale === 'en' ? service.nameEn?.trim() || service.nameAr : service.nameAr}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
           <div>
-            <ColumnHeader>{t('footer.supportGroups')}</ColumnHeader>
+            <ColumnHeader>{t('footer.social')}</ColumnHeader>
             <ul className="space-y-3">
-              {supportGroups.map((program) => {
-                const name =
-                  locale === 'en'
-                    ? program.nameEn?.trim() || program.nameAr
-                    : program.nameAr;
-                return (
-                <li key={program.id}>
-                  <Link
-                    href={`/support-groups/${encodeURIComponent(program.id)}`}
-                    aria-label={name}
-                    className="text-[0.813rem] transition"
-                    style={{ color: 'var(--sw-neutral-500)' }}
+              {socialLinks.map((s) => (
+                <li key={s.href}>
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.label}
+                    className="inline-flex items-center gap-2 text-[0.813rem] transition-colors duration-200 text-[var(--sw-neutral-500)] hover:text-[var(--sw-primary-600)] focus-visible:text-[var(--sw-primary-600)] focus-visible:outline-none focus-visible:underline focus-visible:underline-offset-[3px]"
                   >
-                    {name}
-                  </Link>
+                    <Marker />
+                    {s.label}
+                  </a>
                 </li>
-                );
-              })}
+              ))}
             </ul>
           </div>
 
           <div>
             <ColumnHeader>{t('footer.contact')}</ColumnHeader>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex gap-3 items-start text-[0.813rem]" style={{ color: 'var(--sw-neutral-500)' }}>
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -257,7 +205,7 @@ export function Footer({ services = [], supportGroups = [] }: FooterProps) {
                 </div>
                 <a
                   href={`tel:${SITE.phone}`}
-                  className="font-semibold transition"
+                  className="text-[0.813rem] font-semibold transition-colors duration-200 text-[var(--sw-neutral-500)] hover:text-[var(--sw-primary-600)] focus-visible:text-[var(--sw-primary-600)] focus-visible:outline-none focus-visible:underline focus-visible:underline-offset-[3px]"
                   style={{ direction: 'ltr' }}
                 >
                   {SITE.phone}
@@ -270,7 +218,10 @@ export function Footer({ services = [], supportGroups = [] }: FooterProps) {
                 >
                   <Mail className="w-4 h-4" style={{ color: 'var(--sw-primary-600)' }} />
                 </div>
-                <a href={`mailto:${SITE.email}`} className="font-semibold transition">
+                <a
+                  href={`mailto:${SITE.email}`}
+                  className="text-[0.813rem] font-semibold transition-colors duration-200 text-[var(--sw-neutral-500)] hover:text-[var(--sw-primary-600)] focus-visible:text-[var(--sw-primary-600)] focus-visible:outline-none focus-visible:underline focus-visible:underline-offset-[3px]"
+                >
                   {SITE.email}
                 </a>
               </div>

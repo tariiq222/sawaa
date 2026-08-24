@@ -1,7 +1,13 @@
 /**
  * Per-request middleware:
- *   1. Sets a cryptographic nonce in the CSP header (no 'unsafe-inline',
- *      no 'unsafe-eval' — Next.js stamps the nonce on its injected scripts).
+ *   1. Sets a cryptographic nonce in the CSP header. Production CSP
+ *      uses 'self' + nonce + 'strict-dynamic' + the FOUC-script hash
+ *      with no 'unsafe-inline' and no 'unsafe-eval'. In non-production
+ *      builds (dev / test), 'unsafe-eval' is appended to script-src
+ *      because Next.js React Refresh and HMR evaluate code at runtime
+ *      — without it, the client bundle refuses to boot and the booking
+ *      wizard renders skeletons forever. The production CSP stays
+ *      byte-for-byte locked down.
  *   2. Redirects unauthenticated users away from /account, /booking/confirm.
  *   3. Redirects authenticated users away from the auth pages to /account.
  *
@@ -35,12 +41,29 @@ function apiOrigin(): string {
 const SENTRY_ORIGIN = process.env.SENTRY_URL || 'https://errors.webvue.pro'
 
 /**
+ * SHA-256 hash of the FOUC-prevention inline script emitted by
+ * `app/layout.tsx` (`document.documentElement.classList.add('sw-js')`).
+ * Hash-based whitelisting lets the script run without `unsafe-inline`
+ * and without per-request nonces, so the same HTML response is valid
+ * even after a cache hit. If the script body changes, regenerate the
+ * hash (e.g. `printf 'document...' | openssl dgst -sha256 -binary | base64`).
+ */
+const FOUC_SCRIPT_HASH = "'sha256-DY/VAMtBGvhQC+0XhmB5TxS7gbObQ8KIXwJIZsXsGK4='"
+
+/**
  * Build the CSP for this request.
  *
- * - script-src drops 'unsafe-inline' and 'unsafe-eval' in favor of a
- *   per-request nonce. 'strict-dynamic' propagates trust to scripts
- *   loaded by the nonced root script (Next.js's chunk loader), which
- *   removes the need for per-chunk nonces.
+ * - script-src drops 'unsafe-inline' in favor of a per-request nonce
+ *   plus the FOUC-script hash. 'strict-dynamic' propagates trust to
+ *   scripts loaded by the nonced root script (Next.js's chunk loader),
+ *   which removes the need for per-chunk nonces.
+ * - In production, script-src is exactly
+ *   `'self' 'nonce-${nonce}' 'strict-dynamic' 'sha256-...'` — no
+ *   'unsafe-eval'. In non-production (dev / test) builds,
+ *   `'unsafe-eval'` is appended because Next.js React Refresh and HMR
+ *   rely on `eval`; without it the client bundle is blocked and pages
+ *   render as permanent skeletons. NODE_ENV is read inside this
+ *   function (not at module load) so tests can toggle it per-case.
  * - style-src still allows 'unsafe-inline' because Next.js injects
  *   styles inline during hydration; tightening this requires
  *   migrating every <style jsx> usage to CSS modules (out of scope).
@@ -49,9 +72,13 @@ const SENTRY_ORIGIN = process.env.SENTRY_URL || 'https://errors.webvue.pro'
  */
 function buildCsp(nonce: string): string {
   const api = apiOrigin()
+  const isProduction = process.env.NODE_ENV === 'production'
+  const scriptSrc = isProduction
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${FOUC_SCRIPT_HASH}`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' ${FOUC_SCRIPT_HASH}`
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    scriptSrc,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",

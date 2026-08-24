@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useReducer, useRef, useState, Suspense } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { reduce, INITIAL_WIZARD_STATE, WizardStep } from '@sawaa/shared';
@@ -29,6 +30,7 @@ import { PaymentRedirect } from '@/features/payment/payment-redirect';
 import { BookingSkeleton } from '@/features/booking/booking-skeleton';
 import { SummaryRail, SummaryChips, type SummaryScreen } from '@/features/booking/summary-rail';
 import { useT, useLocale } from '@/features/locale/locale-provider';
+import { SITE } from '@/themes/sawaa/lib/constants';
 import '@/themes/sawaa/theme.css';
 
 function todayLocalIso(): string {
@@ -326,11 +328,11 @@ function PractitionerChoicePicker({
       </header>
       <ul className="flex flex-col gap-3" role="list">
         {options.map((opt, i) => {
-          const labelText = opt.label
-            ? opt.label
-            : opt.deliveryType === 'ONLINE'
-              ? isAr ? 'أونلاين' : 'Online'
-              : isAr ? 'حضوري' : 'In-person';
+          // The backend-supplied `opt.label` is intentionally NOT shown: it
+          // duplicates the service name (e.g. "تقييم نفسي أولي (60 دقيقة)")
+          // already chosen in step 1 and surfaced again in the summary rail,
+          // which made both option cards look identical at a glance. The card
+          // title is the attendance type only; duration lives on the subline.
           return (
             <li key={`${opt.durationOptionId}-${opt.deliveryType}-${i}`}>
               <button
@@ -353,13 +355,12 @@ function PractitionerChoicePicker({
                 <div className="flex items-center gap-4 p-4 sm:p-5">
                   <div className="flex flex-col min-w-0 flex-1 gap-1">
                     <span className="font-bold text-base leading-snug" style={{ color: 'var(--sw-secondary-700)' }}>
-                      {labelText}
+                      {opt.deliveryType === 'ONLINE'
+                        ? isAr ? 'أونلاين' : 'Online'
+                        : isAr ? 'حضوري' : 'In-person'}
                     </span>
                     <span className="text-[0.8125rem] font-medium" style={{ color: 'var(--sw-body)' }}>
                       {`${opt.durationMins} ${isAr ? 'دقيقة' : 'min'}`}
-                      {opt.deliveryType === 'ONLINE'
-                        ? ` · ${isAr ? 'أونلاين' : 'Online'}`
-                        : ` · ${isAr ? 'حضوري' : 'In-person'}`}
                     </span>
                   </div>
                   <div className="flex flex-col items-end shrink-0 gap-0.5">
@@ -411,6 +412,25 @@ function BookingWizardInner() {
     entryPoint: preselectEmployeeId && !preselectServiceId ? 'therapist' : 'service',
   });
   const didPreselectRef = useRef(false);
+  // Bounded latch: remembers the (service.id, therapist.id) pair we already
+  // auto-selected via the single-therapist shortcut so the effect does not
+  // re-fire when the machine advances past THERAPIST and re-renders with the
+  // same pair. Cleared whenever the user re-enters service selection so
+  // returning to the same service after a back-out still auto-selects the
+  // sole therapist and opens the dedicated choice step (not a parking
+  // therapist screen).
+  const autoSelectedPairRef = useRef<string | null>(null);
+  // Monotonic request generation for the practitioner-options fetch. Every
+  // load captures the current value and only writes back if it is still the
+  // latest — older in-flight loads observe a mismatch on resolve or fail
+  // and bail. This is the only mechanism that guarantees a stale slower
+  // request cannot overwrite options for a newer pair after back/reselect.
+  const practitionerOptionsRequestRef = useRef(0);
+  // Mounted-ref guard so an in-flight load that resolves after the wizard
+  // unmounts does not dispatch into an unmounted tree. The generation bump
+  // in the cleanup effect above also covers this case, but the explicit
+  // check is cheap and makes the intent obvious at every dispatch site.
+  const mountedRef = useRef(true);
   const [preselectDone, setPreselectDone] = useState(false);
   const {
     entryPoint,
@@ -553,6 +573,17 @@ function BookingWizardInner() {
     dispatchUi({ type: 'PICK_BRANCH', branch: main });
   }, [loadingData, preselectDone, selectedBranch, branches]);
 
+  // Mount/unmount tracking for practitioner-options loads. On unmount we
+  // bump the generation so any in-flight resolve/fail sees a stale id and
+  // bails before dispatching UI updates into an unmounted tree.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      practitionerOptionsRequestRef.current += 1;
+    };
+  }, []);
+
   const service =
     state.step === WizardStep.THERAPIST ||
     state.step === WizardStep.SLOT ||
@@ -594,7 +625,17 @@ function BookingWizardInner() {
   // Which visible screen are we on right now?
   const currentScreen: WizardScreen = useMemo(() => {
     if (awaitingBranch) return 'branch';
-    if (showingChoiceStep) return 'choice';
+    // Only honour the choice flag while the machine has NOT yet advanced past
+    // the choice point. When state.step is INFO_OTP/PAYMENT, a true
+    // showingChoiceStep is stale (handleChoiceConfirm should have cleared it,
+    // but a stale flag must never mask the later step).
+    if (
+      showingChoiceStep &&
+      state.step !== WizardStep.INFO_OTP &&
+      state.step !== WizardStep.PAYMENT
+    ) {
+      return 'choice';
+    }
     // Therapist-first: the underlying machine starts at SERVICE, but the visible
     // first screen is the therapist picker (until the user confirms a therapist).
     if (entryPoint === 'therapist' && state.step === WizardStep.SERVICE && !therapistStepDone) return 'therapist';
@@ -612,6 +653,19 @@ function BookingWizardInner() {
         return 'info';
     }
   }, [state.step, awaitingBranch, showingChoiceStep, entryPoint, therapistStepDone]);
+
+  // Belt-and-braces: if the machine reaches INFO_OTP/PAYMENT while the choice
+  // flag is still true (e.g. user advanced directly to a slot radio without
+  // confirming a choice option), clear it so state and view agree. Only fires
+  // when the flag is actually true, so it does not loop.
+  useEffect(() => {
+    if (
+      showingChoiceStep &&
+      (state.step === WizardStep.INFO_OTP || state.step === WizardStep.PAYMENT)
+    ) {
+      dispatchUi({ type: 'EXIT_CHOICE_STEP' });
+    }
+  }, [state.step, showingChoiceStep]);
 
   const stepIndex = Math.max(0, flow.indexOf(currentScreen));
 
@@ -669,27 +723,100 @@ function BookingWizardInner() {
 
   // === Handlers (entry-point aware) ===
 
-  const handleServiceSelect = async (
-    svc: Service,
-    choice?: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' },
-  ) => {
+  /**
+   * Shared practitioner-options loader. Bumps the monotonic request
+   * generation so any older in-flight load observes a stale id on resolve
+   * or fail and bails before dispatching. Used by both the therapist-first
+   * `handleServiceSelect` (carried therapist) and `selectTherapistAndLoadOptions`
+   * so they take the same sequencing/invalidation contract.
+   *
+   * The loader owns the entire fetch + UI sequence: it clears any prior
+   * options, marks loading=true, enters the choice step, awaits the fetch,
+   * and only writes options / clears loading if its generation is still the
+   * latest. Callers must clear `selectedChoice` before invoking this helper
+   * so the summary reflects the new therapist context.
+   */
+  const loadPractitionerOptions = (svcId: string, empId: string) => {
+    practitionerOptionsRequestRef.current += 1;
+    const myRequestId = practitionerOptionsRequestRef.current;
+    dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
+    dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: true });
+    dispatchUi({ type: 'ENTER_CHOICE_STEP' });
+    void (async () => {
+      try {
+        const opts = await getPractitionerBookingOptions(svcId, empId);
+        if (practitionerOptionsRequestRef.current !== myRequestId) return;
+        if (!mountedRef.current) return;
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts });
+      } catch {
+        if (practitionerOptionsRequestRef.current !== myRequestId) return;
+        if (!mountedRef.current) return;
+        // Preserve existing failure behavior: the LATEST failed request
+        // stores null options; stale failures are ignored.
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
+      } finally {
+        if (practitionerOptionsRequestRef.current !== myRequestId) return;
+        if (!mountedRef.current) return;
+        // Only the latest load may end the loading state — a stale load
+        // must not silently clear a newer load's spinner.
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: false });
+      }
+    })();
+  };
+
+  /**
+   * Invalidate any in-flight practitioner-options load WITHOUT starting a
+   * replacement. Used by back / reset / unmount paths that need a late
+   * response to never repopulate options on an earlier screen.
+   */
+  const invalidatePractitionerOptionsLoad = () => {
+    practitionerOptionsRequestRef.current += 1;
+  };
+
+  /**
+   * Select a service. Duration/attendance/price are decided later on the
+   * dedicated choice screen — this handler never pre-commits a service-level
+   * choice and always clears any stale `selectedChoice` from a prior flow.
+   *
+   * - service-first flow: the underlying state machine advances to THERAPIST.
+   * - therapist-first flow: the carried therapist from the deep-link is
+   *   pushed into the machine, the dedicated choice screen is shown while
+   *   practitioner options load.
+   */
+  const handleServiceSelect = async (svc: Service) => {
     dispatch({ type: 'SELECT_SERVICE', service: svc });
-    dispatchUi({ type: 'SET_CHOICE', choice: choice ?? null });
+    // Always clear stale choices: the dedicated choice screen is the only
+    // place the user commits { durationOptionId, deliveryType }.
+    dispatchUi({ type: 'SET_CHOICE', choice: null });
+    // Clear the single-therapist latch so re-selecting this service (or any
+    // service) on a fresh entry lets the auto-skip re-fire if applicable —
+    // otherwise returning to service then choosing the same service parks
+    // the user on the therapist step with no way to advance.
+    autoSelectedPairRef.current = null;
     const carriedTherapist = lockedEmployee;
     if (carriedTherapist) {
       dispatch({ type: 'SELECT_EMPLOYEE', employee: carriedTherapist });
       dispatchUi({ type: 'CLEAR_LOCKED_EMPLOYEE' });
-      dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: true });
-      dispatchUi({ type: 'ENTER_CHOICE_STEP' });
-      try {
-        const opts = await getPractitionerBookingOptions(svc.id, carriedTherapist.id);
-        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts });
-      } catch {
-        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
-      } finally {
-        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: false });
-      }
+      loadPractitionerOptions(svc.id, carriedTherapist.id);
     }
+  };
+
+  /**
+   * Shared helper: select a therapist and enter the dedicated choice screen
+   * while practitioner options load. Used both by manual therapist selection
+   * and the single-therapist auto-skip effect so both paths take exactly one
+   * fetch and converge on the same screen.
+   */
+  const selectTherapistAndLoadOptions = async (emp: EmployeeWithUser) => {
+    dispatch({ type: 'SELECT_EMPLOYEE', employee: emp });
+    if (!service) return;
+    // Clear the prior therapist's choice before entering the dedicated
+    // choice screen for the new therapist — otherwise the summary keeps
+    // showing the prior therapist's duration/delivery/total until a new
+    // option is committed (committed-only summary must reflect the active
+    // therapist context, not the previous one).
+    dispatchUi({ type: 'SET_CHOICE', choice: null });
+    loadPractitionerOptions(service.id, emp.id);
   };
 
   const handleTherapistSelect = async (emp: EmployeeWithUser) => {
@@ -698,21 +825,7 @@ function BookingWizardInner() {
       dispatchUi({ type: 'THERAPIST_STEP_DONE' });
       return;
     }
-    dispatch({ type: 'SELECT_EMPLOYEE', employee: emp });
-    if (service) {
-      dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: true });
-      dispatchUi({ type: 'ENTER_CHOICE_STEP' });
-      try {
-        const opts = await getPractitionerBookingOptions(service.id, emp.id);
-        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts });
-      } catch {
-        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
-      } finally {
-        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: false });
-      }
-    } else {
-      dispatchUi({ type: 'ENTER_CHOICE_STEP' });
-    }
+    await selectTherapistAndLoadOptions(emp);
   };
 
   const handleChoiceConfirm = (choice: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' }) => {
@@ -783,17 +896,29 @@ function BookingWizardInner() {
   }, [branchScopedEmployees, service]);
 
   // Auto-skip therapist step if the chosen service has exactly one offering
-  // therapist — there's no choice to make. Applies only to service-first flow.
-  // Branch is always pre-selected in the new model, so we go straight to
-  // SELECT_EMPLOYEE without opening a branch picker.
+  // therapist — there's no real therapist choice to make. The dedicated
+  // choice screen is still shown so the user explicitly commits
+  // duration/attendance/price, and practitioner options are loaded exactly
+  // once for that single therapist.
+  //
+  // Applies only to service-first flow. Branch is always pre-selected in the
+  // new model, so we never open a branch picker.
   useEffect(() => {
     if (entryPoint !== 'service') return;
     if (state.step !== WizardStep.THERAPIST) return;
     if (loadingData) return;
     if (filteredTherapists.length !== 1) return;
     const only = filteredTherapists[0];
-    dispatch({ type: 'SELECT_EMPLOYEE', employee: only });
-  }, [entryPoint, state.step, loadingData, filteredTherapists]);
+    const pairKey = `${service?.id ?? ''}::${only.id}`;
+    if (autoSelectedPairRef.current === pairKey) return;
+    autoSelectedPairRef.current = pairKey;
+    void selectTherapistAndLoadOptions(only);
+    // selectTherapistAndLoadOptions is intentionally NOT in the deps: it is
+    // recreated on every render and depends on closures already captured
+    // here. The pair-key ref + filteredTherapists guard re-runs prevent
+    // infinite loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryPoint, state.step, loadingData, filteredTherapists, service]);
 
   // Snap selectedDate forward to the first day that actually has open slots.
   // Uses the per-day probe; falls back to the employee's weekday rules until
@@ -867,7 +992,16 @@ function BookingWizardInner() {
     }
     if (showingChoiceStep) {
       dispatchUi({ type: 'EXIT_CHOICE_STEP' });
+      // Invalidate any in-flight load so a late response cannot repopulate
+      // options on the therapist screen we are returning to — even if no
+      // replacement request is starting.
+      invalidatePractitionerOptionsLoad();
       dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
+      // Clear the single-therapist latch so going back from the choice step
+      // with exactly one therapist re-fires the auto-skip and routes the user
+      // back through the dedicated choice screen (not a parking therapist
+      // step from which they cannot advance).
+      autoSelectedPairRef.current = null;
       if (service) {
         dispatch({ type: 'SELECT_SERVICE', service });
       }
@@ -889,12 +1023,28 @@ function BookingWizardInner() {
         // Back to service picker.
         dispatch({ type: 'RESET' });
         dispatchUi({ type: 'SET_CHOICE', choice: null });
+        // No in-flight load expected here (choice was never entered), but
+        // invalidate for symmetry — keeps the contract uniform across paths
+        // that drop the therapist context.
+        invalidatePractitionerOptionsLoad();
         break;
       case WizardStep.SLOT:
-        // Back to therapist picker.
+        // Back to therapist picker — the underlying machine drops back to
+        // THERAPIST. For services with exactly one therapist, the auto-skip
+        // below will re-fire and route the user through the dedicated
+        // choice step so they can revise duration/delivery/total — they do
+        // NOT return directly to the slot screen. The latch must be reset;
+        // otherwise the auto-skip would see the same (service, therapist)
+        // pair and park the user on the therapist step with no way to
+        // advance.
         if (state.service) {
           dispatch({ type: 'SELECT_SERVICE', service: state.service });
         }
+        autoSelectedPairRef.current = null;
+        // Symmetric invalidation: if the user backed out of choice before
+        // the first load resolved, this guarantees the in-flight resolve
+        // cannot write options to the therapist picker we are returning to.
+        invalidatePractitionerOptionsLoad();
         break;
       case WizardStep.INFO_OTP:
       case WizardStep.PAYMENT:
@@ -935,7 +1085,13 @@ function BookingWizardInner() {
       case 'therapist':
         if (service) dispatch({ type: 'SELECT_SERVICE', service });
         dispatchUi({ type: 'EXIT_CHOICE_STEP' });
+        // Invalidate any in-flight load so a late response cannot repopulate
+        // options on the therapist screen we are returning to.
+        invalidatePractitionerOptionsLoad();
         dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
+        // Allow the single-therapist auto-skip to re-evaluate with fresh
+        // therapist data when the user re-enters the therapist screen.
+        autoSelectedPairRef.current = null;
         break;
       case 'slot':
         if (employee) dispatch({ type: 'SELECT_EMPLOYEE', employee });
@@ -966,7 +1122,6 @@ function BookingWizardInner() {
     choice: selectedChoice,
     employee,
     slot,
-    pendingDateIso: state.step === WizardStep.SLOT ? selectedDate : null,
     activeScreen: awaitingBranch
       ? ('branch' as const)
       : currentScreen === 'info'
@@ -1004,20 +1159,14 @@ function BookingWizardInner() {
                 </IconButton>
               )}
             </div>
-            <span
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.6875rem] font-bold bg-white"
-              style={{
-                color: 'color-mix(in srgb, var(--sw-secondary-700) 65%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
-                boxShadow: 'var(--sw-shadow-xs)',
-              }}
-            >
-              <svg viewBox="0 0 14 14" className="h-3 w-3" fill="none" stroke="var(--primary-dark)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="2.5" y="6" width="9" height="6" rx="1.5" />
-                <path d="M4.5 6V4.5a2.5 2.5 0 1 1 5 0V6" />
-              </svg>
-              {isAr ? 'موعد آمن وسرّي' : 'Private & secure'}
-            </span>
+            <Image
+              src={SITE.logo}
+              alt={isAr ? SITE.name : SITE.nameEn}
+              width={36}
+              height={36}
+              priority={false}
+              className="shrink-0 object-contain"
+            />
           </div>
 
           <div
@@ -1111,8 +1260,8 @@ function BookingWizardInner() {
                   </div>
                 )}
 
-                {/* === BRANCH SCREEN (shown whenever awaitingBranch) === */}
-                {!nothingBookable && awaitingBranch && (
+                {/* === BRANCH SCREEN (shown whenever currentScreen === 'branch') === */}
+                {!nothingBookable && currentScreen === 'branch' && (
                   <BranchStep
                     branches={(() => {
                       const emp = pendingEmployee ?? lockedEmployee;
@@ -1127,7 +1276,7 @@ function BookingWizardInner() {
                 )}
 
                 {/* === SERVICE SCREEN === */}
-                {!nothingBookable && !awaitingBranch && state.step === WizardStep.SERVICE && currentScreen === 'service' && (
+                {!nothingBookable && currentScreen === 'service' && (
                   loadingData ? (
                     <BookingSkeleton count={4} />
                   ) : (
@@ -1136,7 +1285,6 @@ function BookingWizardInner() {
                         services={filteredServices}
                         categories={categories}
                         selected={null}
-                        vatRate={vatRate}
                         onSelect={handleServiceSelect}
                         lockedTherapistName={entryPoint === 'therapist' ? lockedTherapistName : null}
                         onClearLockedTherapist={
@@ -1145,14 +1293,13 @@ function BookingWizardInner() {
                             : undefined
                         }
                         initialCategoryId={preselectCategoryId}
-                        skipChoicePicker={entryPoint === 'service'}
                       />
                     </div>
                   )
                 )}
 
                 {/* === THERAPIST SCREEN === */}
-                {!nothingBookable && !awaitingBranch && currentScreen === 'therapist' && (
+                {!nothingBookable && currentScreen === 'therapist' && (
                   <div className="flex flex-col gap-5">
                     {loadingData ? (
                       <BookingSkeleton count={4} />
@@ -1167,7 +1314,7 @@ function BookingWizardInner() {
                 )}
 
                 {/* === CHOICE SCREEN (duration / delivery-type from practitioner options) === */}
-                {!nothingBookable && !awaitingBranch && showingChoiceStep && service && employee && (
+                {!nothingBookable && currentScreen === 'choice' && service && employee && (
                   <PractitionerChoicePicker
                     options={practitionerOptions?.options ?? []}
                     isLoading={practitionerOptionsLoading}
@@ -1179,7 +1326,7 @@ function BookingWizardInner() {
                 )}
 
                 {/* === SLOT SCREEN === */}
-                {!nothingBookable && !awaitingBranch && state.step === WizardStep.SLOT && service && employee && (
+                {!nothingBookable && currentScreen === 'slot' && service && employee && (
                   <div className="flex flex-col gap-6">
                     <DateStrip
                       value={selectedDate}
@@ -1197,7 +1344,7 @@ function BookingWizardInner() {
                 )}
 
                 {/* === INFO + PAYMENT (merged) === */}
-                {state.step === WizardStep.INFO_OTP && service && employee && slot && (
+                {!nothingBookable && currentScreen === 'info' && service && employee && slot && (
                   <ClientInfoStep
                     slot={slot}
                     service={service}

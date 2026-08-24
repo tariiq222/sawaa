@@ -15,11 +15,14 @@ export interface SummarySelection {
   choice: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' } | null;
   employee: EmployeeWithUser | null;
   slot: AvailableSlot | null;
-  /** Date being browsed on the slot screen — shown before a time is picked. */
-  pendingDateIso?: string | null;
   /** The screen currently shown — its row hides the edit affordance. */
   activeScreen?: SummaryScreen | null;
   vatRate?: number;
+  /**
+   * Price resolved from practitioner booking options (overrides the service-level
+   * lookup). Only applied once the user has committed a choice — without a
+   * committed choice, the summary must show NO price/VAT/total at all.
+   */
   resolvedPriceHalalas?: number | null;
   /** Jump back to a completed step to change it. Omit to hide edit affordances. */
   onEdit?: (screen: SummaryScreen) => void;
@@ -34,38 +37,37 @@ type ResolvedChoice = {
 /**
  * Resolve the picked duration option / booking config into display values.
  * Mirrors the extended shape the service picker reads (durationOptions /
- * bookingConfigs are not part of the base `Service` type).
+ * bookingConfigs are not part of the base `Service` type). Returns nulls for
+ * every field when no choice has been committed — the summary rail must never
+ * show undecided facts (duration/attendance/total/VAT) before the dedicated
+ * choice screen has been confirmed.
  */
 function resolveChoice(
   service: Service | null,
   choice: SummarySelection['choice'],
 ): ResolvedChoice {
-  if (!service) return { durationMins: null, price: null, deliveryType: null };
+  if (!service || !choice) return { durationMins: null, price: null, deliveryType: null };
   const extended = service as Service & {
-    durationMins?: number;
+    durationOptions?: Array<{
+      id: string;
+      durationMins: number;
+      price: number | string;
+    }>;
     bookingConfigs?: Array<{
       id: string;
       deliveryType: 'IN_PERSON' | 'ONLINE';
       price: number | string;
       durationMins: number;
     }>;
-    durationOptions?: Array<{
-      id: string;
-      durationMins: number;
-      price: number | string;
-    }>;
   };
-  const fromOption = choice
-    ? extended.durationOptions?.find((o) => o.id === choice.durationOptionId)
-    : undefined;
-  const fromConfig = choice
-    ? extended.bookingConfigs?.find((c) => c.id === choice.durationOptionId)
-    : undefined;
+  const fromOption = extended.durationOptions?.find((o) => o.id === choice.durationOptionId);
+  const fromConfig = extended.bookingConfigs?.find((c) => c.id === choice.durationOptionId);
   const picked = fromOption ?? fromConfig;
+  if (!picked) return { durationMins: null, price: null, deliveryType: null };
   return {
-    durationMins: picked?.durationMins ?? extended.durationMins ?? service.duration ?? null,
-    price: picked ? Number(picked.price) : Number(service.price ?? 0) || null,
-    deliveryType: choice?.deliveryType ?? null,
+    durationMins: picked.durationMins,
+    price: Number(picked.price),
+    deliveryType: choice.deliveryType,
   };
 }
 
@@ -74,8 +76,18 @@ function useSummaryRows(sel: SummarySelection) {
   const locale = useLocale();
   const isAr = locale === 'ar';
   const dateLocale = isAr ? 'ar-SA' : 'en-US';
+  const hasChoice = sel.choice != null;
   const resolved = resolveChoice(sel.service, sel.choice);
-  const finalPrice = sel.resolvedPriceHalalas != null ? sel.resolvedPriceHalalas : resolved.price;
+  // Only honour the caller-supplied price when the user has actually
+  // committed a choice. Without a choice, fall back to null so the total is
+  // suppressed even if the page passes a resolvedPriceHalalas from a prior
+  // selection.
+  const finalPrice =
+    hasChoice && sel.resolvedPriceHalalas != null
+      ? sel.resolvedPriceHalalas
+      : hasChoice
+        ? resolved.price
+        : null;
 
   const rows: Array<{
     screen: SummaryScreen;
@@ -92,11 +104,14 @@ function useSummaryRows(sel: SummarySelection) {
     });
   }
 
+  // Subline (duration + attendance) only renders once the user has committed
+  // a choice on the dedicated choice screen. Before that, only the chosen
+  // service name renders on the service row.
   const serviceMeta: string[] = [];
-  if (resolved.durationMins) {
+  if (hasChoice && resolved.durationMins) {
     serviceMeta.push(`${resolved.durationMins} ${isAr ? 'دقيقة' : 'min'}`);
   }
-  if (resolved.deliveryType) {
+  if (hasChoice && resolved.deliveryType) {
     serviceMeta.push(
       resolved.deliveryType === 'ONLINE'
         ? isAr ? 'أونلاين' : 'Online'
@@ -117,6 +132,8 @@ function useSummaryRows(sel: SummarySelection) {
     value: therapistName || null,
   });
 
+  // Date/time only renders from a committed slot. A browsed-but-not-selected
+  // date is intentionally hidden — the user has not committed anything yet.
   let slotValue: string | null = null;
   let slotSub: string | null = null;
   if (sel.slot) {
@@ -127,12 +144,6 @@ function useSummaryRows(sel: SummarySelection) {
       month: 'long',
     });
     slotSub = start.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' });
-  } else if (sel.pendingDateIso) {
-    slotValue = new Date(`${sel.pendingDateIso}T00:00:00`).toLocaleDateString(dateLocale, {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-    });
   }
   rows.push({
     screen: 'slot',
@@ -151,12 +162,15 @@ function useSummaryRows(sel: SummarySelection) {
       ? Intl.NumberFormat(dateLocale, { style: 'decimal', maximumFractionDigits: 2 }).format(gross)
       : null;
 
-  return { rows, totalLabel, vatRate, isAr, t };
+  // VAT inclusion copy is only meaningful alongside a committed total.
+  const showVatNote = gross != null && vatRate > 0;
+
+  return { rows, totalLabel, showVatNote, isAr, t };
 }
 
 /** Sticky side panel (lg+): the booking slip that fills in as choices land. */
 export function SummaryRail(sel: SummarySelection) {
-  const { rows, totalLabel, vatRate, isAr, t } = useSummaryRows(sel);
+  const { rows, totalLabel, showVatNote, isAr, t } = useSummaryRows(sel);
 
   return (
     <aside
@@ -271,7 +285,7 @@ export function SummaryRail(sel: SummarySelection) {
                 {t('booking.summary.currency')}
               </span>
             </span>
-            {vatRate > 0 && (
+            {showVatNote && (
               <span
                 className="text-[0.625rem] font-medium"
                 style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)' }}

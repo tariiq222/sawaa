@@ -7,6 +7,7 @@ import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
 import { normalizeSaudiPhone } from '@/features/auth/auth.schema';
 import { setClient as setAuthClient } from '@/features/auth/auth-store';
 import { useCurrentClient } from '@/features/auth/use-current-client';
+import { RegisterForm } from '@/features/auth/register-form';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { therapistDisplayName } from './therapist-name';
 
@@ -76,6 +77,12 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<WebsitePaymentMethod>('ONLINE');
+  // Inline registration: keep the user inside the booking wizard instead of
+  // navigating to /register (which would unmount the wizard and lose the
+  // selected service / therapist / slot). The RegisterForm handles its own
+  // 3-step flow; on success it calls `onSuccess` and we re-fetch the session
+  // so this component re-renders into the authenticated confirm-and-pay view.
+  const [authMode, setAuthMode] = useState<'signin' | 'register'>('signin');
   const phoneInputId = useId();
   const passwordInputId = useId();
 
@@ -110,6 +117,13 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
     } finally {
       setLoginLoading(false);
     }
+  };
+
+  // Inline registration completion — re-fetch the session so the component
+  // re-renders into the authenticated confirm-and-pay branch. No navigation:
+  // staying on /booking preserves the wizard state and the chosen slot.
+  const handleRegisterSuccess = async () => {
+    await refetch();
   };
 
   const start = new Date(slot.startTime);
@@ -156,8 +170,8 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               ? 'تأكّد من بياناتك ثم أكّد موعدك والدفع.'
               : 'Confirm your details, then complete the booking and payment.'
             : isAr
-              ? 'لإتمام حجز موعدك، سجّل الدخول إلى حسابك أو أنشئ حساباً جديداً. بياناتك سرّية ولا تُستخدم خارج المركز.'
-              : 'To book, sign in to your account or create one. Your data is private and never leaves the centre.'}
+              ? 'لإتمام حجز موعدك، سجّل الدخول إلى حسابك أو أنشئ حساباً جديداً.'
+              : 'To book, sign in to your account or create one.'}
         </p>
       </header>
 
@@ -179,148 +193,191 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
       {/* === NOT LOGGED IN: sign-in invitation + inline login === */}
       {!clientLoading && !isAuthed && (
         <div className="flex flex-col gap-4">
-          <form
-            className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-white"
+          {/* Segmented control: switch between inline sign-in and inline
+              registration without leaving the booking wizard. The two buttons
+              are non-submit type="button" so they never submit the form and
+              they never navigate. role="tablist" + role="tab" + aria-selected
+              exposes the active option to assistive tech. */}
+          <div
+            role="tablist"
+            aria-label={isAr ? 'تسجيل الدخول أو إنشاء حساب' : 'Sign in or create an account'}
+            className="flex p-1 rounded-full"
             style={{
-              border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
-              boxShadow: 'var(--sw-shadow-sm)',
+              background: 'color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
             }}
-            onSubmit={(e) => {
-              e.preventDefault();
-              void handleInlineLogin();
-            }}
-            noValidate
           >
-            <h3 className="text-sm font-bold" style={{ color: 'var(--sw-secondary-700)' }}>
-              {isAr ? 'تسجيل الدخول' : 'Sign in'}
-            </h3>
-
-            <div className="flex flex-col">
-              <label htmlFor={phoneInputId} className={fieldLabelClass} style={fieldLabelStyle}>
-                {isAr ? 'رقم الجوال' : 'Phone number'}
-              </label>
-              <div className="relative">
-                <FieldIcon>
-                  <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="4.5" y="1.5" width="7" height="13" rx="1.5" />
-                    <path d="M7 12.5h2" />
-                  </svg>
-                </FieldIcon>
-                <input
-                  id={phoneInputId}
-                  type="tel"
-                  inputMode="tel"
-                  value={loginPhone}
-                  onChange={(e) => setLoginPhone(e.target.value)}
-                  placeholder="05XXXXXXXX"
-                  className={`${baseInputClass} text-start`}
-                  style={inputStyle(false)}
-                  autoComplete="tel"
-                  dir="ltr"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col">
-              <label htmlFor={passwordInputId} className={fieldLabelClass} style={fieldLabelStyle}>
-                {isAr ? 'كلمة المرور' : 'Password'}
-              </label>
-              <div className="relative">
-                <FieldIcon>
-                  <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="7" width="10" height="6.5" rx="1.5" />
-                    <path d="M5 7V5a3 3 0 1 1 6 0v2" />
-                  </svg>
-                </FieldIcon>
-                <input
-                  id={passwordInputId}
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className={baseInputClass}
-                  style={inputStyle(false)}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-            </div>
-
-            {loginError && (
-              <p
-                role="alert"
-                className="text-xs flex items-start gap-1.5 font-medium leading-relaxed"
-                style={{ color: 'var(--error)' }}
-              >
-                <svg viewBox="0 0 12 12" className="h-3 w-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <circle cx="6" cy="6" r="4.8" />
-                  <path d="M6 3.8v2.6M6 7.6v.4" strokeLinecap="round" />
-                </svg>
-                {loginError}
-              </p>
-            )}
-
             <button
-              type="submit"
-              disabled={loginLoading}
-              className="self-stretch inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99] enabled:cursor-pointer"
-              style={{
-                background: 'var(--primary)',
-                color: '#FFFFFF',
-                boxShadow: 'var(--sw-shadow-primary)',
-              }}
+              type="button"
+              role="tab"
+              aria-selected={authMode === 'signin'}
+              onClick={() => setAuthMode('signin')}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer"
+              style={
+                authMode === 'signin'
+                  ? {
+                      background: 'var(--primary)',
+                      color: '#FFFFFF',
+                      boxShadow: 'var(--sw-shadow-xs)',
+                    }
+                  : {
+                      background: 'transparent',
+                      color: 'color-mix(in srgb, var(--sw-secondary-700) 70%, transparent)',
+                    }
+              }
             >
-              {loginLoading
-                ? isAr
-                  ? 'جاري الدخول…'
-                  : 'Signing in…'
-                : isAr
-                  ? 'تسجيل الدخول'
-                  : 'Sign in'}
+              {isAr ? 'تسجيل الدخول' : 'Sign in'}
             </button>
-
-            <a
-              href="/forgot-password"
-              className="self-center text-xs font-semibold underline-offset-2 hover:underline"
-              style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 60%, transparent)' }}
-            >
-              {isAr ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
-            </a>
-          </form>
-
-          <div className="flex items-center gap-3" aria-hidden="true">
-            <span className="h-px flex-1" style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)' }} />
-            <span className="text-xs font-medium" style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}>
-              {isAr ? 'أو' : 'or'}
-            </span>
-            <span className="h-px flex-1" style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)' }} />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <a
-              href="/register"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
-              style={{
-                background: 'color-mix(in srgb, var(--primary) 8%, #FFFFFF)',
-                color: 'var(--primary-dark)',
-                border: '1.5px solid color-mix(in srgb, var(--primary) 32%, transparent)',
-              }}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMode === 'register'}
+              onClick={() => setAuthMode('register')}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer"
+              style={
+                authMode === 'register'
+                  ? {
+                      background: 'var(--primary)',
+                      color: '#FFFFFF',
+                      boxShadow: 'var(--sw-shadow-xs)',
+                    }
+                  : {
+                      background: 'transparent',
+                      color: 'color-mix(in srgb, var(--sw-secondary-700) 70%, transparent)',
+                    }
+              }
             >
               {isAr ? 'إنشاء حساب جديد' : 'Create an account'}
-            </a>
-            <a
-              href="/login"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99]"
+            </button>
+          </div>
+
+          {authMode === 'signin' && (
+            <form
+              data-testid="inline-signin"
+              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-white"
               style={{
-                background: 'transparent',
-                color: 'var(--sw-secondary-700)',
-                border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 16%, transparent)',
+                border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
+                boxShadow: 'var(--sw-shadow-sm)',
+              }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleInlineLogin();
+              }}
+              noValidate
+            >
+              <h3 className="text-sm font-bold" style={{ color: 'var(--sw-secondary-700)' }}>
+                {isAr ? 'تسجيل الدخول' : 'Sign in'}
+              </h3>
+
+              <div className="flex flex-col">
+                <label htmlFor={phoneInputId} className={fieldLabelClass} style={fieldLabelStyle}>
+                  {isAr ? 'رقم الجوال' : 'Phone number'}
+                </label>
+                <div className="relative">
+                  <FieldIcon>
+                    <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="4.5" y="1.5" width="7" height="13" rx="1.5" />
+                      <path d="M7 12.5h2" />
+                    </svg>
+                  </FieldIcon>
+                  <input
+                    id={phoneInputId}
+                    type="tel"
+                    inputMode="tel"
+                    value={loginPhone}
+                    onChange={(e) => setLoginPhone(e.target.value)}
+                    placeholder="05XXXXXXXX"
+                    className={`${baseInputClass} text-start`}
+                    style={inputStyle(false)}
+                    autoComplete="tel"
+                    dir="ltr"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col">
+                <label htmlFor={passwordInputId} className={fieldLabelClass} style={fieldLabelStyle}>
+                  {isAr ? 'كلمة المرور' : 'Password'}
+                </label>
+                <div className="relative">
+                  <FieldIcon>
+                    <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="7" width="10" height="6.5" rx="1.5" />
+                      <path d="M5 7V5a3 3 0 1 1 6 0v2" />
+                    </svg>
+                  </FieldIcon>
+                  <input
+                    id={passwordInputId}
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={baseInputClass}
+                    style={inputStyle(false)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+              </div>
+
+              {loginError && (
+                <p
+                  role="alert"
+                  className="text-xs flex items-start gap-1.5 font-medium leading-relaxed"
+                  style={{ color: 'var(--error)' }}
+                >
+                  <svg viewBox="0 0 12 12" className="h-3 w-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <circle cx="6" cy="6" r="4.8" />
+                    <path d="M6 3.8v2.6M6 7.6v.4" strokeLinecap="round" />
+                  </svg>
+                  {loginError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="self-stretch inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99] enabled:cursor-pointer"
+                style={{
+                  background: 'var(--primary)',
+                  color: '#FFFFFF',
+                  boxShadow: 'var(--sw-shadow-primary)',
+                }}
+              >
+                {loginLoading
+                  ? isAr
+                    ? 'جاري الدخول…'
+                    : 'Signing in…'
+                  : isAr
+                    ? 'تسجيل الدخول'
+                    : 'Sign in'}
+              </button>
+
+              <a
+                href="/forgot-password"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="self-center text-xs font-semibold underline-offset-2 hover:underline"
+                style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 60%, transparent)' }}
+              >
+                {isAr ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
+              </a>
+            </form>
+          )}
+
+          {authMode === 'register' && (
+            <div
+              data-testid="inline-register"
+              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-white"
+              style={{
+                border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
+                boxShadow: 'var(--sw-shadow-sm)',
               }}
             >
-              {isAr ? 'صفحة تسجيل الدخول' : 'Go to sign-in page'}
-            </a>
-          </div>
+              <RegisterForm onSuccess={handleRegisterSuccess} />
+            </div>
+          )}
         </div>
       )}
 

@@ -5,6 +5,7 @@ import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import { AnalyticsLoader } from '@/components/analytics/analytics-loader';
 import { FloatingWhatsApp } from '@/components/cta/floating-whatsapp';
+import { getApiOrigin } from '@/lib/api-base';
 import './globals.css';
 import {
   generateMedicalBusinessSchema,
@@ -62,6 +63,9 @@ export default async function RootLayout({
   const branding = await getPublicBrandingForSsr();
   const locale = await getLocale();
   const dir = localeDir(locale);
+  // The preconnect/dns-prefetch for the API origin is derived once on the
+  // server so it lands in the initial HTML (no client-side flicker).
+  const apiOrigin = getApiOrigin();
 
   const medicalBusinessSchema = generateMedicalBusinessSchema({
     '@context': 'https://schema.org',
@@ -105,6 +109,8 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir}>
       <head>
+        <link rel="preconnect" href={apiOrigin} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={apiOrigin} />
         <script
           dangerouslySetInnerHTML={{
             __html: "document.documentElement.classList.add('sw-js')",

@@ -5,7 +5,6 @@ import { MessageCircle, X } from 'lucide-react';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { localeDir } from '@/features/locale/dir';
 import { useBranding } from '@/features/branding/public';
-import { hasAnalyticsConsent } from '@/components/consent/cookie-consent-banner';
 import type { MessageKey } from '@/features/locale/dictionary';
 
 const STORAGE_KEY = 'sawaa-chat-dismissed-at';
@@ -28,6 +27,10 @@ interface WhatsAppLinkProps {
  *
  * Respects RTL: pin to bottom-start in RTL, bottom-end in LTR so it
  * matches the natural reading direction.
+ *
+ * Hydration-safe: the component returns `null` on the server and on the
+ * first client render, then mounts and reads the dismissed timestamp
+ * from localStorage so React hydration matches.
  */
 export function FloatingWhatsApp({ phone, message }: WhatsAppLinkProps) {
   const t = useT();
@@ -51,27 +54,30 @@ export function FloatingWhatsApp({ phone, message }: WhatsAppLinkProps) {
 
   const [open, setOpen] = useState(false)
   const [visible, setVisible] = useState(false)
+  // Render `null` until mounted so the server output and the first
+  // client render are byte-identical — no `typeof window`, localStorage,
+  // or `Date.now()` reads happen during render.
+  const [mounted, setMounted] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
 
-  // Compute dismissed from localStorage in a derived state via
-  // useSyncExternalStore-friendly pattern. We avoid setState-in-effect
-  // by deriving the dismissed/visible from a single read of the store
-  // (no reactive subscription — the cooldown is a one-shot read on
-  // mount via lazy init).
-  const [dismissed] = useState(() => {
-    if (typeof window === 'undefined') return true
+  // One-shot read of the dismissed timestamp on mount. Failing
+  // localStorage (private mode, quota) is non-fatal: we just show the
+  // button.
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const ts = Number(raw)
         if (Number.isFinite(ts) && Date.now() - ts < DISMISS_COOLDOWN_HOURS * 3_600_000) {
-          return true
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- canonical external-system sync on mount; see https://react.dev/learn/you-might-not-need-an-effect
+          setDismissed(true)
         }
       }
     } catch {
       // localStorage unavailable — show the button
     }
-    return false
-  })
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (dismissed) return
@@ -86,24 +92,17 @@ export function FloatingWhatsApp({ phone, message }: WhatsAppLinkProps) {
     } catch {
       // ignore
     }
-    // We can't setState in a callback easily; reload is the cleanest
-    // way to apply the dismissal. The next page load won't show the
-    // button because the localStorage check at mount returns true.
-    if (typeof window !== 'undefined') {
-      window.location.reload()
-    }
+    setDismissed(true)
   }
 
-  if (dismissed) return null
+  if (!mounted || dismissed) return null
 
   const href = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}`
 
   return (
     <div
-      // bottom-start in RTL (visual left), bottom-end in LTR (visual right)
-      // Wait — for a CTA button we usually want bottom-end in both
-      // directions so the button doesn't cover the language switcher.
-      // Pick the side opposite the navbar so they don't overlap.
+      // Pinned to the side opposite the navbar so they don't overlap:
+      // `left` in RTL (visual left), `right` in LTR (visual right).
       dir={dir}
       style={{
         position: 'fixed',

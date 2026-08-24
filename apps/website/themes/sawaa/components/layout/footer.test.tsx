@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LocaleProvider } from '@/features/locale/locale-provider';
-import type { SupportGroup } from '@/features/support-groups/support-groups.api';
+import { SITE } from '../../lib/constants';
 import { Footer } from './footer';
 
 vi.mock('@/features/branding/public', () => ({
@@ -14,46 +14,41 @@ vi.mock('@/features/branding/public', () => ({
   }),
 }));
 
-const program: SupportGroup = {
-  id: 'program-1',
-  ref: 1,
-  title: 'برنامج الأسرة',
-  nameAr: 'برنامج الأسرة',
-  nameEn: 'Family Program',
-  descriptionAr: null,
-  descriptionEn: null,
-  publicDescriptionAr: null,
-  publicDescriptionEn: null,
-  departmentId: 'department-1',
-  branchId: 'branch-1',
-  startDate: null,
-  daysCount: 3,
-  hoursPerDay: 2,
-  minParticipants: 2,
-  maxParticipants: 8,
-  enrolledCount: 1,
-  price: '0',
-  currency: 'SAR',
-  depositEnabled: false,
-  depositAmount: null,
-  status: 'OPEN',
-  isPublic: true,
-  isFull: false,
-  spotsLeft: 7,
-};
-
-describe('Footer group programs', () => {
-  it('uses the published program name and deep link', () => {
+describe('Footer quick links', () => {
+  it('renders Quick links heading, contact/privacy links, social text list, and omits removed links', () => {
     render(
       <LocaleProvider locale="en">
-        <Footer supportGroups={[program]} />
+        <Footer />
       </LocaleProvider>,
     );
 
-    expect(screen.getByText('Group programs')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Family Program' })).toHaveAttribute(
-      'href',
-      '/support-groups/program-1',
-    );
+    expect(screen.getByText('Quick links')).toBeInTheDocument();
+
+    expect(screen.getByRole('link', { name: 'Contact' })).toHaveAttribute('href', '/contact');
+    expect(screen.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy');
+
+    expect(
+      screen.getAllByRole('link', { name: 'TikTok' }).some(
+        (link) => link.getAttribute('href') === SITE.social.tiktok,
+      ),
+    ).toBe(true);
+    expect(
+      screen.getAllByRole('link', { name: 'X' }).some(
+        (link) => link.getAttribute('href') === SITE.social.x,
+      ),
+    ).toBe(true);
+    expect(
+      screen.getAllByRole('link', { name: 'Instagram' }).some(
+        (link) => link.getAttribute('href') === SITE.social.instagram,
+      ),
+    ).toBe(true);
+    expect(
+      screen.getAllByRole('link', { name: 'YouTube' }).some(
+        (link) => link.getAttribute('href') === SITE.social.youtube,
+      ),
+    ).toBe(true);
+
+    expect(screen.queryByText('Services')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Group Programs' })).toBeNull();
   });
 });

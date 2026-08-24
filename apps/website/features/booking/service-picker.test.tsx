@@ -6,8 +6,9 @@ import type { Service } from '@sawaa/shared';
 import { ServicePicker } from './service-picker';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 
-// Mirrors the extended shape ServicePicker reads off each service
+// Mirrors the extended shape ServicePicker used to read off each service
 // (bookingConfigs / durationOptions are not on the base Service type).
+// Kept here purely for fixture setup; the picker no longer consumes these.
 type ServiceWithConfigs = Service & {
   durationMins?: number;
   bookingConfigs?: Array<{
@@ -152,7 +153,7 @@ describe('ServicePicker', () => {
     expect(screen.getByText(/TherapyX/)).toBeTruthy();
   });
 
-  it('calls onSelect immediately when the service has a single bookingConfig (no choice picker)', () => {
+  it('calls onSelect(service) exactly once and immediately for a service with a single bookingConfig', () => {
     const onSelect = vi.fn();
     const service = makeService({
       id: 'svc-single',
@@ -171,13 +172,92 @@ describe('ServicePicker', () => {
       ),
     );
     fireEvent.click(screen.getByRole('radio', { name: /^Consultation/ }));
-    expect(onSelect).toHaveBeenCalledWith(service, {
-      durationOptionId: 'cfg1',
-      deliveryType: 'IN_PERSON',
-    });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    // The picker no longer returns a choice — only the service itself.
+    expect(onSelect).toHaveBeenCalledWith(service);
   });
 
-  it('opens the choice picker with the type-stage when the service has multiple delivery types', () => {
+  it('renders no duration, attendance, price, currency, VAT or option-count text on the card', () => {
+    const service = makeService({
+      id: 'svc-multi',
+      bookingConfigs: [
+        { id: 'cfg1', deliveryType: 'IN_PERSON', price: 10000, durationMins: 60 },
+        { id: 'cfg2', deliveryType: 'ONLINE', price: 8000, durationMins: 45 },
+      ],
+      durationOptions: [
+        {
+          id: 'opt60',
+          deliveryType: 'IN_PERSON',
+          label: '60 min label',
+          labelAr: null,
+          durationMins: 60,
+          price: 10000,
+        },
+        {
+          id: 'opt45',
+          deliveryType: 'ONLINE',
+          label: '45 min label',
+          labelAr: null,
+          durationMins: 45,
+          price: 8000,
+        },
+      ],
+    });
+    render(
+      withLocale(
+        <ServicePicker
+          services={[service]}
+          categories={CATEGORIES}
+          selected={null}
+          onSelect={vi.fn()}
+        />,
+      ),
+    );
+    const card = screen.getByRole('radio', { name: /Consultation/ });
+    const text = card.textContent ?? '';
+    expect(text).not.toContain('60');
+    expect(text).not.toContain('45');
+    expect(text).not.toContain('min');
+    expect(text).not.toContain('دقيقة');
+    expect(text).not.toContain('In-person');
+    expect(text).not.toContain('Online');
+    expect(text).not.toContain('حضوري');
+    expect(text).not.toContain('أونلاين');
+    expect(text).not.toContain('100');
+    expect(text).not.toContain('80');
+    expect(text).not.toContain('SAR');
+    expect(text).not.toContain('ر.س');
+    expect(text).not.toContain('incl. VAT');
+    expect(text).not.toContain('شامل الضريبة');
+    expect(text).not.toContain('options');
+    expect(text).not.toContain('خيارات');
+  });
+
+  it('does not render any inline choice picker UI on the card (no delivery/duration prompt)', () => {
+    const service = makeService({
+      id: 'svc-multi',
+      bookingConfigs: [
+        { id: 'cfg1', deliveryType: 'IN_PERSON', price: 10000, durationMins: 60 },
+        { id: 'cfg2', deliveryType: 'ONLINE', price: 8000, durationMins: 45 },
+      ],
+    });
+    render(
+      withLocale(
+        <ServicePicker
+          services={[service]}
+          categories={CATEGORIES}
+          selected={null}
+          onSelect={vi.fn()}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByRole('radio', { name: /^Consultation/ }));
+    expect(screen.queryByText(/How would you like to attend/)).toBeNull();
+    expect(screen.queryByText(/Pick a session length/i)).toBeNull();
+    expect(screen.queryByText(/اختر مدة الجلسة/)).toBeNull();
+  });
+
+  it('calls onSelect(service) for a multi-option service — never an inline choice', () => {
     const onSelect = vi.fn();
     const service = makeService({
       id: 'svc-multi',
@@ -197,50 +277,8 @@ describe('ServicePicker', () => {
       ),
     );
     fireEvent.click(screen.getByRole('radio', { name: /^Consultation/ }));
-    // Type stage prompt appears when there is more than one delivery type.
-    expect(screen.getByText(/How would you like to attend/)).toBeTruthy();
-    // Picking a type moves to the duration stage.
-    fireEvent.click(screen.getByRole('button', { name: /^Online$/ }));
-    // The duration prompt replaces the type prompt.
-    expect(screen.getByText(/Pick a session length/i)).toBeTruthy();
-    // The duration buttons are filtered by the chosen type.
-    // cfg2 (ONLINE, 45 min) is shown — click it.
-    const duration45 = screen.getByRole('button', { name: /45/ });
-    fireEvent.click(duration45);
-    expect(onSelect).toHaveBeenCalledWith(service, {
-      durationOptionId: 'cfg2',
-      deliveryType: 'ONLINE',
-    });
-  });
-
-  it('auto-skips the type stage when only a single delivery type is offered', () => {
-    const onSelect = vi.fn();
-    const service = makeService({
-      id: 'svc-online-only',
-      bookingConfigs: [
-        { id: 'cfg1', deliveryType: 'ONLINE', price: 5000, durationMins: 30 },
-        { id: 'cfg2', deliveryType: 'ONLINE', price: 8000, durationMins: 60 },
-      ],
-    });
-    render(
-      withLocale(
-        <ServicePicker
-          services={[service]}
-          categories={CATEGORIES}
-          selected={null}
-          onSelect={onSelect}
-        />,
-      ),
-    );
-    fireEvent.click(screen.getByRole('radio', { name: /^Consultation/ }));
-    // No "How would you like to attend?" type-stage prompt — durations visible directly.
-    expect(screen.queryByText(/How would you like to attend/)).toBeNull();
-    // The "30 min" and "60 min" buttons are visible.
-    fireEvent.click(screen.getByRole('button', { name: /^30\s+min/ }));
-    expect(onSelect).toHaveBeenCalledWith(service, {
-      durationOptionId: 'cfg1',
-      deliveryType: 'ONLINE',
-    });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(service);
   });
 
   it('respects the lockedTherapistName banner and clears it via onClearLockedTherapist', () => {
@@ -278,7 +316,7 @@ describe('ServicePicker', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
   });
 
-  it('shows the VAT-inclusive badge when vatRate > 0', () => {
+  it('never shows a VAT-inclusive badge on the service card (VAT lives on the choice screen)', () => {
     render(
       withLocale(
         <ServicePicker
@@ -286,32 +324,54 @@ describe('ServicePicker', () => {
           categories={CATEGORIES}
           selected={null}
           onSelect={vi.fn()}
-          vatRate={0.15}
         />,
       ),
     );
-    expect(screen.getByText(/incl\. VAT/)).toBeTruthy();
+    expect(screen.queryByText(/incl\. VAT/)).toBeNull();
+    expect(screen.queryByText(/شامل الضريبة/)).toBeNull();
   });
 
-  it('hides the price column when showPrice is false', () => {
+  it('does not show a currency symbol on the service card (currency lives on the choice screen)', () => {
     render(
       withLocale(
         <ServicePicker
-          services={[makeService({ showPrice: false })]}
+          services={[makeService()]}
           categories={CATEGORIES}
           selected={null}
           onSelect={vi.fn()}
         />,
       ),
     );
-    expect(screen.queryByText(/SAR/)).toBeNull();
+    const card = screen.getByRole('radio', { name: /^Consultation/ });
+    const text = card.textContent ?? '';
+    expect(text).not.toContain('SAR');
+    expect(text).not.toContain('ر.س');
   });
 
-  it('hides the duration column when showDuration is false', () => {
+  it('does not render a price on the service card even when service.showPrice is true', () => {
     render(
       withLocale(
         <ServicePicker
-          services={[makeService({ showDuration: false })]}
+          services={[makeService({ showPrice: true, price: 12345 })]}
+          categories={CATEGORIES}
+          selected={null}
+          onSelect={vi.fn()}
+        />,
+      ),
+    );
+    const card = screen.getByRole('radio', { name: /^Consultation/ });
+    // 12345 halalas = 123.45 SAR — neither the digits nor the currency label
+    // should appear on the card.
+    expect(card.textContent ?? '').not.toContain('123');
+    expect(card.textContent ?? '').not.toContain('SAR');
+    expect(card.textContent ?? '').not.toContain('ر.س');
+  });
+
+  it('does not render a duration on the service card even when service.showDuration is true', () => {
+    render(
+      withLocale(
+        <ServicePicker
+          services={[makeService({ showDuration: true, duration: 60 })]}
           categories={CATEGORIES}
           selected={null}
           onSelect={vi.fn()}
@@ -319,6 +379,26 @@ describe('ServicePicker', () => {
       ),
     );
     expect(screen.queryByText(/60 min/)).toBeNull();
+    expect(screen.queryByText(/60 دقيقة/)).toBeNull();
+  });
+
+  it('shows the localized description on the card when one exists', () => {
+    render(
+      withLocale(
+        <ServicePicker
+          services={[
+            makeService({
+              descriptionEn: 'A short consultation to get started.',
+              descriptionAr: 'استشارة قصيرة للبداية.',
+            }),
+          ]}
+          categories={CATEGORIES}
+          selected={null}
+          onSelect={vi.fn()}
+        />,
+      ),
+    );
+    expect(screen.getByText('A short consultation to get started.')).toBeTruthy();
   });
 
   it('marks the selected service as aria-checked=true and not aria-pressed', () => {
@@ -374,7 +454,8 @@ describe('ServicePicker', () => {
     expect(radios[1]).toHaveFocus();
   });
 
-  it('keyboard activation of a multi-option service opens its inline picker', () => {
+  it('keyboard activation of a multi-option service calls onSelect(service) — no inline picker opens', () => {
+    const onSelect = vi.fn();
     const svc1 = makeService({ id: 'svc1' });
     const svc2 = makeService({
       id: 'svc2',
@@ -390,13 +471,16 @@ describe('ServicePicker', () => {
           services={[svc1, svc2]}
           categories={CATEGORIES}
           selected={null}
-          onSelect={vi.fn()}
+          onSelect={onSelect}
         />,
       ),
     );
     const radios = screen.getAllByRole('radio');
     radios[0].focus();
     fireEvent.keyDown(radios[0], { key: 'ArrowDown' });
-    expect(screen.getByText(/How would you like to attend/)).toBeTruthy();
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(svc2);
+    expect(screen.queryByText(/How would you like to attend/)).toBeNull();
+    expect(screen.queryByText(/Pick a session length/i)).toBeNull();
   });
 });
