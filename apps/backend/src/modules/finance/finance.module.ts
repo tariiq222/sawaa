@@ -55,10 +55,12 @@ import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-r
 import { GenerateInvoicePdfHandler } from './generate-invoice-pdf/generate-invoice-pdf.handler';
 import { ApplyInvoiceDiscountHandler } from './apply-invoice-discount/apply-invoice-discount.handler';
 import { EnsureBookingInvoiceHandler } from './ensure-booking-invoice/ensure-booking-invoice.handler';
+import { CollectBookingPaymentHandler } from './collect-booking-payment/collect-booking-payment.handler';
 
 const handlers = [
   CreateInvoiceHandler,
   EnsureBookingInvoiceHandler,
+  CollectBookingPaymentHandler,
   GenerateInvoicePdfHandler,
   ProcessPaymentHandler,
   ApplyInvoiceDiscountHandler,

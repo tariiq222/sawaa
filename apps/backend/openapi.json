@@ -1027,6 +1027,48 @@
         ],
         "type": "string"
       },
+      "CollectBookingPaymentDto": {
+        "properties": {
+          "amount": {
+            "description": "Amount to collect in integer halalas (1 SAR = 100). Omit to collect the full outstanding AFTER any discount. Must not exceed the outstanding balance — ProcessPaymentHandler enforces this.",
+            "example": 10000,
+            "type": "number"
+          },
+          "discountAmt": {
+            "description": "Manual discount to apply to the invoice subtotal BEFORE collection, in integer halalas (1 SAR = 100). Omit to skip discount. Requires discountReasonId when > 0.",
+            "example": 5000,
+            "type": "number"
+          },
+          "discountReasonId": {
+            "description": "Active DiscountReason UUID. Required by ApplyInvoiceDiscountHandler when discountAmt > 0.",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "description": "Idempotency key forwarded to ProcessPaymentHandler to dedupe dashboard retries.",
+            "example": "collect-booking-2026-xyz",
+            "type": "string"
+          },
+          "method": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethod"
+              }
+            ],
+            "description": "Statistical payment label for the reception record. ONLINE_CARD and COUPON are rejected by the handler — manual collection only.",
+            "example": "CASH"
+          },
+          "note": {
+            "description": "Free-text note stored on the invoice alongside the discount audit row.",
+            "example": "موافقة المدير",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method"
+        ],
+        "type": "object"
+      },
       "CompleteBookingDto": {
         "properties": {
           "completionNotes": {
@@ -11723,6 +11765,98 @@
         "summary": "Update a discount reason",
         "tags": [
           "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/bookings/{bookingId}/collect": {
+      "post": {
+        "description": "Single-command reception collection: ensures the booking's invoice exists, applies an optional manual discount, and records a manual payment. Omit amount to collect the full outstanding balance AFTER any discount. Returns payment:null when the discount fully covers the invoice (no payment row created). Manual/statistical methods only — ONLINE_CARD (must come through the Moyasar webhook) and COUPON (redeemed via ApplyCouponHandler) are rejected by the handler. Requires BOTH manage:Payment AND manage:Invoice: the route can ensure an invoice and apply a discount, and CaslGuard requires every listed permission.",
+        "operationId": "DashboardFinanceController_collectBookingPaymentEndpoint_v1",
+        "parameters": [
+          {
+            "description": "Booking UUID",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectBookingPaymentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Invoice ensured, optional discount applied, manual payment recorded (or payment:null when 100% discounted)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking is historical, has no payable amount, has no client, method is ONLINE_CARD/COUPON, or invoice discount/payment tripwire"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Collect a payment for a booking (reception manual/statistical)",
+        "tags": [
+          "Dashboard / Finance"
         ]
       }
     },

@@ -1,6 +1,7 @@
 /**
  * booking-actions.spec.tsx — BookingActions: status→actions, mutations, loading, error toasts.
  * Dialog tests are in booking-actions-dialogs.spec.tsx.
+ * Collect-entry tests are in booking-actions-collect.spec.tsx.
  */
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
@@ -21,8 +22,18 @@ const { useLocale } = vi.hoisted(() => ({
   })),
 }))
 
+const { useAuth } = vi.hoisted(() => ({
+  useAuth: vi.fn(),
+}))
+
 vi.mock("@/hooks/use-bookings", () => ({ useBookingMutations }))
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
+vi.mock("@/components/providers/auth-provider", () => ({ useAuth }))
+
+vi.mock("@/components/features/bookings/record-payment-dialog", () => ({
+  RecordPaymentDialog: ({ open, booking }: { open: boolean; booking: Booking }) =>
+    open ? <div data-testid="record-payment-dialog" data-booking-id={booking.id} /> : null,
+}))
 
 vi.mock("@hugeicons/react", () => ({
   HugeiconsIcon: () => <span data-testid="icon" />,
@@ -36,6 +47,7 @@ vi.mock("@hugeicons/core-free-icons", () => ({
   Cancel01Icon: () => null,
   CheckmarkCircle01Icon: () => null,
   EyeIcon: () => null,
+  Payment01Icon: () => null,
 }))
 
 vi.mock("@sawaa/ui", () => {
@@ -115,6 +127,14 @@ function mockMutations(overrides: Record<string, { mutateAsync: ReturnType<typeo
   return all
 }
 
+/** Default `useAuth()` returns canDo=true so existing tests still pass;
+ *  specific collect-behavior tests override with mockAuth(() => false). */
+function mockAuth(
+  canDo: (module: string, action: string) => boolean = () => true,
+) {
+  useAuth.mockReturnValue({ canDo })
+}
+
 function findDropdownItem(text: string) {
   const items = screen.getByTestId("dropdown-content").querySelectorAll("[data-testid='dropdown-item']")
   return Array.from(items).find((el) => el.textContent?.includes(text))
@@ -124,6 +144,7 @@ describe("BookingActions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    mockAuth()
   })
 
   afterEach(() => {

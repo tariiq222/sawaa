@@ -12,7 +12,9 @@ import {
   ensureBookingInvoice,
   manualRefundPayment,
   fetchPaymentStats,
+  collectBookingPayment,
 } from "@/lib/api/payments"
+import type { CollectBookingPaymentPayload } from "@/lib/api/payments"
 import type { PaymentListQuery } from "@/lib/types/payment"
 import type { PaymentStatus, PaymentMethod } from "@/lib/types/common"
 
@@ -92,7 +94,23 @@ export function useRecordPaymentMutations() {
     },
   })
 
-  return { applyDiscountMut, recordMut, ensureInvoiceMut }
+  // Unified booking collection — single round trip that ensures the booking
+  // has an invoice, applies any discount, and records the payment. Staff
+  // methods are statistical labels; the backend never calls Moyasar here.
+  const collectMut = useMutation({
+    mutationFn: ({
+      bookingId,
+      ...payload
+    }: { bookingId: string } & CollectBookingPaymentPayload) =>
+      collectBookingPayment(bookingId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
+    },
+  })
+
+  return { applyDiscountMut, recordMut, ensureInvoiceMut, collectMut }
 }
 
 /* ─── List Hook ─── */

@@ -829,6 +829,26 @@ export interface paths {
         patch: operations["DashboardDiscountReasonsController_updateEndpoint_v1"];
         trace?: never;
     };
+    "/api/v1/dashboard/finance/bookings/{bookingId}/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Collect a payment for a booking (reception manual/statistical)
+         * @description Single-command reception collection: ensures the booking's invoice exists, applies an optional manual discount, and records a manual payment. Omit amount to collect the full outstanding balance AFTER any discount. Returns payment:null when the discount fully covers the invoice (no payment row created). Manual/statistical methods only — ONLINE_CARD (must come through the Moyasar webhook) and COUPON (redeemed via ApplyCouponHandler) are rejected by the handler. Requires BOTH manage:Payment AND manage:Invoice: the route can ensure an invoice and apply a discount, and CaslGuard requires every listed permission.
+         */
+        post: operations["DashboardFinanceController_collectBookingPaymentEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/finance/bookings/{bookingId}/invoice": {
         parameters: {
             query?: never;
@@ -4999,6 +5019,38 @@ export interface components {
          * @enum {string}
          */
         ClientSource: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP";
+        CollectBookingPaymentDto: {
+            /**
+             * @description Amount to collect in integer halalas (1 SAR = 100). Omit to collect the full outstanding AFTER any discount. Must not exceed the outstanding balance — ProcessPaymentHandler enforces this.
+             * @example 10000
+             */
+            amount?: number;
+            /**
+             * @description Manual discount to apply to the invoice subtotal BEFORE collection, in integer halalas (1 SAR = 100). Omit to skip discount. Requires discountReasonId when > 0.
+             * @example 5000
+             */
+            discountAmt?: number;
+            /**
+             * @description Active DiscountReason UUID. Required by ApplyInvoiceDiscountHandler when discountAmt > 0.
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            discountReasonId?: string;
+            /**
+             * @description Idempotency key forwarded to ProcessPaymentHandler to dedupe dashboard retries.
+             * @example collect-booking-2026-xyz
+             */
+            idempotencyKey?: string;
+            /**
+             * @description Statistical payment label for the reception record. ONLINE_CARD and COUPON are rejected by the handler — manual collection only.
+             * @example CASH
+             */
+            method: components["schemas"]["PaymentMethod"];
+            /**
+             * @description Free-text note stored on the invoice alongside the discount audit row.
+             * @example موافقة المدير
+             */
+            note?: string;
+        };
         CompleteBookingDto: {
             /**
              * @description Notes recorded at booking completion
@@ -12442,6 +12494,76 @@ export interface operations {
                 };
             };
             /** @description Discount reason not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardFinanceController_collectBookingPaymentEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking UUID */
+                bookingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectBookingPaymentDto"];
+            };
+        };
+        responses: {
+            /** @description Invoice ensured, optional discount applied, manual payment recorded (or payment:null when 100% discounted) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Booking is historical, has no payable amount, has no client, method is ONLINE_CARD/COUPON, or invoice discount/payment tripwire */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking not found */
             404: {
                 headers: {
                     [name: string]: unknown;

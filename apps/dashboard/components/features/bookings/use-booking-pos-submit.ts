@@ -5,18 +5,26 @@
 // GROUP guard and the useCredit / paid branches) into a custom hook
 // so `booking-pos.tsx` stays under the 350-line absolute limit.
 //
-// W2-T2 update — 2026-08-23 — added the W2-T2 "collect-now" sequence:
-// after a successful createMut on the PAID branch, when the operator
-// picked "تحصيل الآن" (payAtClinic === false), the hook now calls
-// ensureBookingInvoice and recordPayment on the booking just created.
-// CRITICAL: those two calls are a separate server round-trip pair with
-// no transaction spanning createBooking + ensure/record, so a failure
-// on either step leaves the booking CREATED. The wizard must still
-// close successfully and surface a distinct Arabic toast — never a
-// compensating delete/cancel of a real booking. The credit branch
-// above is intentionally left untouched and is the financial-surface
-// sacred ground mentioned by the user ("انتبه التعديل. ياثر علي
-// العمليات الموجوده لان فيه بيانات ما نبيها تكسر").
+// W1-T4 update — 2026-08-25 — collapsed the W2-T2 two-call "collect-now"
+// sequence (ensureBookingInvoice + recordPayment) into the single
+// `collectMut` introduced in `useRecordPaymentMutations` by the
+// parallel W1-T2 stream. The contract is unchanged: when the operator
+// picked "تحصيل الآن" (payAtClinic === false), the hook now makes
+// ONE server round-trip — the server materialises the invoice if
+// needed AND records the full outstanding amount against it.
+//
+// We deliberately do NOT compute the amount client-side and we do
+// NOT send a discount payload from this hook — both are server
+// concerns. The booking is already CREATED before this call runs, so
+// a failure here is NOT a compensating delete/cancel surface — we
+// still close the wizard and surface the dedicated `paymentRecordFailed`
+// toast so the operator records the payment from the booking details
+// screen rather than booking through the wizard again.
+//
+// The credit branch above is intentionally left untouched and is
+// the financial-surface sacred ground mentioned by the user
+// ("انتبه التعديل. ياثر علي العمليات الموجوده لان فيه بيانات ما
+// نبيها تكسر").
 
 import { useCallback } from "react"
 import { toast } from "sonner"
@@ -29,10 +37,7 @@ import { usePaymentSettings } from "@/hooks/use-organization-settings"
 import { showApiError } from "@/lib/mutation-helpers"
 import { combineDateTimeToISO } from "@/lib/utils"
 import { bookingPosPayloadSchema } from "@/lib/schemas/booking.schema"
-import {
-  resolveActiveMethod,
-  type PayMethod,
-} from "@/components/features/shared/payment-method-picker"
+import { resolveActiveMethod } from "@/components/features/shared/payment-method-picker"
 
 import type { BookingFormState } from "./use-booking-form-state"
 
@@ -57,17 +62,18 @@ export function useBookingPosSubmit({
   const { t } = useLocale()
   const { createMut } = useBookingMutations()
   const bookFromCreditMut = useBookFromCredit()
-  // W2-T2 — the "collect-now" sequence reuses the same mutations the
-  // existing record-payment dialog uses. We deliberately do NOT
-  // introduce a second payment-recording code path.
-  const { recordMut, ensureInvoiceMut } = useRecordPaymentMutations()
+  // W1-T4 — collect-now is now a SINGLE `collectMut` round-trip added
+  // by the parallel W1-T2 stream to `useRecordPaymentMutations`. The
+  // server resolves the invoice + records the full outstanding amount
+  // in one call; we deliberately do NOT compute amount client-side
+  // and we do NOT send a discount payload from this hook.
+  const { collectMut } = useRecordPaymentMutations()
   const { data: paymentSettings } = usePaymentSettings()
 
   const isSubmitting =
     createMut.isPending ||
     bookFromCreditMut.isPending ||
-    recordMut.isPending ||
-    ensureInvoiceMut.isPending
+    collectMut.isPending
 
   const submit = useCallback(async () => {
     // Phase 6 — GROUP track is closed by handleProgramEnrolled the
@@ -91,10 +97,10 @@ export function useBookingPosSubmit({
     // purchase id stays set — using packagePurchaseId directly prevents the
     // double-charge bug from regressing).
     //
-    // W2-T2 — the credit branch remains COMPLETELY UNTOUCHED: it must
+    // W1-T4 — the credit branch remains COMPLETELY UNTOUCHED: it must
     // still post to /from-credit, still send no payAtClinic, and must
-    // never call ensureInvoice or recordPayment — package-credit
-    // bookings are zero-priced and pre-paid.
+    // never call collectMut — package-credit bookings are zero-priced
+    // and pre-paid.
     if (useCredit || state.packagePurchaseId) {
       if (!state.durationOptionId || !mainBranch?.id) {
         toast.error(t("bookings.wizard.submitError"))
@@ -114,6 +120,14 @@ export function useBookingPosSubmit({
           branchId: mainBranch.id,
           scheduledAt,
           deliveryType: state.deliveryType,
+          // W3-T9 — FLEXIBLE path only: pin the exact PackageCredit id the
+          // operator picked. Without `creditId`, the backend FIFO/specificity
+          // matcher could debit a different overlapping package on a client
+          // who holds two eligible credits. The triple is still required so
+          // the backend can validate the target against the credit's
+          // constraints (`creditMatchesTarget` in the handler). The PINNED
+          // path keeps the payload byte-identical by omitting the key.
+          ...(state.creditFilter ? { creditId: state.creditFilter.creditId } : {}),
         })
         toast.success(t("bookings.credit.toast.success"))
         reset()
@@ -149,33 +163,28 @@ export function useBookingPosSubmit({
     try {
       const created = await createMut.mutateAsync(validation.data)
 
-      // W2-T2 — only the PAID branch AND only when the operator picked
-      // "تحصيل الآن" (payAtClinic === false) do we record a payment.
-      // The credit branch above already returned; nothing below this
-      // line touches it.
+      // W1-T4 — only the PAID branch AND only when the operator picked
+      // "تحصيل الآن" (payAtClinic === false) do we collect the full
+      // outstanding payment. The credit branch above already returned;
+      // nothing below this line touches it.
       if (created && !state.payAtClinic) {
         try {
-          const invoice = await ensureInvoiceMut.mutateAsync(created.id)
-          // Backend truth: `outstanding` is integer halalas, already
-          // includes VAT and any coupon discount. We deliberately do
-          // NOT compute the amount from the wizard's servicePrice or
-          // do any client-side arithmetic on the submission path.
-          const amount = invoice.outstanding
-          if (amount > 0) {
-            const method: PayMethod = resolveActiveMethod(
-              paymentSettings,
-              state.collectionMethod,
-            )
-            await recordMut.mutateAsync({
-              invoiceId: invoice.id,
-              amount,
-              method,
-            })
+          const method = resolveActiveMethod(
+            paymentSettings,
+            state.collectionMethod,
+          )
+          const result = await collectMut.mutateAsync({
+            bookingId: created.id,
+            method,
+          })
+          // Backend truth: when the booking has zero outstanding (e.g.
+          // a 100%-discount or coupon edge case), the server returns
+          // `payment: null`. The booking is legitimately created; close
+          // the wizard and only toast paymentRecorded when a payment
+          // actually landed.
+          if (result?.payment) {
             toast.success(t("bookings.wizard.step.confirm.paymentRecorded"))
           }
-          // If outstanding <= 0 the booking is already paid (e.g. a
-          // 100%-discount or coupon edge case). The booking is
-          // legitimately created; close the wizard.
         } catch (paymentErr) {
           // CRITICAL — the booking IS created. Do NOT attempt a
           // compensating delete/cancel. Surface a distinct toast so
@@ -186,7 +195,7 @@ export function useBookingPosSubmit({
             t("bookings.wizard.step.confirm.paymentRecordFailed"),
             { id: "pos-payment-record-failed" },
           )
-          console.error("[useBookingPosSubmit] payment recording failed", paymentErr)
+          console.error("[useBookingPosSubmit] collect payment failed", paymentErr)
         }
       }
 
@@ -201,8 +210,7 @@ export function useBookingPosSubmit({
     mainBranch,
     createMut,
     bookFromCreditMut,
-    ensureInvoiceMut,
-    recordMut,
+    collectMut,
     paymentSettings,
     reset,
     onSuccess,

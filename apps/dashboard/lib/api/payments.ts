@@ -88,3 +88,47 @@ export async function applyInvoiceDiscount(
 ): Promise<unknown> {
   return api.patch(`/dashboard/finance/invoices/${invoiceId}/discount`, payload)
 }
+
+/**
+ * Body for the unified booking collection endpoint. Staff methods are
+ * statistical labels only — the backend never calls Moyasar here.
+ */
+export interface CollectBookingPaymentPayload {
+  method: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY"
+  /** Integer halalas. Omit to let the server default to the invoice's full outstanding. */
+  amount?: number
+  /** Optional discount applied on top of the payment (integer halalas). */
+  discountAmt?: number
+  /** Required when discountAmt > 0 (server enforces). */
+  discountReasonId?: string
+  /** Free-text note attached to the payment or the discount. */
+  note?: string
+  /** Client-supplied idempotency key — same key returns the same result. */
+  idempotencyKey?: string
+}
+
+/**
+ * Response for the unified booking collection endpoint. `payment` is null when
+ * the call only adjusted the discount (no money moved).
+ */
+export interface CollectBookingPaymentResult {
+  bookingId: string
+  invoice: EnsuredBookingInvoice
+  payment: { id: string; amount: number; method: string; status: string } | null
+}
+
+/**
+ * Unified booking collection — single round trip that ensures the booking has
+ * an invoice, applies any discount, and records the payment. amount/discountAmt
+ * are in integer halalas. Staff methods (CASH/BANK_TRANSFER/MADA/TABBY) are
+ * statistical labels; the server does not call Moyasar.
+ */
+export async function collectBookingPayment(
+  bookingId: string,
+  payload: CollectBookingPaymentPayload,
+): Promise<CollectBookingPaymentResult> {
+  return api.post<CollectBookingPaymentResult>(
+    `/dashboard/finance/bookings/${bookingId}/collect`,
+    payload,
+  )
+}

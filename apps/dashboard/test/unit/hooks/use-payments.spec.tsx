@@ -6,19 +6,23 @@ import type { ReactNode } from "react"
 const {
   fetchPayments,
   fetchPaymentStats,
+  collectBookingPayment,
 } = vi.hoisted(() => ({
   fetchPayments: vi.fn(),
   fetchPaymentStats: vi.fn(),
+  collectBookingPayment: vi.fn(),
 }))
 
 vi.mock("@/lib/api/payments", () => ({
   fetchPayments,
   fetchPaymentStats,
+  collectBookingPayment,
 }))
 
 import {
   usePayments,
   usePaymentMutations,
+  useRecordPaymentMutations,
 } from "@/hooks/use-payments"
 
 function makeWrapper() {
@@ -127,5 +131,73 @@ describe("usePaymentMutations", () => {
     const { result } = renderHook(() => usePaymentMutations(), { wrapper: makeWrapper() })
     expect(result.current.verifyMut).toBeDefined()
     expect(typeof result.current.verifyMut.mutateAsync).toBe("function")
+  })
+})
+
+describe("useRecordPaymentMutations.collectMut", () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("collectMut exists and exposes mutateAsync", () => {
+    const { result } = renderHook(() => useRecordPaymentMutations(), { wrapper: makeWrapper() })
+    expect(result.current.collectMut).toBeDefined()
+    expect(typeof result.current.collectMut.mutateAsync).toBe("function")
+  })
+
+  it("calls collectBookingPayment with bookingId and payload, then invalidates bookings + payments + invoices", async () => {
+    const apiResult = {
+      bookingId: "bk-42",
+      invoice: { id: "inv-42", subtotal: 0, vatRate: 0, total: 2500, outstanding: 0, status: "PAID" },
+      payment: { id: "pay-42", amount: 2500, method: "CASH", status: "COMPLETED" },
+    }
+    collectBookingPayment.mockResolvedValueOnce(apiResult)
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    function TestWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    }
+    TestWrapper.displayName = "TestWrapper"
+
+    const { result } = renderHook(() => useRecordPaymentMutations(), { wrapper: TestWrapper })
+
+    const payload = {
+      bookingId: "bk-42",
+      method: "CASH" as const,
+      amount: 2500,
+      discountAmt: 0,
+      discountReasonId: "reason-9",
+      note: "Paid at reception",
+      idempotencyKey: "idem-xyz",
+    }
+
+    await act(async () => {
+      const response = await result.current.collectMut.mutateAsync(payload)
+      expect(response).toBe(apiResult)
+    })
+
+    expect(collectBookingPayment).toHaveBeenCalledWith("bk-42", {
+      method: "CASH",
+      amount: 2500,
+      discountAmt: 0,
+      discountReasonId: "reason-9",
+      note: "Paid at reception",
+      idempotencyKey: "idem-xyz",
+    })
+
+    const calledKeys = invalidateSpy.mock.calls.map(
+      ([arg]) => (arg as { queryKey: unknown }).queryKey,
+    )
+    expect(calledKeys).toContainEqual(expect.arrayContaining(["bookings"]))
+    expect(calledKeys).toContainEqual(expect.arrayContaining(["payments"]))
+    expect(calledKeys).toContainEqual(expect.arrayContaining(["invoices"]))
+  })
+
+  it("keeps applyDiscountMut, recordMut, and ensureInvoiceMut exported alongside collectMut", () => {
+    const { result } = renderHook(() => useRecordPaymentMutations(), { wrapper: makeWrapper() })
+    expect(result.current.applyDiscountMut).toBeDefined()
+    expect(result.current.recordMut).toBeDefined()
+    expect(result.current.ensureInvoiceMut).toBeDefined()
+    expect(result.current.collectMut).toBeDefined()
   })
 })

@@ -22,10 +22,12 @@ import {
   DropdownMenuTrigger,
 } from "@sawaa/ui"
 import { useBookingMutations } from "@/hooks/use-bookings"
+import { useAuth } from "@/components/providers/auth-provider"
 import { showApiError } from "@/lib/mutation-helpers"
 import { sarToHalalas } from "@/lib/money"
 import type { Booking, CancellationReason, RefundDecision, RefundType } from "@/lib/types/booking"
 import { ApproveCancelDialog, RejectCancelDialog, AdminCancelDialog } from "./cancel-dialogs"
+import { CollectAction, canCollectBooking, useLatestBookingRef } from "./booking-collect-action"
 
 interface BookingActionsProps {
   booking: Booking
@@ -74,6 +76,7 @@ const getStatusLabels = (t: (k: string) => string): Record<string, string> => ({
 
 export function BookingActions({ booking, onAction }: BookingActionsProps) {
   const { t } = useLocale()
+  const { canDo } = useAuth()
   const actionMeta = getActionMeta(t)
   const statusLabels = getStatusLabels(t)
   const {
@@ -91,6 +94,7 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
   const [refundAmount, setRefundAmount] = useState("")
   const [adminNotes, setAdminNotes] = useState("")
   const [cancelReason, setCancelReason] = useState<CancellationReason | "">("")
+  const [collectOpen, setCollectOpen] = useState(false)
 
   const loading =
     confirmMut.isPending ||
@@ -101,13 +105,17 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
     approveCancelMut.isPending ||
     rejectCancelMut.isPending
 
-  const run = async (action: () => Promise<unknown>, msg: string) => {
+  // Always resolves; returns true on success, false on caught failure so
+  // callers can gate follow-up UI. Toast + onAction() behavior unchanged.
+  const run = async (action: () => Promise<unknown>, msg: string): Promise<boolean> => {
     try {
       await action()
       toast.success(msg)
       onAction()
+      return true
     } catch (err) {
       showApiError(err, { fallback: t("bookings.actions.toast.genericError"), t })
+      return false
     }
   }
 
@@ -122,6 +130,14 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
   const { status } = booking
   const actions = statusActions[status] ?? []
 
+  // "Owes money" predicate — co-located in booking-collect-action.tsx so the
+  // dropdown item and the dialog render with the same gating.
+  const canCollect = canCollectBooking(booking, canDo)
+
+  // Latest-prop ref: re-evaluate canCollect against the parent's current
+  // booking inside the post-complete `.then()` (onAction() refreshes first).
+  const bookingRef = useLatestBookingRef(booking)
+
   const handleAction = (action: string) => {
     switch (action) {
       case "confirm":
@@ -131,7 +147,14 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
         run(() => checkInMut.mutateAsync(booking.id), t("bookings.actions.toast.checkedIn"))
         break
       case "complete":
+        // Successful complete on a still-owing booking opens collect dialog.
+        // Gated on `run`'s boolean so a FAILED complete never opens it.
         run(() => completeMut.mutateAsync(booking.id), t("bookings.actions.toast.completed"))
+          .then((ok) => {
+            if (ok && canCollectBooking(bookingRef.current, canDo)) {
+              setCollectOpen(true)
+            }
+          })
         break
       case "noshow":
         run(() => noShowMut.mutateAsync(booking.id), t("bookings.actions.toast.noShow"))
@@ -149,7 +172,7 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
     }
   }
 
-  if (booking.isHistoricalImport || actions.length === 0) return null
+  if (booking.isHistoricalImport || (actions.length === 0 && !canCollect)) return null
 
   return (
     <>
@@ -184,6 +207,15 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
               </DropdownMenuItem>
             )
           })}
+          {canCollect && actions.length > 0 && <DropdownMenuSeparator />}
+          {canCollect && (
+            <CollectAction
+              booking={booking}
+              open={collectOpen}
+              setOpen={setCollectOpen}
+              onCollected={onAction}
+            />
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

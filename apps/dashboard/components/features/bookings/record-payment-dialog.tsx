@@ -66,7 +66,7 @@ export function RecordPaymentDialog({ booking, open, onOpenChange }: RecordPayme
 
 function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: () => void }) {
   const { t } = useLocale()
-  const { applyDiscountMut, recordMut, ensureInvoiceMut } = useRecordPaymentMutations()
+  const { collectMut, ensureInvoiceMut } = useRecordPaymentMutations()
   const { data: reasons = [] } = useDiscountReasons()
   const { data: paymentSettings } = usePaymentSettings()
 
@@ -115,22 +115,24 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
   const hasDiscount = discountNum > 0
   const discountValid = !hasDiscount || discountReasonId !== ""
   const amountValid = amountNum > 0 && amountNum <= payableSar
-  const canSubmit = !!invoice && discountValid && amountValid && !recordMut.isPending && !applyDiscountMut.isPending
+  const canSubmit =
+    !!invoice &&
+    discountValid &&
+    amountValid &&
+    !collectMut.isPending &&
+    !ensureInvoiceMut.isPending
 
   async function onSubmit() {
     if (!invoice) return
     try {
-      if (hasDiscount) {
-        await applyDiscountMut.mutateAsync({
-          invoiceId: invoice.id,
+      await collectMut.mutateAsync({
+        bookingId: booking.id,
+        method: activeMethod,
+        amount: sarToHalalas(amountNum),
+        ...(hasDiscount && {
           discountAmt: sarToHalalas(discountNum),
           discountReasonId,
-        })
-      }
-      await recordMut.mutateAsync({
-        invoiceId: invoice.id,
-        amount: sarToHalalas(amountNum),
-        method: activeMethod,
+        }),
       })
       toast.success(t("bookings.recordPayment.successToast"))
       onClose()
@@ -235,7 +237,7 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
           {t("bookings.recordPayment.cancel")}
         </Button>
         <Button type="button" size="sm" disabled={!canSubmit} onClick={onSubmit}>
-          {recordMut.isPending || applyDiscountMut.isPending
+          {collectMut.isPending || ensureInvoiceMut.isPending
             ? t("bookings.recordPayment.submitting")
             : t("bookings.recordPayment.submit")}
         </Button>

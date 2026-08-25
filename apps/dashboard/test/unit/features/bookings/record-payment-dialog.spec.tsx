@@ -3,8 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import type { Booking } from '@/lib/types/booking'
 
-const applyDiscountMutateAsync = vi.fn().mockResolvedValue({})
-const recordMutateAsync = vi.fn().mockResolvedValue({})
+const collectMutateAsync = vi.fn().mockResolvedValue({})
 
 vi.mock('@/components/locale-provider', () => ({
   useLocale: () => ({ t: (key: string) => key }),
@@ -16,8 +15,7 @@ vi.mock('@/components/providers/auth-provider', () => ({
 
 vi.mock('@/hooks/use-payments', () => ({
   useRecordPaymentMutations: () => ({
-    applyDiscountMut: { mutateAsync: applyDiscountMutateAsync, isPending: false },
-    recordMut: { mutateAsync: recordMutateAsync, isPending: false },
+    collectMut: { mutateAsync: collectMutateAsync, isPending: false },
     ensureInvoiceMut: { mutateAsync: vi.fn().mockRejectedValue(new Error('no invoice')), isPending: false, isError: true },
   }),
 }))
@@ -47,6 +45,7 @@ import { RecordPaymentDialog } from '@/components/features/bookings/record-payme
 
 function makeBooking(overrides: Partial<Booking> = {}): Booking {
   return {
+    id: 'book-1',
     invoice: { id: 'inv-1', subtotal: 10000, vatRate: 0.15, total: 11500, outstanding: 11500, status: 'ISSUED' },
     payment: null,
     ...overrides,
@@ -61,8 +60,7 @@ function renderDialog(booking: Booking) {
 
 describe('RecordPaymentDialog', () => {
   beforeEach(() => {
-    applyDiscountMutateAsync.mockClear()
-    recordMutateAsync.mockClear()
+    collectMutateAsync.mockClear()
   })
 
   it('seeds the amount field from the outstanding balance (115.00 SAR)', () => {
@@ -71,15 +69,15 @@ describe('RecordPaymentDialog', () => {
     expect(Number(amount.value)).toBe(115)
   })
 
-  it('records a payment without discount: skips discount mutation', async () => {
+  it('records a payment without discount via a single collectMut call', async () => {
     renderDialog(makeBooking())
     fireEvent.click(screen.getByText('bookings.recordPayment.submit'))
-    await waitFor(() => expect(recordMutateAsync).toHaveBeenCalled())
-    expect(applyDiscountMutateAsync).not.toHaveBeenCalled()
-    expect(recordMutateAsync).toHaveBeenCalledWith({
-      invoiceId: 'inv-1',
-      amount: 11500, // 115 SAR → halalas
+    await waitFor(() => expect(collectMutateAsync).toHaveBeenCalled())
+    expect(collectMutateAsync).toHaveBeenCalledTimes(1)
+    expect(collectMutateAsync).toHaveBeenCalledWith({
+      bookingId: 'book-1',
       method: 'CASH',
+      amount: 11500, // 115 SAR → halalas
     })
   })
 
@@ -116,14 +114,23 @@ describe('RecordPaymentDialog', () => {
     expect(screen.queryByRole('radio', { name: 'bookings.recordPayment.method.tabby' })).not.toBeInTheDocument()
   })
 
-  it('records the payment with the selected method', async () => {
+  it('records the payment with the selected method via a single collectMut call', async () => {
     renderDialog(makeBooking())
     fireEvent.click(screen.getByRole('radio', { name: 'bookings.recordPayment.method.mada' }))
     fireEvent.click(screen.getByText('bookings.recordPayment.submit'))
-    await waitFor(() => expect(recordMutateAsync).toHaveBeenCalled())
-    expect(recordMutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'MADA' }),
+    await waitFor(() => expect(collectMutateAsync).toHaveBeenCalled())
+    expect(collectMutateAsync).toHaveBeenCalledTimes(1)
+    expect(collectMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bookingId: 'book-1',
+        method: 'MADA',
+        amount: 11500,
+      }),
     )
+    // No standalone discount payload is sent when no discount is entered.
+    const call = collectMutateAsync.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(call).not.toHaveProperty('discountAmt')
+    expect(call).not.toHaveProperty('discountReasonId')
   })
 
   it('shows no-invoice message when the booking has no invoice', () => {

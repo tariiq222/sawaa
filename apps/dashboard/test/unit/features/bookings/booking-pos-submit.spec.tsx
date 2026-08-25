@@ -12,14 +12,26 @@
  * Note: the POS flow derives session duration from service bookingConfigs,
  * not a user-selected durationOptionId, so no durationOptionId is sent.
  *
+ * W1-T4 — after the W1-T4 refactor that collapsed the W2-T2 two-call
+ * collect-now sequence (ensureInvoiceMut + recordMut) into the single
+ * `collectMut`, this spec mocks `collectMut` directly. Default resolution
+ * is `{ payment: null }` so the PAID branch completes without firing
+ * either `paymentRecorded` or `paymentRecordFailed` toasts. New tests
+ * assert that collect-now (payAtClinic false) calls collectMut with
+ * `{ bookingId, method }` (no amount, no discount), payAtClinic true
+ * never collects, and the credit/package branch never collects.
+ *
  * Lives in its own file to avoid vi.mock hoisting conflicts with the
  * pure state-machine / BookingSummary tests in booking-create-flow.spec.tsx.
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor, renderHook } from "@testing-library/react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import React from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+
+import { useBookingPosSubmit } from "@/components/features/bookings/use-booking-pos-submit"
+import type { BookingFormState } from "@/components/features/bookings/use-booking-form-state"
 
 import { BookingPos } from "@/components/features/bookings/booking-pos"
 import { useBookingFormState } from "@/components/features/bookings/use-booking-form-state"
@@ -210,6 +222,7 @@ const makeCompleteState = (overrides = {}) => ({
     programId: null,
     programName: null,
     packagePurchaseId: null,
+    creditFilter: null,
     payAtClinic: false,
     collectionMethod: "CASH" as const,
     couponCode: null,
@@ -234,20 +247,18 @@ const makeCompleteState = (overrides = {}) => ({
   setCouponCode: vi.fn(),
   applyCreditTarget: vi.fn(),
   applyPackageCreditTarget: vi.fn(),
+  applyCreditFilter: vi.fn(),
+  clearCreditFilter: vi.fn(),
 })
 
 /* ─── Shared mock factories ──────────────────────────────────────────────── */
 
-const { createMut, ensureInvoiceMut, recordMut, bookFromCreditMut } = vi.hoisted(() => ({
+const { createMut, collectMut, bookFromCreditMut } = vi.hoisted(() => ({
   createMut: {
     mutateAsync: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
     isPending: false,
   },
-  ensureInvoiceMut: {
-    mutateAsync: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
-    isPending: false,
-  },
-  recordMut: {
+  collectMut: {
     mutateAsync: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
     isPending: false,
   },
@@ -277,7 +288,7 @@ vi.mock("@/hooks/use-organization-settings", () => ({
 }))
 
 vi.mock("@/hooks/use-payments", () => ({
-  useRecordPaymentMutations: vi.fn(() => ({ recordMut, ensureInvoiceMut })),
+  useRecordPaymentMutations: vi.fn(() => ({ collectMut })),
 }))
 
 vi.mock("@/hooks/use-credit-bookings", () => ({
@@ -318,12 +329,12 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
   beforeEach(() => {
     vi.clearAllMocks()
     createMut.mutateAsync.mockResolvedValue({ id: "bk-new" })
-    // Default collect-now sequence returns a zero-outstanding invoice so
-    // the W2-T2 PAID branch in use-booking-pos-submit completes without
-    // firing the paymentRecordFailed toast. Tests that want to exercise
-    // the recordPayment path can override this in `mockResolvedValueOnce`.
-    ensureInvoiceMut.mutateAsync.mockResolvedValue({ id: "inv-stub", outstanding: 0 })
-    recordMut.mutateAsync.mockResolvedValue({ id: "pay-stub" })
+    // W1-T4 — default collectMut resolves with `{ payment: null }` so the
+    // PAID branch in use-booking-pos-submit completes without firing
+    // `paymentRecorded` (zero outstanding) or `paymentRecordFailed` (throw).
+    // Tests that want to exercise the success path can override with
+    // `mockResolvedValueOnce({ payment: { id: "pay-1" } })`.
+    collectMut.mutateAsync.mockResolvedValue({ payment: null })
     bookFromCreditMut.mutateAsync.mockResolvedValue({ id: "bk-credit" })
   })
 
@@ -446,5 +457,336 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
       name: /bookings\.pos\.confirm/,
     }) as HTMLButtonElement
     expect(btn).toBeDisabled()
+  })
+
+  /* ════════════════════════════════════════════════════════════════════════
+     W1-T4 — collect-now is a single collectMut call.
+     payAtClinic false (تحصيل الآن) → collectMut called once with
+       { bookingId, method } (no amount, no discount).
+     payAtClinic true                  → collectMut NOT called.
+     Credit/packagePurchaseId path     → collectMut NOT called.
+     When collectMut resolves with `{ payment }` → paymentRecorded toast.
+     When collectMut resolves with `{ payment: null }` → no toast.
+     When collectMut rejects                       → paymentRecordFailed toast.
+     ════════════════════════════════════════════════════════════════════════ */
+
+  it("collect-now (payAtClinic false) calls collectMut once with bookingId and resolved method, no amount/discount", async () => {
+    collectMut.mutateAsync.mockResolvedValueOnce({ payment: { id: "pay-1" } })
+
+    renderBookingPos()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
+
+    await waitFor(() => {
+      expect(collectMut.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+
+    const [payload] = collectMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
+    expect(payload).toMatchObject({
+      bookingId: "bk-new",
+      method: "CASH",
+    })
+    // W1-T4 contract — server collects the full outstanding amount, so
+    // the hook must NOT send amount or discount from the client.
+    expect(payload).not.toHaveProperty("amount")
+    expect(payload).not.toHaveProperty("discount")
+    // Server returned a payment → success toast fires.
+    expect(toastSuccess).toHaveBeenCalledWith(
+      "bookings.wizard.step.confirm.paymentRecorded"
+    )
+  })
+
+  it("collect-now stays silent when server returns payment: null (zero outstanding)", async () => {
+    // beforeEach already sets collectMut default to { payment: null }.
+    renderBookingPos()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
+
+    await waitFor(() => {
+      expect(collectMut.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+    // paymentRecorded toast is suppressed when nothing was paid.
+    expect(toastSuccess).not.toHaveBeenCalledWith(
+      "bookings.wizard.step.confirm.paymentRecorded"
+    )
+    // paymentRecordFailed is also NOT fired — the call succeeded.
+    expect(toastError).not.toHaveBeenCalledWith(
+      "bookings.wizard.step.confirm.paymentRecordFailed"
+    )
+  })
+
+  it("payAtClinic true does NOT call collectMut", async () => {
+    renderBookingPos(makeCompleteState({ payAtClinic: true }))
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
+
+    await waitFor(() => {
+      expect(createMut.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+    expect(collectMut.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it("credit path (packagePurchaseId set) posts to /from-credit and does NOT call collectMut", async () => {
+    // Setting packagePurchaseId + durationOptionId triggers the credit
+    // branch in use-booking-pos-submit (the hook checks
+    // `useCredit || state.packagePurchaseId`).
+    renderBookingPos(
+      makeCompleteState({
+        packagePurchaseId: "pkg-1",
+        durationOptionId: "dur-credit-1",
+      })
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
+
+    await waitFor(() => {
+      expect(bookFromCreditMut.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+    // Credit branch is sacred — no create, no collect, no ensureInvoice.
+    expect(createMut.mutateAsync).not.toHaveBeenCalled()
+    expect(collectMut.mutateAsync).not.toHaveBeenCalled()
+    expect(toastSuccess).toHaveBeenCalledWith("bookings.credit.toast.success")
+  })
+
+  it("collect-now failure surfaces paymentRecordFailed toast and does NOT throw out of submit", async () => {
+    collectMut.mutateAsync.mockRejectedValueOnce(new Error("server boom"))
+
+    renderBookingPos()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith(
+        "bookings.wizard.step.confirm.paymentRecordFailed",
+        expect.objectContaining({ id: "pos-payment-record-failed" }),
+      )
+    })
+    // CRITICAL — the booking IS created. Never show the generic
+    // submit-error toast for a collect failure.
+    expect(toastError).not.toHaveBeenCalledWith("bookings.wizard.submitError")
+    expect(toastSuccess).not.toHaveBeenCalledWith(
+      "bookings.wizard.step.confirm.paymentRecorded"
+    )
+  })
+})
+
+/* ══════════════════════════════════════════════════════════════════════════
+   W3-T9 — creditId forwarded only on the FLEXIBLE path
+
+   The submit hook must populate `creditId` ONLY when state.creditFilter is
+   set (the operator picked a specific FLEXIBLE credit). Without it, the
+   backend FIFO/specificity matcher could debit the WRONG overlapping
+   package. The PINNED path (creditFilter null + packagePurchaseId set) and
+   the auto-detect BADGE path (creditFilter null + useCredit true) keep
+   sending the triple alone — the conditional spread omits the `creditId`
+   key entirely so the JSON payload is byte-identical to today.
+
+   Tests (a), (b), (d) drive the real BookingPos so the integration end-
+   to-end is exercised. Test (c) drives the hook directly via renderHook
+   because the only consumer that flips useCredit=true is the MatchingCredit
+   accept button, which only renders inside the datetime CollapsibleSection
+   when MatchingCreditBadge returns matches — opening that section in a
+   renderBookingPos test would require mocking useMatchingCredits, opening
+   a closed accordion, and asserting through additional UI noise that does
+   not add coverage beyond what calling the hook with useCredit=true does.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+describe("BookingPos — W3-T9: creditId forwarded only on the FLEXIBLE path", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    bookFromCreditMut.mutateAsync.mockResolvedValue({ id: "bk-credit" })
+    createMut.mutateAsync.mockResolvedValue({ id: "bk-new" })
+    // W1-T4 — default collectMut resolves with `{ payment: null }`.
+    collectMut.mutateAsync.mockResolvedValue({ payment: null })
+  })
+
+  /* (a) FLEXIBLE: creditFilter set → posts creditId AND the full triple. */
+  it("FLEXIBLE path: payload includes creditId AND the full triple when state.creditFilter is set", async () => {
+    const flexibleCreditId = "credit-flex-1"
+    const flexiblePurchaseId = "pkg-flex-1"
+    const creditFilter = {
+      creditId: flexibleCreditId,
+      packagePurchaseId: flexiblePurchaseId,
+      packageName: "Flexible Package",
+      constraints: [],
+      serviceId: null,
+      employeeId: null,
+      durationOptionId: null,
+    }
+
+    renderBookingPos(
+      makeCompleteState({
+        creditFilter: creditFilter as unknown as ReturnType<
+          typeof useBookingFormState
+        >["state"]["creditFilter"],
+        packagePurchaseId: flexiblePurchaseId,
+        durationOptionId: "dur-flex-1",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ }),
+    )
+
+    await waitFor(() => {
+      expect(bookFromCreditMut.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+
+    const [payload] = bookFromCreditMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
+    // creditId is forwarded.
+    expect(payload).toMatchObject({
+      creditId: flexibleCreditId,
+      clientId: "cli-1",
+      serviceId: "svc-1",
+      employeeId: "emp-1",
+      durationOptionId: "dur-flex-1",
+      branchId: "branch-1",
+      deliveryType: "IN_PERSON",
+    })
+    // The full triple is still present so the backend can constraint-validate.
+    expect(payload).toHaveProperty("scheduledAt")
+    expect(createMut.mutateAsync).not.toHaveBeenCalled()
+    expect(collectMut.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  /* (b) PINNED: creditFilter null + packagePurchaseId set → payload has NO creditId key. */
+  it("PINNED path: payload has NO creditId key when only packagePurchaseId is set (creditFilter null)", async () => {
+    renderBookingPos(
+      makeCompleteState({
+        packagePurchaseId: "pkg-pinned-1",
+        durationOptionId: "dur-pinned-1",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ }),
+    )
+
+    await waitFor(() => {
+      expect(bookFromCreditMut.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+
+    const [payload] = bookFromCreditMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
+    // PINNED payload is byte-identical to today — no creditId key at all.
+    expect(payload).not.toHaveProperty("creditId")
+    // Triple is still there.
+    expect(payload).toMatchObject({
+      clientId: "cli-1",
+      serviceId: "svc-1",
+      employeeId: "emp-1",
+      durationOptionId: "dur-pinned-1",
+      branchId: "branch-1",
+      deliveryType: "IN_PERSON",
+    })
+  })
+
+  /* (c) BADGE: creditFilter null + useCredit true → payload has NO creditId key.
+   * Uses renderHook because the only consumer that flips useCredit=true is
+   * the MatchingCreditBadge accept button — exercising that UI path here
+   * would require mocking useMatchingCredits, opening the datetime
+   * CollapsibleSection, and asserting through unrelated UI plumbing. The
+   * regression we care about is the hook's conditional-spread branch. */
+  it("BADGE path: payload has NO creditId key when useCredit is true but state.creditFilter is null", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      )
+    }
+
+    const minimalState = {
+      clientId: "cli-1",
+      clientName: "Sara",
+      track: "CLINICS" as const,
+      departmentId: "dep-1",
+      departmentName: "Family",
+      categoryId: "cat-1",
+      categoryName: "Marriage Clinic",
+      categoryBookingMode: "SERVICES" as const,
+      serviceId: "svc-1",
+      serviceName: "Counseling",
+      employeeId: "emp-1",
+      employeeName: "Ahmad",
+      durationOptionId: "dur-badge-1",
+      deliveryType: "IN_PERSON" as const,
+      type: "IN_PERSON" as const,
+      date: "2026-06-01",
+      startTime: "09:00",
+      programId: null,
+      programName: null,
+      packagePurchaseId: null,
+      creditFilter: null,
+      payAtClinic: false,
+      collectionMethod: "CASH" as const,
+      couponCode: null,
+    }
+
+    const { result } = renderHook(
+      () =>
+        useBookingPosSubmit({
+          state: minimalState as unknown as BookingFormState,
+          mainBranch: { id: "branch-1" },
+          // useCredit=true simulates the operator having clicked the
+          // MatchingCreditBadge accept button. The filter is NOT set
+          // because the badge auto-detect path never produces a
+          // CreditFilter — only the applyCreditFilter path does.
+          useCredit: true,
+          reset: vi.fn(),
+          onSuccess: vi.fn(),
+        }),
+      { wrapper: Wrapper },
+    )
+
+    await result.current.submit()
+
+    expect(bookFromCreditMut.mutateAsync).toHaveBeenCalledTimes(1)
+    const [payload] = bookFromCreditMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
+    // Regression guard — the badge path must NOT send creditId.
+    expect(payload).not.toHaveProperty("creditId")
+    // Triple still present.
+    expect(payload).toMatchObject({
+      clientId: "cli-1",
+      serviceId: "svc-1",
+      employeeId: "emp-1",
+      durationOptionId: "dur-badge-1",
+      branchId: "branch-1",
+      deliveryType: "IN_PERSON",
+    })
+  })
+
+  /* (d) NON-CREDIT: ordinary booking still posts to /bookings and never
+   * touches bookFromCreditMut — the credit branch is opt-in only. */
+  it("non-credit path: ordinary booking never calls bookFromCreditMut", async () => {
+    // Default makeCompleteState: no packagePurchaseId, no creditFilter.
+    renderBookingPos()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ }),
+    )
+
+    await waitFor(() => {
+      expect(createMut.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+    expect(bookFromCreditMut.mutateAsync).not.toHaveBeenCalled()
   })
 })

@@ -18,6 +18,7 @@ describe('DashboardFinanceController', () => {
       'getPayment', 'applyInvoiceDiscount',
       'createPackagePurchase', 'listClientPackagePurchases',
       'refundPackagePurchase', 'ensureBookingInvoice', 'manualRefundPayment',
+      'collectBookingPayment',
     ];
 
     handlers = {};
@@ -36,6 +37,7 @@ describe('DashboardFinanceController', () => {
       handlerMocks[2] as any,  // processPayment
       handlerMocks[24] as any, // ensureBookingInvoice
       handlerMocks[20] as any, // applyInvoiceDiscount
+      handlerMocks[26] as any, // collectBookingPayment
       handlerMocks[3] as any,  // listPayments
       handlerMocks[19] as any, // getPayment
       handlerMocks[4] as any,  // listInvoices
@@ -300,5 +302,50 @@ describe('DashboardFinanceController', () => {
       clientId: 'client-1',
       status: undefined,
     });
+  });
+
+  // ── Collect booking payment (W1-T1) ───────────────────────────────────────
+
+  it('collectBookingPaymentEndpoint should call collectBookingPayment.execute with bookingId + appliedBy + body fields', async () => {
+    const body = {
+      method: 'CASH' as const,
+      amount: 15000,
+      discountAmt: 5000,
+      discountReasonId: '00000000-0000-0000-0000-000000000007',
+      note: 'approved',
+      idempotencyKey: 'collect-1',
+    };
+    await controller.collectBookingPaymentEndpoint('booking-1', 'manager-1', body as any);
+    expect(handlers.collectBookingPayment).toHaveBeenCalledWith({
+      bookingId: 'booking-1',
+      appliedBy: 'manager-1',
+      method: 'CASH',
+      amount: 15000,
+      discountAmt: 5000,
+      discountReasonId: '00000000-0000-0000-0000-000000000007',
+      note: 'approved',
+      idempotencyKey: 'collect-1',
+    });
+  });
+
+  it('W2-T1: collectBookingPaymentEndpoint requires BOTH manage:Payment AND manage:Invoice', async () => {
+    // Tightened from the W1-T1 single-permission gate (manage:Payment only).
+    // The handler composes EnsureBookingInvoiceHandler and
+    // ApplyInvoiceDiscountHandler — capabilities the dedicated routes
+    // `POST bookings/:bookingId/invoice` and `PATCH invoices/:id/discount`
+    // both gate on manage:Invoice. CaslGuard evaluates `required.every(...)`,
+    // so listing both permissions enforces both. Built-in roles
+    // (ACCOUNTANT / ADMIN / OWNER) already hold both and remain unaffected.
+    // The `toHaveLength(2)` plus `toEqual(expect.arrayContaining(...))` form
+    // would fail if either permission were dropped.
+    const perms = new Reflector().get(
+      CHECK_PERMISSIONS_KEY,
+      DashboardFinanceController.prototype.collectBookingPaymentEndpoint,
+    );
+    expect(perms).toHaveLength(2);
+    expect(perms).toEqual(expect.arrayContaining([
+      { action: 'manage', subject: 'Payment' },
+      { action: 'manage', subject: 'Invoice' },
+    ]));
   });
 });

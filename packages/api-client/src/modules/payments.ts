@@ -1,5 +1,6 @@
 import { apiRequest } from '../client'
 import type {
+  CollectBookingPaymentResult,
   PaymentListItem,
   PaymentListQuery,
   PaymentListResponse,
@@ -104,4 +105,29 @@ export async function applyInvoiceDiscount(
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
+}
+
+/**
+ * Collect a payment against a booking (e.g. at reception).
+ * All monetary fields are integer halalas. `amount` defaults to the booking's
+ * outstanding balance on the backend when omitted.
+ */
+export async function collectBookingPayment(
+  bookingId: string,
+  payload: {
+    method: 'CASH' | 'BANK_TRANSFER' | 'MADA' | 'TABBY'
+    amount?: number
+    discountAmt?: number
+    discountReasonId?: string
+    note?: string
+    idempotencyKey?: string
+  },
+): Promise<CollectBookingPaymentResult> {
+  return apiRequest<CollectBookingPaymentResult>(
+    `/dashboard/finance/bookings/${bookingId}/collect`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  )
 }

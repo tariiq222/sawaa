@@ -25,6 +25,7 @@ import {
 } from '../employees'
 import {
   applyInvoiceDiscount,
+  collectBookingPayment,
   getPayment,
   getPaymentStats,
   listPayments,
@@ -489,6 +490,54 @@ describe('payments module', () => {
       method: 'CASH',
       gatewayRef: 'rcpt-42',
     })
+  })
+
+  it('POSTs collect payload to /dashboard/finance/bookings/:bookingId/collect and parses the {bookingId, invoice, payment} response', async () => {
+    const fakeResult = {
+      bookingId: 'book-1',
+      invoice: {
+        id: 'inv-1',
+        subtotal: 24000,
+        vatRate: 0.15,
+        total: 27600,
+        outstanding: 2600,
+        status: 'PARTIALLY_PAID',
+      },
+      payment: {
+        id: 'pay-99',
+        amount: 25000,
+        method: 'CASH',
+        status: 'COMPLETED',
+      },
+    }
+    vi.mocked(fetch).mockReset()
+    vi.mocked(fetch).mockResolvedValueOnce(okJson(fakeResult))
+
+    const result = await collectBookingPayment('book-1', {
+      method: 'CASH',
+      amount: 25000,
+      discountAmt: 500,
+      discountReasonId: 'reason-1',
+      note: 'collected at reception',
+      idempotencyKey: 'idem-1',
+    })
+
+    const [url, init] = lastRequest()
+    expect(url).toBe(
+      'http://api.test/dashboard/finance/bookings/book-1/collect',
+    )
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      method: 'CASH',
+      amount: 25000,
+      discountAmt: 500,
+      discountReasonId: 'reason-1',
+      note: 'collected at reception',
+      idempotencyKey: 'idem-1',
+    })
+    expect(result).toEqual(fakeResult)
+    expect(result.payment).not.toBeNull()
+    expect(result.invoice.outstanding).toBe(2600)
   })
 
   it('PATCHes an invoice discount', async () => {

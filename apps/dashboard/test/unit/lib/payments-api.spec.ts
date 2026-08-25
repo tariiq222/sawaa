@@ -1,18 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getMock, patchMock } = vi.hoisted(() => ({
+const { getMock, patchMock, postMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   patchMock: vi.fn(),
+  postMock: vi.fn(),
 }))
 
 vi.mock("@/lib/api", () => ({
   api: {
     get: getMock,
     patch: patchMock,
+    post: postMock,
   },
 }))
 
 import {
+  collectBookingPayment,
   fetchPayment,
   fetchPayments,
   refundPayment,
@@ -108,6 +111,60 @@ describe("payments api", () => {
       expect(patchMock).toHaveBeenCalledWith(
         "/dashboard/finance/payments/pay-5/verify",
         { action: "approve" },
+      )
+    })
+  })
+
+  describe("collectBookingPayment", () => {
+    it("posts to the booking collect path with the full payload", async () => {
+      const expected = {
+        bookingId: "bk-1",
+        invoice: { id: "inv-1", subtotal: 0, vatRate: 0, total: 1000, outstanding: 0, status: "PAID" },
+        payment: { id: "pay-7", amount: 1000, method: "CASH", status: "COMPLETED" },
+      }
+      postMock.mockResolvedValueOnce(expected)
+
+      const payload = {
+        method: "CASH" as const,
+        amount: 1000,
+        discountAmt: 0,
+        discountReasonId: "reason-1",
+        note: "Paid in full at reception",
+        idempotencyKey: "idem-abc",
+      }
+
+      await expect(collectBookingPayment("bk-1", payload)).resolves.toBe(expected)
+      expect(postMock).toHaveBeenCalledWith(
+        "/dashboard/finance/bookings/bk-1/collect",
+        payload,
+      )
+    })
+
+    it("posts a minimal payload with only method", async () => {
+      postMock.mockResolvedValueOnce({
+        bookingId: "bk-2",
+        invoice: { id: "inv-2", subtotal: 0, vatRate: 0, total: 500, outstanding: 0, status: "PAID" },
+        payment: null,
+      })
+
+      await collectBookingPayment("bk-2", { method: "BANK_TRANSFER" })
+      expect(postMock).toHaveBeenCalledWith(
+        "/dashboard/finance/bookings/bk-2/collect",
+        { method: "BANK_TRANSFER" },
+      )
+    })
+
+    it("routes TABBY and MADA methods without hitting Moyasar", async () => {
+      postMock.mockResolvedValueOnce({
+        bookingId: "bk-3",
+        invoice: { id: "inv-3", subtotal: 0, vatRate: 0, total: 0, outstanding: 0, status: "PAID" },
+        payment: { id: "pay-9", amount: 0, method: "MADA", status: "COMPLETED" },
+      })
+
+      await collectBookingPayment("bk-3", { method: "MADA" })
+      expect(postMock).toHaveBeenCalledWith(
+        "/dashboard/finance/bookings/bk-3/collect",
+        { method: "MADA" },
       )
     })
   })

@@ -22,6 +22,8 @@ import { ProcessPaymentDto } from '../../modules/finance/process-payment/process
 import { EnsureBookingInvoiceHandler } from '../../modules/finance/ensure-booking-invoice/ensure-booking-invoice.handler';
 import { ApplyInvoiceDiscountHandler } from '../../modules/finance/apply-invoice-discount/apply-invoice-discount.handler';
 import { ApplyInvoiceDiscountDto } from '../../modules/finance/apply-invoice-discount/apply-invoice-discount.dto';
+import { CollectBookingPaymentHandler } from '../../modules/finance/collect-booking-payment/collect-booking-payment.handler';
+import { CollectBookingPaymentDto } from '../../modules/finance/collect-booking-payment/collect-booking-payment.dto';
 import { UserId } from '../../common/auth/user-id.decorator';
 import { ListPaymentsHandler } from '../../modules/finance/list-payments/list-payments.handler';
 import { GetPaymentHandler } from '../../modules/finance/get-payment/get-payment.handler';
@@ -82,6 +84,7 @@ export class DashboardFinanceController {
     private readonly processPayment: ProcessPaymentHandler,
     private readonly ensureBookingInvoice: EnsureBookingInvoiceHandler,
     private readonly applyInvoiceDiscount: ApplyInvoiceDiscountHandler,
+    private readonly collectBookingPayment: CollectBookingPaymentHandler,
     private readonly listPayments: ListPaymentsHandler,
     private readonly getPayment: GetPaymentHandler,
     private readonly listInvoices: ListInvoicesHandler,
@@ -242,6 +245,48 @@ export class DashboardFinanceController {
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   ensureBookingInvoiceEndpoint(@Param('bookingId', ParseUUIDPipe) bookingId: string) {
     return this.ensureBookingInvoice.execute({ bookingId });
+  }
+
+  // W1-T1 single-command reception collection: ensure invoice → optional
+  // manual discount → record the manual payment. Manual/statistical methods
+  // only — ONLINE_CARD still flows through the Moyasar webhook and COUPON is
+  // a redemption flow (ApplyCouponHandler). The handler rejects both before
+  // touching any composed handler.
+  // W2-T1: tightened from manage:Payment-only to require BOTH manage:Payment
+  // AND manage:Invoice, because the handler composes EnsureBookingInvoiceHandler
+  // and ApplyInvoiceDiscountHandler — capabilities the dedicated routes
+  // `POST bookings/:bookingId/invoice` and `PATCH invoices/:id/discount` both
+  // gate on manage:Invoice. CaslGuard evaluates `required.every(...)`, so
+  // listing both permissions enforces both. Built-in roles (ACCOUNTANT /
+  // ADMIN / OWNER) already hold both and are unaffected.
+  @Post('bookings/:bookingId/collect')
+  @CheckPermissions({ action: 'manage', subject: 'Payment' }, { action: 'manage', subject: 'Invoice' })
+  @ApiOperation({
+    summary: 'Collect a payment for a booking (reception manual/statistical)',
+    description:
+      'Single-command reception collection: ensures the booking\'s invoice exists, ' +
+      'applies an optional manual discount, and records a manual payment. ' +
+      'Omit amount to collect the full outstanding balance AFTER any discount. ' +
+      'Returns payment:null when the discount fully covers the invoice (no payment row created). ' +
+      'Manual/statistical methods only — ONLINE_CARD (must come through the Moyasar webhook) ' +
+      'and COUPON (redeemed via ApplyCouponHandler) are rejected by the handler. ' +
+      'Requires BOTH manage:Payment AND manage:Invoice: the route can ensure an ' +
+      'invoice and apply a discount, and CaslGuard requires every listed permission.',
+  })
+  @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiCreatedResponse({ description: 'Invoice ensured, optional discount applied, manual payment recorded (or payment:null when 100% discounted)' })
+  @ApiResponse({ status: 400, description: 'Booking is historical, has no payable amount, has no client, method is ONLINE_CARD/COUPON, or invoice discount/payment tripwire', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
+  collectBookingPaymentEndpoint(
+    @Param('bookingId', ParseUUIDPipe) bookingId: string,
+    @UserId() userId: string,
+    @Body() body: CollectBookingPaymentDto,
+  ) {
+    return this.collectBookingPayment.execute({
+      bookingId,
+      appliedBy: userId,
+      ...body,
+    });
   }
 
   @Patch('invoices/:id/discount')

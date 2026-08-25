@@ -90,3 +90,26 @@ export interface PaymentListQuery extends PaginationParams {
 }
 
 export type PaymentListResponse = PaginatedResponse<PaymentListItem>
+
+// Mirrors the invoice shape returned by POST /dashboard/finance/bookings/:bookingId/collect
+// (and the standalone ensure-invoice endpoint). All amounts are integer halalas.
+export interface EnsuredBookingInvoice {
+  id: string
+  subtotal: number
+  vatRate: number
+  total: number
+  outstanding: number
+  status: string
+}
+
+/**
+ * Response of the unified booking collection endpoint
+ * (POST /dashboard/finance/bookings/:bookingId/collect). `payment` is null when
+ * the call only adjusted the discount without moving money. All amounts are
+ * integer halalas.
+ */
+export interface CollectBookingPaymentResult {
+  bookingId: string
+  invoice: EnsuredBookingInvoice
+  payment: { id: string; amount: number; method: string; status: string } | null
+}

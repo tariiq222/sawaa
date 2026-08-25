@@ -60,10 +60,16 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
   const bookedAt = bookedParts.date ? `${formatDate(bookedParts.date)} - ${bookedParts.time}` : "—"
 
   const canReschedule = !booking.isHistoricalImport && !["completed", "cancelled", "no_show", "cancel_requested", "expired"].includes(booking.status)
-  const hasInvoice = !booking.isHistoricalImport && !!booking.invoice
+  // Show the invoice tab whenever a booking still owes money (an invoice OR a
+  // payable booking with no invoice yet). Mirrors PaymentStatusCell so the
+  // collect action surfaces everywhere staff look at the booking.
+  const bookingPrice = booking.priceSnapshot ?? booking.service?.price ?? 0
+  const hasInvoiceTab =
+    !booking.isHistoricalImport &&
+    (!!booking.invoice || (bookingPrice > 0 && !!booking.clientId))
   // Keep the requested tab valid for this booking; fall back to details.
   const activeTab =
-    (defaultTab === "reschedule" && !canReschedule) || (defaultTab === "invoice" && !hasInvoice)
+    (defaultTab === "reschedule" && !canReschedule) || (defaultTab === "invoice" && !hasInvoiceTab)
       ? "details"
       : defaultTab
 
@@ -116,7 +122,7 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
                 {canReschedule && (
                   <TabsTrigger value="reschedule" className="h-7 px-3 text-xs">{t("detail.tabs.reschedule")}</TabsTrigger>
                 )}
-                {hasInvoice && (
+                {hasInvoiceTab && (
                   <TabsTrigger value="invoice" className="h-7 px-3 text-xs">{t("detail.tabs.invoice")}</TabsTrigger>
                 )}
                 <TabsTrigger value="statusLog" className="h-7 px-3 text-xs">{t("detail.tabs.statusLog")}</TabsTrigger>
@@ -136,7 +142,7 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
               </TabsContent>
             )}
 
-            {hasInvoice && (
+            {hasInvoiceTab && (
               <TabsContent value="invoice" className="px-6 pt-4 pb-6">
                 <BookingInvoiceTab booking={booking} t={t} locale={locale} />
               </TabsContent>

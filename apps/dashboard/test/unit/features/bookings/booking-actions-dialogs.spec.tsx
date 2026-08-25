@@ -24,8 +24,13 @@ const { useLocale } = vi.hoisted(() => ({
   })),
 }))
 
+const { useAuth } = vi.hoisted(() => ({
+  useAuth: vi.fn(),
+}))
+
 vi.mock("@/hooks/use-bookings", () => ({ useBookingMutations }))
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
+vi.mock("@/components/providers/auth-provider", () => ({ useAuth }))
 
 vi.mock("@hugeicons/react", () => ({
   HugeiconsIcon: () => <span data-testid="icon" />,
@@ -126,6 +131,7 @@ describe("BookingActions – Dialogs", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    useAuth.mockReturnValue({ canDo: () => true })
   })
 
   afterEach(() => {
