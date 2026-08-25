@@ -15,8 +15,32 @@
 // Pay-at-Clinic (and forces payAtClinic=false) when the org setting
 // paymentAtClinicEnabled is false lives in booking-pos.tsx, not in
 // the hook, so the hook stays policy-free.
+//
+// W2-T5 update — 2026-08-25 — added creditFilter +
+// applyCreditFilter + clearCreditFilter for the FLEXIBLE (rule-based)
+// package credit path. creditFilter carries the constraint snapshot
+// and the packagePurchaseId; the wizard's
+// service/practitioner/duration/deliveryType lists are narrowed by the
+// predicates in @/lib/booking-credit-filter. isComplete is unchanged:
+// a flexible-credit booking still completes through the same
+// six-field condition (the operator picks within the allowed options,
+// not from a fixed target). Mirrored downstreamReset() so the new
+// field is cleared together with packagePurchaseId whenever the
+// operator switches tracks or clients.
+//
+// W2B-T7 update — 2026-08-25 — closed a latent state-leak: when the
+// operator spent a FLEXIBLE credit (filter set) and then backed up to
+// pick a PINNED credit, both applyCreditTarget and
+// applyPackageCreditTarget used to spread `prev` and overwrite every
+// concrete target field WITHOUT nulling creditFilter, so the new
+// jump-fill shipped alongside a stale restriction. Now both jump
+// functions explicitly null creditFilter so the wizard only ever
+// applies a restriction that came from a currently-active credit pick.
+// isComplete, downstreamReset, applyCreditFilter, clearCreditFilter
+// untouched.
 
 import { useCallback, useState } from 'react'
+import type { CreditFilter } from '@/lib/booking-credit-filter'
 
 export type CategoryBookingMode = 'DIRECT' | 'SERVICES'
 
@@ -68,6 +92,10 @@ export interface BookingFormState {
   programName: string | null
   /** Phase 6 — PACKAGES track purchase the first session consumes. */
   packagePurchaseId: string | null
+  /** Wave 2 — set when the operator spends a FLEXIBLE package credit. Non-null
+   *  means the wizard's service/practitioner/duration lists are restricted to
+   *  what this credit's constraints permit. Null = unrestricted. */
+  creditFilter: CreditFilter | null
   payAtClinic: boolean
   /** W2-T2 — collection method selected when `payAtClinic === false`
    *  (تحصيل الآن). Default "CASH" so the shared PaymentMethodPicker
@@ -100,6 +128,7 @@ const INITIAL_STATE: BookingFormState = {
   programId: null,
   programName: null,
   packagePurchaseId: null,
+  creditFilter: null,
   payAtClinic: true,
   collectionMethod: "CASH",
   couponCode: null,
@@ -130,6 +159,7 @@ function downstreamReset(overrides: DownstreamReset = {}): DownstreamReset {
     programId: null,
     programName: null,
     packagePurchaseId: null,
+    creditFilter: null,
     ...overrides,
   }
 }
@@ -322,6 +352,7 @@ export function useBookingFormState() {
       employeeId: t.employeeId,
       employeeName: t.employeeName,
       durationOptionId: t.durationOptionId,
+      creditFilter: null,
       deliveryType: null,
       type: null,
       date: null,
@@ -347,6 +378,7 @@ export function useBookingFormState() {
         employeeName: t.employeeName,
         durationOptionId: t.durationOptionId,
         packagePurchaseId,
+        creditFilter: null,
         deliveryType: null,
         type: null,
         date: null,
@@ -355,6 +387,55 @@ export function useBookingFormState() {
     },
     [],
   )
+
+  /** PACKAGES track — spend a FLEXIBLE credit. Unlike `applyPackageCreditTarget`
+   *  this fills NO target: it records the purchase + the restriction and clears
+   *  department-and-below so the operator picks within the allowed options. */
+  const applyCreditFilter = useCallback((filter: CreditFilter) => {
+    setState((prev) => ({
+      ...prev,
+      creditFilter: filter,
+      packagePurchaseId: filter.packagePurchaseId,
+      departmentId: null,
+      departmentName: null,
+      categoryId: null,
+      categoryName: null,
+      categoryBookingMode: null,
+      serviceId: null,
+      serviceName: null,
+      employeeId: null,
+      employeeName: null,
+      durationOptionId: null,
+      deliveryType: null,
+      type: null,
+      date: null,
+      startTime: null,
+    }))
+  }, [])
+
+  /** Drop the restriction and the recorded purchase, returning the wizard to a
+   *  normal unrestricted flow. Also clears department-and-below. */
+  const clearCreditFilter = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      creditFilter: null,
+      packagePurchaseId: null,
+      departmentId: null,
+      departmentName: null,
+      categoryId: null,
+      categoryName: null,
+      categoryBookingMode: null,
+      serviceId: null,
+      serviceName: null,
+      employeeId: null,
+      employeeName: null,
+      durationOptionId: null,
+      deliveryType: null,
+      type: null,
+      date: null,
+      startTime: null,
+    }))
+  }, [])
 
   return {
     state,
@@ -378,5 +459,7 @@ export function useBookingFormState() {
     setCouponCode,
     applyCreditTarget,
     applyPackageCreditTarget,
+    applyCreditFilter,
+    clearCreditFilter,
   }
 }

@@ -26,9 +26,11 @@ import { usePackagesList } from "@/hooks/use-packages"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
 import { queryKeys } from "@/lib/query-keys"
 import { showApiError } from "@/lib/mutation-helpers"
+import { buildCreditFilter, type CreditFilter } from "@/lib/booking-credit-filter"
 
 import type {
   CreatePackagePurchasePayload,
+  PackageCredit,
   PackagePurchasePaymentMethod,
 } from "@/lib/types/package-purchase"
 import type { SessionPackage } from "@/lib/types/package"
@@ -61,6 +63,12 @@ interface StepPackageProps {
   clientId: string
   branchId: string
   onCreditSelected: (target: CreditTarget, packagePurchaseId: string) => void
+  /** Fired when the operator spends a FLEXIBLE credit. The wizard cannot
+   *  jump-fill from it, so the shell records the restriction and lets the
+   *  operator pick within the credit's allowed options. Absent in surfaces
+   *  that do not support the restricted flow — the picker then renders the
+   *  flexible branch disabled. */
+  onFlexibleCreditSelected?: (filter: CreditFilter) => void
 }
 
 type UiMode = "EXISTING" | "BUY"
@@ -69,6 +77,7 @@ export function StepPackage({
   clientId,
   branchId,
   onCreditSelected,
+  onFlexibleCreditSelected,
 }: StepPackageProps): JSX.Element {
   const { t, locale } = useLocale()
   const queryClient = useQueryClient()
@@ -143,6 +152,22 @@ export function StepPackage({
     setAwaitingFirstSession(false)
   }
 
+  // Convert a flexible-credit pick into a CreditFilter and forward to the
+  // shell. Not wrapped in useCallback — the file intentionally avoids the
+  // hook (matches the existing style for sibling handlers like switchToBuy
+  // and handleConfirmPurchase). The handler is only ever passed to a
+  // single child component (PackageCreditPicker), so memoisation would add
+  // ceremony without benefit.
+  function handlePickFlexible(
+    credit: PackageCredit,
+    packagePurchaseId: string,
+    packageName: string,
+  ) {
+    onFlexibleCreditSelected?.(
+      buildCreditFilter(credit, packagePurchaseId, packageName),
+    )
+  }
+
   async function handleConfirmPurchase() {
     if (!selectedPkg) return
     // Sync lock + mutation guard. The lock is released in `finally` so a
@@ -188,7 +213,13 @@ export function StepPackage({
     return (
       <div className="flex flex-col gap-3">
         <h3 className="text-sm font-semibold text-foreground">{t(headingKey)}</h3>
-        <PackageCreditPicker purchases={purchases ?? []} onPick={onCreditSelected} />
+        <PackageCreditPicker
+          purchases={purchases ?? []}
+          onPick={onCreditSelected}
+          {...(onFlexibleCreditSelected
+            ? { onPickFlexible: handlePickFlexible }
+            : {})}
+        />
         <Button
           type="button"
           variant="ghost"

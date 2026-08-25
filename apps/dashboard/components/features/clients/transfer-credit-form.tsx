@@ -65,7 +65,7 @@ export function TransferCreditForm({
 }: TransferCreditFormProps) {
   const { t, locale } = useLocale()
   const { data: serviceEmployees, isLoading: employeesLoading } =
-    useServiceEmployees(credit.serviceId)
+    useServiceEmployees(credit.serviceId ?? "")
   const transferMut = useTransferCredit()
 
   // Map the raw `ServiceEmployee` rows to the picker shape.
@@ -91,7 +91,7 @@ export function TransferCreditForm({
 
   // Filter out the current owner so the picker never offers a no-op.
   const targetOptions = useMemo(
-    () => pickTransferTargetEmployees(options, credit.employeeId),
+    () => pickTransferTargetEmployees(options, credit.employeeId ?? ""),
     [options, credit.employeeId],
   )
 

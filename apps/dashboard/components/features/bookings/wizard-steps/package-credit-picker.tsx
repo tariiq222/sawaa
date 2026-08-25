@@ -1,15 +1,9 @@
 "use client"
 
 // Phase 6 — wizard-step presentational + BUY-mode UI helpers.
-//   1. `PackageCreditPicker` — pure render layer for EXISTING-mode.
-//   2. Pure helpers + `MethodPicker` / `CatalogCard` sub-components used
-//      by `step-package.tsx`. Co-located so the container stays under
-//      the 300-line feature-component limit. No data fetching here.
-//
-// `PayMethod`, `resolveActiveMethod`, and the canonical option list now live in
-// `@/components/features/shared/payment-method-picker` — the single source of
-// truth shared with `record-payment-dialog.tsx`. We re-export them here so
-// `step-package.tsx`'s existing imports keep compiling unchanged.
+// `PackageCreditPicker` is the EXISTING-mode render layer; `MethodPicker`
+// and `CatalogCard` are BUY-mode helpers co-located so step-package.tsx
+// can import them from one path. No data fetching here.
 
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Package01Icon } from "@hugeicons/core-free-icons"
@@ -27,26 +21,32 @@ import {
 } from "@/components/features/shared/payment-method-picker"
 import { WizardCard } from "@/components/features/bookings/wizard-card"
 import type { PaymentSettings } from "@/lib/api/organization-settings"
-import type {
-  PackageCredit,
-  PackagePurchase,
-} from "@/lib/types/package-purchase"
+import type { PackageCredit, PackagePurchase } from "@/lib/types/package-purchase"
 import type { SessionPackage } from "@/lib/types/package"
+import { filterUsableCredits, isJumpableCredit } from "@/lib/package-credit-usability"
 
 import type { CreditTarget } from "../use-booking-form-state"
 
 export interface PackageCreditPickerProps {
   purchases: PackagePurchase[]
   onPick: (target: CreditTarget, packagePurchaseId: string) => void
+  /** Optional — when absent the flexible branch renders disabled. The
+   *  PACKAGES-track caller wires this to `applyCreditFilter`, so a
+   *  flexible credit narrows the wizard's option lists to what the
+   *  credit's constraints permit. */
+  onPickFlexible?: (
+    credit: PackageCredit,
+    packagePurchaseId: string,
+    packageName: string,
+  ) => void
   /** Override the empty-state copy. Defaults to a localized fallback. */
   emptyLabelKey?: string
 }
 
-// Re-export the shared module so step-package.tsx keeps its existing imports.
+// Re-exported so step-package.tsx's existing imports keep compiling.
 export type { PayMethod, PayMethodSettingKey, PaymentMethodOption }
 export { resolveActiveMethod }
 
-/** `packages.sell.method.*` namespace, owned by the package-credit flow. */
 const PACKAGE_METHOD_LABEL_KEYS: Record<PayMethod, string> = {
   CASH: "packages.sell.method.cash",
   BANK_TRANSFER: "packages.sell.method.bankTransfer",
@@ -60,7 +60,6 @@ interface MethodPickerProps {
   onChange: (m: PayMethod) => void
 }
 
-/** Namespace-specific wrapper around the shared `PaymentMethodPicker`. */
 export function MethodPicker({
   paymentSettings,
   method,
@@ -78,8 +77,6 @@ export function MethodPicker({
   )
 }
 
-/* ─── Pure helpers (exported for the container) ─── */
-
 export function purchaseName(p: PackagePurchase, locale: string): string {
   if (locale === "ar") return p.packageNameAr
   return p.packageNameEn ?? p.packageNameAr
@@ -90,32 +87,11 @@ export function packageLabel(p: SessionPackage, locale: string): string {
   return p.nameEn ?? p.nameAr
 }
 
-/**
- * Filter a purchase's credits: keep `remaining > 0`, dedupe by the
- * `(serviceId, employeeId, durationOptionId)` triple (keep first). Tolerates
- * null fields so flexible (rule/constraint-based) credits survive.
- */
-export function filterUsableCredits(credits: PackageCredit[]): PackageCredit[] {
-  const seen = new Set<string>()
-  return credits.filter((credit) => {
-    if (credit.remaining <= 0) return false
-    const key = `${credit.serviceId}:${credit.employeeId}:${credit.durationOptionId}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-}
-
-/** Type guard: jumpable iff categoryId resolved AND service/employee still bookable. Flexible credits have null categoryId. */
-export function isJumpableCredit(
-  credit: PackageCredit,
-): credit is PackageCredit & { categoryId: string } {
-  return credit.categoryId != null && credit.serviceIsBookable
-}
-
-/** Build the `CreditTarget` payload the booking wizard consumes. */
+/** Build the wizard's `CreditTarget` from a narrowed jumpable credit. */
 export function buildCreditTarget(
-  credit: PackageCredit & { categoryId: string },
+  credit: PackageCredit & {
+    categoryId: string; serviceId: string; employeeId: string; durationOptionId: string
+  },
 ): CreditTarget {
   return {
     departmentId: credit.departmentId,
@@ -169,11 +145,86 @@ export function CatalogCard({
   )
 }
 
-/* ─── Picker component ─── */
+interface CreditRowProps {
+  credit: PackageCredit
+  purchase: PackagePurchase
+  onPick: (target: CreditTarget, packagePurchaseId: string) => void
+  onPickFlexible?: (credit: PackageCredit, packagePurchaseId: string, packageName: string) => void
+}
+
+/* Extracted from `PackageCreditPicker` to keep the container under the
+ * 300-line cap. Three branches: jumpable -> flexible (ENABLED only when
+ * wired) -> pinned-but-inactive. Subtitle suppressed when both parts
+ * are blank to avoid a dangling `·`. */
+function CreditRow({
+  credit,
+  purchase,
+  onPick,
+  onPickFlexible,
+}: CreditRowProps): JSX.Element {
+  const { t, locale } = useLocale()
+  const jumpable = isJumpableCredit(credit)
+  const isFlexible = !jumpable && credit.categoryId == null
+  const isPinnedNotBookable = !jumpable && credit.categoryId != null
+  const displayName = credit.serviceNameAr || purchaseName(purchase, locale)
+  const remainingLabel = t("bookings.pos.package.remaining")
+    .replace("{remaining}", String(credit.remaining))
+    .replace("{total}", String(credit.totalQuantity))
+  const subtitleParts = [credit.employeeNameAr, credit.durationLabelAr].filter(
+    (part) => part.length > 0,
+  )
+  const subtitleText = subtitleParts.join(" · ")
+  return (
+    <div
+      key={credit.id}
+      className="flex items-center justify-between gap-3 rounded-lg border bg-surface-solid p-3"
+    >
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <p className="truncate text-sm font-medium">{displayName}</p>
+        {subtitleText.length > 0 && (
+          <p className="truncate text-xs text-muted-foreground">{subtitleText}</p>
+        )}
+        <p className="text-xs tabular-nums text-muted-foreground">{remainingLabel}</p>
+        {isFlexible && (
+          <>
+            <p className="text-xs font-medium text-foreground">
+              {t("bookings.pos.package.flexibleTitle")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("bookings.pos.package.flexibleSubtitle")}
+            </p>
+          </>
+        )}
+      </div>
+      <Button
+        size="sm"
+        disabled={isPinnedNotBookable || (isFlexible && !onPickFlexible)}
+        onClick={() => {
+          // Disabled buttons shouldn't fire onClick; each branch below
+          // re-narrows the credit so no `!` is needed in the bodies.
+          if (jumpable) {
+            onPick(buildCreditTarget(credit), purchase.id)
+            return
+          }
+          if (isFlexible && onPickFlexible) {
+            onPickFlexible(credit, purchase.id, purchaseName(purchase, locale))
+          }
+        }}
+      >
+        {jumpable
+          ? t("bookings.pos.package.use")
+          : isFlexible
+            ? t("bookings.pos.package.chooseFromPackage")
+            : t("bookings.pos.package.notBookable")}
+      </Button>
+    </div>
+  )
+}
 
 export function PackageCreditPicker({
   purchases,
   onPick,
+  onPickFlexible,
   emptyLabelKey,
 }: PackageCreditPickerProps): JSX.Element {
   const { t, locale } = useLocale()
@@ -202,54 +253,15 @@ export function PackageCreditPicker({
             <span className="truncate">{purchaseName(purchase, locale)}</span>
           </header>
           <div className="flex flex-col gap-2">
-            {credits.map((credit) => {
-              const jumpable = isJumpableCredit(credit)
-              const isFlexible = credit.categoryId == null
-              // Flexible credits carry no resolved service label — fall
-              // back to the owning purchase's name so the row is never blank.
-              const displayName = credit.serviceNameAr || purchaseName(purchase, locale)
-              const remainingLabel = t("bookings.pos.package.remaining")
-                .replace("{remaining}", String(credit.remaining))
-                .replace("{total}", String(credit.totalQuantity))
-              return (
-                <div
-                  key={credit.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border bg-surface-solid p-3"
-                >
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <p className="truncate text-sm font-medium">{displayName}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {credit.employeeNameAr} · {credit.durationLabelAr}
-                    </p>
-                    <p className="text-xs tabular-nums text-muted-foreground">
-                      {remainingLabel}
-                    </p>
-                    {isFlexible && (
-                      <p className="text-xs text-muted-foreground">
-                        {t("bookings.pos.package.flexibleHint")}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={!jumpable}
-                    onClick={() => {
-                      // Belt-and-suspenders: a disabled button should not
-                      // fire onClick, but this guard makes it impossible to
-                      // build a CreditTarget for a credit whose categoryId
-                      // is null.
-                      if (isJumpableCredit(credit)) {
-                        onPick(buildCreditTarget(credit), purchase.id)
-                      }
-                    }}
-                  >
-                    {jumpable
-                      ? t("bookings.pos.package.use")
-                      : t("bookings.pos.package.unavailable")}
-                  </Button>
-                </div>
-              )
-            })}
+            {credits.map((credit) => (
+              <CreditRow
+                key={credit.id}
+                credit={credit}
+                purchase={purchase}
+                onPick={onPick}
+                onPickFlexible={onPickFlexible}
+              />
+            ))}
           </div>
         </section>
       ))}

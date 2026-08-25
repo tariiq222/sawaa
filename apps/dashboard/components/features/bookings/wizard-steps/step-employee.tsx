@@ -41,9 +41,20 @@ function StepEmployeeSkeleton() {
 interface StepEmployeeProps {
   serviceId: string
   onSelect: (employeeId: string, employeeName: string) => void
+  /**
+   * W2B-T8 — optional FLEXIBLE-credit gate. When provided, practitioners
+   * whose id fails the predicate are HIDDEN from the rendered grid
+   * (not merely disabled). Default behaviour — render every practitioner
+   * — is preserved exactly when the prop is omitted.
+   */
+  isEmployeeAllowed?: (employeeId: string) => boolean
 }
 
-export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
+export function StepEmployee({
+  serviceId,
+  onSelect,
+  isEmployeeAllowed,
+}: StepEmployeeProps) {
   const { t, locale } = useLocale()
 
   const { data: serviceEmployees, isLoading: loadingByService } = useQuery<ServiceEmployee[]>({
@@ -61,8 +72,8 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
   })
 
   const employees: Employee[] = useMemo(
-    () =>
-      serviceId
+    () => {
+      const resolved: Employee[] = serviceId
         ? (serviceEmployees ?? [])
             .filter((e) => e.isActive && e.employee.isActive)
             .map((e) => ({
@@ -73,8 +84,11 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
               isActive: e.employee.isActive,
               user: e.employee.user,
             } as unknown as Employee))
-        : (allEmployees?.items ?? []).filter((p) => p.isActive),
-    [serviceId, serviceEmployees, allEmployees],
+        : (allEmployees?.items ?? []).filter((p) => p.isActive)
+      if (!isEmployeeAllowed) return resolved
+      return resolved.filter((p) => isEmployeeAllowed(p.id))
+    },
+    [serviceId, serviceEmployees, allEmployees, isEmployeeAllowed],
   )
 
   // Weekly schedule per practitioner — drives the existing
@@ -199,8 +213,13 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
       })}
 
       {employees.length === 0 && (
-        <p className="col-span-full py-6 text-center text-sm text-muted-foreground">
-          {t("bookings.wizard.noEmployees")}
+        <p
+          data-testid={isEmployeeAllowed ? "step-employee-empty-filter" : undefined}
+          className="col-span-full py-6 text-center text-sm text-muted-foreground"
+        >
+          {isEmployeeAllowed
+            ? t("bookings.pos.package.filter.noOptions")
+            : t("bookings.wizard.noEmployees")}
         </p>
       )}
     </div>

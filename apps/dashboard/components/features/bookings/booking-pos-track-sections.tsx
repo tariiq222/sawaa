@@ -1,28 +1,41 @@
 "use client"
 
-// EXCEPTION: absolute file size limit (350) reached — 2026-08-23 —
 // Phase 6 split the booking-pos wizard into a shell + per-track
-// section groups. This file owns pure JSX composition; state and
-// handleSubmit continue to live in `booking-pos.tsx`.
+// section groups. This file owns pure JSX composition for the
+// generic track / package / program sections and the PACKAGES-track
+// `PackagesCreditSections` pair; state and handleSubmit continue to
+// live in `booking-pos.tsx`. The CLINICS-track chain (department →
+// category → service → employee → typeDuration → datetime, plus the
+// `MatchingCreditBadge`) now lives in `booking-pos-clinics-sections.tsx`.
+//
+// W2B-T8 update — 2026-08-25 — `PackageSection` now also forwards
+// the optional `onFlexibleCreditSelected` prop to `StepPackage` so
+// the sibling-owned FLEXIBLE-credit picker can emit a `CreditFilter`
+// straight back to the shell. The clear-restriction chip + button
+// live in `booking-pos-flexible-sections.tsx`.
+//
+// W2B-T12 — extracted `ClinicsSections` into
+// `booking-pos-clinics-sections.tsx` on 2026-08-25 to bring this file
+// back under the 350-line absolute limit; appending a second
+// `// EXCEPTION:` block was rejected by review as unacceptable
+// practice. Behaviour, prop contracts, and the pre-existing
+// `state.employeeId!` / `state.serviceId!` non-null assertions are
+// unchanged — this is a pure move.
 
 import { CollapsibleSection, PosSectionHint, type SectionId } from "./pos-collapsible-section"
-import { StepDepartment } from "./wizard-steps/step-department"
-import { StepCategory } from "./wizard-steps/step-category"
-import { StepService } from "./wizard-steps/step-service"
-import { StepEmployee } from "./wizard-steps/step-employee"
 import { StepTypeDuration } from "./wizard-steps/step-type-duration"
 import { StepDatetime } from "./wizard-steps/step-datetime"
 import { StepTrack } from "./wizard-steps/step-track"
 import { StepPackage } from "./wizard-steps/step-package"
 import { StepProgram } from "./wizard-steps/step-program"
-import { MatchingCreditBadge } from "./matching-credit-badge"
 
 import { useLocale } from "@/components/locale-provider"
+
+import type { CreditFilter } from "@/lib/booking-credit-filter"
 
 import type {
   BookingFormState,
   BookingTrack,
-  CategoryBookingMode,
   CreditTarget,
 } from "./use-booking-form-state"
 
@@ -60,10 +73,19 @@ interface PackageSectionProps extends OpenSectionController {
   branchId: string | null
   summary: string | null
   onCreditSelected: (target: CreditTarget, packagePurchaseId: string) => void
+  /**
+   * W2B-T8 — forwarded to `StepPackage`'s fixed
+   * `onFlexibleCreditSelected?: (filter: CreditFilter) => void` prop.
+   * The sibling step-package task owns the receiver; this file only
+   * passes it through. Optional so surfaces that do not yet support
+   * the FLEXIBLE-credit branch keep compiling.
+   */
+  onFlexibleCreditSelected?: (filter: CreditFilter) => void
 }
 
 export function PackageSection({
-  state, openSection, setOpenSection, branchId, summary, onCreditSelected,
+  state, openSection, setOpenSection, branchId, summary,
+  onCreditSelected, onFlexibleCreditSelected,
 }: PackageSectionProps) {
   const { t } = useLocale()
   return (
@@ -80,6 +102,7 @@ export function PackageSection({
           clientId={state.clientId}
           branchId={branchId}
           onCreditSelected={onCreditSelected}
+          onFlexibleCreditSelected={onFlexibleCreditSelected}
         />
       ) : (
         <PosSectionHint hint={t("bookings.pos.hint.needClient")} />
@@ -117,157 +140,6 @@ export function ProgramSection({
         <PosSectionHint hint={t("bookings.pos.hint.needClient")} />
       )}
     </CollapsibleSection>
-  )
-}
-
-interface ClinicsSectionsProps extends OpenSectionController {
-  state: BookingFormState
-  summaries: Record<SectionId, string | null>
-  isServiceAutoSelected: boolean
-  canShowTypeDuration: boolean
-  canShowDatetime: boolean
-  selectedDurationMins: number | null
-  maxAdvanceDays: number
-  creditBadgeReady: boolean
-  useCredit: boolean
-  creditDismissed: boolean
-  onDepartmentSelect: (id: string, name: string) => void
-  onCategorySelect: (id: string, name: string, bookingMode: CategoryBookingMode | null) => Promise<void>
-  onServiceSelect: (id: string, name: string) => void
-  onEmployeeSelect: (id: string, name: string) => void
-  onSelectDeliveryType: (deliveryType: string, durationOptionId: string | null) => void
-  onSelectDuration: (durationOptionId: string) => void
-  onSelectDate: (date: string) => void
-  onSelectTime: (startTime: string) => void
-  onAcceptCredit: () => void
-  onDismissCredit: () => void
-}
-
-export function ClinicsSections(p: ClinicsSectionsProps) {
-  const { t } = useLocale()
-  const { state, openSection, setOpenSection, summaries, isServiceAutoSelected, canShowTypeDuration, canShowDatetime, selectedDurationMins, maxAdvanceDays, creditBadgeReady, useCredit, creditDismissed, onDepartmentSelect, onCategorySelect, onServiceSelect, onEmployeeSelect, onSelectDeliveryType, onSelectDuration, onSelectDate, onSelectTime, onAcceptCredit, onDismissCredit } = p
-  return (
-    <>
-      <CollapsibleSection
-        id="department"
-        label={t("bookings.pos.section.department")}
-        summary={summaries.department}
-        isOpen={openSection === "department"}
-        isFilled={summaries.department !== null}
-        onToggle={() => setOpenSection("department")}
-      >
-        <StepDepartment onSelect={onDepartmentSelect} />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        id="category"
-        label={t("bookings.pos.section.category")}
-        summary={summaries.category}
-        isOpen={openSection === "category"}
-        isFilled={summaries.category !== null}
-        onToggle={() => setOpenSection("category")}
-      >
-        {state.departmentId ? (
-          <StepCategory departmentId={state.departmentId} onSelect={onCategorySelect} />
-        ) : (
-          <PosSectionHint hint={t("bookings.pos.hint.needDepartment")} />
-        )}
-      </CollapsibleSection>
-
-      {!isServiceAutoSelected && (
-        <CollapsibleSection
-          id="service"
-          label={t("bookings.pos.section.service")}
-          summary={summaries.service}
-          isOpen={openSection === "service"}
-          isFilled={summaries.service !== null}
-          onToggle={() => setOpenSection("service")}
-        >
-          {state.categoryId ? (
-            <StepService categoryId={state.categoryId} onSelect={onServiceSelect} />
-          ) : (
-            <PosSectionHint hint={t("bookings.pos.hint.needCategory")} />
-          )}
-        </CollapsibleSection>
-      )}
-
-      <CollapsibleSection
-        id="employee"
-        label={t("bookings.pos.section.employee")}
-        summary={summaries.employee}
-        isOpen={openSection === "employee"}
-        isFilled={summaries.employee !== null}
-        onToggle={() => setOpenSection("employee")}
-      >
-        <StepEmployee serviceId={state.serviceId ?? ""} onSelect={onEmployeeSelect} />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        id="typeDuration"
-        label={t("bookings.pos.section.typeDuration")}
-        summary={summaries.typeDuration}
-        isOpen={openSection === "typeDuration"}
-        isFilled={summaries.typeDuration !== null}
-        onToggle={() => setOpenSection("typeDuration")}
-      >
-        {canShowTypeDuration ? (
-          <StepTypeDuration
-            employeeId={state.employeeId!}
-            serviceId={state.serviceId!}
-            selectedType={state.deliveryType}
-            onSelectType={onSelectDeliveryType}
-            selectedDurationOptionId={state.durationOptionId}
-            onSelectDuration={onSelectDuration}
-          />
-        ) : (
-          <PosSectionHint hint={t("bookings.pos.hint.needService")} />
-        )}
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        id="datetime"
-        label={t("bookings.pos.section.datetime")}
-        summary={summaries.datetime}
-        isOpen={openSection === "datetime"}
-        isFilled={summaries.datetime !== null}
-        onToggle={() => setOpenSection("datetime")}
-      >
-        {canShowDatetime ? (
-          <>
-            <StepDatetime
-              employeeId={state.employeeId!}
-              serviceId={state.serviceId!}
-              deliveryType={state.deliveryType!}
-              durationOptionId={state.durationOptionId}
-              durationMins={selectedDurationMins}
-              selectedDate={state.date}
-              selectedTime={state.startTime}
-              onSelectDate={onSelectDate}
-              onSelectTime={onSelectTime}
-              maxAdvanceDays={maxAdvanceDays}
-            />
-            {/* Phase 3 — auto-detect "احجز من الرصيد" badge once all four
-                params are set. Renders nothing until then. */}
-            {creditBadgeReady && (
-              <div className="mt-3">
-                <MatchingCreditBadge
-                  clientId={state.clientId}
-                  serviceId={state.serviceId}
-                  employeeId={state.employeeId}
-                  durationOptionId={state.durationOptionId}
-                  useCredit={useCredit}
-                  dismissed={creditDismissed}
-                  onAccept={onAcceptCredit}
-                  onDismiss={onDismissCredit}
-                />
-              </div>
-            )}
-          </>
-        ) : (
-          <PosSectionHint hint={t("bookings.pos.hint.needEmployee")} />
-        )}
-      </CollapsibleSection>
-    </>
   )
 }
 

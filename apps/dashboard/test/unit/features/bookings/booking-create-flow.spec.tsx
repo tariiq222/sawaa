@@ -574,3 +574,145 @@ describe("useBookingFormState — internal state machine", () => {
     expect(result.current.isComplete).toBe(false)
   })
 })
+
+/* ══════════════════════════════════════════════════════════════════════════
+   W5-T17 — useBookingPosSelectionHandlers PACKAGES-credit useCredit guard.
+   The selection handlers must mirror the duration/type handlers and SKIP
+   `setUseCredit(false)` when state.packagePurchaseId is set, so a deliberate
+   FLEXIBLE-credit booking is never silently downgraded to a paid booking
+   just because the operator had to pick a service + practitioner inside the
+   restricted flow. Mirrors the existing useBookingFormState renderHook
+   pattern: real form state, real selection handlers, only the side-effect
+   setters (setOpenSection / setUseCredit / setCreditDismissed) are mocks.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+import { QueryClient } from "@tanstack/react-query"
+import { useBookingPosSelectionHandlers } from "@/components/features/bookings/use-booking-pos-selection-handlers"
+import type { CreditFilter } from "@/lib/booking-credit-filter"
+import type { EmployeeServiceType } from "@/lib/types/employee"
+import type { Locale } from "@/lib/translations"
+
+describe("useBookingPosSelectionHandlers — useCredit guard under active package credit", () => {
+  // Minimal stub — only `packagePurchaseId` is read by the guard under test.
+  const stubFilter: CreditFilter = {
+    packagePurchaseId: "pkg-credit-1",
+    creditId: "cr-1",
+    packageName: "Test Package",
+    constraints: [],
+    serviceId: null,
+    employeeId: null,
+    durationOptionId: null,
+  }
+
+  function setupHarness() {
+    const setOpenSection = vi.fn()
+    const setUseCredit = vi.fn()
+    const setCreditDismissed = vi.fn()
+    const selectServiceFn = vi.fn()
+    const selectEmployeeFn = vi.fn()
+    const selectDeliveryTypeFn = vi.fn()
+    const selectDurationOptionFn = vi.fn()
+    const selectCategoryFn = vi.fn()
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    const rendered = renderHook(() => {
+      const formState = useBookingFormState()
+      const handlers = useBookingPosSelectionHandlers({
+        state: formState.state,
+        setOpenSection,
+        setUseCredit,
+        setCreditDismissed,
+        queryClient,
+        locale: "ar" as Locale,
+        t: (k: string) => k,
+        serviceTypes: [] as EmployeeServiceType[],
+        resolvePreservedDurationOptionId: (currentId: string | null) => currentId,
+        selectClient: vi.fn(),
+        selectDepartment: vi.fn(),
+        selectService: selectServiceFn,
+        selectEmployee: selectEmployeeFn,
+        selectDeliveryType: selectDeliveryTypeFn,
+        selectDurationOption: selectDurationOptionFn,
+        selectCategory: selectCategoryFn,
+      })
+      return { formState, handlers }
+    })
+
+    return {
+      rendered,
+      setUseCredit,
+      setCreditDismissed,
+      selectServiceFn,
+      selectEmployeeFn,
+    }
+  }
+
+  it("handleServiceSelect does NOT clear useCredit when state.packagePurchaseId is set, and DOES clear it when packagePurchaseId is null", () => {
+    // ─── Case A: PACKAGES track (active FLEXIBLE credit) ─────────────────
+    // Mirror the duration/type handlers' guard so a deliberate credit
+    // booking is never silently downgraded just because the operator
+    // picked a service inside the restricted flow.
+    const a = setupHarness()
+    act(() => {
+      a.rendered.result.current.formState.applyCreditFilter(stubFilter)
+    })
+    expect(
+      a.rendered.result.current.formState.state.packagePurchaseId,
+    ).toBe("pkg-credit-1")
+    a.setUseCredit.mockClear()
+    act(() => {
+      a.rendered.result.current.handlers.handleServiceSelect("svc-1", "Counseling")
+    })
+    // The guard: selectService + setOpenSection + setCreditDismissed still
+    // fire; only the destructive `setUseCredit(false)` is suppressed.
+    expect(a.selectServiceFn).toHaveBeenCalledWith("svc-1", "Counseling")
+    expect(a.setUseCredit).not.toHaveBeenCalled()
+    expect(a.setCreditDismissed).toHaveBeenCalledWith(false)
+
+    // ─── Case B: no active credit — auto-detect badge still re-arms ──────
+    const b = setupHarness()
+    expect(
+      b.rendered.result.current.formState.state.packagePurchaseId,
+    ).toBeNull()
+    b.setUseCredit.mockClear()
+    act(() => {
+      b.rendered.result.current.handlers.handleServiceSelect("svc-1", "Counseling")
+    })
+    expect(b.selectServiceFn).toHaveBeenCalledWith("svc-1", "Counseling")
+    expect(b.setUseCredit).toHaveBeenCalledWith(false)
+    expect(b.setCreditDismissed).toHaveBeenCalledWith(false)
+  })
+
+  it("handleEmployeeSelect does NOT clear useCredit when state.packagePurchaseId is set, and DOES clear it when packagePurchaseId is null", () => {
+    // ─── Case A: PACKAGES track (active FLEXIBLE credit) ─────────────────
+    const a = setupHarness()
+    act(() => {
+      a.rendered.result.current.formState.applyCreditFilter(stubFilter)
+    })
+    expect(
+      a.rendered.result.current.formState.state.packagePurchaseId,
+    ).toBe("pkg-credit-1")
+    a.setUseCredit.mockClear()
+    act(() => {
+      a.rendered.result.current.handlers.handleEmployeeSelect("emp-1", "Ahmad")
+    })
+    expect(a.selectEmployeeFn).toHaveBeenCalledWith("emp-1", "Ahmad")
+    expect(a.setUseCredit).not.toHaveBeenCalled()
+    expect(a.setCreditDismissed).toHaveBeenCalledWith(false)
+
+    // ─── Case B: no active credit — auto-detect badge still re-arms ──────
+    const b = setupHarness()
+    expect(
+      b.rendered.result.current.formState.state.packagePurchaseId,
+    ).toBeNull()
+    b.setUseCredit.mockClear()
+    act(() => {
+      b.rendered.result.current.handlers.handleEmployeeSelect("emp-1", "Ahmad")
+    })
+    expect(b.selectEmployeeFn).toHaveBeenCalledWith("emp-1", "Ahmad")
+    expect(b.setUseCredit).toHaveBeenCalledWith(false)
+    expect(b.setCreditDismissed).toHaveBeenCalledWith(false)
+  })
+})

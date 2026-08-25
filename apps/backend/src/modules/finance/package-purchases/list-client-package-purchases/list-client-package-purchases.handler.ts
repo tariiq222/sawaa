@@ -7,6 +7,13 @@ export interface ListClientPackagePurchasesQuery {
   status?: PackagePurchaseStatus;
 }
 
+export interface ClientPackageCreditConstraintRow {
+  dimension: 'SERVICE' | 'PRACTITIONER' | 'DURATION' | 'DELIVERY_TYPE';
+  mode: 'ANY' | 'INCLUDE' | 'EXCLUDE';
+  /** Flattened from the constraint's `targets[].targetId` rows. Empty for ANY. */
+  targetIds: string[];
+}
+
 export interface ClientPackageCreditRow {
   id: string;
   // null on flexible (rule-based) credits, which are not pinned to one triple.
@@ -35,6 +42,14 @@ export interface ClientPackageCreditRow {
   departmentNameEn: string | null;
   /** True when the service is active, not archived, and the employee is active. */
   serviceIsBookable: boolean;
+  /**
+   * Snapshot eligibility rules for this credit. Empty array means the credit
+   * predates constraint snapshotting — consumers must then fall back to the
+   * legacy (serviceId, employeeId, durationOptionId) triple as INCLUDE rules,
+   * mirroring `effectiveConstraints` in
+   * modules/bookings/package-credit-matching.helper.ts.
+   */
+  constraints: ClientPackageCreditConstraintRow[];
 }
 
 export interface ClientPackagePurchaseRow {
@@ -77,7 +92,19 @@ export class ListClientPackagePurchasesHandler {
 
     const purchases = await this.prisma.packagePurchase.findMany({
       where,
-      include: { credits: true },
+      include: {
+        credits: {
+          include: {
+            constraints: {
+              select: {
+                dimension: true,
+                mode: true,
+                targets: { select: { targetId: true } },
+              },
+            },
+          },
+        },
+      },
       orderBy: { paidAt: 'desc' },
     });
 
@@ -212,6 +239,11 @@ export class ListClientPackagePurchasesHandler {
             departmentNameAr: department?.nameAr ?? '',
             departmentNameEn: department?.nameEn ?? null,
             serviceIsBookable,
+            constraints: credit.constraints.map((c) => ({
+              dimension: c.dimension as ClientPackageCreditConstraintRow['dimension'],
+              mode: c.mode as ClientPackageCreditConstraintRow['mode'],
+              targetIds: c.targets.map((t) => t.targetId),
+            })),
           };
         }),
       };

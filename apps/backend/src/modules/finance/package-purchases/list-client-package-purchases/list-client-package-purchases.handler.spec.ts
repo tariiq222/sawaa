@@ -40,6 +40,7 @@ const PURCHASE_1 = {
       totalQuantity: 5,
       usedQuantity: 2,
       createdAt: new Date('2026-01-15T10:00:00Z'),
+      constraints: [],
     },
     {
       id: 'credit-2',
@@ -51,6 +52,7 @@ const PURCHASE_1 = {
       totalQuantity: 3,
       usedQuantity: 3, // fully consumed → remaining 0
       createdAt: new Date('2026-01-15T10:00:00Z'),
+      constraints: [],
     },
   ],
 };
@@ -73,6 +75,7 @@ const PURCHASE_2 = {
       totalQuantity: 4,
       usedQuantity: 0,
       createdAt: new Date('2026-02-01T10:00:00Z'),
+      constraints: [],
     },
   ],
 };
@@ -279,9 +282,9 @@ describe('ListClientPackagePurchasesHandler', () => {
         paidAt: new Date('2026-06-01'), refundedAt: null, notes: null, createdAt: new Date('2026-06-01'),
         credits: [
           { id: 'cr1', serviceId: 's1', employeeId: 'e1', durationOptionId: 'd1',
-            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1 },
+            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1, constraints: [] },
           { id: 'cr2', serviceId: 's2', employeeId: 'e1', durationOptionId: 'd1',
-            unitPriceSnapshot: 10000, totalQuantity: 2, usedQuantity: 0 },
+            unitPriceSnapshot: 10000, totalQuantity: 2, usedQuantity: 0, constraints: [] },
         ],
       },
     ]);
@@ -319,7 +322,7 @@ describe('ListClientPackagePurchasesHandler', () => {
         paidAt: new Date('2026-06-01'), refundedAt: null, notes: null, createdAt: new Date('2026-06-01'),
         credits: [
           { id: 'cr1', serviceId: 's1', employeeId: 'e1', durationOptionId: 'd1',
-            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1 },
+            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1, constraints: [] },
         ],
       },
     ]);
@@ -340,5 +343,158 @@ describe('ListClientPackagePurchasesHandler', () => {
     const handler = new ListClientPackagePurchasesHandler(prisma as never);
     const rows = await handler.execute({ clientId: 'c1' });
     expect(rows[0].credits[0].serviceIsBookable).toBe(false);
+  });
+
+  it('projects a pinned credit with constraints: [] to constraints: [] and leaves every pre-existing field unchanged', async () => {
+    // Self-contained mock so we can assert on serviceIsBookable: true — the
+    // shared mockHappyPath() does not set isActive / archivedAt on services,
+    // so it cannot demonstrate a bookable pinned credit.
+    prisma.packagePurchase.findMany.mockResolvedValue([PURCHASE_1]);
+    prisma.sessionPackage.findMany.mockResolvedValue([
+      { id: 'pkg-1', nameAr: 'باقة العائلة', nameEn: 'Family Pack' },
+    ]);
+    prisma.service.findMany.mockResolvedValue([
+      { id: SERVICE_ID, nameAr: 'استشارة زوجية', nameEn: 'Couples Counseling',
+        isActive: true, archivedAt: null,
+        categoryId: 'cat-1',
+        category: { id: 'cat-1', nameAr: 'إرشاد', nameEn: 'Counseling', bookingMode: 'SERVICES',
+          departmentId: 'dep-1', department: { id: 'dep-1', nameAr: 'قسم', nameEn: 'Dept' } } },
+    ]);
+    prisma.employee.findMany.mockResolvedValue([
+      { id: EMPLOYEE_ID, nameAr: 'د. سارة', nameEn: 'Dr. Sara', isActive: true },
+    ]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([
+      { id: DURATION_OPTION_ID, labelAr: 'جلسة 60 دقيقة', label: '60-min Session', durationMins: 60 },
+    ]);
+    prisma.employeeService.findMany.mockResolvedValue([
+      { employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+    ]);
+
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const result = await handler.execute({ clientId: CLIENT_ID });
+    const c1 = result[0].credits.find((c) => c.id === 'credit-1')!;
+
+    // The snapshot rules are present as an array field (empty here).
+    expect(c1.constraints).toEqual([]);
+    // Every pre-existing field on that row is unchanged.
+    expect(c1).toEqual(expect.objectContaining({
+      id: 'credit-1',
+      serviceId: SERVICE_ID,
+      employeeId: EMPLOYEE_ID,
+      durationOptionId: DURATION_OPTION_ID,
+      serviceNameAr: 'استشارة زوجية',
+      serviceNameEn: 'Couples Counseling',
+      employeeNameAr: 'د. سارة',
+      employeeNameEn: 'Dr. Sara',
+      durationLabelAr: 'جلسة 60 دقيقة',
+      durationLabelEn: '60-min Session',
+      durationMins: 60,
+      totalQuantity: 5,
+      usedQuantity: 2,
+      remaining: 3,
+      serviceIsBookable: true,
+    }));
+  });
+
+  it('projects a flexible credit (null triple) with two constraint rows — INCLUDE on services, ANY on practitioner — without throwing', async () => {
+    prisma.packagePurchase.findMany.mockResolvedValue([
+      {
+        id: 'p-flex', packageId: 'pkg-flex', clientId: 'c-flex', status: 'ACTIVE',
+        subtotalSnapshot: 0, discountSnapshot: 0, amountPaid: 0, refundAmount: 0,
+        paidAt: new Date('2026-07-01'), refundedAt: null, notes: null, createdAt: new Date('2026-07-01'),
+        credits: [
+          {
+            id: 'cr-flex',
+            serviceId: null,
+            employeeId: null,
+            durationOptionId: null,
+            unitPriceSnapshot: 8000,
+            totalQuantity: 6,
+            usedQuantity: 1,
+            constraints: [
+              {
+                dimension: 'SERVICE',
+                mode: 'INCLUDE',
+                targets: [{ targetId: 'svc-1' }, { targetId: 'svc-2' }],
+              },
+              {
+                dimension: 'PRACTITIONER',
+                mode: 'ANY',
+                targets: [],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    // No service/employee/duration lookups should be needed — every triple is null.
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'pkg-flex', nameAr: 'باقة', nameEn: null }]);
+    prisma.service.findMany.mockResolvedValue([]);
+    prisma.employee.findMany.mockResolvedValue([]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([]);
+    prisma.employeeService.findMany.mockResolvedValue([]);
+
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const result = await handler.execute({ clientId: 'c-flex' });
+    const credit = result[0].credits[0];
+
+    // Snapshot rules round-trip in declaration order, with targets flattened to targetIds.
+    expect(credit.constraints).toEqual([
+      { dimension: 'SERVICE', mode: 'INCLUDE', targetIds: ['svc-1', 'svc-2'] },
+      { dimension: 'PRACTITIONER', mode: 'ANY', targetIds: [] },
+    ]);
+    // Flexible credits carry no resolved name and are not bookable.
+    expect(credit.serviceIsBookable).toBe(false);
+    expect(credit.categoryId).toBeNull();
+    expect(credit.serviceId).toBeNull();
+    expect(credit.employeeId).toBeNull();
+    expect(credit.durationOptionId).toBeNull();
+    expect(credit.remaining).toBe(5);
+  });
+
+  it('preserves an EXCLUDE constraint verbatim — mode, dimension, and targetIds all round-trip', async () => {
+    prisma.packagePurchase.findMany.mockResolvedValue([
+      {
+        id: 'p-excl', packageId: 'pkg-excl', clientId: 'c-excl', status: 'ACTIVE',
+        subtotalSnapshot: 0, discountSnapshot: 0, amountPaid: 0, refundAmount: 0,
+        paidAt: new Date('2026-08-01'), refundedAt: null, notes: null, createdAt: new Date('2026-08-01'),
+        credits: [
+          {
+            id: 'cr-excl',
+            serviceId: 'svc-keep',
+            employeeId: 'emp-keep',
+            durationOptionId: 'dur-keep',
+            unitPriceSnapshot: 12000,
+            totalQuantity: 2,
+            usedQuantity: 0,
+            constraints: [
+              {
+                dimension: 'DURATION',
+                mode: 'EXCLUDE',
+                targets: [{ targetId: 'd1' }, { targetId: 'd2' }],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'pkg-excl', nameAr: 'باقة', nameEn: null }]);
+    prisma.service.findMany.mockResolvedValue([
+      { id: 'svc-keep', nameAr: 'استشارة', nameEn: null, isActive: true, archivedAt: null,
+        categoryId: 'cat-x',
+        category: { id: 'cat-x', nameAr: 'تنظيمية', nameEn: null, bookingMode: 'DIRECT',
+          departmentId: null, department: null } },
+    ]);
+    prisma.employee.findMany.mockResolvedValue([{ id: 'emp-keep', name: 'Emp', nameAr: 'موظف', nameEn: null, isActive: true }]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([{ id: 'dur-keep', labelAr: '٦٠ د', label: '60m', durationMins: 60 }]);
+    prisma.employeeService.findMany.mockResolvedValue([{ employeeId: 'emp-keep', serviceId: 'svc-keep' }]);
+
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const result = await handler.execute({ clientId: 'c-excl' });
+    const credit = result[0].credits[0];
+
+    expect(credit.constraints).toEqual([
+      { dimension: 'DURATION', mode: 'EXCLUDE', targetIds: ['d1', 'd2'] },
+    ]);
   });
 });

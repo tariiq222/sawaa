@@ -55,9 +55,19 @@ export type PackagePurchasePaymentMethod =
  */
 export interface PackageCredit {
   id: string
-  serviceId: string
-  employeeId: string
-  durationOptionId: string
+  /**
+   * Wire-declared nullable on the backend (`list-client-package-purchases`
+   * row 20-22). A FLEXIBLE / rule-based credit has all three ids NULL — the
+   * wizard cannot "jump" from such a credit and must instead RESTRICT the
+   * service / practitioner / duration lists to what the credit's `constraints`
+   * permit. Pinned credits always carry all three as concrete strings.
+   *
+   * Dashboard code that builds a `CreditTarget` (jumpable path) MUST narrow
+   * all four ids via `isJumpableCredit` before reading them — no `!`.
+   */
+  serviceId: string | null
+  employeeId: string | null
+  durationOptionId: string | null
   serviceNameAr: string
   serviceNameEn: string | null
   employeeNameAr: string
@@ -85,6 +95,48 @@ export interface PackageCredit {
   departmentNameAr: string
   departmentNameEn: string | null
   serviceIsBookable: boolean
+  /**
+   * Snapshot of the eligibility constraints captured at purchase/activation
+   * time. An empty array means the credit predates constraint snapshotting
+   * (or was issued from a defensive fallback) — consumers must fall back to
+   * the legacy triple above (`serviceId` / `employeeId` / `durationOptionId`)
+   * for matching. The dashboard helper `effectiveConstraints` in
+   * `@/lib/credit-constraints` handles that synthesis.
+   */
+  constraints: PackageCreditConstraint[]
+}
+
+/* ─── Constraint snapshot ─── */
+
+/**
+ * Eligibility rule dimension. Mirrors the backend `PackageConstraintDimension`
+ * enum. Single-tenant: no org scoping on the wire.
+ */
+export type CreditConstraintDimension =
+  | "SERVICE"
+  | "PRACTITIONER"
+  | "DURATION"
+  | "DELIVERY_TYPE"
+
+/**
+ * Eligibility rule mode. Mirrors the backend `PackageConstraintMode` enum.
+ *   ANY      → dimension is unrestricted (a missing row is also ANY).
+ *   INCLUDE  → the booking value must be one of `targetIds`.
+ *   EXCLUDE  → the booking value must NOT be one of `targetIds`.
+ */
+export type CreditConstraintMode = "ANY" | "INCLUDE" | "EXCLUDE"
+
+/**
+ * Wire shape of one constraint row attached to a `PackageCredit`. The backend
+ * stores `targets: { targetId }[]` and the dashboard reads them pre-flattened
+ * into `targetIds: string[]` (empty for `ANY`). See `credit-constraints.ts`
+ * for the matching predicates that mirror the backend semantics.
+ */
+export interface PackageCreditConstraint {
+  dimension: CreditConstraintDimension
+  mode: CreditConstraintMode
+  /** Flattened target ids. Empty for ANY. */
+  targetIds: string[]
 }
 
 /**
