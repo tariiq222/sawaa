@@ -6,6 +6,9 @@ import { ManageKnowledgeBaseHandler } from '../../modules/ai/manage-knowledge-ba
 import { ChatCompletionHandler } from '../../modules/ai/chat-completion/chat-completion.handler';
 import { GetChatbotConfigHandler } from '../../modules/ai/chatbot-config/get-chatbot-config.handler';
 import { UpsertChatbotConfigHandler } from '../../modules/ai/chatbot-config/upsert-chatbot-config.handler';
+import { GetAiProviderConfigHandler } from '../../modules/ai/provider-config/get-ai-provider-config.handler';
+import { UpsertAiProviderConfigHandler } from '../../modules/ai/provider-config/upsert-ai-provider-config.handler';
+import { TestAiProviderConfigHandler } from '../../modules/ai/provider-config/test-ai-provider-config.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -15,12 +18,19 @@ describe('DashboardAiController (e2e)', () => {
   const mockKnowledgeBase = {
     listDocuments: jest.fn(),
     getDocument: jest.fn(),
+    createDocument: jest.fn(),
     updateDocument: jest.fn(),
+    publishDocument: jest.fn(),
+    unpublishDocument: jest.fn(),
+    reindexDocument: jest.fn(),
     deleteDocument: jest.fn(),
   };
   const mockChatCompletion = { execute: jest.fn() };
   const mockGetChatbotConfig = { execute: jest.fn() };
   const mockUpsertChatbotConfig = { execute: jest.fn() };
+  const mockGetProvider = { execute: jest.fn() };
+  const mockUpsertProvider = { execute: jest.fn() };
+  const mockTestProvider = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -30,6 +40,9 @@ describe('DashboardAiController (e2e)', () => {
         { provide: ChatCompletionHandler, useValue: mockChatCompletion },
         { provide: GetChatbotConfigHandler, useValue: mockGetChatbotConfig },
         { provide: UpsertChatbotConfigHandler, useValue: mockUpsertChatbotConfig },
+        { provide: GetAiProviderConfigHandler, useValue: mockGetProvider },
+        { provide: UpsertAiProviderConfigHandler, useValue: mockUpsertProvider },
+        { provide: TestAiProviderConfigHandler, useValue: mockTestProvider },
       ],
     })
       .overrideGuard(JwtGuard)
@@ -90,6 +103,23 @@ describe('DashboardAiController (e2e)', () => {
         .get('/dashboard/ai/knowledge-base?status=ACTIVE')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(400);
+    });
+  });
+
+  describe('knowledge-base lifecycle', () => {
+    it('creates a manual document and passes the authenticated actor', async () => {
+      mockKnowledgeBase.createDocument.mockResolvedValue({ id: docId, title: 'FAQ', status: 'PENDING' });
+      await request(app.getHttpServer())
+        .post('/dashboard/ai/knowledge-base')
+        .send({ title: 'FAQ', sourceType: 'manual', content: 'Opening hours' })
+        .expect(201);
+      expect(mockKnowledgeBase.createDocument).toHaveBeenCalledWith(expect.objectContaining({ title: 'FAQ', sourceType: 'manual', content: 'Opening hours' }));
+    });
+
+    it.each(['publish', 'unpublish', 'reindex'] as const)('routes %s to the lifecycle handler', async (action) => {
+      mockKnowledgeBase[`${action}Document`].mockResolvedValue({ id: docId, status: 'PENDING' });
+      await request(app.getHttpServer()).post(`/dashboard/ai/knowledge-base/${docId}/${action}`).expect(200);
+      expect(mockKnowledgeBase[`${action}Document`]).toHaveBeenCalledWith(expect.objectContaining({ documentId: docId }));
     });
   });
 
@@ -220,6 +250,27 @@ describe('DashboardAiController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .send({ userMessage: 'Hi', extra: 'bad' })
         .expect(400);
+    });
+  });
+
+  describe('AI provider settings', () => {
+    it('returns 200 with a safe provider projection', async () => {
+      mockGetProvider.execute.mockResolvedValue({ provider: 'OPENAI', model: 'gpt-4o-mini', hasCredential: false });
+      const res = await request(app.getHttpServer()).get('/dashboard/ai/provider-config').expect(200);
+      expect(res.body.hasCredential).toBe(false);
+      expect(res.body.credentialCiphertext).toBeUndefined();
+    });
+
+    it('passes provider settings updates to the handler', async () => {
+      mockUpsertProvider.execute.mockResolvedValue({ provider: 'OPENAI', model: 'gpt-4o-mini' });
+      await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENAI', model: 'gpt-4o-mini' }).expect(200);
+      expect(mockUpsertProvider.execute).toHaveBeenCalledWith(expect.objectContaining({ provider: 'OPENAI', model: 'gpt-4o-mini' }), undefined);
+    });
+
+    it('passes write-only candidate credentials to the test handler', async () => {
+      mockTestProvider.execute.mockResolvedValue({ ok: true, persisted: false });
+      await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENAI', model: 'gpt-4o-mini', candidateApiKey: 'candidate-key' }).expect(200);
+      expect(mockTestProvider.execute).toHaveBeenCalledWith(expect.objectContaining({ candidateApiKey: 'candidate-key' }), undefined);
     });
   });
 });

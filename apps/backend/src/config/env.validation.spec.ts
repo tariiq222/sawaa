@@ -1,4 +1,8 @@
 import { envValidationSchema } from './env.validation';
+import {
+  isProductionChatGuestTokenSecretPlaceholder,
+  NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES,
+} from './guest-chat-token-secret.policy';
 
 // Non-zero 32-byte key, base64 — `Buffer.alloc(32)` would be all-zero, which
 // the env validator (P0-14) rejects in production as trivially decryptable.
@@ -31,15 +35,12 @@ const baseValidEnv = {
   JWT_REFRESH_TTL: '30d',
   JWT_CLIENT_ACCESS_SECRET: 'a-very-long-and-secure-client-access-secret',
   JWT_CLIENT_ACCESS_TTL: '15m',
+  CHAT_GUEST_TOKEN_SECRET: 'a-very-long-and-secure-chat-guest-token-secret',
   MOYASAR_ENCRYPTION_KEY: base64_44,
+  AI_PROVIDER_ENCRYPTION_KEY: base64_44,
   SMS_PROVIDER_ENCRYPTION_KEY: base64_44,
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
   EMAIL_PROVIDER_ENCRYPTION_KEY: base64_44,
-  WHATSAPP_PROVIDER_ENCRYPTION_KEY: base64_44,
-  WHATSAPP_EVOLUTION_BASE_URL: 'https://evolution.example.com',
-  WHATSAPP_EVOLUTION_INSTANCE_NAME: 'sawaa-main',
-  WHATSAPP_EVOLUTION_API_KEY: 'evolution-api-key-123', // gitleaks:allow -- test fixture
-  WHATSAPP_EVOLUTION_WEBHOOK_SECRET: 'evolution-webhook-secret-123',
   PLATFORM_SETTINGS_KEY: 'a'.repeat(64),
   SUPER_ADMIN_PASSWORD: 'SuperSecurePassword123!',
   THROTTLER_DISABLED: 'false',
@@ -73,15 +74,26 @@ const buildDevEnv = (overrides: Record<string, string | undefined> = {}) => ({
   JWT_ACCESS_SECRET: 'a-very-long-and-secure-jwt-access-secret-32b',
   JWT_REFRESH_SECRET: 'a-very-long-and-secure-jwt-refresh-secret-32b',
   JWT_CLIENT_ACCESS_SECRET: 'a-very-long-and-secure-client-access-secret',
+  CHAT_GUEST_TOKEN_SECRET: 'a-very-long-and-secure-chat-guest-token-secret',
   MOYASAR_ENCRYPTION_KEY: base64_44,
+  AI_PROVIDER_ENCRYPTION_KEY: base64_44,
   SMS_PROVIDER_ENCRYPTION_KEY: base64_44,
   ZOOM_PROVIDER_ENCRYPTION_KEY: base64_44,
   EMAIL_PROVIDER_ENCRYPTION_KEY: base64_44,
-  WHATSAPP_PROVIDER_ENCRYPTION_KEY: base64_44,
   ...overrides,
 });
 
 describe('envValidationSchema', () => {
+  it('requires a valid 32-byte AI provider encryption key', () => {
+    const invalid = envValidationSchema.validate({ AI_PROVIDER_ENCRYPTION_KEY: '' }, { abortEarly: false });
+    expect(invalid.error?.details.some((d) => d.path.includes('AI_PROVIDER_ENCRYPTION_KEY'))).toBe(true);
+  });
+
+  it('accepts the known non-zero 32-byte AI provider test key', () => {
+    const result = envValidationSchema.validate({ AI_PROVIDER_ENCRYPTION_KEY: base64_44 }, { abortEarly: false });
+    expect(result.error?.details.some((d) => d.path.includes('AI_PROVIDER_ENCRYPTION_KEY'))).toBe(false);
+  });
+
   let originalNodeEnv: string | undefined;
 
   beforeEach(() => {
@@ -104,29 +116,133 @@ describe('envValidationSchema', () => {
     expect(result.error).toBeUndefined();
   });
 
-  it('allows production to boot when the optional WhatsApp integration is not configured', () => {
-    process.env.NODE_ENV = 'production';
-    const env = {
-      ...baseValidEnv,
-      WHATSAPP_PROVIDER_ENCRYPTION_KEY: undefined,
-      WHATSAPP_EVOLUTION_BASE_URL: undefined,
-      WHATSAPP_EVOLUTION_API_KEY: undefined,
-      WHATSAPP_EVOLUTION_WEBHOOK_SECRET: undefined,
-    };
-    const result = envValidationSchema.validate(env, { abortEarly: false });
+  it('accepts CHAT_MAX_MESSAGE_LENGTH=4000 and rejects 4001', () => {
+    const accepted = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_MAX_MESSAGE_LENGTH: '4000' },
+      { abortEarly: false },
+    );
+    const rejected = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_MAX_MESSAGE_LENGTH: '4001' },
+      { abortEarly: false },
+    );
+
+    expect(accepted.error).toBeUndefined();
+    expect(rejected.error?.details.some((detail) => detail.path.includes('CHAT_MAX_MESSAGE_LENGTH'))).toBe(true);
+  });
+
+  it('applies safe defaults for the complete web-chat runtime contract', () => {
+    const result = envValidationSchema.validate(baseValidEnv, { abortEarly: false });
+
+    expect(result.error).toBeUndefined();
+    expect(result.value).toEqual(expect.objectContaining({
+      WEB_CHAT_ENABLED: false,
+      CHAT_MAX_MESSAGE_LENGTH: 4000,
+      CHAT_RATE_LIMIT_PER_MINUTE: 20,
+      CHAT_DAILY_TOKEN_BUDGET: 100000,
+      CHAT_GUEST_SESSION_DAYS: 30,
+      RETENTION_CHAT_DAYS: 365,
+    }));
+  });
+
+  it.each([
+    ['CHAT_RATE_LIMIT_PER_MINUTE', '0'],
+    ['CHAT_DAILY_TOKEN_BUDGET', '0'],
+    ['CHAT_GUEST_SESSION_DAYS', '0'],
+    ['RETENTION_CHAT_DAYS', '0'],
+  ])('rejects a non-positive %s', (key, value) => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, [key]: value },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((detail) => detail.path.includes(key))).toBe(true);
+  });
+
+  it('rejects a missing CHAT_GUEST_TOKEN_SECRET at startup', () => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: undefined },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.path.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+  });
+
+  it('rejects a weak CHAT_GUEST_TOKEN_SECRET at startup', () => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: 'too-short' },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.path.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+  });
+
+  it('rejects a production placeholder CHAT_GUEST_TOKEN_SECRET', () => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: 'change-me-chat-guest-token-secret-123456' },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+  });
+
+  it.each([
+    'change.me-chat-guest-token-secret-123456',
+    'change me-chat-guest-token-secret-123456',
+    'replace.me-chat-guest-token-secret-123456',
+  ])('rejects the legacy production guest token placeholder %s', (secret) => {
+    const result = envValidationSchema.validate(
+      { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: secret },
+      { abortEarly: false },
+    );
+    expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+  });
+
+  it.each(NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES)(
+    'rejects the non-production guest token fixture %s in production',
+    (fixture) => {
+      const result = envValidationSchema.validate(
+        { ...baseValidEnv, CHAT_GUEST_TOKEN_SECRET: fixture },
+        { abortEarly: false },
+      );
+      expect(result.error?.details.some((d) => d.context?.message?.includes('CHAT_GUEST_TOKEN_SECRET'))).toBe(true);
+    },
+  );
+
+  it.each(NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES)(
+    'allows the non-production guest token fixture %s outside production',
+    (fixture) => {
+      const result = envValidationSchema.validate(
+        buildDevEnv({ CHAT_GUEST_TOKEN_SECRET: fixture }),
+        { abortEarly: false },
+      );
+      expect(result.error).toBeUndefined();
+    },
+  );
+
+  it('allows a strong guest token secret that starts with testing in production', () => {
+    const result = envValidationSchema.validate(
+      {
+        ...baseValidEnv,
+        CHAT_GUEST_TOKEN_SECRET: 'testing-is-a-valid-strong-guest-token-secret-32chars',
+      },
+      { abortEarly: false },
+    );
     expect(result.error).toBeUndefined();
   });
 
-  it('rejects a partial WhatsApp configuration in production', () => {
-    process.env.NODE_ENV = 'production';
-    const env = {
-      ...baseValidEnv,
-      WHATSAPP_PROVIDER_ENCRYPTION_KEY: undefined,
-      WHATSAPP_EVOLUTION_API_KEY: undefined,
-      WHATSAPP_EVOLUTION_WEBHOOK_SECRET: undefined,
-    };
-    const result = envValidationSchema.validate(env, { abortEarly: false });
-    expect(result.error).toBeDefined();
+  it.each([
+    ...NON_PRODUCTION_CHAT_GUEST_TOKEN_SECRET_FIXTURES,
+    'change-me-chat-guest-token-secret-123456',
+    'change.me-chat-guest-token-secret-123456',
+    'change me-chat-guest-token-secret-123456',
+    'REPLACE_ME-chat-guest-token-secret-123456',
+    'replace.me-chat-guest-token-secret-123456',
+  ])('identifies %s as a production guest token placeholder', (secret) => {
+    expect(isProductionChatGuestTokenSecretPlaceholder(secret)).toBe(true);
+  });
+
+  it('does not identify a strong testing-prefixed secret as a placeholder', () => {
+    expect(
+      isProductionChatGuestTokenSecretPlaceholder(
+        'testing-is-a-valid-strong-guest-token-secret-32chars',
+      ),
+    ).toBe(false);
   });
 
   it('passes with minimal development env', () => {

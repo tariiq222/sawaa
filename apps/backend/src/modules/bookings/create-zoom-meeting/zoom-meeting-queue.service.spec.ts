@@ -29,6 +29,7 @@ describe('ZoomMeetingQueueService', () => {
       'create-zoom-meeting',
       { bookingId: 'book-1' },
       expect.objectContaining({
+        jobId: 'booking-book-1-zoom-create',
         attempts: 3,
         backoff: { type: 'exponential', delay: 2000 },
       }),

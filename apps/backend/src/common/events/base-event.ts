@@ -31,9 +31,11 @@ export abstract class BaseEvent<TPayload = unknown> {
     version: number;
     payload: TPayload;
     correlationId?: string;
+    /** Stable identity for transactional-outbox/domain-ledger events. */
+    eventId?: string;
   }) {
     const ctx = RequestContextStorage.get();
-    this.eventId = randomUUID();
+    this.eventId = opts.eventId ?? randomUUID();
     this.correlationId = opts.correlationId ?? ctx?.requestId ?? randomUUID();
     this.source = opts.source;
     this.version = opts.version;

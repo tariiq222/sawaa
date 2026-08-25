@@ -27,6 +27,15 @@ export interface ZoomMeetingResponse {
   start_url: string;
 }
 
+export interface ZoomMeetingState {
+  id: number;
+  topic: string;
+  startTime: string;
+  durationMins: number;
+  join_url?: string;
+  start_url?: string;
+}
+
 interface ZoomTokenResponse {
   access_token: string;
   expires_in: number;
@@ -126,7 +135,10 @@ export class ZoomApiClient implements OnModuleInit, OnModuleDestroy {
     opts: ZoomMeetingRequest,
     timezone: string,
   ): Promise<ZoomMeetingResponse> {
-    const res = await this.fetchWithRetry('https://api.zoom.us/v2/users/me/meetings', {
+    // POST is deliberately single-attempt: Zoom documents no idempotency key
+    // for meeting creation. Durable callers persist CALL_UNKNOWN before this
+    // call and reconcile by deterministic topic instead of posting twice.
+    const res = await fetchWithTimeout('https://api.zoom.us/v2/users/me/meetings', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -146,7 +158,7 @@ export class ZoomApiClient implements OnModuleInit, OnModuleDestroy {
           waiting_room: true,
         },
       }),
-    });
+    }, 10_000);
 
     if (!res.ok) {
       const error = await res.text();
@@ -195,7 +207,64 @@ export class ZoomApiClient implements OnModuleInit, OnModuleDestroy {
     if (!res.ok) {
       const error = await res.text();
       this.logger.error(`Failed to update Zoom meeting ${meetingId}: ${res.status} ${error}`);
+      throw new InternalServerErrorException(`Zoom meeting update failed: ${res.status}`);
     }
+  }
+
+  /** Read-before-write makes PATCH replay safe when a prior response was lost. */
+  async getMeeting(token: string, meetingId: string): Promise<ZoomMeetingState> {
+    const res = await this.fetchWithRetry(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const error = await res.text();
+      this.logger.error(`Failed to get Zoom meeting ${meetingId}: ${res.status} ${error}`);
+      throw new InternalServerErrorException(`Zoom meeting lookup failed: ${res.status}`);
+    }
+    const meeting = await res.json() as {
+      id: number;
+      topic: string;
+      start_time: string;
+      duration: number;
+      join_url?: string;
+      start_url?: string;
+    };
+    return {
+      id: meeting.id,
+      topic: meeting.topic,
+      startTime: meeting.start_time,
+      durationMins: meeting.duration,
+      join_url: meeting.join_url,
+      start_url: meeting.start_url,
+    };
+  }
+
+  /** GET-only reconciliation for a create call with an unknown outcome. */
+  async findMeetingByTopic(token: string, topic: string): Promise<ZoomMeetingState | null> {
+    let nextPageToken = '';
+    for (let page = 0; page < 10; page++) {
+      const query = new URLSearchParams({ type: 'upcoming', page_size: '300' });
+      if (nextPageToken) query.set('next_page_token', nextPageToken);
+      const res = await this.fetchWithRetry(
+        `https://api.zoom.us/v2/users/me/meetings?${query.toString()}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) {
+        const error = await res.text();
+        this.logger.error(`Failed to reconcile Zoom meeting topic: ${res.status} ${error}`);
+        throw new InternalServerErrorException(`Zoom meeting reconciliation failed: ${res.status}`);
+      }
+      const body = await res.json() as {
+        next_page_token?: string;
+        meetings?: Array<{ id: number; topic: string }>;
+      };
+      const match = body.meetings?.find((meeting) => meeting.topic === topic);
+      if (match) return this.getMeeting(token, String(match.id));
+      nextPageToken = body.next_page_token ?? '';
+      if (!nextPageToken) return null;
+    }
+    return null;
   }
 
   private async fetchWithRetry(url: string, init?: RequestInit, retries = 3): Promise<Response> {

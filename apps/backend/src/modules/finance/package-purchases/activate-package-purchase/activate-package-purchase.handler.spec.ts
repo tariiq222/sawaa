@@ -82,7 +82,7 @@ function buildHandler(
 ) {
   const eb = { subscribe: jest.fn(), publish: jest.fn() };
   let subscriber: ((e: { payload: unknown }) => Promise<void>) | null = null;
-  eb.subscribe = jest.fn((_evt, cb) => {
+  eb.subscribe = jest.fn((_evt, _consumerId, cb) => {
     subscriber = cb as typeof subscriber;
   });
   const cls = buildCls();
@@ -115,7 +115,9 @@ describe('ActivatePackagePurchaseHandler', () => {
 
   it('subscribes to finance.payment.completed', () => {
     const { eb } = buildHandler();
-    expect(eb.subscribe).toHaveBeenCalledWith('finance.payment.completed', expect.any(Function));
+    expect(eb.subscribe).toHaveBeenCalledWith(
+      'finance.payment.completed', 'finance.package-purchase-activate.v1', expect.any(Function),
+    );
   });
 
   describe('success path', () => {

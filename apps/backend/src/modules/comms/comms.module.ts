@@ -1,5 +1,6 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { forwardRef, Module, OnModuleInit } from '@nestjs/common';
 import { DashboardCommsController } from '../../api/dashboard/comms.controller';
+import { DashboardConversationsController } from '../../api/dashboard/conversations.controller';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { MailModule } from '../../infrastructure/mail/mail.module';
@@ -55,6 +56,52 @@ import { ResilientNotificationDispatcher } from './resilient-notification-dispat
 import { NotificationRetryWorker } from './resilient-notification-dispatcher/notification-retry-worker';
 import { ListTenantDeliveryLogsHandler } from './list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { ListSmsDeliveriesHandler } from './list-sms-deliveries/list-sms-deliveries.handler';
+import { GuestChatTokenService } from './chat/guest/guest-chat-token.service';
+import { ChatAccessService } from './chat/guest/chat-access.service';
+import { CreateGuestConversationHandler } from './chat/guest/create-conversation.handler';
+import { GetCurrentConversationHandler } from './chat/guest/get-current-conversation.handler';
+import { ClaimConversationHandler } from './chat/guest/claim-conversation.handler';
+import { SendChatMessageHandler } from './chat/messages/send-chat-message.handler';
+import { ListChatMessagesHandler } from './chat/messages/list-chat-messages.handler';
+import { ListClientChatConversationsHandler } from './chat/messages/list-client-chat-conversations.handler';
+import { GetClientChatConversationHandler } from './chat/messages/get-client-chat-conversation.handler';
+import { AiModule } from '../ai/ai.module';
+import { BookingsModule } from '../bookings/bookings.module';
+import { OrgExperienceModule } from '../org-experience/org-experience.module';
+import { PeopleModule } from '../people/people.module';
+import { AdministrativeAssistantService } from './chat/assistant/administrative-assistant.service';
+import { RetryAdministrativeMessageHandler } from './chat/assistant/retry-administrative-message.handler';
+import { AdministrativeToolsService } from './chat/assistant/administrative-tools.service';
+import { AdministrativeAssistantLeaseService } from './chat/assistant/administrative-assistant-lease.service';
+import { AdministrativeScopeGate } from './chat/assistant/administrative-scope-gate';
+import { AdministrativeOutputValidator } from './chat/assistant/administrative-output-validator';
+import { AdministrativeResponseRenderer } from './chat/assistant/administrative-response-renderer';
+import { RequestHandoffHandler } from './chat/staff/request-handoff.handler';
+import { ClaimConversationHandler as ClaimStaffConversationHandler } from './chat/staff/claim-conversation.handler';
+import { AssignConversationHandler } from './chat/staff/assign-conversation.handler';
+import { ReleaseConversationHandler } from './chat/staff/release-conversation.handler';
+import { CloseConversationHandler as CloseStaffConversationHandler } from './chat/staff/close-conversation.handler';
+import { MarkConversationReadHandler } from './chat/staff/mark-conversation-read.handler';
+import { ReplyConversationHandler } from './chat/staff/reply-conversation.handler';
+import { ListInboxHandler } from './chat/staff/list-inbox.handler';
+import { GetConversationHandler as GetStaffConversationHandler } from './chat/staff/get-conversation.handler';
+import { ListConversationMessagesHandler } from './chat/staff/list-conversation-messages.handler';
+import { StaffConversationAccessService } from './chat/staff/staff-conversation-access.service';
+import { ChatBookingQuoteService } from './chat/operations/chat-booking-quote.service';
+import { PrepareBookingHandler } from './chat/operations/prepare-booking.handler';
+import { PrepareRescheduleHandler } from './chat/operations/prepare-reschedule.handler';
+import { PrepareCancellationHandler } from './chat/operations/prepare-cancellation.handler';
+import { ListOwnAppointmentsHandler } from './chat/operations/list-own-appointments.handler';
+import { AcknowledgeExistingBookingHandler } from './chat/operations/acknowledge-existing-booking.handler';
+import { ConfirmOperationHandler } from './chat/operations/confirm-operation.handler';
+import { DeclineOperationHandler } from './chat/operations/decline-operation.handler';
+import { ResumeChatOperationsHandler } from './chat/operations/resume-chat-operations.handler';
+import { OnChatOperationsResumeRequestedHandler } from './chat/operations/on-chat-operations-resume-requested.handler';
+import { OnAdministrativeMessageProcessingRequestedHandler } from './chat/assistant/on-administrative-message-processing-requested.handler';
+import { AdministrativeAssistantRecoveryWorker } from './chat/assistant/administrative-assistant-recovery.worker';
+import { ChatAuditService } from './chat/chat-audit.service';
+import { ChatUsageLimitsService } from './chat/chat-usage-limits.service';
+import { WebChatAvailabilityService, WebChatEnabledGuard } from './chat/web-chat-availability.service';
 
 const handlers = [
   SendPushHandler,
@@ -97,6 +144,49 @@ const handlers = [
   NotificationRetryWorker,
   ListTenantDeliveryLogsHandler,
   ListSmsDeliveriesHandler,
+  GuestChatTokenService,
+  ChatAuditService,
+  ChatUsageLimitsService,
+  WebChatAvailabilityService,
+  WebChatEnabledGuard,
+  ChatAccessService,
+  CreateGuestConversationHandler,
+  GetCurrentConversationHandler,
+  ClaimConversationHandler,
+  SendChatMessageHandler,
+  ListChatMessagesHandler,
+  ListClientChatConversationsHandler,
+  GetClientChatConversationHandler,
+  AdministrativeAssistantService,
+  RetryAdministrativeMessageHandler,
+  AdministrativeToolsService,
+  AdministrativeAssistantLeaseService,
+  AdministrativeScopeGate,
+  AdministrativeOutputValidator,
+  AdministrativeResponseRenderer,
+  RequestHandoffHandler,
+  ClaimStaffConversationHandler,
+  AssignConversationHandler,
+  ReleaseConversationHandler,
+  CloseStaffConversationHandler,
+  MarkConversationReadHandler,
+  ReplyConversationHandler,
+  ListInboxHandler,
+  GetStaffConversationHandler,
+  ListConversationMessagesHandler,
+  StaffConversationAccessService,
+  ChatBookingQuoteService,
+  PrepareBookingHandler,
+  PrepareRescheduleHandler,
+  PrepareCancellationHandler,
+  ListOwnAppointmentsHandler,
+  AcknowledgeExistingBookingHandler,
+  ConfirmOperationHandler,
+  DeclineOperationHandler,
+  ResumeChatOperationsHandler,
+  OnChatOperationsResumeRequestedHandler,
+  OnAdministrativeMessageProcessingRequestedHandler,
+  AdministrativeAssistantRecoveryWorker,
 ];
 
 const eventHandlers = [
@@ -111,8 +201,19 @@ const eventHandlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule, MailModule, NotificationChannelModule, SmsModule, EmailModule, ],
-  controllers: [DashboardCommsController],
+  imports: [
+    DatabaseModule,
+    MessagingModule,
+    MailModule,
+    NotificationChannelModule,
+    SmsModule,
+    EmailModule,
+    AiModule,
+    BookingsModule,
+    OrgExperienceModule,
+    forwardRef(() => PeopleModule),
+  ],
+  controllers: [DashboardCommsController, DashboardConversationsController],
   providers: [...handlers, ...eventHandlers],
   exports: [...handlers, NotificationChannelModule],
 })
@@ -127,6 +228,8 @@ export class CommsModule implements OnModuleInit {
     private readonly onBookingCancelledStaff: OnBookingCancelledStaffHandler,
     private readonly onPaymentCompletedStaff: OnPaymentCompletedStaffHandler,
     private readonly onClientEnrolledStaff: OnClientEnrolledStaffHandler,
+    private readonly onChatOperationsResumeRequested: OnChatOperationsResumeRequestedHandler,
+    private readonly onAdministrativeMessageProcessingRequested: OnAdministrativeMessageProcessingRequestedHandler,
   ) {}
 
   onModuleInit(): void {
@@ -138,5 +241,7 @@ export class CommsModule implements OnModuleInit {
     this.onBookingCancelledStaff.register(this.eventBus);
     this.onPaymentCompletedStaff.register(this.eventBus);
     this.onClientEnrolledStaff.register(this.eventBus);
+    this.onChatOperationsResumeRequested.register();
+    this.onAdministrativeMessageProcessingRequested.register();
   }
 }

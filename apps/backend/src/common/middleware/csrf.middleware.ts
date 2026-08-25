@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 
 const CSRF_COOKIE = 'ck_csrf';
 const CSRF_HEADER = 'x-csrf-token';
+const CSRF_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**
@@ -13,14 +14,15 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * `ck_csrf` cookie. Because cross-origin attackers cannot read the cookie
  * value, they cannot forge the header — breaking the request.
  *
- * Token is generated on first request and rotated on every mutation so a
- * stolen token has a short useful lifetime. The cookie is httpOnly:false so
- * the JS layer (or native app) can echo it back in the header.
+ * Token is generated on the first protected request and kept in a host-only
+ * API cookie. The matching response header lets an explicitly CORS-allowed
+ * website origin bootstrap the token without widening the cookie Domain.
  */
 export function csrfMiddleware(req: Request, res: Response, next: NextFunction): void {
   const existing = req.cookies?.[CSRF_COOKIE];
+  let token: string;
 
-  if (!existing || typeof existing !== 'string' || existing.length < 32) {
+  if (typeof existing !== 'string' || !CSRF_TOKEN_PATTERN.test(existing)) {
     const fresh = randomBytes(32).toString('hex');
     res.cookie(CSRF_COOKIE, fresh, {
       httpOnly: false,
@@ -29,7 +31,14 @@ export function csrfMiddleware(req: Request, res: Response, next: NextFunction):
       path: '/',
     });
     req.cookies = { ...(req.cookies ?? {}), [CSRF_COOKIE]: fresh };
+    token = fresh;
+  } else {
+    token = existing;
   }
+
+  // CORS exposes this header only to explicitly configured origins. Keeping
+  // the token out of URLs and browser storage avoids history/log leakage.
+  res.setHeader(CSRF_HEADER, token);
 
   if (SAFE_METHODS.has(req.method)) {
     return next();
@@ -44,7 +53,11 @@ export function csrfMiddleware(req: Request, res: Response, next: NextFunction):
     headerToken.length === 0 ||
     headerToken !== cookieToken
   ) {
-    res.status(403).json({ statusCode: 403, message: 'CSRF token missing or invalid' });
+    res.status(403).json({
+      statusCode: 403,
+      code: 'CSRF_INVALID',
+      message: 'CSRF token missing or invalid',
+    });
     return;
   }
 

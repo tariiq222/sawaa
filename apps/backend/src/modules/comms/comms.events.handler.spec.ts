@@ -14,7 +14,7 @@ const buildPushTargets = (
 const buildEventBus = () => {
   const subscribers = new Map<string, (e: unknown) => Promise<void>>();
   return {
-    subscribe: jest.fn((event: string, cb: (e: unknown) => Promise<void>) => { subscribers.set(event, cb); }),
+    subscribe: jest.fn((event: string, _consumerId: string, cb: (e: unknown) => Promise<void>) => { subscribers.set(event, cb); }),
     getSubscriber: (event: string) => subscribers.get(event)!,
   };
 };
@@ -97,7 +97,9 @@ describe('OnBookingReminderHandler', () => {
       pushTargets as unknown as GetClientPushTargetsHandler,
     );
     handler.register(eb as unknown as EventBusService);
-    expect(eb.subscribe).toHaveBeenCalledWith('ops.booking.reminder_due', expect.any(Function));
+    expect(eb.subscribe).toHaveBeenCalledWith(
+      'ops.booking.reminder_due', 'comms.booking-reminder.v1', expect.any(Function),
+    );
   });
 
   it('sends push notification with booking time', async () => {

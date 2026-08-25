@@ -92,6 +92,22 @@ describe('auth-store', () => {
       clearAuth();
       expect(isAuthenticated()).toBe(false);
     });
+
+    it('publishes identity changes so persistent clients can clear user-owned state', async () => {
+      const { setClient, clearAuth, subscribeAuth, getAuthIdentitySnapshot } = await freshStore();
+      const listener = vi.fn();
+      const unsubscribe = subscribeAuth(listener);
+
+      setClient(makeProfile({ id: 'client-a' }));
+      expect(getAuthIdentitySnapshot()).toBe('client-a');
+      clearAuth();
+      expect(getAuthIdentitySnapshot()).toBeNull();
+      expect(listener).toHaveBeenCalledTimes(2);
+
+      unsubscribe();
+      setClient(makeProfile({ id: 'client-b' }));
+      expect(listener).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('TTL and corruption handling on localStorage read', () => {

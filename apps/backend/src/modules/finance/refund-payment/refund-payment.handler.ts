@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PaymentStatus, RefundStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -9,6 +15,8 @@ import { assertValidTransition } from '../payment-state-machine';
 import { computeRefundAccounting } from './refund-vat.helper';
 import { decimalToHalalas } from '../money.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+
+const REFUND_PROVIDER_LEASE_MS = 60_000;
 
 /**
  * Money columns are Decimal(12,2) in Postgres holding whole halalas. Prisma
@@ -39,18 +47,20 @@ interface RefundPaymentCommand {
   reason: string;
   amount?: number;
   performedBy?: string;
+  /** Stable domain-event identity for queue replay recovery. */
+  sourceEventId?: string;
 }
 
 /**
  * Single-step refund used by `PATCH /payments/:id/refund` (clinic dashboard).
  *
  * Ordering — CRITICAL for money-safety:
- *   1. Persist a RefundRequest row in PROCESSING with the chosen idempotencyKey
- *      BEFORE calling Moyasar. This way, if Moyasar succeeds but our DB write
- *      fails afterwards, we have a record of the in-flight refund (with its
- *      idempotencyKey) so reconciliation can complete it without double-charging.
- *   2. Call Moyasar (real money moves).
- *   3. Atomic finalize: flip RefundRequest → COMPLETED + Payment → REFUNDED +
+ *   1. Persist a RefundRequest row in PROCESSING before calling Moyasar.
+ *   2. Acquire its exclusive DB lease, GET the provider's cumulative refunded
+ *      baseline, persist CALL_UNKNOWN + target, then POST exactly once.
+ *   3. If the POST outcome is unknown, replay performs GET only. A proven
+ *      target finalizes; an unchanged/intermediate amount enters MANUAL_REVIEW.
+ *   4. Atomic finalize: flip RefundRequest → COMPLETED + Payment → REFUNDED +
  *      Invoice → REFUNDED in a single transaction. If this transaction fails
  *      after Moyasar succeeded, we keep the gatewayRef on the row and leave
  *      it in PROCESSING for reconciliation.
@@ -62,7 +72,7 @@ export class RefundPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
+    _eventBus: EventBusService,
     private readonly moyasar: MoyasarApiClient,
   ) {}
 
@@ -93,13 +103,12 @@ export class RefundPaymentHandler {
   async callMoyasarAndFinalize(
     gatewayRef: string,
     amount: number,
-    idempotencyKey: string,
+    _requestKey: string,
     organizationId: string,
   ): Promise<{ id: string }> {
     return this.moyasar.createRefund(organizationId, {
       paymentId: gatewayRef,
       amount: Math.round(amount), // already halalas
-      idempotencyKey,
     });
   }
 
@@ -174,7 +183,13 @@ export class RefundPaymentHandler {
    */
   async createRefundRequestInTx(
     tx: Prisma.TransactionClient,
-    cmd: { paymentId: string; reason: string; performedBy?: string; amount?: number },
+    cmd: {
+      paymentId: string;
+      reason: string;
+      performedBy?: string;
+      amount?: number;
+      sourceEventId?: string;
+    },
   ): Promise<CreateRefundRequestInTxResult> {
     const rows = await tx.$queryRaw<
       Array<{
@@ -275,6 +290,9 @@ export class RefundPaymentHandler {
           status: RefundStatus.COMPLETED,
           processedAt: new Date(),
           processedBy: cmd.performedBy ?? 'system',
+          idempotencyKey,
+          sourceEventId: cmd.sourceEventId,
+          providerState: 'CONFIRMED',
         },
         select: { id: true },
       });
@@ -322,6 +340,9 @@ export class RefundPaymentHandler {
         status: RefundStatus.PROCESSING,
         processedAt: new Date(),
         processedBy: cmd.performedBy ?? 'system',
+        idempotencyKey,
+        sourceEventId: cmd.sourceEventId,
+          providerState: 'BEFORE_CALL',
       },
       select: { id: true },
     });
@@ -341,102 +362,501 @@ export class RefundPaymentHandler {
   /**
    * Phase 3 (finalize) — called by OnBookingCancelledRefundHandler when a
    * RefundRequest was pre-created via createRefundRequestInTx in the
-   * cancellation transaction. Calls Moyasar (idempotent) and then
+   * cancellation transaction. Calls Moyasar at most once and then
    * atomically updates RefundRequest → COMPLETED, Payment → REFUNDED,
    * Invoice → REFUNDED inside a single RLS transaction.
    */
   async finalizeRefundFromCancellation(
-    cmd: { refundRequestId: string; idempotencyKey: string },
+    cmd: { refundRequestId: string; idempotencyKey: string; sourceEventId?: string },
   ): Promise<void> {
-    const refundReq = await this.prisma.refundRequest.findUniqueOrThrow({
+    const initial = await this.prisma.refundRequest.findUniqueOrThrow({
       where: { id: cmd.refundRequestId },
-      select: { id: true, paymentId: true, amount: true, invoiceId: true, status: true },
+      select: {
+        id: true,
+        paymentId: true,
+        amount: true,
+        invoiceId: true,
+        status: true,
+        gatewayRef: true,
+        idempotencyKey: true,
+        sourceEventId: true,
+        providerState: true,
+        providerLeaseOwner: true,
+        providerLeaseExpiresAt: true,
+        baselineRefundedAmount: true,
+        targetCumulativeRefundedAmount: true,
+        observedCumulativeRefundedAmount: true,
+      },
     });
 
-    if (refundReq.status === RefundStatus.COMPLETED) {
+    if (initial.idempotencyKey && initial.idempotencyKey !== cmd.idempotencyKey) {
+      throw new ConflictException('Refund idempotency key does not match the durable request');
+    }
+    if (initial.sourceEventId && cmd.sourceEventId && initial.sourceEventId !== cmd.sourceEventId) {
+      throw new ConflictException('Refund request belongs to a different source event');
+    }
+    if (initial.status === RefundStatus.COMPLETED) {
       this.logger.warn({ refundRequestId: cmd.refundRequestId }, 'refund_already_completed_skipping');
       return;
     }
+    if (
+      initial.status === RefundStatus.MANUAL_REVIEW
+      || (initial.status === RefundStatus.FAILED && initial.providerState === 'FAILED')
+    ) {
+      this.logger.warn({ refundRequestId: cmd.refundRequestId }, 'refund_provider_failure_already_recorded');
+      return;
+    }
+    if (initial.status !== RefundStatus.PROCESSING) {
+      throw new ConflictException(`Refund request is not retryable from status ${initial.status}`);
+    }
 
-    const payment = await this.prisma.payment.findUniqueOrThrow({
-      where: { id: refundReq.paymentId },
-      select: { id: true, gatewayRef: true },
+    const leaseOwner = randomUUID();
+    const leaseNow = new Date();
+    const leaseExpiresAt = new Date(leaseNow.getTime() + REFUND_PROVIDER_LEASE_MS);
+    const acquired = await this.prisma.refundRequest.updateMany({
+      where: {
+        id: cmd.refundRequestId,
+        status: RefundStatus.PROCESSING,
+        OR: [
+          { providerLeaseOwner: null },
+          { providerLeaseExpiresAt: null },
+          { providerLeaseExpiresAt: { lt: leaseNow } },
+        ],
+      },
+      data: {
+        providerLeaseOwner: leaseOwner,
+        providerLeaseExpiresAt: leaseExpiresAt,
+        providerAttemptCount: { increment: 1 },
+        lastProviderAttemptAt: leaseNow,
+      },
     });
+    if (acquired.count !== 1) {
+      throw new ConflictException('Refund provider lease is already held');
+    }
 
-    // Decimal → integer halalas, converted once at the read boundary.
-    const refundAmount = decimalToHalalas(refundReq.amount);
+    let primaryError: unknown;
+    let paymentLeaseId: string | null = null;
+    try {
+      // Keep early terminal/manual-review returns scoped to the processing
+      // closure so the outer flow always releases the provider lease.
+      await (async () => {
+      const refundReq = await this.prisma.refundRequest.findUniqueOrThrow({
+        where: { id: cmd.refundRequestId },
+        select: {
+          id: true,
+          paymentId: true,
+          amount: true,
+          invoiceId: true,
+          status: true,
+          gatewayRef: true,
+          idempotencyKey: true,
+          sourceEventId: true,
+          providerState: true,
+          baselineRefundedAmount: true,
+          targetCumulativeRefundedAmount: true,
+          observedCumulativeRefundedAmount: true,
+        },
+      });
+      if (refundReq.status !== RefundStatus.PROCESSING) return;
 
-    const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
-      paymentId: payment.gatewayRef ?? '',
-      amount: refundAmount, // already halalas
-      idempotencyKey: cmd.idempotencyKey,
+      const payment = await this.prisma.payment.findUniqueOrThrow({
+        where: { id: refundReq.paymentId },
+        select: {
+          id: true,
+          gatewayRef: true,
+          amount: true,
+          refundedAmount: true,
+          currency: true,
+        },
+      });
+      if (!payment.gatewayRef) {
+        throw new ConflictException('Gateway refund has no payment reference');
+      }
+      // A RefundRequest lease is not enough: two distinct requests for the
+      // same Payment can otherwise baseline the same cumulative amount and
+      // both POST. This lease is the provider-call serialization fence.
+      const paymentLease = await this.prisma.payment.updateMany({
+        where: {
+          id: payment.id,
+          OR: [
+            { refundProviderLeaseOwner: null },
+            { refundProviderLeaseExpiresAt: null },
+            { refundProviderLeaseExpiresAt: { lt: leaseNow } },
+          ],
+        },
+        data: {
+          refundProviderLeaseOwner: leaseOwner,
+          refundProviderLeaseExpiresAt: leaseExpiresAt,
+        },
+      });
+      if (paymentLease.count !== 1) {
+        throw new ConflictException('Payment refund provider lease is already held');
+      }
+      paymentLeaseId = payment.id;
+
+      const refundAmount = decimalToHalalas(refundReq.amount);
+      const phase = refundReq.providerState === 'NOT_CALLED'
+        ? 'BEFORE_CALL'
+        : refundReq.providerState;
+      let providerPaymentId = refundReq.gatewayRef ?? payment.gatewayRef;
+
+      if (phase === 'BEFORE_CALL') {
+        const providerPayment = await this.moyasar.getPaymentStatus(
+          DEFAULT_ORG_ID,
+          payment.gatewayRef,
+        );
+        const localAmount = decimalToHalalas(payment.amount);
+        const localRefunded = decimalToHalalas(payment.refundedAmount ?? 0);
+        const providerBaseline = Math.round(providerPayment.refunded);
+        const providerOutstanding = providerPayment.amount - providerBaseline;
+        const providerMatchesLocal =
+          Number.isSafeInteger(providerBaseline)
+          && providerBaseline >= 0
+          && ['paid', 'captured'].includes(providerPayment.status)
+          && providerPayment.id === payment.gatewayRef
+          && providerPayment.amount === localAmount
+          && providerPayment.currency === payment.currency
+          && providerBaseline === localRefunded
+          && refundAmount > 0
+          && refundAmount <= providerOutstanding;
+        if (!providerMatchesLocal) {
+          await this.markRefundManualReview(
+            cmd.refundRequestId,
+            leaseOwner,
+            providerBaseline,
+            'Provider cumulative refund does not match local accounting; manual review required',
+          );
+          return;
+        }
+
+        const target = providerBaseline + refundAmount;
+        await this.requireOwnedRefundUpdate(cmd.refundRequestId, leaseOwner, {
+          idempotencyKey: cmd.idempotencyKey,
+          ...(cmd.sourceEventId ? { sourceEventId: cmd.sourceEventId } : {}),
+          providerState: 'CALL_UNKNOWN',
+          baselineRefundedAmount: providerBaseline,
+          targetCumulativeRefundedAmount: target,
+          observedCumulativeRefundedAmount: providerBaseline,
+          lastProviderError: null,
+        });
+
+        let providerRefund: Awaited<ReturnType<MoyasarApiClient['createRefund']>>;
+        try {
+          providerRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
+            paymentId: payment.gatewayRef,
+            amount: refundAmount,
+          });
+        } catch (error) {
+          if (error instanceof NotFoundException) {
+            await this.requireOwnedRefundUpdate(cmd.refundRequestId, leaseOwner, {
+              status: RefundStatus.FAILED,
+              providerState: 'FAILED',
+              providerLeaseOwner: null,
+              providerLeaseExpiresAt: null,
+              lastProviderError: 'Provider confirmed refund resource is unavailable',
+            });
+          } else {
+            await this.requireOwnedRefundUpdate(cmd.refundRequestId, leaseOwner, {
+              providerState: 'CALL_UNKNOWN',
+              lastProviderError: 'Provider refund outcome is unknown; reconciliation required',
+            });
+          }
+          throw error;
+        }
+
+        providerPaymentId = providerRefund.id;
+        if (
+          providerRefund.id !== payment.gatewayRef
+          || providerRefund.currency !== payment.currency
+          // A cumulative amount above target is not attributable to this
+          // request (another refund may have landed concurrently/out of band).
+          // Only the exact baseline + requested amount is safe to account.
+          || providerRefund.refunded !== target
+        ) {
+          await this.markRefundManualReview(
+            cmd.refundRequestId,
+            leaseOwner,
+            providerRefund.refunded,
+            'Provider response is not exactly attributable to this refund; manual review required',
+          );
+          return;
+        }
+        await this.requireOwnedRefundUpdate(cmd.refundRequestId, leaseOwner, {
+          gatewayRef: providerPaymentId,
+          providerState: 'CONFIRMED',
+          observedCumulativeRefundedAmount: providerRefund.refunded,
+          lastProviderError: null,
+        });
+      } else if (phase === 'CALL_UNKNOWN') {
+        const baseline = refundReq.baselineRefundedAmount == null
+          ? null
+          : decimalToHalalas(refundReq.baselineRefundedAmount);
+        const target = refundReq.targetCumulativeRefundedAmount == null
+          ? null
+          : decimalToHalalas(refundReq.targetCumulativeRefundedAmount);
+        if (baseline == null || target == null || target <= baseline) {
+          await this.markRefundManualReview(
+            cmd.refundRequestId,
+            leaseOwner,
+            null,
+            'Refund reconciliation baseline is incomplete; manual review required',
+          );
+          return;
+        }
+        const providerPayment = await this.moyasar.getPaymentStatus(
+          DEFAULT_ORG_ID,
+          payment.gatewayRef,
+        );
+        providerPaymentId = providerPayment.id;
+        const providerIdentityMatches = providerPayment.id === payment.gatewayRef
+          && providerPayment.amount === decimalToHalalas(payment.amount)
+          && providerPayment.currency === payment.currency;
+        if (!providerIdentityMatches) {
+          await this.markRefundManualReview(
+            cmd.refundRequestId,
+            leaseOwner,
+            providerPayment.refunded,
+            'Provider payment identity changed during refund reconciliation; manual review required',
+          );
+          return;
+        }
+        // Cumulative provider totals cannot attribute a refund to this request
+        // after a timeout: even >= target may include an external refund. Never
+        // account it automatically; an operator reconciles the durable facts.
+        await this.markRefundManualReview(
+          cmd.refundRequestId,
+          leaseOwner,
+          providerPayment.refunded,
+          providerPayment.refunded === baseline
+            ? 'Provider cumulative refund is unchanged after an unknown call; manual review required'
+            : providerPayment.refunded >= target
+              ? 'Provider cumulative refund is ambiguous after an unknown call; manual review required'
+              : 'Provider cumulative refund is between baseline and target; manual review required',
+        );
+        return;
+      } else if (phase !== 'CONFIRMED') {
+        throw new ConflictException(`Refund provider phase ${phase} is not retryable`);
+      }
+
+      await this.finalizeOwnedRefund({
+        refundRequestId: cmd.refundRequestId,
+        requestKey: cmd.idempotencyKey,
+        leaseOwner,
+        providerPaymentId,
+        refundReq,
+        refundAmount,
+      });
+      })();
+    } catch (error) {
+      primaryError = error;
+      try {
+        await this.prisma.refundRequest.updateMany({
+          where: {
+            id: cmd.refundRequestId,
+            status: RefundStatus.PROCESSING,
+            providerLeaseOwner: leaseOwner,
+          },
+          data: {
+            lastProviderError: 'Refund processing failed; retry or reconciliation required',
+          },
+        });
+      } catch (persistError) {
+        primaryError = new AggregateError(
+          [error, persistError],
+          'Refund processing failed and retry state could not be persisted',
+        );
+      }
+    }
+
+    let releaseError: unknown;
+    try {
+      await this.prisma.refundRequest.updateMany({
+        where: { id: cmd.refundRequestId, providerLeaseOwner: leaseOwner },
+        data: { providerLeaseOwner: null, providerLeaseExpiresAt: null },
+      });
+    } catch (error) {
+      releaseError = error;
+    }
+    if (paymentLeaseId) {
+      try {
+        await this.prisma.payment.updateMany({
+          where: { id: paymentLeaseId, refundProviderLeaseOwner: leaseOwner },
+          data: { refundProviderLeaseOwner: null, refundProviderLeaseExpiresAt: null },
+        });
+      } catch (error) {
+        releaseError = releaseError
+          ? new AggregateError([releaseError, error], 'Refund provider leases could not be released')
+          : error;
+      }
+    }
+    if (primaryError && releaseError) {
+      throw new AggregateError(
+        [primaryError, releaseError],
+        'Refund processing failed and its provider lease could not be released',
+      );
+    }
+    if (primaryError) throw primaryError;
+    if (releaseError) throw releaseError;
+  }
+
+  private async requireOwnedRefundUpdate(
+    refundRequestId: string,
+    leaseOwner: string,
+    data: Prisma.RefundRequestUpdateManyMutationInput,
+  ): Promise<void> {
+    const result = await this.prisma.refundRequest.updateMany({
+      where: {
+        id: refundRequestId,
+        status: RefundStatus.PROCESSING,
+        providerLeaseOwner: leaseOwner,
+      },
+      data,
     });
+    if (result.count !== 1) {
+      throw new ConflictException('Refund provider lease was lost');
+    }
+  }
 
+  private async markRefundManualReview(
+    refundRequestId: string,
+    leaseOwner: string,
+    observedCumulative: number | null,
+    reason: string,
+  ): Promise<void> {
+    await this.requireOwnedRefundUpdate(refundRequestId, leaseOwner, {
+      status: RefundStatus.MANUAL_REVIEW,
+      providerState: 'MANUAL_REVIEW',
+      ...(observedCumulative == null
+        ? {}
+        : { observedCumulativeRefundedAmount: observedCumulative }),
+      lastProviderError: reason,
+      providerLeaseOwner: null,
+      providerLeaseExpiresAt: null,
+    });
+  }
+
+  private async finalizeOwnedRefund(input: {
+    refundRequestId: string;
+    requestKey: string;
+    leaseOwner: string;
+    providerPaymentId: string;
+    refundReq: {
+      invoiceId: string;
+      paymentId: string;
+    };
+    refundAmount: number;
+  }): Promise<void> {
     await this.rlsTransaction.withTransaction(async (tx) => {
       const { count } = await tx.refundRequest.updateMany({
-        where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
-        data: { status: RefundStatus.COMPLETED, gatewayRef: moyasarRefund.id },
+        where: {
+          id: input.refundRequestId,
+          status: RefundStatus.PROCESSING,
+          providerState: 'CONFIRMED',
+          providerLeaseOwner: input.leaseOwner,
+        },
+        data: {
+          status: RefundStatus.COMPLETED,
+          gatewayRef: input.providerPaymentId,
+          providerState: 'CONFIRMED',
+          processedAt: new Date(),
+          lastProviderError: null,
+          providerLeaseOwner: null,
+          providerLeaseExpiresAt: null,
+        },
       });
-      if (count === 0) {
-        this.logger.warn({ refundRequestId: cmd.refundRequestId }, 'refund_already_finalized_concurrent_skip');
-        return;
+      if (count !== 1) {
+        throw new ConflictException('Refund accounting lease was lost');
       }
       const currentInvoice = await tx.invoice.findUniqueOrThrow({
-        where: { id: refundReq.invoiceId },
-        select: { total: true, vatAmt: true, refundedAmount: true },
+        where: { id: input.refundReq.invoiceId },
+        select: {
+          total: true,
+          vatAmt: true,
+          refundedAmount: true,
+          id: true,
+          bookingId: true,
+          currency: true,
+        },
       });
       const accounting = computeRefundAccounting({
         invoiceTotal: currentInvoice.total,
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
-        thisRefundAmount: refundAmount,
+        thisRefundAmount: input.refundAmount,
       });
-      const paymentStatus =
-        accounting.newInvoiceStatus === 'REFUNDED'
-          ? PaymentStatus.REFUNDED
-          : PaymentStatus.PARTIALLY_REFUNDED;
+      const paymentStatus = accounting.newInvoiceStatus === 'REFUNDED'
+        ? PaymentStatus.REFUNDED
+        : PaymentStatus.PARTIALLY_REFUNDED;
       await tx.payment.update({
-        where: { id: refundReq.paymentId },
+        where: { id: input.refundReq.paymentId },
         data: {
           status: paymentStatus,
-          failureReason: `Booking cancellation refund (${cmd.idempotencyKey})`,
-          refundedAmount: { increment: refundAmount },
+          failureReason: `Booking cancellation refund (${input.requestKey})`,
+          refundedAmount: { increment: input.refundAmount },
         },
       });
       await tx.invoice.update({
-        where: { id: refundReq.invoiceId },
+        where: { id: input.refundReq.invoiceId },
         data: {
           status: accounting.newInvoiceStatus,
           refundedAmount: accounting.newRefundedAmount,
           refundedVatAmt: accounting.newRefundedVatAmt,
         },
       });
-    });
 
-    const invoice = await this.prisma.invoice.findUnique({
-      where: { id: refundReq.invoiceId },
-      select: { id: true, bookingId: true, currency: true },
+      const event = new RefundCompletedEvent({
+        refundRequestId: input.refundRequestId,
+        organizationId: DEFAULT_ORG_ID,
+        invoiceId: input.refundReq.invoiceId,
+        paymentId: input.refundReq.paymentId,
+        bookingId: currentInvoice.bookingId,
+        amount: input.refundAmount,
+        currency: currentInvoice.currency,
+      }, input.refundRequestId);
+      await tx.outboxEvent.create({
+        data: {
+          id: event.eventId,
+          aggregateId: input.refundRequestId,
+          eventType: event.eventName,
+          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      });
     });
-
-    const event = new RefundCompletedEvent({
-      refundRequestId: cmd.refundRequestId,
-      organizationId: DEFAULT_ORG_ID,
-      invoiceId: refundReq.invoiceId,
-      paymentId: refundReq.paymentId,
-      bookingId: invoice?.bookingId ?? '',
-      amount: refundAmount,
-      currency: invoice?.currency ?? '',
-    });
-    await this.eventBus
-      .publish(event.eventName, event.toEnvelope())
-      .catch((err) => this.logger.error(`Failed to publish RefundCompletedEvent`, err));
   }
 
   async execute(cmd: RefundPaymentCommand) {
+    if (cmd.sourceEventId) {
+      const recovered = await this.prisma.refundRequest.findUnique({
+        where: { sourceEventId: cmd.sourceEventId },
+        select: {
+          id: true,
+          paymentId: true,
+          status: true,
+          idempotencyKey: true,
+        },
+      });
+      if (recovered) {
+        if (recovered.paymentId !== cmd.paymentId || !recovered.idempotencyKey) {
+          throw new ConflictException('Refund source event belongs to a different request');
+        }
+        if (recovered.status === RefundStatus.PROCESSING) {
+          await this.finalizeRefundFromCancellation({
+            refundRequestId: recovered.id,
+            idempotencyKey: recovered.idempotencyKey,
+            sourceEventId: cmd.sourceEventId,
+          });
+        }
+        // COMPLETED/FAILED are both durable terminal outcomes. Returning the
+        // current payment acknowledges a replay after the consumer job result
+        // was lost; it must not create another RefundRequest or provider call.
+        return this.prisma.payment.findUniqueOrThrow({ where: { id: cmd.paymentId } });
+      }
+    }
+
     // ── Locking transaction: read + validate + persist in-flight record ──
     // SELECT FOR UPDATE prevents two concurrent requests from both reading
     // Payment.status=COMPLETED and proceeding to issue a double-refund.
-    const { payment, refundAmount, refundRequestId, idempotencyKey } =
+    const { refundRequestId, idempotencyKey } =
       await this.rlsTransaction.withTransaction(async (tx) => {
         // Lock the payment row for the duration of this transaction.
         const rows = await tx.$queryRaw<
@@ -523,6 +943,9 @@ export class RefundPaymentHandler {
             status: RefundStatus.PROCESSING,
             processedAt: new Date(),
             processedBy: cmd.performedBy ?? 'system',
+            idempotencyKey: iKey,
+            sourceEventId: cmd.sourceEventId,
+            providerState: 'BEFORE_CALL',
           },
           select: { id: true },
         });
@@ -530,99 +953,13 @@ export class RefundPaymentHandler {
         return { payment: lockedPayment, refundAmount: refAmt, refundRequestId: reqId, idempotencyKey: iKey };
       });
 
-    // Step 2 — gateway round-trip OUTSIDE any DB transaction. Never hold a
-    // transaction across an external HTTP call.
-    let moyasarRefundId: string | undefined;
-    try {
-      const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
-        paymentId: payment.gatewayRef,
-        amount: Math.round(refundAmount), // already halalas
-        idempotencyKey,
-      });
-      moyasarRefundId = moyasarRefund.id;
-    } catch (error) {
-      // Moyasar refused the refund. No money moved. Safe to mark FAILED.
-      await this.prisma.refundRequest
-        .update({ where: { id: refundRequestId }, data: { status: RefundStatus.FAILED } })
-        .catch((persistErr) => {
-          this.logger.error(
-            `Refund ${refundRequestId}: failed to mark FAILED after Moyasar rejection`,
-            persistErr instanceof Error ? persistErr.stack : undefined,
-          );
-        });
-      throw error;
-    }
-
-    // Step 3 — atomic finalize. If this transaction fails, money has
-    // already moved at Moyasar; we persist gatewayRef separately and
-    // leave the row in PROCESSING for reconciliation.
-    let updatedPayment;
-    try {
-      updatedPayment = await this.rlsTransaction.withTransaction(async (tx) => {
-        await tx.refundRequest.update({
-          where: { id: refundRequestId },
-          data: { status: RefundStatus.COMPLETED, gatewayRef: moyasarRefundId },
-        });
-        const currentInvoice = await tx.invoice.findUniqueOrThrow({
-          where: { id: payment.invoice.id },
-          select: { total: true, vatAmt: true, refundedAmount: true },
-        });
-        const accounting = computeRefundAccounting({
-          invoiceTotal: currentInvoice.total,
-          invoiceVatAmt: currentInvoice.vatAmt,
-          alreadyRefundedAmount: currentInvoice.refundedAmount,
-          thisRefundAmount: refundAmount,
-        });
-        const updated = await tx.payment.update({
-          where: { id: cmd.paymentId },
-          data: {
-            status:
-              accounting.newInvoiceStatus === 'REFUNDED'
-                ? PaymentStatus.REFUNDED
-                : PaymentStatus.PARTIALLY_REFUNDED,
-            failureReason: cmd.reason,
-            refundedAmount: { increment: refundAmount },
-          },
-        });
-        await tx.invoice.update({
-          where: { id: payment.invoice.id },
-          data: {
-            status: accounting.newInvoiceStatus,
-            refundedAmount: accounting.newRefundedAmount,
-            refundedVatAmt: accounting.newRefundedVatAmt,
-          },
-        });
-        return updated;
-      });
-    } catch (error) {
-      this.logger.error(
-        `Refund ${refundRequestId}: Moyasar succeeded (gatewayRef=${moyasarRefundId}) but DB finalize failed — left in PROCESSING for reconciliation`,
-        error instanceof Error ? error.stack : undefined,
-      );
-      await this.prisma.refundRequest
-        .update({ where: { id: refundRequestId }, data: { gatewayRef: moyasarRefundId } })
-        .catch((persistErr) => {
-          this.logger.error(
-            `Refund ${refundRequestId}: failed to persist gatewayRef after partial-success — manual intervention required`,
-            persistErr instanceof Error ? persistErr.stack : undefined,
-          );
-        });
-      throw error;
-    }
-
-    const event = new RefundCompletedEvent({
+    // Every gateway path, including dashboard-triggered refunds, uses the same
+    // exclusive lease and cumulative-refund reconciliation state machine.
+    await this.finalizeRefundFromCancellation({
       refundRequestId,
-      organizationId: DEFAULT_ORG_ID,
-      invoiceId: payment.invoice.id,
-      paymentId: payment.id,
-      bookingId: payment.invoice.bookingId,
-      amount: refundAmount,
-      currency: payment.invoice.currency,
+      idempotencyKey,
+      ...(cmd.sourceEventId ? { sourceEventId: cmd.sourceEventId } : {}),
     });
-    await this.eventBus
-      .publish(event.eventName, event.toEnvelope())
-      .catch((err) => this.logger.error(`Failed to publish RefundCompletedEvent`, err));
-
-    return updatedPayment;
+    return this.prisma.payment.findUniqueOrThrow({ where: { id: cmd.paymentId } });
   }
 }

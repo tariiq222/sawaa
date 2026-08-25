@@ -75,6 +75,9 @@ RUN ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/x64/') \
 # Leaving them empty will fail the build — no silent localhost fallback in production.
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_DEFAULT_ORG_ID
+# This is compiled into the public browser bundle. Keep the default closed so
+# an omitted deployment build arg cannot expose the web-chat launcher.
+ARG NEXT_PUBLIC_WEB_CHAT_ENABLED=false
 
 # Fail fast if required public args are missing
 RUN if [ -z "$NEXT_PUBLIC_API_URL" ]; then \
@@ -84,6 +87,7 @@ RUN if [ -z "$NEXT_PUBLIC_API_URL" ]; then \
 
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_DEFAULT_ORG_ID=$NEXT_PUBLIC_DEFAULT_ORG_ID
+ENV NEXT_PUBLIC_WEB_CHAT_ENABLED=$NEXT_PUBLIC_WEB_CHAT_ENABLED
 
 RUN pnpm --filter=website run build
 

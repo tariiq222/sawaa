@@ -21,6 +21,7 @@ export const PERMISSION_SUBJECTS = [
   'Branch',
   'Category',
   'Client',
+  'Conversation',
   'Coupon',
   'Department',
   'Employee',
@@ -32,7 +33,6 @@ export const PERMISSION_SUBJECTS = [
   'Service',
   'Setting',
   'User',
-  'WhatsappConversation',
 ] as const;
 
 export type PermissionSubject = (typeof PERMISSION_SUBJECTS)[number];

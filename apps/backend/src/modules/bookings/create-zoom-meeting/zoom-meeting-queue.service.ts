@@ -25,6 +25,8 @@ export class ZoomMeetingQueueService {
       'create-zoom-meeting',
       { bookingId } satisfies ZoomMeetingJobData,
       {
+        // BullMQ reserves ':' in custom job IDs.
+        jobId: `booking-${bookingId}-zoom-create`,
         attempts: 3,
         backoff: {
           type: 'exponential',

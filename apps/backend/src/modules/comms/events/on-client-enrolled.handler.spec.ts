@@ -26,7 +26,9 @@ describe('OnClientEnrolledHandler', () => {
 
   it('should subscribe on register', () => {
     handler.register(eventBus as any);
-    expect(eventBus.subscribe).toHaveBeenCalledWith('people.client.enrolled', expect.any(Function));
+    expect(eventBus.subscribe).toHaveBeenCalledWith(
+      'people.client.enrolled', 'comms.client-enrolled-notify.v1', expect.any(Function),
+    );
   });
 
   it('should send welcome notification on handle', async () => {

@@ -42,6 +42,7 @@ export class DepositPaidEventHandler {
   register(): void {
     this.eventBus.subscribe<DepositPaidPayload>(
       'finance.payment.deposit_paid',
+      'bookings.deposit-paid.v1',
       async (envelope) => {
         const { bookingId, paymentId } = envelope.payload;
         // Package-purchase invoices carry no bookingId — deposits never apply.

@@ -27,6 +27,12 @@ describe('ZoomMeetingService', () => {
             getAccessToken: jest.fn().mockResolvedValue('token-123'),
             deleteMeeting: jest.fn().mockResolvedValue(undefined),
             updateMeeting: jest.fn().mockResolvedValue(undefined),
+            getMeeting: jest.fn().mockResolvedValue({
+              id: 123,
+              topic: 'Booking book-1',
+              startTime: '2026-08-20T10:00:00Z',
+              durationMins: 60,
+            }),
           },
         },
         {
@@ -98,5 +104,23 @@ describe('ZoomMeetingService', () => {
     (prisma.organizationSettings.findFirst as jest.Mock).mockResolvedValue(null);
     await service.updateMeeting('org-1', '123', { topic: 'Test', startTime: '2024-01-01T10:00:00Z', durationMins: 30 });
     expect(zoomApi.updateMeeting).toHaveBeenCalledWith('token-123', '123', expect.anything(), 'Asia/Riyadh');
+  });
+
+  it('reads current meeting state for desired-state reconciliation', async () => {
+    (prisma.integration.findFirst as jest.Mock).mockResolvedValue({
+      provider: 'zoom', isActive: true, config: { ciphertext: 'enc' },
+    });
+
+    const meeting = await service.getMeeting('org-1', '123');
+
+    expect(meeting).toMatchObject({ id: 123, durationMins: 60 });
+    expect(zoomApi.getMeeting).toHaveBeenCalledWith('token-123', '123');
+  });
+
+  it('throws when Zoom is unavailable so a durable sync is not acknowledged', async () => {
+    (prisma.integration.findFirst as jest.Mock).mockResolvedValue(null);
+
+    await expect(service.getMeeting('org-1', '123')).rejects.toThrow('Zoom integration is unavailable');
+    expect(zoomApi.getMeeting).not.toHaveBeenCalled();
   });
 });

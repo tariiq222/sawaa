@@ -237,6 +237,16 @@ export const queryKeys = {
     list: (filters?: object) => ["contact-messages", "list", filters] as const,
   },
 
+  /* ─── Reception conversations ─── */
+  conversations: {
+    all: ["conversations"] as const,
+    list: (filters?: object) => ["conversations", "list", filters ?? {}] as const,
+    detail: (id: string) => ["conversations", "detail", id] as const,
+    messages: (id: string, filters?: object) =>
+      ["conversations", "messages", id, filters ?? {}] as const,
+    staff: () => ["conversations", "assignable-staff"] as const,
+  },
+
   /* ─── Dashboard ─── */
   dashboard: {
     all: ["dashboard"] as const,

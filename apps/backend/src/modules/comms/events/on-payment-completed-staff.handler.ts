@@ -24,7 +24,11 @@ export class OnPaymentCompletedStaffHandler {
   ) {}
 
   register(eventBus: EventBusService): void {
-    eventBus.subscribe<PaymentCompletedPayload>('finance.payment.completed', (e) => this.handle(e));
+    eventBus.subscribe<PaymentCompletedPayload>(
+      'finance.payment.completed',
+      'comms.payment-completed-staff.v1',
+      (e) => this.handle(e),
+    );
   }
 
   async handle(envelope: DomainEventEnvelope<PaymentCompletedPayload>): Promise<void> {

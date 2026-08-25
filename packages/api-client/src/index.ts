@@ -27,3 +27,24 @@ export * as employeesApi from './modules/employees'
 export * as paymentsApi from './modules/payments'
 export { requestRefund } from './modules/payments'
 export * as sessionPackagesApi from './modules/session-packages'
+export * as chatApi from './modules/chat'
+export {
+  setChatBaseUrl,
+  createGuestChatConversation,
+  getCurrentGuestChatConversation,
+  getCurrentClientChatConversation,
+  getClientChatConversation,
+  listClientChatConversations,
+  claimGuestChatConversation,
+  sendGuestChatMessage,
+  sendClientChatMessage,
+  retryGuestChatMessage,
+  retryClientChatMessage,
+  listGuestChatMessages,
+  listClientChatMessages,
+  requestGuestChatHandoff,
+  requestClientChatHandoff,
+  acknowledgeChatOperation,
+  confirmChatOperation,
+  declineChatOperation,
+} from './modules/chat'

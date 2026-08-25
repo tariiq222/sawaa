@@ -98,11 +98,12 @@ jobs:
           JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
           JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
           JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
-          MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
+         MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+         AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
           ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
           EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
-          WHATSAPP_PROVIDER_ENCRYPTION_KEY: 3Yr1vT8pK9hZQm4nFvGcW2xL7bS5uA6dE0jR1kP3oN8I= # gitleaks:allow -- deterministic CI fixture
           AUTHENTICA_API_KEY: ci-authentica-key
           MINIO_ENDPOINT: localhost
           MINIO_PORT: 9000
@@ -121,11 +122,12 @@ jobs:
           JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
           JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
           JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
           MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
           ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
           EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
-          WHATSAPP_PROVIDER_ENCRYPTION_KEY: 3Yr1vT8pK9hZQm4nFvGcW2xL7bS5uA6dE0jR1kP3oN8I= # gitleaks:allow -- deterministic CI fixture
           AUTHENTICA_API_KEY: ci-authentica-key
           MINIO_ENDPOINT: localhost
           MINIO_PORT: 9000
@@ -156,11 +158,12 @@ jobs:
           JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
           JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
           JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
           MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
           ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
           EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
-          WHATSAPP_PROVIDER_ENCRYPTION_KEY: 3Yr1vT8pK9hZQm4nFvGcW2xL7bS5uA6dE0jR1kP3oN8I= # gitleaks:allow -- deterministic CI fixture
           AUTHENTICA_API_KEY: ci-authentica-key
           MINIO_ENDPOINT: localhost
           MINIO_PORT: 9000
@@ -305,6 +308,7 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
           MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
           SUPER_ADMIN_PASSWORD: SuperAdmin@123456
 
@@ -335,11 +339,12 @@ jobs:
           JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
           JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
           JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
           MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
           ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
           EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
-          WHATSAPP_PROVIDER_ENCRYPTION_KEY: 3Yr1vT8pK9hZQm4nFvGcW2xL7bS5uA6dE0jR1kP3oN8I= # gitleaks:allow -- deterministic CI fixture
           AUTHENTICA_API_KEY: ci-authentica-key
           MINIO_ENDPOINT: localhost
           MINIO_PORT: 9000
@@ -443,7 +448,7 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-format: 'table'
+          format: 'table'
           exit-code: '0'
           ignore-unfixed: true
           skip-dirs: 'coverage,dist,node_modules,.next'

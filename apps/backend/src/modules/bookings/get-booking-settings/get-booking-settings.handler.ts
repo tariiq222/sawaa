@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { BookingSettings } from '@prisma/client';
+import type { BookingSettings, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 
@@ -7,6 +7,7 @@ export const BOOKING_SETTINGS_CACHE_KEY = 'ref:booking-settings';
 
 export interface GetBookingSettingsQuery {
   branchId: string | null;
+  transaction?: Prisma.TransactionClient;
 }
 
 /** Hardcoded fallback used when no DB row exists at all. */
@@ -36,21 +37,27 @@ export class GetBookingSettingsHandler {
   ) {}
 
   async execute(query: GetBookingSettingsQuery): Promise<BookingSettings | ResolvedBookingSettings> {
+    if (query.transaction) {
+      return this.readSettings(query.branchId, query.transaction);
+    }
     const cacheKey = `${BOOKING_SETTINGS_CACHE_KEY}:${query.branchId ?? 'global'}`;
-    return this.cache.getOrSet(cacheKey, async () => {
-      if (query.branchId) {
-        const branchRow = await this.prisma.bookingSettings.findFirst({
-          where: { branchId: query.branchId },
-        });
-        if (branchRow) return branchRow;
-      }
+    return this.cache.getOrSet(
+      cacheKey,
+      () => this.readSettings(query.branchId, this.prisma),
+      300,
+    );
+  }
 
-      const globalRow = await this.prisma.bookingSettings.findFirst({
-        where: { branchId: null },
-      });
-      if (globalRow) return globalRow;
+  private async readSettings(
+    branchId: string | null,
+    db: Prisma.TransactionClient | PrismaService,
+  ): Promise<BookingSettings | ResolvedBookingSettings> {
+    if (branchId) {
+      const branchRow = await db.bookingSettings.findFirst({ where: { branchId } });
+      if (branchRow) return branchRow;
+    }
 
-      return DEFAULT_BOOKING_SETTINGS;
-    }, 300);
+    const globalRow = await db.bookingSettings.findFirst({ where: { branchId: null } });
+    return globalRow ?? DEFAULT_BOOKING_SETTINGS;
   }
 }

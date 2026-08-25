@@ -66,7 +66,7 @@ export const managementNav: NavItem[] = [
 export const communicationNav: NavItem[] = [
   { titleKey: "nav.notifications", href: "/notifications", icon: Notification03Icon, permission: "booking:read" },
   { titleKey: "nav.contactMessages", href: "/contact-messages", icon: InboxIcon, permission: "setting:read" },
-  { titleKey: "nav.whatsapp", href: "/whatsapp", icon: AiChat02Icon, permission: "whatsappconversation:read" },
+  { titleKey: "nav.conversations", href: "/conversations", icon: AiChat02Icon, permission: "conversation:read" },
 ]
 
 export const systemNav: NavItem[] = [

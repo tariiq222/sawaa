@@ -33,23 +33,11 @@ describe('ClientRescheduleBookingDto', () => {
     expect(errors.some((e) => e.property === 'newScheduledAt')).toBe(true);
   });
 
-  it('accepts newDurationMins at the lower bound (15)', async () => {
-    const errors = await validateDto({ ...valid, newDurationMins: 15 });
+  it('does not expose newDurationMins and strips a forged value under the API whitelist', async () => {
+    const dto = plainToInstance(ClientRescheduleBookingDto, { ...valid, newDurationMins: 90 });
+    const errors = await validate(dto, { whitelist: true });
+
     expect(errors).toHaveLength(0);
-  });
-
-  it('rejects newDurationMins = 14 (Min(15))', async () => {
-    const errors = await validateDto({ ...valid, newDurationMins: 14 });
-    expect(errors.some((e) => e.property === 'newDurationMins')).toBe(true);
-  });
-
-  it('rejects newDurationMins = 0', async () => {
-    const errors = await validateDto({ ...valid, newDurationMins: 0 });
-    expect(errors.some((e) => e.property === 'newDurationMins')).toBe(true);
-  });
-
-  it('rejects a non-integer newDurationMins', async () => {
-    const errors = await validateDto({ ...valid, newDurationMins: 30.5 });
-    expect(errors.some((e) => e.property === 'newDurationMins')).toBe(true);
+    expect(dto).not.toHaveProperty('newDurationMins');
   });
 });

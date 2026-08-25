@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BookingStatus, DeliveryType } from '@prisma/client';
+import { BookingStatus, DeliveryType, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
+import { BookingZoomCreateRequestedEvent } from '../events/booking-zoom-create-requested.event';
 import { ZoomMeetingQueueService } from '../create-zoom-meeting/zoom-meeting-queue.service';
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface ConfirmBookingCommand {
   bookingId: string;
@@ -26,6 +28,9 @@ export class ConfirmBookingHandler {
   async execute(cmd: ConfirmBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING], 'confirmed');
     const nextStatus = assertTransition(booking.status, 'CONFIRM');
+    const zoomEvent = booking.deliveryType === DeliveryType.ONLINE
+      ? new BookingZoomCreateRequestedEvent({ organizationId: DEFAULT_ORG_ID, bookingId: booking.id })
+      : null;
 
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       updateBookingAtomically(tx, {
@@ -42,6 +47,16 @@ export class ConfirmBookingHandler {
           changedBy: cmd.changedBy,
         },
       }),
+      ...(zoomEvent ? [tx.outboxEvent.create({
+        data: {
+          id: zoomEvent.eventId,
+          aggregateId: booking.id,
+          eventType: zoomEvent.eventName,
+          status: 'PENDING_V2',
+          deliveryLane: 'PENDING_V2',
+          payload: zoomEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      })] : []),
     ]));
 
     const event = new BookingConfirmedEvent({
@@ -63,9 +78,9 @@ export class ConfirmBookingHandler {
 
     if (booking.deliveryType === DeliveryType.ONLINE) {
       try {
-        // Meeting creation runs in ZoomMeetingWorker (BullMQ) so the confirm
-        // request never waits on Zoom latency. The worker persists the same
-        // CREATED/FAILED states the old inline call did, with retries.
+        // The transactional outbox above is the durability boundary. This
+        // enqueue is only a low-latency wake-up; stable leases make duplicate
+        // deliveries safe and an enqueue failure cannot lose the work.
         await this.zoomMeetingQueue.enqueue(cmd.bookingId);
       } catch (err) {
         // Never fail the confirm because of queue infrastructure; the meeting

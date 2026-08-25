@@ -258,25 +258,19 @@ describe('PublicMeController (e2e)', () => {
         bookingId: '00000000-0000-4000-a000-000000000001',
         clientId: 'client-1',
         newScheduledAt: '2026-12-31T10:00:00Z',
-        newDurationMins: undefined,
       });
     });
 
-    it('returns 200 on reschedule with duration', async () => {
+    it('rejects a forged duration because client reschedule preserves the existing duration', async () => {
       mockReschedule.execute.mockResolvedValue({ id: 'b-1', status: 'RESCHEDULED' });
 
       await request(app.getHttpServer())
         .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/reschedule')
         .set('Authorization', 'Bearer fake-jwt')
         .send({ newScheduledAt: '2026-12-31T10:00:00Z', newDurationMins: 30 })
-        .expect(200);
+        .expect(400);
 
-      expect(mockReschedule.execute).toHaveBeenCalledWith({
-        bookingId: '00000000-0000-4000-a000-000000000001',
-        clientId: 'client-1',
-        newScheduledAt: '2026-12-31T10:00:00Z',
-        newDurationMins: 30,
-      });
+      expect(mockReschedule.execute).not.toHaveBeenCalled();
     });
 
     it('returns 400 for missing newScheduledAt', async () => {
@@ -287,7 +281,7 @@ describe('PublicMeController (e2e)', () => {
         .expect(400);
     });
 
-    it('returns 400 for invalid newDurationMins', async () => {
+    it('returns 400 for any newDurationMins field', async () => {
       return request(app.getHttpServer())
         .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/reschedule')
         .set('Authorization', 'Bearer fake-jwt')

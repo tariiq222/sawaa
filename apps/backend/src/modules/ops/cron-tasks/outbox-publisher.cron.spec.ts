@@ -1,4 +1,5 @@
 import { OutboxPublisherCron } from './outbox-publisher.cron';
+import { NoEventConsumersRegisteredError } from '../../../infrastructure/events/event-bus.service';
 
 /** Mock AppMetricsService: labels() returns a fresh recorder per label set. */
 function createMetricsMock() {
@@ -44,6 +45,42 @@ describe('OutboxPublisherCron', () => {
       where: { id: { in: ['evt-1', 'evt-2'] } },
       data: { status: 'PUBLISHED', publishedAt: expect.any(Date), lockedUntil: null },
     });
+  });
+
+  it('owns the PENDING_V2 transition lane that a 1ebce257 PENDING-only publisher cannot see', async () => {
+    const row = { id: 'evt-v2', eventType: 'bookings.zoom.create_requested', attemptCount: 0, payload: { eventId: 'e-v2' } };
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValueOnce([{ acquired: true }]).mockResolvedValueOnce([row]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      outboxEvent: { updateMany: jest.fn().mockResolvedValue({ count: 1 }), update: jest.fn() },
+    };
+    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
+    const cron = new OutboxPublisherCron(prisma as never, eventBus as never, createMetricsMock() as never);
+    await cron.execute();
+    // The former pod's predicate was exactly status = PENDING, so this event
+    // cannot enter its legacy ACK-on-unknown worker before this publisher adds
+    // the current consumer-specific job.
+    const oldPublisherSelects = (status: string) => status === 'PENDING';
+    expect(oldPublisherSelects('PENDING_V2')).toBe(false);
+    expect(eventBus.publish).toHaveBeenCalledWith(row.eventType, row.payload);
+  });
+
+  it('keeps a failed PENDING_V2 event in its old-publisher-safe lane for retry', async () => {
+    const row = { id: 'evt-v2-retry', eventType: 'bookings.zoom.create_requested', attemptCount: 0, payload: { eventId: 'e-v2' } };
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValueOnce([{ acquired: true }]).mockResolvedValueOnce([row]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      outboxEvent: { updateMany: jest.fn(), update: jest.fn().mockResolvedValue({}) },
+    };
+    const cron = new OutboxPublisherCron(
+      prisma as never,
+      { publish: jest.fn().mockRejectedValue(new Error('queue unavailable')) } as never,
+      createMetricsMock() as never,
+    );
+    await cron.execute();
+    const update = (prisma.outboxEvent.update as jest.Mock).mock.calls[0][0];
+    expect(update.data).toEqual(expect.objectContaining({ attemptCount: 1 }));
+    expect(update.data.status).toBeUndefined();
   });
 
   it('is a no-op when no pending events exist', async () => {
@@ -199,6 +236,40 @@ describe('OutboxPublisherCron', () => {
     expect(updateCall.data.failedAt).toBeUndefined();
     expect(updateCall.data.status).toBeUndefined();
     // Still below MAX_ATTEMPTS — no terminal transition, no counter increment.
+    expect(metrics.outboxTerminalFailures.labels).not.toHaveBeenCalled();
+  });
+
+  it('leaves a rolling-version unknown event pending without consuming an attempt', async () => {
+    const rows = [{
+      id: 'evt-new-version', eventType: 'comms.chat.operations.resume_requested',
+      attemptCount: 4, payload: { eventId: 'new-event' },
+    }];
+    const prisma = {
+      $queryRaw: jest.fn()
+        .mockResolvedValueOnce([{ acquired: true }])
+        .mockResolvedValueOnce(rows),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      outboxEvent: {
+        updateMany: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const eventBus = {
+      publish: jest.fn().mockRejectedValue(
+        new NoEventConsumersRegisteredError('comms.chat.operations.resume_requested'),
+      ),
+    };
+    const metrics = createMetricsMock();
+
+    await new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never).execute();
+
+    expect(prisma.outboxEvent.update).toHaveBeenCalledWith({
+      where: { id: 'evt-new-version' },
+      data: { lockedUntil: null },
+    });
+    expect(prisma.outboxEvent.update).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ attemptCount: expect.any(Number) }),
+    }));
     expect(metrics.outboxTerminalFailures.labels).not.toHaveBeenCalled();
   });
 

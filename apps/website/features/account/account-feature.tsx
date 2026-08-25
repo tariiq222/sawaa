@@ -9,15 +9,16 @@ import { ClientBookingsList } from '@/features/auth/client-bookings-list';
 import { OverviewTab } from './overview-tab';
 import { InvoicesTab } from './invoices-tab';
 import { ProfileTab } from './profile-tab';
+import { AccountConversationsTab } from '@/features/chat/account-conversations-tab';
 import { Mail, Phone, BadgeCheck, LogOut, User, ArrowRight, X } from 'lucide-react';
 
 interface AccountFeatureProps {
   locale: Locale;
 }
 
-type AccountTab = 'overview' | 'bookings' | 'invoices' | 'profile';
+type AccountTab = 'overview' | 'bookings' | 'invoices' | 'conversations' | 'profile';
 
-const TABS: AccountTab[] = ['overview', 'bookings', 'invoices', 'profile'];
+const TABS: AccountTab[] = ['overview', 'bookings', 'invoices', 'conversations', 'profile'];
 
 const emptySubscribe = () => () => {};
 
@@ -151,6 +152,7 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
         )}
         {activeTab === 'bookings' && <ClientBookingsList locale={locale} />}
         {activeTab === 'invoices' && <InvoicesTab locale={locale} />}
+        {activeTab === 'conversations' && <AccountConversationsTab />}
         {activeTab === 'profile' && <ProfileTab />}
       </div>
     </div>

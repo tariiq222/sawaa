@@ -167,6 +167,10 @@ process.env.JWT_CLIENT_ACCESS_SECRET ??=
   "test-client-jwt-secret-key-for-e2e-only";
 process.env.JWT_CLIENT_ACCESS_TTL ??= "15m";
 process.env.JWT_CLIENT_REFRESH_TTL ??= "7d";
+// Non-production fixture required by Joi before any AppModule-backed e2e/smoke
+// helper imports the backend. This is intentionally not a deployable secret.
+process.env.CHAT_GUEST_TOKEN_SECRET ??=
+  "test-chat-guest-token-secret-for-e2e-only";
 process.env.PLATFORM_SETTINGS_KEY ??=
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 process.env.MINIO_ENDPOINT ??= "localhost";
@@ -186,6 +190,8 @@ process.env.MOYASAR_SECRET_KEY ??=
 process.env.MOYASAR_PUBLISHABLE_KEY ??=
   "pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv";
 process.env.MOYASAR_ENCRYPTION_KEY ??=
+  "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+process.env.AI_PROVIDER_ENCRYPTION_KEY ??=
   "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
 process.env.SMS_PROVIDER_ENCRYPTION_KEY ??=
   "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";

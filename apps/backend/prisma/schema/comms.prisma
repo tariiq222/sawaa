@@ -20,14 +20,45 @@ enum RecipientType {
 }
 
 enum ConversationStatus {
-  OPEN
+  OPEN // legacy only
+  AI_ACTIVE
+  WAITING_FOR_STAFF
+  STAFF_ACTIVE
   CLOSED
 }
 
 enum MessageSenderType {
   CLIENT
-  EMPLOYEE
+  EMPLOYEE // legacy only
+  VISITOR
   AI
+  STAFF
+  SYSTEM
+}
+
+enum ChatMessageKind {
+  TEXT
+  ACTION_CARD
+  OPERATION_RESULT
+  SYSTEM_EVENT
+}
+
+enum ChatOperationType {
+  LIST_OWN_APPOINTMENTS
+  CREATE_BOOKING
+  RESCHEDULE_BOOKING
+  CANCEL_BOOKING
+}
+
+enum ChatOperationStatus {
+  AWAITING_AUTH
+  AWAITING_EXISTING_BOOKING_ACK
+  AWAITING_CONFIRMATION
+  EXECUTING
+  SUCCEEDED
+  FAILED
+  DECLINED
+  EXPIRED
 }
 
 model Notification {
@@ -48,33 +79,96 @@ model Notification {
 }
 
 model ChatConversation {
-  id            String             @id @default(uuid())
-  clientId      String
-  employeeId    String?
-  isAiChat      Boolean            @default(false)
-  status        ConversationStatus @default(OPEN)
-  lastMessageAt DateTime?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id                      String             @id @default(uuid())
+  clientId                String?
+  employeeId              String?
+  isAiChat                Boolean            @default(false)
+  status                  ConversationStatus @default(AI_ACTIVE)
+  stateVersion            Int                @default(0)
+  guestTokenHash          String?            @unique
+  guestName               String?
+  guestPhone              String?
+  language                String             @default("ar")
+  assignedStaffUserId     String?
+  handoffRequestedAt      DateTime?
+  staffClaimedAt          DateTime?
+  closedAt                DateTime?
+  staffUnreadCount        Int                @default(0)
+  clientUnreadCount       Int                @default(0)
+  customerContext         Json?
+  customerContextVersion  Int                @default(0)
+  assistantLeaseOwner     String?
+  assistantLeaseExpiresAt DateTime?
+  lastMessageAt           DateTime?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 
-  messages CommsChatMessage[]
+  messages   CommsChatMessage[]
+  operations ChatOperation[]
 
   @@index([clientId])
   @@index([employeeId])
   @@index([status, lastMessageAt])
+  @@index([assignedStaffUserId, status, lastMessageAt])
+  @@index([assistantLeaseExpiresAt])
 }
 
 model CommsChatMessage {
-  id             String            @id @default(uuid())
-  conversationId String
-  conversation   ChatConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderType     MessageSenderType
-  senderId       String?
-  body           String
-  isRead         Boolean           @default(false)
-  createdAt      DateTime          @default(now())
+  id                   String            @id @default(uuid())
+  conversationId       String
+  conversation         ChatConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType           MessageSenderType
+  senderId             String?
+  body                 String
+  kind                 ChatMessageKind   @default(TEXT)
+  metadata             Json?
+  clientMessageId      String?
+  responseForMessageId String?           @unique
+  sequence             BigInt            @unique @default(autoincrement())
+  model                String?
+  tokensUsed           Int               @default(0)
+  latencyMs            Int?
+  isRead               Boolean           @default(false)
+  readAt               DateTime?
+  createdAt            DateTime          @default(now())
 
+  @@unique([conversationId, clientMessageId])
   @@index([conversationId, createdAt])
+  @@index([conversationId, sequence])
+}
+
+model ChatOperation {
+  id                     String              @id @default(uuid())
+  conversationId         String
+  conversation           ChatConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  clientId               String?
+  type                   ChatOperationType
+  status                 ChatOperationStatus
+  payload                Json
+  summary                Json
+  idempotencyKey         String              @unique
+  requiredConfirmations  Int
+  confirmationCount      Int                 @default(0)
+  version                Int                 @default(0)
+  expiresAt              DateTime
+  confirmedAt            DateTime?
+  executedAt             DateTime?
+  bookingId              String?
+  resultMessageId        String?             @unique
+  errorCode              String?
+  // Set once a guest intent has been revalidated after conversation claim.
+  // The result-message key prevents double-claim/resume from creating cards.
+  authResumedAt          DateTime?
+  authResumeMessageId    String?             @unique
+  resumedFromOperationId String?             @unique
+  resumedOperationId     String?             @unique
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([conversationId, status, createdAt])
+  @@index([clientId, status, createdAt])
+  @@index([expiresAt])
+  @@index([bookingId])
 }
 
 enum ContactMessageStatus {
@@ -221,26 +315,26 @@ enum NotificationSenderActor {
 }
 
 model NotificationDeliveryLog {
-    id            String                  @id @default(uuid())
-    recipientId   String
-    type          NotificationType
-    priority      NotificationPriority    @default(STANDARD)
-    channel       DeliveryChannel
-    status        DeliveryStatus          @default(PENDING)
-    toAddress     String?
-    providerName  String?
-    senderActor   NotificationSenderActor @default(TENANT)
-    attempts      Int                     @default(0)
-    lastAttemptAt DateTime?
-    sentAt        DateTime?
-    errorMessage  String?
-    jobId         String?
-    createdAt     DateTime                @default(now())
-    updatedAt     DateTime                @updatedAt
+  id            String                  @id @default(uuid())
+  recipientId   String
+  type          NotificationType
+  priority      NotificationPriority    @default(STANDARD)
+  channel       DeliveryChannel
+  status        DeliveryStatus          @default(PENDING)
+  toAddress     String?
+  providerName  String?
+  senderActor   NotificationSenderActor @default(TENANT)
+  attempts      Int                     @default(0)
+  lastAttemptAt DateTime?
+  sentAt        DateTime?
+  errorMessage  String?
+  jobId         String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
 
-    @@index([status])
-    @@index([type])
-    @@index([status, createdAt]) // DB-06: composite for retry sweep — replaces standalone (createdAt)
+  @@index([status])
+  @@index([type])
+  @@index([status, createdAt]) // DB-06: composite for retry sweep — replaces standalone (createdAt)
 }
 
 // ─── WhatsApp Agent ───────────────────────────────────────────────────────────
@@ -249,126 +343,126 @@ model NotificationDeliveryLog {
 // See migration 20260730000000_whatsapp_agent_config.
 
 enum WhatsappProvider {
-    META_CLOUD
-    EVOLUTION_API
+  META_CLOUD
+  EVOLUTION_API
 }
 
 enum WhatsappConversationStatus {
-    ACTIVE
-    COMPLETED
-    ABANDONED
-    TAKEOVER
-    BLOCKED
+  ACTIVE
+  COMPLETED
+  ABANDONED
+  TAKEOVER
+  BLOCKED
 }
 
 enum WhatsappMessageRole {
-    USER
-    ASSISTANT
-    STAFF
-    TOOL
-    SYSTEM
+  USER
+  ASSISTANT
+  STAFF
+  TOOL
+  SYSTEM
 }
 
 enum WhatsappDeliveryStatus {
-    PENDING
-    SENT
-    FAILED
+  PENDING
+  SENT
+  FAILED
 }
 
 model WhatsappAgentConfig {
-    id                    String          @id @default(uuid())
-    provider              WhatsappProvider @default(EVOLUTION_API)
-    // Evolution API: base URL + API key (encrypted) + instance name
-    evolutionBaseUrl      String?
-    evolutionInstanceName String?
-    // Encrypted blob (AES-256-GCM) — base64(iv||tag||ciphertext)
-    // Holds: { evolutionApiKey, phoneNumberId?, businessAccountId?, accessToken?, webhookSecret? }
-    credentialsCiphertext String?
-    // Webhook verify secret (encrypted separately for independent rotation)
-    webhookSecretEnc      String?
-    isActive              Boolean         @default(true)
-    // AI / LLM settings (plain — not secrets)
-    aiModel               String          @default("qwen/qwen3.5-plus-02-15")
-    aiTemperature         Float           @default(0.4)
-    aiMaxTokens           Int             @default(800)
-    // OpenRouter / OpenAI compatible API key — encrypted at rest (write-only).
-    // When present, overrides the OPENROUTER_API_KEY env var at runtime.
-    aiApiKeyEncrypted     String?
-    systemPromptAr        String          @default("")
-    systemPromptEn        String          @default("")
-    greetingAr            String?
-    greetingEn            String?
-    defaultLanguage       String          @default("ar")
-    businessHoursOnly     Boolean         @default(false)
-    activeDays            Int[]           @default([0, 1, 2, 3, 4])
-    // Runtime state (mirrored from Evolution API on each poll)
-    isConnected           Boolean         @default(false)
-    connectedPhone        String?
-    connectedAt           DateTime?
-    disconnectedAt        DateTime?
-    messagesCount         Int             @default(0)
-    activeChatCount       Int             @default(0)
-    lastTestAt            DateTime?
-    lastTestOk            Boolean?
-    lastTestError         String?
-    lastErrorAt           DateTime?
-    lastErrorMessage      String?
-    createdAt             DateTime        @default(now())
-    updatedAt             DateTime        @updatedAt
+  id                    String           @id @default(uuid())
+  provider              WhatsappProvider @default(EVOLUTION_API)
+  // Evolution API: base URL + API key (encrypted) + instance name
+  evolutionBaseUrl      String?
+  evolutionInstanceName String?
+  // Encrypted blob (AES-256-GCM) — base64(iv||tag||ciphertext)
+  // Holds: { evolutionApiKey, phoneNumberId?, businessAccountId?, accessToken?, webhookSecret? }
+  credentialsCiphertext String?
+  // Webhook verify secret (encrypted separately for independent rotation)
+  webhookSecretEnc      String?
+  isActive              Boolean          @default(true)
+  // AI / LLM settings (plain — not secrets)
+  aiModel               String           @default("qwen/qwen3.5-plus-02-15")
+  aiTemperature         Float            @default(0.4)
+  aiMaxTokens           Int              @default(800)
+  // OpenRouter / OpenAI compatible API key — encrypted at rest (write-only).
+  // When present, overrides the OPENROUTER_API_KEY env var at runtime.
+  aiApiKeyEncrypted     String?
+  systemPromptAr        String           @default("")
+  systemPromptEn        String           @default("")
+  greetingAr            String?
+  greetingEn            String?
+  defaultLanguage       String           @default("ar")
+  businessHoursOnly     Boolean          @default(false)
+  activeDays            Int[]            @default([0, 1, 2, 3, 4])
+  // Runtime state (mirrored from Evolution API on each poll)
+  isConnected           Boolean          @default(false)
+  connectedPhone        String?
+  connectedAt           DateTime?
+  disconnectedAt        DateTime?
+  messagesCount         Int              @default(0)
+  activeChatCount       Int              @default(0)
+  lastTestAt            DateTime?
+  lastTestOk            Boolean?
+  lastTestError         String?
+  lastErrorAt           DateTime?
+  lastErrorMessage      String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 }
 
 model WhatsappConversation {
-    id              String                      @id @default(uuid())
-    // E.164 phone number (canonical +9665XXXXXXXX for Saudi)
-    phone           String                      @unique
-    contactName     String?
-    // Resolved Client.id (nullable — WALK_IN client may not exist yet)
-    clientId        String?
-    status          WhatsappConversationStatus  @default(ACTIVE)
-    language        String                      @default("ar")
-    // Accumulated state (collected name, email, chosenServiceId, etc.)
-    context         Json?
-    // Staff handover to a human (auto-reply disabled while true)
-    staffTakeover   Boolean                     @default(false)
-    staffUserId     String?
-    staffTookOverAt DateTime?
-    unreadCount     Int                         @default(0)
-    lastInboundAt   DateTime?
-    lastReadAt      DateTime?
-    lastMessageAt   DateTime                    @default(now())
-    createdAt       DateTime                    @default(now())
-    updatedAt       DateTime                    @updatedAt
+  id              String                     @id @default(uuid())
+  // E.164 phone number (canonical +9665XXXXXXXX for Saudi)
+  phone           String                     @unique
+  contactName     String?
+  // Resolved Client.id (nullable — WALK_IN client may not exist yet)
+  clientId        String?
+  status          WhatsappConversationStatus @default(ACTIVE)
+  language        String                     @default("ar")
+  // Accumulated state (collected name, email, chosenServiceId, etc.)
+  context         Json?
+  // Staff handover to a human (auto-reply disabled while true)
+  staffTakeover   Boolean                    @default(false)
+  staffUserId     String?
+  staffTookOverAt DateTime?
+  unreadCount     Int                        @default(0)
+  lastInboundAt   DateTime?
+  lastReadAt      DateTime?
+  lastMessageAt   DateTime                   @default(now())
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
 
-    messages WhatsappMessage[]
+  messages WhatsappMessage[]
 
-    @@index([status, lastMessageAt(sort: Desc)])
-    @@index([clientId])
-    @@index([lastMessageAt(sort: Desc)])
-    @@index([staffTakeover, lastMessageAt(sort: Desc)])
-    @@index([unreadCount, lastMessageAt(sort: Desc)])
+  @@index([status, lastMessageAt(sort: Desc)])
+  @@index([clientId])
+  @@index([lastMessageAt(sort: Desc)])
+  @@index([staffTakeover, lastMessageAt(sort: Desc)])
+  @@index([unreadCount, lastMessageAt(sort: Desc)])
 }
 
 model WhatsappMessage {
-    id                String                @id @default(uuid())
-    conversationId    String
-    role              WhatsappMessageRole
-    content           String
-    toolCalls         Json?
-    toolResults       Json?
-    tokenUsage        Int?
-    latencyMs         Int?
-    // External message id (Meta Cloud wamid / Baileys message id) for idempotency
-    externalMessageId String?               @unique
-    // Links one generated reply to one inbound provider message for retry safety.
-    inReplyToExternalMessageId String?       @unique
-    deliveryStatus    WhatsappDeliveryStatus?
-    providerMessageId String?
-    errorMessage      String?
-    readAt            DateTime?
-    createdAt         DateTime              @default(now())
+  id                         String                  @id @default(uuid())
+  conversationId             String
+  role                       WhatsappMessageRole
+  content                    String
+  toolCalls                  Json?
+  toolResults                Json?
+  tokenUsage                 Int?
+  latencyMs                  Int?
+  // External message id (Meta Cloud wamid / Baileys message id) for idempotency
+  externalMessageId          String?                 @unique
+  // Links one generated reply to one inbound provider message for retry safety.
+  inReplyToExternalMessageId String?                 @unique
+  deliveryStatus             WhatsappDeliveryStatus?
+  providerMessageId          String?
+  errorMessage               String?
+  readAt                     DateTime?
+  createdAt                  DateTime                @default(now())
 
-    conversation WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-    @@index([conversationId, createdAt(sort: Desc)])
-    @@index([conversationId, createdAt(sort: Desc), role, readAt])
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([conversationId, createdAt(sort: Desc), role, readAt])
 }

@@ -54,7 +54,7 @@ describe('RefundCompletedEventHandler', () => {
     };
     rls = { withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)) };
     eventBus = {
-      subscribe: jest.fn((_name: string, cb: (e: { payload: Record<string, unknown> }) => Promise<void>) => {
+      subscribe: jest.fn((_name: string, _consumerId: string, cb: (e: { payload: Record<string, unknown> }) => Promise<void>) => {
         registeredHandler = cb;
       }),
       publish: jest.fn(),
@@ -85,6 +85,7 @@ describe('RefundCompletedEventHandler', () => {
   it('subscribes to finance.refund.completed on register()', () => {
     expect(eventBus.subscribe).toHaveBeenCalledWith(
       'finance.refund.completed',
+      'bookings.refund-completed.v1',
       expect.any(Function),
     );
   });

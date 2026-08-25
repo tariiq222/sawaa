@@ -1,8 +1,8 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ClientRescheduleBookingHandler } from './client-reschedule-booking.handler';
+import { stableEventId } from '../../../common/events';
 import { mockBooking, buildPrisma, buildRlsTransaction } from '../testing/booking-test-helpers';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const futureBooking = {
   ...mockBooking,
@@ -189,9 +189,59 @@ describe('ClientRescheduleBookingHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('calls zoom updateMeeting with the new time and duration when zoomMeetingId exists', async () => {
+  it('commits the existing duration as durable Zoom desired state plus outbox event', async () => {
     const prisma = buildPrisma();
     const newScheduledAt = new Date(Date.now() + 72 * 3_600_000);
+    prisma.booking.findUnique.mockResolvedValue({
+      ...futureBooking,
+      zoomMeetingId: 'zoom-123',
+      zoomSyncRevision: 4,
+    });
+    const zoomService = buildZoomService();
+    const availability = buildAvailabilityHandler();
+    const handler = new ClientRescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      zoomService as never,
+      availability as never,
+    );
+
+    const sourceActionId = '11111111-1111-4111-8111-111111111111';
+    const result = await handler.execute({
+      bookingId: 'book-1',
+      clientId: 'client-1',
+      newScheduledAt: newScheduledAt.toISOString(),
+      sourceActionId,
+    });
+
+    expect(result.booking).toBeDefined();
+    expect(prisma.bookingZoomSync.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        bookingId: 'book-1',
+        zoomMeetingId: 'zoom-123',
+        desiredStartAt: newScheduledAt,
+        desiredDurationMins: 60,
+        desiredTopic: 'Booking book-1',
+        eventId: stableEventId(`booking:book-1:zoom-reschedule:${sourceActionId}`),
+        sourceActionId,
+        revision: 5,
+      }),
+    });
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        eventType: 'bookings.zoom.reschedule_requested',
+        id: stableEventId(`booking:book-1:zoom-reschedule:${sourceActionId}`),
+        payload: expect.objectContaining({
+          payload: expect.objectContaining({ bookingId: 'book-1', revision: 5 }),
+        }),
+      }),
+    });
+    expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+  });
+
+  it('never calls Zoom inline, so provider availability cannot roll back the booking mutation', async () => {
+    const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({
       ...futureBooking,
       zoomMeetingId: 'zoom-123',
@@ -209,52 +259,12 @@ describe('ClientRescheduleBookingHandler', () => {
     const result = await handler.execute({
       bookingId: 'book-1',
       clientId: 'client-1',
-      newScheduledAt: newScheduledAt.toISOString(),
-      newDurationMins: 90,
-    });
-
-    expect(result.booking).toBeDefined();
-    expect(zoomService.updateMeeting).toHaveBeenCalledWith(
-      DEFAULT_ORG_ID,
-      'zoom-123',
-      {
-        topic: 'Booking book-1',
-        startTime: newScheduledAt.toISOString(),
-        durationMins: 90,
-      },
-    );
-  });
-
-  it('swallows zoom updateMeeting rejection and still returns the committed booking', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findUnique.mockResolvedValue({
-      ...futureBooking,
-      zoomMeetingId: 'zoom-123',
-    });
-    const zoomService = {
-      updateMeeting: jest.fn().mockRejectedValue(new Error('zoom fail')),
-    };
-    const availability = buildAvailabilityHandler();
-    const handler = new ClientRescheduleBookingHandler(
-      prisma as never,
-      buildRlsTransaction(prisma) as never,
-      buildSettingsHandler() as never,
-      zoomService as never,
-      availability as never,
-    );
-
-    const result = await handler.execute({
-      bookingId: 'book-1',
-      clientId: 'client-1',
       newScheduledAt: new Date(Date.now() + 72 * 3_600_000).toISOString(),
     });
 
     expect(result.booking).toBeDefined();
-    expect(zoomService.updateMeeting).toHaveBeenCalledWith(
-      DEFAULT_ORG_ID,
-      'zoom-123',
-      expect.objectContaining({ durationMins: 60 }),
-    );
+    expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+    expect(prisma.bookingZoomSync.create).toHaveBeenCalledTimes(1);
   });
 
   it('skips zoom updateMeeting when booking has no zoomMeetingId', async () => {
@@ -281,6 +291,7 @@ describe('ClientRescheduleBookingHandler', () => {
 
     expect(result.booking).toBeDefined();
     expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+    expect(prisma.bookingZoomSync.create).not.toHaveBeenCalled();
   });
 
   it('calls availability handler with excludeBookingId for the rescheduled booking', async () => {
@@ -304,5 +315,120 @@ describe('ClientRescheduleBookingHandler', () => {
     expect(availability.execute).toHaveBeenCalledWith(
       expect.objectContaining({ excludeBookingId: 'book-1' }),
     );
+  });
+
+  it('joins a supplied transaction, locks client before slot, and stores a durable action result', async () => {
+    const prisma = buildPrisma();
+    const tx = buildPrisma();
+    tx.booking.findUnique.mockResolvedValue(futureBooking);
+    const rls = buildRlsTransaction(prisma);
+    const availability = buildAvailabilityHandler();
+    const handler = new ClientRescheduleBookingHandler(
+      prisma as never,
+      rls as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      availability as never,
+    );
+    const scheduledAt = new Date(Date.now() + 72 * 3_600_000).toISOString();
+
+    await handler.execute({
+      bookingId: 'book-1', clientId: 'client-1', newScheduledAt: scheduledAt,
+      sourceActionId: '11111111-1111-4111-8111-111111111111', transaction: tx as never,
+    });
+
+    expect(rls.withTransaction).not.toHaveBeenCalled();
+    expect(prisma.booking.findUnique).not.toHaveBeenCalled();
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(2);
+    expect(availability.execute).toHaveBeenCalledWith(expect.objectContaining({ transaction: tx }));
+    expect(tx.bookingStatusLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        sourceActionId: '11111111-1111-4111-8111-111111111111',
+        sourceActionHash: expect.any(String),
+        sourceActionResult: expect.objectContaining({ kind: 'RESCHEDULE', bookingId: 'book-1' }),
+      }),
+    });
+  });
+
+  it('recovers the same result by sourceActionId without mutating again', async () => {
+    const tx = buildPrisma();
+    tx.booking.findUnique.mockResolvedValue(futureBooking);
+    const scheduledAt = new Date(Date.now() + 72 * 3_600_000).toISOString();
+    const sourceActionId = '11111111-1111-4111-8111-111111111111';
+    const handler = new ClientRescheduleBookingHandler(
+      buildPrisma() as never,
+      buildRlsTransaction() as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      buildAvailabilityHandler() as never,
+    );
+
+    await handler.execute({
+      bookingId: 'book-1', clientId: 'client-1', newScheduledAt: scheduledAt,
+      sourceActionId, transaction: tx as never,
+    });
+    const created = tx.bookingStatusLog.create.mock.calls[0][0].data;
+    tx.bookingStatusLog.findUnique.mockResolvedValue(created);
+    tx.booking.updateMany.mockClear();
+    tx.bookingStatusLog.create.mockClear();
+
+    const replay = await handler.execute({
+      bookingId: 'book-1', clientId: 'client-1', newScheduledAt: scheduledAt,
+      sourceActionId, transaction: tx as never,
+    });
+
+    expect(replay.booking.id).toBe('book-1');
+    expect(tx.booking.updateMany).not.toHaveBeenCalled();
+    expect(tx.bookingStatusLog.create).not.toHaveBeenCalled();
+  });
+
+  it('recovers the durable result even when the rescheduled time has since passed', async () => {
+    const tx = buildPrisma();
+    tx.booking.findUnique.mockResolvedValue(futureBooking);
+    const scheduledAt = new Date(Date.now() + 72 * 3_600_000);
+    const sourceActionId = '11111111-1111-4111-8111-111111111111';
+    const handler = new ClientRescheduleBookingHandler(
+      buildPrisma() as never, buildRlsTransaction() as never,
+      buildSettingsHandler() as never, buildZoomService() as never,
+      buildAvailabilityHandler() as never,
+    );
+
+    await handler.execute({
+      bookingId: 'book-1', clientId: 'client-1', newScheduledAt: scheduledAt.toISOString(),
+      sourceActionId, transaction: tx as never,
+    });
+    tx.bookingStatusLog.findUnique.mockResolvedValue(tx.bookingStatusLog.create.mock.calls[0][0].data);
+    tx.booking.updateMany.mockClear();
+    jest.useFakeTimers().setSystemTime(new Date(scheduledAt.getTime() + 1));
+    try {
+      const replay = await handler.execute({
+        bookingId: 'book-1', clientId: 'client-1', newScheduledAt: scheduledAt.toISOString(),
+        sourceActionId, transaction: tx as never,
+      });
+      expect(replay.booking.id).toBe('book-1');
+      expect(tx.booking.updateMany).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('rejects reuse of a sourceActionId with different immutable input', async () => {
+    const tx = buildPrisma();
+    tx.bookingStatusLog.findUnique.mockResolvedValue({
+      sourceActionId: '11111111-1111-4111-8111-111111111111',
+      sourceActionHash: 'different',
+      sourceActionResult: { kind: 'RESCHEDULE', bookingId: 'book-1' },
+    });
+    const handler = new ClientRescheduleBookingHandler(
+      buildPrisma() as never, buildRlsTransaction() as never,
+      buildSettingsHandler() as never, buildZoomService() as never,
+      buildAvailabilityHandler() as never,
+    );
+
+    await expect(handler.execute({
+      bookingId: 'book-1', clientId: 'client-1',
+      newScheduledAt: new Date(Date.now() + 72 * 3_600_000).toISOString(),
+      sourceActionId: '11111111-1111-4111-8111-111111111111', transaction: tx as never,
+    })).rejects.toThrow(ConflictException);
   });
 });

@@ -58,12 +58,17 @@ export interface MoyasarPaymentStatusResult {
 	id: string;
 	status: MoyasarPaymentStatus;
 	amount: number;
+	/** Cumulative amount already refunded by Moyasar, in halalas. */
+	refunded: number;
 	currency: string;
 }
 
 export interface MoyasarRefund {
 	id: string;
+	/** Amount requested by this call, in halalas. */
 	amount: number;
+	/** Authoritative cumulative refunded amount returned by Moyasar. */
+	refunded: number;
 	currency: string;
 	status: "refunded";
 	paymentId: string;
@@ -249,7 +254,7 @@ export class MoyasarApiClient {
 
 	async createRefund(
 		organizationId: string,
-		params: { paymentId: string; amount: number; idempotencyKey: string },
+		params: { paymentId: string; amount: number },
 	): Promise<MoyasarRefund> {
 		const body = { amount: params.amount };
 
@@ -263,12 +268,12 @@ export class MoyasarApiClient {
 		}>(organizationId, `/payments/${params.paymentId}/refund`, {
 			method: "POST",
 			body: JSON.stringify(body),
-			headers: { "Idempotency-Key": params.idempotencyKey },
 		});
 
 		return {
 			id: data.id,
-			amount: data.refunded,
+			amount: params.amount,
+			refunded: data.refunded,
 			currency: data.currency,
 			status: "refunded",
 			paymentId: data.id,
@@ -329,6 +334,7 @@ export class MoyasarApiClient {
 			id: string;
 			status: string;
 			amount: number;
+			refunded: number;
 			currency: string;
 		}>(organizationId, `/payments/${paymentId}`, { method: "GET" });
 
@@ -336,6 +342,7 @@ export class MoyasarApiClient {
 			id: data.id,
 			status: data.status as MoyasarPaymentStatus,
 			amount: data.amount,
+			refunded: data.refunded ?? 0,
 			currency: data.currency,
 		};
 	}

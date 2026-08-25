@@ -1,14 +1,14 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
-import type { AiConfig } from './ai.config';
+import { AiProviderClientService } from './ai-provider-client.service';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
   tool_call_id?: string;
   name?: string;
+  toolCalls?: ToolCall[];
 }
 
 export interface CompletionResult {
@@ -24,6 +24,11 @@ export interface ToolCall {
   function: { name: string; arguments: string };
 }
 
+export type ToolChoice = 'required' | {
+  type: 'function';
+  function: { name: string };
+};
+
 export interface CompletionWithToolsResult {
   content: string | null;
   toolCalls: ToolCall[];
@@ -36,42 +41,32 @@ interface IChatService {
   completeWithTools(
     messages: ChatMessage[],
     tools: ToolDefinition[],
-    options?: { model?: string; maxTokens?: number; temperature?: number },
+    options?: { model?: string; maxTokens?: number; temperature?: number; toolChoice?: ToolChoice },
   ): Promise<CompletionWithToolsResult>;
   stream(messages: ChatMessage[], model?: string): AsyncIterable<string>;
-  isAvailable(): boolean;
+  isAvailable(): Promise<boolean>;
 }
 
 @Injectable()
-export class ChatAdapter implements IChatService, OnModuleInit {
-  private readonly logger = new Logger(ChatAdapter.name);
-  private client?: OpenAI;
-  private defaultModel: string;
+export class ChatAdapter implements IChatService {
+  constructor(private readonly providerClient: AiProviderClientService) {}
 
-  constructor(private readonly config: ConfigService) {
-    const cfg = this.config.get<AiConfig>('ai')!;
-    this.defaultModel = cfg.chatModel;
+  async isAvailable(): Promise<boolean> {
+    try { return (await this.providerClient.getReadyClient()) !== null; } catch { return false; }
   }
 
-  onModuleInit(): void {
-    const cfg = this.config.get<AiConfig>('ai')!;
-    if (!cfg.openrouterApiKey) {
-      this.logger.warn('OPENROUTER_API_KEY not set — ChatAdapter disabled');
-      return;
-    }
-    this.client = new OpenAI({
-      apiKey: cfg.openrouterApiKey,
-      baseURL: cfg.openrouterBaseUrl,
-      defaultHeaders: {
-        'HTTP-Referer': 'https://sawaa.app',
-        'X-Title': 'Sawaa AI',
-      },
-    });
-    this.logger.log(`ChatAdapter ready (model: ${this.defaultModel})`);
+  private async ready(): Promise<{ client: OpenAI; model: string }> {
+    const resolved = await this.providerClient.getReadyClient();
+    if (!resolved) throw new Error('ChatAdapter is not available — configure and test an AI provider');
+    return resolved;
   }
 
-  isAvailable(): boolean {
-    return !!this.client;
+  private async providerError(error: unknown): Promise<never> {
+    const status = typeof error === 'object' && error !== null
+      ? ((error as { status?: number; response?: { status?: number } }).status ?? (error as { response?: { status?: number } }).response?.status)
+      : undefined;
+    if (status === 401 || status === 403) await this.providerClient.markRetestRequired();
+    throw error;
   }
 
   private toOpenAIMessages(messages: ChatMessage[]): ChatCompletionMessageParam[] {
@@ -84,7 +79,19 @@ export class ChatAdapter implements IChatService, OnModuleInit {
         };
       }
       if (m.role === 'assistant') {
-        return { role: 'assistant', content: m.content };
+        return {
+          role: 'assistant',
+          content: m.content,
+          ...(m.toolCalls?.length
+            ? {
+                tool_calls: m.toolCalls.map((call) => ({
+                  id: call.id,
+                  type: 'function' as const,
+                  function: call.function,
+                })),
+              }
+            : {}),
+        };
       }
       if (m.role === 'system') {
         return { role: 'system', content: m.content };
@@ -94,32 +101,28 @@ export class ChatAdapter implements IChatService, OnModuleInit {
   }
 
   async complete(messages: ChatMessage[], model?: string, options?: { maxTokens?: number }): Promise<CompletionResult> {
-    if (!this.client) throw new Error('ChatAdapter is not available — set OPENROUTER_API_KEY');
-    const response = await this.client.chat.completions.create({
-      model: model ?? this.defaultModel,
-      messages: this.toOpenAIMessages(messages),
-      ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}),
-    });
+    const ready = await this.ready();
+    let response;
+    try {
+      response = await ready.client.chat.completions.create({ model: model ?? ready.model, messages: this.toOpenAIMessages(messages), ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}) });
+    } catch (error) { return this.providerError(error); }
     return {
       content: response.choices[0]?.message?.content ?? '',
       tokensUsed: response.usage?.total_tokens ?? 0,
-      model: response.model ?? model ?? this.defaultModel,
+      model: response.model ?? model ?? ready.model,
     };
   }
 
   async completeWithTools(
     messages: ChatMessage[],
     tools: ToolDefinition[],
-    options?: { model?: string; maxTokens?: number; temperature?: number },
+    options?: { model?: string; maxTokens?: number; temperature?: number; toolChoice?: ToolChoice },
   ): Promise<CompletionWithToolsResult> {
-    if (!this.client) throw new Error('ChatAdapter is not available — set OPENROUTER_API_KEY');
-    const response = await this.client.chat.completions.create({
-      model: options?.model ?? this.defaultModel,
-      messages: this.toOpenAIMessages(messages),
-      tools,
-      ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
-      ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}),
-    });
+    const ready = await this.ready();
+    let response;
+    try {
+      response = await ready.client.chat.completions.create({ model: options?.model ?? ready.model, messages: this.toOpenAIMessages(messages), tools, ...(tools.length > 0 ? { tool_choice: options?.toolChoice ?? 'required' as const } : {}), ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}), ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}) });
+    } catch (error) { return this.providerError(error); }
     const message = response.choices[0]?.message;
     const toolCalls: ToolCall[] = [];
     for (const tc of message?.tool_calls ?? []) {
@@ -137,20 +140,18 @@ export class ChatAdapter implements IChatService, OnModuleInit {
       content: message?.content ?? null,
       toolCalls,
       tokensUsed: response.usage?.total_tokens ?? 0,
-      model: response.model ?? options?.model ?? this.defaultModel,
+      model: response.model ?? options?.model ?? ready.model,
     };
   }
 
   async *stream(messages: ChatMessage[], model?: string): AsyncIterable<string> {
-    if (!this.client) throw new Error('ChatAdapter is not available — set OPENROUTER_API_KEY');
-    const streamResult = await this.client.chat.completions.create({
-      model: model ?? this.defaultModel,
-      messages: this.toOpenAIMessages(messages),
-      stream: true,
-    });
-    for await (const chunk of streamResult) {
-      const delta = chunk.choices[0]?.delta?.content;
-      if (delta) yield delta;
-    }
+    const ready = await this.ready();
+    try {
+      const streamResult = await ready.client.chat.completions.create({ model: model ?? ready.model, messages: this.toOpenAIMessages(messages), stream: true });
+      for await (const chunk of streamResult) {
+        const delta = chunk.choices[0]?.delta?.content;
+        if (delta) yield delta;
+      }
+    } catch (error) { await this.providerError(error); }
   }
 }

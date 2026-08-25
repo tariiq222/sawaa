@@ -14,7 +14,7 @@ import { CancellationTab } from "@/components/features/settings/cancellation-tab
 import { WorkingHoursTab } from "@/components/features/settings/working-hours-tab"
 import { SettingsPaymentTab } from "@/components/features/settings/settings-payment-tab"
 import { SettingsIntegrationsTab } from "@/components/features/settings/settings-integrations-tab"
-import { WhatsappSettingsContent } from "@/components/features/whatsapp/whatsapp-settings-content"
+import { SawaaAiSettingsContent } from "@/components/features/settings/sawaa-ai-settings-content"
 import { EmailTemplatesTab } from "@/components/features/settings/email-templates-tab"
 import { DiscountReasonsManager } from "@/components/features/settings/discount-reasons-manager"
 import { PermissionGuard } from "@/components/features/permission-guard"
@@ -27,7 +27,7 @@ const VALID_TABS = new Set([
   "payment",
   "discount-reasons",
   "integrations",
-  "whatsapp",
+  "sawaa-ai",
   "email-templates",
 ])
 
@@ -67,7 +67,7 @@ function SettingsTabs() {
           <TabsTrigger value="payment">{t("settings.tabs.payment")}</TabsTrigger>
           <TabsTrigger value="discount-reasons">{t("settings.tabs.discountReasons")}</TabsTrigger>
           <TabsTrigger value="integrations">{t("settings.tabs.integrations")}</TabsTrigger>
-          <TabsTrigger value="whatsapp">{t("whatsapp.menuLabel")}</TabsTrigger>
+          <TabsTrigger value="sawaa-ai">{t("sawaaAi.menuLabel")}</TabsTrigger>
           <TabsTrigger value="email-templates">{t("settings.tabs.emailTemplates")}</TabsTrigger>
         </TabsList>
       </div>
@@ -93,8 +93,8 @@ function SettingsTabs() {
       <TabsContent value="integrations" className="mt-4">
         <SettingsIntegrationsTab />
       </TabsContent>
-      <TabsContent value="whatsapp" className="mt-4">
-        <WhatsappSettingsContent />
+      <TabsContent value="sawaa-ai" className="mt-4">
+        <SawaaAiSettingsContent />
       </TabsContent>
       <TabsContent value="email-templates" className="mt-4">
         <EmailTemplatesTab />

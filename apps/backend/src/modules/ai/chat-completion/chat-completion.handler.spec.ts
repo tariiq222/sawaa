@@ -73,8 +73,14 @@ describe('ChatCompletionHandler', () => {
   });
 
   it('should throw on AI error', async () => {
-    (chat.complete as jest.Mock).mockRejectedValue(new Error('API error'));
+    const error = new Error('provider body credential=FAKE_PROVIDER_SECRET');
+    error.stack = 'Error: provider body credential=FAKE_PROVIDER_SECRET';
+    const warn = jest.spyOn((handler as any).logger, 'warn');
+    (chat.complete as jest.Mock).mockRejectedValue(error);
     await expect(handler.execute({ userMessage: 'Hello', clientId: 'c1', userId: 'u1' })).rejects.toThrow(ServiceUnavailableException);
+    expect(warn).toHaveBeenCalledWith('AI_PROVIDER_REQUEST_FAILED', ChatCompletionHandler.name);
+    expect(warn.mock.calls.flat().join(' ')).not.toContain('FAKE_PROVIDER_SECRET');
+    expect(warn.mock.calls.flat().join(' ')).not.toContain('provider body');
   });
 
   it('rejects sessionId not owned by caller (P0-4)', async () => {

@@ -33,7 +33,9 @@ describe('OnBookingCancelledHandler', () => {
 
   it('should subscribe on register', () => {
     handler.register(eventBus as any);
-    expect(eventBus.subscribe).toHaveBeenCalledWith('bookings.booking.cancelled', expect.any(Function));
+    expect(eventBus.subscribe).toHaveBeenCalledWith(
+      'bookings.booking.cancelled', 'comms.booking-cancelled-notify.v1', expect.any(Function),
+    );
   });
 
   it('should send notification without push when disabled', async () => {

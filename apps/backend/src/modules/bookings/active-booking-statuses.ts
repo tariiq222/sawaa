@@ -1,5 +1,21 @@
 import { BookingStatus } from '@prisma/client';
 
+/**
+ * Non-terminal booking states used for client-level future/overlap checks.
+ *
+ * This is intentionally different from STAFF_TIME_BLOCKING_BOOKING_STATUSES:
+ * completed/no-show rows can still block an employee's future slot when staff
+ * finalized them early, but they are not active appointments owned by a client.
+ */
+export const ACTIVE_BOOKING_STATUSES = [
+  BookingStatus.PENDING,
+  BookingStatus.PENDING_GROUP_FILL,
+  BookingStatus.AWAITING_PAYMENT,
+  BookingStatus.CONFIRMED,
+  BookingStatus.CANCEL_REQUESTED,
+  BookingStatus.DEPOSIT_PAID,
+] as const;
+
 export const STAFF_TIME_BLOCKING_BOOKING_STATUSES = [
   BookingStatus.PENDING,
   BookingStatus.AWAITING_PAYMENT,

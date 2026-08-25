@@ -19,7 +19,7 @@ export interface RefundCompletedPayload {
 export class RefundCompletedEvent extends BaseEvent<RefundCompletedPayload> {
   readonly eventName = 'finance.refund.completed';
 
-  constructor(payload: RefundCompletedPayload) {
-    super({ source: 'finance', version: 1, payload });
+  constructor(payload: RefundCompletedPayload, eventId?: string) {
+    super({ source: 'finance', version: 1, payload, eventId });
   }
 }

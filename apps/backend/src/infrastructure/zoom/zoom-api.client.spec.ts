@@ -88,6 +88,7 @@ describe('ZoomApiClient', () => {
       mockedFetch.mockResolvedValue({ ok: false, status: 400, statusText: 'Bad Request', text: jest.fn().mockResolvedValue('error') });
 
       await expect(client.createMeeting('token', { topic: 'Test', startTime: '2026-01-01T10:00:00Z', durationMins: 30 }, 'UTC')).rejects.toThrow(InternalServerErrorException);
+      expect(mockedFetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -123,9 +124,102 @@ describe('ZoomApiClient', () => {
       expect(body).toEqual({ topic: 'Only topic' });
     });
 
-    it('should log error on failure', async () => {
+    it('should throw on failure so the durable worker retries', async () => {
       mockedFetch.mockResolvedValue({ ok: false, status: 404, text: jest.fn().mockResolvedValue('Not found') });
-      await expect(client.updateMeeting('token', '123', {}, 'UTC')).resolves.toBeUndefined();
+      await expect(client.updateMeeting('token', '123', {}, 'UTC'))
+        .rejects.toThrow(InternalServerErrorException);
+    });
+  });
+
+  describe('getMeeting', () => {
+    it('returns the provider state used for read-before-write recovery', async () => {
+      mockedFetch.mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          id: 123,
+          topic: 'Booking book-1',
+          start_time: '2026-08-20T10:00:00Z',
+          duration: 60,
+        }),
+      });
+
+      await expect(client.getMeeting('token', '123')).resolves.toEqual({
+        id: 123,
+        topic: 'Booking book-1',
+        startTime: '2026-08-20T10:00:00Z',
+        durationMins: 60,
+      });
+      expect(mockedFetch).toHaveBeenCalledWith(
+        'https://api.zoom.us/v2/meetings/123',
+        expect.objectContaining({
+          method: 'GET',
+          headers: { Authorization: 'Bearer token' },
+        }),
+        10000,
+      );
+    });
+
+    it('throws when provider state cannot be read so the worker retries', async () => {
+      mockedFetch.mockResolvedValue({
+        ok: false,
+        status: 503,
+        text: jest.fn().mockResolvedValue('unavailable'),
+      });
+
+      await expect(client.getMeeting('token', '123'))
+        .rejects.toThrow(InternalServerErrorException);
+    });
+  });
+
+  describe('findMeetingByTopic', () => {
+    it('paginates with GET and resolves the exact deterministic topic', async () => {
+      mockedFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            next_page_token: 'page-2',
+            meetings: [{ id: 1, topic: 'Another booking' }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            meetings: [{ id: 9876, topic: 'Booking book-1' }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            id: 9876,
+            topic: 'Booking book-1',
+            start_time: '2026-08-20T10:00:00Z',
+            duration: 60,
+            join_url: 'https://zoom.us/j/9876',
+            start_url: 'https://zoom.us/s/9876',
+          }),
+        });
+
+      await expect(client.findMeetingByTopic('token', 'Booking book-1')).resolves.toEqual({
+        id: 9876,
+        topic: 'Booking book-1',
+        startTime: '2026-08-20T10:00:00Z',
+        durationMins: 60,
+        join_url: 'https://zoom.us/j/9876',
+        start_url: 'https://zoom.us/s/9876',
+      });
+      expect(mockedFetch.mock.calls[1][0]).toContain('next_page_token=page-2');
+      expect(mockedFetch.mock.calls[2][0]).toBe('https://api.zoom.us/v2/meetings/9876');
+    });
+
+    it('returns null without a provider mutation when no exact topic exists', async () => {
+      mockedFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ meetings: [], next_page_token: '' }),
+      });
+
+      await expect(client.findMeetingByTopic('token', 'Booking missing')).resolves.toBeNull();
+      expect(mockedFetch).toHaveBeenCalledTimes(1);
+      expect(mockedFetch.mock.calls[0][1]?.method).toBeUndefined();
     });
   });
 

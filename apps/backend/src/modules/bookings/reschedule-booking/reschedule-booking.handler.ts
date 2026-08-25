@@ -16,8 +16,10 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { RescheduleBookingDto } from './reschedule-booking.dto';
 import { fetchBookingOrFail, updateBookingAtomically, hashToInt32 } from '../booking-lifecycle.helper';
-import { ZoomMeetingService } from '../zoom-meeting.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { randomUUID } from 'node:crypto';
+import { BookingZoomRescheduleRequestedEvent } from '../events/booking-zoom-reschedule-requested.event';
+import { ZoomMeetingService } from '../zoom-meeting.service';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { assertTransition } from '../booking-state-machine';
 import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
@@ -35,7 +37,9 @@ export class RescheduleBookingHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
-    private readonly zoomMeetingService: ZoomMeetingService,
+    // Retained as a constructor dependency for backwards-compatible module
+    // wiring; all provider work now goes through the durable outbox protocol.
+    _zoomMeetingService: ZoomMeetingService,
     private readonly availabilityHandler: CheckAvailabilityHandler,
   ) {}
 
@@ -81,6 +85,7 @@ export class RescheduleBookingHandler {
     });
 
     // Serialize conflict check + update + status log inside one transaction.
+    const zoomSyncEventId = booking.zoomMeetingId ? randomUUID() : null;
     const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
         // Parity with create-booking (CR-5): acquire an advisory lock scoped to
         // employee + new slot window BEFORE the conflict check so a concurrent
@@ -111,12 +116,40 @@ export class RescheduleBookingHandler {
           throw new ConflictException('Employee already has a booking in the new time slot');
         }
 
-        return Promise.all([
+        const revision = booking.zoomMeetingId ? (booking.zoomSyncRevision ?? 0) + 1 : null;
+        const writes: Array<Promise<unknown> | Prisma.PrismaPromise<unknown>> = [
           updateBookingAtomically(tx, {
             bookingId: cmd.bookingId,
             currentStatus: booking.status,
             actionLabel: 'rescheduled',
-            data: { scheduledAt: newScheduledAt, endsAt: newEndsAt, durationMins },
+            data: {
+              scheduledAt: newScheduledAt,
+              endsAt: newEndsAt,
+              durationMins,
+              ...(revision === null ? {} : { zoomSyncRevision: revision }),
+            },
+            ...(booking.deliveryType === 'ONLINE' || booking.zoomMeetingId
+              ? {
+                  extraWhere: {
+                    AND: [
+                      ...(booking.deliveryType === 'ONLINE' ? [{
+                        OR: [
+                          { zoomCreateLeaseOwner: null },
+                          { zoomCreateLeaseExpiresAt: null },
+                          { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+                        ],
+                      }] : []),
+                      ...(booking.zoomMeetingId ? [{
+                        OR: [
+                          { zoomSyncLeaseOwner: null },
+                          { zoomSyncLeaseExpiresAt: null },
+                          { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+                        ],
+                      }] : []),
+                    ],
+                  },
+                }
+              : {}),
           }),
           tx.bookingStatusLog.create({
             data: {
@@ -146,19 +179,41 @@ export class RescheduleBookingHandler {
               },
             },
           }),
-        ]);
-    }, { isolationLevel: 'Serializable' }).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, unknown, unknown];
-
-    if (booking.zoomMeetingId) {
-      // Best effort update — only for ONLINE delivery type bookings
-      this.zoomMeetingService
-        .updateMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId, {
-          topic: `Booking ${booking.id}`,
-          startTime: newScheduledAt.toISOString(),
-          durationMins,
-        })
-        .catch(() => {});
-    }
+        ];
+        if (booking.zoomMeetingId && zoomSyncEventId && revision !== null) {
+          const event = new BookingZoomRescheduleRequestedEvent({
+            organizationId: DEFAULT_ORG_ID,
+            syncId: zoomSyncEventId,
+            bookingId: booking.id,
+            zoomMeetingId: booking.zoomMeetingId,
+            revision,
+          }, zoomSyncEventId);
+          writes.push(tx.bookingZoomSync.create({
+            data: {
+              id: zoomSyncEventId,
+              eventId: zoomSyncEventId,
+              bookingId: booking.id,
+              sourceActionId: zoomSyncEventId,
+              zoomMeetingId: booking.zoomMeetingId,
+              desiredTopic: `Booking ${booking.id}`,
+              desiredStartAt: newScheduledAt,
+              desiredDurationMins: durationMins,
+              revision,
+            },
+          }));
+          writes.push(tx.outboxEvent.create({
+            data: {
+              id: event.eventId,
+              aggregateId: booking.id,
+              eventType: event.eventName,
+              status: 'PENDING_V2',
+              deliveryLane: 'PENDING_V2',
+              payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+            },
+          }));
+        }
+        return Promise.all(writes);
+    }, { isolationLevel: 'Serializable' }).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, ...unknown[]];
 
     return updated;
   }

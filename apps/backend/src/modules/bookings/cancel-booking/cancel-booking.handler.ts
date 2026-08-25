@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { RefundType } from '@prisma/client';
+import { Prisma, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
@@ -14,12 +14,14 @@ import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-p
 import { ProgramCapacityService } from '../program/program-capacity.service';
 import { assertBookingIsMutable, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { returnPackageCreditForBooking } from '../package-credit-return.helper';
+import { stableEventId } from '../../../common/events';
 
 export type CancelBookingCommand = CancelBookingDto & {
   bookingId: string;
   changedBy: string;
   source?: string;
   clientId?: string;
+  sourceActionId?: string;
 };
 
 // Allowed source statuses are defined by the DIRECT_CANCEL transition in booking-state-machine.ts
@@ -32,7 +34,7 @@ export class CancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
+    _eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly zoomMeetingService: ZoomMeetingService,
     private readonly refundHandler: RefundPaymentHandler,
@@ -81,6 +83,9 @@ export class CancelBookingHandler {
 
     let refundRequestId: string | null = null;
     let idempotencyKey: string | null = null;
+    const cancellationEventId = stableEventId(
+      `booking:${booking.id}:direct-cancel:${cmd.sourceActionId ?? 'lifecycle'}`,
+    );
 
     const updated = await this.rlsTransaction.withTransaction(async (tx) => {
       const cancelledBooking = await updateBookingAtomically(tx, {
@@ -94,6 +99,28 @@ export class CancelBookingHandler {
           cancelledAt: new Date(),
           zoomMeetingStatus: booking.zoomMeetingId ? 'CANCELLED' : undefined,
         },
+        ...(booking.deliveryType === 'ONLINE' || booking.zoomMeetingId
+          ? {
+              extraWhere: {
+                AND: [
+                  ...(booking.deliveryType === 'ONLINE' ? [{
+                    OR: [
+                      { zoomCreateLeaseOwner: null },
+                      { zoomCreateLeaseExpiresAt: null },
+                      { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+                    ],
+                  }] : []),
+                  ...(booking.zoomMeetingId ? [{
+                    OR: [
+                      { zoomSyncLeaseOwner: null },
+                      { zoomSyncLeaseExpiresAt: null },
+                      { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+                    ],
+                  }] : []),
+                ],
+              },
+            }
+          : {}),
       });
       await tx.bookingStatusLog.create({
         data: {
@@ -137,6 +164,7 @@ export class CancelBookingHandler {
             reason: `Booking ${booking.id} cancellation (${refundType})`,
             performedBy: cmd.changedBy,
             amount: refundAmount,
+            sourceEventId: cancellationEventId,
           });
           refundRequestId = created.refundRequestId;
           idempotencyKey = created.idempotencyKey;
@@ -152,25 +180,32 @@ export class CancelBookingHandler {
         await tx.programEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
         await this.groupSessionCapacity.decrementEnrollment(tx, booking.programId);
       }
+
+      const event = new BookingCancelledEvent({
+        organizationId: DEFAULT_ORG_ID,
+        scheduledAt: booking.scheduledAt,
+        bookingId: booking.id,
+        bookingNumber: booking.bookingNumber,
+        clientId: booking.clientId,
+        employeeId: booking.employeeId,
+        reason: cmd.reason,
+        cancelNotes: cmd.cancelNotes,
+        zoomMeetingId: (booking as Record<string, unknown>).zoomMeetingId as string | null ?? null,
+        refundType,
+        paymentId: completedPayment?.id ?? null,
+        refundRequestId,
+        idempotencyKey,
+      }, cancellationEventId);
+      await tx.outboxEvent.create({
+        data: {
+          id: event.eventId,
+          aggregateId: booking.id,
+          eventType: event.eventName,
+          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      });
       return cancelledBooking;
     });
-
-    const event = new BookingCancelledEvent({
-      organizationId: DEFAULT_ORG_ID,
-      scheduledAt: booking.scheduledAt,
-      bookingId: booking.id,
-      bookingNumber: booking.bookingNumber,
-      clientId: booking.clientId,
-      employeeId: booking.employeeId,
-      reason: cmd.reason,
-      cancelNotes: cmd.cancelNotes,
-      zoomMeetingId: (booking as Record<string, unknown>).zoomMeetingId as string | null ?? null,
-      refundType,
-      paymentId: completedPayment?.id ?? null,
-      refundRequestId,
-      idempotencyKey,
-    });
-    await this.eventBus.publish(event.eventName, event.toEnvelope());
 
     if (booking.zoomMeetingId) {
       this.zoomMeetingService.deleteMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId).catch((err) => {

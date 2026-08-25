@@ -1,0 +1,249 @@
+import { Body, Controller, Get, Header, HttpCode, HttpStatus, Ip, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { ApiBearerAuth, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ClientSession } from '../../common/auth/client-session.decorator';
+import { ClientSessionGuard } from '../../common/guards/client-session.guard';
+import { Public } from '../../common/guards/jwt.guard';
+import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
+import { ClaimConversationHandler } from '../../modules/comms/chat/guest/claim-conversation.handler';
+import { ClaimGuestConversationDto } from '../../modules/comms/chat/guest/claim-guest-conversation.dto';
+import { CHAT_GUEST_COOKIE_NAME, GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat-token.service';
+import { GetCurrentConversationHandler } from '../../modules/comms/chat/guest/get-current-conversation.handler';
+import { toChatMessageResponse } from '../../modules/comms/chat/messages/chat-message.mapper';
+import { ListChatMessagesDto } from '../../modules/comms/chat/messages/list-chat-messages.dto';
+import { ListChatMessagesHandler } from '../../modules/comms/chat/messages/list-chat-messages.handler';
+import { SendChatMessageDto } from '../../modules/comms/chat/messages/send-chat-message.dto';
+import { SendChatMessageHandler } from '../../modules/comms/chat/messages/send-chat-message.handler';
+import { RequestHandoffHandler } from '../../modules/comms/chat/staff/request-handoff.handler';
+import { ClientRequestHandoffDto } from '../../modules/comms/chat/staff/request-handoff.dto';
+import { toChatConversationResponse } from '../../modules/comms/chat/guest/chat-conversation.response';
+import { AcknowledgeExistingBookingHandler } from '../../modules/comms/chat/operations/acknowledge-existing-booking.handler';
+import { ConfirmOperationHandler } from '../../modules/comms/chat/operations/confirm-operation.handler';
+import { DeclineOperationHandler } from '../../modules/comms/chat/operations/decline-operation.handler';
+import { OperationVersionDto } from '../../modules/comms/chat/operations/operation-version.dto';
+import { toPublicChatOperation } from '../../modules/comms/chat/operations/chat-operation-public.mapper';
+import { ResumeChatOperationsHandler } from '../../modules/comms/chat/operations/resume-chat-operations.handler';
+import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assistant/retry-administrative-message.handler';
+import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
+import { ChatMessageResponseDto, ClaimGuestConversationResponseDto } from '../../modules/comms/chat/messages/public-chat-response.dto';
+import { ClientChatConversationDetailDto, ListClientChatConversationsDto, ListClientChatConversationsResponseDto } from '../../modules/comms/chat/messages/list-client-chat-conversations.dto';
+import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
+import { GetClientChatConversationHandler } from '../../modules/comms/chat/messages/get-client-chat-conversation.handler';
+import { WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availability.service';
+
+type CookieRequest = Request & { cookies?: Record<string, unknown> };
+
+@ApiTags('Public / Chat')
+@ApiBearerAuth()
+@ApiStandardResponses()
+@UseGuards(WebChatEnabledGuard, ClientSessionGuard)
+@Public()
+@Controller('public/me/chat')
+export class MyChatController {
+  private readonly logger = new Logger(MyChatController.name);
+
+  constructor(
+    private readonly getCurrentConversation: GetCurrentConversationHandler,
+    private readonly claimConversation: ClaimConversationHandler,
+    private readonly tokens: GuestChatTokenService,
+    private readonly sendMessage: SendChatMessageHandler,
+    private readonly listMessages: ListChatMessagesHandler,
+    private readonly listConversations: ListClientChatConversationsHandler,
+    private readonly getConversation: GetClientChatConversationHandler,
+    private readonly requestHandoff: RequestHandoffHandler,
+    private readonly acknowledgeOperation: AcknowledgeExistingBookingHandler,
+    private readonly confirmOperation: ConfirmOperationHandler,
+    private readonly declineOperation: DeclineOperationHandler,
+    private readonly resumeOperations: ResumeChatOperationsHandler,
+    private readonly retryMessage: RetryAdministrativeMessageHandler,
+  ) {}
+
+  @Get('conversations')
+  @ApiOperation({ summary: 'List the authenticated client chat conversation history' })
+  @ApiOkResponse({ type: ListClientChatConversationsResponseDto, description: 'Only conversations owned by the authenticated client' })
+  listConversationsForClient(
+    @Query() dto: ListClientChatConversationsDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return this.listConversations.execute({
+      clientId: session.id,
+      limit: dto.limit ?? 20,
+      ...(dto.cursor ? { cursor: dto.cursor } : {}),
+    });
+  }
+
+  @Get('conversations/current')
+  @ApiOperation({ summary: 'Get the authenticated client chat conversation' })
+  @ApiOkResponse({ description: 'Current conversation for the authenticated client' })
+  current(@ClientSession() session: { id: string }) {
+    return this.getCurrentConversation.execute({ clientId: session.id });
+  }
+
+  @Get('conversations/:conversationId')
+  @ApiOperation({ summary: 'Get one authenticated client-owned chat conversation' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiOkResponse({ type: ClientChatConversationDetailDto, description: 'Safe detail for the authenticated client-owned conversation' })
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'Conversation is not owned by the authenticated client or does not exist' })
+  getConversationForClient(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @ClientSession() session: { id: string },
+  ) {
+    return this.getConversation.execute({ clientId: session.id, conversationId });
+  }
+
+  @Post('conversations/:conversationId/claim')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Claim a guest conversation for the authenticated client' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
+  @ApiCreatedResponse({ type: ClaimGuestConversationResponseDto, description: 'Guest conversation claimed by the authenticated client' })
+  async claim(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Body() _body: ClaimGuestConversationDto,
+    @ClientSession() session: { id: string },
+    @Req() request: CookieRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const guestToken = request.cookies?.[CHAT_GUEST_COOKIE_NAME];
+    if (typeof guestToken !== 'string' || guestToken.length === 0) {
+      throw new UnauthorizedException('Guest chat cookie is required');
+    }
+    const conversation = await this.claimConversation.execute({
+      conversationId,
+      clientId: session.id,
+      guestToken,
+    });
+    let resumedOperations: ReturnType<typeof toPublicChatOperation>[] = [];
+    try {
+      resumedOperations = (await this.resumeOperations.execute({
+        conversationId,
+        clientId: session.id,
+      })).map(toPublicChatOperation);
+    } catch (error) {
+      // The identity claim is already committed. A transient resume failure must
+      // never roll it back or leave the guest cookie usable; retrying claim/resume
+      // remains safe because guest operations are row-locked and linked once.
+      this.logger.warn(`Guest chat operations could not be resumed: ${error instanceof Error ? error.name : 'UnknownError'}`);
+    }
+    response.clearCookie(CHAT_GUEST_COOKIE_NAME, this.tokens.clearCookieOptions());
+    return { ...conversation, resumedOperations };
+  }
+
+  @Post('conversations/:conversationId/messages')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Send a message as the authenticated client' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  async sendMessageForClient(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Body() dto: SendChatMessageDto,
+    @ClientSession() session: { id: string },
+    @Ip() ipAddress: string,
+  ) {
+    const message = await this.sendMessage.execute({
+      audience: 'client',
+      conversationId,
+      clientId: session.id,
+      ipAddress,
+      ...dto,
+    });
+    return toChatMessageResponse(message);
+  }
+
+  @Post('conversations/:conversationId/messages/:messageId/retry')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Retry an unanswered administrative assistant message as the client owner' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiParam({ name: 'messageId', format: 'uuid', description: 'Inbound message UUID' })
+  @ApiOkResponse({ type: ChatMessageResponseDto, description: 'The retryable inbound message after a durable retry was staged' })
+  async retryMessageForClient(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Param('messageId', ParseUUIDPipe) messageId: string,
+    @Body() _body: RetryAdministrativeMessageDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toChatMessageResponse(await this.retryMessage.execute({
+      audience: 'client', conversationId, messageId, clientId: session.id,
+    }));
+  }
+
+  @Get('conversations/:conversationId/messages')
+  @Header('Cache-Control', 'no-store, max-age=0')
+  @ApiOperation({ summary: 'List messages as the authenticated client' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  listMessagesForClient(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Query() dto: ListChatMessagesDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return this.listMessages.execute({
+      audience: 'client',
+      conversationId,
+      clientId: session.id,
+      limit: dto.limit ?? 20,
+      ...(dto.cursor ? { cursor: dto.cursor } : {}),
+    });
+  }
+
+  @Post('conversations/:conversationId/handoff')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Request reception handoff as the authenticated client' })
+  @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  async requestReceptionForClient(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Body() _dto: ClientRequestHandoffDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toChatConversationResponse(await this.requestHandoff.execute({
+      audience: 'client',
+      conversationId,
+      clientId: session.id,
+    }));
+  }
+
+  @Post('operations/:operationId/acknowledge')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Acknowledge an additional appointment before confirmation' })
+  @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  async acknowledgeAdditionalBooking(
+    @Param('operationId', ParseUUIDPipe) operationId: string,
+    @Body() dto: OperationVersionDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toPublicChatOperation(await this.acknowledgeOperation.execute({
+      operationId,
+      clientId: session.id,
+      expectedVersion: dto.expectedVersion,
+    }));
+  }
+
+  @Post('operations/:operationId/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm and execute a prepared chat operation' })
+  @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  async confirmPreparedOperation(
+    @Param('operationId', ParseUUIDPipe) operationId: string,
+    @Body() dto: OperationVersionDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toPublicChatOperation(await this.confirmOperation.execute({
+      operationId,
+      clientId: session.id,
+      expectedVersion: dto.expectedVersion,
+    }));
+  }
+
+  @Post('operations/:operationId/decline')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Decline a prepared chat operation without executing it' })
+  @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  async declinePreparedOperation(
+    @Param('operationId', ParseUUIDPipe) operationId: string,
+    @Body() dto: OperationVersionDto,
+    @ClientSession() session: { id: string },
+  ) {
+    return toPublicChatOperation(await this.declineOperation.execute({
+      operationId,
+      clientId: session.id,
+      expectedVersion: dto.expectedVersion,
+    }));
+  }
+}

@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import type { ZoomMeetingState } from '../../infrastructure/zoom/zoom-api.client';
 import { PrismaService } from '../../infrastructure/database';
 import { ZoomApiClient } from '../../infrastructure/zoom/zoom-api.client';
 import { ZoomCredentialsService } from '../../infrastructure/zoom/zoom-credentials.service';
@@ -62,18 +63,21 @@ export class ZoomMeetingService {
     opts: { topic: string; startTime: string; durationMins: number },
   ): Promise<void> {
     const token = await this.getAccessToken(organizationId);
-    if (!token) return;
+    if (!token) throw new ServiceUnavailableException('Zoom integration is unavailable');
 
-    try {
-      const settings = await this.prisma.organizationSettings.findFirst({
-        where: {},
-      });
-      const timezone = settings?.timezone || 'Asia/Riyadh';
+    const settings = await this.prisma.organizationSettings.findFirst({
+      where: {},
+    });
+    const timezone = settings?.timezone || 'Asia/Riyadh';
+    await this.zoomApi.updateMeeting(token, meetingId, opts, timezone);
+  }
 
-      await this.zoomApi.updateMeeting(token, meetingId, opts, timezone);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Unknown error';
-      this.logger.error(`Failed to update Zoom meeting ${meetingId}: ${message}`);
-    }
+  async getMeeting(
+    organizationId: string,
+    meetingId: string,
+  ): Promise<ZoomMeetingState> {
+    const token = await this.getAccessToken(organizationId);
+    if (!token) throw new ServiceUnavailableException('Zoom integration is unavailable');
+    return this.zoomApi.getMeeting(token, meetingId);
   }
 }

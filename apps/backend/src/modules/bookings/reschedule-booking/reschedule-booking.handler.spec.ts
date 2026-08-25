@@ -388,7 +388,7 @@ describe('RescheduleBookingHandler', () => {
     ).rejects.toThrow(otherError);
   });
 
-  it('10. calls zoom updateMeeting and swallows rejection when zoomMeetingId exists', async () => {
+  it('10. writes revisioned Zoom desired state and never PATCHes directly when zoomMeetingId exists', async () => {
     (fetchBookingOrFail as jest.Mock).mockResolvedValue(
       makeBooking({ zoomMeetingId: 'zoom-123' }),
     );
@@ -414,15 +414,13 @@ describe('RescheduleBookingHandler', () => {
       }),
     ).resolves.toBeDefined();
 
-    expect(zoomService.updateMeeting).toHaveBeenCalledWith(
-      DEFAULT_ORG_ID,
-      'zoom-123',
-      expect.objectContaining({
-        topic: 'Booking book-1',
-        startTime: futureDate.toISOString(),
-        durationMins: 90,
-      }),
-    );
+    expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+    expect(prisma.bookingZoomSync.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ zoomMeetingId: 'zoom-123', revision: 1, desiredStartAt: futureDate }),
+    }));
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ eventType: 'bookings.zoom.reschedule_requested', status: 'PENDING_V2' }),
+    }));
   });
 
   it('11. skips zoom updateMeeting when booking has no zoomMeetingId', async () => {

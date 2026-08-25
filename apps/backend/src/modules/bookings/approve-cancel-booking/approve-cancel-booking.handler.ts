@@ -3,8 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RefundType } from '@prisma/client';
+import { Prisma, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { stableEventId } from '../../../common/events';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.event';
@@ -29,7 +30,7 @@ export class ApproveCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
+    _eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly groupSessionCapacity: ProgramCapacityService,
     private readonly refundHandler: RefundPaymentHandler,
@@ -76,10 +77,10 @@ export class ApproveCancelBookingHandler {
 
     let refundRequestId: string | null = null;
     let idempotencyKey: string | null = null;
+    const cancellationEventId = stableEventId(`booking:${booking.id}:cancel-approved`);
 
-    const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
-      const results = await Promise.all([
-        updateBookingAtomically(tx, {
+    const updated = await this.rlsTransaction.withTransaction(async (tx) => {
+      const updatedBooking = await updateBookingAtomically(tx, {
           bookingId: cmd.bookingId,
           currentStatus: booking.status,
           actionLabel: 'cancelled',
@@ -87,17 +88,32 @@ export class ApproveCancelBookingHandler {
             status: nextStatus,
             cancelledAt: new Date(),
           },
-        }),
-        tx.bookingStatusLog.create({
-          data: {
-            bookingId: cmd.bookingId,
-            fromStatus: booking.status,
-            toStatus: nextStatus,
-            changedBy: cmd.approvedBy,
-            reason: statusLogReason,
-          },
-        }),
-      ]);
+          ...(booking.deliveryType === 'ONLINE' ? {
+            extraWhere: {
+              AND: [
+                { OR: [
+                  { zoomCreateLeaseOwner: null },
+                  { zoomCreateLeaseExpiresAt: null },
+                  { zoomCreateLeaseExpiresAt: { lt: new Date() } },
+                ] },
+                { OR: [
+                  { zoomSyncLeaseOwner: null },
+                  { zoomSyncLeaseExpiresAt: null },
+                  { zoomSyncLeaseExpiresAt: { lt: new Date() } },
+                ] },
+              ],
+            },
+          } : {}),
+        });
+      await tx.bookingStatusLog.create({
+        data: {
+          bookingId: cmd.bookingId,
+          fromStatus: booking.status,
+          toStatus: nextStatus,
+          changedBy: cmd.approvedBy,
+          reason: statusLogReason,
+        },
+      });
 
       // MONEY SAFETY: create the RefundRequest atomically with the status
       // change so a crash between commit and publish cannot lose the refund.
@@ -113,6 +129,7 @@ export class ApproveCancelBookingHandler {
             reason: `Booking ${cmd.bookingId} cancel-approval (${effectiveRefundType})`,
             performedBy: cmd.approvedBy,
             amount: refundAmount,
+            sourceEventId: cancellationEventId,
           });
           refundRequestId = created.refundRequestId;
           idempotencyKey = created.idempotencyKey;
@@ -134,22 +151,29 @@ export class ApproveCancelBookingHandler {
         await tx.programEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
         await this.groupSessionCapacity.decrementEnrollment(tx, booking.programId);
       }
-      return results;
-    });
 
-    const event = new BookingCancelApprovedEvent({
-      bookingId: booking.id,
-      clientId: booking.clientId,
-      employeeId: booking.employeeId,
-      autoRefund,
-      approverNotes: cmd.approverNotes,
-      refundType: cmd.refundType,
-      refundAmount: cmd.refundAmount,
-      paymentId: completedPayment?.id ?? null,
-      refundRequestId,
-      idempotencyKey,
+      const event = new BookingCancelApprovedEvent({
+        bookingId: booking.id,
+        clientId: booking.clientId,
+        employeeId: booking.employeeId,
+        autoRefund,
+        approverNotes: cmd.approverNotes,
+        refundType: cmd.refundType,
+        refundAmount: cmd.refundAmount,
+        paymentId: completedPayment?.id ?? null,
+        refundRequestId,
+        idempotencyKey,
+      }, cancellationEventId);
+      await tx.outboxEvent.create({
+        data: {
+          id: event.eventId,
+          aggregateId: booking.id,
+          eventType: event.eventName,
+          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      });
+      return updatedBooking;
     });
-    await this.eventBus.publish(event.eventName, event.toEnvelope());
 
     return { ...updated, autoRefund };
   }

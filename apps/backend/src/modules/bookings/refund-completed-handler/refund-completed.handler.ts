@@ -44,6 +44,7 @@ export class RefundCompletedEventHandler {
   register(): void {
     this.eventBus.subscribe<RefundCompletedPayload>(
       'finance.refund.completed',
+      'bookings.refund-completed.v1',
       async (envelope) => {
         const { bookingId, refundRequestId } = envelope.payload;
         if (!bookingId) {

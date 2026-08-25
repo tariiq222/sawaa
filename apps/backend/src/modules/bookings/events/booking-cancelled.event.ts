@@ -27,7 +27,7 @@ export interface BookingCancelledPayload {
 export class BookingCancelledEvent extends BaseEvent<BookingCancelledPayload> {
   readonly eventName = 'bookings.booking.cancelled';
 
-  constructor(payload: BookingCancelledPayload) {
-    super({ source: 'bookings', version: 1, payload });
+  constructor(payload: BookingCancelledPayload, eventId?: string) {
+    super({ source: 'bookings', version: 1, payload, eventId });
   }
 }

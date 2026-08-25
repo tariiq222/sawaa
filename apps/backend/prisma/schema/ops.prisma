@@ -111,6 +111,9 @@ model OutboxEvent {
   eventType     String
   payload       Json
   status        String    @default("PENDING") // PENDING | PUBLISHED | FAILED
+  // Durable publishing lane survives FAILED so an administrative retry cannot
+  // re-expose a current-only event to a pre-transition publisher.
+  deliveryLane  String    @default("PENDING")
   lockedUntil   DateTime? @db.Timestamptz(3)
   publishedAt   DateTime? @db.Timestamptz(3)
   createdAt     DateTime  @default(now()) @db.Timestamptz(3)

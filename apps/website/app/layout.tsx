@@ -4,7 +4,7 @@ import { QueryProvider } from '@/providers/query-provider';
 import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import { AnalyticsLoader } from '@/components/analytics/analytics-loader';
-import { FloatingWhatsApp } from '@/components/cta/floating-whatsapp';
+import { AiChatWidget } from '@/features/chat/ai-chat-widget';
 import { getApiOrigin } from '@/lib/api-base';
 import './globals.css';
 import {
@@ -132,9 +132,7 @@ export default async function RootLayout({
             <BrandingProvider branding={branding}>
               {children}
               <AnalyticsLoader />
-              <FloatingWhatsApp
-                phone={branding.contactPhone ?? ''}
-              />
+              {process.env.NEXT_PUBLIC_WEB_CHAT_ENABLED === 'true' && <AiChatWidget />}
             </BrandingProvider>
           </LocaleProvider>
         </QueryProvider>

@@ -9,6 +9,7 @@ import { RefundPaymentHandler } from '../../finance/refund-payment/refund-paymen
 import { CancelBookingHandler } from './cancel-booking.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { ProgramCapacityService } from '../program/program-capacity.service';
+import { stableEventId } from '../../../common/events';
 
 type MockPrisma = {
   booking: {
@@ -19,6 +20,7 @@ type MockPrisma = {
   bookingStatusLog: { create: jest.Mock };
   coupon: { updateMany: jest.Mock };
   programEnrollment: { deleteMany: jest.Mock };
+  outboxEvent: { create: jest.Mock };
   $transaction: jest.Mock;
 };
 
@@ -29,6 +31,7 @@ const buildMockPrisma = (): MockPrisma => {
     bookingStatusLog: { create: jest.fn() },
     coupon: { updateMany: jest.fn() },
     programEnrollment: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
     $transaction: jest.fn(async (cb: (tx: MockPrisma) => Promise<unknown>) => await cb(prisma)),
   };
   return prisma;
@@ -512,7 +515,7 @@ describe('CancelBookingHandler', () => {
       });
     });
 
-    it('publishes BookingCancelledEvent with correct payload', async () => {
+    it('commits a deterministic BookingCancelled outbox event with the cancellation and refund', async () => {
       const in48h = new Date(Date.now() + 48 * 3_600_000);
       prisma.booking.findFirst.mockResolvedValue({
         ...baseBooking,
@@ -536,12 +539,15 @@ describe('CancelBookingHandler', () => {
         cancelNotes: 'Test notes',
       });
 
-      expect(eventBus.publish).toHaveBeenCalledWith(
-        'bookings.booking.cancelled',
-        expect.objectContaining({
-          source: 'bookings',
-          version: 1,
+      expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id: stableEventId('booking:book-1:direct-cancel:lifecycle'),
+          aggregateId: 'book-1',
+          eventType: 'bookings.booking.cancelled',
           payload: expect.objectContaining({
+            source: 'bookings',
+            version: 1,
+            payload: expect.objectContaining({
             organizationId: DEFAULT_ORG_ID,
             bookingId: 'book-1',
             clientId: 'client-1',
@@ -552,9 +558,17 @@ describe('CancelBookingHandler', () => {
             paymentId: 'pay-1',
             refundRequestId: 'rr-1',
             idempotencyKey: 'ik-1',
+            }),
           }),
         }),
+      });
+      expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          sourceEventId: stableEventId('booking:book-1:direct-cancel:lifecycle'),
+        }),
       );
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
     it('sets zoomMeetingStatus to CANCELLED in transaction when zoomMeetingId exists', async () => {

@@ -36,6 +36,7 @@ export class IssueInvoiceReceiptHandler {
   register(): void {
     this.eventBus.subscribe<PaymentCompletedPayload>(
       'finance.payment.completed',
+      'finance.payment-completed-receipt.v1',
       (envelope) => this.handle(envelope),
     );
   }

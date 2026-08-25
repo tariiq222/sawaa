@@ -37,6 +37,7 @@
     "seed:group-programs": "tsx prisma/seeds/sawa-group-programs.ts",
     "seed:group-sessions": "tsx prisma/seeds/group-sessions-demo.ts",
     "seed:clinics-demo": "tsx prisma/seeds/sawa-clinics-demo.ts",
+    "seed:sawaa-ai-local-catalog": "tsx prisma/seeds/sawaa-ai-local-catalog.ts",
     "reset:org-suspension": "tsx scripts/reset-org-suspension.ts",
     "openapi:export": "tsx scripts/export-openapi.ts",
     "openapi:snapshot": "WRITE_OPENAPI_SPEC=1 tsx -e \"require('./dist/main.js')\"",

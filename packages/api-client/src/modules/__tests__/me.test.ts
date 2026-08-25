@@ -35,6 +35,7 @@ beforeEach(() => {
     onTokenRefreshed,
     onAuthFailure,
   })
+  vi.stubGlobal('window', {})
   setMeBaseUrl('http://api.test/api/v1')
   vi.stubGlobal('fetch', vi.fn())
 })
@@ -56,6 +57,12 @@ describe('getMe', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(jsonResponse({ message: 'Expired' }, 401))
       .mockResolvedValueOnce(
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'a'.repeat(64) },
+        }),
+      )
+      .mockResolvedValueOnce(
         jsonResponse({
           success: true,
           data: { clientId: 'client_1' },
@@ -70,16 +77,17 @@ describe('getMe', () => {
     expect(onAuthFailure).not.toHaveBeenCalled()
 
     const calls = vi.mocked(fetch).mock.calls
-    expect(calls).toHaveLength(3)
+    expect(calls).toHaveLength(4)
     expect(calls[0]?.[0]).toBe('http://api.test/api/v1/public/me')
-    expect(calls[1]?.[0]).toBe('http://api.test/api/v1/public/auth/refresh')
-    expect(calls[2]?.[0]).toBe('http://api.test/api/v1/public/me')
+    expect(calls[1]?.[0]).toBe('http://api.test/api/v1/public/branding')
+    expect(calls[2]?.[0]).toBe('http://api.test/api/v1/public/auth/refresh')
+    expect(calls[3]?.[0]).toBe('http://api.test/api/v1/public/me')
 
-    const refreshInit = calls[1]?.[1] as RequestInit
+    const refreshInit = calls[2]?.[1] as RequestInit
     expect((calls[0]?.[1] as RequestInit).credentials).toBe('include')
     expect(refreshInit.credentials).toBe('include')
     expect(JSON.parse(refreshInit.body as string)).toEqual({})
-    expect((calls[2]?.[1] as RequestInit).credentials).toBe('include')
+    expect((calls[3]?.[1] as RequestInit).credentials).toBe('include')
   })
 })
 

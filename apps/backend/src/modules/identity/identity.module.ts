@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -104,7 +104,7 @@ const handlers = [
     StorageModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     NotificationChannelModule,
-    CommsModule,
+    forwardRef(() => CommsModule),
     PlatformSettingsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

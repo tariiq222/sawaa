@@ -3,7 +3,7 @@ import { BookingConfirmedHandler } from './booking-confirmed.handler';
 const buildEventBus = () => {
   let subscriber: ((env: { payload: { bookingId: string; clientId: string; employeeId: string; branchId: string; price: number; currency: string } }) => Promise<void>) | null = null;
   return {
-    subscribe: jest.fn((_, cb) => { subscriber = cb as typeof subscriber; }),
+    subscribe: jest.fn((_, _consumerId, cb) => { subscriber = cb as typeof subscriber; }),
     publish: jest.fn(),
     getSubscriber: () => subscriber!,
   };
@@ -25,7 +25,9 @@ describe('BookingConfirmedHandler', () => {
     const createInvoice = buildCreateInvoice();
     const handler = new BookingConfirmedHandler(eb as never, createInvoice as never);
     handler.register();
-    expect(eb.subscribe).toHaveBeenCalledWith('bookings.booking.confirmed', expect.any(Function));
+    expect(eb.subscribe).toHaveBeenCalledWith(
+      'bookings.booking.confirmed', 'finance.booking-confirmed-invoice.v1', expect.any(Function),
+    );
   });
 
   it('calls createInvoice when booking confirmed', async () => {

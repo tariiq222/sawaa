@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import type { DomainEventEnvelope } from '../../../infrastructure/events/event-bus.service';
+import { NoEventConsumersRegisteredError } from '../../../infrastructure/events/event-bus.service';
 import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 
@@ -52,7 +53,11 @@ export class OutboxPublisherCron {
       // Exclude terminal rows (failedAt IS NOT NULL) from the poll.
       const rows = await this.prisma.$queryRaw<{ id: string; eventType: string; payload: unknown; attemptCount: number }[]>`
         SELECT id, "eventType", "payload", "attemptCount" FROM "OutboxEvent"
-        WHERE status = 'PENDING'
+        -- PENDING_V2 is intentionally invisible to 1ebce257, whose publisher
+        -- only selects PENDING and whose legacy worker ACKs unknown handlers.
+        -- This binary owns both lanes and only stamps PUBLISHED after durable
+        -- consumer-specific BullMQ jobs have been added.
+        WHERE status IN ('PENDING', 'PENDING_V2')
         AND ("lockedUntil" IS NULL OR "lockedUntil" < ${now})
         AND "failedAt" IS NULL
         ORDER BY "createdAt" ASC
@@ -79,6 +84,18 @@ export class OutboxPublisherCron {
           );
           publishedIds.push(row.id);
         } catch (err) {
+          if (err instanceof NoEventConsumersRegisteredError) {
+            // Rolling deploy safety: an older process may see an outbox event
+            // whose dedicated consumer queue only exists in the newer build.
+            // Keep it pending and release the poll lease without burning the
+            // finite delivery-attempt budget.
+            await this.prisma.outboxEvent.update({
+              where: { id: row.id },
+              data: { lockedUntil: null },
+            });
+            this.logger.debug({ eventId: row.id, eventType: row.eventType }, 'outbox event awaits compatible consumer');
+            continue;
+          }
           const nextAttempt = (row.attemptCount ?? 0) + 1;
           const isTerminal = nextAttempt >= MAX_ATTEMPTS;
           await this.prisma.outboxEvent.update({

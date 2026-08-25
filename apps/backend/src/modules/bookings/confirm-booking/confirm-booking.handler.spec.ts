@@ -29,6 +29,12 @@ describe('ConfirmBookingHandler', () => {
     });
 
     expect(zoomQueue.enqueue).toHaveBeenCalledWith('book-1');
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        aggregateId: 'book-1',
+        eventType: 'bookings.zoom.create_requested',
+      }),
+    });
   });
 
   it('still confirms the booking when the Zoom enqueue fails', async () => {
@@ -45,6 +51,7 @@ describe('ConfirmBookingHandler', () => {
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CONFIRMED }) }),
     );
+    expect(prisma.outboxEvent.create).toHaveBeenCalled();
   });
 
   it('throws BadRequestException when booking is already CONFIRMED', async () => {

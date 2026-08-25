@@ -35,6 +35,7 @@ export class BookingConfirmedHandler {
   register(): void {
     this.eventBus.subscribe<BookingConfirmedPayload>(
       'bookings.booking.confirmed',
+      'finance.booking-confirmed-invoice.v1',
       async (envelope) => {
         const { bookingId, clientId, employeeId, branchId, price, discountedPrice } =
           envelope.payload;

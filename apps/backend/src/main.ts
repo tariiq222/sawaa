@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
+import { isProductionChatGuestTokenSecretPlaceholder } from './config/guest-chat-token-secret.policy';
 import { ConfigService } from '@nestjs/config';
 import { LoggingInterceptor, AuditInterceptor, RequestContextInterceptor } from './common/interceptors';
 import { PrismaService } from './infrastructure/database';
@@ -30,6 +31,9 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
   app.use(cookieParser());
+  // Register CORS before middleware which may reject a request. This preserves
+  // headers on a CSRF 403 for explicitly allowed browser origins only.
+  configureCors(app);
 
   // CSRF protection: applied to cookie-based auth endpoints (mobile-client,
   // public with session cookie). Dashboard uses Bearer tokens which are
@@ -40,7 +44,6 @@ async function bootstrap(): Promise<void> {
       req.path.startsWith('/api/v1/auth') ||
       req.path.startsWith('/api/v1/public/sms/webhooks') ||
       req.path.startsWith('/api/v1/public/payment-webhook') ||
-      req.path.startsWith('/api/v1/public/whatsapp') ||
       req.path.startsWith('/api/v1/public/health') ||
       req.path.startsWith('/api/v1/public/metrics')
     ) {
@@ -61,8 +64,6 @@ async function bootstrap(): Promise<void> {
   // defaultVersion='1' preserves the existing /api/v1/... URL shape, so existing
   // clients and reverse-proxy rewrites are unaffected.
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-
-  configureCors(app);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -138,10 +139,17 @@ async function bootstrap(): Promise<void> {
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
       'MOYASAR_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
+      'CHAT_GUEST_TOKEN_SECRET',
       'SUPER_ADMIN_PASSWORD',
     ]) {
       const v = config.get<string>(key);
-      if (!v || bannedPatterns.some((p) => p.test(v))) {
+      const isGuestTokenSecretPlaceholder =
+        key === 'CHAT_GUEST_TOKEN_SECRET' &&
+        isProductionChatGuestTokenSecretPlaceholder(v);
+      const isOtherSecretPlaceholder =
+        key !== 'CHAT_GUEST_TOKEN_SECRET' &&
+        bannedPatterns.some((pattern) => pattern.test(v ?? ''));
+      if (!v || isGuestTokenSecretPlaceholder || isOtherSecretPlaceholder) {
         throw new Error(
           `Refusing to boot: ${key} is missing or set to a known dev placeholder`,
         );

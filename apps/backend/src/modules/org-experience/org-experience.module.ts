@@ -51,6 +51,7 @@ import { GetSessionPackageHandler } from './session-packages/get-session-package
 import { ArchiveSessionPackageHandler } from './session-packages/archive-session-package/archive-session-package.handler';
 import { ListPublicPackagesHandler } from './session-packages/list-public-packages/list-public-packages.handler';
 import { GetPublicPackageHandler } from './session-packages/get-public-package/get-public-package.handler';
+import { GetPublicCatalogHandler } from './public-catalog/get-public-catalog.handler';
 
 const serviceHandlers = [
   CreateServiceHandler, UpdateServiceHandler, ListServicesHandler, GetServiceHandler, ArchiveServiceHandler,
@@ -89,6 +90,7 @@ const sessionPackageHandlers = [
     ...sessionPackageHandlers,
     ComputePackagePriceService,
     GetPublicBrandingHandler,
+    GetPublicCatalogHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
@@ -102,6 +104,7 @@ const sessionPackageHandlers = [
     ...sessionPackageHandlers,
     ComputePackagePriceService,
     GetPublicBrandingHandler,
+    GetPublicCatalogHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,

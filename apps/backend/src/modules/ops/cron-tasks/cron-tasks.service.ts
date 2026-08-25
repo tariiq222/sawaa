@@ -65,13 +65,30 @@ export class CronTasksService implements OnModuleInit {
     this.ownerAlertEmail = this.config.get<string>('OWNER_ALERT_EMAIL');
   }
 
-  onModuleInit(): void {
-    this.registerRepeatingJobs();
+  async onModuleInit(): Promise<void> {
+    await this.registerRepeatingJobs();
     this.registerWorker();
   }
 
-  private registerRepeatingJobs(): void {
+  private async registerRepeatingJobs(): Promise<void> {
     const queue = this.bullMq.getQueue(QUEUE_NAME);
+
+    // The previous deployment used a minute cron pattern. BullMQ derives the
+    // repeat key from the repeat options, so changing it to `every: 5000`
+    // would otherwise leave the old scheduler active in Redis. Remove only
+    // that exact legacy entry and wait for completion before registering the
+    // stable 5-second schedule. If Redis rejects the cleanup, fail closed for
+    // this startup pass instead of creating a duplicate publisher.
+    try {
+      await queue.removeRepeatable(
+        CRON_JOBS.OUTBOX_PUBLISHER,
+        { pattern: '*/1 * * * *' },
+        `repeat:${CRON_JOBS.OUTBOX_PUBLISHER}`,
+      );
+    } catch (err) {
+      this.logger.error('Failed to remove legacy outbox publisher schedule; skipping schedule registration', err);
+      return;
+    }
 
     const jobs: Array<{ name: string; cron: string }> = [
       { name: CRON_JOBS.BOOKING_AUTOCOMPLETE, cron: '*/15 * * * *' },
@@ -86,17 +103,23 @@ export class CronTasksService implements OnModuleInit {
 
       { name: CRON_JOBS.RECONCILE_REFUNDS, cron: '*/15 * * * *' },    // every 15 min
       { name: CRON_JOBS.RECONCILE_PAYMENTS, cron: '*/15 * * * *' },   // every 15 min — catch lost payment webhooks
-      { name: CRON_JOBS.OUTBOX_PUBLISHER, cron: '*/1 * * * *' },      // every minute (BullMQ min granularity; real tick is every 5s via worker loop)
+      // BullMQ cron patterns have minute granularity. Use its fixed-interval
+      // repeat mode for the outbox so assistant messages are dispatched within
+      // seconds instead of waiting for the next minute boundary.
+      { name: CRON_JOBS.OUTBOX_PUBLISHER, cron: '*/1 * * * *' },
       { name: CRON_JOBS.AUTHENTICA_BALANCE_CHECK, cron: '0 8 * * *' }, // daily at 08:00 AST
     ];
 
     for (const { name, cron } of jobs) {
+      const repeat = name === CRON_JOBS.OUTBOX_PUBLISHER
+        ? { every: 5_000 }
+        : { pattern: cron };
       queue
         .add(
           name,
           {}, // platform-level cron; no per-org context needed
           {
-            repeat: { pattern: cron },
+            repeat,
             jobId: `repeat:${name}`,
             attempts: 3,
             backoff: { type: 'exponential', delay: 30_000 },

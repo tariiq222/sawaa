@@ -48,7 +48,12 @@ describe("SidebarConfig — persona groups", () => {
   it("communicationNav contains messaging items", () => {
     expect(allHrefs).toContain("/notifications")
     expect(allHrefs).toContain("/contact-messages")
-    expect(allHrefs).toContain("/whatsapp")
+    expect(allHrefs).toContain("/conversations")
+    expect(allHrefs).not.toContain("/whatsapp")
+    expect(communicationNav.find((item) => item.href === "/conversations")).toMatchObject({
+      titleKey: "nav.conversations",
+      permission: "conversation:read",
+    })
   })
 
   it("systemNav contains settings", () => {

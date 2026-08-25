@@ -8,7 +8,8 @@
  * primary/accent — swap those in the dashboard and the entire theme reflows.
  */
 
-.theme-sawaa {
+.theme-sawaa,
+.theme-sawaa-tokens {
   /* ═══ Primary scale (derived from --primary) ═══ */
   --sw-primary: var(--primary);
   --sw-primary-50:  color-mix(in srgb, var(--primary) 8%,  #ffffff);

@@ -80,6 +80,50 @@ describe('GetConversationHandler', () => {
     expect(result.messages.map((m) => m.content)).toEqual(['hi', 'hello', 'auto-reply']);
   });
 
+  it('maps visitor, staff, and system messages for the unified chat record', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue({
+      id: 'c1',
+      clientId: null,
+      employeeId: null,
+      status: ConversationStatus.AI_ACTIVE,
+      createdAt: new Date('2026-08-13T10:00:00Z'),
+      updatedAt: new Date('2026-08-13T10:00:00Z'),
+      lastMessageAt: null,
+      messages: [
+        {
+          id: 'm1',
+          conversationId: 'c1',
+          senderType: MessageSenderType.VISITOR,
+          body: 'مرحبا',
+          createdAt: new Date('2026-08-13T10:00:00Z'),
+        },
+        {
+          id: 'm2',
+          conversationId: 'c1',
+          senderType: MessageSenderType.STAFF,
+          body: 'أهلًا',
+          createdAt: new Date('2026-08-13T10:01:00Z'),
+        },
+        {
+          id: 'm3',
+          conversationId: 'c1',
+          senderType: MessageSenderType.SYSTEM,
+          body: 'تم تحويل المحادثة',
+          createdAt: new Date('2026-08-13T10:02:00Z'),
+        },
+      ],
+    });
+
+    const result = await handler.execute({ conversationId: 'c1' });
+
+    expect(result.messages.map((message) => message.role)).toEqual([
+      'user',
+      'staff',
+      'assistant',
+    ]);
+    expect(prisma.client.findFirst).not.toHaveBeenCalled();
+  });
+
   it('returns endedAt=updatedAt when conversation is CLOSED', async () => {
     const updatedAt = new Date('2026-05-20T11:00:00Z');
     prisma.chatConversation.findFirst.mockResolvedValue({
@@ -97,6 +141,26 @@ describe('GetConversationHandler', () => {
 
     expect(result.handedOff).toBe(false);
     expect(result.endedAt).toEqual(updatedAt);
+  });
+
+  it('returns closedAt instead of a later updatedAt for a closed conversation', async () => {
+    const closedAt = new Date('2026-08-13T10:30:00Z');
+    const updatedAt = new Date('2026-08-13T11:00:00Z');
+    prisma.chatConversation.findFirst.mockResolvedValue({
+      id: 'c1',
+      clientId: 'u1',
+      employeeId: null,
+      status: ConversationStatus.CLOSED,
+      closedAt,
+      createdAt: new Date('2026-08-13T10:00:00Z'),
+      updatedAt,
+      lastMessageAt: null,
+      messages: [],
+    });
+
+    const result = await handler.execute({ conversationId: 'c1' });
+
+    expect(result.endedAt).toEqual(closedAt);
   });
 
   // AUTHZ-004 / COMMS-004: EMPLOYEE callers may only read their assigned chats.

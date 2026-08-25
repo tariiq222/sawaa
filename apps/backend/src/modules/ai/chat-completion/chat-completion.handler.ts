@@ -33,8 +33,8 @@ export class ChatCompletionHandler {
   ) {}
 
   async execute(dto: ChatCompletionCommand): Promise<ChatCompletionResult> {
-    if (!this.chat.isAvailable()) {
-      throw new BadRequestException('ChatAdapter is not available — set OPENROUTER_API_KEY');
+    if (!await this.chat.isAvailable()) {
+      throw new BadRequestException('AI provider is not configured and connected');
     }
 
     // Load chatbot config for custom system prompt
@@ -102,8 +102,10 @@ export class ChatCompletionHandler {
     let result: Awaited<ReturnType<typeof this.chat.complete>>;
     try {
       result = await this.chat.complete(messages, undefined, { maxTokens: MAX_OUTPUT_TOKENS });
-    } catch (err) {
-      this.logger.error('OpenRouter call failed', err instanceof Error ? err.stack : String(err));
+    } catch {
+      // Provider errors can contain response bodies, prompts, or credentials.
+      // Emit only a fixed safe code and context; never serialize the error.
+      this.logger.warn('AI_PROVIDER_REQUEST_FAILED', ChatCompletionHandler.name);
       throw new ServiceUnavailableException('AI temporarily unavailable, please try again');
     }
 

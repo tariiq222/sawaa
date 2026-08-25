@@ -1,5 +1,5 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 import { ApproveCancelBookingHandler } from './approve-cancel-booking.handler';
 import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
 
@@ -57,8 +57,34 @@ describe('ApproveCancelBookingHandler', () => {
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CANCELLED }) }),
     );
-    expect(eb.publish).toHaveBeenCalledWith('bookings.booking.cancel_approved', expect.anything());
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ eventType: 'bookings.booking.cancel_approved' }),
+    });
+    expect(eb.publish).not.toHaveBeenCalled();
     expect(result.autoRefund).toBe(true);
+  });
+
+  it('fences approval against an active ONLINE reschedule sync lease', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, deliveryType: DeliveryType.ONLINE });
+    const handler = buildHandler(prisma);
+    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        AND: expect.arrayContaining([expect.objectContaining({
+          OR: expect.arrayContaining([expect.objectContaining({ zoomSyncLeaseOwner: null })]),
+        })]),
+      }),
+    }));
+  });
+
+  it('fails approval atomically when the active sync lease makes its booking CAS lose', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, deliveryType: DeliveryType.ONLINE });
+    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
+    const handler = buildHandler(prisma);
+    await expect(handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' })).rejects.toThrow('status changed concurrently');
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when booking not found', async () => {
@@ -115,16 +141,18 @@ describe('ApproveCancelBookingHandler', () => {
       refundAmount: 5000,
     });
 
-    expect(eb.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancel_approved',
-      expect.objectContaining({
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        eventType: 'bookings.booking.cancel_approved',
         payload: expect.objectContaining({
+          payload: expect.objectContaining({
           refundType: 'PARTIAL',
           refundAmount: 5000,
           approverNotes: 'client travelled',
+          }),
         }),
       }),
-    );
+    });
     expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -143,12 +171,13 @@ describe('ApproveCancelBookingHandler', () => {
 
     await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
 
-    expect(eb.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancel_approved',
-      expect.objectContaining({
-        payload: expect.objectContaining({ refundType: 'FULL', refundAmount: undefined }),
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        payload: expect.objectContaining({
+          payload: expect.objectContaining({ refundType: 'FULL', refundAmount: undefined }),
+        }),
       }),
-    );
+    });
     expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ reason: 'Cancel request approved — refund: FULL' }),
@@ -165,12 +194,13 @@ describe('ApproveCancelBookingHandler', () => {
 
     await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
 
-    expect(eb.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancel_approved',
-      expect.objectContaining({
-        payload: expect.objectContaining({ refundType: undefined, refundAmount: undefined }),
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        payload: expect.objectContaining({
+          payload: expect.objectContaining({ refundType: undefined, refundAmount: undefined }),
+        }),
       }),
-    );
+    });
     expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ reason: 'Cancel request approved' }),
@@ -305,7 +335,7 @@ describe('ApproveCancelBookingHandler', () => {
     expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
   });
 
-  it('includes refundRequestId and paymentId in the published event', async () => {
+  it('includes refundRequestId and paymentId in the transactional outbox event', async () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
     prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
@@ -316,16 +346,19 @@ describe('ApproveCancelBookingHandler', () => {
 
     await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
 
-    expect(eb.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancel_approved',
-      expect.objectContaining({
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        eventType: 'bookings.booking.cancel_approved',
         payload: expect.objectContaining({
+          payload: expect.objectContaining({
           paymentId: 'pay-1',
           refundRequestId: 'rr-1',
           idempotencyKey: 'ik-1',
+          }),
         }),
       }),
-    );
+    });
+    expect(eb.publish).not.toHaveBeenCalled();
   });
 
   // ─── Session-package credit return (P1-1 fix) ───────────────────────────

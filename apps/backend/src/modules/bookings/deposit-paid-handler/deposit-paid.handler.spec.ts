@@ -15,7 +15,7 @@ function buildHandler() {
     | ((envelope: { payload: { bookingId: string | null; paymentId: string; invoiceId: string } }) => Promise<void>)
     | null = null;
   const eb = {
-    subscribe: jest.fn((_: string, cb: unknown) => {
+    subscribe: jest.fn((_: string, _consumerId: string, cb: unknown) => {
       subscriber = cb as typeof subscriber;
     }),
     publish: jest.fn().mockResolvedValue(undefined),
@@ -40,7 +40,9 @@ const makeEnvelope = (
 describe('DepositPaidEventHandler', () => {
   it('registers a subscriber on finance.payment.deposit_paid', () => {
     const { eb } = buildHandler();
-    expect(eb.subscribe).toHaveBeenCalledWith('finance.payment.deposit_paid', expect.any(Function));
+    expect(eb.subscribe).toHaveBeenCalledWith(
+      'finance.payment.deposit_paid', 'bookings.deposit-paid.v1', expect.any(Function),
+    );
   });
 
   it('moves a PENDING booking to DEPOSIT_PAID', async () => {

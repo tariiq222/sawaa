@@ -3,15 +3,20 @@ import {
   ApiError,
   ORG_SUSPENDED_CODE,
   apiRequest,
+  ensureCsrfToken,
   initClient,
   setApiRequestBaseUrl,
 } from './client'
 import { setRefreshMutex, getRefreshMutex } from './refresh-mutex'
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(
+  body: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
   })
 }
 
@@ -172,9 +177,13 @@ describe('apiRequest 401 refresh flow', () => {
   })
 
   it('uses /public/auth/refresh for public/* paths', async () => {
+    vi.stubGlobal('window', {})
     storedAccess = 'old.access'
     vi.mocked(fetch)
       .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
+      .mockResolvedValueOnce(
+        jsonResponse({}, 200, { 'X-CSRF-Token': 'a'.repeat(64) }),
+      )
       .mockResolvedValueOnce(
         jsonResponse({ success: true, data: { accessToken: 'pub.access' } }),
       )
@@ -182,9 +191,102 @@ describe('apiRequest 401 refresh flow', () => {
 
     await apiRequest('/public/me/bookings')
 
-    expect(vi.mocked(fetch).mock.calls[1]?.[0]).toBe(
+    expect(vi.mocked(fetch).mock.calls[2]?.[0]).toBe(
       'http://api.test/public/auth/refresh',
     )
+  })
+
+  it('bootstraps CSRF before public refresh and retries the original mutation unchanged', async () => {
+    vi.stubGlobal('window', {})
+    storedAccess = 'old.access'
+    const body = JSON.stringify({ clientMessageId: 'message-1', text: 'hello' })
+    const csrfToken = 'b'.repeat(64)
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': csrfToken }))
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: { accessToken: 'new.access' } }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { id: 'message-1' } }))
+
+    await expect(
+      apiRequest('/public/me/chat/conversations/c1/messages', {
+        method: 'POST',
+        credentials: 'include',
+        body,
+      }),
+    ).resolves.toEqual({ id: 'message-1' })
+
+    const calls = vi.mocked(fetch).mock.calls
+    expect(calls.map(([url]) => url)).toEqual([
+      'http://api.test/public/me/chat/conversations/c1/messages',
+      'http://api.test/public/branding',
+      'http://api.test/public/auth/refresh',
+      'http://api.test/public/me/chat/conversations/c1/messages',
+    ])
+    expect(calls[1]?.[1]).toMatchObject({ method: 'GET', credentials: 'include' })
+    expect(new Headers(calls[2]?.[1]?.headers).get('x-csrf-token')).toBe(csrfToken)
+    expect(calls[3]?.[1]?.body).toBe(body)
+    expect(new Headers(calls[3]?.[1]?.headers).get('authorization')).toBe('Bearer new.access')
+  })
+
+  it('rebootstraps and retries public refresh once when another tab made its CSRF token stale', async () => {
+    vi.stubGlobal('window', {})
+    storedAccess = 'old.access'
+    const staleToken = 'a'.repeat(64)
+    const freshToken = 'b'.repeat(64)
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': staleToken }))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { statusCode: 403, code: 'CSRF_INVALID', message: 'CSRF token missing or invalid' },
+          403,
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': freshToken }))
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: { accessToken: 'new.access' } }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { id: 'booking-1' } }))
+
+    await expect(apiRequest('/public/me/bookings/booking-1')).resolves.toEqual({ id: 'booking-1' })
+
+    const calls = vi.mocked(fetch).mock.calls
+    expect(calls.map(([url]) => url)).toEqual([
+      'http://api.test/public/me/bookings/booking-1',
+      'http://api.test/public/branding',
+      'http://api.test/public/auth/refresh',
+      'http://api.test/public/branding',
+      'http://api.test/public/auth/refresh',
+      'http://api.test/public/me/bookings/booking-1',
+    ])
+    expect(new Headers(calls[2]?.[1]?.headers).get('x-csrf-token')).toBe(staleToken)
+    expect(new Headers(calls[4]?.[1]?.headers).get('x-csrf-token')).toBe(freshToken)
+    expect(onAuthFailure).not.toHaveBeenCalled()
+  })
+
+  it('calls onAuthFailure only after the single CSRF refresh retry also fails', async () => {
+    vi.stubGlobal('window', {})
+    storedAccess = 'old.access'
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': 'a'.repeat(64) }))
+      .mockResolvedValueOnce(
+        jsonResponse({ statusCode: 403, code: 'CSRF_INVALID', message: 'CSRF token missing or invalid' }, 403),
+      )
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': 'b'.repeat(64) }))
+      .mockResolvedValueOnce(
+        jsonResponse({ statusCode: 403, code: 'CSRF_INVALID', message: 'CSRF token missing or invalid' }, 403),
+      )
+
+    await expect(apiRequest('/public/me/bookings/booking-1')).rejects.toMatchObject({
+      status: 403,
+      code: 'CSRF_INVALID',
+    })
+
+    expect(vi.mocked(fetch).mock.calls).toHaveLength(5)
+    expect(onAuthFailure).toHaveBeenCalledTimes(1)
   })
 
   it('shares a single refresh across concurrent 401s (mutex)', async () => {
@@ -270,6 +372,86 @@ describe('apiRequest 401 refresh flow', () => {
       status: 401,
     })
     expect(vi.mocked(fetch).mock.calls).toHaveLength(2)
+  })
+})
+
+describe('apiRequest CSRF mismatch recovery', () => {
+  it('rebootstraps once after a stale tab token and retries the unchanged mutation body', async () => {
+    vi.stubGlobal('window', {})
+    const staleToken = 'a'.repeat(64)
+    const freshToken = 'b'.repeat(64)
+    const body = JSON.stringify({ clientMessageId: 'message-1', text: 'hello' })
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': staleToken }))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { statusCode: 403, code: 'CSRF_INVALID', message: 'CSRF token missing or invalid' },
+          403,
+          { 'X-CSRF-Token': freshToken },
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': freshToken }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { id: 'message-1' } }))
+
+    const token = await ensureCsrfToken()
+    await expect(
+      apiRequest('/public/chat/conversations/c1/messages', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': token },
+        body,
+      }),
+    ).resolves.toEqual({ id: 'message-1' })
+
+    const calls = vi.mocked(fetch).mock.calls
+    expect(calls.map(([url]) => url)).toEqual([
+      'http://api.test/public/branding',
+      'http://api.test/public/chat/conversations/c1/messages',
+      'http://api.test/public/branding',
+      'http://api.test/public/chat/conversations/c1/messages',
+    ])
+    expect(calls[1]?.[1]?.body).toBe(body)
+    expect(calls[3]?.[1]?.body).toBe(body)
+    expect(new Headers(calls[3]?.[1]?.headers).get('x-csrf-token')).toBe(freshToken)
+  })
+
+  it('does not retry a second CSRF rejection', async () => {
+    vi.stubGlobal('window', {})
+    const staleToken = 'a'.repeat(64)
+    const freshToken = 'b'.repeat(64)
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { statusCode: 403, code: 'CSRF_INVALID', message: 'CSRF token missing or invalid' },
+          403,
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': freshToken }))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { statusCode: 403, code: 'CSRF_INVALID', message: 'CSRF token missing or invalid' },
+          403,
+        ),
+      )
+
+    await expect(
+      apiRequest('/public/chat/conversations/c1/messages', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': staleToken },
+        body: JSON.stringify({ clientMessageId: 'message-1', text: 'hello' }),
+      }),
+    ).rejects.toMatchObject({ status: 403, code: 'CSRF_INVALID' })
+
+    expect(vi.mocked(fetch).mock.calls).toHaveLength(3)
+  })
+
+  it('fails closed for CSRF bootstrap outside a browser context', async () => {
+    await expect(ensureCsrfToken()).rejects.toMatchObject({
+      status: 0,
+      code: 'CSRF_BROWSER_REQUIRED',
+    })
+    expect(fetch).not.toHaveBeenCalled()
   })
 })
 

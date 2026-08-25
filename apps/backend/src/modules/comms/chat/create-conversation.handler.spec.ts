@@ -32,7 +32,12 @@ describe('CreateConversationHandler', () => {
 
     const result = await handler.execute({ clientId: 'client-1', employeeId: 'emp-1' });
     expect(prisma.chatConversation.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ clientId: 'client-1', employeeId: 'emp-1', isAiChat: false }),
+      data: expect.objectContaining({
+        clientId: 'client-1',
+        employeeId: 'emp-1',
+        isAiChat: false,
+        status: ConversationStatus.STAFF_ACTIVE,
+      }),
     }));
     expect(result.isAiChat).toBe(false);
   });
@@ -43,7 +48,12 @@ describe('CreateConversationHandler', () => {
 
     const result = await handler.execute({ clientId: 'client-1' });
     expect(prisma.chatConversation.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ clientId: 'client-1', employeeId: null, isAiChat: true }),
+      data: expect.objectContaining({
+        clientId: 'client-1',
+        employeeId: null,
+        isAiChat: true,
+        status: ConversationStatus.AI_ACTIVE,
+      }),
     }));
     expect(result.isAiChat).toBe(true);
   });

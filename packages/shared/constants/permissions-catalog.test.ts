@@ -13,6 +13,7 @@ describe('permissions catalog', () => {
       'Branch',
       'Category',
       'Client',
+      'Conversation',
       'Coupon',
       'Department',
       'Employee',
@@ -24,7 +25,6 @@ describe('permissions catalog', () => {
       'Service',
       'Setting',
       'User',
-      'WhatsappConversation',
     ]);
   });
 

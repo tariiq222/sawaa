@@ -12,13 +12,12 @@ const buildPrisma = () => ({
     .mockResolvedValueOnce([{ acquired: true }])
     .mockResolvedValue([]),
   $executeRaw: jest.fn().mockResolvedValue(1),
+  chatConversation: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
   otpCode: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
   activityLog: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
   notification: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
   smsDelivery: { deleteMany: jest.fn().mockResolvedValue({ count: 4 }) },
   notificationDeliveryLog: { deleteMany: jest.fn().mockResolvedValue({ count: 5 }) },
-  whatsappMessage: { deleteMany: jest.fn().mockResolvedValue({ count: 6 }) },
-  whatsappConversation: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
 });
 
 const buildConfig = (overrides: Record<string, string> = {}) => ({
@@ -34,12 +33,33 @@ describe('DataRetentionCron', () => {
     await expect(cron.execute()).resolves.not.toThrow();
 
     expect(prisma.otpCode.deleteMany).toHaveBeenCalledTimes(1);
+    expect(prisma.chatConversation.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.activityLog.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.notification.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.smsDelivery.deleteMany).toHaveBeenCalledTimes(1);
     expect(prisma.notificationDeliveryLog.deleteMany).toHaveBeenCalledTimes(1);
-    expect(prisma.whatsappMessage.deleteMany).toHaveBeenCalledTimes(1);
-    expect(prisma.whatsappConversation.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('purges only explicitly closed chats whose closedAt is strictly older than the configured cutoff', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-14T00:00:00.000Z'));
+    const prisma = buildPrisma();
+    const cron = new DataRetentionCron(
+      prisma as never,
+      buildConfig({ RETENTION_CHAT_DAYS: '10' }) as never,
+    );
+
+    try {
+      await cron.execute();
+
+      expect(prisma.chatConversation.deleteMany).toHaveBeenCalledWith({
+        where: {
+          status: 'CLOSED',
+          closedAt: { lt: new Date('2026-08-04T00:00:00.000Z') },
+        },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('keys each table on the correct timestamp field', async () => {
@@ -55,7 +75,6 @@ describe('DataRetentionCron', () => {
     expect(prisma.notificationDeliveryLog.deleteMany.mock.calls[0][0].where).toHaveProperty(
       'createdAt',
     );
-    expect(prisma.whatsappMessage.deleteMany.mock.calls[0][0].where).toHaveProperty('createdAt');
   });
 
   it('computes cutoffs from the default windows (otp=30d, activity=365d, others=90d)', async () => {

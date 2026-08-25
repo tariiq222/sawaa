@@ -1952,4 +1952,27 @@ describe('CheckAvailabilityHandler', () => {
       expect(result.length).toBeGreaterThan(0);
     });
   });
+
+  it('uses a supplied transaction for settings and every availability read', async () => {
+    const prisma = makePrisma();
+    const tx = makePrisma();
+    const settingsHandler = makeSettingsHandler();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        CheckAvailabilityHandler,
+        { provide: PrismaService, useValue: prisma },
+        { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+      ],
+    }).compile();
+    handler = moduleRef.get(CheckAvailabilityHandler);
+
+    await handler.execute({
+      employeeId: 'emp-1', branchId: 'branch-1', date: tomorrowMidnight,
+      durationMins: 60, transaction: tx,
+    } as never);
+
+    expect(settingsHandler.execute).toHaveBeenCalledWith({ branchId: 'branch-1', transaction: tx });
+    expect(prisma.businessHour.findUnique).not.toHaveBeenCalled();
+    expect(tx.businessHour.findUnique).toHaveBeenCalled();
+  });
 });

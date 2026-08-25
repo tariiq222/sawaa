@@ -21,7 +21,7 @@ import { PrismaService } from '../../../infrastructure/database';
  * @throws ForbiddenException if an EMPLOYEE is not the assigned counselor.
  */
 export async function assertConversationAccess(
-  prisma: PrismaService,
+  prisma: Pick<PrismaService, 'employee'>,
   conversation: { employeeId: string | null },
   requester: { requesterRole?: string | null; requesterUserId?: string },
 ): Promise<void> {

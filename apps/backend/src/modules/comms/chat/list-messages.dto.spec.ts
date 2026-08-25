@@ -41,4 +41,9 @@ describe('ListMessagesDto', () => {
     const errors = await validateDto({ limit: 2.5 });
     expect(errors.some((e) => e.property === 'limit')).toBe(true);
   });
+
+  it('keeps the legacy dashboard DTO unconstrained above its minimum', async () => {
+    const errors = await validateDto({ limit: 101 });
+    expect(errors).toHaveLength(0);
+  });
 });

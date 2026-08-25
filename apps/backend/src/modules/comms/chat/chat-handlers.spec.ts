@@ -8,6 +8,7 @@ const buildPrisma = () => ({
   chatConversation: {
     findFirst: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
   commsChatMessage: {
     create: jest.fn(),
@@ -72,21 +73,32 @@ describe('CloseConversationHandler', () => {
 
   beforeEach(() => {
     prisma = buildPrisma();
-    handler = new CloseConversationHandler(prisma as never);
+    handler = new CloseConversationHandler(
+      { withTransaction: (work: (tx: typeof prisma) => unknown) => work(prisma) } as never,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
   });
 
   it('closes an open conversation', async () => {
     const conv = { id: conversationId, status: ConversationStatus.OPEN };
     const updated = { ...conv, status: ConversationStatus.CLOSED };
-    prisma.chatConversation.findFirst.mockResolvedValue(conv);
-    prisma.chatConversation.update.mockResolvedValue(updated);
+    prisma.chatConversation.findFirst
+      .mockResolvedValueOnce(conv)
+      .mockResolvedValueOnce(updated);
+    prisma.chatConversation.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await handler.execute({ conversationId });
 
     expect(result).toEqual(updated);
-    expect(prisma.chatConversation.update).toHaveBeenCalledWith({
-      where: { id: conversationId },
-      data: { status: ConversationStatus.CLOSED },
+    expect(prisma.chatConversation.updateMany).toHaveBeenCalledWith({
+      where: { id: conversationId, status: { not: ConversationStatus.CLOSED } },
+      data: {
+        status: ConversationStatus.CLOSED,
+        closedAt: expect.any(Date),
+        stateVersion: { increment: 1 },
+        assistantLeaseOwner: null,
+        assistantLeaseExpiresAt: null,
+      },
     });
   });
 
@@ -97,7 +109,7 @@ describe('CloseConversationHandler', () => {
     const result = await handler.execute({ conversationId });
 
     expect(result).toEqual(conv);
-    expect(prisma.chatConversation.update).not.toHaveBeenCalled();
+    expect(prisma.chatConversation.updateMany).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when not found', async () => {

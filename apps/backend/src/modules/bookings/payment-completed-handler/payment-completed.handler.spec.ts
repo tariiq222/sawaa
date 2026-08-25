@@ -21,10 +21,10 @@ function buildHandler(clsOverride?: ReturnType<typeof buildCls>, zoomOverride?: 
     publish: jest.fn().mockResolvedValue(undefined),
   };
   let subscriber: ((envelope: { payload: { bookingId: string; paymentId: string; invoiceId: string } }) => Promise<void>) | null = null;
-  eb.subscribe = jest.fn((_, cb) => { subscriber = cb as typeof subscriber; });
+  eb.subscribe = jest.fn((_, _consumerId, cb) => { subscriber = cb as typeof subscriber; });
   const cls = clsOverride ?? buildCls();
   const zoom = zoomOverride ?? buildZoom();
-  const handler = new PaymentCompletedEventHandler(prisma as never, buildRlsTransaction(prisma) as never, eb as never, cls as never, zoom as never);
+  const handler = new PaymentCompletedEventHandler(prisma as never, buildRlsTransaction(prisma) as never, eb as never, cls as never);
   handler.register();
   return { prisma, eb, handler, cls, zoom, getSubscriber: () => subscriber! };
 }
@@ -36,7 +36,9 @@ const makeEnvelope = (overrides: Partial<{ bookingId: string; paymentId: string;
 describe('PaymentCompletedEventHandler', () => {
   it('registers a subscriber on finance.payment.completed', () => {
     const { eb } = buildHandler();
-    expect(eb.subscribe).toHaveBeenCalledWith('finance.payment.completed', expect.any(Function));
+    expect(eb.subscribe).toHaveBeenCalledWith(
+      'finance.payment.completed', 'bookings.payment-completed-confirm.v1', expect.any(Function),
+    );
   });
 
   it('confirms PENDING booking on payment completed', async () => {
@@ -196,7 +198,7 @@ describe('PaymentCompletedEventHandler', () => {
   });
 
   describe('Zoom meeting provisioning', () => {
-    it('triggers Zoom meeting creation for ONLINE bookings after confirmation', async () => {
+    it('writes a durable Zoom-create outbox event in the confirmation transaction', async () => {
       const zoom = buildZoom();
       const { prisma, getSubscriber } = buildHandler(undefined, zoom);
       prisma.booking.findFirst = jest.fn().mockResolvedValue({
@@ -207,7 +209,13 @@ describe('PaymentCompletedEventHandler', () => {
 
       await getSubscriber()(makeEnvelope());
 
-      expect(zoom.execute).toHaveBeenCalledWith({ bookingId: 'book-1' });
+      expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          aggregateId: 'book-1',
+          eventType: 'bookings.zoom.create_requested',
+        }),
+      });
+      expect(zoom.execute).not.toHaveBeenCalled();
     });
 
     it('does NOT trigger Zoom for IN_PERSON bookings', async () => {
@@ -221,10 +229,11 @@ describe('PaymentCompletedEventHandler', () => {
 
       await getSubscriber()(makeEnvelope());
 
+      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
       expect(zoom.execute).not.toHaveBeenCalled();
     });
 
-    it('does not fail the payment confirmation when Zoom creation throws (best-effort)', async () => {
+    it('does not call the provider inline, so an unavailable provider cannot roll back confirmation', async () => {
       const zoom = { execute: jest.fn().mockRejectedValue(new Error('Zoom API down')) };
       const { prisma, getSubscriber } = buildHandler(undefined, zoom as never);
       prisma.booking.findFirst = jest.fn().mockResolvedValue({
@@ -235,6 +244,8 @@ describe('PaymentCompletedEventHandler', () => {
 
       await expect(getSubscriber()(makeEnvelope())).resolves.toBeUndefined();
       expect(prisma.booking.updateMany).toHaveBeenCalled();
+      expect(prisma.outboxEvent.create).toHaveBeenCalled();
+      expect(zoom.execute).not.toHaveBeenCalled();
     });
   });
 });
