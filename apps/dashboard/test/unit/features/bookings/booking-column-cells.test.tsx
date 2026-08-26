@@ -2,8 +2,10 @@
  * booking-column-cells.test.tsx
  *
  * Verifies the permission gating added to the booking column cells:
- *   - PaymentStatusCell only renders the "Record payment" button when the
- *     user has `manage:Payment` (backend: POST /dashboard/finance/payments).
+ *   - PaymentStatusCell renders the "Record payment" button when the user has
+ *     `create:Payment` + `create:Invoice` (RECEPTIONIST built-in role) OR
+ *     `manage:Payment` + `manage:Invoice` (ADMIN/OWNER/ACCOUNTANT) — see
+ *     BK-COLLECT-P0 / canCollectBooking in booking-collect-action.tsx.
  *   - ActionsCell only renders the manual-refund button when the user has
  *     `update:Payment` (backend: PATCH /payments/:id/manual-refund), on top
  *     of the existing payment-state condition.
@@ -94,18 +96,44 @@ beforeEach(() => {
   mockUseAuth.mockReset()
 })
 
-/* ─── PaymentStatusCell — manage:Payment gate ─── */
+/* ─── PaymentStatusCell — create:Payment + create:Invoice gate (BK-COLLECT-P0) ─── */
 
-test("PaymentStatusCell shows record-payment button with manage:Payment", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+test("PaymentStatusCell shows record-payment button with create:Payment + create:Invoice (RECEPTIONIST)", () => {
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
   render(<PaymentStatusCell booking={payableBooking} />)
   expect(
     screen.getByRole("button", { name: "bookings.col.recordPayment" }),
   ).toBeInTheDocument()
 })
 
-test("PaymentStatusCell hides record-payment button without manage:Payment", () => {
+test("PaymentStatusCell still shows record-payment button with manage:Payment + manage:Invoice (ADMIN/OWNER/ACCOUNTANT)", () => {
+  // CASL `manage` is a superset of `create`; the predicate accepts either.
+  mockUseAuth.mockReturnValue(authWith("payment:manage", "invoice:manage"))
+  render(<PaymentStatusCell booking={payableBooking} />)
+  expect(
+    screen.getByRole("button", { name: "bookings.col.recordPayment" }),
+  ).toBeInTheDocument()
+})
+
+test("PaymentStatusCell hides record-payment button with no permissions", () => {
   mockUseAuth.mockReturnValue(authWith())
+  render(<PaymentStatusCell booking={payableBooking} />)
+  expect(
+    screen.queryByRole("button", { name: "bookings.col.recordPayment" }),
+  ).not.toBeInTheDocument()
+})
+
+test("PaymentStatusCell hides record-payment button with only payment:create (no invoice:create)", () => {
+  // Ensures BOTH halves of the gate are required — invoice create matters too.
+  mockUseAuth.mockReturnValue(authWith("payment:create"))
+  render(<PaymentStatusCell booking={payableBooking} />)
+  expect(
+    screen.queryByRole("button", { name: "bookings.col.recordPayment" }),
+  ).not.toBeInTheDocument()
+})
+
+test("PaymentStatusCell hides record-payment button with only invoice:create (no payment:create)", () => {
+  mockUseAuth.mockReturnValue(authWith("invoice:create"))
   render(<PaymentStatusCell booking={payableBooking} />)
   expect(
     screen.queryByRole("button", { name: "bookings.col.recordPayment" }),

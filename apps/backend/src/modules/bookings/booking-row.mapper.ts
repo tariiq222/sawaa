@@ -69,9 +69,13 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
   // Convert UTC instants to Asia/Riyadh wall-clock for display.
   // Using formatToBusinessYmd/HHmm (date-fns-tz) ensures the output is
   // correct regardless of the server's process TZ.
-  const date = formatToBusinessYmd(scheduled);
-  const startTime = formatToBusinessHHmm(scheduled);
-  const endTime = formatToBusinessHHmm(ends);
+  // `scheduled` / `ends` are non-nullable in the Prisma schema, but defend
+  // against any legacy/malformed row so a single bad booking cannot 500 the
+  // entire dashboard list (the helpers throw "Invalid time value" on a bad
+  // Date and would otherwise abort the response for every row).
+  const date = isValidDate(scheduled) ? formatToBusinessYmd(scheduled) : null;
+  const startTime = isValidDate(scheduled) ? formatToBusinessHHmm(scheduled) : null;
+  const endTime = isValidDate(ends) ? formatToBusinessHHmm(ends) : null;
 
   const clientNames = splitName(client?.name ?? null, client?.firstName ?? null, client?.lastName ?? null);
   const employeeNames = splitName(employee?.nameAr || employee?.name || null, null, null);
@@ -191,10 +195,17 @@ function mapTypeForUi(t: string): string {
  * a balance is still outstanding) — it is NOT folded into any other status.
  */
 function mapStatusForUi(s: string): string {
-  const lower = s.toLowerCase();
+  // `s` is non-nullable in the schema, but defend against any legacy/malformed
+  // row so a single bad booking cannot 500 the entire dashboard list.
+  const lower = typeof s === 'string' ? s.toLowerCase() : '';
   if (lower === 'deposit_paid') return 'deposit_paid';
   if (lower === 'awaiting_payment' || lower === 'pending_group_fill') return 'pending';
   return lower;
+}
+
+/** Defensive Date validator: handles null/undefined/invalid Date instances. */
+function isValidDate(d: unknown): d is Date {
+  return d instanceof Date && !Number.isNaN(d.getTime());
 }
 
 type PaymentStatusUi = 'pending' | 'awaiting' | 'paid' | 'failed' | 'refunded' | 'rejected';

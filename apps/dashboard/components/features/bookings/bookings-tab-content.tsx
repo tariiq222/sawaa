@@ -1,4 +1,4 @@
-// EXCEPTION: 306 lines — mutation handlers (handleStatusAction, handleDelete, handleHardDelete) share local dialog state and cannot be split without a dedicated hook. Approved 2026-06-19.
+// EXCEPTION: 315 lines — mutation handlers (handleStatusAction, handleDelete, handleHardDelete) share local dialog state and cannot be split without a dedicated hook. Approved 2026-06-19; size +9 added 2026-08-26 for clinic-local tab date helpers (todayClinicYmd / clinicWeekRange / clinicMonthRange).
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
@@ -21,6 +21,7 @@ import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { showApiError } from "@/lib/mutation-helpers"
 import { useBookingsExport } from "@/hooks/use-bookings-export"
+import { clinicMonthRange, clinicWeekRange, todayClinicYmd } from "@/lib/utils"
 import type { Booking, CancellationReason } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
@@ -34,7 +35,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const { bookings, meta, loading, error, filters, setFilters, resetFilters, hasFilters, setPage, query } = useBookings()
   const { confirmMut, checkInMut, completeMut, noShowMut, adminCancelMut, deleteMut } = useBookingMutations()
   const { employees } = useEmployees()
-  const [activeTimeTab, setActiveTimeTab] = useState("all")
+  const [activeTimeTab, setActiveTimeTab] = useState("today")
   const [search, setSearch] = useState("")
   const bookingsExport = useBookingsExport()
 
@@ -71,22 +72,19 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
 
   const handleTimeTabChange = (key: string) => {
     setActiveTimeTab(key)
-    const today = new Date()
-    const fmt = (d: Date) => d.toISOString().split("T")[0]
     if (key === "all") {
+      // Clearing dates is a deliberate "all-time" view — break out of the
+      // today-baseline so `hasFilters` flips true and Reset is offered.
       setFilters({ dateFrom: "", dateTo: "" })
     } else if (key === "today") {
-      setFilters({ dateFrom: fmt(today), dateTo: fmt(today) })
+      const today = todayClinicYmd()
+      setFilters({ dateFrom: today, dateTo: today })
     } else if (key === "week") {
-      const start = new Date(today)
-      start.setDate(today.getDate() - ((today.getDay() - weekStartDayNumber + 7) % 7))
-      const end = new Date(start)
-      end.setDate(start.getDate() + 6)
-      setFilters({ dateFrom: fmt(start), dateTo: fmt(end) })
+      const range = clinicWeekRange(weekStartDayNumber)
+      setFilters({ dateFrom: range.dateFrom, dateTo: range.dateTo })
     } else if (key === "month") {
-      const start = new Date(today.getFullYear(), today.getMonth(), 1)
-      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-      setFilters({ dateFrom: fmt(start), dateTo: fmt(end) })
+      const range = clinicMonthRange()
+      setFilters({ dateFrom: range.dateFrom, dateTo: range.dateTo })
     }
   }
 
@@ -221,7 +219,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
           placeholderTo: t("bookings.filters.to"),
         }}
         hasFilters={hasFilters}
-        onReset={() => { setSearch(""); resetFilters(); setActiveTimeTab("all") }}
+        onReset={() => { setSearch(""); resetFilters(); setActiveTimeTab("today") }}
         trailing={
           <Button
             variant="outline"

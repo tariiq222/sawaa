@@ -41,11 +41,17 @@ export function mapHistoricalPayment(
   const method = typeof metadata.paymentMethod === 'string' && metadata.paymentMethod.trim()
     ? metadata.paymentMethod.trim()
     : null;
+  // bookingStatus is non-null in the Prisma schema, but defend against any
+  // legacy/malformed row so the dashboard list endpoint never 500s on a single
+  // bad booking.
+  const normalizedBookingStatus = typeof bookingStatus === 'string'
+    ? bookingStatus.toUpperCase()
+    : '';
 
   return {
     status,
     amount: Number.isFinite(amountSar) ? Math.round(amountSar * 100) : 0,
     method,
-    requiresReview: status === 'paid' && bookingStatus.toUpperCase() !== 'CONFIRMED',
+    requiresReview: status === 'paid' && normalizedBookingStatus !== 'CONFIRMED',
   };
 }

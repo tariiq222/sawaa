@@ -7,12 +7,15 @@ import { Button } from "@sawaa/ui"
 
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
+import { canCollectBooking } from "@/components/features/bookings/booking-collect-action"
 import { useAuth } from "@/components/providers/auth-provider"
 import type { Booking } from "@/lib/types/booking"
 
 /* ── Invoice tab — read-only summary + collect action when the booking still
-   owes money. Mirrors the eligibility rule used by PaymentStatusCell so the
-   same "record payment" affordance is available wherever staff look. ── */
+   owes money. Single-source-of-truth via canCollectBooking so the same
+   "record payment" affordance is available wherever staff look and the
+   permission gate stays aligned with PaymentStatusCell and the actions-menu
+   `CollectAction`. ── */
 
 export function BookingInvoiceTab({
   booking,
@@ -27,26 +30,15 @@ export function BookingInvoiceTab({
   const { canDo } = useAuth()
 
   const invoice = booking.invoice
-  const hasOutstanding = (invoice?.outstanding ?? 0) > 0
-  // Pay-at-clinic bookings have no invoice yet — same rule as PaymentStatusCell:
-  // need a price and a client so the backend can materialise a DRAFT invoice.
-  const bookingPrice = booking.priceSnapshot ?? booking.service?.price ?? 0
-  const noInvoiceButPayable = !invoice && bookingPrice > 0 && !!booking.clientId
-  // Backend gate: POST /dashboard/finance/payments requires `manage:Payment`
-  // (and manage:Invoice for the DRAFT-invoice sub-call). Historical imports
-  // are read-only — never expose collection on them.
-  // The `payment.status !== "awaiting"` clause MUST stay in sync with
-  // PaymentStatusCell (booking-column-cells.tsx) and canCollectBooking
-  // (booking-collect-action.tsx): a bank transfer under verification is
-  // stored as PENDING_VERIFICATION (UI: "awaiting"), and ProcessPaymentHandler
-  // only sums COMPLETED payments when computing outstanding — so the invoice
-  // can still show a full balance while the transfer is awaiting, and a
-  // second collect here would create a duplicate COMPLETED payment.
-  const canCollect =
-    !booking.isHistoricalImport &&
-    booking.payment?.status !== "awaiting" &&
-    canDo("payment", "manage") &&
-    (hasOutstanding || noInvoiceButPayable)
+  // canCollectBooking already encodes:
+  //   - !isHistoricalImport (historical imports are read-only)
+  //   - outstanding>0 OR (no invoice + payable price + client)
+  //   - payment.status !== "awaiting" (avoids duplicate collect while a
+  //     bank transfer is pending verification)
+  //   - create:Payment + create:Invoice permission (manage accepted as a
+  //     superset — BK-COLLECT-P0)
+  // See booking-collect-action.tsx for the full predicate.
+  const canCollect = canCollectBooking(booking, canDo)
 
   const collectAction = canCollect ? (
     <>

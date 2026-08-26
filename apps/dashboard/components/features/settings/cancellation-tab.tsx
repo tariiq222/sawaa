@@ -22,6 +22,46 @@ interface Props {
   t: (key: string) => string
 }
 
+/**
+ * Parse a non-negative integer from raw input. Used by the automation tab
+ * where 0 is a valid value (0 = disabled — staff complete / mark no-show
+ * manually so they keep control of the booking after the appointment).
+ *
+ * Rules:
+ * - trim raw before checking
+ * - empty / NaN / non-integer / negative → fallback
+ * - "0" / " 0 " → 0 (must NOT fall back)
+ * - positive integers (e.g. "2", "30") → that integer
+ */
+export function parseNonNegativeInt(raw: string, fallback: number): number {
+  const trimmed = raw.trim()
+  if (trimmed === "") return fallback
+  const n = Number(trimmed)
+  if (!Number.isFinite(n)) return fallback
+  if (!Number.isInteger(n)) return fallback
+  if (n < 0) return fallback
+  return n
+}
+
+/**
+ * Resolve the value persisted to the backend for an automation delay.
+ *
+ * - When the switch is OFF, persist 0 (the backend treats 0 as "manual").
+ * - When the switch is ON, persist the parsed positive delay. If the
+ *   number field is empty or 0 we fall back to the default — the switch
+ *   is the only "off" affordance, so the number field cannot sneak a 0.
+ */
+export function resolveAutomationDelay(
+  enabled: boolean,
+  raw: string,
+  fallback: number,
+): number {
+  if (!enabled) return 0
+  const n = parseNonNegativeInt(raw, fallback)
+  if (n === 0) return fallback
+  return n
+}
+
 function RefundSelect({
   value,
   onChange,
@@ -59,6 +99,8 @@ export function CancellationTab({ t }: Props) {
   const [maxReschedules, setMaxReschedules] = useState("3")
   const [autoComplete, setAutoComplete] = useState("2")
   const [autoNoShow, setAutoNoShow] = useState("30")
+  const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true)
+  const [autoNoShowEnabled, setAutoNoShowEnabled] = useState(true)
 
   useEffect(() => {
     if (!settings) return
@@ -71,8 +113,12 @@ export function CancellationTab({ t }: Props) {
     setAutoRefund(settings.autoRefundOnCancel ?? true)
     setRescheduleBefore(String(settings.clientRescheduleMinHoursBefore ?? 24))
     setMaxReschedules(String(settings.maxReschedulesPerBooking ?? 3))
-    setAutoComplete(String(settings.autoCompleteAfterHours ?? 2))
-    setAutoNoShow(String(settings.autoNoShowAfterMinutes ?? 30))
+    const hours = settings.autoCompleteAfterHours ?? 2
+    setAutoCompleteEnabled(hours > 0)
+    setAutoComplete(hours > 0 ? String(hours) : "2")
+    const minutes = settings.autoNoShowAfterMinutes ?? 30
+    setAutoNoShowEnabled(minutes > 0)
+    setAutoNoShow(minutes > 0 ? String(minutes) : "30")
   }, [settings])
 
   const save = (data: Record<string, unknown>) => {
@@ -179,16 +225,48 @@ export function CancellationTab({ t }: Props) {
             <div className="flex h-full flex-col gap-3">
               <div className="grid grid-cols-2 gap-3">
                 <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                  <NumberRow label={t("settings.autoCompleteAfter")} desc={t("settings.autoCompleteAfterDesc")} value={autoComplete} onChange={setAutoComplete} unit="h" />
+                  <div className="divide-y divide-border">
+                    <SwitchRow
+                      label={t("settings.autoCompleteEnabled")}
+                      desc={t("settings.autoCompleteEnabledDesc")}
+                      checked={autoCompleteEnabled}
+                      onChange={setAutoCompleteEnabled}
+                    />
+                    {autoCompleteEnabled && (
+                      <NumberRow
+                        label={t("settings.autoCompleteAfter")}
+                        desc={t("settings.autoCompleteAfterDesc")}
+                        value={autoComplete}
+                        onChange={setAutoComplete}
+                        unit="h"
+                      />
+                    )}
+                  </div>
                 </CardContent></Card>
                 <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                  <NumberRow label={t("settings.autoNoShowAfter")} desc={t("settings.autoNoShowAfterDesc")} value={autoNoShow} onChange={setAutoNoShow} unit="min" />
+                  <div className="divide-y divide-border">
+                    <SwitchRow
+                      label={t("settings.autoNoShowEnabled")}
+                      desc={t("settings.autoNoShowEnabledDesc")}
+                      checked={autoNoShowEnabled}
+                      onChange={setAutoNoShowEnabled}
+                    />
+                    {autoNoShowEnabled && (
+                      <NumberRow
+                        label={t("settings.autoNoShowAfter")}
+                        desc={t("settings.autoNoShowAfterDesc")}
+                        value={autoNoShow}
+                        onChange={setAutoNoShow}
+                        unit="min"
+                      />
+                    )}
+                  </div>
                 </CardContent></Card>
               </div>
               <div className="mt-auto flex justify-end pt-2">
                 <Button size="sm" disabled={mutation.isPending} onClick={() => save({
-                  autoCompleteAfterHours: Number(autoComplete) || 2,
-                  autoNoShowAfterMinutes: Number(autoNoShow) || 30,
+                  autoCompleteAfterHours: resolveAutomationDelay(autoCompleteEnabled, autoComplete, 2),
+                  autoNoShowAfterMinutes: resolveAutomationDelay(autoNoShowEnabled, autoNoShow, 30),
                 })}>
                   {t("settings.save")}
                 </Button>

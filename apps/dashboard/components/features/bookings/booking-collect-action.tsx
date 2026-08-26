@@ -16,8 +16,19 @@ import { RecordPaymentDialog } from "./record-payment-dialog"
 import type { Booking } from "@/lib/types/booking"
 
 /**
- * "Owes money" predicate — mirrors PaymentStatusCell in booking-column-cells.tsx.
- * Credit/package bookings and historical imports never collect.
+ * "Owes money" predicate — mirrors PaymentStatusCell in booking-column-cells.tsx
+ * and BookingInvoiceTab. Credit/package bookings and historical imports never
+ * collect.
+ *
+ * Permission gate: the backend collects via
+ * `POST /dashboard/finance/bookings/:id/collect`, which requires
+ * create:Payment + create:Invoice (BK-COLLECT-P0). The dialog also calls
+ * `POST .../bookings/:id/invoice` on open, gated on create:Invoice. So we
+ * require BOTH create-or-manage for payment AND create-or-manage for invoice.
+ * The `manage` fallback keeps existing unit mocks that grant `manage` without
+ * expanding `*` (see booking-actions-collect / column-cells / invoice-tab
+ * specs). It does NOT unlock bank-transfer verify / refund: those are gated
+ * separately on the backend (manage:Payment / update:Payment).
  */
 export function canCollectBooking(
   booking: Booking,
@@ -26,11 +37,14 @@ export function canCollectBooking(
   const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
   const bookingPrice = booking.priceSnapshot ?? booking.service?.price ?? 0
   const noInvoiceButPayable = !booking.invoice && bookingPrice > 0 && !!booking.clientId
+  const canCreatePayment = canDo("payment", "create") || canDo("payment", "manage")
+  const canCreateInvoice = canDo("invoice", "create") || canDo("invoice", "manage")
   return (
     !booking.isHistoricalImport &&
     (hasOutstanding || noInvoiceButPayable) &&
     booking.payment?.status !== "awaiting" &&
-    canDo("payment", "manage")
+    canCreatePayment &&
+    canCreateInvoice
   )
 }
 

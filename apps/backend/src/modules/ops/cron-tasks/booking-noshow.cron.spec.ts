@@ -88,4 +88,37 @@ describe('BookingNoShowCron', () => {
     expect(call.where.isHistoricalImport).toBe(false);
     expect(call.where.scheduledAt).toHaveProperty('lte');
   });
+
+  it('does not query bookings or delegate when autoNoShowAfterMinutes is 0', async () => {
+    const prisma = buildPrisma({
+      bookingSettings: {
+        findFirst: jest.fn().mockResolvedValue({ autoNoShowAfterMinutes: 0 }),
+      },
+    });
+    const handler = buildNoShowHandler();
+    const cron = new BookingNoShowCron(prisma as never, handler as never);
+
+    await cron.execute();
+
+    expect(prisma.booking.findMany).not.toHaveBeenCalled();
+    expect(handler.execute).not.toHaveBeenCalled();
+  });
+
+  it('queries and delegates when settings returns a positive autoNoShowAfterMinutes', async () => {
+    const targets = [{ id: 'book-1' }];
+    const prisma = buildPrisma({
+      bookingSettings: {
+        findFirst: jest.fn().mockResolvedValue({ autoNoShowAfterMinutes: 45 }),
+      },
+      booking: { findMany: jest.fn().mockResolvedValue(targets) },
+    });
+    const handler = buildNoShowHandler();
+    const cron = new BookingNoShowCron(prisma as never, handler as never);
+
+    await cron.execute();
+
+    expect(prisma.booking.findMany).toHaveBeenCalledTimes(1);
+    expect(handler.execute).toHaveBeenCalledTimes(1);
+    expect(handler.execute).toHaveBeenCalledWith({ bookingId: 'book-1', changedBy: CRON_ACTOR });
+  });
 });

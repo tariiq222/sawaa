@@ -4,11 +4,14 @@
  * Verifies the collect-action gate on the booking invoice tab. The button
  * must surface whenever the booking still owes money — invoice with an
  * outstanding balance, OR a payable booking with no invoice yet — and only
- * when the user has `manage:Payment`. Historical imports stay read-only.
- * Bank transfers under verification (payment.status === "awaiting") never
- * offer a second collection: the invoice still shows the full outstanding
- * because ProcessPaymentHandler only sums COMPLETED payments, so a second
- * collect here would create a duplicate COMPLETED payment.
+ * when the user has `create:Payment` + `create:Invoice` (RECEPTIONIST) or
+ * `manage:Payment` + `manage:Invoice` (ADMIN/OWNER/ACCOUNTANT). Historical
+ * imports stay read-only. Bank transfers under verification
+ * (payment.status === "awaiting") never offer a second collection: the
+ * invoice still shows the full outstanding because ProcessPaymentHandler
+ * only sums COMPLETED payments, so a second collect here would create a
+ * duplicate COMPLETED payment. See BK-COLLECT-P0 / canCollectBooking in
+ * booking-collect-action.tsx.
  */
 
 import React from "react"
@@ -80,10 +83,17 @@ function noInvoiceBooking(overrides: Partial<Booking> = {}): Booking {
 
 const t = (k: string) => k
 
-/* ─── Invoice with outstanding > 0 + manage:Payment ─── */
+/* ─── Invoice with outstanding > 0 + permission matrix (BK-COLLECT-P0) ─── */
 
-test("renders the collect button when the invoice has outstanding and user has manage:Payment", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+test("renders the collect button when the invoice has outstanding and user has create:Payment + create:Invoice (RECEPTIONIST)", () => {
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
+  render(<BookingInvoiceTab booking={withInvoice(11500)} t={t} locale="ar" />)
+  expect(screen.getByRole("button", { name: COLLECT })).toBeInTheDocument()
+})
+
+test("renders the collect button when the invoice has outstanding and user has manage:Payment + manage:Invoice (ADMIN/OWNER/ACCOUNTANT)", () => {
+  // CASL `manage` is a superset of `create`; the predicate accepts either.
+  mockUseAuth.mockReturnValue(authWith("payment:manage", "invoice:manage"))
   render(<BookingInvoiceTab booking={withInvoice(11500)} t={t} locale="ar" />)
   expect(screen.getByRole("button", { name: COLLECT })).toBeInTheDocument()
 })
@@ -91,21 +101,21 @@ test("renders the collect button when the invoice has outstanding and user has m
 /* ─── Invoice fully paid — no collect button ─── */
 
 test("does not render the collect button when the invoice is fully paid (outstanding 0)", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
   render(<BookingInvoiceTab booking={withInvoice(0)} t={t} locale="ar" />)
   expect(screen.queryByRole("button", { name: COLLECT })).not.toBeInTheDocument()
 })
 
 /* ─── No invoice + payable booking + permission ─── */
 
-test("renders the collect button when there is no invoice but the booking is payable", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+test("renders the collect button when there is no invoice but the booking is payable (RECEPTIONIST create+create)", () => {
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
   render(<BookingInvoiceTab booking={noInvoiceBooking()} t={t} locale="ar" />)
   expect(screen.getByRole("button", { name: COLLECT })).toBeInTheDocument()
 })
 
 test("does not render the collect button when there is no invoice and no price", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
   // package-credit path: no priceSnapshot, no service price, no clientId.
   render(
     <BookingInvoiceTab
@@ -120,7 +130,7 @@ test("does not render the collect button when there is no invoice and no price",
 /* ─── Historical import never offers collection ─── */
 
 test("never renders the collect button for a historical import with an invoice", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
   render(
     <BookingInvoiceTab
       booking={{ ...withInvoice(11500), isHistoricalImport: true }}
@@ -132,7 +142,7 @@ test("never renders the collect button for a historical import with an invoice",
 })
 
 test("never renders the collect button for a historical import without an invoice", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
   render(
     <BookingInvoiceTab
       booking={{ ...noInvoiceBooking(), isHistoricalImport: true }}
@@ -145,8 +155,8 @@ test("never renders the collect button for a historical import without an invoic
 
 /* ─── Bank transfer under verification — never offer a second collection ─── */
 
-test("does not render the collect button when payment.status is 'awaiting' even with outstanding > 0 and manage:Payment", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+test("does not render the collect button when payment.status is 'awaiting' even with outstanding > 0 and create:Payment + create:Invoice", () => {
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
   // Payment row arrived as a bank-transfer receipt and is sitting in
   // PENDING_VERIFICATION (UI: "awaiting") — invoice still shows full
   // outstanding because the handler ignores non-COMPLETED payments when
@@ -167,15 +177,27 @@ test("does not render the collect button when payment.status is 'awaiting' even 
   expect(screen.getByText("detail.invoice.outstanding")).toBeInTheDocument()
 })
 
-/* ─── Missing manage:Payment ─── */
+/* ─── Missing permissions — both halves of the gate must be present ─── */
 
-test("does not render the collect button without manage:Payment", () => {
+test("does not render the collect button without any permission", () => {
   mockUseAuth.mockReturnValue(authWith())
   render(<BookingInvoiceTab booking={withInvoice(11500)} t={t} locale="ar" />)
   expect(screen.queryByRole("button", { name: COLLECT })).not.toBeInTheDocument()
 })
 
-test("does not render the collect button without manage:Payment on a payable booking with no invoice", () => {
+test("does not render the collect button with only payment:create (no invoice:create)", () => {
+  mockUseAuth.mockReturnValue(authWith("payment:create"))
+  render(<BookingInvoiceTab booking={withInvoice(11500)} t={t} locale="ar" />)
+  expect(screen.queryByRole("button", { name: COLLECT })).not.toBeInTheDocument()
+})
+
+test("does not render the collect button with only invoice:create (no payment:create)", () => {
+  mockUseAuth.mockReturnValue(authWith("invoice:create"))
+  render(<BookingInvoiceTab booking={withInvoice(11500)} t={t} locale="ar" />)
+  expect(screen.queryByRole("button", { name: COLLECT })).not.toBeInTheDocument()
+})
+
+test("does not render the collect button without permission on a payable booking with no invoice", () => {
   mockUseAuth.mockReturnValue(authWith())
   render(<BookingInvoiceTab booking={noInvoiceBooking()} t={t} locale="ar" />)
   expect(screen.queryByRole("button", { name: COLLECT })).not.toBeInTheDocument()
@@ -184,7 +206,7 @@ test("does not render the collect button without manage:Payment on a payable boo
 /* ─── Read-only summary stays untouched when invoice exists ─── */
 
 test("renders the invoice summary rows when an invoice is present", () => {
-  mockUseAuth.mockReturnValue(authWith("payment:manage"))
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
   render(<BookingInvoiceTab booking={withInvoice(11500)} t={t} locale="ar" />)
   expect(screen.getByText("detail.invoice.subtotal")).toBeInTheDocument()
   expect(screen.getByText("detail.invoice.total")).toBeInTheDocument()

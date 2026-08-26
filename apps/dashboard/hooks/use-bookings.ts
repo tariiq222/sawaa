@@ -1,5 +1,12 @@
 "use client"
 
+// EXCEPTION: 222 lines — hook colocates `useBookings`, `useTodayBookings`, and
+// `useBookingMutations` because they share a single QueryClient namespace and
+// inverting either list hook into its own file would force callers to import
+// two paths for one feature surface. Approved 2026-06-19; +16 added
+// 2026-08-26 for the today-baseline default filter + reset semantics
+// (BK-TODAY-DEFAULT).
+
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { useState, useCallback } from "react"
 import { queryKeys } from "@/lib/query-keys"
@@ -22,6 +29,7 @@ import type {
   DeliveryType,
   BookingListQuery,
 } from "@/lib/types/booking"
+import { todayClinicYmd } from "@/lib/utils"
 
 /* ─── Filters ─── */
 
@@ -47,19 +55,34 @@ const defaultFilters: BookingFilters = {
   search: "",
 }
 
+/**
+ * Build a fresh filter state anchored on the clinic's current day.
+ * Today (Asia/Riyadh) is the baseline; `hasFilters` treats that range as the
+ * "clean" state so the Reset button doesn't appear on first paint.
+ */
+function defaultFiltersForToday(): BookingFilters {
+  const today = todayClinicYmd()
+  return { ...defaultFilters, dateFrom: today, dateTo: today }
+}
+
 /* ─── List Hook ─── */
 
 export function useBookings() {
   const [page, setPage] = useState(1)
-  const [filters, setFiltersState] = useState<BookingFilters>(defaultFilters)
+  const [filters, setFiltersState] = useState<BookingFilters>(defaultFiltersForToday)
+
+  // Recompute "today" each render so a session that survives midnight doesn't
+  // pin yesterday as the baseline; date dimension dirty-check is relative to
+  // the current clinic day.
+  const today = todayClinicYmd()
 
   const hasFilters =
     filters.status !== "all" ||
     filters.type !== "all" ||
     filters.delivery !== "all" ||
     filters.isGuest !== "all" ||
-    filters.dateFrom !== "" ||
-    filters.dateTo !== "" ||
+    filters.dateFrom !== today ||
+    filters.dateTo !== today ||
     filters.employeeId !== "" ||
     filters.search !== ""
 
@@ -95,7 +118,7 @@ export function useBookings() {
   }, [])
 
   const resetFilters = useCallback(() => {
-    setFiltersState(defaultFilters)
+    setFiltersState(defaultFiltersForToday())
     setPage(1)
   }, [])
 

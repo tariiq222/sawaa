@@ -168,6 +168,79 @@ export function isoToClinicParts(iso: string): { date: string; time: string } {
   }
 }
 
+/**
+ * Today's date as `YYYY-MM-DD` in the clinic's business timezone (Asia/Riyadh).
+ *
+ * Use this instead of `new Date().toISOString().split("T")[0]`, which formats
+ * in UTC and can shift the clinic date by one day after 21:00 UTC / 00:00
+ * Riyadh. The `now` parameter is injectable for deterministic tests.
+ */
+export function todayClinicYmd(now: Date = new Date()): string {
+  return formatInTimeZone(now, BUSINESS_TZ, "yyyy-MM-dd")
+}
+
+/** Format a Y/M/D triple as a clinic-local `YYYY-MM-DD` string with zero-padding. */
+function clinicYmd(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+}
+
+/**
+ * Week range (`YYYY-MM-DD` × 2) for the current Asia/Riyadh week, anchored on
+ * the clinic-configured start day. Asia/Riyadh has no DST, so plain day
+ * arithmetic on UTC dates is safe — the y/m/d values are wall-clock numbers
+ * from `Intl.DateTimeFormat`, not instants.
+ */
+export function clinicWeekRange(
+  weekStartDayNumber: 0 | 1,
+  now: Date = new Date(),
+): { dateFrom: string; dateTo: string } {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  })
+  const parts: Record<string, string> = {}
+  for (const p of fmt.formatToParts(now)) parts[p.type] = p.value
+  const year = Number(parts.year)
+  const month = Number(parts.month)
+  const day = Number(parts.day)
+  const weekdayByShort: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  }
+  const weekday = weekdayByShort[parts.weekday] ?? 0
+  const daysBack = (weekday - weekStartDayNumber + 7) % 7
+  const start = new Date(Date.UTC(year, month - 1, day - daysBack))
+  const end = new Date(Date.UTC(year, month - 1, day - daysBack + 6))
+  return {
+    dateFrom: clinicYmd(start.getUTCFullYear(), start.getUTCMonth() + 1, start.getUTCDate()),
+    dateTo: clinicYmd(end.getUTCFullYear(), end.getUTCMonth() + 1, end.getUTCDate()),
+  }
+}
+
+/**
+ * Calendar-month range (`YYYY-MM-DD` × 2) for the current Asia/Riyadh month,
+ * day 1 through the month's last calendar day.
+ */
+export function clinicMonthRange(now: Date = new Date()): { dateFrom: string; dateTo: string } {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+  const parts: Record<string, string> = {}
+  for (const p of fmt.formatToParts(now)) parts[p.type] = p.value
+  const year = Number(parts.year)
+  const month = Number(parts.month)
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  return {
+    dateFrom: clinicYmd(year, month, 1),
+    dateTo: clinicYmd(year, month, lastDay),
+  }
+}
+
 /** Convert a Date/ISO timestamp to the HH:mm input expected by formatClinicTime. */
 export function toCanonicalTime(date: Date | string): string {
   const d = new Date(date)

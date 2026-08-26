@@ -9,6 +9,9 @@ import {
   formatClinicTime,
   getWeekStartDay,
   parseClinicTimeInput,
+  todayClinicYmd,
+  clinicWeekRange,
+  clinicMonthRange,
 } from "@/lib/utils"
 import { halalasToSar, sarToHalalas, formatPrice } from "@/lib/money"
 
@@ -346,5 +349,88 @@ describe("combineDateTimeToISO", () => {
     // across any host timezone or season.
     const iso = combineDateTimeToISO("2026-05-21", "12:00")!
     expect(new Date(iso).toISOString()).toBe("2026-05-21T09:00:00.000Z")
+  })
+})
+
+// EXCEPTION: file is intentionally over the 350-line absolute limit — adding
+// the todayClinicYmd / clinicWeekRange / clinicMonthRange tests here keeps
+// the clinic-date helpers co-located with the other clinic-format utils.
+// Approved 2026-08-26 (BK-TODAY-DEFAULT).
+
+describe("todayClinicYmd", () => {
+  it("returns YYYY-MM-DD format in Asia/Riyadh", () => {
+    expect(todayClinicYmd()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it("returns the Riyadh date for an instant that is already past UTC midnight", () => {
+    // 2026-01-01T00:30:00Z = 2026-01-01T03:30:00 in Asia/Riyadh → Riyadh date is 2026-01-01.
+    // UTC would yield "2026-01-01" too — this asserts the helper agrees.
+    expect(todayClinicYmd(new Date("2026-01-01T00:30:00Z"))).toBe("2026-01-01")
+  })
+
+  it("does NOT use UTC when Riyadh is already on the next calendar day", () => {
+    // 2026-08-26T21:30:00Z = 2026-08-27T00:30:00 in Asia/Riyadh (UTC+3, no DST).
+    // The naive `toISOString().split("T")[0]` returns "2026-08-26"; the clinic
+    // helper must return "2026-08-27" so the dashboard bookings list shows
+    // the correct Riyadh day after 21:00 UTC.
+    expect(todayClinicYmd(new Date("2026-08-26T21:30:00Z"))).toBe("2026-08-27")
+  })
+
+  it("returns the previous Riyadh day when the instant is just before midnight Riyadh", () => {
+    // 2026-08-26T20:59:00Z = 2026-08-26T23:59:00 in Asia/Riyadh — still the 26th.
+    expect(todayClinicYmd(new Date("2026-08-26T20:59:00Z"))).toBe("2026-08-26")
+  })
+})
+
+describe("clinicWeekRange", () => {
+  it("returns a 7-day Sunday-anchored range starting on Sunday for weekStartDayNumber=0", () => {
+    // 2026-08-26 is a Wednesday → Sunday-anchored week starts Sun 2026-08-23.
+    const range = clinicWeekRange(0, new Date("2026-08-26T12:00:00Z"))
+    expect(range.dateFrom).toBe("2026-08-23")
+    expect(range.dateTo).toBe("2026-08-29")
+  })
+
+  it("returns a 7-day Monday-anchored range for weekStartDayNumber=1", () => {
+    // Same Wednesday → Monday-anchored week starts Mon 2026-08-24.
+    const range = clinicWeekRange(1, new Date("2026-08-26T12:00:00Z"))
+    expect(range.dateFrom).toBe("2026-08-24")
+    expect(range.dateTo).toBe("2026-08-30")
+  })
+
+  it("uses the clinic's calendar day when the instant crosses UTC midnight", () => {
+    // 2026-08-27T21:30:00Z is already 2026-08-28T00:30:00 in Riyadh (a Thursday).
+    // Sunday-anchored → week of Sun 2026-08-23 → Sat 2026-08-29.
+    const range = clinicWeekRange(0, new Date("2026-08-27T21:30:00Z"))
+    expect(range.dateFrom).toBe("2026-08-23")
+    expect(range.dateTo).toBe("2026-08-29")
+  })
+
+  it("handles the week that contains a month boundary", () => {
+    // 2026-09-02 is a Wednesday → Sunday-anchored range spans two months.
+    const range = clinicWeekRange(0, new Date("2026-09-02T12:00:00Z"))
+    expect(range.dateFrom).toBe("2026-08-30")
+    expect(range.dateTo).toBe("2026-09-05")
+  })
+})
+
+describe("clinicMonthRange", () => {
+  it("returns day 1 through the last day of the current month", () => {
+    // 2026-02-15 → February has 28 days.
+    const range = clinicMonthRange(new Date("2026-02-15T12:00:00Z"))
+    expect(range.dateFrom).toBe("2026-02-01")
+    expect(range.dateTo).toBe("2026-02-28")
+  })
+
+  it("handles a 31-day month", () => {
+    const range = clinicMonthRange(new Date("2026-03-15T12:00:00Z"))
+    expect(range.dateFrom).toBe("2026-03-01")
+    expect(range.dateTo).toBe("2026-03-31")
+  })
+
+  it("uses the clinic's calendar day when the instant crosses UTC midnight", () => {
+    // 2026-08-31T21:30:00Z = 2026-09-01T00:30:00 in Riyadh → month should be September.
+    const range = clinicMonthRange(new Date("2026-08-31T21:30:00Z"))
+    expect(range.dateFrom).toBe("2026-09-01")
+    expect(range.dateTo).toBe("2026-09-30")
   })
 })

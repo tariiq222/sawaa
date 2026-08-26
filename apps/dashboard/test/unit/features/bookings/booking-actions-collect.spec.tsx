@@ -219,7 +219,7 @@ describe("BookingActions – Collect entry", () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it("is absent when the user lacks payment:manage permission", () => {
+  it("is absent when canDo always returns false (no collect/create/manage)", () => {
     mockMutations()
     mockAuth(() => false) // canDo always returns false
     render(
@@ -232,6 +232,26 @@ describe("BookingActions – Collect entry", () => {
     expect(findDropdownItem("bookings.col.recordPayment")).toBeUndefined()
     // Status actions still render — only collect is gated by permission.
     expect(findDropdownItem("complete")).toBeTruthy()
+  })
+
+  it("appears when canDo grants payment:create + invoice:create (RECEPTIONIST)", () => {
+    // The collect gate was lowered from manage:Payment to create:Payment +
+    // create:Invoice under BK-COLLECT-P0 so the built-in RECEPTIONIST role
+    // can collect without 403. The dashboard predicate accepts create as
+    // well as manage (manage is a CASL superset of create).
+    mockMutations()
+    mockAuth((module: string, action: string) => {
+      const grants = ["payment:create", "invoice:create"]
+      return grants.includes(`${module.toLowerCase()}:${action.toLowerCase()}`)
+    })
+    render(
+      <BookingActions
+        booking={makeBooking("confirmed", { invoice: invoiceWithOutstanding })}
+        onAction={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByTestId("dropdown-trigger"))
+    expect(findDropdownItem("bookings.col.recordPayment")).toBeTruthy()
   })
 
   it("is absent for a bank transfer awaiting verification", () => {

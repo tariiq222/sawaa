@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Booking } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListBookingsDto } from './list-bookings.dto';
@@ -14,6 +14,55 @@ export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDa
   role?: string | null;
   userId?: string;
 };
+
+/**
+ * Columns the dashboard list actually reads from each Booking row (see
+ * mapBookingRow + loadRelations). Excluding the rest of the Booking model from
+ * the SELECT keeps the query narrow AND — critically — skips columns that the
+ * live local dev DB may not have yet. The Prisma schema adds:
+ *   - creationIdempotencyKey + creationRequestHash
+ *       (migration 20260813000001_unified_web_chat)
+ *   - zoomCreatePhase / zoomCreateLeaseOwner / zoomCreateLeaseExpiresAt /
+ *     zoomCreateAttemptCount / zoomSyncRevision / zoomSyncLeaseOwner /
+ *     zoomSyncLeaseExpiresAt
+ *       (migration 20260813200000_reconcile_appointment_side_effects_safely)
+ * Without this select, `prisma.booking.findMany` emits a SELECT that names
+ * every Booking column, and Postgres responds with
+ * "The column Booking.creationIdempotencyKey does not exist in the current
+ *  database" — 500-ing GET /api/v1/dashboard/bookings on every call.
+ * Keep this list in sync with `mapBookingRow` if a new Booking field is read.
+ */
+const BOOKING_LIST_SELECT = {
+  id: true,
+  bookingNumber: true,
+  clientId: true,
+  employeeId: true,
+  serviceId: true,
+  bookingType: true,
+  deliveryType: true,
+  source: true,
+  categoryNameSnapshot: true,
+  branchNameSnapshot: true,
+  durationMinutesSnapshot: true,
+  priceSnapshot: true,
+  scheduledAt: true,
+  endsAt: true,
+  status: true,
+  isHistoricalImport: true,
+  checkedInAt: true,
+  notes: true,
+  zoomJoinUrl: true,
+  zoomHostUrl: true,
+  zoomStartUrl: true,
+  zoomMeetingStatus: true,
+  zoomMeetingError: true,
+  cancelReason: true,
+  cancelledAt: true,
+  confirmedAt: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} as const satisfies Prisma.BookingSelect;
 
 @Injectable()
 export class ListBookingsHandler {
@@ -113,6 +162,9 @@ export class ListBookingsHandler {
         skip: (query.page - 1) * query.limit,
         take: query.limit,
         orderBy: { scheduledAt: 'asc' },
+        // See BOOKING_LIST_SELECT — narrow SELECT keeps the dashboard list
+        // independent of columns that may not yet exist on every dev DB.
+        select: BOOKING_LIST_SELECT,
       }),
       this.prisma.booking.count({ where }),
     ]);
@@ -120,7 +172,9 @@ export class ListBookingsHandler {
     const relations = await loadRelations(this.prisma, items);
 
     return toListResponse(
-      items.map((row) => mapBookingRow(row, relations)),
+      // BOOKING_LIST_SELECT returns a strict subset of `Booking`; mapBookingRow
+      // only reads the selected fields, so the type narrowing is sound.
+      items.map((row) => mapBookingRow(row as Booking, relations)),
       total,
       query.page,
       query.limit,

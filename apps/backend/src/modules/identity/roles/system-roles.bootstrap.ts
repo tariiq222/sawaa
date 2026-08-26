@@ -38,7 +38,11 @@ export class SystemRolesBootstrap implements OnModuleInit {
 
       const existing = await this.prisma.customRole.findFirst({
         where: { systemKey: roleKey },
-        select: { id: true, permissionsCustomized: true },
+        select: {
+          id: true,
+          permissionsCustomized: true,
+          _count: { select: { permissions: true } },
+        },
       });
 
       if (!existing) {
@@ -51,12 +55,38 @@ export class SystemRolesBootstrap implements OnModuleInit {
           },
         });
         this.logger.log(`Created system role: ${roleKey}`);
-      } else if (existing.permissionsCustomized) {
-        // An admin has edited this system role's permissions via the dashboard.
-        // Do NOT overwrite them from BUILT_IN — that edit must persist across
-        // deploys/restarts. (This is the regression fix: previously every boot
-        // wiped admin edits back to defaults.)
+      } else if (
+        existing.permissionsCustomized &&
+        existing._count.permissions > 0
+      ) {
+        // An admin has edited this system role's permissions via the dashboard
+        // AND the edit left actual permission rows behind. Do NOT overwrite —
+        // that edit must persist across deploys/restarts. (Regression fix:
+        // previously every boot wiped admin edits back to defaults.)
         this.logger.log(`Skipped synced system role (customized): ${roleKey}`);
+      } else if (existing.permissionsCustomized && existing._count.permissions === 0) {
+        // RX-PERMS-EMPTY: a customized role with zero permission rows is
+        // indistinguishable from a failed seed — it locks the user out of
+        // every dashboard surface. Treat as data corruption: resync from
+        // BUILT_IN and clear the customized flag so the role is owned by
+        // code again. Logged as a WARN so operators notice the heal.
+        this.logger.warn(
+          `Repairing customized system role with 0 permission rows: ${roleKey}`,
+        );
+        // eslint-disable-next-line no-restricted-syntax
+        await this.prisma.$transaction([
+          this.prisma.permission.deleteMany({
+            where: { customRoleId: existing.id },
+          }),
+          this.prisma.permission.createMany({
+            data: flatPermissions.map((p) => ({ ...p, customRoleId: existing.id })),
+          }),
+          this.prisma.customRole.update({
+            where: { id: existing.id },
+            data: { permissionsCustomized: false },
+          }),
+        ]);
+        this.logger.warn(`Repaired system role: ${roleKey}`);
       } else {
         // Never-customized system role: keep it in sync with BUILT_IN so default
         // permission updates ship on boot. Delete old, insert new (idempotent) —

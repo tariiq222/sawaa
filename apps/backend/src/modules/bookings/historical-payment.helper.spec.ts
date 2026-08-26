@@ -42,4 +42,24 @@ describe('mapHistoricalPayment', () => {
       'CANCELLED',
     ).requiresReview).toBe(false);
   });
+
+  // Regression: BK-LIST-500 — a malformed historical row where booking.status is
+  // missing must NOT crash the dashboard list. Without the guard, `.toUpperCase()`
+  // on undefined throws "Cannot read properties of undefined" and 500s the route.
+  it.each([undefined, null, '' as unknown as string])(
+    'does not throw when bookingStatus is %p',
+    (bookingStatus) => {
+      expect(() => mapHistoricalPayment(
+        { paymentStatus: 'paid', paidAmount: '200' },
+        bookingStatus as unknown as string,
+      )).not.toThrow();
+    },
+  );
+
+  it('treats missing bookingStatus the same as a non-CONFIRMED status for review', () => {
+    expect(mapHistoricalPayment(
+      { paymentStatus: 'paid', paidAmount: '200' },
+      undefined,
+    ).requiresReview).toBe(true);
+  });
 });

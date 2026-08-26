@@ -328,24 +328,44 @@ describe('DashboardFinanceController', () => {
     });
   });
 
-  it('W2-T1: collectBookingPaymentEndpoint requires BOTH manage:Payment AND manage:Invoice', async () => {
-    // Tightened from the W1-T1 single-permission gate (manage:Payment only).
-    // The handler composes EnsureBookingInvoiceHandler and
-    // ApplyInvoiceDiscountHandler — capabilities the dedicated routes
-    // `POST bookings/:bookingId/invoice` and `PATCH invoices/:id/discount`
-    // both gate on manage:Invoice. CaslGuard evaluates `required.every(...)`,
-    // so listing both permissions enforces both. Built-in roles
-    // (ACCOUNTANT / ADMIN / OWNER) already hold both and remain unaffected.
-    // The `toHaveLength(2)` plus `toEqual(expect.arrayContaining(...))` form
-    // would fail if either permission were dropped.
+  it('W2-T1: collectBookingPaymentEndpoint requires BOTH create:Payment AND create:Invoice (so RECEPTIONIST can collect)', async () => {
+    // Tightened from the W1-T1 single-permission gate (manage:Payment only)
+    // and lowered from W2-T1's manage+manage to create+create under BK-COLLECT-P0
+    // so the built-in RECEPTIONIST role (create:Payment, create:Invoice) can
+    // collect a booking payment without 403. The handler composes
+    // EnsureBookingInvoiceHandler and ApplyInvoiceDiscountHandler, both of
+    // which the dedicated routes also gate on invoice create/manage. CaslGuard
+    // evaluates `required.every(...)`, so listing both permissions enforces
+    // both. ADMIN / OWNER / ACCOUNTANT still pass because CASL `manage` is a
+    // superset of `create` (and flatten-permissions writes `subject:*` for
+    // manage rules, which CaslGuard still matches against `create`). We do
+    // NOT grant RECEPTIONIST manage:Payment — that would also unlock PATCH
+    // payments/:id/verify (bank-transfer approve/reject). The `toHaveLength(2)`
+    // plus `toEqual(expect.arrayContaining(...))` form would fail if either
+    // permission were dropped or its action changed away from create.
     const perms = new Reflector().get(
       CHECK_PERMISSIONS_KEY,
       DashboardFinanceController.prototype.collectBookingPaymentEndpoint,
     );
     expect(perms).toHaveLength(2);
     expect(perms).toEqual(expect.arrayContaining([
-      { action: 'manage', subject: 'Payment' },
-      { action: 'manage', subject: 'Invoice' },
+      { action: 'create', subject: 'Payment' },
+      { action: 'create', subject: 'Invoice' },
     ]));
+  });
+
+  it('BK-COLLECT-P0: ensureBookingInvoiceEndpoint is gated by create:Invoice (not manage:Invoice) so RECEPTIONIST can open RecordPaymentDialog', async () => {
+    // RecordPaymentDialog.onOpen calls ensure-invoice to materialise a DRAFT
+    // invoice for a payable booking with no invoice yet. The built-in
+    // RECEPTIONIST role has create:Invoice (and create:Payment) but not
+    // manage:Invoice, so the endpoint must mirror create:Invoice — the same
+    // pattern as `createPackagePurchaseEndpoint` (P1-11). ADMIN / OWNER still
+    // pass because CASL `manage` is a superset of `create`. Style matches the
+    // existing P1-11 reflector spec above.
+    const perms = new Reflector().get(
+      CHECK_PERMISSIONS_KEY,
+      DashboardFinanceController.prototype.ensureBookingInvoiceEndpoint,
+    );
+    expect(perms).toEqual([{ action: 'create', subject: 'Invoice' }]);
   });
 });

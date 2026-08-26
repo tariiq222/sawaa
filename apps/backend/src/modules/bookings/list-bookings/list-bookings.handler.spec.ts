@@ -157,4 +157,82 @@ describe('ListBookingsHandler', () => {
     expect(result.meta.total).toBe(0);
     expect(prisma.booking.findMany).not.toHaveBeenCalled();
   });
+
+  // Regression: BK-LIST-500 — a malformed Booking row with null status /
+  // endsAt / scheduledAt must NOT 500 the dashboard list endpoint. Before
+  // the guard, mapBookingRow called `.toLowerCase()` / `.toUpperCase()` /
+  // formatInTimeZone() on the bad values and threw, aborting the response
+  // for every row.
+  it('does not throw on a row with null status / null endsAt / null scheduledAt', async () => {
+    const prisma = buildPrisma();
+    const malformed = {
+      ...mockBooking,
+      status: null,
+      scheduledAt: null,
+      endsAt: null,
+    } as unknown as { id: string; clientId: string; employeeId: string; serviceId: string | null; isHistoricalImport: boolean };
+    prisma.booking.findMany = jest.fn().mockResolvedValue([malformed]);
+    const handler = new ListBookingsHandler(prisma as never);
+    const result = await handler.execute({ page: 1, limit: 10 });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.status).toBe('');
+    expect(result.items[0]?.date).toBeNull();
+    expect(result.items[0]?.startTime).toBeNull();
+    expect(result.items[0]?.endTime).toBeNull();
+  });
+
+  // Regression: BK-LIST-500 — the dashboard list query must use an explicit
+  // narrow `select` so it does not name columns that may not yet exist on the
+  // live dev DB (e.g. `Booking.creationIdempotencyKey`, added by migration
+  // `20260813000001_unified_web_chat` and missing from a freshly-migrated DB
+  // before that migration runs). Without this select, the generated SQL
+  // includes every Booking column and Postgres raises
+  // `column ... does not exist in the current database` → 500.
+  it('issues findMany with a narrow select (no creationIdempotencyKey, no zoomCreatePhase)', async () => {
+    const prisma = buildPrisma();
+    const handler = new ListBookingsHandler(prisma as never);
+    await handler.execute({ page: 1, limit: 10 });
+    const args = (prisma.booking.findMany as jest.Mock).mock.calls[0]?.[0] as {
+      select?: Record<string, unknown>;
+    };
+    expect(args.select).toBeDefined();
+    expect(Object.keys(args.select ?? {}).sort()).toEqual([
+      'bookingNumber',
+      'bookingType',
+      'branchNameSnapshot',
+      'cancelReason',
+      'cancelledAt',
+      'categoryNameSnapshot',
+      'checkedInAt',
+      'clientId',
+      'completedAt',
+      'confirmedAt',
+      'createdAt',
+      'deliveryType',
+      'durationMinutesSnapshot',
+      'employeeId',
+      'endsAt',
+      'id',
+      'isHistoricalImport',
+      'notes',
+      'priceSnapshot',
+      'scheduledAt',
+      'serviceId',
+      'source',
+      'status',
+      'updatedAt',
+      'zoomHostUrl',
+      'zoomJoinUrl',
+      'zoomMeetingError',
+      'zoomMeetingStatus',
+      'zoomStartUrl',
+    ]);
+    // Explicit guard: these columns must NEVER appear in the list SELECT.
+    // Naming any of them is the exact regression we are guarding against.
+    expect(args.select).not.toHaveProperty('creationIdempotencyKey');
+    expect(args.select).not.toHaveProperty('creationRequestHash');
+    expect(args.select).not.toHaveProperty('zoomCreatePhase');
+    expect(args.select).not.toHaveProperty('zoomCreateAttemptCount');
+    expect(args.select).not.toHaveProperty('zoomSyncRevision');
+  });
 });

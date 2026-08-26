@@ -25,6 +25,10 @@ export class BookingNoShowCron {
       });
       const minutes =
         settings?.autoNoShowAfterMinutes ?? DEFAULT_BOOKING_SETTINGS.autoNoShowAfterMinutes;
+      // A non-positive value means staff want to keep manual control after
+      // appointment time. Short-circuit before any booking query or handler
+      // delegation so we never mark a CONFIRMED booking as NO_SHOW.
+      if (minutes <= 0) return;
       const cutoff = new Date(Date.now() - minutes * 60_000);
 
       // Snapshot the matching ids first so we can process each one through

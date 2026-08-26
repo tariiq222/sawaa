@@ -20,6 +20,7 @@ const apiMocks = vi.hoisted(() => ({
 vi.mock("@/lib/api/bookings", () => apiMocks)
 
 import { useBookings, useBookingMutations } from "@/hooks/use-bookings"
+import { todayClinicYmd } from "@/lib/utils"
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -33,7 +34,7 @@ function makeWrapper() {
 describe("useBookings — hasFilters + page management", () => {
   beforeEach(() => { Object.values(apiMocks).forEach((m) => m.mockReset()) })
 
-  it("hasFilters is false on initial state", async () => {
+  it("hasFilters is false on initial state (today is the baseline)", async () => {
     apiMocks.fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useBookings(), { wrapper: Wrapper })
@@ -69,6 +70,53 @@ describe("useBookings — hasFilters + page management", () => {
     expect(result.current.hasFilters).toBe(true)
   })
 
+  it("hasFilters stays false when the user picks today's date explicitly (today is the baseline)", async () => {
+    apiMocks.fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useBookings(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const today = todayClinicYmd()
+    act(() => { result.current.setFilters({ dateFrom: today, dateTo: today }) })
+    expect(result.current.hasFilters).toBe(false)
+  })
+
+  it("hasFilters is true when the user picks a non-today date range", async () => {
+    apiMocks.fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useBookings(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    act(() => { result.current.setFilters({ dateFrom: "2026-08-20", dateTo: "2026-08-26" }) })
+    expect(result.current.hasFilters).toBe(true)
+  })
+
+  it("hasFilters is true when the user clicks «الكل» (dateFrom/dateTo cleared)", async () => {
+    apiMocks.fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useBookings(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    act(() => { result.current.setFilters({ dateFrom: "", dateTo: "" }) })
+    expect(result.current.hasFilters).toBe(true)
+  })
+
+  it("resetFilters restores today's date range so hasFilters becomes false again", async () => {
+    apiMocks.fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useBookings(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    act(() => { result.current.setFilters({ dateFrom: "2026-01-01", dateTo: "2026-01-07" }) })
+    expect(result.current.hasFilters).toBe(true)
+
+    act(() => { result.current.resetFilters() })
+    const today = todayClinicYmd()
+    expect(result.current.filters.dateFrom).toBe(today)
+    expect(result.current.filters.dateTo).toBe(today)
+    expect(result.current.hasFilters).toBe(false)
+  })
+
   it("setFilters always resets page to 1 even when page is mid-pagination", async () => {
     apiMocks.fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
     const { Wrapper } = makeWrapper()
@@ -97,7 +145,7 @@ describe("useBookings — hasFilters + page management", () => {
     )
   })
 
-  it("'all' sentinel values are scrubbed from the API query", async () => {
+  it("'all' sentinel values are scrubbed from the API query (dateFrom/dateTo still present as today)", async () => {
     apiMocks.fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useBookings(), { wrapper: Wrapper })
@@ -106,5 +154,8 @@ describe("useBookings — hasFilters + page management", () => {
     expect(firstCall.status).toBeUndefined()
     expect(firstCall.type).toBeUndefined()
     expect(firstCall.isGuest).toBeUndefined()
+    // Today's range is sent (not scrubbed) so the very first query is today-scoped.
+    expect(firstCall.dateFrom).toBe(todayClinicYmd())
+    expect(firstCall.dateTo).toBe(todayClinicYmd())
   })
 })

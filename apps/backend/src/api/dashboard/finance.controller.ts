@@ -237,7 +237,13 @@ export class DashboardFinanceController {
   }
 
   @Post('bookings/:bookingId/invoice')
-  @CheckPermissions({ action: 'manage', subject: 'Invoice' })
+  // RECEPTIONIST opens RecordPaymentDialog on a payable booking, which calls
+  // ensure-invoice to materialise the DRAFT invoice before collecting. The
+  // built-in RECEPTIONIST role already has create:Invoice (and create:Payment),
+  // so the gate must be create:Invoice — not manage:Invoice — for the dialog
+  // open to succeed. ADMIN/OWNER still pass because CASL `manage` is a
+  // superset of `create`.
+  @CheckPermissions({ action: 'create', subject: 'Invoice' })
   @ApiOperation({ summary: 'Ensure a (DRAFT) invoice exists for a booking and return it' })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiCreatedResponse({ description: 'Invoice ensured' })
@@ -252,15 +258,22 @@ export class DashboardFinanceController {
   // only — ONLINE_CARD still flows through the Moyasar webhook and COUPON is
   // a redemption flow (ApplyCouponHandler). The handler rejects both before
   // touching any composed handler.
-  // W2-T1: tightened from manage:Payment-only to require BOTH manage:Payment
-  // AND manage:Invoice, because the handler composes EnsureBookingInvoiceHandler
+  // W2-T1: tightened from manage:Payment-only to require BOTH payment AND
+  // invoice permissions, because the handler composes EnsureBookingInvoiceHandler
   // and ApplyInvoiceDiscountHandler — capabilities the dedicated routes
   // `POST bookings/:bookingId/invoice` and `PATCH invoices/:id/discount` both
-  // gate on manage:Invoice. CaslGuard evaluates `required.every(...)`, so
-  // listing both permissions enforces both. Built-in roles (ACCOUNTANT /
-  // ADMIN / OWNER) already hold both and are unaffected.
+  // gate on invoice create/manage.
+  // BK-COLLECT-P0: lowered from manage+manage to create+create so the
+  // built-in RECEPTIONIST role (create:Payment, create:Invoice) can collect
+  // a booking payment without 403. CaslGuard evaluates `required.every(...)`,
+  // so listing both permissions enforces both. ADMIN / OWNER / ACCOUNTANT
+  // still pass because CASL `manage` is a superset of every action and the
+  // flatten-permissions step writes `subject:*` for `manage:subject` rules,
+  // which `canDo` matches for create as well. We deliberately do NOT grant
+  // RECEPTIONIST manage:Payment — that would also unlock PATCH payments/:id/verify
+  // (bank-transfer approve/reject), which must stay admin/owner-only.
   @Post('bookings/:bookingId/collect')
-  @CheckPermissions({ action: 'manage', subject: 'Payment' }, { action: 'manage', subject: 'Invoice' })
+  @CheckPermissions({ action: 'create', subject: 'Payment' }, { action: 'create', subject: 'Invoice' })
   @ApiOperation({
     summary: 'Collect a payment for a booking (reception manual/statistical)',
     description:
@@ -270,8 +283,9 @@ export class DashboardFinanceController {
       'Returns payment:null when the discount fully covers the invoice (no payment row created). ' +
       'Manual/statistical methods only — ONLINE_CARD (must come through the Moyasar webhook) ' +
       'and COUPON (redeemed via ApplyCouponHandler) are rejected by the handler. ' +
-      'Requires BOTH manage:Payment AND manage:Invoice: the route can ensure an ' +
-      'invoice and apply a discount, and CaslGuard requires every listed permission.',
+      'Requires BOTH create:Payment AND create:Invoice (CASL `manage` is a ' +
+      'superset of `create`, so ADMIN/OWNER/ACCOUNTANT still pass), enforced ' +
+      'by CaslGuard via `required.every(...)`.',
   })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiCreatedResponse({ description: 'Invoice ensured, optional discount applied, manual payment recorded (or payment:null when 100% discounted)' })

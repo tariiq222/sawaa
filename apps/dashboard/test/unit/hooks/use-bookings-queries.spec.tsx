@@ -35,6 +35,7 @@ vi.mock("@/lib/api/bookings", () => ({
 }))
 
 import { useBookings, useTodayBookings } from "@/hooks/use-bookings"
+import { todayClinicYmd } from "@/lib/utils"
 
 function makeWrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -100,6 +101,40 @@ describe("useBookings", () => {
     await waitFor(() => {
       expect(result.current.filters.status).toBe("all")
       expect(result.current.filters.employeeId).toBe("")
+      expect(result.current.hasFilters).toBe(false)
+    })
+  })
+
+  it("defaults dateFrom and dateTo to today's clinic ymd (Asia/Riyadh)", async () => {
+    fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
+
+    const { result } = renderHook(() => useBookings(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const today = todayClinicYmd()
+    expect(result.current.filters.dateFrom).toBe(today)
+    expect(result.current.filters.dateTo).toBe(today)
+    // Initial fetch must carry today's range — never an all-time query.
+    expect(fetchBookings).toHaveBeenCalledWith(
+      expect.objectContaining({ dateFrom: today, dateTo: today }),
+    )
+  })
+
+  it("resetFilters restores today's clinic ymd range (not all-time)", async () => {
+    fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
+
+    const { result } = renderHook(() => useBookings(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    // Simulate user picking "الكل" (all-time clears dates) then "this week".
+    act(() => { result.current.setFilters({ dateFrom: "", dateTo: "" }) })
+    act(() => { result.current.setFilters({ dateFrom: "2026-08-20", dateTo: "2026-08-26" }) })
+    act(() => { result.current.resetFilters() })
+
+    const today = todayClinicYmd()
+    await waitFor(() => {
+      expect(result.current.filters.dateFrom).toBe(today)
+      expect(result.current.filters.dateTo).toBe(today)
       expect(result.current.hasFilters).toBe(false)
     })
   })

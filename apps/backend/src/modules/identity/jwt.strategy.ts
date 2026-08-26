@@ -6,6 +6,7 @@ import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../common/constants';
 import { CaslAbilityFactory } from './casl/casl-ability.factory';
+import { loadSystemRolePermissions } from './shared/load-system-role-permissions';
 import type { JwtPayload } from './shared/token.service';
 
 @Injectable()
@@ -37,18 +38,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         include: { customRole: { include: { permissions: true } } },
       });
 
-      let sysRolePerms: Array<{ action: string; subject: string }> | null = null;
-      if (
-        foundUser &&
-        foundUser.role !== 'SUPER_ADMIN' &&
-        foundUser.role !== 'CLIENT'
-      ) {
-        const sysRole = await this.prisma.customRole.findFirst({
-          where: { systemKey: foundUser.role },
-          select: { permissions: { select: { action: true, subject: true } } },
-        });
-        sysRolePerms = sysRole?.permissions ?? null;
-      }
+      // RX-PERMS-EMPTY: route through the shared loader so login / `me` /
+      // dashboard-OTP and this strategy all agree on whether the DB row
+      // grants permissions, fell back to BUILT_IN, or is an explicit deny-all.
+      const sysRolePerms = foundUser
+        ? await loadSystemRolePermissions(this.prisma, foundUser.role)
+        : null;
 
       return { user: foundUser, systemRolePermissions: sysRolePerms };
     });

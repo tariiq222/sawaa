@@ -578,6 +578,38 @@ describe('mapBookingRow', () => {
     const result = mapBookingRow(booking, relations);
     expect(result.deliveryType).toBeNull();
   });
+
+  // Regression: BK-LIST-500 — a malformed Booking row with null status
+  // must NOT crash mapBookingRow. Without the guard, mapStatusForUi calls
+  // `.toLowerCase()` on undefined and throws "Cannot read properties of
+  // undefined", 500-ing the entire dashboard bookings list endpoint.
+  it('does not throw when status is null/undefined', () => {
+    const bookingNull = { ...mockBooking, status: null } as unknown as Booking;
+    const bookingUndef = { ...mockBooking, status: undefined } as unknown as Booking;
+    expect(() => mapBookingRow(bookingNull, relations)).not.toThrow();
+    expect(() => mapBookingRow(bookingUndef, relations)).not.toThrow();
+  });
+
+  it('emits an empty status string for a malformed status row', () => {
+    const booking = { ...mockBooking, status: null } as unknown as Booking;
+    expect(mapBookingRow(booking, relations).status).toBe('');
+  });
+
+  // Regression: BK-LIST-500 — a malformed Booking row with null endsAt/scheduledAt
+  // must NOT crash mapBookingRow. Without the guard, formatToBusinessHHmm on a
+  // bad Date throws "Invalid time value" and 500-s the entire dashboard list.
+  it('does not throw when scheduledAt or endsAt is null', () => {
+    const booking = { ...mockBooking, scheduledAt: null, endsAt: null } as unknown as Booking;
+    expect(() => mapBookingRow(booking, relations)).not.toThrow();
+  });
+
+  it('emits null date/startTime/endTime for a malformed-date row', () => {
+    const booking = { ...mockBooking, scheduledAt: null, endsAt: null } as unknown as Booking;
+    const result = mapBookingRow(booking, relations);
+    expect(result.date).toBeNull();
+    expect(result.startTime).toBeNull();
+    expect(result.endTime).toBeNull();
+  });
 });
 
 describe('mapPaymentStatusForUi', () => {

@@ -94,6 +94,37 @@ describe('BookingAutocompleteCron', () => {
     await cron.execute();
     expect(prisma.bookingSettings.findFirst).toHaveBeenCalledTimes(1);
   });
+
+  it('does not query bookings or delegate when autoCompleteAfterHours is 0', async () => {
+    const prisma = buildPrisma();
+    prisma.bookingSettings.findFirst = jest
+      .fn()
+      .mockResolvedValue({ autoCompleteAfterHours: 0 });
+    const completeHandler = buildCompleteHandler();
+    const cron = new BookingAutocompleteCron(prisma as never, completeHandler as never);
+    await cron.execute();
+    expect(prisma.booking.findMany).not.toHaveBeenCalled();
+    expect(completeHandler.execute).not.toHaveBeenCalled();
+  });
+
+  it('queries and delegates when settings returns a positive autoCompleteAfterHours', async () => {
+    const prisma = buildPrisma();
+    prisma.bookingSettings.findFirst = jest
+      .fn()
+      .mockResolvedValue({ autoCompleteAfterHours: 2 });
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { id: 'b-1', status: BookingStatus.CONFIRMED },
+    ]);
+    const completeHandler = buildCompleteHandler();
+    const cron = new BookingAutocompleteCron(prisma as never, completeHandler as never);
+    await cron.execute();
+    expect(prisma.booking.findMany).toHaveBeenCalledTimes(1);
+    expect(completeHandler.execute).toHaveBeenCalledTimes(1);
+    expect(completeHandler.execute).toHaveBeenCalledWith({
+      bookingId: 'b-1',
+      changedBy: 'system:booking-autocomplete-cron',
+    });
+  });
 });
 
 describe('BookingExpiryCron', () => {

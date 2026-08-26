@@ -1152,7 +1152,7 @@ export interface paths {
         put?: never;
         /**
          * Collect a payment for a booking (reception manual/statistical)
-         * @description Single-command reception collection: ensures the booking's invoice exists, applies an optional manual discount, and records a manual payment. Omit amount to collect the full outstanding balance AFTER any discount. Returns payment:null when the discount fully covers the invoice (no payment row created). Manual/statistical methods only — ONLINE_CARD (must come through the Moyasar webhook) and COUPON (redeemed via ApplyCouponHandler) are rejected by the handler. Requires BOTH manage:Payment AND manage:Invoice: the route can ensure an invoice and apply a discount, and CaslGuard requires every listed permission.
+         * @description Single-command reception collection: ensures the booking's invoice exists, applies an optional manual discount, and records a manual payment. Omit amount to collect the full outstanding balance AFTER any discount. Returns payment:null when the discount fully covers the invoice (no payment row created). Manual/statistical methods only — ONLINE_CARD (must come through the Moyasar webhook) and COUPON (redeemed via ApplyCouponHandler) are rejected by the handler. Requires BOTH create:Payment AND create:Invoice (CASL `manage` is a superset of `create`, so ADMIN/OWNER/ACCOUNTANT still pass), enforced by CaslGuard via `required.every(...)`.
          */
         post: operations["DashboardFinanceController_collectBookingPaymentEndpoint_v1"];
         delete?: never;
@@ -7585,7 +7585,7 @@ export interface components {
              * @example Booking
              * @enum {string}
              */
-            subject: "Booking" | "Branch" | "Category" | "Client" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
+            subject: "Booking" | "Branch" | "Category" | "Client" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User" | "WhatsappConversation";
         };
         PreviewEmailTemplateDto: {
             /**

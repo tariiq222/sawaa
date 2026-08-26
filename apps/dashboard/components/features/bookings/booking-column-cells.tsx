@@ -34,6 +34,7 @@ import { ApiError } from "@/lib/api"
 import { generateInvoicePdf } from "@/lib/api/invoices"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
 import { BookingRefundDialog } from "@/components/features/bookings/booking-refund-dialog"
+import { canCollectBooking } from "@/components/features/bookings/booking-collect-action"
 import type { Booking } from "@/lib/types/booking"
 
 export type QuickStatusActionType = "confirm" | "checkin" | "complete" | "noshow" | "reschedule"
@@ -291,19 +292,12 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
       </div>
     )
   }
-  const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
-  // Pay-at-clinic bookings have no invoice yet — still allow recording a payment
-  // (the dialog materialises a DRAFT invoice on open). Needs a price and a client
-  // (the backend cannot invoice a guest booking without one).
-  const bookingPrice = booking.priceSnapshot ?? booking.service?.price ?? 0
-  const noInvoiceButPayable = !booking.invoice && bookingPrice > 0 && !!booking.clientId
-  // Backend gate: POST /dashboard/finance/payments requires `manage:Payment`
-  // (and manage:Invoice for the DRAFT-invoice sub-call).
-  const canRecordPayment =
-    !booking.isHistoricalImport &&
-    (hasOutstanding || noInvoiceButPayable) &&
-    payment?.status !== "awaiting" &&
-    canDo("payment", "manage")
+  // Single source of truth for the "record payment" affordance — mirrors
+  // BookingInvoiceTab and the actions-menu `CollectAction`. The predicate
+  // checks create:Payment + create:Invoice (with manage accepted as a
+  // superset), matching the backend gate on
+  // POST /dashboard/finance/bookings/:id/collect (BK-COLLECT-P0).
+  const canRecordPayment = canCollectBooking(booking, canDo)
 
   const status = isPartiallyPaid(booking) ? "partial" : payment?.status ?? "unpaid"
   const label = payment
