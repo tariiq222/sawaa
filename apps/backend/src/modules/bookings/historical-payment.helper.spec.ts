@@ -59,7 +59,7 @@ describe('mapHistoricalPayment', () => {
   it('treats missing bookingStatus the same as a non-CONFIRMED status for review', () => {
     expect(mapHistoricalPayment(
       { paymentStatus: 'paid', paidAmount: '200' },
-      undefined,
+      undefined as unknown as string,
     ).requiresReview).toBe(true);
   });
 });
