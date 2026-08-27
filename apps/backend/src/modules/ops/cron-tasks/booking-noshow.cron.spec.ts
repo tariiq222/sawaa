@@ -5,7 +5,10 @@ const CRON_ACTOR = 'system:booking-noshow-cron';
 
 const buildPrisma = (overrides: Record<string, unknown> = {}) => ({
   bookingSettings: {
-    findFirst: jest.fn().mockResolvedValue({ autoNoShowAfterMinutes: 30 }),
+    findFirst: jest.fn().mockResolvedValue({
+      autoNoShowAfterMinutes: 30,
+      autoNoShowAfterEnd: true,
+    }),
   },
   booking: {
     findMany: jest.fn().mockResolvedValue([]),
@@ -75,7 +78,7 @@ describe('BookingNoShowCron', () => {
     expect(handler.execute).toHaveBeenCalledTimes(2);
   });
 
-  it('queries only CONFIRMED bookings with no check-in, within the cutoff window', async () => {
+  it('queries only CONFIRMED bookings with no check-in, defaulting to endsAt cutoff', async () => {
     const prisma = buildPrisma();
     const handler = buildNoShowHandler();
     const cron = new BookingNoShowCron(prisma as never, handler as never);
@@ -86,13 +89,74 @@ describe('BookingNoShowCron', () => {
     expect(call.where.status).toBe(BookingStatus.CONFIRMED);
     expect(call.where.checkedInAt).toBeNull();
     expect(call.where.isHistoricalImport).toBe(false);
+    expect(call.where.endsAt).toHaveProperty('lte');
+    expect(call.where.scheduledAt).toBeUndefined();
+    expect(call.orderBy).toEqual([{ endsAt: 'asc' }, { id: 'asc' }]);
+  });
+
+  it('uses endsAt cutoff when autoNoShowAfterEnd is explicitly true', async () => {
+    const prisma = buildPrisma({
+      bookingSettings: {
+        findFirst: jest.fn().mockResolvedValue({
+          autoNoShowAfterMinutes: 30,
+          autoNoShowAfterEnd: true,
+        }),
+      },
+    });
+    const handler = buildNoShowHandler();
+    const cron = new BookingNoShowCron(prisma as never, handler as never);
+
+    await cron.execute();
+
+    const call = (prisma.booking.findMany as jest.Mock).mock.calls[0][0];
+    expect(call.where.endsAt).toHaveProperty('lte');
+    expect(call.where.scheduledAt).toBeUndefined();
+    expect(call.orderBy).toEqual([{ endsAt: 'asc' }, { id: 'asc' }]);
+  });
+
+  it('falls back to scheduledAt cutoff when autoNoShowAfterEnd is false (legacy)', async () => {
+    const prisma = buildPrisma({
+      bookingSettings: {
+        findFirst: jest.fn().mockResolvedValue({
+          autoNoShowAfterMinutes: 30,
+          autoNoShowAfterEnd: false,
+        }),
+      },
+    });
+    const handler = buildNoShowHandler();
+    const cron = new BookingNoShowCron(prisma as never, handler as never);
+
+    await cron.execute();
+
+    const call = (prisma.booking.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where.scheduledAt).toHaveProperty('lte');
+    expect(call.where.endsAt).toBeUndefined();
+    expect(call.orderBy).toEqual([{ scheduledAt: 'asc' }, { id: 'asc' }]);
+  });
+
+  it('defaults to endsAt when settings returns null', async () => {
+    const prisma = buildPrisma({
+      bookingSettings: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+    });
+    const handler = buildNoShowHandler();
+    const cron = new BookingNoShowCron(prisma as never, handler as never);
+
+    await cron.execute();
+
+    const call = (prisma.booking.findMany as jest.Mock).mock.calls[0][0];
+    expect(call.where.endsAt).toHaveProperty('lte');
+    expect(call.orderBy).toEqual([{ endsAt: 'asc' }, { id: 'asc' }]);
   });
 
   it('does not query bookings or delegate when autoNoShowAfterMinutes is 0', async () => {
     const prisma = buildPrisma({
       bookingSettings: {
-        findFirst: jest.fn().mockResolvedValue({ autoNoShowAfterMinutes: 0 }),
+        findFirst: jest.fn().mockResolvedValue({
+          autoNoShowAfterMinutes: 0,
+          autoNoShowAfterEnd: true,
+        }),
       },
     });
     const handler = buildNoShowHandler();
@@ -108,7 +172,10 @@ describe('BookingNoShowCron', () => {
     const targets = [{ id: 'book-1' }];
     const prisma = buildPrisma({
       bookingSettings: {
-        findFirst: jest.fn().mockResolvedValue({ autoNoShowAfterMinutes: 45 }),
+        findFirst: jest.fn().mockResolvedValue({
+          autoNoShowAfterMinutes: 45,
+          autoNoShowAfterEnd: true,
+        }),
       },
       booking: { findMany: jest.fn().mockResolvedValue(targets) },
     });

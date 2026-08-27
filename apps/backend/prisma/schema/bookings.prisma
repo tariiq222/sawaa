@@ -310,6 +310,11 @@ model BookingSettings {
 
   autoCompleteAfterHours Int @default(2)
   autoNoShowAfterMinutes Int @default(30)
+  /// When true (default), the auto-no-show grace is measured from the
+  /// appointment end (endsAt + autoNoShowAfterMinutes). When false, the grace
+  /// runs from the appointment start (scheduledAt + autoNoShowAfterMinutes —
+  /// legacy behavior kept for staff who want start-based marking).
+  autoNoShowAfterEnd    Boolean @default(true)
 
   minBookingLeadMinutes Int @default(60)
   maxAdvanceBookingDays Int @default(90)

@@ -11,6 +11,7 @@ const {
   confirmBooking,
   completeBooking,
   markNoShow,
+  restoreNoShowBooking,
   approveCancelBooking,
   rejectCancelBooking,
   checkInBooking,
@@ -28,6 +29,7 @@ const {
   confirmBooking: vi.fn(),
   completeBooking: vi.fn(),
   markNoShow: vi.fn(),
+  restoreNoShowBooking: vi.fn(),
   approveCancelBooking: vi.fn(),
   rejectCancelBooking: vi.fn(),
   checkInBooking: vi.fn(),
@@ -47,6 +49,7 @@ vi.mock("@/lib/api/bookings", () => ({
   confirmBooking,
   completeBooking,
   markNoShow,
+  restoreNoShowBooking,
   approveCancelBooking,
   rejectCancelBooking,
   checkInBooking,
@@ -181,6 +184,26 @@ describe("useBookingMutations", () => {
 
     await waitFor(() =>
       expect(markNoShow).toHaveBeenCalledWith("bk-1", expect.anything()),
+    )
+  })
+
+  it("restoreNoShowMut calls restoreNoShowBooking with id and reason", async () => {
+    restoreNoShowBooking.mockResolvedValueOnce({ id: "bk-1", status: "CONFIRMED" })
+
+    const { result } = renderHook(() => useBookingMutations(), { wrapper: makeWrapper() })
+
+    act(() => {
+      result.current.restoreNoShowMut.mutate({
+        id: "bk-1",
+        reason: "client arrived late",
+      })
+    })
+
+    await waitFor(() =>
+      expect(restoreNoShowBooking).toHaveBeenCalledWith(
+        "bk-1",
+        "client arrived late",
+      ),
     )
   })
 })

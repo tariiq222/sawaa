@@ -17,7 +17,13 @@ function allTerminalCombinations(): Array<{ from: BookingStatus; transition: Boo
   for (const from of TERMINAL_STATUSES) {
     for (const transition of Object.keys(VALID_TRANSITIONS) as BookingTransition[]) {
       if (VALID_TRANSITIONS[transition].from.length > 0) {
-        // Only non-CREATE transitions are guard-checked; CREATE has empty `from`
+        // Only non-CREATE transitions are guard-checked; CREATE has empty `from`.
+        // Skip the sole audited exception: NO_SHOW → RESTORE_NO_SHOW is the one
+        // legal escape out of a terminal status, exercised by its own positive
+        // test. Asserting it throws here would contradict that.
+        if (from === BookingStatus.NO_SHOW && transition === 'RESTORE_NO_SHOW') {
+          continue;
+        }
         pairs.push({ from, transition });
       }
     }
@@ -162,6 +168,12 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(assertTransition(BookingStatus.CONFIRMED, 'NO_SHOW')).toBe(BookingStatus.NO_SHOW);
     });
 
+    it('RESTORE_NO_SHOW (audited exception): NO_SHOW → CONFIRMED', () => {
+      // Sole legal escape out of a terminal status. The handler always sets
+      // checkedInAt to `now` so the auto-no-show cron does not re-mark it.
+      expect(assertTransition(BookingStatus.NO_SHOW, 'RESTORE_NO_SHOW')).toBe(BookingStatus.CONFIRMED);
+    });
+
     it('EXPIRE: PENDING → EXPIRED', () => {
       expect(assertTransition(BookingStatus.PENDING, 'EXPIRE')).toBe(BookingStatus.EXPIRED);
     });
@@ -229,6 +241,21 @@ describe('BookingStateMachine — assertTransition', () => {
     it('NO_SHOW from PENDING_GROUP_FILL throws', () => {
       expect(() =>
         assertTransition(BookingStatus.PENDING_GROUP_FILL, 'NO_SHOW'),
+      ).toThrow(BadRequestException);
+    });
+
+    it('RESTORE_NO_SHOW from CONFIRMED throws (restore is only out of NO_SHOW)', () => {
+      // A booking that was never marked no-show has no reason to be restored.
+      // The handler must guard this — otherwise staff could bypass the cron.
+      expect(() =>
+        assertTransition(BookingStatus.CONFIRMED, 'RESTORE_NO_SHOW'),
+      ).toThrow(BadRequestException);
+    });
+
+    it('RESTORE_NO_SHOW from COMPLETED throws (terminal, no audit escape)', () => {
+      // COMPLETED is terminal for every transition — restore does not apply.
+      expect(() =>
+        assertTransition(BookingStatus.COMPLETED, 'RESTORE_NO_SHOW'),
       ).toThrow(BadRequestException);
     });
 
@@ -317,15 +344,21 @@ describe('BookingStateMachine — isTerminalStatus', () => {
 });
 
 describe('BookingStateMachine — VALID_TRANSITIONS integrity', () => {
-  it('no terminal status appears as a "from" state in any transition', () => {
+  it('no terminal status appears as a "from" state in any transition EXCEPT the audited restore', () => {
+    // RESTORE_NO_SHOW is the sole audited exception: NO_SHOW → CONFIRMED is a
+    // legal escape so a mistakenly auto-no-show'd booking can be corrected.
+    // Every other entry in this table must keep the terminal-status invariant.
+    const ALLOWED_TERMINAL_FROM: ReadonlySet<string> = new Set(['RESTORE_NO_SHOW']);
     for (const [name, rule] of Object.entries(VALID_TRANSITIONS) as Array<[BookingTransition, { from: BookingStatus[]; to: BookingStatus }]>) {
       for (const fromStatus of rule.from) {
-        expect(TERMINAL_STATUSES.has(fromStatus)).toBe(false);
         if (TERMINAL_STATUSES.has(fromStatus)) {
-          console.error(`Violation: transition '${name}' lists terminal status '${fromStatus}' in its from[] list`);
+          expect(ALLOWED_TERMINAL_FROM.has(name)).toBe(true);
         }
       }
     }
+    // And pin the exception down exactly: only RESTORE_NO_SHOW may list NO_SHOW,
+    // and it must list exactly NO_SHOW.
+    expect(VALID_TRANSITIONS.RESTORE_NO_SHOW.from).toEqual([BookingStatus.NO_SHOW]);
   });
 
   it('every "to" status is a valid BookingStatus value', () => {

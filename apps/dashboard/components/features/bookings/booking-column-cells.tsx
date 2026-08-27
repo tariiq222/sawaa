@@ -228,40 +228,60 @@ export function StatusCell({
   if (booking.isHistoricalImport) return <StatusBadge status={booking.status} />
   const actions = quickStatusActions[booking.status] ?? []
   const canCancel = CANCELLABLE_STATUSES.has(booking.status)
-  if (!actions.length && !canCancel) return <StatusBadge status={booking.status} />
+  // Confirmed + not-yet-checked-in bookings surface a dedicated one-click
+  // "تسجيل حضور" control beside the dropdown — reception used to miss it
+  // when it lived only inside the status menu, so confirmed rows defaulted
+  // to لم يحضر after the fact.
+  const showCheckinButton =
+    booking.status === "confirmed" && !booking.checkedInAt
+  if (!actions.length && !canCancel && !showCheckinButton)
+    return <StatusBadge status={booking.status} />
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="rounded-md transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
-          <StatusBadge status={booking.status} />
+    <div className="flex items-center gap-1">
+      {showCheckinButton && (
+        <button
+          type="button"
+          className={intentIconBtn.approve}
+          aria-label={t("bookings.actions.action.checkin")}
+          title={t("bookings.actions.action.checkin")}
+          onClick={() => onStatusAction(booking, "checkin")}
+        >
+          <HugeiconsIcon icon={UserCheck01Icon} size={16} strokeWidth={2.2} />
         </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-44">
-        {actions.map(({ action, labelKey, icon, destructive }) => (
-          <DropdownMenuItem
-            key={action}
-            onSelect={() => onStatusAction(booking, action)}
-            className={destructive ? "text-destructive focus:text-destructive focus:bg-destructive/10" : ""}
-          >
-            <HugeiconsIcon icon={icon} size={15} className="me-2 shrink-0" />
-            {t(labelKey)}
-          </DropdownMenuItem>
-        ))}
-        {canCancel && (
-          <>
-            {actions.length > 0 && <DropdownMenuSeparator />}
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="rounded-md transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+            <StatusBadge status={booking.status} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-44">
+          {actions.map(({ action, labelKey, icon, destructive }) => (
             <DropdownMenuItem
-              onSelect={() => onDelete(booking)}
-              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+              key={action}
+              onSelect={() => onStatusAction(booking, action)}
+              className={destructive ? "text-destructive focus:text-destructive focus:bg-destructive/10" : ""}
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={15} className="me-2 shrink-0" />
-              {t("bookings.col.quickAction.cancel")}
+              <HugeiconsIcon icon={icon} size={15} className="me-2 shrink-0" />
+              {t(labelKey)}
             </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          ))}
+          {canCancel && (
+            <>
+              {actions.length > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuItem
+                onSelect={() => onDelete(booking)}
+                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={15} className="me-2 shrink-0" />
+                {t("bookings.col.quickAction.cancel")}
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }
 

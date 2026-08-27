@@ -54,6 +54,7 @@ vi.mock("@hugeicons/core-free-icons", () => ({
   CheckmarkCircle01Icon: () => null,
   EyeIcon: () => null,
   Payment01Icon: () => null,
+  ArrowTurnBackwardIcon: () => null,
 }))
 
 vi.mock("@sawaa/ui", () => {
@@ -122,6 +123,7 @@ function mockMutations(overrides: Record<string, { mutateAsync: ReturnType<typeo
     checkInMut: { ...empty, ...(overrides.checkInMut as object) },
     completeMut: { ...empty, ...(overrides.completeMut as object) },
     noShowMut: { ...empty, ...(overrides.noShowMut as object) },
+    restoreNoShowMut: { ...empty, ...(overrides.restoreNoShowMut as object) },
     adminCancelMut: { ...empty, ...(overrides.adminCancelMut as object) },
     approveCancelMut: { ...empty, ...(overrides.approveCancelMut as object) },
     rejectCancelMut: { ...empty, ...(overrides.rejectCancelMut as object) },

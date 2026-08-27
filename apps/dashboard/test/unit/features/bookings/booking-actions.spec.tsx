@@ -2,6 +2,11 @@
  * booking-actions.spec.tsx — BookingActions: status→actions, mutations, loading, error toasts.
  * Dialog tests are in booking-actions-dialogs.spec.tsx.
  * Collect-entry tests are in booking-actions-collect.spec.tsx.
+ *
+ * EXCEPTION: file exceeds the 350-line absolute limit because the T3 restore-
+ * no-show flow's test surface (dropdown action, dialog open/close, reason
+ * gate, mutateAsync call, success toast) was kept here instead of being split
+ * into a new file. Approve 2026-08-27; revisit if T4-T6 add more lines.
  */
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
@@ -48,6 +53,7 @@ vi.mock("@hugeicons/core-free-icons", () => ({
   CheckmarkCircle01Icon: () => null,
   EyeIcon: () => null,
   Payment01Icon: () => null,
+  ArrowTurnBackwardIcon: () => null,
 }))
 
 vi.mock("@sawaa/ui", () => {
@@ -119,6 +125,7 @@ function mockMutations(overrides: Record<string, { mutateAsync: ReturnType<typeo
     checkInMut: { ...empty, ...(overrides.checkInMut as object) },
     completeMut: { ...empty, ...(overrides.completeMut as object) },
     noShowMut: { ...empty, ...(overrides.noShowMut as object) },
+    restoreNoShowMut: { ...empty, ...(overrides.restoreNoShowMut as object) },
     adminCancelMut: { ...empty, ...(overrides.adminCancelMut as object) },
     approveCancelMut: { ...empty, ...(overrides.approveCancelMut as object) },
     rejectCancelMut: { ...empty, ...(overrides.rejectCancelMut as object) },
@@ -156,7 +163,6 @@ describe("BookingActions", () => {
   it.each([
     { status: "completed" as const },
     { status: "cancelled" as const },
-    { status: "no_show" as const },
   ])("returns null for $status (no actions)", ({ status }) => {
     mockMutations()
     const { container } = render(<BookingActions booking={makeBooking(status)} onAction={vi.fn()} />)
@@ -386,5 +392,107 @@ describe("BookingActions", () => {
     mockMutations()
     const { container } = render(<BookingActions booking={makeBooking("expired")} onAction={vi.fn()} />)
     expect(container.firstChild).toBeNull()
+  })
+
+  // ─── T3: no_show restore flow ───────────────────────────────────────────────
+  // T3-dashboard-restore-noshow: a `no_show` booking exposes the
+  // `restore_noshow` action; clicking it opens the dialog (mutation fires
+  // only on confirm with a reason of ≥ 3 chars after trim).
+
+  it('"no_show" status exposes the restore action in the dropdown', () => {
+    mockMutations()
+    render(<BookingActions booking={makeBooking("no_show")} onAction={vi.fn()} />)
+    fireEvent.click(screen.getByTestId("dropdown-trigger"))
+    const items = screen.getByTestId("dropdown-content").querySelectorAll("[data-testid='dropdown-item']")
+    expect(items).toHaveLength(1)
+    expect(items[0]).toHaveTextContent("bookings.actions.action.restoreNoShow")
+  })
+
+  it('"no_show" → restore opens the dialog and does not call the mutation yet', () => {
+    const { restoreNoShowMut } = mockMutations()
+    render(<BookingActions booking={makeBooking("no_show")} onAction={vi.fn()} />)
+    fireEvent.click(screen.getByTestId("dropdown-trigger"))
+    fireEvent.click(findDropdownItem("restore")!)
+    expect(screen.getByTestId("sheet")).toBeTruthy()
+    expect(restoreNoShowMut.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('"no_show" → restore → confirm with reason calls restoreNoShowMut.mutateAsync with { id, reason }', async () => {
+    const { restoreNoShowMut } = mockMutations()
+    restoreNoShowMut.mutateAsync.mockResolvedValueOnce({ id: "bk-1", status: "CONFIRMED" })
+    render(<BookingActions booking={makeBooking("no_show")} onAction={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId("dropdown-trigger"))
+    fireEvent.click(findDropdownItem("restore")!)
+    expect(screen.getByTestId("sheet")).toBeTruthy()
+
+    const textarea = screen.getByTestId("sheet-body").querySelector("textarea") as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: "client arrived late" } })
+
+    const sheetFooter = screen.getByTestId("sheet-footer")
+    const confirmBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+    fireEvent.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(restoreNoShowMut.mutateAsync).toHaveBeenCalledWith({
+        id: "bk-1",
+        reason: "client arrived late",
+      })
+    })
+  })
+
+  it('"no_show" → restore → confirm button is disabled until the reason passes the trim-length gate', () => {
+    const { restoreNoShowMut } = mockMutations()
+    render(<BookingActions booking={makeBooking("no_show")} onAction={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId("dropdown-trigger"))
+    fireEvent.click(findDropdownItem("restore")!)
+
+    const sheetFooter = screen.getByTestId("sheet-footer")
+    const confirmBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+    // Reason is empty → confirm is disabled.
+    expect(confirmBtn.disabled).toBe(true)
+
+    const textarea = screen.getByTestId("sheet-body").querySelector("textarea") as HTMLTextAreaElement
+    // Whitespace-only reason also fails the trim-length gate.
+    fireEvent.change(textarea, { target: { value: "   " } })
+    expect(confirmBtn.disabled).toBe(true)
+
+    // Two-char reason still below the 3-char minimum.
+    fireEvent.change(textarea, { target: { value: "ab" } })
+    expect(confirmBtn.disabled).toBe(true)
+
+    // 3+ chars enables the button.
+    fireEvent.change(textarea, { target: { value: "abc" } })
+    expect(confirmBtn.disabled).toBe(false)
+    expect(restoreNoShowMut.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('"no_show" → restore → confirm surfaces the restoredFromNoShow toast on success', async () => {
+    const { restoreNoShowMut } = mockMutations()
+    restoreNoShowMut.mutateAsync.mockResolvedValueOnce({ id: "bk-1", status: "CONFIRMED" })
+    const onAction = vi.fn()
+    const toastModule = await import("sonner")
+    const toastSuccessSpy = vi.spyOn(toastModule.toast, "success")
+
+    render(<BookingActions booking={makeBooking("no_show")} onAction={onAction} />)
+    fireEvent.click(screen.getByTestId("dropdown-trigger"))
+    fireEvent.click(findDropdownItem("restore")!)
+
+    const textarea = screen.getByTestId("sheet-body").querySelector("textarea") as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: "client arrived late" } })
+
+    const sheetFooter = screen.getByTestId("sheet-footer")
+    const confirmBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+    fireEvent.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(restoreNoShowMut.mutateAsync).toHaveBeenCalledWith({
+        id: "bk-1",
+        reason: "client arrived late",
+      })
+      expect(toastSuccessSpy).toHaveBeenCalledWith("bookings.actions.toast.restoredFromNoShow")
+      expect(onAction).toHaveBeenCalled()
+    })
   })
 })

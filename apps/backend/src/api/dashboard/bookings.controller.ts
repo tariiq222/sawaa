@@ -31,6 +31,8 @@ import { CheckInBookingHandler } from '../../modules/bookings/check-in-booking/c
 import { CompleteBookingHandler } from '../../modules/bookings/complete-booking/complete-booking.handler';
 import { CompleteBookingDto } from '../../modules/bookings/complete-booking/complete-booking.dto';
 import { NoShowBookingHandler } from '../../modules/bookings/no-show-booking/no-show-booking.handler';
+import { RestoreNoShowBookingHandler } from '../../modules/bookings/restore-no-show-booking/restore-no-show-booking.handler';
+import { RestoreNoShowBookingDto } from '../../modules/bookings/restore-no-show-booking/restore-no-show-booking.dto';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { CheckAvailabilityDto } from '../../modules/bookings/check-availability/check-availability.dto';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
@@ -66,6 +68,7 @@ export class DashboardBookingsController {
     private readonly checkInHandler: CheckInBookingHandler,
     private readonly completeHandler: CompleteBookingHandler,
     private readonly noShowHandler: NoShowBookingHandler,
+    private readonly restoreNoShowHandler: RestoreNoShowBookingHandler,
     private readonly availabilityHandler: CheckAvailabilityHandler,
     private readonly statusLogHandler: ListBookingStatusLogHandler,
     private readonly timelineHandler: GetBookingTimelineHandler,
@@ -557,5 +560,36 @@ export class DashboardBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.noShowHandler.execute({ bookingId: id, changedBy: userId });
+  }
+
+  @Patch(':id/restore-no-show')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Restore a no-show booking to confirmed' })
+  @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description: 'Booking restored to CONFIRMED with check-in timestamp set',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        status: { type: 'string', example: 'CONFIRMED' },
+        checkedInAt: { type: 'string', format: 'date-time', nullable: true },
+        noShowAt: { type: 'string', format: 'date-time', nullable: true },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Booking is not in NO_SHOW, or credit bucket is full', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
+  restoreNoShowBooking(
+    @UserId() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: RestoreNoShowBookingDto,
+  ) {
+    return this.restoreNoShowHandler.execute({
+      bookingId: id,
+      changedBy: userId,
+      reason: body.reason,
+    });
   }
 }

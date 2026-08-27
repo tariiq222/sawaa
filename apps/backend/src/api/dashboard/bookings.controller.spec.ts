@@ -14,6 +14,7 @@ import { RetryZoomMeetingHandler } from '../../modules/bookings/retry-zoom-meeti
 import { CheckInBookingHandler } from '../../modules/bookings/check-in-booking/check-in-booking.handler';
 import { CompleteBookingHandler } from '../../modules/bookings/complete-booking/complete-booking.handler';
 import { NoShowBookingHandler } from '../../modules/bookings/no-show-booking/no-show-booking.handler';
+import { RestoreNoShowBookingHandler } from '../../modules/bookings/restore-no-show-booking/restore-no-show-booking.handler';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
 import { GetBookingTimelineHandler } from '../../modules/bookings/get-booking-timeline/get-booking-timeline.handler';
@@ -40,6 +41,7 @@ describe('DashboardBookingsController (e2e)', () => {
   const mockCheckIn = { execute: jest.fn() };
   const mockComplete = { execute: jest.fn() };
   const mockNoShow = { execute: jest.fn() };
+  const mockRestoreNoShow = { execute: jest.fn() };
   const mockAvailability = { execute: jest.fn() };
   const mockStatusLog = { execute: jest.fn() };
   const mockTimeline = { execute: jest.fn() };
@@ -65,6 +67,7 @@ describe('DashboardBookingsController (e2e)', () => {
         { provide: CheckInBookingHandler, useValue: mockCheckIn },
         { provide: CompleteBookingHandler, useValue: mockComplete },
         { provide: NoShowBookingHandler, useValue: mockNoShow },
+        { provide: RestoreNoShowBookingHandler, useValue: mockRestoreNoShow },
         { provide: CheckAvailabilityHandler, useValue: mockAvailability },
         { provide: ListBookingStatusLogHandler, useValue: mockStatusLog },
         { provide: GetBookingTimelineHandler, useValue: mockTimeline },
@@ -295,6 +298,54 @@ describe('DashboardBookingsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.status).toBe('NO_SHOW');
+    });
+  });
+
+  describe('PATCH /dashboard/bookings/:id/restore-no-show', () => {
+    it('returns 200 and forwards bookingId + changedBy(userId) + reason to the handler', async () => {
+      mockRestoreNoShow.execute.mockResolvedValue({
+        id: 'b-1',
+        status: 'CONFIRMED',
+        checkedInAt: '2026-08-27T09:30:00.000Z',
+        noShowAt: null,
+      });
+
+      const res = await request(app.getHttpServer())
+        .patch('/dashboard/bookings/00000000-0000-4000-a000-000000000001/restore-no-show')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ reason: 'Client arrived 5 min late; auto-no-show fired in error' })
+        .expect(200);
+
+      expect(res.body.status).toBe('CONFIRMED');
+      expect(mockRestoreNoShow.execute).toHaveBeenCalledWith({
+        bookingId: '00000000-0000-4000-a000-000000000001',
+        changedBy: 'user-1',
+        reason: 'Client arrived 5 min late; auto-no-show fired in error',
+      });
+    });
+
+    it('returns 400 when reason is missing', async () => {
+      await request(app.getHttpServer())
+        .patch('/dashboard/bookings/00000000-0000-4000-a000-000000000001/restore-no-show')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({})
+        .expect(400);
+    });
+
+    it('returns 400 when reason is shorter than 3 characters', async () => {
+      await request(app.getHttpServer())
+        .patch('/dashboard/bookings/00000000-0000-4000-a000-000000000001/restore-no-show')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ reason: 'no' })
+        .expect(400);
+    });
+
+    it('returns 400 when the bookingId path param is not a UUID', async () => {
+      await request(app.getHttpServer())
+        .patch('/dashboard/bookings/not-a-uuid/restore-no-show')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ reason: 'valid reason text' })
+        .expect(400);
     });
   });
 

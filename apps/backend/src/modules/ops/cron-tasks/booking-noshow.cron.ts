@@ -21,7 +21,7 @@ export class BookingNoShowCron {
     await withCronLeader(this.prisma, 'booking-noshow', async () => {
       const settings = await this.prisma.bookingSettings.findFirst({
         where: { branchId: null },
-        select: { autoNoShowAfterMinutes: true },
+        select: { autoNoShowAfterMinutes: true, autoNoShowAfterEnd: true },
       });
       const minutes =
         settings?.autoNoShowAfterMinutes ?? DEFAULT_BOOKING_SETTINGS.autoNoShowAfterMinutes;
@@ -29,6 +29,9 @@ export class BookingNoShowCron {
       // appointment time. Short-circuit before any booking query or handler
       // delegation so we never mark a CONFIRMED booking as NO_SHOW.
       if (minutes <= 0) return;
+      // Default path: grace runs from endsAt so a session in progress is not
+      // marked NO_SHOW. Staff can flip to start-based via the settings toggle.
+      const afterEnd = settings?.autoNoShowAfterEnd ?? DEFAULT_BOOKING_SETTINGS.autoNoShowAfterEnd;
       const cutoff = new Date(Date.now() - minutes * 60_000);
 
       // Snapshot the matching ids first so we can process each one through
@@ -38,11 +41,15 @@ export class BookingNoShowCron {
         where: {
           status: BookingStatus.CONFIRMED,
           isHistoricalImport: false,
-          scheduledAt: { lte: cutoff },
+          ...(afterEnd
+            ? { endsAt: { lte: cutoff } }
+            : { scheduledAt: { lte: cutoff } }),
           checkedInAt: null,
         },
         select: { id: true },
-        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+        orderBy: afterEnd
+          ? [{ endsAt: 'asc' }, { id: 'asc' }]
+          : [{ scheduledAt: 'asc' }, { id: 'asc' }],
         take: BATCH_SIZE,
       });
 

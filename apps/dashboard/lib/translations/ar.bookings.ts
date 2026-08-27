@@ -192,6 +192,7 @@ export const arBookings: Record<string, string> = {
   "bookings.actions.action.cancel": "إلغاء الحجز",
   "bookings.actions.action.approveCancel": "قبول طلب الإلغاء",
   "bookings.actions.action.rejectCancel": "رفض طلب الإلغاء",
+  "bookings.actions.action.restoreNoShow": "إرجاع الحضور",
   "bookings.actions.status.pending": "بانتظار التأكيد",
   "bookings.actions.status.pending_group_fill": "بانتظار اكتمال المجموعة",
   "bookings.actions.status.awaiting_payment": "بانتظار الدفع",
@@ -209,10 +210,18 @@ export const arBookings: Record<string, string> = {
   "bookings.actions.toast.cancelApproved": "تم قبول طلب الإلغاء",
   "bookings.actions.toast.cancelRejected": "تم رفض طلب الإلغاء",
   "bookings.actions.toast.cancelled": "تم إلغاء الحجز",
+  "bookings.actions.toast.restoredFromNoShow": "تم إرجاع الموعد من «لم يحضر»",
   "bookings.actions.toast.genericError": "حدث خطأ",
   "bookings.actions.toast.serverError": "حدث خطأ في النظام. يرجى المحاولة مرة أخرى.",
   "bookings.actions.validation.reasonRequired": "السبب مطلوب",
   "bookings.actions.validation.refundAmountRequired": "مبلغ الاسترداد مطلوب ويجب أن يكون أكبر من صفر",
+
+  // restore-no-show dialog
+  "bookings.restoreNoShow.title": "إرجاع الحجز من «لم يحضر»",
+  "bookings.restoreNoShow.desc": "سيُعاد الحجز إلى حالة مؤكد مع تسجيل وقت الحضور، ويمكن بعدها إتمامه كالعادة.",
+  "bookings.restoreNoShow.reasonLabel": "سبب الإرجاع *",
+  "bookings.restoreNoShow.reasonPlaceholder": "اكتب سبب إرجاع الحجز...",
+  "bookings.restoreNoShow.confirm": "إرجاع الحضور",
 
   // pagination
   "bookings.pagination.page": "الصفحة",

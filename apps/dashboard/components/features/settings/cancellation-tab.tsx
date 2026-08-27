@@ -101,6 +101,9 @@ export function CancellationTab({ t }: Props) {
   const [autoNoShow, setAutoNoShow] = useState("30")
   const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true)
   const [autoNoShowEnabled, setAutoNoShowEnabled] = useState(true)
+  // T2-noshow-after-end: when true (default), the no-show grace is measured
+  // from the appointment end; when false, from the scheduled start (legacy).
+  const [autoNoShowAfterEnd, setAutoNoShowAfterEnd] = useState(true)
 
   useEffect(() => {
     if (!settings) return
@@ -119,6 +122,7 @@ export function CancellationTab({ t }: Props) {
     const minutes = settings.autoNoShowAfterMinutes ?? 30
     setAutoNoShowEnabled(minutes > 0)
     setAutoNoShow(minutes > 0 ? String(minutes) : "30")
+    setAutoNoShowAfterEnd(settings.autoNoShowAfterEnd ?? true)
   }, [settings])
 
   const save = (data: Record<string, unknown>) => {
@@ -252,13 +256,21 @@ export function CancellationTab({ t }: Props) {
                       onChange={setAutoNoShowEnabled}
                     />
                     {autoNoShowEnabled && (
-                      <NumberRow
-                        label={t("settings.autoNoShowAfter")}
-                        desc={t("settings.autoNoShowAfterDesc")}
-                        value={autoNoShow}
-                        onChange={setAutoNoShow}
-                        unit="min"
-                      />
+                      <>
+                        <NumberRow
+                          label={t("settings.autoNoShowAfter")}
+                          desc={t("settings.autoNoShowAfterDesc")}
+                          value={autoNoShow}
+                          onChange={setAutoNoShow}
+                          unit="min"
+                        />
+                        <SwitchRow
+                          label={t("settings.autoNoShowAfterEnd")}
+                          desc={t("settings.autoNoShowAfterEndDesc")}
+                          checked={autoNoShowAfterEnd}
+                          onChange={setAutoNoShowAfterEnd}
+                        />
+                      </>
                     )}
                   </div>
                 </CardContent></Card>
@@ -267,6 +279,7 @@ export function CancellationTab({ t }: Props) {
                 <Button size="sm" disabled={mutation.isPending} onClick={() => save({
                   autoCompleteAfterHours: resolveAutomationDelay(autoCompleteEnabled, autoComplete, 2),
                   autoNoShowAfterMinutes: resolveAutomationDelay(autoNoShowEnabled, autoNoShow, 30),
+                  autoNoShowAfterEnd,
                 })}>
                   {t("settings.save")}
                 </Button>

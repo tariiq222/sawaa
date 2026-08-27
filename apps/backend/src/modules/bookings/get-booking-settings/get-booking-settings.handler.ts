@@ -19,6 +19,8 @@ export const DEFAULT_BOOKING_SETTINGS = {
   maxReschedulesPerBooking: 3,
   autoCompleteAfterHours: 2,
   autoNoShowAfterMinutes: 30,
+  /** Default grace is measured from the appointment end, not the start. */
+  autoNoShowAfterEnd: true,
   minBookingLeadMinutes: 60,
   maxAdvanceBookingDays: 90,
   payAtClinicEnabled: false,

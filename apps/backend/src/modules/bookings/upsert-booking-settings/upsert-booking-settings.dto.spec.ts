@@ -25,6 +25,7 @@ describe('UpsertBookingSettingsDto', () => {
       clientRescheduleMinHoursBefore: 24,
       autoCompleteAfterHours: 1,
       autoNoShowAfterMinutes: 30,
+      autoNoShowAfterEnd: true,
       minBookingLeadMinutes: 60,
       maxAdvanceBookingDays: 90,
       payAtClinicEnabled: true,
@@ -96,6 +97,10 @@ describe('UpsertBookingSettingsDto', () => {
     it('accepts true / false for payAtClinicEnabled', async () => {
       expect((await validateDto({ payAtClinicEnabled: true }))).toHaveLength(0);
       expect((await validateDto({ payAtClinicEnabled: false }))).toHaveLength(0);
+    });
+    it('accepts true / false for autoNoShowAfterEnd', async () => {
+      expect((await validateDto({ autoNoShowAfterEnd: true }))).toHaveLength(0);
+      expect((await validateDto({ autoNoShowAfterEnd: false }))).toHaveLength(0);
     });
     it('rejects a non-boolean (object — enableImplicitConversion cannot coerce)', async () => {
       const errors = await validateDto({ requireCancelApproval: { value: true } });

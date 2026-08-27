@@ -1,5 +1,13 @@
 "use client"
 
+// EXCEPTION: file exceeded the 300-line feature-component soft limit with the
+// addition of the no-show restore dialog (mutation wiring + state + render
+// alongside the existing cancel dialogs). Kept in one file because the
+// dropdown's `handleAction` switch is the single dispatch point for every
+// status-driven action, and splitting it would force callers to import two
+// BookingActions components. Stay ≤350 (absolute limit). Added 2026-08-27 for
+// T3-dashboard-restore-noshow.
+
 import { useState } from "react"
 import { toast } from "sonner"
 import { useLocale } from "@/components/locale-provider"
@@ -11,6 +19,7 @@ import {
   Cancel01Icon,
   CheckmarkCircle01Icon,
   EyeIcon,
+  ArrowTurnBackwardIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@sawaa/ui"
 import {
@@ -27,6 +36,7 @@ import { showApiError } from "@/lib/mutation-helpers"
 import { sarToHalalas } from "@/lib/money"
 import type { Booking, CancellationReason, RefundDecision, RefundType } from "@/lib/types/booking"
 import { ApproveCancelDialog, RejectCancelDialog, AdminCancelDialog } from "./cancel-dialogs"
+import { RestoreNoShowDialog } from "./restore-no-show-dialog"
 import { CollectAction, canCollectBooking, useLatestBookingRef } from "./booking-collect-action"
 
 interface BookingActionsProps {
@@ -48,7 +58,7 @@ const statusActions = {
   cancel_requested: ["approve_cancel", "reject_cancel"] as const,
   completed: [] as const,
   cancelled: [] as const,
-  no_show: [] as const,
+  no_show: ["restore_noshow"] as const,
   expired: [] as const,
 }
 
@@ -60,6 +70,7 @@ const getActionMeta = (t: (k: string) => string) => ({
   cancel:         { label: t("bookings.actions.action.cancel"),        icon: Cancel01Icon,          variant: "destructive" },
   approve_cancel: { label: t("bookings.actions.action.approveCancel"), icon: Tick01Icon,            variant: "default" },
   reject_cancel:  { label: t("bookings.actions.action.rejectCancel"),  icon: Cancel01Icon,          variant: "outline" },
+  restore_noshow: { label: t("bookings.actions.action.restoreNoShow"), icon: ArrowTurnBackwardIcon, variant: "outline" },
 })
 
 const getStatusLabels = (t: (k: string) => string): Record<string, string> => ({
@@ -84,6 +95,7 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
     checkInMut,
     completeMut,
     noShowMut,
+    restoreNoShowMut,
     adminCancelMut,
     approveCancelMut,
     rejectCancelMut,
@@ -95,12 +107,15 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
   const [adminNotes, setAdminNotes] = useState("")
   const [cancelReason, setCancelReason] = useState<CancellationReason | "">("")
   const [collectOpen, setCollectOpen] = useState(false)
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false)
+  const [restoreReason, setRestoreReason] = useState("")
 
   const loading =
     confirmMut.isPending ||
     checkInMut.isPending ||
     completeMut.isPending ||
     noShowMut.isPending ||
+    restoreNoShowMut.isPending ||
     adminCancelMut.isPending ||
     approveCancelMut.isPending ||
     rejectCancelMut.isPending
@@ -125,6 +140,11 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
     setRefundAmount("")
     setAdminNotes("")
     setCancelReason("")
+  }
+
+  const resetRestoreDialog = () => {
+    setRestoreDialogOpen(false)
+    setRestoreReason("")
   }
 
   const { status } = booking
@@ -168,6 +188,12 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
         break
       case "reject_cancel":
         setCancelDialog("reject")
+        break
+      case "restore_noshow":
+        // Open the dialog so the staff member can write a reason. The mutation
+        // is fired only after they confirm (preserves the `run` wrapper's
+        // toast + onAction() behaviour for the success path).
+        setRestoreDialogOpen(true)
         break
     }
   }
@@ -292,6 +318,29 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
             t("bookings.actions.toast.cancelled"),
           )
           resetDialog()
+        }}
+      />
+
+      <RestoreNoShowDialog
+        open={restoreDialogOpen}
+        reason={restoreReason}
+        setReason={setRestoreReason}
+        loading={loading}
+        onReset={resetRestoreDialog}
+        onConfirm={async () => {
+          const trimmed = restoreReason.trim()
+          if (trimmed.length < 3) {
+            toast.error(t("bookings.actions.validation.reasonRequired"))
+            return
+          }
+          await run(
+            () => restoreNoShowMut.mutateAsync({
+              id: booking.id,
+              reason: trimmed,
+            }),
+            t("bookings.actions.toast.restoredFromNoShow"),
+          )
+          resetRestoreDialog()
         }}
       />
     </>

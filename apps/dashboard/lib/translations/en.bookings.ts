@@ -192,6 +192,7 @@ export const enBookings: Record<string, string> = {
   "bookings.actions.action.cancel": "Cancel Booking",
   "bookings.actions.action.approveCancel": "Approve Cancellation",
   "bookings.actions.action.rejectCancel": "Reject Cancellation",
+  "bookings.actions.action.restoreNoShow": "Restore attendance",
   "bookings.actions.status.pending": "Awaiting Confirmation",
   "bookings.actions.status.pending_group_fill": "Awaiting Group Fill",
   "bookings.actions.status.awaiting_payment": "Awaiting Payment",
@@ -209,10 +210,18 @@ export const enBookings: Record<string, string> = {
   "bookings.actions.toast.cancelApproved": "Cancellation approved",
   "bookings.actions.toast.cancelRejected": "Cancellation rejected",
   "bookings.actions.toast.cancelled": "Booking cancelled",
+  "bookings.actions.toast.restoredFromNoShow": "Booking restored from no-show",
   "bookings.actions.toast.genericError": "An error occurred",
   "bookings.actions.toast.serverError": "A system error occurred. Please try again.",
   "bookings.actions.validation.reasonRequired": "Reason is required",
   "bookings.actions.validation.refundAmountRequired": "Refund amount is required and must be greater than zero",
+
+  // restore-no-show dialog
+  "bookings.restoreNoShow.title": "Restore booking from no-show",
+  "bookings.restoreNoShow.desc": "The booking will be restored to confirmed status with check-in time recorded; you can then complete it as usual.",
+  "bookings.restoreNoShow.reasonLabel": "Reason *",
+  "bookings.restoreNoShow.reasonPlaceholder": "Write the reason for restoring the booking...",
+  "bookings.restoreNoShow.confirm": "Restore attendance",
 
   // pagination
   "bookings.pagination.page": "Page",

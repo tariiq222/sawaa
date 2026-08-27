@@ -31,8 +31,11 @@ export class UpsertBookingSettingsDto {
   @ApiPropertyOptional({ description: 'Hours after booking start to auto-complete the booking', example: 1 })
   @IsOptional() @IsInt() @Min(0) autoCompleteAfterHours?: number;
 
-  @ApiPropertyOptional({ description: 'Minutes after booking start to auto-mark as no-show', example: 30 })
+  @ApiPropertyOptional({ description: 'Minutes of grace before auto no-show. Measured from appointment end when autoNoShowAfterEnd is true (default), otherwise from start. 0 disables auto no-show.', example: 30 })
   @IsOptional() @IsInt() @Min(0) autoNoShowAfterMinutes?: number;
+
+  @ApiPropertyOptional({ description: 'When true, auto no-show grace is measured from appointment end; when false, from start', example: true })
+  @IsOptional() @IsBoolean() autoNoShowAfterEnd?: boolean;
 
   @ApiPropertyOptional({ description: 'Minimum lead time in minutes before a booking can be created', example: 60 })
   @IsOptional() @IsInt() @Min(0) minBookingLeadMinutes?: number;

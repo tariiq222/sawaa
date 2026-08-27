@@ -12,6 +12,7 @@ const dbSettings = {
   bufferMinutes: 0, freeCancelBeforeHours: 24, freeCancelRefundType: 'FULL' as const,
   lateCancelRefundPercent: 0, maxReschedulesPerBooking: 3,
   autoCompleteAfterHours: 2, autoNoShowAfterMinutes: 30,
+  autoNoShowAfterEnd: true,
   minBookingLeadMinutes: 60, maxAdvanceBookingDays: 90,
   createdAt: new Date(), updatedAt: new Date(),
 };
@@ -49,6 +50,22 @@ describe('UpsertBookingSettingsHandler', () => {
     expect((prisma as any).bookingSettings.update).toHaveBeenCalledWith({
       where: { id: 'settings-1' },
       data: { bufferMinutes: 5 },
+    });
+  });
+
+  it('persists autoNoShowAfterEnd on update', async () => {
+    const prisma = buildPrisma();
+    (prisma as any).bookingSettings = {
+      findFirst: jest.fn().mockResolvedValue(dbSettings),
+      update: jest.fn().mockResolvedValue({ ...dbSettings, autoNoShowAfterEnd: false }),
+    };
+    const handler = new UpsertBookingSettingsHandler(prisma as never, buildCache() as never);
+
+    await handler.execute({ branchId: null, autoNoShowAfterEnd: false });
+
+    expect((prisma as any).bookingSettings.update).toHaveBeenCalledWith({
+      where: { id: 'settings-1' },
+      data: { autoNoShowAfterEnd: false },
     });
   });
 });
