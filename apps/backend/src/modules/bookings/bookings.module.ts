@@ -15,6 +15,7 @@ import { CheckAvailabilityHandler } from './check-availability/check-availabilit
 import { CheckInBookingHandler } from './check-in-booking/check-in-booking.handler';
 import { CompleteBookingHandler } from './complete-booking/complete-booking.handler';
 import { NoShowBookingHandler } from './no-show-booking/no-show-booking.handler';
+import { RestoreNoShowBookingHandler } from './restore-no-show-booking/restore-no-show-booking.handler';
 import { ExpireBookingHandler } from './expire-booking/expire-booking.handler';
 import { ListBookingStatusLogHandler } from './list-booking-status-log/list-booking-status-log.handler';
 import { GetBookingTimelineHandler } from './get-booking-timeline/get-booking-timeline.handler';
@@ -75,6 +76,7 @@ const handlers = [
   CheckInBookingHandler,
   CompleteBookingHandler,
   NoShowBookingHandler,
+  RestoreNoShowBookingHandler,
   ExpireBookingHandler,
   ListBookingStatusLogHandler,
   GetBookingTimelineHandler,
@@ -124,7 +126,7 @@ const handlers = [
   ],
   controllers: [DashboardBookingsController, DashboardProgramsController],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
-  exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler],
+  exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler, RestoreNoShowBookingHandler],
 })
 export class BookingsModule implements OnModuleInit {
   constructor(

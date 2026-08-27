@@ -39,6 +39,13 @@
  *   (none of these appear as a 'from' state in any transition;
  *    DEPOSIT_PAID is an active, non-terminal state)
  *
+ *   Sole audited exception out of a terminal state:
+ *     NO_SHOW → RESTORE_NO_SHOW → CONFIRMED
+ *     Restores a mistakenly auto-no-show'd booking to CONFIRMED with the
+ *     check-in timestamp set, so the auto-no-show cron does not immediately
+ *     re-mark it. Still audited in `BookingStatusLog`. NO_SHOW remains
+ *     terminal for every other transition (cancel / complete / delete / etc.).
+ *
  *   Self-loops:
  *     CONFIRMED → RESCHEDULE → CONFIRMED
  *     PENDING   → RESCHEDULE → PENDING
@@ -65,6 +72,7 @@ export type BookingTransition =
   | 'RESCHEDULE'
   | 'COMPLETE'
   | 'NO_SHOW'
+  | 'RESTORE_NO_SHOW'
   | 'EXPIRE'
   | 'CHECK_IN';
 
@@ -227,6 +235,26 @@ export const VALID_TRANSITIONS: Record<
   },
 
   /**
+   * Sole audited exception out of a terminal state.
+   *
+   * Restores a NO_SHOW booking to CONFIRMED so a mistakenly auto-no-show'd
+   * slot can be corrected without the auto-no-show cron immediately
+   * re-marking it. The handler always sets `checkedInAt` to `now`, which the
+   * cron checks before re-marking, so the restore is durable.
+   *
+   * The transition is the only entry in this table that lists a terminal
+   * status in `from[]`. NO_SHOW remains terminal for every other transition
+   * (CANCEL / COMPLETE / DELETE / etc.) — this single audited exception does
+   * not weaken that invariant.
+   *
+   * Handler: restore-no-show-booking/restore-no-show-booking.handler.ts
+   */
+  RESTORE_NO_SHOW: {
+    from: [BookingStatus.NO_SHOW],
+    to: BookingStatus.CONFIRMED,
+  },
+
+  /**
    * Cron/system expires a non-confirmed booking whose payment window elapsed.
    * A DEPOSIT_PAID booking expires when the client never settles the remaining
    * balance in time; the paid deposit is refunded by the existing expire-booking
@@ -267,6 +295,19 @@ export const REJECT_CANCEL_RESTORE_STATUSES: ReadonlySet<BookingStatus> =
 
 // ─── Terminal states ──────────────────────────────────────────────────────────
 
+/**
+ * Terminal statuses: NO outgoing transitions in normal flow (cancel, complete,
+ * expire, delete). Every terminal status appears as a `from` source in ZERO
+ * transitions of `VALID_TRANSITIONS` except for the sole audited exception:
+ *
+ *   NO_SHOW → RESTORE_NO_SHOW → CONFIRMED
+ *
+ * That exception exists so a mistakenly auto-no-show'd booking can be
+ * corrected by staff (with a reason and a `BookingStatusLog` row) without
+ * the auto-no-show cron immediately re-marking it. NO_SHOW is otherwise still
+ * terminal — `RESTORE_NO_SHOW` is the only path back out, and only ever
+ * into CONFIRMED.
+ */
 export const TERMINAL_STATUSES: ReadonlySet<BookingStatus> = new Set([
   BookingStatus.CANCELLED,
   BookingStatus.COMPLETED,

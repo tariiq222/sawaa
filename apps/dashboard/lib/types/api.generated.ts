@@ -606,6 +606,23 @@ export interface paths {
         patch: operations["DashboardBookingsController_rescheduleBooking_v1"];
         trace?: never;
     };
+    "/api/v1/dashboard/bookings/{id}/restore-no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Restore a no-show booking to confirmed */
+        patch: operations["DashboardBookingsController_restoreNoShowBooking_v1"];
+        trace?: never;
+    };
     "/api/v1/dashboard/bookings/{id}/status-log": {
         parameters: {
             query?: never;
@@ -7585,7 +7602,7 @@ export interface components {
              * @example Booking
              * @enum {string}
              */
-            subject: "Booking" | "Branch" | "Category" | "Client" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User" | "WhatsappConversation";
+            subject: "Booking" | "Branch" | "Category" | "Client" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
         };
         PreviewEmailTemplateDto: {
             /**
@@ -7988,6 +8005,13 @@ export interface components {
              * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
              */
             sessionToken: string;
+        };
+        RestoreNoShowBookingDto: {
+            /**
+             * @description Audited reason explaining why the booking is being restored from no-show. Stored verbatim in BookingStatusLog.reason with a "Restored from no-show:" prefix.
+             * @example Client arrived 5 min late; auto-no-show fired in error
+             */
+            reason: string;
         };
         RetryAdministrativeMessageDto: Record<string, never>;
         ScheduleProgramDto: {
@@ -9041,7 +9065,12 @@ export interface components {
              */
             autoCompleteAfterHours?: number;
             /**
-             * @description Minutes after booking start to auto-mark as no-show
+             * @description When true, auto no-show grace is measured from appointment end; when false, from start
+             * @example true
+             */
+            autoNoShowAfterEnd?: boolean;
+            /**
+             * @description Minutes of grace before auto no-show. Measured from appointment end when autoNoShowAfterEnd is true (default), otherwise from start. 0 disables auto no-show.
              * @example 30
              */
             autoNoShowAfterMinutes?: number;
@@ -12220,6 +12249,87 @@ export interface operations {
                 };
             };
             /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_restoreNoShowBooking_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreNoShowBookingDto"];
+            };
+        };
+        responses: {
+            /** @description Booking restored to CONFIRMED with check-in timestamp set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date-time */
+                        checkedInAt?: string | null;
+                        /** Format: uuid */
+                        id?: string;
+                        /** Format: date-time */
+                        noShowAt?: string | null;
+                        /** @example CONFIRMED */
+                        status?: string;
+                    };
+                };
+            };
+            /** @description Booking is not in NO_SHOW, or credit bucket is full */
             400: {
                 headers: {
                     [name: string]: unknown;

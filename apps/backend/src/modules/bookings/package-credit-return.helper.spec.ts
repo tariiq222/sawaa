@@ -1,5 +1,9 @@
 import { PackageCreditUsageStatus, PackagePurchaseStatus } from '@prisma/client';
-import { returnPackageCreditForBooking } from './package-credit-return.helper';
+import { BadRequestException } from '@nestjs/common';
+import {
+  reclaimPackageCreditForBooking,
+  returnPackageCreditForBooking,
+} from './package-credit-return.helper';
 
 /**
  * Build a minimal transaction-client stub exposing only the models the
@@ -119,6 +123,99 @@ describe('returnPackageCreditForBooking', () => {
       tx.packageCreditUsage.findFirst.mockResolvedValue(null);
 
       const result = await returnPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(result).toBe(false);
+      expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('reclaimPackageCreditForBooking', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('returns false (no-op) when the booking has no RETURNED usage', async () => {
+    const tx = buildTx();
+    tx.packageCreditUsage.findFirst.mockResolvedValue(null);
+
+    const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+
+    expect(result).toBe(false);
+    expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
+    expect(tx.packageCredit.update).not.toHaveBeenCalled();
+  });
+
+  describe('when the booking has a RETURNED usage to reclaim', () => {
+    function mockReturned(tx: ReturnType<typeof buildTx>, credit: { totalQuantity: number; usedQuantity: number }) {
+      tx.packageCreditUsage.findFirst.mockResolvedValue({
+        id: USAGE_ID,
+        creditId: CREDIT_ID,
+        bookingId: BOOKING_ID,
+        status: PackageCreditUsageStatus.RETURNED,
+      });
+      tx.packageCredit.findUnique.mockResolvedValue({
+        id: CREDIT_ID,
+        totalQuantity: credit.totalQuantity,
+        usedQuantity: credit.usedQuantity,
+      });
+    }
+
+    it('flips the usage row back to CONSUMED and clears returnedAt', async () => {
+      const tx = buildTx();
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
+
+      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(result).toBe(true);
+      expect(tx.packageCreditUsage.update).toHaveBeenCalledTimes(1);
+      const call = tx.packageCreditUsage.update.mock.calls[0][0];
+      expect(call.where).toEqual({ id: USAGE_ID });
+      expect(call.data.status).toBe(PackageCreditUsageStatus.CONSUMED);
+      expect(call.data.returnedAt).toBeNull();
+    });
+
+    it('increments credit.usedQuantity by exactly 1 via an id-keyed update', async () => {
+      const tx = buildTx();
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
+
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(tx.packageCredit.update).toHaveBeenCalledTimes(1);
+      expect(tx.packageCredit.update).toHaveBeenCalledWith({
+        where: { id: CREDIT_ID },
+        data: { usedQuantity: { increment: 1 } },
+      });
+    });
+
+    it('does NOT touch the parent purchase (reclaim is seat-only; auto-complete does not re-fire)', async () => {
+      const tx = buildTx();
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
+
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(tx.packagePurchase.update).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when the credit bucket has no remaining capacity (usedQuantity >= totalQuantity)', async () => {
+      const tx = buildTx();
+      // Bucket is full — flipping the usage back would push the bucket past
+      // totalQuantity. The transaction MUST roll back so staff can investigate.
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 10 });
+
+      await expect(
+        reclaimPackageCreditForBooking(tx as never, BOOKING_ID),
+      ).rejects.toThrow(BadRequestException);
+      // No mutation must have happened — the throw must precede any write.
+      expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
+      expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    });
+
+    it('is idempotent: a usage already CONSUMED is ignored (no double-increment)', async () => {
+      const tx = buildTx();
+      // findFirst is scoped to RETURNED only — a CONSUMED usage yields null,
+      // proving a booking whose credit is already consumed cannot be re-claimed.
+      tx.packageCreditUsage.findFirst.mockResolvedValue(null);
+
+      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
 
       expect(result).toBe(false);
       expect(tx.packageCredit.update).not.toHaveBeenCalled();

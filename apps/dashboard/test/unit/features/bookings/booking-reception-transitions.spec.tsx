@@ -34,8 +34,13 @@ const { useLocale } = vi.hoisted(() => ({
   })),
 }))
 
+const { useAuth } = vi.hoisted(() => ({
+  useAuth: vi.fn(),
+}))
+
 vi.mock("@/hooks/use-bookings", () => ({ useBookingMutations }))
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
+vi.mock("@/components/providers/auth-provider", () => ({ useAuth }))
 
 vi.mock("@hugeicons/react", () => ({
   HugeiconsIcon: () => <span data-testid="icon" />,
@@ -48,6 +53,7 @@ vi.mock("@hugeicons/core-free-icons", () => ({
   Cancel01Icon: () => null,
   CheckmarkCircle01Icon: () => null,
   EyeIcon: () => null,
+  ArrowTurnBackwardIcon: () => null,
 }))
 
 vi.mock("@sawaa/ui", () => ({
@@ -109,6 +115,7 @@ function mockMutations(overrides: Record<string, { mutateAsync: ReturnType<typeo
     checkInMut: { ...empty, ...(overrides.checkInMut as object) },
     completeMut: { ...empty, ...(overrides.completeMut as object) },
     noShowMut: { ...empty, ...(overrides.noShowMut as object) },
+    restoreNoShowMut: { ...empty, ...(overrides.restoreNoShowMut as object) },
     adminCancelMut: { ...empty, ...(overrides.adminCancelMut as object) },
     approveCancelMut: { ...empty, ...(overrides.approveCancelMut as object) },
     rejectCancelMut: { ...empty, ...(overrides.rejectCancelMut as object) },
@@ -125,6 +132,9 @@ function findDropdownItem(text: string) {
 describe("BookingActions — reception status menu (CONFIRMED)", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: collection-permission gate is open so the canCollect predicate
+    // in BookingActions doesn't short-circuit to null.
+    useAuth.mockReturnValue({ canDo: () => true })
   })
 
   afterEach(() => {
@@ -261,10 +271,17 @@ describe("BookingActions — reception status menu (CONFIRMED)", () => {
  * existing `booking-actions.spec.tsx`.
  */
 describe("BookingActions — status→actions matrix", () => {
+  beforeEach(() => {
+    // Default `useAuth()` returns canDo=true so canCollect doesn't null the
+    // component. Re-declared here because vi.clearAllMocks() in the prior
+    // describe's beforeEach wipes the earlier mockReturnValue.
+    useAuth.mockReturnValue({ canDo: () => true })
+  })
+
   const statusMatrix: ReadonlyArray<{
     status: Booking["status"]
     /** Action keys defined by the `getActionMeta` map. */
-    expected: ReadonlyArray<"confirm" | "checkin" | "complete" | "noshow" | "cancel" | "approve_cancel" | "reject_cancel">
+    expected: ReadonlyArray<"confirm" | "checkin" | "complete" | "noshow" | "cancel" | "approve_cancel" | "reject_cancel" | "restore_noshow">
     /** Number of dropdown items to expect (0 ⇒ component returns null). */
     count: number
   }> = [
@@ -276,7 +293,7 @@ describe("BookingActions — status→actions matrix", () => {
     { status: "cancel_requested",     expected: ["approve_cancel", "reject_cancel"],        count: 2 },
     { status: "completed",            expected: [], count: 0 },
     { status: "cancelled",            expected: [], count: 0 },
-    { status: "no_show",              expected: [], count: 0 },
+    { status: "no_show",              expected: ["restore_noshow"], count: 1 },
     { status: "expired",              expected: [], count: 0 },
   ]
 
@@ -301,12 +318,14 @@ describe("BookingActions — status→actions matrix", () => {
       expect(items).toHaveLength(count)
       for (const action of expected) {
         // The action key in the component is camelCased for approve/reject
-        // (e.g. "approveCancel") but snake-cased for the rest
-        // (e.g. "checkin", "noshow"). Translate to the i18n key the
-        // component actually emits.
+        // (e.g. "approveCancel") and for restore_noshow (e.g. "restoreNoShow"),
+        // but snake-cased for the rest (e.g. "checkin", "noshow"). Translate
+        // to the i18n key the component actually emits.
         const i18nKey =
           action === "approve_cancel" || action === "reject_cancel"
             ? action.replace(/_cancel$/, "Cancel")
+            : action === "restore_noshow"
+            ? "restoreNoShow"
             : action
         expect(labels.some((l) => l.includes(i18nKey))).toBe(true)
       }

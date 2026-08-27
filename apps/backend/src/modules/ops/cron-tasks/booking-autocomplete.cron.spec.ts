@@ -165,6 +165,10 @@ describe('BookingNoShowCron', () => {
 
   it('selects confirmed bookings past cutoff (no check-in)', async () => {
     const prisma = buildPrisma();
+    prisma.bookingSettings.findFirst = jest.fn().mockResolvedValue({
+      autoNoShowAfterMinutes: 30,
+      autoNoShowAfterEnd: true,
+    });
     const cron = new BookingNoShowCron(prisma as never, buildNoShowHandler() as never);
     await cron.execute();
     expect(prisma.booking.findMany).toHaveBeenCalledWith(
@@ -174,7 +178,8 @@ describe('BookingNoShowCron', () => {
           checkedInAt: null,
           isHistoricalImport: false,
         }),
-        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+        // Default path: grace is measured from appointment end (T2-noshow-after-end).
+        orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
         take: 100,
       }),
     );

@@ -136,6 +136,13 @@ export async function markNoShow(id: string): Promise<Booking> {
   return api.patch<Booking>(`/dashboard/bookings/${id}/no-show`)
 }
 
+export async function restoreNoShowBooking(
+  id: string,
+  reason: string,
+): Promise<Booking> {
+  return api.patch<Booking>(`/dashboard/bookings/${id}/restore-no-show`, { reason })
+}
+
 export async function checkInBooking(id: string): Promise<Booking> {
   return api.patch<Booking>(`/dashboard/bookings/${id}/check-in`)
 }

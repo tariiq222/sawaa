@@ -12,6 +12,7 @@ const dbSettings = {
   bufferMinutes: 0, freeCancelBeforeHours: 24, freeCancelRefundType: 'FULL' as const,
   lateCancelRefundPercent: 0, maxReschedulesPerBooking: 3,
   autoCompleteAfterHours: 2, autoNoShowAfterMinutes: 30,
+  autoNoShowAfterEnd: true,
   minBookingLeadMinutes: 60, maxAdvanceBookingDays: 90,
   createdAt: new Date(), updatedAt: new Date(),
 };
@@ -58,6 +59,7 @@ describe('GetBookingSettingsHandler', () => {
     expect(result.bufferMinutes).toBe(0);
     expect(result.freeCancelBeforeHours).toBe(24);
     expect(result.maxReschedulesPerBooking).toBe(3);
+    expect(result.autoNoShowAfterEnd).toBe(true);
   });
 
   it('bypasses cache and reads only through a supplied transaction', async () => {

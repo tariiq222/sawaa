@@ -18,6 +18,7 @@ import {
   confirmBooking,
   completeBooking,
   markNoShow,
+  restoreNoShowBooking,
   checkInBooking,
   adminCancelBooking,
 } from "@/lib/api/bookings"
@@ -91,6 +92,15 @@ describe("bookings api", () => {
     patchMock.mockResolvedValueOnce({ id: "bk-1" })
     await markNoShow("bk-1")
     expect(patchMock).toHaveBeenCalledWith("/dashboard/bookings/bk-1/no-show")
+  })
+
+  it("restoreNoShowBooking patches /dashboard/bookings/:id/restore-no-show with reason", async () => {
+    patchMock.mockResolvedValueOnce({ id: "bk-1", status: "CONFIRMED" })
+    await restoreNoShowBooking("bk-1", "client arrived late")
+    expect(patchMock).toHaveBeenCalledWith(
+      "/dashboard/bookings/bk-1/restore-no-show",
+      { reason: "client arrived late" },
+    )
   })
 
   it("checkInBooking patches /dashboard/bookings/:id/check-in", async () => {

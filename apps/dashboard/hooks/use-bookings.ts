@@ -1,11 +1,12 @@
 "use client"
 
-// EXCEPTION: 222 lines — hook colocates `useBookings`, `useTodayBookings`, and
+// EXCEPTION: hook colocates `useBookings`, `useTodayBookings`, and
 // `useBookingMutations` because they share a single QueryClient namespace and
 // inverting either list hook into its own file would force callers to import
 // two paths for one feature surface. Approved 2026-06-19; +16 added
 // 2026-08-26 for the today-baseline default filter + reset semantics
-// (BK-TODAY-DEFAULT).
+// (BK-TODAY-DEFAULT); +10 added 2026-08-27 for the restore-no-show mutation
+// (T3-dashboard-restore-noshow).
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { useState, useCallback } from "react"
@@ -17,6 +18,7 @@ import {
   confirmBooking,
   completeBooking,
   markNoShow,
+  restoreNoShowBooking,
   checkInBooking,
   adminCancelBooking,
   deleteBooking,
@@ -186,6 +188,12 @@ export function useBookingMutations() {
     onSuccess: invalidate,
   })
 
+  const restoreNoShowMut = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      restoreNoShowBooking(id, reason),
+    onSuccess: invalidate,
+  })
+
   const checkInMut = useMutation({
     mutationFn: checkInBooking,
     onSuccess: invalidate,
@@ -220,6 +228,7 @@ export function useBookingMutations() {
     confirmMut,
     completeMut,
     noShowMut,
+    restoreNoShowMut,
     checkInMut,
     adminCancelMut,
     deleteMut,

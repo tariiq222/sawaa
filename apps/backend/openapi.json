@@ -4628,6 +4628,7 @@
               "Branch",
               "Category",
               "Client",
+              "Conversation",
               "Coupon",
               "Department",
               "Employee",
@@ -4638,8 +4639,7 @@
               "Role",
               "Service",
               "Setting",
-              "User",
-              "WhatsappConversation"
+              "User"
             ],
             "example": "Booking",
             "type": "string"
@@ -5284,6 +5284,21 @@
         "required": [
           "sessionToken",
           "newPassword"
+        ],
+        "type": "object"
+      },
+      "RestoreNoShowBookingDto": {
+        "properties": {
+          "reason": {
+            "description": "Audited reason explaining why the booking is being restored from no-show. Stored verbatim in BookingStatusLog.reason with a \"Restored from no-show:\" prefix.",
+            "example": "Client arrived 5 min late; auto-no-show fired in error",
+            "maxLength": 500,
+            "minLength": 3,
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
         ],
         "type": "object"
       },
@@ -6896,8 +6911,13 @@
             "example": 1,
             "type": "number"
           },
+          "autoNoShowAfterEnd": {
+            "description": "When true, auto no-show grace is measured from appointment end; when false, from start",
+            "example": true,
+            "type": "boolean"
+          },
           "autoNoShowAfterMinutes": {
-            "description": "Minutes after booking start to auto-mark as no-show",
+            "description": "Minutes of grace before auto no-show. Measured from appointment end when autoNoShowAfterEnd is true (default), otherwise from start. 0 disables auto no-show.",
             "example": 30,
             "type": "number"
           },
@@ -11443,6 +11463,124 @@
           }
         ],
         "summary": "Reschedule a booking",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/{id}/restore-no-show": {
+      "patch": {
+        "operationId": "DashboardBookingsController_restoreNoShowBooking_v1",
+        "parameters": [
+          {
+            "description": "Booking ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreNoShowBookingDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "checkedInAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "noShowAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "status": {
+                      "example": "CONFIRMED",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Booking restored to CONFIRMED with check-in timestamp set"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking is not in NO_SHOW, or credit bucket is full"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Restore a no-show booking to confirmed",
         "tags": [
           "Dashboard / Bookings"
         ]

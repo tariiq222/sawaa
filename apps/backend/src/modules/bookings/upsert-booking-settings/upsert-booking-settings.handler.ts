@@ -14,6 +14,7 @@ export interface UpsertBookingSettingsCommand {
   clientRescheduleMinHoursBefore?: number;
   autoCompleteAfterHours?: number;
   autoNoShowAfterMinutes?: number;
+  autoNoShowAfterEnd?: boolean;
   minBookingLeadMinutes?: number;
   maxAdvanceBookingDays?: number;
   payAtClinicEnabled?: boolean;
