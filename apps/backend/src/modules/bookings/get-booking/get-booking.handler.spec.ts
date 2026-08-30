@@ -20,6 +20,10 @@ describe('GetBookingHandler', () => {
       service: { findFirst: jest.fn() },
       invoice: { findFirst: jest.fn().mockResolvedValue(null) },
       legacyImportRecord: { findFirst: jest.fn().mockResolvedValue(null) },
+      packageCreditUsage: { findFirst: jest.fn().mockResolvedValue(null) },
+      packageCredit: { findUnique: jest.fn().mockResolvedValue(null) },
+      packagePurchase: { findUnique: jest.fn().mockResolvedValue(null) },
+      sessionPackage: { findFirst: jest.fn().mockResolvedValue(null) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -150,6 +154,34 @@ describe('GetBookingHandler', () => {
       paymentStatus: 'paid',
       paymentMethod: 'local',
       paidAmount: '200.0000',
+    });
+  });
+
+  it('passes package funding to the booking mapper', async () => {
+    prisma.booking.findFirst.mockResolvedValue({
+      id: 'b1', clientId: 'c1', employeeId: 'e1', serviceId: 's1', packageCreditId: 'credit-1',
+    });
+    prisma.client.findFirst.mockResolvedValue(null);
+    prisma.employee.findFirst.mockResolvedValue(null);
+    prisma.service.findFirst.mockResolvedValue(null);
+    prisma.packageCreditUsage.findFirst.mockResolvedValue({ status: 'CONSUMED' });
+    prisma.packageCredit.findUnique.mockResolvedValue({ id: 'credit-1', purchaseId: 'purchase-1' });
+    prisma.packagePurchase.findUnique.mockResolvedValue({ id: 'purchase-1', packageId: 'package-1' });
+    prisma.sessionPackage.findFirst.mockResolvedValue({
+      id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package',
+    });
+
+    (mapBookingRow as jest.Mock).mockClear();
+    await handler.execute({ bookingId: 'b1' });
+
+    const relations = (mapBookingRow as jest.Mock).mock.calls[0][1];
+    expect(relations.packageFundingByBookingId.get('b1')).toEqual({
+      creditId: 'credit-1',
+      purchaseId: 'purchase-1',
+      packageId: 'package-1',
+      packageNameAr: 'باقة الجلسات',
+      packageNameEn: 'Session package',
+      usageStatus: 'CONSUMED',
     });
   });
 });

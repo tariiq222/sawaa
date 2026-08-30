@@ -84,6 +84,15 @@ export interface BookingInvoice {
   status: string      // Prisma InvoiceStatus
 }
 
+export interface BookingPackageFunding {
+  creditId: string
+  purchaseId: string
+  packageId: string
+  packageNameAr: string | null
+  packageNameEn: string | null
+  usageStatus: "CONSUMED" | "RETURNED"
+}
+
 export interface RescheduledFrom {
   id: string
   date: string
@@ -130,6 +139,7 @@ export interface Booking {
   rescheduledFrom: RescheduledFrom | null
   payment: BookingPayment | null
   invoice: BookingInvoice | null
+  packageFunding: BookingPackageFunding | null
   intakeFormId: string | null
   intakeFormAlreadySubmitted: boolean
   // ─── Snapshot fields (denormalized at booking creation) ───

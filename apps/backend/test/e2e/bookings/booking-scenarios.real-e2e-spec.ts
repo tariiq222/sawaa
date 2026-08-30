@@ -805,19 +805,32 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 				scheduledAt: scheduledAt.toISOString(),
 			});
 			const bookingId = createRes.body.id;
+			const priorStatus = createRes.body.status as BookingStatus;
 
-			// Simulate client cancel request
-			await prisma.booking.update({
-				where: { id: bookingId },
-				data: { status: BookingStatus.CANCEL_REQUESTED },
-			});
+			// Simulate the client request while preserving the audited prior state
+			// that the rejection flow uses to restore the booking safely.
+			await prisma.$transaction([
+				prisma.booking.update({
+					where: { id: bookingId },
+					data: { status: BookingStatus.CANCEL_REQUESTED },
+				}),
+				prisma.bookingStatusLog.create({
+					data: {
+						bookingId,
+						fromStatus: priorStatus,
+						toStatus: BookingStatus.CANCEL_REQUESTED,
+						changedBy: ctx.userId,
+						reason: "Late cancellation request",
+					},
+				}),
+			]);
 
 			// Staff rejects
 			const rejectRes = await rejectCancel(bookingId, {
 				rejectReason: "Late cancellation not allowed",
 			});
 			expect(rejectRes.status).toBe(200);
-			expect(rejectRes.body.status).toBe("CONFIRMED");
+			expect(rejectRes.body.status).toBe(priorStatus);
 
 			// Reset setting
 			await prisma.bookingSettings.updateMany({

@@ -312,6 +312,18 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
       </div>
     )
   }
+  if (booking.packageFunding) {
+    const labelKey =
+      booking.packageFunding.usageStatus === "RETURNED"
+        ? "bookings.col.paymentStatus.packageReturned"
+        : "bookings.col.paymentStatus.packageFunded"
+    return (
+      <PaymentStatusBadge
+        status="package"
+        label={t(labelKey)}
+      />
+    )
+  }
   // Single source of truth for the "record payment" affordance — mirrors
   // BookingInvoiceTab and the actions-menu `CollectAction`. The predicate
   // checks create:Payment + create:Invoice (with manage accepted as a

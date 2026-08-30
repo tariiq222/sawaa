@@ -110,11 +110,13 @@ export function StepPackage({
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null)
   const [method, setMethod] = useState<PayMethod>("CASH")
 
-  // Synchronous lock around the sell mutation. `disabled` on the button only
-  // catches clicks after React re-renders, so a double-tap before the next
-  // paint would otherwise issue two full-amount POSTs (the endpoint has no
-  // idempotency key and intentionally allows duplicates).
+  // Synchronous lock catches a double-tap before React disables the button.
+  // The attempt identity below also collapses network retries of the same sale.
   const purchaseLockRef = useRef(false)
+  const purchaseAttemptRef = useRef<{
+    fingerprint: string
+    idempotencyKey: string
+  } | null>(null)
 
   // Resolved method is the single source of truth for BOTH the chip
   // highlighted in MethodPicker AND the `method` field posted below. Without
@@ -175,13 +177,27 @@ export function StepPackage({
     if (purchaseLockRef.current || sellMut.isPending) return
     purchaseLockRef.current = true
     try {
+      const fingerprint = JSON.stringify({
+        packageId: selectedPkg.id,
+        clientId,
+        branchId,
+        method: activeMethod,
+      })
+      if (purchaseAttemptRef.current?.fingerprint !== fingerprint) {
+        purchaseAttemptRef.current = {
+          fingerprint,
+          idempotencyKey: crypto.randomUUID(),
+        }
+      }
       const payload: CreatePackagePurchasePayload = {
+        idempotencyKey: purchaseAttemptRef.current.idempotencyKey,
         packageId: selectedPkg.id,
         clientId,
         branchId,
         method: activeMethod as PackagePurchasePaymentMethod,
       }
       await sellMut.mutateAsync(payload)
+      purchaseAttemptRef.current = null
       toast.success(t("bookings.pos.package.purchase.success"))
       // Await the explicit refetch: the wire response omits the resolved
       // categoryId/departmentId, so the picker needs the enriched rows.

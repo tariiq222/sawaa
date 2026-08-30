@@ -18,6 +18,7 @@ const buildPrisma = () => ({
 
 const buildEventBus = () => ({
   publish: jest.fn().mockResolvedValue(undefined),
+  publishOptional: jest.fn().mockResolvedValue(undefined),
 });
 
 describe('CreateInvoiceHandler', () => {
@@ -158,7 +159,7 @@ describe('CreateInvoiceHandler', () => {
     expect(Number(result.total)).toBe(11500);
   });
 
-  it('publishes finance.invoice.created event after creation', async () => {
+  it('publishes finance.invoice.created as an optional event after creation', async () => {
     await handler.execute({
       bookingId: 'book-1',
       branchId: 'branch-1',
@@ -167,7 +168,7 @@ describe('CreateInvoiceHandler', () => {
       subtotal: 200,
     });
 
-    expect(eventBus.publish).toHaveBeenCalledWith(
+    expect(eventBus.publishOptional).toHaveBeenCalledWith(
       'finance.invoice.created',
       expect.objectContaining({
         payload: expect.objectContaining({
@@ -176,6 +177,7 @@ describe('CreateInvoiceHandler', () => {
         }),
       }),
     );
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 
   it('throws ConflictException when invoice already exists for booking', async () => {

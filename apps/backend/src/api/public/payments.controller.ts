@@ -79,6 +79,7 @@ export class PublicPaymentsController {
     // creates the PENDING purchase against `client.id`, never a caller-supplied id.
     return this.initPackagePurchase.execute({
       clientId: client.id,
+      idempotencyKey: dto.idempotencyKey,
       packageId: dto.packageId,
       branchId: dto.branchId,
     });

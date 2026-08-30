@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
+  BookingStatus,
   InvoiceStatus,
   PackagePurchaseStatus,
   PaymentStatus,
@@ -112,6 +113,36 @@ export class RefundPackagePurchaseHandler {
       }
       if (purchase.status === PackagePurchaseStatus.REFUNDED) {
         throw new BadRequestException('Package purchase is already refunded');
+      }
+
+      // A package cannot be refunded or cancelled while one of its credits
+      // already funds a future appointment that is still active. PackageCreditUsage
+      // and Booking intentionally have no Prisma relation (cross-BC reference),
+      // so resolve the usage ids first and then inspect the bookings explicitly.
+      const usages = await tx.packageCreditUsage.findMany({
+        where: {
+          credit: { purchaseId: cmd.purchaseId },
+          bookingId: { not: null },
+        },
+        select: { bookingId: true },
+      });
+      const bookingIds = usages.flatMap((usage) =>
+        usage.bookingId ? [usage.bookingId] : [],
+      );
+      if (bookingIds.length > 0) {
+        const futureFundedBooking = await tx.booking.findFirst({
+          where: {
+            id: { in: bookingIds },
+            scheduledAt: { gt: new Date() },
+            status: { not: BookingStatus.CANCELLED },
+          },
+          select: { id: true },
+        });
+        if (futureFundedBooking) {
+          throw new BadRequestException(
+            'Package purchase cannot be refunded while it funds a future active booking',
+          );
+        }
       }
 
       const amountPaid = decimalToHalalas(purchase.amountPaid);

@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { BookingStatus, PackageCreditUsageStatus } from '@prisma/client';
+import { BookingStatus, BookingType, PackageCreditUsageStatus, ProgramStatus } from '@prisma/client';
 import { RestoreNoShowBookingHandler } from './restore-no-show-booking.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
 
@@ -240,22 +240,32 @@ describe('RestoreNoShowBookingHandler — program enrollment', () => {
       existingEnrollment?: boolean;
       programMissing?: boolean;
       programFull?: boolean;
+      programCancelled?: boolean;
     } = {},
   ) {
+    (prisma as unknown as { $queryRaw: jest.Mock }).$queryRaw = jest
+      .fn()
+      .mockResolvedValue([]);
     (prisma as unknown as Record<string, unknown>).program = {
       findUnique: jest.fn().mockImplementation(() => {
         if (options.programMissing) return Promise.resolve(null);
         return Promise.resolve(
           options.programFull
-            ? { maxParticipants: 10, enrolledCount: 10 }
-            : { maxParticipants: 10, enrolledCount: 3 },
+            ? { status: ProgramStatus.SCHEDULED, maxParticipants: 10, enrolledCount: 10 }
+            : {
+                status: options.programCancelled ? ProgramStatus.CANCELLED : ProgramStatus.SCHEDULED,
+                maxParticipants: 10,
+                enrolledCount: 3,
+              },
         );
       }),
       updateMany: jest.fn().mockResolvedValue({ count: options.programFull ? 0 : 1 }),
     };
     (prisma as unknown as Record<string, unknown>).programEnrollment = {
       findUnique: jest.fn().mockResolvedValue(
-        options.existingEnrollment ? { id: 'enr-1' } : null,
+        options.existingEnrollment
+          ? { id: 'enr-1', programId: 'prog-1', clientId: 'client-1' }
+          : null,
       ),
       create: jest.fn().mockResolvedValue({ id: 'enr-new' }),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -294,6 +304,7 @@ describe('RestoreNoShowBookingHandler — program enrollment', () => {
         bookingId: 'book-1',
       }),
     });
+    expect((prisma as any).$queryRaw).toHaveBeenCalledTimes(1);
   });
 
   it('skips re-enrollment when an enrollment already exists for this booking (idempotency)', async () => {
@@ -316,7 +327,7 @@ describe('RestoreNoShowBookingHandler — program enrollment', () => {
     expect((prisma as any).programEnrollment.create).not.toHaveBeenCalled();
   });
 
-  it('does NOT fail the restore when the program is now full (best-effort)', async () => {
+  it('rejects the restore when the program is now full, rather than confirming a GROUP booking without a seat', async () => {
     const prisma = buildPrisma();
     withProgramStubs(prisma, { programFull: true });
     prisma.booking.findUnique = jest.fn().mockResolvedValue({
@@ -326,19 +337,19 @@ describe('RestoreNoShowBookingHandler — program enrollment', () => {
       clientId: 'client-1',
     });
 
-    // The restore itself succeeds even though the program is full.
-    const result = await newHandler(prisma).execute({
-      bookingId: 'book-1',
-      changedBy: 'user-42',
-      reason: 'program filled up while client was away',
-    });
+    await expect(
+      newHandler(prisma).execute({
+        bookingId: 'book-1',
+        changedBy: 'user-42',
+        reason: 'program filled up while client was away',
+      }),
+    ).rejects.toThrow(BadRequestException);
 
-    expect(result).toBeDefined();
     expect((prisma as any).programEnrollment.create).not.toHaveBeenCalled();
-    expect(prisma.bookingStatusLog.create).toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
-  it('does NOT fail the restore when the program record is missing', async () => {
+  it('rejects the restore when the GROUP booking no longer has a program to own its seat', async () => {
     const prisma = buildPrisma();
     withProgramStubs(prisma, { programMissing: true });
     prisma.booking.findUnique = jest.fn().mockResolvedValue({
@@ -348,15 +359,39 @@ describe('RestoreNoShowBookingHandler — program enrollment', () => {
       clientId: 'client-1',
     });
 
-    const result = await newHandler(prisma).execute({
-      bookingId: 'book-1',
-      changedBy: 'user-42',
-      reason: 'program deleted under us',
-    });
+    await expect(
+      newHandler(prisma).execute({
+        bookingId: 'book-1',
+        changedBy: 'user-42',
+        reason: 'program deleted under us',
+      }),
+    ).rejects.toThrow(BadRequestException);
 
-    expect(result).toBeDefined();
     expect((prisma as any).program.updateMany).not.toHaveBeenCalled();
     expect((prisma as any).programEnrollment.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects the restore when the GROUP program was cancelled while the booking was no-show', async () => {
+    const prisma = buildPrisma();
+    withProgramStubs(prisma, { programCancelled: true });
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.NO_SHOW,
+      bookingType: BookingType.GROUP,
+      programId: 'prog-1',
+      clientId: 'client-1',
+    });
+
+    await expect(
+      newHandler(prisma).execute({
+        bookingId: 'book-1',
+        changedBy: 'user-42',
+        reason: 'program was cancelled',
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect((prisma as any).programEnrollment.create).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
   it('does NOT touch program models when the booking has no programId', async () => {

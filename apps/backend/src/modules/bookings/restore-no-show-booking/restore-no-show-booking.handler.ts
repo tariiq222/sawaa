@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, BookingType, ProgramStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
@@ -31,11 +31,11 @@ export interface RestoreNoShowBookingCommand {
  *                              previously RETURNED usage is flipped back to
  *                              CONSUMED and the bucket counter is
  *                              incremented (rollback-on-failure).
- *   - Program enrollment      best-effort: if the program still has free
- *                              seats AND no enrollment for this booking
- *                              exists, a row is created and the counter
- *                              incremented. A full program NEVER fails the
- *                              restore.
+ *   - Program enrollment      GROUP bookings are restored only when their
+ *                              original program is still SCHEDULED and has
+ *                              a valid enrollment or a seat that can be
+ *                              atomically reclaimed. We never confirm a
+ *                              GROUP booking without a valid seat.
  */
 @Injectable()
 export class RestoreNoShowBookingHandler {
@@ -64,6 +64,73 @@ export class RestoreNoShowBookingHandler {
     const nextStatus = assertTransition(booking.status, 'RESTORE_NO_SHOW'); // CONFIRMED
 
     const updated = await this.rlsTransaction.withTransaction(async (tx) => {
+      const isGroupBooking =
+        booking.bookingType === BookingType.GROUP || Boolean(booking.programId);
+
+      // 1) Re-establish the program-seat invariant before restoring the
+      // booking status. The guarded update acquires the Program row lock and
+      // serializes with enrollment/cancellation, so a successful restore
+      // cannot leave a confirmed GROUP booking without a seat.
+      if (isGroupBooking) {
+        if (!booking.programId || !booking.clientId) {
+          throw new BadRequestException(
+            'Cannot restore a group booking without its program and client',
+          );
+        }
+
+        // Use the same Program row lock as enrollment/cancellation. This
+        // closes the existing-enrollment race too: cancellation either sees
+        // the restored booking and cascades it, or restore sees CANCELLED and
+        // fails before changing the booking status.
+        await tx.$queryRaw`SELECT id FROM "Program" WHERE id = ${booking.programId} FOR UPDATE`;
+
+        const program = await tx.program.findUnique({
+          where: { id: booking.programId },
+          select: { status: true, maxParticipants: true },
+        });
+        if (!program || program.status !== ProgramStatus.SCHEDULED) {
+          throw new BadRequestException(
+            'Cannot restore a group booking for an unavailable program',
+          );
+        }
+
+        const existingEnrollment = await tx.programEnrollment.findUnique({
+          where: { bookingId: cmd.bookingId },
+          select: { id: true, programId: true, clientId: true },
+        });
+        if (existingEnrollment) {
+          if (
+            existingEnrollment.programId !== booking.programId ||
+            existingEnrollment.clientId !== booking.clientId
+          ) {
+            throw new BadRequestException(
+              'Cannot restore a group booking with an invalid enrollment',
+            );
+          }
+        } else {
+          const reserved = await tx.program.updateMany({
+            where: {
+              id: booking.programId,
+              status: ProgramStatus.SCHEDULED,
+              enrolledCount: { lt: program.maxParticipants },
+            },
+            data: { enrolledCount: { increment: 1 } },
+          });
+          if (reserved.count !== 1) {
+            throw new BadRequestException(
+              'Cannot restore a group booking because no seat is available',
+            );
+          }
+          await tx.programEnrollment.create({
+            data: {
+              programId: booking.programId,
+              clientId: booking.clientId,
+              bookingId: cmd.bookingId,
+            },
+          });
+        }
+      }
+
       // 1) Flip the booking. Always set checkedInAt so the auto-no-show cron
       //    does not immediately re-mark the booking on its next pass.
       const [restored] = await Promise.all([
@@ -96,48 +163,6 @@ export class RestoreNoShowBookingHandler {
       //    booking flip nor the log row survives.
       if (booking.packageCreditId) {
         await reclaimPackageCreditForBooking(tx, cmd.bookingId);
-      }
-
-      // 3) Best-effort re-enrollment for program bookings. The no-show
-      //    handler deleted the ProgramEnrollment row and decremented the
-      //    counter; we reverse that only when there is room. If the program
-      //    filled up while the client was away, the restore still succeeds —
-      //    staff can re-enroll manually and the seat credit already
-      //    covers the booking.
-      if (booking.programId && booking.clientId) {
-        const existingEnrollment = await tx.programEnrollment.findUnique({
-          where: { bookingId: cmd.bookingId },
-          select: { id: true },
-        });
-        if (!existingEnrollment) {
-          const program = await tx.program.findUnique({
-            where: { id: booking.programId },
-            select: { maxParticipants: true, enrolledCount: true },
-          });
-          if (program) {
-            const reserved = await tx.program.updateMany({
-              where: {
-                id: booking.programId,
-                enrolledCount: { lt: program.maxParticipants },
-              },
-              data: { enrolledCount: { increment: 1 } },
-            });
-            if (reserved.count === 1) {
-              await tx.programEnrollment.create({
-                data: {
-                  programId: booking.programId,
-                  clientId: booking.clientId,
-                  bookingId: cmd.bookingId,
-                },
-              });
-            }
-            // reserved.count === 0 → program is full; skip re-enrollment
-            // (the restore itself still succeeded).
-          }
-          // program missing → nothing to enroll against; skip.
-        }
-        // existingEnrollment present → already re-enrolled by a concurrent
-        // restore attempt (idempotency guard).
       }
 
       return restored;

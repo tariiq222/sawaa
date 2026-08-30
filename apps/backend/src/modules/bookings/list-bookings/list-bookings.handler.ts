@@ -3,7 +3,11 @@ import { Prisma, type Booking } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListBookingsDto } from './list-bookings.dto';
-import { mapBookingRow, type BookingRelations } from '../booking-row.mapper';
+import {
+  mapBookingRow,
+  type BookingPackageFundingRelation,
+  type BookingRelations,
+} from '../booking-row.mapper';
 import type { HistoricalPaymentMetadata } from '../historical-payment.helper';
 
 export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDate' | 'toDate'> & {
@@ -38,6 +42,7 @@ const BOOKING_LIST_SELECT = {
   clientId: true,
   employeeId: true,
   serviceId: true,
+  packageCreditId: true,
   bookingType: true,
   deliveryType: true,
   source: true,
@@ -189,6 +194,7 @@ async function loadRelations(
     clientId: string;
     employeeId: string;
     serviceId: string | null;
+    packageCreditId: string | null;
     isHistoricalImport: boolean;
   }[],
 ): Promise<BookingRelations> {
@@ -199,8 +205,9 @@ async function loadRelations(
   const clientIds = [...new Set(rows.map((r) => r.clientId))];
   const employeeIds = [...new Set(rows.map((r) => r.employeeId))];
   const serviceIds = [...new Set(rows.map((r) => r.serviceId).filter((id): id is string => id !== null))];
+  const creditIds = [...new Set(rows.map((r) => r.packageCreditId).filter((id): id is string => id !== null))];
 
-  const [clients, employees, services, invoices, historicalRecords] = await Promise.all([
+  const [clients, employees, services, invoices, historicalRecords, usages, credits] = await Promise.all([
     clientIds.length
       ? prisma.client.findMany({ where: { id: { in: clientIds } } })
       : Promise.resolve([]),
@@ -244,7 +251,37 @@ async function loadRelations(
           select: { targetId: true, metadata: true },
         })
       : Promise.resolve([]),
+    bookingIds.length && creditIds.length
+      ? prisma.packageCreditUsage.findMany({
+          where: {
+            bookingId: { in: bookingIds },
+            creditId: { in: creditIds },
+          },
+          select: { bookingId: true, creditId: true, status: true },
+        })
+      : Promise.resolve([]),
+    creditIds.length
+      ? prisma.packageCredit.findMany({
+          where: { id: { in: creditIds } },
+          select: { id: true, purchaseId: true },
+        })
+      : Promise.resolve([]),
   ]);
+
+  const purchaseIds = [...new Set(credits.map((credit) => credit.purchaseId))];
+  const purchases = purchaseIds.length
+    ? await prisma.packagePurchase.findMany({
+        where: { id: { in: purchaseIds } },
+        select: { id: true, packageId: true },
+      })
+    : [];
+  const packageIds = [...new Set(purchases.map((purchase) => purchase.packageId))];
+  const packages = packageIds.length
+    ? await prisma.sessionPackage.findMany({
+        where: { id: { in: packageIds } },
+        select: { id: true, nameAr: true, nameEn: true },
+      })
+    : [];
 
   // Build paymentsByBookingId: bookingId → latest payment (amounts in halalat)
   // Payment.amount is stored as Decimal(12,2) SAR in Prisma.
@@ -292,12 +329,42 @@ async function loadRelations(
       }),
   );
 
+  const usageByBookingId = new Map(
+    usages
+      .filter((usage) => {
+        const row = rows.find((booking) => booking.id === usage.bookingId);
+        return row?.packageCreditId === usage.creditId;
+      })
+      .map((usage) => [usage.bookingId!, usage] as const),
+  );
+  const creditsById = new Map(credits.map((credit) => [credit.id, credit]));
+  const purchasesById = new Map(purchases.map((purchase) => [purchase.id, purchase]));
+  const packagesById = new Map(packages.map((pkg) => [pkg.id, pkg]));
+  const packageFundingByBookingId = new Map<string, BookingPackageFundingRelation>();
+  for (const row of rows) {
+    if (!row.packageCreditId) continue;
+    const usage = usageByBookingId.get(row.id);
+    const credit = creditsById.get(row.packageCreditId);
+    const purchase = credit ? purchasesById.get(credit.purchaseId) : undefined;
+    const pkg = purchase ? packagesById.get(purchase.packageId) : undefined;
+    if (!usage || !credit || !purchase || !pkg) continue;
+    packageFundingByBookingId.set(row.id, {
+      creditId: credit.id,
+      purchaseId: purchase.id,
+      packageId: pkg.id,
+      packageNameAr: pkg.nameAr,
+      packageNameEn: pkg.nameEn ?? null,
+      usageStatus: usage.status as 'CONSUMED' | 'RETURNED',
+    });
+  }
+
   return {
     clientsById: new Map(clients.map((c) => [c.id, c])),
     employeesById: new Map(employees.map((e) => [e.id, e])),
     servicesById: new Map(services.map((s) => [s.id, s])),
     paymentsByBookingId,
     invoicesByBookingId,
+    packageFundingByBookingId,
     historicalPaymentsByBookingId: new Map(
       historicalRecords
         .filter((row) => row.targetId && row.metadata)

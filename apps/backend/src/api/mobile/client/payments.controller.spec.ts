@@ -192,5 +192,15 @@ describe('MobileClientPaymentsController (e2e)', () => {
         .field('amount', '-10')
         .expect(400);
     });
+
+    it.each(['0', '249.5'])('returns 400 for non-positive or fractional halalas (%s)', async (amount) => {
+      return request(app.getHttpServer())
+        .post('/mobile/client/payments/bank-transfer')
+        .set('Authorization', 'Bearer fake-jwt')
+        .attach('receipt', Buffer.from('receipt'), 'receipt.png')
+        .field('invoiceId', invoiceId)
+        .field('amount', amount)
+        .expect(400);
+    });
   });
 });

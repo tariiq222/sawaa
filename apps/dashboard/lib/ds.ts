@@ -61,6 +61,7 @@ export const paymentStatusStyles = {
   failed:               { bg: "bg-error-soft",    text: "text-error",            border: "border-error/40"            },
   rejected:             { bg: "bg-error-soft",    text: "text-error",            border: "border-error/40"            },
   refunded:             { bg: "bg-refunded-soft", text: "text-refunded",         border: "border-refunded/40"         },
+  package:              { bg: "bg-primary/10",    text: "text-primary",          border: "border-primary/30"          },
   _fallback:            { bg: "bg-muted",          text: "text-muted-foreground", border: "border-border"              },
 } as const
 

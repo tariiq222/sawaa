@@ -247,7 +247,7 @@ export class EnrollInProgramHandler {
         minParticipants: program.minParticipants,
         reachedAt: new Date(),
       });
-      await this.eventBus.publish(event.eventName, event.toEnvelope());
+      await this.eventBus.publishOptional(event.eventName, event.toEnvelope());
     }
 
     return {

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CreateInvoiceHandler } from '../create-invoice/create-invoice.handler';
 import { decimalToHalalas } from '../money.helper';
+import { assertBookingAcceptsPayment } from '../booking-payment-eligibility.helper';
 
 export interface EnsureBookingInvoiceCommand {
   bookingId: string;
@@ -47,6 +48,7 @@ export class EnsureBookingInvoiceHandler {
         price: true,
         discountedPrice: true,
         isHistoricalImport: true,
+        status: true,
       },
     });
     if (!booking) {
@@ -55,6 +57,7 @@ export class EnsureBookingInvoiceHandler {
     if (booking.isHistoricalImport) {
       throw new BadRequestException('Historical bookings are read-only and cannot be invoiced');
     }
+    assertBookingAcceptsPayment(booking.id, booking.status);
 
     // Existing invoice — return its current shape (idempotent). Reads go
     // through `db` so a collect transaction sees an uncommitted discount.

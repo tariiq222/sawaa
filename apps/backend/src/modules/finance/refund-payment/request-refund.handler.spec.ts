@@ -84,4 +84,63 @@ describe('RequestRefundHandler', () => {
       }),
     );
   });
+
+  it('selects the next payment with refundable balance on a multi-payment invoice', async () => {
+    prisma.invoice.findFirst.mockResolvedValue({
+      id: 'inv-1',
+      status: 'PARTIALLY_REFUNDED',
+      payments: [
+        { id: 'pay-new', amount: 100, refundedAmount: 100 },
+        { id: 'pay-old', amount: 100, refundedAmount: 0 },
+      ],
+    });
+    prisma.refundRequest.findFirst.mockResolvedValue(null);
+    prisma.refundRequest.create.mockResolvedValue({
+      id: 'rr-2', status: 'PENDING_REVIEW', amount: 100, createdAt: new Date(),
+    });
+
+    await handler.execute(cmd);
+
+    expect(prisma.refundRequest.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ paymentId: 'pay-old', amount: 100 }),
+      }),
+    );
+  });
+
+  it('requests only the remaining refundable amount on a partially-refunded payment', async () => {
+    prisma.invoice.findFirst.mockResolvedValue({
+      id: 'inv-1',
+      status: 'PARTIALLY_REFUNDED',
+      payments: [{ id: 'pay-1', amount: 200, refundedAmount: 50 }],
+    });
+    prisma.refundRequest.findFirst.mockResolvedValue(null);
+    prisma.refundRequest.create.mockResolvedValue({
+      id: 'rr-2', status: 'PENDING_REVIEW', amount: 150, createdAt: new Date(),
+    });
+
+    await handler.execute(cmd);
+
+    expect(prisma.refundRequest.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ paymentId: 'pay-1', amount: 150 }),
+      }),
+    );
+  });
+
+  it('allows a new request after an earlier request completed', async () => {
+    prisma.invoice.findFirst.mockResolvedValue({
+      id: 'inv-1',
+      status: 'PARTIALLY_REFUNDED',
+      payments: [{ id: 'pay-2', amount: 100, refundedAmount: 0 }],
+    });
+    prisma.refundRequest.findFirst.mockResolvedValue({ id: 'rr-complete', status: 'COMPLETED' });
+    prisma.refundRequest.create.mockResolvedValue({
+      id: 'rr-next', status: 'PENDING_REVIEW', amount: 100, createdAt: new Date(),
+    });
+
+    await expect(handler.execute(cmd)).resolves.toEqual(
+      expect.objectContaining({ id: 'rr-next', amount: 100 }),
+    );
+  });
 });

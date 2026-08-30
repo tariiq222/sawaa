@@ -72,7 +72,6 @@ export default function BookingPaymentScreen() {
         serviceId: params.serviceId!,
         scheduledAt: params.scheduledAt!,
         durationOptionId: params.durationOptionId,
-        deliveryType: params.deliveryType ?? 'in_person',
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 

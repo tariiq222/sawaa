@@ -170,6 +170,7 @@ export interface PackagePurchase {
 /* ─── Write side ─── */
 
 export interface CreatePackagePurchasePayload {
+  idempotencyKey: string
   packageId: string
   clientId: string
   branchId: string

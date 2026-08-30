@@ -70,7 +70,7 @@ export class RejectCancelBookingHandler {
       employeeId: booking.employeeId,
       rejectReason: cmd.rejectReason,
     });
-    await this.eventBus.publish(event.eventName, event.toEnvelope());
+    await this.eventBus.publishOptional(event.eventName, event.toEnvelope());
 
     return updated;
   }

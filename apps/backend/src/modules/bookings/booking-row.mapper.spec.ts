@@ -83,6 +83,27 @@ describe('mapBookingRow', () => {
     expect(result.serviceId).toBe('svc-1');
   });
 
+  it('maps package funding when the booking was funded by a package credit', () => {
+    const funding = {
+      creditId: 'credit-1',
+      purchaseId: 'purchase-1',
+      packageId: 'package-1',
+      packageNameAr: 'باقة الجلسات',
+      packageNameEn: 'Session package',
+      usageStatus: 'CONSUMED' as const,
+    };
+    const result = mapBookingRow(mockBooking, {
+      ...relations,
+      packageFundingByBookingId: new Map([[mockBooking.id, funding]]),
+    });
+
+    expect(result.packageFunding).toEqual(funding);
+  });
+
+  it('maps packageFunding to null when the booking has no package credit funding', () => {
+    expect(mapBookingRow(mockBooking, relations).packageFunding).toBeNull();
+  });
+
   it('derives date from scheduledAt', () => {
     const result = mapBookingRow(mockBooking, relations);
 

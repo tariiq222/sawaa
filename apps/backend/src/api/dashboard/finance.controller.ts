@@ -337,12 +337,16 @@ export class DashboardFinanceController {
     description: 'Receipt file + invoice metadata',
     schema: {
       type: 'object',
-      required: ['receipt', 'invoiceId', 'clientId', 'amount'],
+      required: ['receipt', 'invoiceId', 'amount'],
       properties: {
         receipt: { type: 'string', format: 'binary', description: 'Bank transfer receipt image or PDF' },
         invoiceId: { type: 'string', format: 'uuid', example: '00000000-0000-0000-0000-000000000000' },
-        clientId: { type: 'string', format: 'uuid', example: '00000000-0000-0000-0000-000000000000' },
-        amount: { type: 'number', example: 100.00 },
+        amount: {
+          type: 'integer',
+          minimum: 1,
+          description: 'Transfer amount in integer halalas',
+          example: 10000,
+        },
       },
     },
   })

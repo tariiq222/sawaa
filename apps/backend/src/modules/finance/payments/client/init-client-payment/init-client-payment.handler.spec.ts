@@ -315,6 +315,23 @@ describe('InitClientPaymentHandler', () => {
     }));
   });
 
+  it('allows a DEPOSIT_PAID booking to initialize payment for the remaining balance', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, total: 12000 });
+    prisma.booking.findFirst.mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.DEPOSIT_PAID,
+    });
+    prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: 5000 } });
+
+    await handler.execute({ invoiceId, clientId });
+
+    expect(moyasar.createPayment.mock.calls[0][1].amountHalalas).toBe(7000);
+    expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ amount: 7000 }),
+    }));
+  });
+
   it('throws BadRequestException when the invoice is already fully paid (outstanding <= 0)', async () => {
     const { handler, prisma, moyasar } = buildHandler();
     prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, total: 12000 });

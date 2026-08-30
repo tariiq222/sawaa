@@ -6,6 +6,10 @@ import { EventBusService, type DomainEventEnvelope } from '../../../../infrastru
 import { DEFAULT_ORG_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../../common/constants';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
 import { buildCreditConstraintCreate } from '../build-credit-constraints.helper';
+import {
+  createPackageCreditSnapshot,
+  parsePackageCreditSnapshot,
+} from '../package-credit-snapshot';
 import type { PaymentCompletedPayload } from '../../events/payment-completed.event';
 
 /**
@@ -73,6 +77,7 @@ export class ActivatePackagePurchaseHandler {
             status: true,
             subtotalSnapshot: true,
             discountSnapshot: true,
+            creditSnapshot: true,
           },
         });
       });
@@ -93,66 +98,56 @@ export class ActivatePackagePurchaseHandler {
         return;
       }
 
-      // Load the package items so we can build the credit buckets. The items are
-      // a definition (not per-purchase rows); read them in system context too.
-      const pkg = await this.cls.run(async () => {
-        this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-        return this.prisma.sessionPackage.findFirst({
-          where: { id: purchase.packageId },
-          select: {
-            items: {
-              orderBy: { sortOrder: 'asc' },
-              select: {
-                serviceId: true,
-                employeeId: true,
-                durationOptionId: true,
-                unitPrice: true,
-                paidQuantity: true,
-                freeQuantity: true,
-                discountType: true,
-                discountValue: true,
-                constraints: {
-                  select: {
-                    dimension: true,
-                    mode: true,
-                    targets: { select: { targetId: true } },
+      let creditSnapshot = parsePackageCreditSnapshot(purchase.creditSnapshot);
+      if (!creditSnapshot) {
+        // Compatibility path for a PENDING row created before the snapshot
+        // migration. New purchases always carry an immutable snapshot.
+        const pkg = await this.cls.run(async () => {
+          this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+          return this.prisma.sessionPackage.findFirst({
+            where: { id: purchase.packageId },
+            select: {
+              items: {
+                orderBy: { sortOrder: 'asc' },
+                select: {
+                  serviceId: true,
+                  employeeId: true,
+                  durationOptionId: true,
+                  unitPrice: true,
+                  paidQuantity: true,
+                  freeQuantity: true,
+                  discountType: true,
+                  discountValue: true,
+                  constraints: {
+                    select: {
+                      dimension: true,
+                      mode: true,
+                      targets: { select: { targetId: true } },
+                    },
                   },
                 },
               },
             },
-          },
+          });
         });
-      });
-
-      if (!pkg) {
-        this.logger.error(
-          `Package ${purchase.packageId} for purchase ${packagePurchaseId} not found — cannot issue credits`,
-        );
-        return;
+        if (!pkg) {
+          this.logger.error(
+            `Package ${purchase.packageId} for purchase ${packagePurchaseId} not found — cannot issue credits`,
+          );
+          return;
+        }
+        const price = await this.cls.run(async () => {
+          this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+          return this.pricing.compute({
+            items: pkg.items.map((item) => ({
+              ...item,
+              unitPrice: item.unitPrice != null ? Number(item.unitPrice) : null,
+              discountValue: Number(item.discountValue),
+            })),
+          });
+        });
+        creditSnapshot = createPackageCreditSnapshot(pkg.items, price.itemUnitPrices);
       }
-
-      // Re-freeze the per-item unit prices. The purchase already stores the
-      // subtotal/discount snapshot; we only need the per-item unitPrice to stamp
-      // on each credit bucket, so the FIFO consumption logic has the right number.
-      const price = await this.cls.run(async () => {
-        this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-        return this.pricing.compute({
-          items: pkg.items.map((it) => ({
-            serviceId: it.serviceId,
-            employeeId: it.employeeId,
-            durationOptionId: it.durationOptionId,
-            unitPrice: it.unitPrice != null ? Number(it.unitPrice) : null,
-            paidQuantity: it.paidQuantity,
-            freeQuantity: it.freeQuantity,
-            discountType: it.discountType,
-            discountValue: Number(it.discountValue),
-          })),
-        });
-      });
-
-      // itemUnitPrices aligns 1:1 with pkg.items (same order) — index-key it so
-      // flexible items (no durationOptionId) resolve correctly too.
-      const unitPriceByIndex = price.itemUnitPrices.map((u) => u.unitPrice);
 
       await this.cls.run(async () => {
         this.cls.set(TENANT_CLS_KEY, {
@@ -178,16 +173,15 @@ export class ActivatePackagePurchaseHandler {
 
           // Per-credit create (not createMany) so each credit snapshots its
           // item's eligibility constraints for the matching engine.
-          for (let idx = 0; idx < pkg.items.length; idx++) {
-            const item = pkg.items[idx];
+          for (const item of creditSnapshot) {
             await tx.packageCredit.create({
               data: {
                 purchaseId: packagePurchaseId,
                 serviceId: item.serviceId,
                 employeeId: item.employeeId,
                 durationOptionId: item.durationOptionId,
-                unitPriceSnapshot: new Prisma.Decimal(unitPriceByIndex[idx] ?? 0),
-                totalQuantity: item.paidQuantity + item.freeQuantity,
+                unitPriceSnapshot: new Prisma.Decimal(item.unitPriceSnapshot),
+                totalQuantity: item.totalQuantity,
                 usedQuantity: 0,
                 constraints: { create: buildCreditConstraintCreate(item) },
               },
@@ -197,7 +191,7 @@ export class ActivatePackagePurchaseHandler {
       });
 
       this.logger.log(
-        `Activated package purchase ${packagePurchaseId} and issued ${pkg.items.length} credit bucket(s) after payment ${paymentId}`,
+        `Activated package purchase ${packagePurchaseId} and issued ${creditSnapshot.length} credit bucket(s) after payment ${paymentId}`,
       );
     } catch (err) {
       this.logger.error(

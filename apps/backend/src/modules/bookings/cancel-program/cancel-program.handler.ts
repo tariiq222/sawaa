@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { BookingStatus, BookingType } from '@prisma/client';
+import { BookingStatus } from '@prisma/client';
 import {
   PrismaService,
   RlsTransactionService,
@@ -26,6 +26,12 @@ export class CancelProgramHandler {
 
   async execute(programId: string, dto: CancelProgramDto) {
     return this.rlsTransaction.withTransaction(async (tx) => {
+      // Enrollment locks this same row before reserving capacity. Taking it
+      // before reading enrollments serializes cancellation with enrollment:
+      // either enrollment commits first and is included in this cascade, or
+      // cancellation commits first and enrollment's guarded update rejects it.
+      await tx.$queryRaw`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`;
+
       const program = await tx.program.findUnique({ where: { id: programId } });
       if (!program) throw new NotFoundException('Program not found');
 

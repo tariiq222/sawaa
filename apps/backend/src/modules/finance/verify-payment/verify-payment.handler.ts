@@ -1,11 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InvoiceStatus, PaymentStatus } from '@prisma/client';
+import { InvoiceStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { EventBusService } from '../../../infrastructure/events';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { stableEventId } from '../../../common/events/stable-event-id';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { DepositPaidEvent } from '../events/deposit-paid.event';
-import { resolveInvoiceDeposit, isDepositPayment } from '../deposit.helper';
+import {
+  assertDepositPaymentAmount,
+  isDepositPayment,
+  resolveInvoiceDeposit,
+} from '../deposit.helper';
+import { decimalToHalalas } from '../money.helper';
+import { assertBookingAcceptsPayment } from '../booking-payment-eligibility.helper';
 
 interface VerifyPaymentCommand {
   paymentId: string;
@@ -18,128 +24,193 @@ export class VerifyPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
   ) {}
 
   async execute(cmd: VerifyPaymentCommand) {
-    const payment = await this.prisma.payment.findFirst({
+    // Resolve the invoice identity before opening the transaction. Every
+    // mutation below then locks that Invoice row, which serializes approvals,
+    // rejections, uploads, and completed-payment aggregation for one balance.
+    const initial = await this.prisma.payment.findFirst({
       where: { id: cmd.paymentId },
     });
+    if (!initial) throw new NotFoundException('Payment not found');
 
-    if (!payment) throw new NotFoundException('Payment not found');
+    return this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${initial.invoiceId} FOR UPDATE`,
+      );
 
-    if (payment.status !== PaymentStatus.PENDING_VERIFICATION) {
-      throw new BadRequestException('Payment is not pending verification');
-    }
-
-    if (cmd.action === 'reject') {
-      return this.prisma.payment.update({
+      const payment = await tx.payment.findFirst({
         where: { id: cmd.paymentId },
-        data: {
-          status: PaymentStatus.FAILED,
-          failureReason: 'Bank transfer rejected',
-        },
       });
-    }
+      if (!payment) throw new NotFoundException('Payment not found');
 
-    // Approve path: mirror ProcessPaymentHandler — mark the payment COMPLETED,
-    // recompute invoice.status from the sum of completed payments, and flip the
-    // invoice to PAID/PARTIALLY_PAID atomically. Without this, downstream
-    // consumers (reports, booking confirmation) see a stuck
-    // ISSUED invoice even though the money has been received.
-    const { updatedPayment, newInvoiceStatus, depositAmount, paidAfter, total } =
-      await this.rlsTransaction.withTransaction(async (tx) => {
-        const updated = await tx.payment.update({
-          where: { id: cmd.paymentId },
-          data: {
-            status: PaymentStatus.COMPLETED,
-            processedAt: new Date(),
-            gatewayRef: cmd.transferRef ?? payment.gatewayRef,
-          },
-        });
-
-        const invoice = await tx.invoice.findFirst({
-          where: { id: payment.invoiceId },
-        });
-        if (!invoice) {
-          throw new NotFoundException(`Invoice ${payment.invoiceId} not found`);
+      if (cmd.action === 'reject') {
+        if (
+          payment.status === PaymentStatus.FAILED &&
+          payment.failureReason === 'Bank transfer rejected'
+        ) {
+          return payment;
+        }
+        if (payment.status !== PaymentStatus.PENDING_VERIFICATION) {
+          throw new BadRequestException('Payment is not pending verification');
         }
 
-        const totalPaid = await tx.payment.aggregate({
-          where: { invoiceId: payment.invoiceId, status: PaymentStatus.COMPLETED },
-          _sum: { amount: true },
-        });
-
-        const paid = Number(totalPaid._sum?.amount ?? 0);
-        const total = Number(invoice.total);
-        const status: InvoiceStatus =
-          paid >= total ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID;
-
-        // Resolve the configured deposit for the invoice's service so the event
-        // emission below can distinguish a deposit-sized partial payment from a
-        // plain partial top-up.
-        const deposit = await resolveInvoiceDeposit(tx, invoice.bookingId);
-
-        await tx.invoice.update({
-          where: { id: invoice.id },
+        const transitioned = await tx.payment.updateMany({
+          where: {
+            id: cmd.paymentId,
+            status: PaymentStatus.PENDING_VERIFICATION,
+          },
           data: {
-            status,
-            // P1-7: stamp the official issuance time on the first payment that
-            // lifts the invoice out of DRAFT — mirrors process-payment +
-            // moyasar-webhook so bank-transfer invoices are not left with a
-            // NULL issuedAt while card/cash invoices carry one. Keep an
-            // existing issuedAt untouched.
-            issuedAt: invoice.issuedAt ?? new Date(),
-            paidAt: status === InvoiceStatus.PAID ? new Date() : undefined,
+            status: PaymentStatus.FAILED,
+            failureReason: 'Bank transfer rejected',
           },
         });
+        if (transitioned.count !== 1) {
+          throw new BadRequestException('Payment is not pending verification');
+        }
+        return tx.payment.findFirstOrThrow({ where: { id: cmd.paymentId } });
+      }
 
-        return {
-          updatedPayment: updated,
-          newInvoiceStatus: status,
-          depositAmount: deposit.depositAmount,
-          paidAfter: paid,
-          total,
-        };
-      });
+      // Same-action retries are idempotent. Only the transaction that performs
+      // PENDING_VERIFICATION -> COMPLETED stages the durable domain event.
+      if (payment.status === PaymentStatus.COMPLETED) return payment;
+      if (payment.status !== PaymentStatus.PENDING_VERIFICATION) {
+        throw new BadRequestException('Payment is not pending verification');
+      }
 
-    if (newInvoiceStatus === InvoiceStatus.PAID) {
-      const invoice = await this.prisma.invoice.findFirst({
+      const invoice = await tx.invoice.findFirst({
         where: { id: payment.invoiceId },
-        select: { id: true, bookingId: true, currency: true },
       });
-      if (invoice) {
+      if (!invoice) {
+        throw new NotFoundException(`Invoice ${payment.invoiceId} not found`);
+      }
+      if (invoice.status === InvoiceStatus.VOID || invoice.status === InvoiceStatus.REFUNDED) {
+        throw new BadRequestException(
+          `Invoice ${invoice.id} cannot accept payments (status: ${invoice.status})`,
+        );
+      }
+
+      if (invoice.bookingId) {
+        const booking = await tx.booking.findFirst({
+          where: { id: invoice.bookingId },
+          select: { status: true },
+        });
+        if (!booking) throw new NotFoundException(`Booking ${invoice.bookingId} not found`);
+        assertBookingAcceptsPayment(invoice.bookingId, booking.status);
+      }
+
+      const completedBefore = await tx.payment.aggregate({
+        where: {
+          invoiceId: payment.invoiceId,
+          status: PaymentStatus.COMPLETED,
+        },
+        _sum: { amount: true },
+      });
+      const alreadyPaid = decimalToHalalas(completedBefore._sum?.amount ?? 0);
+      const total = decimalToHalalas(invoice.total);
+      const amount = decimalToHalalas(payment.amount);
+      const outstanding = total - alreadyPaid;
+      if (outstanding <= 0) {
+        throw new BadRequestException('Invoice is already fully paid');
+      }
+      if (amount > outstanding) {
+        throw new BadRequestException(
+          `Payment amount (${amount}) exceeds outstanding balance (${outstanding})`,
+        );
+      }
+
+      const deposit = await resolveInvoiceDeposit(tx, invoice.bookingId);
+      if (deposit.enabled && deposit.depositAmount != null) {
+        assertDepositPaymentAmount({
+          amount,
+          depositAmount: deposit.depositAmount,
+          outstanding,
+          alreadyPaid,
+        });
+      }
+
+      const transitioned = await tx.payment.updateMany({
+        where: {
+          id: cmd.paymentId,
+          status: PaymentStatus.PENDING_VERIFICATION,
+        },
+        data: {
+          status: PaymentStatus.COMPLETED,
+          processedAt: new Date(),
+          gatewayRef: cmd.transferRef ?? payment.gatewayRef,
+        },
+      });
+      if (transitioned.count !== 1) {
+        throw new BadRequestException('Payment is not pending verification');
+      }
+
+      const updatedPayment = await tx.payment.findFirstOrThrow({
+        where: { id: cmd.paymentId },
+      });
+      const paidAfter = alreadyPaid + amount;
+      const newInvoiceStatus: InvoiceStatus =
+        paidAfter >= total ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID;
+
+      await tx.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: newInvoiceStatus,
+          issuedAt: invoice.issuedAt ?? new Date(),
+          paidAt: newInvoiceStatus === InvoiceStatus.PAID ? new Date() : undefined,
+        },
+      });
+
+      if (newInvoiceStatus === InvoiceStatus.PAID) {
         const event = new PaymentCompletedEvent({
           paymentId: updatedPayment.id,
           invoiceId: invoice.id,
           bookingId: invoice.bookingId,
-          amount: Number(updatedPayment.amount),
+          packagePurchaseId: invoice.packagePurchaseId,
+          amount,
           currency: invoice.currency,
           organizationId: DEFAULT_ORG_ID,
         });
-        await this.eventBus.publish(event.eventName, event.toEnvelope());
-      }
-    } else if (
-      newInvoiceStatus === InvoiceStatus.PARTIALLY_PAID &&
-      isDepositPayment({ paidAfter, total, depositAmount })
-    ) {
-      const invoice = await this.prisma.invoice.findFirst({
-        where: { id: payment.invoiceId },
-        select: { id: true, bookingId: true, currency: true },
-      });
-      if (invoice) {
+        await this.stageEvent(tx, invoice.id, updatedPayment.id, event.eventName, event.toEnvelope());
+      } else if (
+        isDepositPayment({
+          paidAfter,
+          total,
+          depositAmount: deposit.depositAmount,
+        })
+      ) {
         const event = new DepositPaidEvent({
           paymentId: updatedPayment.id,
           invoiceId: invoice.id,
           bookingId: invoice.bookingId,
-          amount: Number(updatedPayment.amount),
+          amount,
           currency: invoice.currency,
           organizationId: DEFAULT_ORG_ID,
         });
-        await this.eventBus.publish(event.eventName, event.toEnvelope());
+        await this.stageEvent(tx, invoice.id, updatedPayment.id, event.eventName, event.toEnvelope());
       }
-    }
 
-    return updatedPayment;
+      return updatedPayment;
+    });
+  }
+
+  private async stageEvent(
+    tx: Prisma.TransactionClient,
+    invoiceId: string,
+    paymentId: string,
+    eventType: string,
+    envelope: Record<string, unknown>,
+  ): Promise<void> {
+    const eventId = stableEventId(`finance:bank-transfer:${paymentId}:${eventType}`);
+    await tx.outboxEvent.create({
+      data: {
+        id: eventId,
+        aggregateId: invoiceId,
+        eventType,
+        status: 'PENDING_V2',
+        deliveryLane: 'PENDING_V2',
+        payload: { ...envelope, eventId } as Prisma.InputJsonValue,
+      },
+    });
   }
 }

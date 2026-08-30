@@ -1042,7 +1042,10 @@ export async function cleanupBooking(id: string, token: string): Promise<void> {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ reason: "e2e test cleanup" }),
+      body: JSON.stringify({
+        reason: "CLIENT_REQUESTED",
+        cancelNotes: "e2e test cleanup",
+      }),
     }
   )
 

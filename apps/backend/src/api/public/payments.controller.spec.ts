@@ -95,6 +95,7 @@ describe('PublicPaymentsController (e2e)', () => {
 
   describe('POST /public/payments/package-purchases/init', () => {
     const validBody = {
+      idempotencyKey: '00000000-0000-4000-a000-000000000099',
       packageId: '00000000-0000-4000-a000-000000000001',
       branchId: '00000000-0000-4000-a000-000000000002',
     };
@@ -116,6 +117,7 @@ describe('PublicPaymentsController (e2e)', () => {
       expect(res.body.redirectUrl).toBe('https://checkout.moyasar.com/pay/abc');
       expect(mockInitPackagePurchase.execute).toHaveBeenCalledWith({
         clientId: 'client-1',
+        idempotencyKey: validBody.idempotencyKey,
         packageId: validBody.packageId,
         branchId: validBody.branchId,
       });

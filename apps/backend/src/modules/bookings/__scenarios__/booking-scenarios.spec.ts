@@ -499,8 +499,8 @@ describe("Scenario 4 — Pay-at-clinic booking, client no-shows", () => {
 // 5. عميلة تحتاج تأجيل موعدها
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("Scenario 5 — Client reschedules to new time, Zoom updated, notification sent", () => {
-	it("staff reschedules CONFIRMED booking to new slot, updates Zoom", async () => {
+describe("Scenario 5 — Client reschedules to new time, Zoom sync queued, notification sent", () => {
+	it("staff reschedules CONFIRMED booking to new slot and queues durable Zoom sync", async () => {
 		const prisma = buildPrisma();
 		const zoomService = buildZoomService();
 
@@ -564,10 +564,25 @@ describe("Scenario 5 — Client reschedules to new time, Zoom updated, notificat
 				data: expect.objectContaining({ scheduledAt: newTime }),
 			}),
 		);
-		expect(zoomService.updateMeeting).toHaveBeenCalledWith(
-			DEFAULT_ORG_ID,
-			"zoom-555",
-			expect.objectContaining({ startTime: newTime.toISOString() }),
+		expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+		expect(prisma.bookingZoomSync.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					bookingId: "book-5",
+					zoomMeetingId: "zoom-555",
+					desiredStartAt: newTime,
+					revision: 1,
+				}),
+			}),
+		);
+		expect(prisma.outboxEvent.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					aggregateId: "book-5",
+					eventType: "bookings.zoom.reschedule_requested",
+					status: "PENDING_V2",
+				}),
+			}),
 		);
 	});
 });

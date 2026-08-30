@@ -64,9 +64,6 @@ interface CreateBookingData {
   serviceId: string;
   scheduledAt: string;
   durationOptionId?: string;
-  deliveryType: DeliveryType;
-  /** Appointment/category type only. Never use for delivery channel. */
-  bookingType?: BookingType;
   notes?: string;
 }
 
@@ -117,10 +114,13 @@ export const clientBookingsService = {
     return response.data;
   },
 
-  async cancel(id: string, reason: string) {
-    const response = await api.post<ClientBookingRow>(
+  async cancel(id: string, cancelNotes?: string) {
+    const response = await api.patch<ClientBookingRow>(
       `/mobile/client/bookings/${id}/cancel`,
-      { reason },
+      {
+        reason: 'CLIENT_REQUESTED',
+        ...(cancelNotes ? { cancelNotes } : {}),
+      },
     );
     return response.data;
   },

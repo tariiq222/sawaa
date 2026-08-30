@@ -17,6 +17,7 @@ import { reconcileOrDiscardInFlightPayment } from './reconcile-in-flight-payment
 const PAYMENT_INIT_BOOKING_STATUSES: readonly BookingStatus[] = [
   BookingStatus.PENDING,
   BookingStatus.AWAITING_PAYMENT,
+  BookingStatus.DEPOSIT_PAID,
 ];
 
 export type InitClientPaymentCommand = InitClientPaymentDto & {

@@ -1,4 +1,4 @@
-import { InvoiceStatus, PaymentStatus } from '@prisma/client';
+import { BookingStatus, InvoiceStatus, PaymentStatus } from '@prisma/client';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { VerifyPaymentHandler } from './verify-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
@@ -33,8 +33,11 @@ const PENDING_PAYMENT = {
 const INVOICE_FULL = {
   id: 'inv-1',
   bookingId: 'book-1',
+  packagePurchaseId: null,
   currency: 'SAR',
   total: 23000,
+  status: InvoiceStatus.DRAFT,
+  issuedAt: null,
 };
 
 /** Build a tx + handler pair with sensible defaults for the happy approve path. */
@@ -44,39 +47,40 @@ const buildDeps = (overrides: {
   totalPaid?: number;
   // Default: no deposit (so the deposit-event branch is inert unless overridden)
   depositAmount?: number | null;
-  // The handler reads the invoice again OUTSIDE the transaction to build the
-  // event payload. Default: a minimal booking+currency snapshot.
-  postTxInvoice?: Record<string, unknown> | null;
 } = {}) => {
   const payment = overrides.payment === null ? null : overrides.payment ?? PENDING_PAYMENT;
   const invoice = overrides.invoice === null ? null : overrides.invoice ?? INVOICE_FULL;
   const totalPaid = overrides.totalPaid ?? 23000;
-  const postTxInvoice =
-    overrides.postTxInvoice === null
-      ? null
-      : overrides.postTxInvoice ?? { id: 'inv-1', bookingId: 'book-1', currency: 'SAR' };
+  const completedBefore = Math.max(0, totalPaid - Number(payment?.amount ?? 0));
+  let currentPayment = payment;
+  const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
   const tx = {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'inv-1' }]),
     payment: {
-      findFirst: jest.fn().mockResolvedValue(payment),
-      update: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ ...payment, ...data }),
-      ),
-      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: totalPaid } }),
+      findFirst: jest.fn().mockImplementation(() => Promise.resolve(currentPayment)),
+      findFirstOrThrow: jest.fn().mockImplementation(() => Promise.resolve(currentPayment)),
+      updateMany: jest.fn().mockImplementation(({ where, data }: {
+        where: { status: PaymentStatus };
+        data: Record<string, unknown>;
+      }) => {
+        if (!currentPayment || currentPayment.status !== where.status) {
+          return Promise.resolve({ count: 0 });
+        }
+        currentPayment = { ...currentPayment, ...data } as typeof currentPayment;
+        return Promise.resolve({ count: 1 });
+      }),
+      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: completedBefore } }),
     },
     invoice: {
-      findFirst: jest
-        .fn()
-        .mockImplementation((args?: { select?: Record<string, boolean> }) => {
-          // Two calls: one inside the tx (no select → full row), one outside
-          // (with select → snapshot used for the event payload).
-          if (args?.select) return Promise.resolve(postTxInvoice);
-          return Promise.resolve(invoice);
-        }),
+      findFirst: jest.fn().mockResolvedValue(invoice),
       update: jest.fn().mockResolvedValue({ ...INVOICE_FULL, status: InvoiceStatus.PAID }),
     },
     booking: {
-      findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1' }),
+      findFirst: jest.fn().mockResolvedValue({
+        serviceId: 'svc-1',
+        status: BookingStatus.CONFIRMED,
+      }),
     },
     service: {
       findFirst: jest
@@ -86,35 +90,32 @@ const buildDeps = (overrides: {
           depositAmount: overrides.depositAmount ?? null,
         }),
     },
+    outboxEvent: {
+      create: jest.fn().mockImplementation(({ data }: { data: { eventType: string; payload: unknown } }) => {
+        void eventBus.publish(data.eventType, data.payload);
+        return Promise.resolve(data);
+      }),
+    },
   };
 
   const prisma = {
     payment: {
       findFirst: jest.fn().mockResolvedValue(payment),
-      update: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ ...payment, ...data }),
-      ),
-      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: totalPaid } }),
-    },
-    invoice: {
-      findFirst: jest
-        .fn()
-        .mockImplementation((args?: { select?: Record<string, boolean> }) => {
-          if (args?.select) return Promise.resolve(postTxInvoice);
-          return Promise.resolve(invoice);
-        }),
     },
   };
 
+  let transactionTail = Promise.resolve<unknown>(undefined);
   const rlsTransaction = {
-    withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(tx)),
+    withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => {
+      const run = transactionTail.then(() => fn(tx));
+      transactionTail = run.catch(() => undefined);
+      return run;
+    }),
   };
-  const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
   const handler = new VerifyPaymentHandler(
     prisma as never,
     rlsTransaction as never,
-    eventBus as never,
   );
 
   return { handler, prisma, tx, rlsTransaction, eventBus };
@@ -137,18 +138,16 @@ describe('VerifyPaymentHandler', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('throws BadRequestException when the payment is not in PENDING_VERIFICATION (P0 double-approve guard)', async () => {
-    // Approving a payment that is already COMPLETED, FAILED, REFUNDED, or
-    // PENDING (not pending-verification) is rejected without mutation.
-    const { handler, prisma } = buildDeps({
+  it('treats a repeated approval of an already COMPLETED payment as an idempotent replay', async () => {
+    const { handler, tx } = buildDeps({
       payment: { ...PENDING_PAYMENT, status: PaymentStatus.COMPLETED },
     });
 
     await expect(
       handler.execute({ paymentId: 'pay-1', action: 'approve' }),
-    ).rejects.toThrow(BadRequestException);
-
-    expect(prisma.payment.update).not.toHaveBeenCalled();
+    ).resolves.toMatchObject({ id: 'pay-1', status: PaymentStatus.COMPLETED });
+    expect(tx.payment.updateMany).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
   });
 
   it('throws BadRequestException when the payment is PENDING (not PENDING_VERIFICATION)', async () => {
@@ -170,14 +169,28 @@ describe('VerifyPaymentHandler', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
+  it('rejects approval when the linked booking is cancelled', async () => {
+    const { handler, tx, eventBus } = buildDeps();
+    tx.booking.findFirst.mockResolvedValue({
+      serviceId: 'svc-1',
+      status: BookingStatus.CANCELLED,
+    });
+
+    await expect(
+      handler.execute({ paymentId: 'pay-1', action: 'approve' }),
+    ).rejects.toThrow('cannot accept payments');
+    expect(tx.payment.updateMany).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+  });
+
   // ── Reject path ───────────────────────────────────────────────────────────
 
   it('on REJECT flips the payment to FAILED with reason "Bank transfer rejected" and emits NO event', async () => {
-    const { handler, prisma, eventBus } = buildDeps();
+    const { handler, tx, eventBus } = buildDeps();
     const result = await handler.execute({ paymentId: 'pay-1', action: 'reject' });
 
-    expect(prisma.payment.update).toHaveBeenCalledWith({
-      where: { id: 'pay-1' },
+    expect(tx.payment.updateMany).toHaveBeenCalledWith({
+      where: { id: 'pay-1', status: PaymentStatus.PENDING_VERIFICATION },
       data: { status: PaymentStatus.FAILED, failureReason: 'Bank transfer rejected' },
     });
     expect(result.status).toBe(PaymentStatus.FAILED);
@@ -188,13 +201,13 @@ describe('VerifyPaymentHandler', () => {
   // ── Approve: full settlement → PAID + PaymentCompletedEvent ──────────────
 
   it('on APPROVE flips the payment to COMPLETED, marks the invoice PAID, and emits PaymentCompletedEvent', async () => {
-    const { handler, prisma, tx, eventBus } = buildDeps();
+    const { handler, tx, eventBus } = buildDeps();
     const result = await handler.execute({ paymentId: 'pay-1', action: 'approve' });
 
     // Payment transitioned to COMPLETED with processedAt stamped.
-    expect(tx.payment.update).toHaveBeenCalledWith(
+    expect(tx.payment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'pay-1' },
+        where: expect.objectContaining({ id: 'pay-1' }),
         data: expect.objectContaining({
           status: PaymentStatus.COMPLETED,
           processedAt: expect.any(Date),
@@ -221,13 +234,22 @@ describe('VerifyPaymentHandler', () => {
         }),
       }),
     );
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          eventType: 'finance.payment.completed',
+          status: 'PENDING_V2',
+          deliveryLane: 'PENDING_V2',
+        }),
+      }),
+    );
     expect(result.status).toBe(PaymentStatus.COMPLETED);
   });
 
   it('uses the supplied transferRef as the new gatewayRef on approve', async () => {
     const { handler, tx } = buildDeps();
     await handler.execute({ paymentId: 'pay-1', action: 'approve', transferRef: 'BANK-TRF-789' });
-    expect(tx.payment.update).toHaveBeenCalledWith(
+    expect(tx.payment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ gatewayRef: 'BANK-TRF-789' }),
       }),
@@ -239,7 +261,7 @@ describe('VerifyPaymentHandler', () => {
       payment: { ...PENDING_PAYMENT, gatewayRef: 'existing-ref-42' },
     });
     await handler.execute({ paymentId: 'pay-1', action: 'approve' });
-    expect(tx.payment.update).toHaveBeenCalledWith(
+    expect(tx.payment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ gatewayRef: 'existing-ref-42' }),
       }),
@@ -251,7 +273,10 @@ describe('VerifyPaymentHandler', () => {
   it('on APPROVE of a partial payment marks the invoice PARTIALLY_PAID and does NOT emit PaymentCompletedEvent', async () => {
     // Total 23000, but only 10000 paid → strictly less than total → PARTIALLY_PAID,
     // and the deposit branch is inert (no deposit configured on the service).
-    const { handler, tx, eventBus } = buildDeps({ totalPaid: 10000 });
+    const { handler, tx, eventBus } = buildDeps({
+      payment: { ...PENDING_PAYMENT, amount: 10000 },
+      totalPaid: 10000,
+    });
     await handler.execute({ paymentId: 'pay-1', action: 'approve' });
 
     expect(tx.invoice.update).toHaveBeenCalledWith(
@@ -276,6 +301,7 @@ describe('VerifyPaymentHandler', () => {
     // less than invoice.total 23000 → PARTIALLY_PAID. Deposit branch fires
     // (paidAfter === depositAmount) and emits DepositPaidEvent.
     const { handler, tx, eventBus } = buildDeps({
+      payment: { ...PENDING_PAYMENT, amount: 5000 },
       totalPaid: 5000,
       depositAmount: 5000,
     });
@@ -296,7 +322,7 @@ describe('VerifyPaymentHandler', () => {
           paymentId: 'pay-1',
           invoiceId: 'inv-1',
           bookingId: 'book-1',
-          amount: 23000, // payment.amount
+          amount: 5000,
           currency: 'SAR',
           organizationId: DEFAULT_ORG_ID,
         }),
@@ -310,27 +336,16 @@ describe('VerifyPaymentHandler', () => {
   });
 
   it('stamps paidAt on the invoice when it transitions to PAID; omits it on PARTIALLY_PAID', async () => {
-    // PAID case
-    const { tx: tx1 } = buildDeps();
-    await new VerifyPaymentHandler(
-      { payment: { findFirst: jest.fn().mockResolvedValue(PENDING_PAYMENT), update: jest.fn(), aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 23000 } }) },
-        invoice: { findFirst: jest.fn() },
-      } as never,
-      { withTransaction: (fn: (tx: unknown) => Promise<unknown>) => fn(tx1) } as never,
-      { publish: jest.fn() } as never,
-    ).execute({ paymentId: 'pay-1', action: 'approve' });
+    const { handler: paidHandler, tx: tx1 } = buildDeps();
+    await paidHandler.execute({ paymentId: 'pay-1', action: 'approve' });
     const paidCallData = tx1.invoice.update.mock.calls[0][0].data;
     expect(paidCallData.paidAt).toBeInstanceOf(Date);
 
-    // PARTIALLY_PAID case
-    const { tx: tx2 } = buildDeps({ totalPaid: 10000 });
-    await new VerifyPaymentHandler(
-      { payment: { findFirst: jest.fn().mockResolvedValue(PENDING_PAYMENT), update: jest.fn(), aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 10000 } }) },
-        invoice: { findFirst: jest.fn() },
-      } as never,
-      { withTransaction: (fn: (tx: unknown) => Promise<unknown>) => fn(tx2) } as never,
-      { publish: jest.fn() } as never,
-    ).execute({ paymentId: 'pay-1', action: 'approve' });
+    const { handler: partialHandler, tx: tx2 } = buildDeps({
+      payment: { ...PENDING_PAYMENT, amount: 10000 },
+      totalPaid: 10000,
+    });
+    await partialHandler.execute({ paymentId: 'pay-1', action: 'approve' });
     const partialCallData = tx2.invoice.update.mock.calls[0][0].data;
     expect(partialCallData.paidAt).toBeUndefined();
   });
@@ -355,12 +370,31 @@ describe('VerifyPaymentHandler', () => {
     expect(callData.issuedAt).toBe(existing);
   });
 
-  it('does NOT emit PaymentCompletedEvent when the post-tx invoice snapshot is missing (defensive)', async () => {
-    // Edge case: the invoice was deleted between the tx finalize and the
-    // event-emit read. The handler must not throw, must not emit a half-formed
-    // PaymentCompletedEvent.
-    const { handler, eventBus } = buildDeps({ postTxInvoice: null });
-    await handler.execute({ paymentId: 'pay-1', action: 'approve' });
-    expect(eventBus.publish).not.toHaveBeenCalled();
+  it('serializes concurrent duplicate approvals and stages exactly one event', async () => {
+    const { handler, tx } = buildDeps();
+
+    const [first, second] = await Promise.all([
+      handler.execute({ paymentId: 'pay-1', action: 'approve' }),
+      handler.execute({ paymentId: 'pay-1', action: 'approve' }),
+    ]);
+
+    expect(first.status).toBe(PaymentStatus.COMPLETED);
+    expect(second.status).toBe(PaymentStatus.COMPLETED);
+    expect(tx.payment.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects an approval that would exceed the outstanding invoice balance', async () => {
+    const { handler, tx } = buildDeps({
+      payment: { ...PENDING_PAYMENT, amount: 5000 },
+      totalPaid: 25000,
+    });
+
+    await expect(
+      handler.execute({ paymentId: 'pay-1', action: 'approve' }),
+    ).rejects.toThrow('exceeds outstanding balance');
+    expect(tx.payment.updateMany).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
   });
 });

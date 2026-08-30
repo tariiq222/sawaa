@@ -15,7 +15,7 @@ describe('EnrollInProgramHandler', () => {
   let handler: EnrollInProgramHandler;
   let prisma: any;
   let rlsTransaction: any;
-  let eventBus: { publish: jest.Mock };
+  let eventBus: { publish: jest.Mock; publishOptional: jest.Mock };
   let tx: any;
 
   beforeEach(async () => {
@@ -67,7 +67,10 @@ describe('EnrollInProgramHandler', () => {
       withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx)),
     };
 
-    eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
+    eventBus = {
+      publish: jest.fn().mockResolvedValue(undefined),
+      publishOptional: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -263,7 +266,7 @@ describe('EnrollInProgramHandler', () => {
       where: { id: 'prog-1' },
       data: { status: 'MIN_REACHED' },
     });
-    expect(eventBus.publish).toHaveBeenCalledWith(
+    expect(eventBus.publishOptional).toHaveBeenCalledWith(
       'bookings.program.min_reached',
       expect.objectContaining({
         payload: expect.objectContaining({
@@ -274,6 +277,7 @@ describe('EnrollInProgramHandler', () => {
         }),
       }),
     );
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 
   it('does NOT flip to MIN_REACHED when threshold is not yet crossed', async () => {

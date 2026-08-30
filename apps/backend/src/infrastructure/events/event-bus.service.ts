@@ -94,6 +94,26 @@ export class EventBusService {
     }
   }
 
+  /**
+   * Publish an observational event when compatible consumers exist.
+   *
+   * Unlike `publish`, an absent consumer is an intentional no-op. This keeps
+   * optional post-commit notifications from turning an already-committed
+   * command into an HTTP 500 while preserving strict delivery semantics for
+   * required/outbox-backed events.
+   */
+  async publishOptional<TPayload>(
+    eventName: string,
+    event: DomainEventEnvelope<TPayload>,
+  ): Promise<void> {
+    const consumers = this.handlersByEvent.get(eventName) ?? [];
+    if (consumers.length === 0) {
+      this.logger.debug(`Optional event "${eventName}" has no registered consumers`);
+      return;
+    }
+    await this.publish(eventName, event);
+  }
+
   subscribe<TPayload>(
     eventName: string,
     consumerId: string,

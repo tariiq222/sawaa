@@ -6257,6 +6257,11 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             employeeId?: string;
+            /**
+             * @description Stable UUID for one reception sale attempt. Retries must reuse the same value.
+             * @example 00000000-0000-4000-a000-000000000000
+             */
+            idempotencyKey: string;
             /** @description Manual payment method used at the desk (reception flow). ONLINE_CARD is rejected — online card sales happen through the Moyasar webhook flow. */
             method: components["schemas"]["PaymentMethod"];
             /**
@@ -7078,6 +7083,11 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             branchId: string;
+            /**
+             * @description Stable UUID for this checkout attempt; reuse it when retrying the same request
+             * @example 00000000-0000-4000-a000-000000000099
+             */
+            idempotencyKey: string;
             /**
              * @description SessionPackage UUID to purchase (must be a public, active package)
              * @example 00000000-0000-0000-0000-000000000000
@@ -16133,13 +16143,11 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    /** @example 100 */
-                    amount: number;
                     /**
-                     * Format: uuid
-                     * @example 00000000-0000-0000-0000-000000000000
+                     * @description Transfer amount in integer halalas
+                     * @example 10000
                      */
-                    clientId: string;
+                    amount: number;
                     /**
                      * Format: uuid
                      * @example 00000000-0000-0000-0000-000000000000
@@ -26911,7 +26919,10 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    /** @example 250 */
+                    /**
+                     * @description Transfer amount in integer halalas
+                     * @example 10000
+                     */
                     amount: number;
                     /** Format: uuid */
                     invoiceId: string;

@@ -24,6 +24,15 @@ export interface BookingInvoiceRelation {
   status: string;      // Prisma InvoiceStatus enum string
 }
 
+export interface BookingPackageFundingRelation {
+  creditId: string;
+  purchaseId: string;
+  packageId: string;
+  packageNameAr: string;
+  packageNameEn: string | null;
+  usageStatus: 'CONSUMED' | 'RETURNED';
+}
+
 export interface BookingRelations {
   clientsById: Map<string, Client>;
   employeesById: Map<string, Employee>;
@@ -34,6 +43,8 @@ export interface BookingRelations {
   historicalPaymentsByBookingId?: Map<string, HistoricalPaymentMetadata>;
   /** bookingId → invoice summary. Absent key means no invoice yet. */
   invoicesByBookingId?: Map<string, BookingInvoiceRelation>;
+  /** bookingId → package-credit funding details. Absent key means no package funding. */
+  packageFundingByBookingId?: Map<string, BookingPackageFundingRelation>;
 }
 
 /**
@@ -83,6 +94,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
   const pay = relations.paymentsByBookingId.get(b.id) ?? null;
   const inv = relations.invoicesByBookingId?.get(b.id) ?? null;
   const historicalMetadata = relations.historicalPaymentsByBookingId?.get(b.id) ?? null;
+  const packageFunding = relations.packageFundingByBookingId?.get(b.id) ?? null;
 
   return {
     id: b.id,
@@ -90,6 +102,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     clientId: b.clientId,
     employeeId: b.employeeId,
     serviceId: b.serviceId,
+    packageFunding,
     employeeServiceId: '',
     type: mapTypeForUi(b.bookingType),
     deliveryType: mapDeliveryTypeForUi(b.deliveryType),

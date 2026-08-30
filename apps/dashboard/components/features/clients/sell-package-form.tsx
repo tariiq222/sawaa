@@ -22,7 +22,7 @@
  *      (localized + request id), network, or the localized fallback.
  */
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -115,6 +115,10 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
   }, [paymentSettings])
 
   const [packageId, setPackageId] = useState<string>("")
+  const purchaseAttemptRef = useRef<{
+    fingerprint: string
+    idempotencyKey: string
+  } | null>(null)
   const [branchId, setBranchId] = useState<string>("")
   const [method, setMethod] = useState<PayMethod>(
     (enabledMethods[0]?.value as PayMethod) ?? "CASH",
@@ -143,7 +147,21 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
 
   async function onSubmit() {
     if (!packageId || !branchId) return
+    const fingerprint = JSON.stringify({
+      packageId,
+      clientId,
+      branchId,
+      method: activeMethod,
+      notes: notes.trim() || null,
+    })
+    if (purchaseAttemptRef.current?.fingerprint !== fingerprint) {
+      purchaseAttemptRef.current = {
+        fingerprint,
+        idempotencyKey: crypto.randomUUID(),
+      }
+    }
     const payload: CreatePackagePurchasePayload = {
+      idempotencyKey: purchaseAttemptRef.current.idempotencyKey,
       packageId,
       clientId,
       branchId,
@@ -152,6 +170,7 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
     }
     try {
       await sellMut.mutateAsync(payload)
+      purchaseAttemptRef.current = null
       toast.success(t("packages.sell.success"))
       onClose()
     } catch (err) {

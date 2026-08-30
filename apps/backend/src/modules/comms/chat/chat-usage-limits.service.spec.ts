@@ -83,14 +83,19 @@ describe('ChatUsageLimitsService', () => {
   });
 
   it('reconciles a reservation to actual provider tokens without exposing the raw identity', async () => {
-    client.eval.mockResolvedValueOnce(500).mockResolvedValueOnce(12);
-    const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123', 500);
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-14T12:00:00.000Z'));
+    try {
+      client.eval.mockResolvedValueOnce(500).mockResolvedValueOnce(12);
+      const reservation = await service.reserveDailyTokenBudget('client:client-sensitive-123', 500);
 
-    await service.settleDailyTokenReservation(reservation, 12);
+      await service.settleDailyTokenReservation(reservation, 12);
 
-    const settle = client.eval.mock.calls[1];
-    expect(settle[2]).toMatch(/^chat:tokens:2026-08-14:[a-f0-9]{64}$/);
-    expect(settle.slice(3)).toEqual(['500', '12']);
+      const settle = client.eval.mock.calls[1];
+      expect(settle[2]).toMatch(/^chat:tokens:2026-08-14:[a-f0-9]{64}$/);
+      expect(settle.slice(3)).toEqual(['500', '12']);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('does not settle an actual total above its reservation, retaining the capped allowance', async () => {

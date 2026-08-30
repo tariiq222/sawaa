@@ -356,6 +356,11 @@ enum PackageCreditUsageStatus {
 // Money fields are integer halalas frozen at purchase time.
 model PackagePurchase {
   id               String                @id @default(uuid())
+  idempotencyKey   String?               @unique
+  requestFingerprint String?
+  /// Immutable credit buckets captured before payment initiation. The payment
+  /// webhook issues credits from this snapshot, never from the mutable package.
+  creditSnapshot   Json?
   packageId        String
   clientId         String
   branchId         String

@@ -39,6 +39,7 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { JwtService } from "@nestjs/jwt";
+import { randomUUID } from "node:crypto";
 import request from "supertest";
 import { AppModule } from "../../../src/app.module";
 import { PrismaService } from "../../../src/infrastructure/database";
@@ -499,6 +500,7 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       clientId: ctx.clientId,
       branchId: ctx.branchId,
       method: "CASH",
+      idempotencyKey: randomUUID(),
       ...over,
     });
     if (res.status === 201) {
@@ -868,11 +870,11 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       // EXACTLY ONE winner.
       expect(successes).toHaveLength(1);
       expect(failures).toHaveLength(1);
-      // The loser is rejected with an over-draw / conflict status (409 from the
-      // ConflictException; a Serializable-abort surfaces as a 4xx/5xx but must
-      // NOT be a 201). We assert it is specifically a rejection, not a success.
+      // The loser is always exposed as a deterministic domain conflict, whether
+      // it observes the exhausted row under FOR UPDATE or PostgreSQL aborts the
+      // Serializable transaction first.
       const loserStatus = failures[0];
-      expect([400, 409, 500]).toContain(loserStatus);
+      expect(loserStatus).toBe(409);
 
       // No over-draw: usedQuantity is exactly 1 (== totalQuantity), enforced by
       // the Serializable + FOR UPDATE guard AND the DB CHECK

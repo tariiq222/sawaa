@@ -106,45 +106,19 @@ describe('clientBookingsService.getById', () => {
 });
 
 describe('clientBookingsService.create', () => {
-  it('POSTs the dto to /mobile/client/bookings', async () => {
+  it('POSTs only the MobileCreateBookingDto fields to /mobile/client/bookings', async () => {
     mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
     const dto = {
       branchId: 'br1',
       employeeId: 'e1',
       serviceId: 's1',
       scheduledAt: '2026-05-01T10:00:00Z',
-      deliveryType: 'in_person' as const,
+      durationOptionId: 'duration-1',
     };
     const r = await clientBookingsService.create(dto);
     expect(r).toEqual(sampleRow);
     expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
-  });
-
-  it('passes deliveryType without overloading bookingType', async () => {
-    mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
-    const dto = {
-      branchId: 'br1',
-      employeeId: 'e1',
-      serviceId: 's1',
-      scheduledAt: '2026-05-01T10:00:00Z',
-      deliveryType: 'online' as const,
-    };
-    await clientBookingsService.create(dto);
-    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
-  });
-
-  it('keeps bookingType as category only when present', async () => {
-    mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
-    const dto = {
-      branchId: 'br1',
-      employeeId: 'e1',
-      serviceId: 's1',
-      scheduledAt: '2026-05-01T10:00:00Z',
-      deliveryType: 'online' as const,
-      bookingType: 'individual' as const,
-    };
-    await clientBookingsService.create(dto);
-    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
+    expect(mockedApi.post.mock.calls[0][1]).not.toHaveProperty('deliveryType');
   });
 
   it('rejects when slot conflict (409)', async () => {
@@ -155,20 +129,19 @@ describe('clientBookingsService.create', () => {
         employeeId: 'e1',
         serviceId: 's1',
         scheduledAt: 'x',
-        deliveryType: 'in_person',
       }),
     ).rejects.toThrow(/409/);
   });
 });
 
 describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => {
-  it('cancel hits /cancel with reason body', async () => {
-    mockedApi.post.mockResolvedValueOnce({ data: { ...sampleRow, status: 'cancelled' } });
+  it('cancel PATCHes the backend cancellation DTO with an enum reason and notes', async () => {
+    mockedApi.patch.mockResolvedValueOnce({ data: { ...sampleRow, status: 'cancelled' } });
     const r = await clientBookingsService.cancel('b1', 'changed plan');
     expect(r.status).toBe('cancelled');
-    expect(mockedApi.post).toHaveBeenCalledWith(
+    expect(mockedApi.patch).toHaveBeenCalledWith(
       '/mobile/client/bookings/b1/cancel',
-      { reason: 'changed plan' },
+      { reason: 'CLIENT_REQUESTED', cancelNotes: 'changed plan' },
     );
   });
 

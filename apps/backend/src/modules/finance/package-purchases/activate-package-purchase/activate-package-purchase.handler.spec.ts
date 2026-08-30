@@ -41,6 +41,16 @@ const pendingPurchase = {
   status: PackagePurchaseStatus.PENDING,
   subtotalSnapshot: new Prisma.Decimal(40_000),
   discountSnapshot: new Prisma.Decimal(4_000),
+  creditSnapshot: [
+    {
+      serviceId: SERVICE_ID,
+      employeeId: EMPLOYEE_ID,
+      durationOptionId: DURATION_OPTION_ID,
+      unitPriceSnapshot: 7_777,
+      totalQuantity: 5,
+      constraints: [],
+    },
+  ],
 };
 
 function buildCls() {
@@ -149,7 +159,7 @@ describe('ActivatePackagePurchaseHandler', () => {
           usedQuantity: 0,
         }),
       );
-      expect(Number(data.unitPriceSnapshot)).toBe(10_000);
+      expect(Number(data.unitPriceSnapshot)).toBe(7_777);
       // No explicit constraints on the item — synthesised from the legacy triple
       // (service/practitioner/duration), one INCLUDE row per non-null field.
       expect(data.constraints.create).toEqual([
@@ -171,6 +181,22 @@ describe('ActivatePackagePurchaseHandler', () => {
       ]);
     });
 
+    it('issues credits only from the immutable purchase snapshot, not the live package definition', async () => {
+      const prisma = buildPrisma(pendingPurchase, {
+        ...pkgRow,
+        items: [{ ...pkgItem, paidQuantity: 99, freeQuantity: 99 }],
+      });
+      const { tx, pricing, getSubscriber } = buildHandler(prisma);
+
+      await getSubscriber()(envelope());
+
+      const data = tx.packageCredit.create.mock.calls[0][0].data;
+      expect(data.totalQuantity).toBe(5);
+      expect(Number(data.unitPriceSnapshot)).toBe(7_777);
+      expect(prisma.sessionPackage.findFirst).not.toHaveBeenCalled();
+      expect(pricing.compute).not.toHaveBeenCalled();
+    });
+
     it('carries explicit item constraints verbatim onto the issued credit instead of synthesising', async () => {
       const flexibleItem = {
         ...pkgItem,
@@ -183,7 +209,20 @@ describe('ActivatePackagePurchaseHandler', () => {
           },
         ],
       };
-      const prisma = buildPrisma(pendingPurchase, { ...pkgRow, items: [flexibleItem] });
+      const snapshotPurchase = {
+        ...pendingPurchase,
+        creditSnapshot: [
+          {
+            serviceId: flexibleItem.serviceId,
+            employeeId: flexibleItem.employeeId,
+            durationOptionId: flexibleItem.durationOptionId,
+            unitPriceSnapshot: 12_000,
+            totalQuantity: flexibleItem.paidQuantity + flexibleItem.freeQuantity,
+            constraints: flexibleItem.constraints,
+          },
+        ],
+      };
+      const prisma = buildPrisma(snapshotPurchase, { ...pkgRow, items: [flexibleItem] });
       const pricing = {
         compute: jest.fn().mockResolvedValue({
           subtotal: 40_000,
@@ -268,7 +307,7 @@ describe('ActivatePackagePurchaseHandler', () => {
     });
 
     it('does not throw (skips) when the package definition is gone', async () => {
-      const prisma = buildPrisma(pendingPurchase, null);
+      const prisma = buildPrisma({ ...pendingPurchase, creditSnapshot: null }, null);
       const { tx, getSubscriber } = buildHandler(prisma);
 
       await getSubscriber()(envelope());

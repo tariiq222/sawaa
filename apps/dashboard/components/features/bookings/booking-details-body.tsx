@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
   User03Icon,
   Call02Icon,
@@ -121,6 +122,9 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
   const cardHeader = "px-5 py-3 bg-accent-ultra-light border-b border-border"
   const cardTitle = "text-xs font-semibold text-accent-foreground uppercase tracking-wider"
   const cardBody = "px-5 py-3 flex flex-col gap-2"
+  const packageName = locale === "ar"
+    ? (booking.packageFunding?.packageNameAr ?? booking.packageFunding?.packageNameEn ?? "—")
+    : (booking.packageFunding?.packageNameEn ?? booking.packageFunding?.packageNameAr ?? "—")
 
   return (
     <div className="flex flex-col gap-3">
@@ -143,7 +147,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
         </div>
       </div>
 
-      <div className={`grid gap-3 ${booking.payment || booking.historicalPayment ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`grid gap-3 ${booking.payment || booking.historicalPayment || booking.packageFunding ? "grid-cols-2" : "grid-cols-1"}`}>
         <div className={card}>
           <div className={cardHeader}><p className={cardTitle}>{t("detail.appointment")}</p></div>
           <div className="px-5 py-3 grid grid-cols-2 gap-x-6 gap-y-4">
@@ -217,6 +221,32 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
               <p className="col-span-2 text-xs text-muted-foreground">
                 {t("bookings.col.historicalPayment.readOnly")}
               </p>
+            </div>
+          </div>
+        )}
+        {booking.packageFunding && (
+          <div className={card}>
+            <div className={cardHeader}><p className={cardTitle}>{t("bookings.packageFunding.title")}</p></div>
+            <div className={cardBody}>
+              <DetailRow
+                label={t("bookings.packageFunding.package")}
+                value={
+                  <Link
+                    href={`/packages/${booking.packageFunding.packageId}`}
+                    className="font-medium text-primary underline underline-offset-2 hover:opacity-80"
+                  >
+                    {packageName}
+                  </Link>
+                }
+                icon={Money02Icon}
+              />
+              <DetailRow
+                label={t("bookings.packageFunding.status")}
+                value={<Badge variant="outline" className={cn("text-xs", booking.packageFunding.usageStatus === "CONSUMED" ? "border-primary/30 bg-primary/10 text-primary" : "border-success/30 bg-success-soft text-success")}>
+                    {t(`bookings.packageFunding.status.${booking.packageFunding.usageStatus.toLowerCase()}`)}
+                  </Badge>}
+                icon={CheckmarkCircle02Icon}
+              />
             </div>
           </div>
         )}

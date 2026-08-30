@@ -13,6 +13,40 @@ describe('ListBookingsHandler', () => {
     expect(result.meta.total).toBe(1);
   });
 
+  it('loads package funding in batches and exposes it on the matching booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { ...mockBooking, packageCreditId: 'credit-1' },
+    ]);
+    prisma.packageCreditUsage.findMany = jest.fn().mockResolvedValue([
+      { bookingId: 'book-1', creditId: 'credit-1', status: 'CONSUMED' },
+    ]);
+    prisma.packageCredit.findMany = jest.fn().mockResolvedValue([
+      { id: 'credit-1', purchaseId: 'purchase-1' },
+    ]);
+    prisma.packagePurchase.findMany = jest.fn().mockResolvedValue([
+      { id: 'purchase-1', packageId: 'package-1' },
+    ]);
+    prisma.sessionPackage.findMany = jest.fn().mockResolvedValue([
+      { id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package' },
+    ]);
+
+    const result = await new ListBookingsHandler(prisma as never).execute({ page: 1, limit: 10 });
+
+    expect(result.items[0]?.packageFunding).toEqual({
+      creditId: 'credit-1',
+      purchaseId: 'purchase-1',
+      packageId: 'package-1',
+      packageNameAr: 'باقة الجلسات',
+      packageNameEn: 'Session package',
+      usageStatus: 'CONSUMED',
+    });
+    expect(prisma.packageCreditUsage.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.packageCredit.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.packagePurchase.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.sessionPackage.findMany).toHaveBeenCalledTimes(1);
+  });
+
   it('loads Booknetic payment metadata for imported booking rows', async () => {
     const prisma = buildPrisma() as ReturnType<typeof buildPrisma> & {
       legacyImportRecord: { findMany: jest.Mock };
@@ -215,6 +249,7 @@ describe('ListBookingsHandler', () => {
       'id',
       'isHistoricalImport',
       'notes',
+      'packageCreditId',
       'priceSnapshot',
       'scheduledAt',
       'serviceId',

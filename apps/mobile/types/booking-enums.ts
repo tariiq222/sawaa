@@ -5,12 +5,11 @@
  * lowercase snake_case strings on the read side, and the
  * `ListBookingsDto` validators upper-case incoming filter values via
  * `@Transform`, so the mobile canonical type uses lowercase snake_case both
- * ways.
+ * ways for read models and list filters.
  *
  * BookingType is the appointment/category type only. DeliveryType is the
- * channel for the session. New request payloads must send DeliveryType via
- * `deliveryType`; `bookingType` must never be overloaded with `online` or
- * `in_person`.
+ * channel for the session. It is a read-model concern for client bookings;
+ * the mobile create-booking DTO does not accept it.
  *
  * Mapping vs the Prisma enums:
  *   Prisma BookingType  → wire
@@ -48,8 +47,7 @@ export function resolveDeliveryType(
 }
 
 /**
- * Legacy response adapter only. Do not use for create/update/availability
- * payloads; new payloads must provide deliveryType explicitly.
+ * Legacy response adapter only. Do not use it to construct request payloads.
  */
 export function resolveDeliveryTypeFromLegacyResponse(
   deliveryType?: DeliveryType | string | null,

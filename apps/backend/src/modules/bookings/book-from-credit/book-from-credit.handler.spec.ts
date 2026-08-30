@@ -548,6 +548,78 @@ describe('BookFromCreditHandler', () => {
   });
 
   describe('OVERDRAW GUARD (concurrency — the critical case)', () => {
+    it('maps a Serializable transaction write conflict to a deterministic 409', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 1, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const { handler, rls } = buildHandler({ prisma });
+      rls.withTransaction.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError(
+          'Transaction failed due to a write conflict or a deadlock. Please retry your transaction',
+          { code: 'P2034', clientVersion: '7.0.0' },
+        ),
+      );
+
+      await expect(handler.execute(baseCmd())).rejects.toEqual(
+        new ConflictException('Package credit was consumed concurrently; please retry'),
+      );
+    });
+
+    it('maps a PrismaPg raw-query 40001 driver error to the same deterministic 409', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 1, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const { handler, rls } = buildHandler({ prisma });
+      rls.withTransaction.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError(
+          'Raw query failed. Code: `40001`.',
+          {
+            code: 'P2010',
+            clientVersion: '7.0.0',
+            meta: {
+              driverAdapterError: {
+                name: 'DriverAdapterError',
+                cause: { kind: 'postgres', originalCode: '40001' },
+              },
+            },
+          },
+        ),
+      );
+
+      await expect(handler.execute(baseCmd())).rejects.toEqual(
+        new ConflictException('Package credit was consumed concurrently; please retry'),
+      );
+    });
+
+    it('does not mask an unrelated database error as a credit conflict', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 1, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const { handler, rls } = buildHandler({ prisma });
+      const unrelatedError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: '7.0.0' },
+      );
+      rls.withTransaction.mockRejectedValueOnce(unrelatedError);
+
+      await expect(handler.execute(baseCmd())).rejects.toBe(unrelatedError);
+    });
+
     it('rejects the booking when the FOR UPDATE recount shows usedQuantity == totalQuantity', async () => {
       // Simulate the LAST credit already fully consumed by a concurrent winner:
       // the FOR UPDATE row read inside the lock shows used == total.

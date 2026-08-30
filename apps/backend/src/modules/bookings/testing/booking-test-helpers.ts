@@ -104,15 +104,22 @@ const buildPrismaRaw = () => ({
   // packageCreditUsage.findFirst to null for non-credit bookings.
   packageCreditUsage: {
     findFirst: jest.fn().mockResolvedValue({ id: 'usage-1', creditId: 'credit-1' }),
+    findMany: jest.fn().mockResolvedValue([]),
     update: jest.fn().mockResolvedValue({ id: 'usage-1' }),
   },
   packageCredit: {
     update: jest.fn().mockResolvedValue({ id: 'credit-1' }),
     findUnique: jest.fn().mockResolvedValue({ purchaseId: 'purchase-1' }),
+    findMany: jest.fn().mockResolvedValue([]),
   },
   packagePurchase: {
     findUnique: jest.fn().mockResolvedValue({ status: 'ACTIVE' }),
+    findMany: jest.fn().mockResolvedValue([]),
     update: jest.fn().mockResolvedValue({ id: 'purchase-1' }),
+  },
+  sessionPackage: {
+    findFirst: jest.fn().mockResolvedValue(null),
+    findMany: jest.fn().mockResolvedValue([]),
   },
 });
 
@@ -145,7 +152,10 @@ export const buildRlsTransaction = (prisma?: ReturnType<typeof buildPrisma>) => 
   withBypassTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma ?? buildPrisma())),
 });
 
-export const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
+export const buildEventBus = () => ({
+  publish: jest.fn().mockResolvedValue(undefined),
+  publishOptional: jest.fn().mockResolvedValue(undefined),
+});
 
 export const buildZoomQueue = () => ({
   enqueue: jest.fn().mockResolvedValue(undefined),

@@ -164,7 +164,7 @@ describe('MoyasarApiClient', () => {
       (fetchWithTimeout as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => ({
-          id: 'pay_123',
+          id: 'a1168bd1-47a4-4b97-8a50-dd5caaccacf2',
           object: 'payment',
           amount: 1000,
           currency: 'SAR',
@@ -183,13 +183,13 @@ describe('MoyasarApiClient', () => {
         description: 'Invoice #1',
         callbackUrl: 'https://example.com/callback',
         metadata: { invoiceId: 'inv_1' },
-        givenId: 'idem-123',
+        givenId: 'a1168bd1-47a4-4b97-8a50-dd5caaccacf2',
       };
 
       const result = await client.createPayment(ORG_ID, params);
 
       expect(result).toEqual({
-        id: 'pay_123',
+        id: 'a1168bd1-47a4-4b97-8a50-dd5caaccacf2',
         amount: 1000,
         currency: 'SAR',
         status: 'initiated',
@@ -211,7 +211,7 @@ describe('MoyasarApiClient', () => {
             callback_url: 'https://example.com/callback',
             metadata: { invoiceId: 'inv_1' },
             source: { type: 'card' },
-            given_id: 'idem-123',
+            given_id: 'a1168bd1-47a4-4b97-8a50-dd5caaccacf2',
           }),
           headers: expect.objectContaining({
             Authorization: 'Bearer sk_live_abc',

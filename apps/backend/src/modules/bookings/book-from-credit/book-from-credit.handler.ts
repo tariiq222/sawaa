@@ -39,6 +39,39 @@ interface LockedCreditRow {
 }
 
 /**
+ * Prisma reports a Serializable transaction abort as P2034. Raw-query errors
+ * can additionally preserve PostgreSQL's 40001 code directly, in `meta.code`,
+ * or in the PrismaPg driver-adapter cause. All represent a safe rollback, so
+ * expose the concurrent loser as a domain conflict instead of leaking a 500.
+ */
+function mapConcurrentCreditConflict(error: unknown): never {
+  const candidate = error as {
+    code?: unknown;
+    meta?: {
+      code?: unknown;
+      driverAdapterError?: {
+        cause?: { originalCode?: unknown };
+      };
+    };
+  } | null;
+  const code = candidate?.code;
+  const postgresCode = candidate?.meta?.code;
+  const driverPostgresCode =
+    candidate?.meta?.driverAdapterError?.cause?.originalCode;
+
+  if (
+    code === 'P2034' ||
+    code === '40001' ||
+    postgresCode === '40001' ||
+    driverPostgresCode === '40001'
+  ) {
+    throw new ConflictException('Package credit was consumed concurrently; please retry');
+  }
+
+  throw error;
+}
+
+/**
  * Consume one session-package credit to create a zero-value booking.
  *
  * The credit pack model: the client pre-paid in full at purchase time, so a
@@ -346,7 +379,7 @@ export class BookFromCreditHandler {
         return created;
       },
       { isolationLevel: 'Serializable' },
-    );
+    ).catch(mapConcurrentCreditConflict);
 
     return booking;
   }

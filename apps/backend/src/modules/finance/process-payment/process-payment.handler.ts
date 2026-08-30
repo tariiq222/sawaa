@@ -12,6 +12,7 @@ import {
 } from '../deposit.helper';
 import { decimalToHalalas } from '../money.helper';
 import { ProcessPaymentDto } from './process-payment.dto';
+import { assertBookingAcceptsPayment } from '../booking-payment-eligibility.helper';
 
 export type ProcessPaymentCommand = ProcessPaymentDto & {
   /** Join an already-open interactive transaction (e.g. collect). */
@@ -60,6 +61,9 @@ export class ProcessPaymentHandler {
     // paidAt. The @unique(idempotencyKey) constraint is the final guard against
     // duplicate payments — the pre-check is kept only as a fast short-circuit.
     const run = async (tx: Prisma.TransactionClient): Promise<PaymentRunResult> => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${dto.invoiceId} FOR UPDATE`,
+      );
       const invoice = await tx.invoice.findFirst({
         where: { id: dto.invoiceId },
       });
@@ -92,6 +96,17 @@ export class ProcessPaymentHandler {
             ...meta,
           };
         }
+      }
+
+      if (invoice.bookingId) {
+        const booking = await tx.booking.findFirst({
+          where: { id: invoice.bookingId },
+          select: { status: true },
+        });
+        if (!booking) {
+          throw new NotFoundException(`Booking ${invoice.bookingId} not found`);
+        }
+        assertBookingAcceptsPayment(invoice.bookingId, booking.status);
       }
 
       const invoiceTotal = decimalToHalalas(invoice.total);

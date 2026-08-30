@@ -22,11 +22,16 @@ describe('BankTransferUploadDto', () => {
   it('coerces a numeric string amount to a number', async () => {
     const dto = plainToInstance(
       BankTransferUploadDto,
-      { invoiceId: valid.invoiceId, amount: '250.75' },
+      { invoiceId: valid.invoiceId, amount: '250' },
       { enableImplicitConversion: true },
     );
-    expect(dto.amount).toBe(250.75);
+    expect(dto.amount).toBe(250);
     expect(await validate(dto)).toHaveLength(0);
+  });
+
+  it('rejects fractional halala amounts', async () => {
+    const errors = await validateDto({ ...valid, amount: 250.75 });
+    expect(errors.some((e) => e.property === 'amount')).toBe(true);
   });
 
   it('rejects a non-UUID invoiceId', async () => {
@@ -44,9 +49,9 @@ describe('BankTransferUploadDto', () => {
     expect(errors.some((e) => e.property === 'amount')).toBe(true);
   });
 
-  it('accepts amount = 0 (zero-amount bank transfer is technically valid at the DTO layer)', async () => {
+  it('rejects amount = 0', async () => {
     const errors = await validateDto({ ...valid, amount: 0 });
-    expect(errors).toHaveLength(0);
+    expect(errors.some((e) => e.property === 'amount')).toBe(true);
   });
 
   it('rejects a non-number amount (object)', async () => {

@@ -141,6 +141,24 @@ describe('EventBusService', () => {
     expect(bullmq.getQueue).not.toHaveBeenCalled();
   });
 
+  it('treats an explicitly optional event with no consumers as a successful no-op', async () => {
+    expect(typeof (service as any).publishOptional).toBe('function');
+
+    await expect(
+      (service as any).publishOptional('optional.event', event()),
+    ).resolves.toBeUndefined();
+    expect(bullmq.getQueue).not.toHaveBeenCalled();
+  });
+
+  it('publishes an explicitly optional event when a consumer is registered', async () => {
+    service.subscribe('optional.event', 'optional-consumer', jest.fn());
+    expect(typeof (service as any).publishOptional).toBe('function');
+
+    await (service as any).publishOptional('optional.event', event());
+
+    expect(queues.get('domain-events--optional-consumer')?.add).toHaveBeenCalledTimes(1);
+  });
+
   it('dispatches only the owning handler and bubbles failures for BullMQ retry', async () => {
     const handlerA = jest.fn().mockResolvedValue(undefined);
     const handlerB = jest.fn().mockRejectedValue(new Error('transient consumer failure'));

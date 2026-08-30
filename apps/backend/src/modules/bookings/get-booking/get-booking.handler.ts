@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { mapBookingRow, type BookingRelations } from '../booking-row.mapper';
+import {
+  mapBookingRow,
+  type BookingPackageFundingRelation,
+  type BookingRelations,
+} from '../booking-row.mapper';
 import type { HistoricalPaymentMetadata } from '../historical-payment.helper';
 
 export interface GetBookingQuery {
@@ -46,7 +50,7 @@ export class GetBookingHandler {
       }
     }
 
-    const [client, employee, service, invoice, historicalRecord] = await Promise.all([
+    const [client, employee, service, invoice, historicalRecord, credit, usage] = await Promise.all([
       this.prisma.client.findFirst({ where: { id: booking.clientId } }),
       this.prisma.employee.findFirst({ where: { id: booking.employeeId } }),
       booking.serviceId ? this.prisma.service.findFirst({ where: { id: booking.serviceId } }) : Promise.resolve(null),
@@ -82,7 +86,43 @@ export class GetBookingHandler {
             select: { targetId: true, metadata: true },
           })
         : Promise.resolve(null),
+      booking.packageCreditId
+        ? this.prisma.packageCredit.findUnique({
+            where: { id: booking.packageCreditId },
+            select: { id: true, purchaseId: true },
+          })
+        : Promise.resolve(null),
+      booking.packageCreditId
+        ? this.prisma.packageCreditUsage.findFirst({
+            where: { bookingId: booking.id, creditId: booking.packageCreditId },
+            select: { status: true },
+          })
+        : Promise.resolve(null),
     ]);
+
+    const purchase = credit
+      ? await this.prisma.packagePurchase.findUnique({
+          where: { id: credit.purchaseId },
+          select: { id: true, packageId: true },
+        })
+      : null;
+    const pkg = purchase
+      ? await this.prisma.sessionPackage.findFirst({
+          where: { id: purchase.packageId },
+          select: { id: true, nameAr: true, nameEn: true },
+        })
+      : null;
+    const packageFundingByBookingId = new Map<string, BookingPackageFundingRelation>();
+    if (credit && usage && purchase && pkg) {
+      packageFundingByBookingId.set(booking.id, {
+        creditId: credit.id,
+        purchaseId: purchase.id,
+        packageId: pkg.id,
+        packageNameAr: pkg.nameAr,
+        packageNameEn: pkg.nameEn ?? null,
+        usageStatus: usage.status as 'CONSUMED' | 'RETURNED',
+      });
+    }
 
     // Build paymentsByBookingId for this single booking
     // Payment.amount is Decimal(12,2) SAR → convert to halalat (× 100)
@@ -133,6 +173,7 @@ export class GetBookingHandler {
       servicesById: new Map(service ? [[service.id, service]] : []),
       paymentsByBookingId,
       invoicesByBookingId,
+      packageFundingByBookingId,
       historicalPaymentsByBookingId: new Map(
         historicalRecord?.targetId && historicalRecord.metadata
           ? [[

@@ -92,6 +92,23 @@ const refundableBooking = {
   payment: { id: "pay2", status: "paid", method: "cash", amount: 50000 },
 } as unknown as Booking
 
+const packageFundedBooking = {
+  id: "b-package",
+  clientId: "c1",
+  priceSnapshot: 50000,
+  service: { price: 50000 },
+  invoice: null,
+  payment: null,
+  packageFunding: {
+    creditId: "credit-1",
+    purchaseId: "purchase-1",
+    packageId: "package-1",
+    packageNameAr: "باقة الاستشارات",
+    packageNameEn: "Counseling package",
+    usageStatus: "CONSUMED",
+  },
+} as unknown as Booking
+
 beforeEach(() => {
   mockUseAuth.mockReset()
 })
@@ -137,6 +154,39 @@ test("PaymentStatusCell hides record-payment button with only invoice:create (no
   render(<PaymentStatusCell booking={payableBooking} />)
   expect(
     screen.queryByRole("button", { name: "bookings.col.recordPayment" }),
+  ).not.toBeInTheDocument()
+})
+
+test("PaymentStatusCell shows package funding instead of unpaid or record-payment", () => {
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
+  render(<PaymentStatusCell booking={packageFundedBooking} />)
+
+  expect(screen.getByText("bookings.col.paymentStatus.packageFunded")).toBeInTheDocument()
+  expect(screen.queryByText("bookings.col.paymentStatus.unpaid")).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole("button", { name: "bookings.col.recordPayment" }),
+  ).not.toBeInTheDocument()
+})
+
+test("PaymentStatusCell distinguishes a credit returned to its package", () => {
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
+  render(
+    <PaymentStatusCell
+      booking={{
+        ...packageFundedBooking,
+        packageFunding: {
+          ...packageFundedBooking.packageFunding!,
+          usageStatus: "RETURNED",
+        },
+      }}
+    />,
+  )
+
+  expect(
+    screen.getByText("bookings.col.paymentStatus.packageReturned"),
+  ).toBeInTheDocument()
+  expect(
+    screen.queryByText("bookings.col.paymentStatus.packageFunded"),
   ).not.toBeInTheDocument()
 })
 

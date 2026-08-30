@@ -1,5 +1,5 @@
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { InvoiceStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { BookingStatus, InvoiceStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { ProcessPaymentHandler } from './process-payment.handler';
 
@@ -26,6 +26,7 @@ const mockPayment = {
 // mock immediately invokes its callback with this tx, simulating a real Prisma
 // interactive transaction against the mock.
 const buildTx = (overrides: Record<string, unknown> = {}) => ({
+  $queryRaw: jest.fn().mockResolvedValue([{ id: mockInvoice.id }]),
   invoice: {
     findFirst: jest.fn().mockResolvedValue(mockInvoice),
     update: jest.fn().mockResolvedValue({ ...mockInvoice, status: InvoiceStatus.PAID }),
@@ -115,6 +116,60 @@ function abortablePaymentTx(opts: {
 }
 
 describe('ProcessPaymentHandler', () => {
+  it('locks the invoice row before reading its payment state', async () => {
+    const tx = buildTx();
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(tx) as never,
+      { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+      buildEventBus() as never,
+    );
+
+    await handler.execute({
+      invoiceId: 'inv-1',
+      amount: 230,
+      method: PaymentMethod.CASH,
+      idempotencyKey: 'key-1',
+    });
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    const sql = tx.$queryRaw.mock.calls[0][0];
+    expect(sql.strings.join('')).toContain('FOR UPDATE');
+    expect(tx.$queryRaw.mock.invocationCallOrder[0])
+      .toBeLessThan(tx.invoice.findFirst.mock.invocationCallOrder[0]);
+  });
+
+  it.each([
+    BookingStatus.CANCEL_REQUESTED,
+    BookingStatus.CANCELLED,
+    BookingStatus.NO_SHOW,
+    BookingStatus.EXPIRED,
+  ])('rejects payment when the linked booking is %s', async (status) => {
+    const tx = buildTx({
+      booking: {
+        findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1', status }),
+      },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue(mockPayment),
+        aggregate: jest.fn()
+          .mockResolvedValueOnce({ _sum: { amount: 0 } })
+          .mockResolvedValueOnce({ _sum: { amount: 230 } }),
+      },
+    });
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(tx) as never,
+      { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+      buildEventBus() as never,
+    );
+
+    await expect(handler.execute({
+      invoiceId: 'inv-1',
+      amount: 230,
+      method: PaymentMethod.CASH,
+    })).rejects.toThrow(`cannot accept payments (booking status: ${status})`);
+    expect(tx.payment.create).not.toHaveBeenCalled();
+  });
+
   it('creates payment and marks invoice PAID when fully paid', async () => {
     // P1: ONLINE_CARD is no longer accepted by this endpoint (Moyasar webhook
     // is the authoritative writer). Test with CASH instead — the rest of the

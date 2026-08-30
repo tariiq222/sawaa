@@ -94,6 +94,7 @@ describe("useSellPackage", () => {
 
     await act(async () => {
       await result.current.mutateAsync({
+        idempotencyKey: "00000000-0000-4000-a000-000000000099",
         packageId: "pkg-1",
         clientId: "cl-1",
         branchId: "br-1",
@@ -102,6 +103,7 @@ describe("useSellPackage", () => {
     })
 
     expect(createPackagePurchase).toHaveBeenCalledWith({
+      idempotencyKey: "00000000-0000-4000-a000-000000000099",
       packageId: "pkg-1",
       clientId: "cl-1",
       branchId: "br-1",

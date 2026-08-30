@@ -98,7 +98,7 @@ export class CreateInvoiceHandler {
       throw err;
     }
 
-    await this.eventBus.publish('finance.invoice.created', {
+    await this.eventBus.publishOptional('finance.invoice.created', {
       eventId: invoice.id,
       source: 'finance',
       version: 1,

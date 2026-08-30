@@ -19,7 +19,11 @@ describe('RejectCancelBookingHandler', () => {
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CONFIRMED }) }),
     );
-    expect(eb.publish).toHaveBeenCalledWith('bookings.booking.cancel_rejected', expect.anything());
+    expect(eb.publishOptional).toHaveBeenCalledWith(
+      'bookings.booking.cancel_rejected',
+      expect.anything(),
+    );
+    expect(eb.publish).not.toHaveBeenCalled();
   });
 
   it('falls back to PENDING (never promotes to a paid slot) when no pre-request status is recorded', async () => {

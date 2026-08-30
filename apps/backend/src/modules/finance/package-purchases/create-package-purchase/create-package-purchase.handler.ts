@@ -1,13 +1,19 @@
+import { createHash } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PackagePurchaseStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { stableEventId } from '../../../../common/events';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { EventBusService } from '../../../../infrastructure/events';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
-import { ProcessPaymentHandler } from '../../process-payment/process-payment.handler';
+import {
+  type DeferredPaymentEvent,
+  ProcessPaymentHandler,
+} from '../../process-payment/process-payment.handler';
 import { buildCreditConstraintCreate } from '../build-credit-constraints.helper';
 import { CreatePackagePurchaseDto } from './create-package-purchase.dto';
 
@@ -15,6 +21,23 @@ export type CreatePackagePurchaseCommand = CreatePackagePurchaseDto & {
   /** Optional override of the authenticated user id (set by the controller). */
   userId?: string;
 };
+
+export function packagePurchaseRequestFingerprint(
+  dto: Pick<
+    CreatePackagePurchaseCommand,
+    'packageId' | 'clientId' | 'branchId' | 'employeeId' | 'method' | 'notes'
+  >,
+): string {
+  const canonical = JSON.stringify({
+    packageId: dto.packageId,
+    clientId: dto.clientId,
+    branchId: dto.branchId,
+    employeeId: dto.employeeId ?? null,
+    method: dto.method,
+    notes: dto.notes?.trim() || null,
+  });
+  return createHash('sha256').update(canonical).digest('hex');
+}
 
 /**
  * Reception-side manual sale of a SessionPackage to a client.
@@ -35,7 +58,8 @@ export type CreatePackagePurchaseCommand = CreatePackagePurchaseDto & {
  *  6. Record the manual payment via ProcessPaymentHandler (full finalPrice) —
  *     that handler is the only authority for invoice-status updates + payment
  *     row insertion, so we reuse it rather than re-implementing the tripwire.
- *  7. Publish `finance.invoice.created` outside the transaction.
+ *  7. Stage the payment-completed event in the transactional outbox.
+ *  8. Publish the optional `finance.invoice.created` observation after commit.
  *
  * Multiple ACTIVE purchases of the same package for the same client are
  * intentionally ALLOWED (unlike the old BundlePurchase duplicate check) —
@@ -60,6 +84,19 @@ export class CreatePackagePurchaseHandler {
       throw new BadRequestException(
         'ONLINE_CARD payments must come through the Moyasar webhook flow, not the reception manual-payment endpoint',
       );
+    }
+
+    const requestFingerprint = packagePurchaseRequestFingerprint(dto);
+    const existingPurchase = await this.prisma.packagePurchase.findUnique({
+      where: { idempotencyKey: dto.idempotencyKey },
+    });
+    if (existingPurchase) {
+      if (existingPurchase.requestFingerprint !== requestFingerprint) {
+        throw new ConflictException(
+          'Package purchase idempotency key was already used with a different request',
+        );
+      }
+      return this.replaySale(existingPurchase);
     }
 
     // 1. Load the package definition (cross-BC IDs — items are real FK rows).
@@ -110,10 +147,14 @@ export class CreatePackagePurchaseHandler {
     // flexible items (no durationOptionId) resolve their unit price too.
     const unitPriceByIndex = price.itemUnitPrices.map((u) => u.unitPrice);
 
-    // 4 + 5: create purchase, credits, invoice in one transaction.
-    const { purchase, invoiceId } = await this.rlsTransaction.withTransaction(async (tx) => {
+    // 4 + 5 + 6: create purchase, credits, invoice, and manual payment in one
+    // transaction. A payment failure therefore rolls the ACTIVE purchase and
+    // its spendable credits back with the invoice.
+    const createSale = () => this.rlsTransaction.withTransaction(async (tx) => {
       const purchase = await tx.packagePurchase.create({
         data: {
+          idempotencyKey: dto.idempotencyKey,
+          requestFingerprint,
           packageId: pkg.id,
           clientId: dto.clientId,
           branchId: dto.branchId,
@@ -171,25 +212,59 @@ export class CreatePackagePurchaseHandler {
         },
       });
 
-      return { purchase, invoiceId: invoice.id };
+      const payment = await this.processPayment.execute({
+        invoiceId: invoice.id,
+        amount: price.finalPrice,
+        method: dto.method,
+        // Deterministic idempotency key per purchase — replaying this exact sale
+        // (dashboard retry, double-click) collapses to the existing Payment row.
+        idempotencyKey: `pkg-purchase:${purchase.id}`,
+        transaction: tx,
+      });
+
+      await this.stagePaymentEvents(
+        tx,
+        invoice.id,
+        purchase.id,
+        payment.id,
+        payment.deferredEvents,
+      );
+
+      return { purchase, invoiceId: invoice.id, payment };
     });
 
-    // 6. Record the full-amount manual payment. ProcessPaymentHandler owns the
-    // invoice-status transition (PAID/PARTIALLY_PAID), the tripwire against
-    // SAR-typed amounts, and the PaymentCompletedEvent emission — by delegating
-    // we keep all payment invariants in one place.
-    const payment = await this.processPayment.execute({
-      invoiceId,
-      amount: price.finalPrice,
-      method: dto.method,
-      // Deterministic idempotency key per purchase — replaying this exact sale
-      // (dashboard retry, double-click) collapses to the existing Payment row.
-      idempotencyKey: `pkg-purchase:${purchase.id}`,
-    });
+    let sale: Awaited<ReturnType<typeof createSale>>;
+    try {
+      sale = await createSale();
+    } catch (error) {
+      const isIdempotencyRace =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+      if (!isIdempotencyRace) {
+        throw error;
+      }
 
-    // 7. Publish outside the transaction (consistent with the rest of the
+      // A concurrent request with the same idempotency key won the unique-key
+      // race after our initial lookup. Replay only when its canonical request
+      // is identical; a reused key with different inputs is always a conflict.
+      const winner = await this.prisma.packagePurchase.findUnique({
+        where: { idempotencyKey: dto.idempotencyKey },
+      });
+      if (!winner) {
+        throw error;
+      }
+      if (winner.requestFingerprint !== requestFingerprint) {
+        throw new ConflictException(
+          'Package purchase idempotency key was already used with a different request',
+        );
+      }
+      return this.replaySale(winner);
+    }
+
+    const { purchase, invoiceId, payment } = sale;
+
+    // 8. Publish outside the transaction (consistent with the rest of the
     // finance cluster — events must only fire for committed work).
-    await this.eventBus.publish('finance.invoice.created', {
+    await this.eventBus.publishOptional('finance.invoice.created', {
       eventId: invoiceId,
       source: 'finance',
       version: 1,
@@ -216,6 +291,87 @@ export class CreatePackagePurchaseHandler {
         unitPriceSnapshot: unitPriceByIndex[idx] ?? 0,
         totalQuantity: item.paidQuantity + item.freeQuantity,
         usedQuantity: 0,
+      })),
+    };
+  }
+
+  private async stagePaymentEvents(
+    tx: Prisma.TransactionClient,
+    invoiceId: string,
+    purchaseId: string,
+    paymentId: string,
+    events: readonly DeferredPaymentEvent[] | undefined,
+  ): Promise<void> {
+    const completedEvent = events?.find(
+      (event) => event.eventName === 'finance.payment.completed',
+    );
+    if (!completedEvent) {
+      throw new ConflictException(
+        'Manual package payment completed without a durable payment event',
+      );
+    }
+
+    const eventId = stableEventId(
+      `finance:manual-package-purchase:${paymentId}:${completedEvent.eventName}`,
+    );
+    await tx.outboxEvent.create({
+      data: {
+        id: eventId,
+        aggregateId: invoiceId,
+        eventType: completedEvent.eventName,
+        status: 'PENDING_V2',
+        deliveryLane: 'PENDING_V2',
+        payload: {
+          ...completedEvent.envelope,
+          eventId,
+          payload: {
+            ...completedEvent.envelope.payload,
+            packagePurchaseId: purchaseId,
+          },
+        } as Prisma.InputJsonValue,
+      },
+    });
+  }
+
+  private async replaySale(purchase: {
+    id: string;
+    requestFingerprint: string | null;
+    [key: string]: unknown;
+  }) {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { packagePurchaseId: purchase.id },
+      select: { id: true },
+    });
+    if (!invoice) {
+      throw new ConflictException('Package purchase replay is missing its invoice');
+    }
+    const payment = await this.prisma.payment.findFirst({
+      where: { invoiceId: invoice.id },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (!payment) {
+      throw new ConflictException('Package purchase replay is missing its payment');
+    }
+    const credits = await this.prisma.packageCredit.findMany({
+      where: { purchaseId: purchase.id },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        serviceId: true,
+        employeeId: true,
+        durationOptionId: true,
+        unitPriceSnapshot: true,
+        totalQuantity: true,
+        usedQuantity: true,
+      },
+    });
+    return {
+      purchase,
+      invoiceId: invoice.id,
+      paymentId: payment.id,
+      credits: credits.map((credit) => ({
+        ...credit,
+        unitPriceSnapshot: Number(credit.unitPriceSnapshot),
       })),
     };
   }

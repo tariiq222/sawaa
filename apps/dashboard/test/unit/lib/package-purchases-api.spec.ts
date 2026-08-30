@@ -27,6 +27,7 @@ describe("package-purchases api", () => {
       credits: [],
     })
     const payload = {
+      idempotencyKey: "00000000-0000-4000-a000-000000000099",
       packageId: "pkg-1",
       clientId: "cl-1",
       branchId: "br-1",
@@ -48,6 +49,7 @@ describe("package-purchases api", () => {
       credits: [],
     })
     const payload = {
+      idempotencyKey: "00000000-0000-4000-a000-000000000100",
       packageId: "pkg-1",
       clientId: "cl-1",
       branchId: "br-1",

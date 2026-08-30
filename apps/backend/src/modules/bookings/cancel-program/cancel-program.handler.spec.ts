@@ -20,6 +20,7 @@ describe('CancelProgramHandler', () => {
 
   const setup = () => {
     prisma = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       program: { findUnique: jest.fn(), update: jest.fn().mockResolvedValue({}) },
       programEnrollment: { findMany: jest.fn().mockResolvedValue([]) },
       booking: { update: jest.fn().mockResolvedValue({}) },
@@ -141,6 +142,20 @@ describe('CancelProgramHandler', () => {
 
     // And the cancelled count is reported back.
     expect(result.cancelledEnrollments).toBe(2);
+  });
+
+  it('locks the program row before snapshotting enrollments so a concurrent enrollment is included or rejected', async () => {
+    prisma.program.findUnique.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+    });
+
+    await handler.execute('prog-1', { reason: 'prevent enrollment race' });
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.programEnrollment.findMany.mock.invocationCallOrder[0],
+    );
   });
 
   it('publishes a BookingCancelledEvent for every cascaded booking', async () => {

@@ -1,5 +1,5 @@
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { BookingStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { BankTransferUploadHandler, MAX_BANK_TRANSFER_RECEIPT_BYTES } from './bank-transfer-upload.handler';
 
 // ── Magic-byte fixtures ──────────────────────────────────────────────────────
@@ -29,6 +29,7 @@ const MP4_BUFFER = Buffer.from([
 
 const mockInvoice = {
   id: 'inv-1',
+  bookingId: 'booking-1',
   total: new (require('decimal.js')).Decimal(230),
   currency: 'SAR',
   clientId: 'client-1',
@@ -42,16 +43,48 @@ const mockPayment = {
   receiptUrl: 'http://minio/bucket/path.jpg',
 };
 
-const buildPrisma = (invoiceOverrides = {}) => ({
-  invoice: {
-    findFirst: jest.fn().mockResolvedValue({ ...mockInvoice, ...invoiceOverrides }),
-  },
-  payment: { create: jest.fn().mockResolvedValue(mockPayment) },
-});
+const buildPrisma = (invoiceOverrides = {}) => {
+  const prisma = {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'inv-1' }]),
+    $transaction: jest.fn(),
+    invoice: {
+      findFirst: jest.fn().mockResolvedValue({ ...mockInvoice, ...invoiceOverrides }),
+    },
+    booking: {
+      findFirst: jest.fn().mockResolvedValue({
+        serviceId: 'service-1',
+        programId: null,
+        status: BookingStatus.CONFIRMED,
+      }),
+    },
+    service: {
+      findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
+    },
+    payment: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+      create: jest.fn().mockResolvedValue(mockPayment),
+    },
+  };
+  prisma.$transaction.mockImplementation((fn: (tx: typeof prisma) => unknown) => fn(prisma));
+  return prisma;
+};
 
 const buildStorage = () => ({
   uploadFile: jest.fn().mockResolvedValue('http://minio/bucket/path.jpg'),
+  deleteFile: jest.fn().mockResolvedValue(undefined),
 });
+
+const buildHandler = (
+  prisma = buildPrisma(),
+  storage = buildStorage(),
+) => new BankTransferUploadHandler(
+  prisma as never,
+  storage as never,
+  {
+    withTransaction: jest.fn((fn: (tx: typeof prisma) => unknown) =>
+      prisma.$transaction(fn)),
+  } as never,
+);
 
 const baseCmd = {
   invoiceId: 'inv-1',
@@ -64,7 +97,7 @@ describe('BankTransferUploadHandler', () => {
     it('uploads JPEG receipt and creates PENDING_VERIFICATION payment', async () => {
       const prisma = buildPrisma();
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(prisma as never, storage as never);
+      const handler = buildHandler(prisma, storage);
 
       const result = await handler.execute({
         ...baseCmd,
@@ -93,7 +126,7 @@ describe('BankTransferUploadHandler', () => {
 
     it('uploads PNG receipt', async () => {
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, storage as never);
+      const handler = buildHandler(buildPrisma(), storage);
 
       await handler.execute({
         ...baseCmd,
@@ -112,7 +145,7 @@ describe('BankTransferUploadHandler', () => {
 
     it('uploads PDF receipt', async () => {
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, storage as never);
+      const handler = buildHandler(buildPrisma(), storage);
 
       await handler.execute({
         ...baseCmd,
@@ -133,7 +166,7 @@ describe('BankTransferUploadHandler', () => {
   describe('magic-byte rejection', () => {
     it('rejects MP4 bytes claimed as image/jpeg', async () => {
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, storage as never);
+      const handler = buildHandler(buildPrisma(), storage);
 
       await expect(
         handler.execute({
@@ -148,7 +181,7 @@ describe('BankTransferUploadHandler', () => {
 
     it('rejects PNG bytes claimed as application/pdf', async () => {
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, storage as never);
+      const handler = buildHandler(buildPrisma(), storage);
 
       await expect(
         handler.execute({
@@ -169,7 +202,7 @@ describe('BankTransferUploadHandler', () => {
       // To simulate: return null from findFirst (invoice not visible under tenant scope).
       const prisma = buildPrisma();
       prisma.invoice.findFirst = jest.fn().mockResolvedValue(null);
-      const handler = new BankTransferUploadHandler(prisma as never, buildStorage() as never);
+      const handler = buildHandler(prisma, buildStorage());
 
       await expect(
         handler.execute({
@@ -182,10 +215,10 @@ describe('BankTransferUploadHandler', () => {
       expect(prisma.payment.create).not.toHaveBeenCalled();
     });
 
-    it('accepts transfer amount within tolerance of invoice total (e.g. partial payment rounding)', async () => {
+    it('rejects fractional halala amounts before uploading the receipt', async () => {
       const prisma = buildPrisma();
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(prisma as never, storage as never);
+      const handler = buildHandler(prisma, storage);
 
       await expect(
         handler.execute({
@@ -195,12 +228,142 @@ describe('BankTransferUploadHandler', () => {
           mimetype: 'image/jpeg',
           filename: 'receipt.jpg',
         }),
-      ).resolves.toHaveProperty('id', 'pay-1');
+      ).rejects.toThrow('integer halalas');
+      expect(storage.uploadFile).not.toHaveBeenCalled();
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a transfer for a cancelled booking', async () => {
+      const prisma = buildPrisma();
+      prisma.booking.findFirst.mockResolvedValue({
+        serviceId: 'service-1',
+        programId: null,
+        status: BookingStatus.CANCELLED,
+      });
+      const storage = buildStorage();
+      const handler = buildHandler(prisma, storage);
+
+      await expect(
+        handler.execute({
+          ...baseCmd,
+          fileBuffer: JPEG_BUFFER,
+          mimetype: 'image/jpeg',
+          filename: 'receipt.jpg',
+        }),
+      ).rejects.toThrow('cannot accept payments');
+      expect(storage.uploadFile).not.toHaveBeenCalled();
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts the configured deposit as the first bank-transfer amount', async () => {
+      const prisma = buildPrisma();
+      prisma.service.findFirst.mockResolvedValue({
+        depositEnabled: true,
+        depositAmount: 50,
+      });
+      const handler = buildHandler(prisma, buildStorage());
+
+      await expect(handler.execute({
+        ...baseCmd,
+        amount: 50,
+        fileBuffer: JPEG_BUFFER,
+        mimetype: 'image/jpeg',
+        filename: 'deposit.jpg',
+      })).resolves.toHaveProperty('id', 'pay-1');
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ amount: 50 }) }),
+      );
+    });
+
+    it('accepts only the outstanding balance after a completed deposit', async () => {
+      const prisma = buildPrisma();
+      prisma.service.findFirst.mockResolvedValue({
+        depositEnabled: true,
+        depositAmount: 50,
+      });
+      prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: 50 } });
+      const handler = buildHandler(prisma, buildStorage());
+
+      await expect(handler.execute({
+        ...baseCmd,
+        amount: 180,
+        fileBuffer: JPEG_BUFFER,
+        mimetype: 'image/jpeg',
+        filename: 'remainder.jpg',
+      })).resolves.toHaveProperty('id', 'pay-1');
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ amount: 180 }) }),
+      );
+    });
+
+    it('rejects the invoice total after a deposit because it exceeds outstanding', async () => {
+      const prisma = buildPrisma();
+      prisma.service.findFirst.mockResolvedValue({
+        depositEnabled: true,
+        depositAmount: 50,
+      });
+      prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: 50 } });
+      const handler = buildHandler(prisma, buildStorage());
+
+      await expect(handler.execute({
+        ...baseCmd,
+        amount: 230,
+        fileBuffer: JPEG_BUFFER,
+        mimetype: 'image/jpeg',
+        filename: 'overpay.jpg',
+      })).rejects.toThrow('outstanding balance 180');
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it('serializes concurrent uploads so pending transfers cannot over-reserve the invoice', async () => {
+      const prisma = buildPrisma();
+      const storage = buildStorage();
+      let reserved = 0;
+      let transactionTail = Promise.resolve<unknown>(undefined);
+      prisma.payment.aggregate.mockImplementation(() =>
+        Promise.resolve({ _sum: { amount: reserved } }),
+      );
+      prisma.payment.create.mockImplementation(({ data }: { data: { amount: number } }) => {
+        reserved += data.amount;
+        return Promise.resolve({ ...mockPayment, amount: data.amount });
+      });
+      prisma.$transaction.mockImplementation((fn: (tx: typeof prisma) => Promise<unknown>) => {
+        const run = transactionTail.then(() => fn(prisma));
+        transactionTail = run.catch(() => undefined);
+        return run;
+      });
+      const handler = buildHandler(prisma, storage);
+      const command = {
+        ...baseCmd,
+        fileBuffer: JPEG_BUFFER,
+        mimetype: 'image/jpeg',
+        filename: 'receipt.jpg',
+      };
+
+      const outcomes = await Promise.allSettled([
+        handler.execute(command),
+        handler.execute(command),
+      ]);
+
+      expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+      expect(outcomes.filter((outcome) => outcome.status === 'rejected')).toHaveLength(1);
+      expect(prisma.payment.create).toHaveBeenCalledTimes(1);
+      expect(prisma.payment.aggregate).toHaveBeenCalledWith({
+        where: {
+          invoiceId: 'inv-1',
+          status: {
+            in: [PaymentStatus.COMPLETED, PaymentStatus.PENDING_VERIFICATION],
+          },
+        },
+        _sum: { amount: true },
+      });
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+      expect(storage.deleteFile).toHaveBeenCalledTimes(1);
     });
 
     it('throws BadRequestException when transfer amount does not match invoice total', async () => {
       const prisma = buildPrisma();
-      const handler = new BankTransferUploadHandler(prisma as never, buildStorage() as never);
+      const handler = buildHandler(prisma, buildStorage());
 
       await expect(
         handler.execute({
@@ -215,14 +378,14 @@ describe('BankTransferUploadHandler', () => {
     });
 
     it('throws BadRequestException for disallowed mime type', async () => {
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildStorage() as never);
+      const handler = buildHandler();
       await expect(
         handler.execute({ ...baseCmd, fileBuffer: JPEG_BUFFER, mimetype: 'text/html', filename: 'x.html' }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException when receipt exceeds maximum size', async () => {
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildStorage() as never);
+      const handler = buildHandler();
       await expect(
         handler.execute({
           ...baseCmd,
@@ -236,7 +399,7 @@ describe('BankTransferUploadHandler', () => {
     it('throws NotFoundException when invoice not found', async () => {
       const prisma = buildPrisma();
       prisma.invoice.findFirst = jest.fn().mockResolvedValue(null);
-      const handler = new BankTransferUploadHandler(prisma as never, buildStorage() as never);
+      const handler = buildHandler(prisma, buildStorage());
       await expect(
         handler.execute({ ...baseCmd, fileBuffer: JPEG_BUFFER, mimetype: 'image/jpeg', filename: 'receipt.jpg' }),
       ).rejects.toThrow(NotFoundException);
@@ -244,7 +407,7 @@ describe('BankTransferUploadHandler', () => {
 
     it('throws ForbiddenException when client tries to pay another client\'s invoice (P0-5)', async () => {
       const prisma = buildPrisma({ clientId: 'other-client' });
-      const handler = new BankTransferUploadHandler(prisma as never, buildStorage() as never);
+      const handler = buildHandler(prisma, buildStorage());
       await expect(
         handler.execute({
           ...baseCmd,

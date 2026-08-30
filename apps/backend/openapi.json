@@ -2434,6 +2434,11 @@
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
           },
+          "idempotencyKey": {
+            "description": "Stable UUID for one reception sale attempt. Retries must reuse the same value.",
+            "example": "00000000-0000-4000-a000-000000000000",
+            "type": "string"
+          },
           "method": {
             "allOf": [
               {
@@ -2454,6 +2459,7 @@
           }
         },
         "required": [
+          "idempotencyKey",
           "packageId",
           "clientId",
           "branchId",
@@ -3648,6 +3654,11 @@
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
           },
+          "idempotencyKey": {
+            "description": "Stable UUID for this checkout attempt; reuse it when retrying the same request",
+            "example": "00000000-0000-4000-a000-000000000099",
+            "type": "string"
+          },
           "packageId": {
             "description": "SessionPackage UUID to purchase (must be a public, active package)",
             "example": "00000000-0000-0000-0000-000000000000",
@@ -3655,6 +3666,7 @@
           }
         },
         "required": [
+          "idempotencyKey",
           "packageId",
           "branchId"
         ],
@@ -16540,13 +16552,10 @@
               "schema": {
                 "properties": {
                   "amount": {
-                    "example": 100,
-                    "type": "number"
-                  },
-                  "clientId": {
-                    "example": "00000000-0000-0000-0000-000000000000",
-                    "format": "uuid",
-                    "type": "string"
+                    "description": "Transfer amount in integer halalas",
+                    "example": 10000,
+                    "minimum": 1,
+                    "type": "integer"
                   },
                   "invoiceId": {
                     "example": "00000000-0000-0000-0000-000000000000",
@@ -16562,7 +16571,6 @@
                 "required": [
                   "receipt",
                   "invoiceId",
-                  "clientId",
                   "amount"
                 ],
                 "type": "object"
@@ -30995,8 +31003,10 @@
               "schema": {
                 "properties": {
                   "amount": {
-                    "example": 250,
-                    "type": "number"
+                    "description": "Transfer amount in integer halalas",
+                    "example": 10000,
+                    "minimum": 1,
+                    "type": "integer"
                   },
                   "invoiceId": {
                     "format": "uuid",

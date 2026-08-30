@@ -20,7 +20,7 @@ import {
   ApiOkResponse, ApiResponse, ApiProperty, ApiPropertyOptional,
   ApiConsumes, ApiBody, ApiCreatedResponse,
 } from '@nestjs/swagger';
-import { IsInt, IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
@@ -48,8 +48,8 @@ export class MobileBankTransferUploadDto {
   @ApiProperty({ description: 'Invoice being paid', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() invoiceId!: string;
 
-  @ApiProperty({ description: 'Transfer amount', example: 100.00 })
-  @IsNumber() @Min(0) @Type(() => Number) amount!: number;
+  @ApiProperty({ description: 'Transfer amount in integer halalas', example: 10000 })
+  @IsInt() @Min(1) @Type(() => Number) amount!: number;
 }
 
 @ApiTags('Mobile Client / Payments')
@@ -139,7 +139,12 @@ export class MobileClientPaymentsController {
       properties: {
         receipt: { type: 'string', format: 'binary', description: 'Receipt image or PDF' },
         invoiceId: { type: 'string', format: 'uuid' },
-        amount: { type: 'number', example: 250 },
+        amount: {
+          type: 'integer',
+          minimum: 1,
+          description: 'Transfer amount in integer halalas',
+          example: 10000,
+        },
       },
     },
   })

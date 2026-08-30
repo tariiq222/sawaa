@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { EnsureBookingInvoiceHandler } from './ensure-booking-invoice.handler';
 
 const dec = (n: number) => new Prisma.Decimal(n);
@@ -11,6 +11,8 @@ const buildBooking = (overrides: Record<string, unknown> = {}) => ({
   employeeId: 'emp-1',
   price: dec(40000),
   discountedPrice: null,
+  isHistoricalImport: false,
+  status: BookingStatus.CONFIRMED,
   ...overrides,
 });
 
@@ -67,6 +69,21 @@ describe('EnsureBookingInvoiceHandler', () => {
       .rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.invoice.findUnique).not.toHaveBeenCalled();
     expect(createInvoice.execute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    BookingStatus.CANCEL_REQUESTED,
+    BookingStatus.CANCELLED,
+    BookingStatus.NO_SHOW,
+    BookingStatus.EXPIRED,
+  ])('rejects invoice creation or reuse when the booking is %s', async (status) => {
+    const { handler, prisma, createInvoice } = build({ status });
+    prisma.invoice.findUnique.mockResolvedValueOnce({ id: 'inv-1' });
+
+    await expect(handler.execute({ bookingId: 'booking-1' }))
+      .rejects.toThrow(`cannot accept payments (booking status: ${status})`);
+    expect(createInvoice.execute).not.toHaveBeenCalled();
+    expect(prisma.payment.aggregate).not.toHaveBeenCalled();
   });
 
   it('passes the stored discount as discountAmt', async () => {

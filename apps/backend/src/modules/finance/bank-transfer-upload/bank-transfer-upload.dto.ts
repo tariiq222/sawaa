@@ -1,4 +1,4 @@
-import { IsNumber, IsUUID, Min } from 'class-validator';
+import { IsInt, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -10,6 +10,6 @@ export class BankTransferUploadDto {
   @ApiProperty({ description: 'Invoice being paid', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() invoiceId!: string;
 
-  @ApiProperty({ description: 'Transfer amount', example: 100.00 })
-  @IsNumber() @Min(0) @Type(() => Number) amount!: number;
+  @ApiProperty({ description: 'Transfer amount in integer halalas', example: 10000 })
+  @IsInt() @Min(1) @Type(() => Number) amount!: number;
 }

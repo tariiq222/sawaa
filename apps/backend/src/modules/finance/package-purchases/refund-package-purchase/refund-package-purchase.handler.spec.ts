@@ -32,6 +32,12 @@ function buildTx(opts: { purchaseRow?: unknown; updateManyCount?: number } = {})
         .mockResolvedValue({ count: opts.updateManyCount ?? 1 }),
     },
     packageCredit: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+    packageCreditUsage: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    booking: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     invoice: {
       findFirst: jest.fn().mockResolvedValue({
         id: INVOICE_ID,
@@ -118,6 +124,42 @@ describe('RefundPackagePurchaseHandler', () => {
     const { handler } = buildHandler({ tx });
     await expect(handler.execute(cmd({ refundAmount: 1 }))).rejects.toThrow(BadRequestException);
     expect(tx.packagePurchase.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects every refund when a package credit funds a future non-cancelled booking', async () => {
+    const tx = buildTx();
+    tx.packageCreditUsage.findMany.mockResolvedValue([
+      { bookingId: '00000000-0000-4000-a000-000000000099' },
+    ]);
+    tx.booking.findFirst.mockResolvedValue({ id: '00000000-0000-4000-a000-000000000099' });
+    const { handler } = buildHandler({ tx });
+
+    await expect(handler.execute(cmd())).rejects.toThrow(BadRequestException);
+    expect(tx.packagePurchase.updateMany).not.toHaveBeenCalled();
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
+    expect(tx.refundRequest.create).not.toHaveBeenCalled();
+  });
+
+  it('allows a refund when the linked future booking is already cancelled', async () => {
+    const tx = buildTx();
+    tx.packageCreditUsage.findMany.mockResolvedValue([
+      { bookingId: '00000000-0000-4000-a000-000000000099' },
+    ]);
+    // The handler query filters CANCELLED bookings out, so no active future
+    // booking is returned.
+    tx.booking.findFirst.mockResolvedValue(null);
+    const { handler } = buildHandler({ tx });
+
+    await expect(handler.execute(cmd())).resolves.toMatchObject({
+      status: PackagePurchaseStatus.REFUNDED,
+    });
+    expect(tx.booking.findFirst).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: { in: ['00000000-0000-4000-a000-000000000099'] },
+        status: { not: 'CANCELLED' },
+      }),
+      select: { id: true },
+    });
   });
 
   it('400 when refundAmount is negative', async () => {

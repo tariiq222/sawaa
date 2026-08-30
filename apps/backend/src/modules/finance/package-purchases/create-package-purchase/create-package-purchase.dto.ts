@@ -10,6 +10,13 @@ import { PaymentMethod } from '@prisma/client';
  * the manual payment, and activates the credits immediately.
  */
 export class CreatePackagePurchaseDto {
+  @ApiProperty({
+    description: 'Stable UUID for one reception sale attempt. Retries must reuse the same value.',
+    example: '00000000-0000-4000-a000-000000000000',
+  })
+  @IsUUID()
+  idempotencyKey!: string;
+
   @ApiProperty({ description: 'Session package being sold', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() packageId!: string;
 
