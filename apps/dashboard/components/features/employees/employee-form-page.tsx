@@ -24,10 +24,10 @@ import {
 } from "@/components/features/employees/create/services-tab"
 import {
   createEmployeeSchema,
-  createEmployeeSchemaStatic,
   createEmployeeDefaults,
   type CreateEmployeeFormData,
 } from "@/components/features/employees/create/form-schema"
+import { createEmployeeEmailSchema } from "@/lib/schemas/employee.schema"
 import {
   useEmployee,
   useEmployeeAvailability,
@@ -38,21 +38,19 @@ import type { AvailabilitySlot } from "@/lib/types/employee"
 import { useLocale } from "@/components/locale-provider"
 import { useEmployeeForm } from "@/components/features/employees/use-employee-form"
 
-/* ─── Edit Schema ─── */
-
-const editEmployeeSchema = createEmployeeSchemaStatic.partial().extend({
-  isActive: z.boolean(),
-})
-
 /* ─── Types ─── */
 
-type Props =
-  | { mode: "create" }
-  | { mode: "edit"; employeeId: string }
+type Props = { mode: "create" } | { mode: "edit"; employeeId: string }
 
-const defaultSchedule: AvailabilitySlot[] = Array.from({ length: 7 }, (_, i) => ({
-  dayOfWeek: i, startTime: "09:00", endTime: "17:00", isActive: i <= 4,
-}))
+const defaultSchedule: AvailabilitySlot[] = Array.from(
+  { length: 7 },
+  (_, i) => ({
+    dayOfWeek: i,
+    startTime: "09:00",
+    endTime: "17:00",
+    isActive: i <= 4,
+  })
+)
 
 /* ─── Component ─── */
 
@@ -81,12 +79,27 @@ export function EmployeeFormPage(props: Props) {
   const [schedule, setSchedule] = useState<AvailabilitySlot[]>(defaultSchedule)
   const [breaks, setBreaksState] = useState<LocalBreak[]>([])
   const [draftServices, setDraftServices] = useState<DraftService[]>([])
-  const [vacation, setVacation] = useState<LocalVacation>({ enabled: false, startDate: "", endDate: "", reason: "" })
+  const [vacation, setVacation] = useState<LocalVacation>({
+    enabled: false,
+    startDate: "",
+    endDate: "",
+    reason: "",
+  })
   const [branchIds, setBranchIds] = useState<string[]>([])
 
   const translatedSchema = createEmployeeSchema(t)
+  const editEmployeeSchema = translatedSchema.partial().extend({
+    email: createEmployeeEmailSchema(t),
+    isActive: z.boolean(),
+  })
   const form = useForm<CreateEmployeeFormData>({
-      resolver: zodResolver(isEdit ? (editEmployeeSchema as unknown as ReturnType<typeof createEmployeeSchema>) : translatedSchema) as never,
+    resolver: zodResolver(
+      isEdit
+        ? (editEmployeeSchema as unknown as ReturnType<
+            typeof createEmployeeSchema
+          >)
+        : translatedSchema
+    ) as never,
     defaultValues: isEdit ? undefined : createEmployeeDefaults,
   })
 
@@ -118,10 +131,13 @@ export function EmployeeFormPage(props: Props) {
     return (
       <ListPageShell>
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-64 mt-2" />
+        <Skeleton className="mt-2 h-4 w-64" />
         <div className="mt-6 space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={`skeleton-${i}`} className="h-32 w-full rounded-xl" />
+            <Skeleton
+              key={`skeleton-${i}`}
+              className="h-32 w-full rounded-xl"
+            />
           ))}
         </div>
       </ListPageShell>
@@ -130,17 +146,25 @@ export function EmployeeFormPage(props: Props) {
 
   /* ─── Render ─── */
 
-  const title = isEdit ? t("employees.edit.pageTitle") : t("employees.create.pageTitle")
+  const title = isEdit
+    ? t("employees.edit.pageTitle")
+    : t("employees.create.pageTitle")
   const employeeDisplayName = employee
-    ? (employee.nameAr ?? `${employee.user.firstName} ${employee.user.lastName}`)
+    ? (employee.nameAr ??
+      `${employee.user.firstName} ${employee.user.lastName}`)
     : ""
-  const description = isEdit ? employeeDisplayName : t("employees.create.pageDesc")
+  const description = isEdit
+    ? employeeDisplayName
+    : t("employees.create.pageDesc")
 
   const breadcrumbItems = isEdit
     ? [
         { label: t("nav.dashboard"), href: "/" },
         { label: t("nav.employees"), href: "/employees" },
-        { label: employeeDisplayName, href: employeeId ? `/employees/${employeeId}` : undefined },
+        {
+          label: employeeDisplayName,
+          href: employeeId ? `/employees/${employeeId}` : undefined,
+        },
         { label: t("nav.edit") },
       ]
     : [
@@ -157,22 +181,28 @@ export function EmployeeFormPage(props: Props) {
       <form onSubmit={onSubmit} className="flex flex-col gap-6 pb-24">
         <Tabs defaultValue={initialTab} key={initialTab}>
           <TabsList>
-            <TabsTrigger value="basic">{t("employees.create.tabs.basic")}</TabsTrigger>
-            <TabsTrigger value="schedule">{t("employees.create.tabs.schedule")}</TabsTrigger>
-            <TabsTrigger value="services">{t("employees.create.tabs.services")}</TabsTrigger>
+            <TabsTrigger value="basic">
+              {t("employees.create.tabs.basic")}
+            </TabsTrigger>
+            <TabsTrigger value="schedule">
+              {t("employees.create.tabs.schedule")}
+            </TabsTrigger>
+            <TabsTrigger value="services">
+              {t("employees.create.tabs.services")}
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="basic" className="pt-4 space-y-4">
+          <TabsContent value="basic" className="space-y-4 pt-4">
             <BasicInfoTab
               form={form}
-              showEmail={!isEdit}
+              showEmail
+              emailRequired={!isEdit}
               employeeName={isEdit ? employeeDisplayName : undefined}
-              readOnlyEmail={isEdit ? employee?.user.email ?? null : null}
               showPublicToggle={!isEdit}
             />
           </TabsContent>
 
-          <TabsContent value="schedule" className="pt-4 space-y-4">
+          <TabsContent value="schedule" className="space-y-4 pt-4">
             <ScheduleTab
               schedule={schedule}
               onScheduleChange={setSchedule}
@@ -192,13 +222,28 @@ export function EmployeeFormPage(props: Props) {
           </TabsContent>
         </Tabs>
 
-        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/employees")}>
+        <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-3 border-t border-border bg-background px-4 py-3 sm:-mx-6 sm:flex-row sm:justify-end sm:px-6">
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="rounded-lg"
+            onClick={() => router.push("/employees")}
+          >
             {t("common.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="rounded-lg" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            size="lg"
+            className="rounded-lg"
+            disabled={isSubmitting}
+          >
             {isSubmitting
-              ? t(isEdit ? "employees.edit.submitting" : "employees.create.submitting")
+              ? t(
+                  isEdit
+                    ? "employees.edit.submitting"
+                    : "employees.create.submitting"
+                )
               : t(isEdit ? "employees.edit.submit" : "employees.create.submit")}
           </Button>
         </div>

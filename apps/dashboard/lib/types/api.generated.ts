@@ -25798,12 +25798,16 @@ export interface operations {
                     "application/json": {
                         /** @example ok */
                         db?: string;
+                        /** @example a1b2c3d */
+                        gitSha?: string;
                         /** @example ok */
                         queue?: string;
                         /** @example ok */
                         redis?: string;
                         /** @example ok */
                         status?: string;
+                        /** @example 2.1.9 */
+                        version?: string;
                     };
                 };
             };

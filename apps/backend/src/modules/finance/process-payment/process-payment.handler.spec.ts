@@ -1,4 +1,4 @@
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InvoiceStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { ProcessPaymentHandler } from './process-payment.handler';
@@ -15,9 +15,10 @@ const mockPayment = {
   id: 'pay-1',
   invoiceId: 'inv-1',
   amount: 230,
-  method: PaymentMethod.ONLINE_CARD,
+  method: PaymentMethod.CASH,
   status: 'COMPLETED',
   idempotencyKey: 'key-1',
+  gatewayRef: null as string | null,
   processedAt: new Date(),
 };
 
@@ -57,6 +58,62 @@ const buildPrisma = (tx = buildTx()) => ({
 
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 
+const ABORTED_TX_MESSAGE =
+  'current transaction is aborted, commands ignored until end of transaction block';
+
+function uniqueConstraintError() {
+  return new Prisma.PrismaClientKnownRequestError('unique violation', {
+    code: 'P2002',
+    clientVersion: 'test',
+  });
+}
+
+function abortedTxError() {
+  return new Error(ABORTED_TX_MESSAGE);
+}
+
+function abortablePaymentTx(opts: {
+  onCreate: () => Promise<never> | never;
+  findFirstBeforeCreate?: unknown;
+}) {
+  let aborted = false;
+  const throwIfAborted = () => {
+    if (aborted) throw abortedTxError();
+  };
+  const tx = buildTx({
+    invoice: {
+      findFirst: jest.fn(async () => {
+        throwIfAborted();
+        return mockInvoice;
+      }),
+      update: jest.fn(async () => {
+        throwIfAborted();
+      }),
+    },
+    payment: {
+      findFirst: jest.fn(async () => {
+        throwIfAborted();
+        return opts.findFirstBeforeCreate ?? null;
+      }),
+      create: jest.fn(async () => {
+        throwIfAborted();
+        aborted = true;
+        return opts.onCreate();
+      }),
+      aggregate: jest.fn(async () => {
+        throwIfAborted();
+        return { _sum: { amount: 0 } };
+      }),
+    },
+  });
+  return {
+    tx,
+    markAborted: () => {
+      aborted = true;
+    },
+  };
+}
+
 describe('ProcessPaymentHandler', () => {
   it('creates payment and marks invoice PAID when fully paid', async () => {
     // P1: ONLINE_CARD is no longer accepted by this endpoint (Moyasar webhook
@@ -65,7 +122,7 @@ describe('ProcessPaymentHandler', () => {
     const tx = buildTx({
       invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
       payment: {
-        findFirst: jest.fn().mockResolvedValue(mockPayment),
+        findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(mockPayment),
         // Aggregate is called twice now: (1) outstanding-balance check before
         // create, (2) post-create paid-vs-total check. First call: 0 paid so
@@ -131,27 +188,43 @@ describe('ProcessPaymentHandler', () => {
     expect(eventBus.publish).not.toHaveBeenCalled();
   });
 
-  it('returns existing payment when idempotencyKey unique constraint fires', async () => {
-    const uniqueError = new Prisma.PrismaClientKnownRequestError('unique violation', {
-      code: 'P2002',
-      clientVersion: 'test',
+  it('recovers a standalone P2002 race via a fresh transaction after rollback', async () => {
+    const { tx: failedTx, markAborted } = abortablePaymentTx({
+      onCreate: () => {
+        throw uniqueConstraintError();
+      },
     });
-    const tx = buildTx({
+    const recoveryTx = buildTx({
       invoice: {
         findFirst: jest.fn().mockResolvedValue(mockInvoice),
         update: jest.fn(),
       },
       payment: {
         findFirst: jest.fn().mockResolvedValue(mockPayment),
-        create: jest.fn().mockRejectedValue(uniqueError),
-        // P1: aggregate is called once now (outstanding check) before create.
-        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+        create: jest.fn(),
+        aggregate: jest.fn(),
       },
     });
-    const prisma = buildPrisma(tx);
-    const handler = new ProcessPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(tx)) } as never, buildEventBus() as never);
+    const eventBus = buildEventBus();
+    const rls = {
+      withTransaction: jest
+        .fn()
+        .mockImplementationOnce(async (fn: (inner: unknown) => Promise<unknown>) => {
+          try {
+            return await fn(failedTx);
+          } catch (err) {
+            markAborted();
+            throw err;
+          }
+        })
+        .mockImplementationOnce(async (fn: (inner: unknown) => Promise<unknown>) => fn(recoveryTx)),
+    };
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(failedTx) as never,
+      rls as never,
+      eventBus as never,
+    );
 
-    // P1: ONLINE_CARD is no longer allowed via this endpoint. Use CASH.
     const result = await handler.execute({
       invoiceId: 'inv-1',
       amount: 230,
@@ -159,12 +232,19 @@ describe('ProcessPaymentHandler', () => {
       idempotencyKey: 'key-1',
     });
 
-    expect(tx.payment.create).toHaveBeenCalled();
-    expect(tx.payment.findFirst).toHaveBeenCalledWith(
+    expect(rls.withTransaction).toHaveBeenCalledTimes(2);
+    expect(failedTx.payment.create).toHaveBeenCalledTimes(1);
+    expect(failedTx.payment.findFirst).toHaveBeenCalledTimes(1);
+    expect(recoveryTx.payment.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ idempotencyKey: 'key-1' }) }),
     );
-    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(recoveryTx.payment.create).not.toHaveBeenCalled();
+    expect(failedTx.invoice.update).not.toHaveBeenCalled();
+    expect(recoveryTx.invoice.update).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
     expect(result.id).toBe('pay-1');
+    expect(result.deferredEvents).toBeUndefined();
+    await expect(failedTx.payment.findFirst()).rejects.toThrow(ABORTED_TX_MESSAGE);
   });
 
   it('throws NotFoundException when invoice not found', async () => {
@@ -211,7 +291,7 @@ describe('ProcessPaymentHandler', () => {
     const tx = buildTx({
       invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
       payment: {
-        findFirst: jest.fn().mockResolvedValue(mockPayment),
+        findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(mockPayment),
         aggregate: jest.fn()
           .mockResolvedValueOnce({ _sum: { amount: 0 } })
@@ -587,5 +667,466 @@ describe('ProcessPaymentHandler', () => {
       const updateData = tx.invoice.update.mock.calls[0][0].data;
       expect(updateData.issuedAt).toBe(existing);
     });
+  });
+
+  it('replays an existing idempotencyKey even when the invoice is already fully paid', async () => {
+    const tx = buildTx({
+      invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(mockPayment),
+        create: jest.fn(),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 230 } }),
+      },
+    });
+    const rls = { withTransaction: jest.fn((fn: (inner: unknown) => unknown) => fn(tx)) };
+    const eventBus = buildEventBus();
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(tx) as never,
+      rls as never,
+      eventBus as never,
+    );
+
+    const result = await handler.execute({
+      invoiceId: 'inv-1',
+      amount: 230,
+      method: PaymentMethod.CASH,
+      idempotencyKey: 'key-1',
+    });
+
+    expect(tx.payment.create).not.toHaveBeenCalled();
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(result.id).toBe('pay-1');
+    expect(result.deferredEvents).toBeUndefined();
+  });
+
+  it('returns no deferred events when replaying inside a caller transaction', async () => {
+    const tx = buildTx({
+      invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(mockPayment),
+        create: jest.fn(),
+        aggregate: jest.fn(),
+      },
+    });
+    const eventBus = buildEventBus();
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(tx) as never,
+      { withTransaction: jest.fn() } as never,
+      eventBus as never,
+    );
+
+    const result = await handler.execute({
+      invoiceId: 'inv-1',
+      amount: 230,
+      method: PaymentMethod.CASH,
+      idempotencyKey: 'key-1',
+      transaction: tx as never,
+    });
+
+    expect(tx.payment.create).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(result.deferredEvents).toEqual([]);
+  });
+
+  it('uses the provided transaction client and does not open a nested transaction', async () => {
+    const tx = buildTx({
+      invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue(mockPayment),
+        aggregate: jest
+          .fn()
+          .mockResolvedValueOnce({ _sum: { amount: 0 } })
+          .mockResolvedValueOnce({ _sum: { amount: 230 } }),
+      },
+    });
+    const rls = { withTransaction: jest.fn((fn: (inner: unknown) => unknown) => fn(tx)) };
+    const eventBus = buildEventBus();
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(tx) as never,
+      rls as never,
+      eventBus as never,
+    );
+
+    const result = await handler.execute({
+      invoiceId: 'inv-1',
+      amount: 230,
+      method: PaymentMethod.CASH,
+      transaction: tx as never,
+    });
+
+    expect(rls.withTransaction).not.toHaveBeenCalled();
+    expect(tx.payment.create).toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(result.deferredEvents).toEqual([
+      expect.objectContaining({ eventName: 'finance.payment.completed' }),
+    ]);
+  });
+
+  it('does not publish DepositPaidEvent when joining an external transaction', async () => {
+    const depositInvoice = { ...mockInvoice, total: 23000 };
+    const tx = buildTx({
+      booking: { findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1' }) },
+      service: {
+        findFirst: jest.fn().mockResolvedValue({ depositEnabled: true, depositAmount: 5000 }),
+      },
+      invoice: { findFirst: jest.fn().mockResolvedValue(depositInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ ...mockPayment, amount: 5000 }),
+        aggregate: jest
+          .fn()
+          .mockResolvedValueOnce({ _sum: { amount: 0 } })
+          .mockResolvedValueOnce({ _sum: { amount: 5000 } }),
+      },
+    });
+    const eventBus = buildEventBus();
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(tx) as never,
+      { withTransaction: jest.fn() } as never,
+      eventBus as never,
+    );
+
+    const result = await handler.execute({
+      invoiceId: 'inv-1',
+      amount: 5000,
+      method: PaymentMethod.CASH,
+      transaction: tx as never,
+    });
+
+    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(result.deferredEvents).toEqual([
+      expect.objectContaining({ eventName: 'finance.payment.deposit_paid' }),
+    ]);
+  });
+
+  describe('same-invoice idempotent replay equivalence', () => {
+    const mismatchCases = [
+      {
+        name: 'amount',
+        existing: { amount: 100 },
+        request: { amount: 230, method: PaymentMethod.CASH },
+      },
+      {
+        name: 'method',
+        existing: { method: PaymentMethod.BANK_TRANSFER },
+        request: { amount: 230, method: PaymentMethod.CASH },
+      },
+      {
+        name: 'gatewayRef',
+        existing: { gatewayRef: 'ref-stored' },
+        request: { amount: 230, method: PaymentMethod.CASH, gatewayRef: 'ref-retry' },
+      },
+    ] as const;
+
+    it.each(mismatchCases)(
+      'pre-check rejects a same-invoice replay with a different $name',
+      async ({ existing, request }) => {
+        const tx = buildTx({
+          invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+          payment: {
+            findFirst: jest.fn().mockResolvedValue({ ...mockPayment, ...existing }),
+            create: jest.fn(),
+            aggregate: jest.fn(),
+          },
+        });
+        const eventBus = buildEventBus();
+        const handler = new ProcessPaymentHandler(
+          buildPrisma(tx) as never,
+          { withTransaction: jest.fn((fn: (inner: unknown) => unknown) => fn(tx)) } as never,
+          eventBus as never,
+        );
+
+        await expect(
+          handler.execute({
+            invoiceId: 'inv-1',
+            idempotencyKey: 'key-1',
+            ...request,
+          }),
+        ).rejects.toBeInstanceOf(ConflictException);
+
+        expect(tx.payment.create).not.toHaveBeenCalled();
+        expect(tx.invoice.update).not.toHaveBeenCalled();
+        expect(eventBus.publish).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(mismatchCases)(
+      'P2002 recovery rejects a same-invoice replay with a different $name',
+      async ({ existing, request }) => {
+        const { tx: failedTx, markAborted } = abortablePaymentTx({
+          onCreate: () => {
+            throw uniqueConstraintError();
+          },
+        });
+        const recoveryTx = buildTx({
+          invoice: {
+            findFirst: jest.fn().mockResolvedValue(mockInvoice),
+            update: jest.fn(),
+          },
+          payment: {
+            findFirst: jest.fn().mockResolvedValue({ ...mockPayment, ...existing }),
+            create: jest.fn(),
+            aggregate: jest.fn(),
+          },
+        });
+        const eventBus = buildEventBus();
+        const rls = {
+          withTransaction: jest
+            .fn()
+            .mockImplementationOnce(async (fn: (inner: unknown) => Promise<unknown>) => {
+              try {
+                return await fn(failedTx);
+              } catch (err) {
+                markAborted();
+                throw err;
+              }
+            })
+            .mockImplementationOnce(async (fn: (inner: unknown) => Promise<unknown>) => fn(recoveryTx)),
+        };
+        const handler = new ProcessPaymentHandler(
+          buildPrisma(failedTx) as never,
+          rls as never,
+          eventBus as never,
+        );
+
+        await expect(
+          handler.execute({
+            invoiceId: 'inv-1',
+            idempotencyKey: 'key-1',
+            ...request,
+          }),
+        ).rejects.toBeInstanceOf(ConflictException);
+
+        expect(rls.withTransaction).toHaveBeenCalledTimes(2);
+        expect(recoveryTx.payment.create).not.toHaveBeenCalled();
+        expect(failedTx.invoice.update).not.toHaveBeenCalled();
+        expect(recoveryTx.invoice.update).not.toHaveBeenCalled();
+        expect(eventBus.publish).not.toHaveBeenCalled();
+      },
+    );
+
+    it('pre-check replays when stored amount is Decimal and gatewayRef is null vs omitted', async () => {
+      const tx = buildTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue({
+            ...mockPayment,
+            amount: new Prisma.Decimal('230.00'),
+            gatewayRef: null,
+          }),
+          create: jest.fn(),
+          aggregate: jest.fn(),
+        },
+      });
+      const eventBus = buildEventBus();
+      const handler = new ProcessPaymentHandler(
+        buildPrisma(tx) as never,
+        { withTransaction: jest.fn((fn: (inner: unknown) => unknown) => fn(tx)) } as never,
+        eventBus as never,
+      );
+
+      const result = await handler.execute({
+        invoiceId: 'inv-1',
+        amount: 230,
+        method: PaymentMethod.CASH,
+        idempotencyKey: 'key-1',
+      });
+
+      expect(tx.payment.create).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
+      expect(result.id).toBe('pay-1');
+    });
+
+    it('P2002 recovery replays when stored amount is Decimal and gatewayRef is null vs omitted', async () => {
+      const { tx: failedTx, markAborted } = abortablePaymentTx({
+        onCreate: () => {
+          throw uniqueConstraintError();
+        },
+      });
+      const recoveryTx = buildTx({
+        invoice: {
+          findFirst: jest.fn().mockResolvedValue(mockInvoice),
+          update: jest.fn(),
+        },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue({
+            ...mockPayment,
+            amount: new Prisma.Decimal('230.00'),
+            gatewayRef: null,
+          }),
+          create: jest.fn(),
+          aggregate: jest.fn(),
+        },
+      });
+      const eventBus = buildEventBus();
+      const rls = {
+        withTransaction: jest
+          .fn()
+          .mockImplementationOnce(async (fn: (inner: unknown) => Promise<unknown>) => {
+            try {
+              return await fn(failedTx);
+            } catch (err) {
+              markAborted();
+              throw err;
+            }
+          })
+          .mockImplementationOnce(async (fn: (inner: unknown) => Promise<unknown>) => fn(recoveryTx)),
+      };
+      const handler = new ProcessPaymentHandler(
+        buildPrisma(failedTx) as never,
+        rls as never,
+        eventBus as never,
+      );
+
+      const result = await handler.execute({
+        invoiceId: 'inv-1',
+        amount: 230,
+        method: PaymentMethod.CASH,
+        idempotencyKey: 'key-1',
+      });
+
+      expect(rls.withTransaction).toHaveBeenCalledTimes(2);
+      expect(recoveryTx.payment.create).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
+      expect(result.id).toBe('pay-1');
+    });
+  });
+
+  it('rejects an idempotencyKey that already belongs to a different invoice', async () => {
+    const tx = buildTx({
+      invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue({ ...mockPayment, invoiceId: 'inv-other' }),
+        create: jest.fn(),
+        aggregate: jest.fn(),
+      },
+    });
+    const eventBus = buildEventBus();
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(tx) as never,
+      { withTransaction: jest.fn((fn: (inner: unknown) => unknown) => fn(tx)) } as never,
+      eventBus as never,
+    );
+
+    await expect(
+      handler.execute({
+        invoiceId: 'inv-1',
+        amount: 230,
+        method: PaymentMethod.CASH,
+        idempotencyKey: 'key-1',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(tx.payment.create).not.toHaveBeenCalled();
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+  });
+
+  it('rejects a standalone P2002 recovery when the committed payment belongs to another invoice', async () => {
+    const { tx: failedTx, markAborted } = abortablePaymentTx({
+      onCreate: () => {
+        throw uniqueConstraintError();
+      },
+    });
+    const recoveryTx = buildTx({
+      invoice: {
+        findFirst: jest.fn().mockResolvedValue(mockInvoice),
+        update: jest.fn(),
+      },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue({ ...mockPayment, invoiceId: 'inv-other' }),
+        create: jest.fn(),
+        aggregate: jest.fn(),
+      },
+    });
+    const eventBus = buildEventBus();
+    const rls = {
+      withTransaction: jest
+        .fn()
+        .mockImplementationOnce(async (fn: (inner: unknown) => Promise<unknown>) => {
+          try {
+            return await fn(failedTx);
+          } catch (err) {
+            markAborted();
+            throw err;
+          }
+        })
+        .mockImplementationOnce(async (fn: (inner: unknown) => Promise<unknown>) => fn(recoveryTx)),
+    };
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(failedTx) as never,
+      rls as never,
+      eventBus as never,
+    );
+
+    await expect(
+      handler.execute({
+        invoiceId: 'inv-1',
+        amount: 230,
+        method: PaymentMethod.CASH,
+        idempotencyKey: 'key-1',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(rls.withTransaction).toHaveBeenCalledTimes(2);
+    expect(recoveryTx.payment.create).not.toHaveBeenCalled();
+    expect(failedTx.invoice.update).not.toHaveBeenCalled();
+    expect(recoveryTx.invoice.update).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+  });
+
+  it('propagates P2002 on a joined transaction without nested recovery on the aborted client', async () => {
+    const { tx: failedTx, markAborted } = abortablePaymentTx({
+      onCreate: () => {
+        throw uniqueConstraintError();
+      },
+    });
+    const eventBus = buildEventBus();
+    const rls = { withTransaction: jest.fn() };
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(failedTx) as never,
+      rls as never,
+      eventBus as never,
+    );
+
+    await expect(
+      handler.execute({
+        invoiceId: 'inv-1',
+        amount: 230,
+        method: PaymentMethod.CASH,
+        idempotencyKey: 'key-1',
+        transaction: failedTx as never,
+      }),
+    ).rejects.toMatchObject({ code: 'P2002' });
+
+    markAborted();
+    expect(rls.withTransaction).not.toHaveBeenCalled();
+    expect(failedTx.payment.create).toHaveBeenCalledTimes(1);
+    expect(failedTx.invoice.update).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+    await expect(failedTx.payment.findFirst()).rejects.toThrow(ABORTED_TX_MESSAGE);
+  });
+
+  it('publishDeferredEvents emits the collected envelopes', async () => {
+    const eventBus = buildEventBus();
+    const handler = new ProcessPaymentHandler(
+      buildPrisma() as never,
+      { withTransaction: jest.fn() } as never,
+      eventBus as never,
+    );
+
+    await handler.publishDeferredEvents([
+      {
+        eventName: 'finance.payment.completed',
+        envelope: { payload: { paymentId: 'pay-1' } } as never,
+      },
+    ]);
+
+    expect(eventBus.publish).toHaveBeenCalledWith(
+      'finance.payment.completed',
+      expect.objectContaining({ payload: expect.objectContaining({ paymentId: 'pay-1' }) }),
+    );
   });
 });

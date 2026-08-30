@@ -6,8 +6,10 @@
  *      shows the booking price even though no payment exists.
  *   2. Clicking "unpaid" opens the dialog seeded with the outstanding amount.
  *   3. Entering a discount without a reason blocks submission.
- *   4. A cash amount records the payment and flips the cell to "مدفوع / Paid".
- *   5. A discount + reason + cash amount records the payment too.
+ *   4. The full payable amount records the payment through `/collect` and flips
+ *      the cell to "مدفوع / Paid".
+ *   5. A discount + reason recalculates and collects the full payable through
+ *      the same `/collect` request.
  *
  * Each test seeds its OWN client + unpaid booking so a recorded (irreversible)
  * payment in one test never collides with the row another test searches for.
@@ -64,10 +66,14 @@ test.beforeAll(async () => {
 })
 
 test.afterAll(async () => {
-  for (const id of createdBookings) await cleanupBooking(id, token).catch(() => undefined)
-  for (const id of createdClients) await cleanupClient(id, token).catch(() => undefined)
-  if (seededEmployee?.id) await cleanupEmployee(seededEmployee.id, token).catch(() => undefined)
-  if (seededService?.id) await cleanupService(seededService.id, token).catch(() => undefined)
+  for (const id of createdBookings)
+    await cleanupBooking(id, token).catch(() => undefined)
+  for (const id of createdClients)
+    await cleanupClient(id, token).catch(() => undefined)
+  if (seededEmployee?.id)
+    await cleanupEmployee(seededEmployee.id, token).catch(() => undefined)
+  if (seededService?.id)
+    await cleanupService(seededService.id, token).catch(() => undefined)
 })
 
 /** Seed a fresh client + unpaid booking + ISSUED invoice; return the client's full name. */
@@ -105,7 +111,9 @@ test.describe("Bookings - record payment from the unpaid cell", () => {
     await loginAs(page, "admin")
   })
 
-  test("unpaid booking shows the Unpaid badge and the price in the amount column", async ({ page }) => {
+  test("unpaid booking shows the Unpaid badge and the price in the amount column", async ({
+    page,
+  }) => {
     const name = await seedUnpaidBookingForFreshClient("badge")
     const row = await findSeededRow(page, name)
 
@@ -113,57 +121,89 @@ test.describe("Bookings - record payment from the unpaid cell", () => {
     await expect(row.getByText(/٢٠٠|200/).first()).toBeVisible()
   })
 
-  test("clicking Unpaid opens the dialog seeded with the outstanding total (230)", async ({ page }) => {
+  test("clicking Unpaid opens the dialog seeded with the outstanding total (230)", async ({
+    page,
+  }) => {
     const name = await seedUnpaidBookingForFreshClient("open")
     const row = await findSeededRow(page, name)
 
     // The Unpaid badge is a button that opens the record-payment dialog.
-    await row.getByRole("button", { name: /تسجيل دفعة|Record payment/i }).click()
+    await row
+      .getByRole("button", { name: /تسجيل دفعة|Record payment/i })
+      .click()
     const dialog = page.getByRole("dialog").first()
     await expect(dialog).toBeVisible()
     await expect(dialog.getByText(/٢٣٠|230/).first()).toBeVisible()
+    const amount = dialog.getByLabel(/المبلغ المدفوع|Amount paid/i).first()
+    await expect(amount).toHaveValue("230.00")
+    await expect(amount).toHaveAttribute("readonly", "")
   })
 
-  test("shows payment-method buttons, including the network method enabled in settings", async ({ page }) => {
+  test("shows payment-method buttons, including the network method enabled in settings", async ({
+    page,
+  }) => {
     const name = await seedUnpaidBookingForFreshClient("methods")
     const row = await findSeededRow(page, name)
-    await row.getByRole("button", { name: /تسجيل دفعة|Record payment/i }).click()
+    await row
+      .getByRole("button", { name: /تسجيل دفعة|Record payment/i })
+      .click()
 
     const dialog = page.getByRole("dialog").first()
     await expect(dialog.getByRole("radio", { name: /نقد|Cash/i })).toBeVisible()
     // mada was enabled in beforeAll; its button must render.
-    await expect(dialog.getByRole("radio", { name: /شبكة|Network|mada/i })).toBeVisible()
+    await expect(
+      dialog.getByRole("radio", { name: /شبكة|Network|mada/i })
+    ).toBeVisible()
   })
 
-  test("entering a discount without a reason keeps the submit button disabled", async ({ page }) => {
+  test("entering a discount without a reason keeps the submit button disabled", async ({
+    page,
+  }) => {
     const name = await seedUnpaidBookingForFreshClient("disc")
     const row = await findSeededRow(page, name)
-    await row.getByRole("button", { name: /تسجيل دفعة|Record payment/i }).click()
+    await row
+      .getByRole("button", { name: /تسجيل دفعة|Record payment/i })
+      .click()
 
     const dialog = page.getByRole("dialog").first()
-    await dialog.getByLabel(/خصم|Discount/i).first().fill("20")
+    await dialog
+      .getByLabel(/خصم|Discount/i)
+      .first()
+      .fill("20")
+    await expect(
+      dialog.getByLabel(/المبلغ المدفوع|Amount paid/i).first()
+    ).toHaveValue("207.00")
 
     await expect(
-      dialog.getByRole("button", { name: /تسجيل الدفعة|Record payment/i }),
+      dialog.getByRole("button", { name: /تسجيل الدفعة|Record payment/i })
     ).toBeDisabled()
     // The discount-reason field appears once a discount is entered. Target the
     // <label> by its `for` attribute to avoid matching the placeholder text too.
-    await expect(dialog.locator("label[for='pay-discount-reason']")).toBeVisible()
+    await expect(
+      dialog.locator("label[for='pay-discount-reason']")
+    ).toBeVisible()
   })
 
   test("recording a cash payment flips the cell to Paid", async ({ page }) => {
     const name = await seedUnpaidBookingForFreshClient("cash")
     const row = await findSeededRow(page, name)
-    await row.getByRole("button", { name: /تسجيل دفعة|Record payment/i }).click()
+    await row
+      .getByRole("button", { name: /تسجيل دفعة|Record payment/i })
+      .click()
 
     const dialog = page.getByRole("dialog").first()
     await expect(dialog).toBeVisible()
 
     const [res] = await Promise.all([
       page.waitForResponse(
-        (r) => r.url().includes("/dashboard/finance/payments") && r.request().method() === "POST",
+        (r) =>
+          r.url().includes("/dashboard/finance/bookings/") &&
+          r.url().includes("/collect") &&
+          r.request().method() === "POST"
       ),
-      dialog.getByRole("button", { name: /تسجيل الدفعة|Record payment/i }).click(),
+      dialog
+        .getByRole("button", { name: /تسجيل الدفعة|Record payment/i })
+        .click(),
     ])
     expect(res.ok()).toBeTruthy()
     // The successful POST closes the dialog; the cache invalidation then flips the
@@ -171,33 +211,47 @@ test.describe("Bookings - record payment from the unpaid cell", () => {
     // the full nav+search risks exceeding the test timeout.
     await expect(dialog).toBeHidden({ timeout: 10_000 })
     const paidRow = page.getByRole("row").filter({ hasText: name }).first()
-    await expect(paidRow.getByText(/مدفوع|Paid/i)).toBeVisible({ timeout: 15_000 })
+    await expect(paidRow.getByText(/مدفوع|Paid/i)).toBeVisible({
+      timeout: 15_000,
+    })
   })
 
-  test("recording a payment with a discount + reason succeeds", async ({ page }) => {
+  test("recording a payment with a discount + reason succeeds", async ({
+    page,
+  }) => {
     const name = await seedUnpaidBookingForFreshClient("dr")
     const row = await findSeededRow(page, name)
-    await row.getByRole("button", { name: /تسجيل دفعة|Record payment/i }).click()
+    await row
+      .getByRole("button", { name: /تسجيل دفعة|Record payment/i })
+      .click()
 
     const dialog = page.getByRole("dialog").first()
-    await dialog.getByLabel(/خصم|Discount/i).first().fill("30")
+    await dialog
+      .getByLabel(/خصم|Discount/i)
+      .first()
+      .fill("30")
 
     // Open the reason combobox and pick the first option.
     await dialog.getByRole("combobox").last().click()
     await page.getByRole("option").first().click()
 
-    const [discountRes, paymentRes] = await Promise.all([
-      page.waitForResponse((r) => r.url().includes("/discount") && r.request().method() === "PATCH"),
+    const [collectRes] = await Promise.all([
       page.waitForResponse(
-        (r) => r.url().includes("/dashboard/finance/payments") && r.request().method() === "POST",
+        (r) =>
+          r.url().includes("/dashboard/finance/bookings/") &&
+          r.url().includes("/collect") &&
+          r.request().method() === "POST"
       ),
-      dialog.getByRole("button", { name: /تسجيل الدفعة|Record payment/i }).click(),
+      dialog
+        .getByRole("button", { name: /تسجيل الدفعة|Record payment/i })
+        .click(),
     ])
-    expect(discountRes.ok()).toBeTruthy()
-    expect(paymentRes.ok()).toBeTruthy()
+    expect(collectRes.ok()).toBeTruthy()
     await expect(dialog).toBeHidden({ timeout: 10_000 })
     const paidRow = page.getByRole("row").filter({ hasText: name }).first()
-    await expect(paidRow.getByText(/مدفوع|Paid/i)).toBeVisible({ timeout: 15_000 })
+    await expect(paidRow.getByText(/مدفوع|Paid/i)).toBeVisible({
+      timeout: 15_000,
+    })
   })
 })
 
@@ -206,7 +260,9 @@ async function findSeededRow(page: Page, clientName: string) {
   await page.goto("/bookings", { waitUntil: "domcontentloaded" })
   await expectCurrentPath(page, "/bookings")
   await expectNoAppCrash(page)
-  await expect(page.getByRole("heading", { name: /الحجوزات|Bookings/i }).first()).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: /الحجوزات|Bookings/i }).first()
+  ).toBeVisible()
 
   const allTab = page
     .getByRole("tab", { name: /^الكل$|^All$/ })
@@ -216,9 +272,14 @@ async function findSeededRow(page: Page, clientName: string) {
   await allTab.click()
   // Let the "all" re-fetch settle before typing, so the input isn't remounted
   // mid-keystroke (which silently drops the typed value).
-  await page.waitForResponse(
-    (r) => r.url().includes("/bookings") && r.request().method() === "GET" && r.ok(),
-  ).catch(() => {})
+  await page
+    .waitForResponse(
+      (r) =>
+        r.url().includes("/bookings") &&
+        r.request().method() === "GET" &&
+        r.ok()
+    )
+    .catch(() => {})
 
   const search = page.getByPlaceholder(/بحث|Search/i).first()
   await expect(search).toBeVisible({ timeout: 15_000 })
@@ -227,13 +288,15 @@ async function findSeededRow(page: Page, clientName: string) {
   // Assert the value actually landed before waiting on the debounced fetch.
   await expect(search).toHaveValue(clientName)
   // Wait for the debounced, filtered re-fetch (URL carries the search term).
-  await page.waitForResponse(
-    (r) =>
-      r.url().includes("/bookings") &&
-      r.url().includes("search=") &&
-      r.request().method() === "GET" &&
-      r.ok(),
-  ).catch(() => {})
+  await page
+    .waitForResponse(
+      (r) =>
+        r.url().includes("/bookings") &&
+        r.url().includes("search=") &&
+        r.request().method() === "GET" &&
+        r.ok()
+    )
+    .catch(() => {})
 
   const row = page.getByRole("row").filter({ hasText: clientName }).first()
   await expect(row).toBeVisible({ timeout: 20_000 })
@@ -249,10 +312,17 @@ async function ensureDiscountReason(bearerToken: string) {
   }).catch(() => undefined)
 }
 
-async function apiPost(path: string, bearerToken: string, body: Record<string, unknown>) {
+async function apiPost(
+  path: string,
+  bearerToken: string,
+  body: Record<string, unknown>
+) {
   const res = await fetch(`${API_BASE}/api/v1${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${bearerToken}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${bearerToken}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(body),
   })
   if (!res.ok) {
@@ -262,10 +332,17 @@ async function apiPost(path: string, bearerToken: string, body: Record<string, u
   return res.json()
 }
 
-async function apiPatch(path: string, bearerToken: string, body: Record<string, unknown>) {
+async function apiPatch(
+  path: string,
+  bearerToken: string,
+  body: Record<string, unknown>
+) {
   const res = await fetch(`${API_BASE}/api/v1${path}`, {
     method: "PATCH",
-    headers: { Authorization: `Bearer ${bearerToken}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${bearerToken}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(body),
   })
   if (!res.ok) {

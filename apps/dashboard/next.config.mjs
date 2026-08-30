@@ -1,12 +1,13 @@
-import { withSentryConfig } from '@sentry/nextjs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { withSentryConfig } from "@sentry/nextjs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 
-const appDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(appDir, "../..");
-const shouldUploadSentryArtifacts = process.env.CI === "true" && Boolean(process.env.SENTRY_AUTH_TOKEN);
+const appDir = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = path.resolve(appDir, "../..")
+const shouldUploadSentryArtifacts =
+  process.env.CI === "true" && Boolean(process.env.SENTRY_AUTH_TOKEN)
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production"
 
 // 'unsafe-eval' is only needed by Next.js dev HMR. The dashboard ships no code
 // that evals (verified: no eval/new Function/wasm in source or deps), so drop it
@@ -18,7 +19,7 @@ const scriptSrc = [
   "https://cdn.moyasar.com https://*.moyasar.com https://static.cloudflareinsights.com",
 ]
   .filter(Boolean)
-  .join(" ");
+  .join(" ")
 
 const securityHeaders = [
   {
@@ -40,9 +41,15 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
-];
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+]
 
 // Frontman (dev-only browser AI agent) serves its client UI from app.frontman.sh,
 // talks to its server over wss://api.frontman.sh, and embeds the dashboard in a
@@ -60,12 +67,12 @@ const frontmanCsp = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
-].join("; ");
+].join("; ")
 
 const frontmanHeaders = [
   { key: "Content-Security-Policy", value: frontmanCsp },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
-];
+]
 
 // Frontman's web preview is a same-origin iframe of the dashboard; both
 // X-Frame-Options DENY and frame-ancestors 'none' would block even that.
@@ -73,12 +80,45 @@ const frontmanHeaders = [
 const appSecurityHeaders = isProduction
   ? securityHeaders
   : securityHeaders.map((h) => {
-      if (h.key === "X-Frame-Options") return { key: h.key, value: "SAMEORIGIN" };
+      if (h.key === "X-Frame-Options")
+        return { key: h.key, value: "SAMEORIGIN" }
       if (h.key === "Content-Security-Policy") {
-        return { key: h.key, value: h.value.replace("frame-ancestors 'none'", "frame-ancestors 'self'") };
+        return {
+          key: h.key,
+          value: h.value.replace(
+            "frame-ancestors 'none'",
+            "frame-ancestors 'self'"
+          ),
+        }
       }
-      return h;
-    });
+      return h
+    })
+
+/**
+ * Turn NEXT_PUBLIC_API_URL into the backend origin used by the `/api/proxy`
+ * rewrite. Accepts `http://host:port`, `http://host:port/api/v1`, and either
+ * form with a trailing slash. Empty/missing values fall back to local backend.
+ *
+ * Exported so unit tests can lock the rewrite contract without importing the
+ * Sentry-wrapped default export's runtime side effects beyond module eval.
+ */
+export function normalizeBackendBaseUrl(apiUrl) {
+  const fallback = "http://localhost:5200"
+  if (typeof apiUrl !== "string") return fallback
+  const trimmed = apiUrl.trim().replace(/\/+$/, "")
+  if (!trimmed) return fallback
+  return trimmed.replace(/\/api\/v\d+$/, "") || fallback
+}
+
+export function dashboardApiProxyRewrite(
+  apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5200/api/v1"
+) {
+  const backendBase = normalizeBackendBaseUrl(apiUrl)
+  return {
+    source: "/api/proxy/:path*",
+    destination: `${backendBase}/api/v1/:path*`,
+  }
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -91,15 +131,19 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: !isProduction },
   typescript: { ignoreBuildErrors: !isProduction },
   serverExternalPackages: [
-    '@opentelemetry/instrumentation',
-    '@opentelemetry/api-logs',
-    '@sentry/node',
-    '@prisma/instrumentation',
-    'require-in-the-middle',
-    'import-in-the-middle',
+    "@opentelemetry/instrumentation",
+    "@opentelemetry/api-logs",
+    "@sentry/node",
+    "@prisma/instrumentation",
+    "require-in-the-middle",
+    "import-in-the-middle",
   ],
   experimental: {
-    optimizePackageImports: ['@hugeicons/core-free-icons', 'recharts', '@sawaa/ui'],
+    optimizePackageImports: [
+      "@hugeicons/core-free-icons",
+      "recharts",
+      "@sawaa/ui",
+    ],
   },
   // Dev autologin hint values. Renamed away from NEXT_PUBLIC_DEV_PASSWORD —
   // the previous name made the variable look like a real credential and would
@@ -108,10 +152,14 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_DEV_AUTOLOGIN_EMAIL: isProduction
       ? ""
-      : (process.env.NEXT_PUBLIC_DEV_AUTOLOGIN_EMAIL ?? process.env.NEXT_PUBLIC_DEV_EMAIL ?? ""),
+      : (process.env.NEXT_PUBLIC_DEV_AUTOLOGIN_EMAIL ??
+        process.env.NEXT_PUBLIC_DEV_EMAIL ??
+        ""),
     NEXT_PUBLIC_DEV_AUTOLOGIN_TOKEN: isProduction
       ? ""
-      : (process.env.NEXT_PUBLIC_DEV_AUTOLOGIN_TOKEN ?? process.env.NEXT_PUBLIC_DEV_PASSWORD ?? ""),
+      : (process.env.NEXT_PUBLIC_DEV_AUTOLOGIN_TOKEN ??
+        process.env.NEXT_PUBLIC_DEV_PASSWORD ??
+        ""),
   },
   async headers() {
     const frontmanRouteHeaders = isProduction
@@ -125,7 +173,7 @@ const nextConfig = {
             source: "/frontman/:path*",
             headers: frontmanHeaders,
           },
-        ];
+        ]
     return [
       {
         source: "/(.*)",
@@ -134,7 +182,12 @@ const nextConfig = {
       ...frontmanRouteHeaders,
       {
         source: "/_next/static/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
       },
       {
         source: "/_next/image",
@@ -143,22 +196,17 @@ const nextConfig = {
     ]
   },
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5200/api/v1"
-    // Strip /api/proxy prefix then forward to backend
-    const backendBase = apiUrl.replace(/\/api\/v\d+$/, "")
-    return [
-      {
-        source: "/api/proxy/:path*",
-        destination: `${backendBase}/api/v1/:path*`,
-      },
-    ]
+    // Same-origin `/api/proxy/:path*` → backend `/api/v1/:path*`.
+    // Normalization lives in dashboardApiProxyRewrite so a trailing slash or
+    // missing `/api/v1` suffix cannot produce `/api/v1/api/v1/...`.
+    return [dashboardApiProxyRewrite()]
   },
 }
 
 export default withSentryConfig(nextConfig, {
-  org: 'webvue',
-  project: 'sawaa-dashboard',
-  url: 'https://errors.webvue.pro/',
+  org: "webvue",
+  project: "sawaa-dashboard",
+  url: "https://errors.webvue.pro/",
   silent: true,
   disableLogger: true,
   useRunAfterProductionCompileHook: shouldUploadSentryArtifacts,
@@ -167,7 +215,9 @@ export default withSentryConfig(nextConfig, {
   release: {
     create: shouldUploadSentryArtifacts,
     finalize: shouldUploadSentryArtifacts,
-    setCommits: shouldUploadSentryArtifacts ? { auto: true, ignoreMissing: true } : false,
+    setCommits: shouldUploadSentryArtifacts
+      ? { auto: true, ignoreMissing: true }
+      : false,
   },
   authToken: process.env.SENTRY_AUTH_TOKEN,
-});
+})

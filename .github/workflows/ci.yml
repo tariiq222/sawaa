@@ -99,8 +99,8 @@ jobs:
           JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
           JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
           CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
-         MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
-         AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
           ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
           EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
@@ -141,7 +141,7 @@ jobs:
         # committed snapshot differs from what the current source produces.
         # Runs here (not in the dashboard job) because only this job has the
         # full backend env wired up. `@sawaa/shared` must be built first
-        # because the snapshot step loads the compiled `dist/main.js`, which
+        # because the snapshot step loads the compiled `dist/src/main.js`, which
         # resolves the shared package via its built CJS entry.
         run: |
           cd packages/shared && node ../../node_modules/typescript/bin/tsc -p tsconfig.json && cd ../..
@@ -205,11 +205,20 @@ jobs:
           pnpm --filter=backend prisma:generate
           cd packages/shared && node ../../node_modules/typescript/bin/tsc -p tsconfig.json
 
-      - name: Generate API client
-        # Best-effort regen: requires a running backend to fetch /api/docs-json,
-        # which this job does not spin up. The actual drift gate runs in the
-        # backend job (where Nest can boot) — see "openapi snapshot drift" step.
-        run: pnpm openapi:sync || true
+      - name: Generate dashboard types from committed OpenAPI snapshot
+        # Deterministic: openapi-typescript reads committed apps/backend/openapi.json.
+        # Do NOT call `pnpm openapi:sync` here — that fetches a live backend
+        # (/api/docs-json) which this job does not start. Snapshot-vs-source
+        # drift is gated in the backend job ("openapi snapshot drift").
+        run: |
+          pnpm --filter=dashboard run openapi:generate
+          if ! git diff --exit-code -- apps/dashboard/lib/types/api.generated.ts; then
+            echo "::error::apps/dashboard/lib/types/api.generated.ts drifted from committed apps/backend/openapi.json. Run 'pnpm --filter=dashboard run openapi:generate' locally and commit."
+            exit 1
+          fi
+
+      - name: dashboard API drift
+        run: node scripts/check-dashboard-api-drift.mjs
 
       - name: Lint
         run: pnpm --filter=dashboard lint
@@ -315,9 +324,13 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter=dashboard exec playwright install --with-deps chromium
 
+      - name: Build backend production binary
+        run: pnpm --filter=backend build
+
       - name: Start backend and wait for health
         run: |
-          pnpm --filter=backend exec nest start > apps/backend/backend-smoke.log 2>&1 &
+          echo "Starting production-equivalent backend: node dist/src/main.js"
+          pnpm --filter=backend exec node dist/src/main.js > apps/backend/backend-smoke.log 2>&1 &
           echo $! > apps/backend/backend-smoke.pid
 
           for i in $(seq 1 90); do

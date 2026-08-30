@@ -14,6 +14,9 @@
 // placeholders). Param NAMES don't have to match the spec — `{id}` vs
 // `{bookingId}` compare equal — but every literal segment must.
 //
+// Dashboard `apps/dashboard/lib/api/*` calls are covered separately by
+// scripts/check-dashboard-api-drift.mjs (literal api.<method> paths only).
+//
 // Usage: node scripts/check-api-client-drift.mjs   (run from anywhere)
 
 import fs from 'node:fs';

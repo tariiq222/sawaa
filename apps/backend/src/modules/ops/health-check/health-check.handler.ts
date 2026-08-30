@@ -8,9 +8,22 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
+import packageJson from '../../../../package.json';
+
+export interface BuildMetadata {
+  version: string;
+  gitSha: string;
+}
+
+export const getBuildMetadata = (): BuildMetadata => ({
+  version: process.env.APP_VERSION?.trim() || packageJson.version || 'unknown',
+  gitSha: process.env.GIT_SHA?.trim() || 'unknown',
+});
 
 export interface HealthCheckResult {
   status: 'ok' | 'error';
+  version: string;
+  gitSha: string;
   info: Record<string, { status: string; [key: string]: unknown }>;
   error: Record<string, { status: string; message?: string }>;
   details: Record<string, { status: string; [key: string]: unknown }>;
@@ -28,12 +41,14 @@ export class HealthCheckHandler {
   ) {}
 
   async execute(): Promise<HealthCheckResult> {
-    return this.health.check([
+    const result = await this.health.check([
       () => this.prismaIndicator.pingCheck('database', this.prisma),
       () => this.checkRedis(),
       () => this.checkBullMq(),
       () => this.checkMinio(),
-    ]) as Promise<HealthCheckResult>;
+    ]);
+
+    return { ...result, ...getBuildMetadata() } as unknown as HealthCheckResult;
   }
 
   private async checkRedis(): Promise<HealthIndicatorResult> {

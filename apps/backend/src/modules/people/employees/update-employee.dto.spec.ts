@@ -56,6 +56,18 @@ describe('UpdateEmployeeDto', () => {
     expect(errors.some((e) => e.property === 'email')).toBe(true);
   });
 
+  it('trims and lowercases a valid email', async () => {
+    const dto = plainToInstance(UpdateEmployeeDto, { email: '  Khalid@Example.COM  ' });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+    expect(dto.email).toBe('khalid@example.com');
+  });
+
+  it('rejects a whitespace-only email after trim', async () => {
+    const errors = await validateDto({ email: '   ' });
+    expect(errors.some((e) => e.property === 'email')).toBe(true);
+  });
+
   it('normalizes a local-format Saudi phone to E.164', async () => {
     const dto = plainToInstance(UpdateEmployeeDto, { phone: '0501234567' });
     const errors = await validate(dto);

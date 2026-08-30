@@ -31,7 +31,13 @@ import { useRecordPaymentMutations } from "@/hooks/use-payments"
 import { useDiscountReasons } from "@/hooks/use-discount-reasons"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
 import { showApiError } from "@/lib/mutation-helpers"
-import { sarToHalalas, halalasToSar } from "@/lib/money"
+import { halalasToSar } from "@/lib/money"
+import {
+  moneyInputToHalalas,
+  normalizeMoneyInput,
+  parseMoneyInput,
+} from "@/lib/money-input"
+import type { CollectBookingPaymentPayload } from "@/lib/api/payments"
 import type { Booking, BookingInvoice } from "@/lib/types/booking"
 
 interface RecordPaymentDialogProps {
@@ -48,23 +54,61 @@ const RECORD_PAYMENT_METHOD_LABEL_KEYS: Record<PayMethod, string> = {
   TABBY: "bookings.recordPayment.method.tabby",
 }
 
-export function RecordPaymentDialog({ booking, open, onOpenChange }: RecordPaymentDialogProps) {
+function createIdempotencyKey(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function")
+    return globalThis.crypto.randomUUID()
+
+  const bytes = new Uint8Array(16)
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    globalThis.crypto.getRandomValues(bytes)
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256)
+    }
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("")
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+export function RecordPaymentDialog({
+  booking,
+  open,
+  onOpenChange,
+}: RecordPaymentDialogProps) {
   const { t } = useLocale()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("bookings.recordPayment.title")}</DialogTitle>
-          <DialogDescription>{t("bookings.recordPayment.description")}</DialogDescription>
+          <DialogDescription>
+            {t("bookings.recordPayment.description")}
+          </DialogDescription>
         </DialogHeader>
         {/* Remount on open so the form state seeds fresh from the booking — no reset effect. */}
-        {open && <RecordPaymentForm booking={booking} onClose={() => onOpenChange(false)} />}
+        {open && (
+          <RecordPaymentForm
+            key={booking.id}
+            booking={booking}
+            onClose={() => onOpenChange(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   )
 }
 
-function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: () => void }) {
+function RecordPaymentForm({
+  booking,
+  onClose,
+}: {
+  booking: Booking
+  onClose: () => void
+}) {
   const { t } = useLocale()
   const { collectMut, ensureInvoiceMut } = useRecordPaymentMutations()
   const { data: reasons = [] } = useDiscountReasons()
@@ -78,13 +122,17 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
     ensureInvoiceMut
       .mutateAsync(booking.id)
       .then(setEnsured)
-      .catch((err) => showApiError(err, { fallback: t("bookings.recordPayment.errorToast"), t }))
+      .catch((err) =>
+        showApiError(err, {
+          fallback: t("bookings.recordPayment.errorToast"),
+          t,
+        })
+      )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const invoice = ensured
   // Outstanding before any discount entered in this dialog.
-  const baseOutstandingSar = halalasToSar(invoice?.outstanding ?? 0)
   const subtotalSar = halalasToSar(invoice?.subtotal ?? 0)
   const vatRate = invoice?.vatRate ?? 0
 
@@ -96,45 +144,79 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
   const activeMethod = resolveActiveMethod(paymentSettings, method)
   const [discountSar, setDiscountSar] = useState("")
   const [discountReasonId, setDiscountReasonId] = useState("")
-  // null = follow the payable total automatically; a string = user typed an explicit amount.
-  const [amountOverride, setAmountOverride] = useState<string | null>(null)
+  // One key belongs to one user operation. It intentionally survives a failed
+  // request so a retry replays the same server-side idempotent operation.
+  const [idempotencyKey, setIdempotencyKey] = useState(createIdempotencyKey)
 
-  const discountNum = Number(discountSar) || 0
+  const subtotalHalalas = invoice?.subtotal ?? 0
+  const baseOutstandingHalalas = invoice?.outstanding ?? 0
+  const parsedDiscount = parseMoneyInput(discountSar)
+  const discountHalalas =
+    discountSar.trim() === "" ? 0 : moneyInputToHalalas(discountSar)
+  const hasDiscount = discountHalalas !== null && discountHalalas > 0
+  const discountAmountValid =
+    discountSar.trim() === "" ||
+    (parsedDiscount !== null &&
+      discountHalalas !== null &&
+      discountHalalas <= subtotalHalalas)
+  const fullDiscount =
+    discountAmountValid && hasDiscount && discountHalalas === subtotalHalalas
+  const discountValid =
+    discountAmountValid && (!hasDiscount || discountReasonId !== "")
+
   // The discount applies to the net subtotal, so VAT is recomputed on the
   // reduced base — matching the backend. payable = (subtotal − discount) × (1 + vatRate).
-  const payableSar = useMemo(() => {
-    if (discountNum <= 0) return baseOutstandingSar
-    const net = Math.max(0, subtotalSar - discountNum)
-    return Math.round(net * (1 + vatRate) * 100) / 100
-  }, [discountNum, baseOutstandingSar, subtotalSar, vatRate])
+  const payableHalalas = useMemo(() => {
+    if (!hasDiscount) return baseOutstandingHalalas
+    const netSubtotalHalalas = Math.max(
+      0,
+      subtotalHalalas - (discountHalalas ?? 0)
+    )
+    // Match the backend's integer-halalas VAT calculation: round VAT once,
+    // then add it to the reduced subtotal.
+    return netSubtotalHalalas + Math.round(netSubtotalHalalas * vatRate)
+  }, [
+    baseOutstandingHalalas,
+    discountHalalas,
+    hasDiscount,
+    subtotalHalalas,
+    vatRate,
+  ])
+  const payableSar = halalasToSar(payableHalalas)
 
-  // Until the user edits the amount, it tracks the payable total so a discount
-  // immediately reduces what's collected (no stale "exceeds outstanding" error).
-  const amountSar = amountOverride ?? String(payableSar)
-  const amountNum = Number(amountSar) || 0
-  const hasDiscount = discountNum > 0
-  const discountValid = !hasDiscount || discountReasonId !== ""
-  const amountValid = amountNum > 0 && amountNum <= payableSar
+  // Collection is always for the complete post-discount payable. The amount is
+  // displayed for clarity, but is intentionally not an independent input.
+  const amountSar = payableSar.toFixed(2)
+  const payableValid = fullDiscount || payableHalalas > 0
   const canSubmit =
     !!invoice &&
     discountValid &&
-    amountValid &&
+    payableValid &&
     !collectMut.isPending &&
     !ensureInvoiceMut.isPending
 
   async function onSubmit() {
-    if (!invoice) return
+    if (!invoice || !discountValid || !payableValid) return
+
+    const payload: CollectBookingPaymentPayload = {
+      method: activeMethod,
+      idempotencyKey,
+    }
+    if (hasDiscount && discountHalalas !== null) {
+      payload.discountAmt = discountHalalas
+      payload.discountReasonId = discountReasonId
+    }
+    // The backend treats an omitted amount after a full discount as a
+    // successful zero-money collection and returns payment: null.
+    if (!fullDiscount) payload.amount = payableHalalas
+
     try {
       await collectMut.mutateAsync({
         bookingId: booking.id,
-        method: activeMethod,
-        amount: sarToHalalas(amountNum),
-        ...(hasDiscount && {
-          discountAmt: sarToHalalas(discountNum),
-          discountReasonId,
-        }),
+        ...payload,
       })
       toast.success(t("bookings.recordPayment.successToast"))
+      setIdempotencyKey(createIdempotencyKey())
       onClose()
     } catch (err) {
       showApiError(err, { fallback: t("bookings.recordPayment.errorToast"), t })
@@ -144,99 +226,119 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
   return (
     <>
       <DialogBody>
-          {!invoice ? (
-            <p className="text-sm text-muted-foreground">
-              {ensureInvoiceMut.isError
-                ? t("bookings.recordPayment.noInvoice")
-                : t("bookings.recordPayment.preparingInvoice")}
-            </p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
-                <span className="text-sm text-muted-foreground">{t("bookings.recordPayment.outstanding")}</span>
-                <span className="text-sm font-semibold tabular-nums">
-                  <FormattedCurrency amount={invoice.outstanding} locale="ar" decimals={2} />
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label>{t("bookings.recordPayment.method")}</Label>
-                <PaymentMethodPicker
-                  paymentSettings={paymentSettings}
-                  method={method}
-                  onChange={setMethod}
-                  labelKeys={RECORD_PAYMENT_METHOD_LABEL_KEYS}
-                  ariaLabel={t("bookings.recordPayment.method")}
+        {!invoice ? (
+          <p className="text-sm text-muted-foreground">
+            {ensureInvoiceMut.isError
+              ? t("bookings.recordPayment.noInvoice")
+              : t("bookings.recordPayment.preparingInvoice")}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
+              <span className="text-sm text-muted-foreground">
+                {t("bookings.recordPayment.outstanding")}
+              </span>
+              <span className="text-sm font-semibold tabular-nums">
+                <FormattedCurrency
+                  amount={invoice.outstanding}
+                  locale="ar"
+                  decimals={2}
                 />
-              </div>
+              </span>
+            </div>
 
+            <div className="flex flex-col gap-2">
+              <Label>{t("bookings.recordPayment.method")}</Label>
+              <PaymentMethodPicker
+                paymentSettings={paymentSettings}
+                method={method}
+                onChange={setMethod}
+                labelKeys={RECORD_PAYMENT_METHOD_LABEL_KEYS}
+                ariaLabel={t("bookings.recordPayment.method")}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pay-discount">
+                {t("bookings.recordPayment.discount")}
+              </Label>
+              <Input
+                id="pay-discount"
+                type="text"
+                inputMode="decimal"
+                min={0}
+                step={0.01}
+                max={subtotalSar}
+                placeholder="0.00"
+                className="tabular-nums"
+                value={discountSar}
+                onChange={(e) =>
+                  setDiscountSar(normalizeMoneyInput(e.target.value))
+                }
+              />
+            </div>
+
+            {hasDiscount && (
               <div className="flex flex-col gap-2">
-                <Label htmlFor="pay-discount">{t("bookings.recordPayment.discount")}</Label>
-                <Input
-                  id="pay-discount"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  max={subtotalSar}
-                  placeholder="0.00"
-                  className="tabular-nums"
-                  value={discountSar}
-                  onChange={(e) => setDiscountSar(e.target.value)}
-                />
-              </div>
-
-              {hasDiscount && (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="pay-discount-reason">{t("bookings.recordPayment.discountReason")}</Label>
-                  <Select value={discountReasonId} onValueChange={setDiscountReasonId}>
-                    <SelectTrigger id="pay-discount-reason">
-                      <SelectValue placeholder={t("bookings.recordPayment.discountReasonPlaceholder")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reasons.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.labelAr}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!discountValid && (
-                    <p className="text-xs text-destructive">{t("bookings.recordPayment.reasonRequired")}</p>
-                  )}
-                </div>
-              )}
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="pay-amount">
-                  {t("bookings.recordPayment.amount")}
-                  <span className="ms-1 font-numeric text-muted-foreground tabular-nums">
-                    ({payableSar.toFixed(2)})
-                  </span>
+                <Label htmlFor="pay-discount-reason">
+                  {t("bookings.recordPayment.discountReason")}
                 </Label>
-                <Input
-                  id="pay-amount"
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  max={payableSar}
-                  placeholder="0.00"
-                  className="tabular-nums"
-                  value={amountSar}
-                  onChange={(e) => setAmountOverride(e.target.value)}
-                />
-                {amountNum > payableSar && (
-                  <p className="text-xs text-destructive">{t("bookings.recordPayment.amountTooHigh")}</p>
+                <Select
+                  value={discountReasonId}
+                  onValueChange={setDiscountReasonId}
+                >
+                  <SelectTrigger id="pay-discount-reason">
+                    <SelectValue
+                      placeholder={t(
+                        "bookings.recordPayment.discountReasonPlaceholder"
+                      )}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reasons.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.labelAr}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!discountValid && (
+                  <p className="text-xs text-destructive">
+                    {t("bookings.recordPayment.reasonRequired")}
+                  </p>
                 )}
               </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pay-amount">
+                {t("bookings.recordPayment.amount")}
+                <span className="ms-1 font-numeric text-muted-foreground tabular-nums">
+                  ({payableSar.toFixed(2)})
+                </span>
+              </Label>
+              <Input
+                id="pay-amount"
+                type="text"
+                className="tabular-nums"
+                value={amountSar}
+                readOnly
+              />
             </div>
-          )}
+          </div>
+        )}
       </DialogBody>
 
       <DialogFooter>
         <Button type="button" variant="outline" size="sm" onClick={onClose}>
           {t("bookings.recordPayment.cancel")}
         </Button>
-        <Button type="button" size="sm" disabled={!canSubmit} onClick={onSubmit}>
+        <Button
+          type="button"
+          size="sm"
+          disabled={!canSubmit}
+          onClick={onSubmit}
+        >
           {collectMut.isPending || ensureInvoiceMut.isPending
             ? t("bookings.recordPayment.submitting")
             : t("bookings.recordPayment.submit")}

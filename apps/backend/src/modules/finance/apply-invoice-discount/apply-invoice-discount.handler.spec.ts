@@ -10,12 +10,20 @@ type Tx = {
   coupon: { updateMany: jest.Mock };
 };
 
-function makeHandler(tx: Tx, moyasar: { getPaymentStatus: jest.Mock } = { getPaymentStatus: jest.fn() }) {
-  const prisma = {} as never;
+function makeHandler(
+  tx: Tx,
+  moyasar: { getPaymentStatus: jest.Mock } = { getPaymentStatus: jest.fn() },
+) {
+  const prisma = {
+    payment: {
+      findMany: jest.fn((args?: unknown) => tx.payment.findMany(args)),
+    },
+  };
   const rlsTransaction = {
-    withTransaction: (cb: (tx: Tx) => unknown) => cb(tx),
-  } as never;
-  return new ApplyInvoiceDiscountHandler(prisma, rlsTransaction, moyasar as never);
+    withTransaction: jest.fn((cb: (inner: Tx) => unknown) => cb(tx)),
+  };
+  const handler = new ApplyInvoiceDiscountHandler(prisma as never, rlsTransaction as never, moyasar as never);
+  return { handler, rlsTransaction };
 }
 
 const baseInvoice = {
@@ -50,7 +58,7 @@ function makeTx(overrides: Partial<Tx> = {}): Tx {
 describe('ApplyInvoiceDiscountHandler', () => {
   it('recomputes VAT and total on a 2000-halala discount', async () => {
     const tx = makeTx();
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
 
     await handler.execute({
       invoiceId: 'inv-1',
@@ -70,7 +78,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
   });
 
   it('requires a reason when discount is positive', async () => {
-    const handler = makeHandler(makeTx());
+    const { handler } = makeHandler(makeTx());
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000 }),
     ).rejects.toThrow(BadRequestException);
@@ -78,7 +86,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
 
   it('clears the discount and audit fields when amount is 0', async () => {
     const tx = makeTx();
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
 
     await handler.execute({ invoiceId: 'inv-1', appliedBy: 'user-1', discountAmt: 0 });
 
@@ -93,7 +101,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
 
   it('throws 404 when invoice is missing', async () => {
     const tx = makeTx({ invoice: { findFirst: jest.fn().mockResolvedValue(null), update: jest.fn() } });
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
     await expect(
       handler.execute({ invoiceId: 'x', appliedBy: 'u', discountAmt: 0 }),
     ).rejects.toThrow(NotFoundException);
@@ -106,7 +114,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
         update: jest.fn(),
       },
     });
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'r' }),
     ).rejects.toThrow(BadRequestException);
@@ -119,7 +127,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
         delete: jest.fn(),
       },
     });
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'r' }),
     ).rejects.toThrow(BadRequestException);
@@ -134,7 +142,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
         delete: jest.fn(),
       },
     });
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'r' }),
     ).rejects.toThrow(BadRequestException);
@@ -148,7 +156,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
       },
     });
     const moyasar = { getPaymentStatus: jest.fn().mockResolvedValue({ status: 'paid' }) };
-    const handler = makeHandler(tx, moyasar);
+    const { handler } = makeHandler(tx, moyasar);
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'reason-1' }),
     ).rejects.toThrow(BadRequestException);
@@ -163,7 +171,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
       },
     });
     const moyasar = { getPaymentStatus: jest.fn().mockResolvedValue({ status: 'initiated' }) };
-    const handler = makeHandler(tx, moyasar);
+    const { handler } = makeHandler(tx, moyasar);
 
     await handler.execute({ invoiceId: 'inv-1', appliedBy: 'user-1', discountAmt: 2000, discountReasonId: 'reason-1' });
 
@@ -181,7 +189,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
       },
     });
     const moyasar = { getPaymentStatus: jest.fn().mockRejectedValue(new Error('Moyasar 500')) };
-    const handler = makeHandler(tx, moyasar);
+    const { handler } = makeHandler(tx, moyasar);
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'reason-1' }),
     ).rejects.toThrow(BadRequestException);
@@ -195,14 +203,14 @@ describe('ApplyInvoiceDiscountHandler', () => {
         delete: jest.fn(),
       },
     });
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'reason-1' }),
     ).rejects.toThrow(BadRequestException);
   });
 
   it('rejects a discount larger than the subtotal', async () => {
-    const handler = makeHandler(makeTx());
+    const { handler } = makeHandler(makeTx());
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 99999, discountReasonId: 'reason-1' }),
     ).rejects.toThrow(BadRequestException);
@@ -210,7 +218,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
 
   it('rejects an inactive or unknown reason', async () => {
     const tx = makeTx({ discountReason: { findFirst: jest.fn().mockResolvedValue(null) } });
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'gone' }),
     ).rejects.toThrow(BadRequestException);
@@ -231,7 +239,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
         deleteMany: jest.fn().mockResolvedValue({ count: 3 }),
       },
     });
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
 
     await handler.execute({
       invoiceId: 'inv-1',
@@ -259,7 +267,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
 
   it('P1-6: does not touch coupons when the invoice has no redemptions', async () => {
     const tx = makeTx();
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
 
     await handler.execute({
       invoiceId: 'inv-1',
@@ -279,7 +287,7 @@ describe('ApplyInvoiceDiscountHandler', () => {
         deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     });
-    const handler = makeHandler(tx);
+    const { handler } = makeHandler(tx);
 
     await handler.execute({ invoiceId: 'inv-1', appliedBy: 'user-1', discountAmt: 0 });
 
@@ -291,5 +299,47 @@ describe('ApplyInvoiceDiscountHandler', () => {
     const data = tx.invoice.update.mock.calls[0][0].data;
     expect(Number(data.discountAmt)).toBe(0);
     expect(Number(data.total)).toBe(11500); // full VAT restored
+  });
+
+  it('does not call Moyasar when joining an outer transaction — PENDING fails closed', async () => {
+    const tx = makeTx({
+      payment: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'p1', status: 'PENDING', gatewayRef: 'g1' }]),
+        delete: jest.fn(),
+      },
+    });
+    const moyasar = { getPaymentStatus: jest.fn() };
+    const { handler, rlsTransaction } = makeHandler(tx, moyasar);
+
+    await expect(
+      handler.execute({
+        invoiceId: 'inv-1',
+        appliedBy: 'u',
+        discountAmt: 1000,
+        discountReasonId: 'reason-1',
+        transaction: tx as never,
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(tx.payment.delete).not.toHaveBeenCalled();
+  });
+
+  it('uses the provided transaction and does not open a nested one', async () => {
+    const tx = makeTx();
+    const { handler, rlsTransaction } = makeHandler(tx);
+
+    await handler.execute({
+      invoiceId: 'inv-1',
+      appliedBy: 'user-1',
+      discountAmt: 2000,
+      discountReasonId: 'reason-1',
+      transaction: tx as never,
+    });
+
+    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
+    expect(tx.invoice.update).toHaveBeenCalled();
   });
 });

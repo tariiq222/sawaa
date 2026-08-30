@@ -1,9 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { createHash } from 'crypto';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
+import { RlsTransactionService } from '../../../infrastructure/database';
 import { CollectBookingPaymentDto } from './collect-booking-payment.dto';
 import { EnsureBookingInvoiceHandler } from '../ensure-booking-invoice/ensure-booking-invoice.handler';
 import { ApplyInvoiceDiscountHandler } from '../apply-invoice-discount/apply-invoice-discount.handler';
-import { ProcessPaymentHandler } from '../process-payment/process-payment.handler';
+import {
+  ProcessPaymentHandler,
+  type DeferredPaymentEvent,
+} from '../process-payment/process-payment.handler';
 
 /**
  * Command = DTO + booking context + acting user.
@@ -39,11 +44,52 @@ export interface CollectBookingPaymentResult {
   payment: CollectBookingPaymentPaymentShape | null;
 }
 
+type CollectTxOutcome = {
+  result: CollectBookingPaymentResult;
+  deferredEvents: DeferredPaymentEvent[];
+};
+
+type CollectionIdempotencyRecord = {
+  invoiceId: string;
+  requestFingerprint: string;
+  paymentId: string | null;
+  payment: {
+    id: string;
+    amount: Prisma.Decimal | number;
+    method: PaymentMethod;
+    status: PaymentStatus;
+  } | null;
+};
+
+/**
+ * sha256 of canonical non-PII collect fields. Same key + same invoice + same
+ * fingerprint replays; any other combination is a conflict.
+ */
+export function collectRequestFingerprint(input: {
+  invoiceId: string;
+  method: PaymentMethod;
+  amount?: number;
+  discountAmt?: number;
+  discountReasonId?: string;
+  note?: string;
+}): string {
+  const canonical = JSON.stringify({
+    invoiceId: input.invoiceId,
+    method: input.method,
+    amount: input.amount ?? null,
+    discountAmt: typeof input.discountAmt === 'number' && input.discountAmt > 0 ? input.discountAmt : null,
+    discountReasonId: input.discountReasonId ?? null,
+    note: input.note ?? null,
+  });
+  return createHash('sha256').update(canonical).digest('hex');
+}
+
 /**
  * Single-command reception collection: ensure invoice → apply optional manual
- * discount → record the payment. Does NOT change any underlying handler — it
- * only composes existing finance slices so a manual collection stays one HTTP
- * call.
+ * discount → record the payment. Discount mutation, payment mutation, the
+ * idempotency reservation, and the rereads that drive the charge / response
+ * share one interactive transaction so a failed payment cannot leave a
+ * persisted discount or a stuck key behind.
  *
  * Manual/statistical methods only. ONLINE_CARD must come through the Moyasar
  * webhook; COUPON is a redemption flow (ApplyCouponHandler), not a payment.
@@ -56,6 +102,7 @@ export class CollectBookingPaymentHandler {
     private readonly ensureBookingInvoice: EnsureBookingInvoiceHandler,
     private readonly applyInvoiceDiscount: ApplyInvoiceDiscountHandler,
     private readonly processPayment: ProcessPaymentHandler,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(cmd: CollectBookingPaymentCommand): Promise<CollectBookingPaymentResult> {
@@ -75,106 +122,193 @@ export class CollectBookingPaymentHandler {
       );
     }
 
-    // ── 1. Ensure invoice ────────────────────────────────────────────────────
-    // Inherits historical / no-client / zero-price / already-paid rejections.
-    // We use the returned invoice shape as the source of truth for `id` and
-    // `outstanding` after any recomputation below.
+    // ── 1. Ensure invoice (outside the atomic tx) ────────────────────────────
+    // CreateInvoiceHandler cannot join our transaction. Materialising a missing
+    // DRAFT invoice is idempotent and is not the discount-without-payment
+    // failure mode this slice closes.
     const ensured = await this.ensureBookingInvoice.execute({ bookingId: cmd.bookingId });
     const invoiceId = ensured.id;
+    const fingerprint = cmd.idempotencyKey
+        ? collectRequestFingerprint({
+          invoiceId,
+          method: cmd.method,
+          amount: cmd.amount,
+          discountAmt: cmd.discountAmt,
+          discountReasonId: cmd.discountReasonId,
+          note: cmd.note,
+        })
+      : null;
 
-    // ── 2. Optional manual discount ──────────────────────────────────────────
-    // ApplyInvoiceDiscountHandler recomputes subtotal/VAT/total and (when
-    // discountAmt > 0) writes discountReason + discountAppliedBy + note. We
-    // skip the call entirely when no discountAmt is provided — a "clear" path
-    // would also need a reason and we never want to silently wipe a stored
-    // discount on a normal collection.
-    if (typeof cmd.discountAmt === 'number' && cmd.discountAmt > 0) {
-      await this.applyInvoiceDiscount.execute({
-        invoiceId,
-        appliedBy: cmd.appliedBy,
-        discountAmt: cmd.discountAmt,
-        discountReasonId: cmd.discountReasonId,
-        note: cmd.note,
+    let outcome: CollectTxOutcome;
+    try {
+      outcome = await this.rlsTransaction.withTransaction(async (tx): Promise<CollectTxOutcome> => {
+        if (cmd.idempotencyKey && fingerprint) {
+          const existing = await this.findCollectionRecord(tx, cmd.idempotencyKey);
+          if (existing) {
+            return this.replayOrConflict(existing, cmd, invoiceId, fingerprint, tx);
+          }
+
+          // Let P2002 escape this transaction. PostgreSQL aborts the tx on a
+          // unique violation; any follow-up read on `tx` would fail with
+          // "current transaction is aborted". Recovery runs after rollback.
+          await tx.paymentCollectionIdempotency.create({
+            data: {
+              idempotencyKey: cmd.idempotencyKey,
+              invoiceId,
+              requestFingerprint: fingerprint,
+            },
+          });
+        }
+
+        // ── 2. Optional manual discount (same tx as the payment) ───────────────
+        if (typeof cmd.discountAmt === 'number' && cmd.discountAmt > 0) {
+          await this.applyInvoiceDiscount.execute({
+            invoiceId,
+            appliedBy: cmd.appliedBy,
+            discountAmt: cmd.discountAmt,
+            discountReasonId: cmd.discountReasonId,
+            note: cmd.note,
+            transaction: tx,
+          });
+        }
+
+        // ── 3. Re-read the invoice shape against the open tx ───────────────────
+        const invoice = await this.ensureBookingInvoice.execute({
+          bookingId: cmd.bookingId,
+          transaction: tx,
+        });
+
+        // ── 4. Skip processPayment when nothing is owed ────────────────────────
+        // A 100% discount leaves outstanding <= 0; we still return success so the
+        // dashboard can show "fully discounted" without inventing a zero-amount
+        // payment row. The discount write above commits with this transaction.
+        if (invoice.outstanding <= 0) {
+          return {
+            result: this.toResult(cmd.bookingId, invoice, null),
+            deferredEvents: [],
+          };
+        }
+
+        // ── 5. Record the manual payment in the same transaction ───────────────
+        const payment = await this.processPayment.execute({
+          invoiceId,
+          amount: cmd.amount ?? invoice.outstanding,
+          method: cmd.method,
+          idempotencyKey: cmd.idempotencyKey,
+          transaction: tx,
+        });
+
+        if (cmd.idempotencyKey) {
+          await tx.paymentCollectionIdempotency.update({
+            where: { idempotencyKey: cmd.idempotencyKey },
+            data: { paymentId: payment.id },
+          });
+        }
+
+        // ── 6. Re-read AFTER the payment so the response is post-collection ────
+        const settled = await this.ensureBookingInvoice.execute({
+          bookingId: cmd.bookingId,
+          transaction: tx,
+        });
+
+        return {
+          result: this.toResult(cmd.bookingId, settled, {
+            id: payment.id,
+            amount: payment.amount,
+            method: payment.method,
+            status: payment.status as PaymentStatus,
+          }),
+          deferredEvents: this.readDeferredEvents(payment),
+        };
+      });
+    } catch (err) {
+      if (!this.isUniqueConstraintError(err) || !cmd.idempotencyKey || !fingerprint) {
+        throw err;
+      }
+      // Fresh transaction: the failed collect tx has already rolled back.
+      outcome = await this.rlsTransaction.withTransaction(async (tx) => {
+        const raced = await this.findCollectionRecord(tx, cmd.idempotencyKey!);
+        if (!raced) throw err;
+        return this.replayOrConflict(raced, cmd, invoiceId, fingerprint, tx);
       });
     }
 
-    // ── 3. Re-read the invoice shape (idempotent) ────────────────────────────
-    // ensureBookingInvoice is the only source of truth for the post-discount
-    // total + outstanding — a recomputed discount changes the outstanding, so
-    // re-running shape() guarantees we charge against the freshly-recomputed
-    // balance and not a stale snapshot from step 1.
-    const invoice = await this.ensureBookingInvoice.execute({ bookingId: cmd.bookingId });
+    // Publish only after the outer collect transaction committed. A reread or
+    // commit failure above never reaches here, so no payment/deposit events leak.
+    // Replay/conflict recovery returns deferredEvents: [] and must not emit.
+    await this.processPayment.publishDeferredEvents(outcome.deferredEvents);
+    return outcome.result;
+  }
 
-    // ── 4. Skip processPayment when nothing is owed ──────────────────────────
-    // A 100% discount leaves outstanding <= 0; we still return success so the
-    // dashboard can show "fully discounted" without inventing a zero-amount
-    // payment row.
-    if (invoice.outstanding <= 0) {
-      return {
-        bookingId: cmd.bookingId,
-        invoice: {
-          id: invoice.id,
-          subtotal: invoice.subtotal,
-          vatRate: invoice.vatRate,
-          total: invoice.total,
-          outstanding: invoice.outstanding,
-          status: invoice.status,
-        },
-        payment: null,
-      };
-    }
+  private isUniqueConstraintError(err: unknown): err is Prisma.PrismaClientKnownRequestError {
+    return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
+  }
 
-    // ── 5. Record the manual payment ────────────────────────────────────────
-    // When amount is omitted, the caller asked for "the full outstanding after
-    // discount" — pass it through unchanged. ProcessPaymentHandler still
-    // enforces the SAR-vs-halalas tripwire + amount>0 + amount<=outstanding +
-    // Moyasar in-flight / deposit invariants, so this slice stays a thin
-    // composer and never re-implements payment math.
-    //
-    // `cmd.amount ?? invoice.outstanding` is computed against the PRE-payment
-    // read (step 3). The pre-payment read is the only correct source for the
-    // charge amount: the post-payment outstanding is by definition smaller
-    // (or zero), so charging against it would silently undercharge every
-    // partial collection. We re-read the invoice shape in step 6 solely to
-    // populate the response truth, never to drive the charge.
-    const payment = await this.processPayment.execute({
-      invoiceId,
-      amount: cmd.amount ?? invoice.outstanding,
-      method: cmd.method,
-      idempotencyKey: cmd.idempotencyKey,
+  private async findCollectionRecord(
+    tx: Prisma.TransactionClient,
+    idempotencyKey: string,
+  ): Promise<CollectionIdempotencyRecord | null> {
+    return tx.paymentCollectionIdempotency.findUnique({
+      where: { idempotencyKey },
+      include: { payment: true },
     });
+  }
 
-    // ── 6. Re-read the invoice shape AFTER the payment was recorded ─────────
-    // The first ensure (step 1) and the second ensure (step 3) both run before
-    // any payment row is written — they reflect pre-payment outstanding, which
-    // is what the caller already knows (and what we charge against). Returning
-    // either of them in the response would lie: the dashboard booking-details
-    // and completion screens now surface `invoice.outstanding` and
-    // `invoice.status`, so the response must reflect the post-collection state.
-    // ensureBookingInvoice is idempotent and recomputes outstanding by
-    // summing COMPLETED payments, so this third read returns the truth
-    // without any extra Prisma plumbing in this slice.
-    const settled = await this.ensureBookingInvoice.execute({ bookingId: cmd.bookingId });
-
-    return {
+  private async replayOrConflict(
+    existing: CollectionIdempotencyRecord,
+    cmd: CollectBookingPaymentCommand,
+    invoiceId: string,
+    fingerprint: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<CollectTxOutcome> {
+    if (existing.invoiceId !== invoiceId) {
+      throw new ConflictException('Idempotency key already used for a different invoice');
+    }
+    if (existing.requestFingerprint !== fingerprint) {
+      throw new ConflictException('Idempotency key already used with a different request');
+    }
+    const invoice = await this.ensureBookingInvoice.execute({
       bookingId: cmd.bookingId,
+      transaction: tx,
+    });
+    return {
+      result: this.toResult(cmd.bookingId, invoice, existing.payment),
+      deferredEvents: [],
+    };
+  }
+
+  private readDeferredEvents(payment: { deferredEvents?: DeferredPaymentEvent[] }): DeferredPaymentEvent[] {
+    return Array.isArray(payment.deferredEvents) ? payment.deferredEvents : [];
+  }
+
+  private toResult(
+    bookingId: string,
+    invoice: CollectBookingPaymentInvoiceShape,
+    payment: {
+      id: string;
+      amount: Prisma.Decimal | number;
+      method: PaymentMethod;
+      status: PaymentStatus;
+    } | null,
+  ): CollectBookingPaymentResult {
+    return {
+      bookingId,
       invoice: {
-        id: settled.id,
-        subtotal: settled.subtotal,
-        vatRate: settled.vatRate,
-        total: settled.total,
-        outstanding: settled.outstanding,
-        status: settled.status,
+        id: invoice.id,
+        subtotal: invoice.subtotal,
+        vatRate: invoice.vatRate,
+        total: invoice.total,
+        outstanding: invoice.outstanding,
+        status: invoice.status,
       },
-      // Prisma Decimal → integer halalas at the read boundary. Math.round
-      // absorbs any fractional remnant and the safe-integer math is enforced
-      // by decimalToHalalas on the ensure-side.
-      payment: {
-        id: payment.id,
-        amount: Math.round(Number(payment.amount)),
-        method: payment.method,
-        status: payment.status,
-      },
+      payment: payment
+        ? {
+            id: payment.id,
+            amount: Math.round(Number(payment.amount)),
+            method: payment.method,
+            status: payment.status,
+          }
+        : null,
     };
   }
 }

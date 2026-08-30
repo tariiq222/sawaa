@@ -64,6 +64,10 @@
     "path": "/api/v1/dashboard/bookings"
   },
   {
+    "method": "POST",
+    "path": "/api/v1/dashboard/finance/bookings/{bookingId}/collect"
+  },
+  {
     "method": "PATCH",
     "path": "/api/v1/dashboard/finance/invoices/{id}/discount"
   },

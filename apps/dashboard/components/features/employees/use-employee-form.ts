@@ -54,7 +54,7 @@ interface UseEmployeeFormOptions {
   employeeId: string | undefined
   employee:
     | {
-        user: { firstName: string; lastName: string }
+        user: { firstName: string; lastName: string; email?: string | null }
         title?: string | null
         nameAr?: string | null
         specialty?: string | null
@@ -135,6 +135,7 @@ export function useEmployeeForm({
       title: employee.title ?? "",
       nameEn: `${employee.user.firstName} ${employee.user.lastName}`.trim(),
       nameAr: employee.nameAr ?? "",
+      email: employee.user.email ?? "",
       phone: anyEmp.phone ?? "",
       gender: anyEmp.gender ?? undefined,
       employmentType: anyEmp.employmentType ?? "FULL_TIME",
@@ -179,15 +180,17 @@ export function useEmployeeForm({
     if (!existingServices?.length || hydratedRef.current.services) return
     hydratedRef.current.services = true
     setDraftServices(
-      existingServices.filter((ps) => ps.service).map((ps: EmployeeService) => ({
-        key: ps.id,
-        serviceId: ps.serviceId,
-        serviceName: ps.service!.nameAr || ps.service!.nameEn,
-        bufferMinutes: ps.bufferMinutes ?? 0,
-        isActive: ps.isActive,
-        availableTypes: ps.availableTypes ?? [],
-        types: toDisplayTypeConfigs(ps.serviceTypes ?? []),
-      }))
+      existingServices
+        .filter((ps) => ps.service)
+        .map((ps: EmployeeService) => ({
+          key: ps.id,
+          serviceId: ps.serviceId,
+          serviceName: ps.service!.nameAr || ps.service!.nameEn,
+          bufferMinutes: ps.bufferMinutes ?? 0,
+          isActive: ps.isActive,
+          availableTypes: ps.availableTypes ?? [],
+          types: toDisplayTypeConfigs(ps.serviceTypes ?? []),
+        }))
     )
   }, [existingServices, setDraftServices])
 
@@ -207,6 +210,7 @@ export function useEmployeeForm({
         title: data.title || undefined,
         nameEn: data.nameEn || undefined,
         nameAr: data.nameAr || undefined,
+        email: data.email || undefined,
         phone: data.phone || undefined,
         gender: data.gender,
         employmentType: data.employmentType,
@@ -316,7 +320,9 @@ export function useEmployeeForm({
     if (stepErrors.length > 0) {
       // Not a full success — surface the failed step names so the user re-submits them.
       const failedList = [...new Set(stepErrors)].join(t("common.listSep"))
-      toast.error(t("employees.form.partialFailure").replace("{list}", failedList))
+      toast.error(
+        t("employees.form.partialFailure").replace("{list}", failedList)
+      )
     } else {
       toast.success(t("employees.edit.success"))
     }
@@ -367,7 +373,9 @@ export function useEmployeeForm({
         if (main) targetBranches = [main.id]
       }
       await Promise.all(
-        targetBranches.map((branchId) => assignEmployeeToBranch(branchId, newId)),
+        targetBranches.map((branchId) =>
+          assignEmployeeToBranch(branchId, newId)
+        )
       )
 
       const activeSlots = schedule.filter((s) => s.isActive)

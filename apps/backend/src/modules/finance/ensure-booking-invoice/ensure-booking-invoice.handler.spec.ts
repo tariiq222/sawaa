@@ -103,4 +103,24 @@ describe('EnsureBookingInvoiceHandler', () => {
     const result = await handler.execute({ bookingId: 'booking-1' });
     expect(result.id).toBe('inv-1');
   });
+
+  it('reads through the provided transaction client when present', async () => {
+    const { handler, prisma, createInvoice } = build();
+    const tx = {
+      booking: { findUnique: jest.fn().mockResolvedValue(buildBooking()) },
+      invoice: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'inv-1' }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(invoiceRow),
+      },
+      payment: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }) },
+    };
+
+    const result = await handler.execute({ bookingId: 'booking-1', transaction: tx as never });
+
+    expect(tx.booking.findUnique).toHaveBeenCalled();
+    expect(prisma.booking.findUnique).not.toHaveBeenCalled();
+    expect(createInvoice.execute).not.toHaveBeenCalled();
+    expect(result.id).toBe('inv-1');
+    expect(result.outstanding).toBe(40000);
+  });
 });

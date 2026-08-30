@@ -1,6 +1,10 @@
 import { Controller, Get, HttpCode, ServiceUnavailableException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
-import { HealthCheckHandler, HealthCheckResult } from '../../modules/ops/health-check/health-check.handler';
+import {
+  getBuildMetadata,
+  HealthCheckHandler,
+  HealthCheckResult,
+} from '../../modules/ops/health-check/health-check.handler';
 import { isShuttingDown } from '../../common/shutdown.state';
 import { Public } from '../../common/guards/jwt.guard';
 
@@ -14,7 +18,7 @@ export class PublicHealthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Liveness check — always returns 200 if the process is alive' })
   getLiveness() {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    return { status: 'ok', timestamp: new Date().toISOString(), ...getBuildMetadata() };
   }
 
   @Get('ready')
@@ -35,6 +39,8 @@ export class PublicHealthController {
       type: 'object',
       properties: {
         status: { type: 'string', example: 'ok' },
+        version: { type: 'string', example: '2.1.9' },
+        gitSha: { type: 'string', example: 'a1b2c3d' },
         db: { type: 'string', example: 'ok' },
         redis: { type: 'string', example: 'ok' },
         queue: { type: 'string', example: 'ok' },

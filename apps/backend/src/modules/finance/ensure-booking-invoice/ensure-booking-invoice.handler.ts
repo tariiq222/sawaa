@@ -1,10 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CreateInvoiceHandler } from '../create-invoice/create-invoice.handler';
 import { decimalToHalalas } from '../money.helper';
 
 export interface EnsureBookingInvoiceCommand {
   bookingId: string;
+  /** Join an already-open interactive transaction (e.g. collect rereads). */
+  transaction?: Prisma.TransactionClient;
 }
 
 export interface EnsureBookingInvoiceResult {
@@ -33,7 +36,8 @@ export class EnsureBookingInvoiceHandler {
   ) {}
 
   async execute(cmd: EnsureBookingInvoiceCommand): Promise<EnsureBookingInvoiceResult> {
-    const booking = await this.prisma.booking.findUnique({
+    const db = (cmd.transaction ?? this.prisma) as unknown as Prisma.TransactionClient;
+    const booking = await db.booking.findUnique({
       where: { id: cmd.bookingId },
       select: {
         id: true,
@@ -52,13 +56,14 @@ export class EnsureBookingInvoiceHandler {
       throw new BadRequestException('Historical bookings are read-only and cannot be invoiced');
     }
 
-    // Existing invoice — return its current shape (idempotent).
-    const existingInvoice = await this.prisma.invoice.findUnique({
+    // Existing invoice — return its current shape (idempotent). Reads go
+    // through `db` so a collect transaction sees an uncommitted discount.
+    const existingInvoice = await db.invoice.findUnique({
       where: { bookingId: booking.id },
       select: { id: true },
     });
     if (existingInvoice) {
-      return this.shape(existingInvoice.id);
+      return this.shape(existingInvoice.id, db);
     }
 
     if (!booking.clientId) {
@@ -75,6 +80,8 @@ export class EnsureBookingInvoiceHandler {
         : undefined;
 
     try {
+      // CreateInvoiceHandler cannot join an outer transaction; the create
+      // commits independently. Shape the result from the committed client.
       const invoice = await this.createInvoice.execute({
         branchId: booking.branchId,
         clientId: booking.clientId,
@@ -83,7 +90,7 @@ export class EnsureBookingInvoiceHandler {
         subtotal,
         discountAmt,
       });
-      return this.shape(invoice.id);
+      return this.shape(invoice.id, this.prisma as unknown as Prisma.TransactionClient);
     } catch (err) {
       // Concurrent create raced us — the invoice now exists. Fetch and return it.
       if ((err as { status?: number }).status === 409) {
@@ -91,19 +98,24 @@ export class EnsureBookingInvoiceHandler {
           where: { bookingId: booking.id },
           select: { id: true },
         });
-        if (existing) return this.shape(existing.id);
+        if (existing) {
+          return this.shape(existing.id, this.prisma as unknown as Prisma.TransactionClient);
+        }
       }
       throw err;
     }
   }
 
   /** Return the dashboard-facing invoice shape with computed outstanding. */
-  private async shape(invoiceId: string): Promise<EnsureBookingInvoiceResult> {
-    const invoice = await this.prisma.invoice.findUniqueOrThrow({
+  private async shape(
+    invoiceId: string,
+    db: Prisma.TransactionClient,
+  ): Promise<EnsureBookingInvoiceResult> {
+    const invoice = await db.invoice.findUniqueOrThrow({
       where: { id: invoiceId },
       select: { id: true, subtotal: true, vatRate: true, total: true, status: true },
     });
-    const paid = await this.prisma.payment.aggregate({
+    const paid = await db.payment.aggregate({
       where: { invoiceId, status: 'COMPLETED' },
       _sum: { amount: true },
     });

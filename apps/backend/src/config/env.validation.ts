@@ -1,5 +1,6 @@
 import * as Joi from 'joi';
 import { isProductionChatGuestTokenSecretPlaceholder } from './guest-chat-token-secret.policy';
+import packageJson from '../../package.json';
 
 /**
  * Boot-time validation for process.env.
@@ -20,6 +21,9 @@ export const envValidationSchema = Joi.object({
     .valid('development', 'test', 'staging', 'production')
     .default('development'),
   PORT: Joi.number().port().default(5200),
+  // Non-sensitive build metadata exposed by public health endpoints.
+  APP_VERSION: Joi.string().trim().max(128).allow('').default(packageJson.version || 'unknown'),
+  GIT_SHA: Joi.string().trim().max(128).allow('').default('unknown'),
 
   // CORS — comma-separated list of allowed origins.
   // In production MUST be set to the dashboard + mobile origins (no localhost).

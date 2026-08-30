@@ -65,26 +65,37 @@ import {
   useVacationMutations,
   useEmployeeServiceMutations,
 } from "@/hooks/use-employee-mutations"
+import { queryKeys } from "@/lib/query-keys"
 
 function makeWrapper() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   function TestWrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
   }
   TestWrapper.displayName = "TestWrapper"
   return TestWrapper
 }
 
 describe("useEmployeeMutations", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it("createMutation calls createEmployee", async () => {
     createEmployee.mockResolvedValueOnce({ id: "p-new" })
 
-    const { result } = renderHook(() => useEmployeeMutations(), { wrapper: makeWrapper() })
+    const { result } = renderHook(() => useEmployeeMutations(), {
+      wrapper: makeWrapper(),
+    })
 
     act(() => {
-      result.current.createMutation.mutate({ firstName: "Ali" } as Parameters<typeof createEmployee>[0])
+      result.current.createMutation.mutate({ firstName: "Ali" } as Parameters<
+        typeof createEmployee
+      >[0])
     })
 
     await waitFor(() => expect(createEmployee).toHaveBeenCalled())
@@ -93,45 +104,89 @@ describe("useEmployeeMutations", () => {
   it("onboardMutation calls onboardEmployee", async () => {
     onboardEmployee.mockResolvedValueOnce({ id: "p-1" })
 
-    const { result } = renderHook(() => useEmployeeMutations(), { wrapper: makeWrapper() })
+    const { result } = renderHook(() => useEmployeeMutations(), {
+      wrapper: makeWrapper(),
+    })
 
     act(() => {
-      result.current.onboardMutation.mutate({ email: "ali@example.com" } as Parameters<typeof onboardEmployee>[0])
+      result.current.onboardMutation.mutate({
+        email: "ali@example.com",
+      } as Parameters<typeof onboardEmployee>[0])
     })
 
     await waitFor(() =>
       expect(onboardEmployee).toHaveBeenCalledWith(
-        expect.objectContaining({ email: "ali@example.com" }),
-      ),
+        expect.objectContaining({ email: "ali@example.com" })
+      )
     )
   })
 
   it("updateMutation calls updateEmployee with id and payload", async () => {
     updateEmployee.mockResolvedValueOnce({ id: "p-1" })
 
-    const { result } = renderHook(() => useEmployeeMutations(), { wrapper: makeWrapper() })
+    const { result } = renderHook(() => useEmployeeMutations(), {
+      wrapper: makeWrapper(),
+    })
 
     act(() => {
-      result.current.updateMutation.mutate({ id: "p-1", firstName: "Updated" } as Parameters<typeof result.current.updateMutation.mutate>[0])
+      result.current.updateMutation.mutate({
+        id: "p-1",
+        firstName: "Updated",
+      } as Parameters<typeof result.current.updateMutation.mutate>[0])
     })
 
     await waitFor(() =>
       expect(updateEmployee).toHaveBeenCalledWith(
         "p-1",
-        expect.objectContaining({ firstName: "Updated" }),
-      ),
+        expect.objectContaining({ firstName: "Updated" })
+      )
     )
   })
 
+  it("updateMutation invalidates list, detail, and account email caches", async () => {
+    updateEmployee.mockResolvedValueOnce({ id: "p-1" })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    function TestWrapper({ children }: { children: ReactNode }) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      )
+    }
+    TestWrapper.displayName = "TestWrapper"
+
+    const { result } = renderHook(() => useEmployeeMutations(), {
+      wrapper: TestWrapper,
+    })
+    await result.current.updateMutation.mutateAsync({
+      id: "p-1",
+      email: "updated@clinic.com",
+    })
+
+    const calledKeys = invalidateSpy.mock.calls.map(
+      ([arg]) => (arg as { queryKey: unknown }).queryKey
+    )
+    expect(calledKeys).toContainEqual(queryKeys.employees.list())
+    expect(calledKeys).toContainEqual(queryKeys.employees.detail("p-1"))
+    expect(calledKeys).toContainEqual(queryKeys.employees.account("p-1"))
+  })
 })
 
 describe("useSetAvailability", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it("calls setAvailability with id and payload", async () => {
     setAvailability.mockResolvedValueOnce([])
 
-    const { result } = renderHook(() => useSetAvailability(), { wrapper: makeWrapper() })
+    const { result } = renderHook(() => useSetAvailability(), {
+      wrapper: makeWrapper(),
+    })
 
     act(() => {
       result.current.mutate({
@@ -143,19 +198,23 @@ describe("useSetAvailability", () => {
     await waitFor(() =>
       expect(setAvailability).toHaveBeenCalledWith(
         "p-1",
-        expect.objectContaining({ schedule: [] }),
-      ),
+        expect.objectContaining({ schedule: [] })
+      )
     )
   })
 })
 
 describe("useSetBreaks", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it("calls setBreaks with id and payload", async () => {
     setBreaks.mockResolvedValueOnce([])
 
-    const { result } = renderHook(() => useSetBreaks(), { wrapper: makeWrapper() })
+    const { result } = renderHook(() => useSetBreaks(), {
+      wrapper: makeWrapper(),
+    })
 
     act(() => {
       result.current.mutate({
@@ -167,22 +226,23 @@ describe("useSetBreaks", () => {
     await waitFor(() =>
       expect(setBreaks).toHaveBeenCalledWith(
         "p-1",
-        expect.objectContaining({ breaks: [] }),
-      ),
+        expect.objectContaining({ breaks: [] })
+      )
     )
   })
 })
 
 describe("useVacationMutations", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it("createMut calls createVacation with employeeId and payload", async () => {
     createVacation.mockResolvedValueOnce({ id: "vac-new" })
 
-    const { result } = renderHook(
-      () => useVacationMutations("p-1"),
-      { wrapper: makeWrapper() },
-    )
+    const { result } = renderHook(() => useVacationMutations("p-1"), {
+      wrapper: makeWrapper(),
+    })
 
     act(() => {
       result.current.createMut.mutate({
@@ -194,37 +254,39 @@ describe("useVacationMutations", () => {
     await waitFor(() =>
       expect(createVacation).toHaveBeenCalledWith(
         "p-1",
-        expect.objectContaining({ startDate: "2026-04-01" }),
-      ),
+        expect.objectContaining({ startDate: "2026-04-01" })
+      )
     )
   })
 
   it("deleteMut calls deleteVacation with employeeId and vacationId", async () => {
     deleteVacation.mockResolvedValueOnce(undefined)
 
-    const { result } = renderHook(
-      () => useVacationMutations("p-1"),
-      { wrapper: makeWrapper() },
-    )
+    const { result } = renderHook(() => useVacationMutations("p-1"), {
+      wrapper: makeWrapper(),
+    })
 
-    act(() => { result.current.deleteMut.mutate("vac-1") })
+    act(() => {
+      result.current.deleteMut.mutate("vac-1")
+    })
 
     await waitFor(() =>
-      expect(deleteVacation).toHaveBeenCalledWith("p-1", "vac-1"),
+      expect(deleteVacation).toHaveBeenCalledWith("p-1", "vac-1")
     )
   })
 })
 
 describe("useEmployeeServiceMutations", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it("assignMut calls assignService with employeeId and payload", async () => {
     assignService.mockResolvedValueOnce({ id: "ps-new" })
 
-    const { result } = renderHook(
-      () => useEmployeeServiceMutations("p-1"),
-      { wrapper: makeWrapper() },
-    )
+    const { result } = renderHook(() => useEmployeeServiceMutations("p-1"), {
+      wrapper: makeWrapper(),
+    })
 
     act(() => {
       result.current.assignMut.mutate({
@@ -235,33 +297,33 @@ describe("useEmployeeServiceMutations", () => {
     await waitFor(() =>
       expect(assignService).toHaveBeenCalledWith(
         "p-1",
-        expect.objectContaining({ serviceId: "svc-1" }),
-      ),
+        expect.objectContaining({ serviceId: "svc-1" })
+      )
     )
   })
 
   it("removeMut calls removeEmployeeService with employeeId and serviceId", async () => {
     removeEmployeeService.mockResolvedValueOnce(undefined)
 
-    const { result } = renderHook(
-      () => useEmployeeServiceMutations("p-1"),
-      { wrapper: makeWrapper() },
-    )
+    const { result } = renderHook(() => useEmployeeServiceMutations("p-1"), {
+      wrapper: makeWrapper(),
+    })
 
-    act(() => { result.current.removeMut.mutate("svc-1") })
+    act(() => {
+      result.current.removeMut.mutate("svc-1")
+    })
 
     await waitFor(() =>
-      expect(removeEmployeeService).toHaveBeenCalledWith("p-1", "svc-1"),
+      expect(removeEmployeeService).toHaveBeenCalledWith("p-1", "svc-1")
     )
   })
 
   it("updateMut calls updateEmployeeService with employeeId, serviceId, payload", async () => {
     updateEmployeeService.mockResolvedValueOnce({ id: "ps-1" })
 
-    const { result } = renderHook(
-      () => useEmployeeServiceMutations("p-1"),
-      { wrapper: makeWrapper() },
-    )
+    const { result } = renderHook(() => useEmployeeServiceMutations("p-1"), {
+      wrapper: makeWrapper(),
+    })
 
     act(() => {
       result.current.updateMut.mutate({
@@ -274,30 +336,37 @@ describe("useEmployeeServiceMutations", () => {
       expect(updateEmployeeService).toHaveBeenCalledWith(
         "p-1",
         "svc-1",
-        expect.objectContaining({ isActive: false }),
-      ),
+        expect.objectContaining({ isActive: false })
+      )
     )
   })
 })
 
 describe("useEmployeeServiceMutations — durationsMut invalidation", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it("invalidates employees.services, services.employees, and employees.serviceTypes on success", async () => {
     setEmployeeDurations.mockResolvedValueOnce([])
 
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
 
     function TestWrapper({ children }: { children: ReactNode }) {
-      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      return (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      )
     }
     TestWrapper.displayName = "TestWrapper"
 
-    const { result } = renderHook(
-      () => useEmployeeServiceMutations("emp-1"),
-      { wrapper: TestWrapper },
-    )
+    const { result } = renderHook(() => useEmployeeServiceMutations("emp-1"), {
+      wrapper: TestWrapper,
+    })
 
     act(() => {
       result.current.durationsMut.mutate({
@@ -306,54 +375,72 @@ describe("useEmployeeServiceMutations — durationsMut invalidation", () => {
       })
     })
 
-    await waitFor(() => expect(result.current.durationsMut.isSuccess).toBe(true))
+    await waitFor(() =>
+      expect(result.current.durationsMut.isSuccess).toBe(true)
+    )
 
     const calledKeys = invalidateSpy.mock.calls.map(
-      ([arg]) => (arg as { queryKey: unknown }).queryKey,
+      ([arg]) => (arg as { queryKey: unknown }).queryKey
     )
 
     // employees.services (employee-scoped)
     expect(calledKeys).toContainEqual(
-      expect.arrayContaining(["employees", "emp-1", "services"]),
+      expect.arrayContaining(["employees", "emp-1", "services"])
     )
 
     // services.employees (service-scoped)
     expect(calledKeys).toContainEqual(
-      expect.arrayContaining(["services", "svc-1", "employees"]),
+      expect.arrayContaining(["services", "svc-1", "employees"])
     )
 
     // employees.serviceTypes(emp-1, svc-1)
     expect(calledKeys).toContainEqual(
-      expect.arrayContaining(["employees", "emp-1", "service-types", "svc-1"]),
+      expect.arrayContaining(["employees", "emp-1", "service-types", "svc-1"])
     )
   })
 })
 
 describe("useEmployeeMutations error handling", () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it("createMutation propagates error", async () => {
     createEmployee.mockRejectedValueOnce(new Error("Email already exists"))
 
-    const { result } = renderHook(() => useEmployeeMutations(), { wrapper: makeWrapper() })
-
-    act(() => {
-      result.current.createMutation.mutate({ email: "dup@clinic.com" } as Parameters<typeof createEmployee>[0])
+    const { result } = renderHook(() => useEmployeeMutations(), {
+      wrapper: makeWrapper(),
     })
 
-    await waitFor(() => expect(result.current.createMutation.isError).toBe(true))
-    expect(result.current.createMutation.error?.message).toBe("Email already exists")
+    act(() => {
+      result.current.createMutation.mutate({
+        email: "dup@clinic.com",
+      } as Parameters<typeof createEmployee>[0])
+    })
+
+    await waitFor(() =>
+      expect(result.current.createMutation.isError).toBe(true)
+    )
+    expect(result.current.createMutation.error?.message).toBe(
+      "Email already exists"
+    )
   })
 
   it("onboardMutation resolves successfully", async () => {
     onboardEmployee.mockResolvedValueOnce({ id: "p-1" })
 
-    const { result } = renderHook(() => useEmployeeMutations(), { wrapper: makeWrapper() })
-
-    act(() => {
-      result.current.onboardMutation.mutate({ email: "new@clinic.com" } as Parameters<typeof onboardEmployee>[0])
+    const { result } = renderHook(() => useEmployeeMutations(), {
+      wrapper: makeWrapper(),
     })
 
-    await waitFor(() => expect(result.current.onboardMutation.isSuccess).toBe(true))
+    act(() => {
+      result.current.onboardMutation.mutate({
+        email: "new@clinic.com",
+      } as Parameters<typeof onboardEmployee>[0])
+    })
+
+    await waitFor(() =>
+      expect(result.current.onboardMutation.isSuccess).toBe(true)
+    )
   })
 })

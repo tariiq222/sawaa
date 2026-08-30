@@ -81,8 +81,9 @@ model Invoice {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  payments       Payment[]
-  refundRequests RefundRequest[]
+  payments                 Payment[]
+  refundRequests           RefundRequest[]
+  collectionIdempotency    PaymentCollectionIdempotency[]
 
   @@unique([bookingId])
   @@unique([packagePurchaseId])
@@ -120,12 +121,30 @@ model Payment {
   createdAt                    DateTime      @default(now())
   updatedAt                    DateTime      @updatedAt
 
-  refundRequests RefundRequest[]
+  refundRequests          RefundRequest[]
+  collectionIdempotency   PaymentCollectionIdempotency?
 
   @@index([invoiceId])
   @@index([gatewayRef])
   @@index([status, createdAt])
   @@index([refundProviderLeaseExpiresAt])
+}
+
+// Durable /collect idempotency. Payment.idempotencyKey cannot cover a 100%
+// discount because that path never mints a Payment row. Fingerprint is a
+// sha256 of canonical non-PII request fields (invoice, method, amounts).
+model PaymentCollectionIdempotency {
+  id                  String   @id @default(uuid())
+  idempotencyKey      String   @unique
+  invoiceId           String
+  invoice             Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  requestFingerprint  String
+  paymentId           String?  @unique
+  payment             Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([invoiceId])
 }
 
 // ─── Coupon ───────────────────────────────────────────────────────────────────

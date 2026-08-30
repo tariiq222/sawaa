@@ -1,7 +1,11 @@
+import { Transform } from 'class-transformer';
 import { IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString, IsUrl, Matches, MaxLength, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EmployeeGender, EmploymentType } from '@prisma/client';
 import { NormalizePhone } from '../../identity/shared/normalize-phone.transform';
+
+const trimLower = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : value;
 
 export class UpdateEmployeeDto {
   @ApiPropertyOptional({ description: 'Professional title (e.g. Dr.)', example: 'Dr.' })
@@ -14,7 +18,7 @@ export class UpdateEmployeeDto {
   @IsOptional() @IsString() @MaxLength(200) nameAr?: string;
 
   @ApiPropertyOptional({ description: 'Email address', example: 'user@example.com' })
-  @IsOptional() @IsEmail() email?: string;
+  @IsOptional() @Transform(trimLower) @IsEmail() email?: string;
 
   @ApiPropertyOptional({ description: 'Phone number (any common format; normalized to E.164)', example: '+966501234567' })
   @IsOptional() @IsString() @NormalizePhone() @Matches(/^\+[1-9][0-9]{6,14}$/) phone?: string;

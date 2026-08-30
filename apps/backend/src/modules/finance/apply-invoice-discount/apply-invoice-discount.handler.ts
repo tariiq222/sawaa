@@ -9,6 +9,8 @@ import { ApplyInvoiceDiscountDto } from './apply-invoice-discount.dto';
 export type ApplyInvoiceDiscountCommand = ApplyInvoiceDiscountDto & {
   invoiceId: string;
   appliedBy: string;
+  /** Join an already-open interactive transaction (e.g. collect). */
+  transaction?: Prisma.TransactionClient;
 };
 
 // Moyasar payment states in which the customer's money has actually moved (or
@@ -30,137 +32,172 @@ export class ApplyInvoiceDiscountHandler {
       throw new BadRequestException('A discount reason is required when applying a discount');
     }
 
-    return this.rlsTransaction.withTransaction(async (tx) => {
-      const invoice = await tx.invoice.findFirst({ where: { id: cmd.invoiceId } });
-      if (!invoice) throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
+    // Read-only Moyasar preflight MUST happen before this handler opens a DB
+    // transaction. When a caller already holds a transaction (collect), skip
+    // the gateway entirely and fail closed on any remaining PENDING row —
+    // never hold a long transaction across an HTTP round-trip.
+    const discardablePendingIds = cmd.transaction
+      ? []
+      : await this.preflightDiscardablePendingIds(cmd.invoiceId);
 
-      // A discount changes subtotal/VAT/total, so it is only safe while the
-      // invoice is still unpaid. Once any payment has landed the totals are
-      // locked against the amount the client already paid.
-      if (invoice.status !== InvoiceStatus.ISSUED && invoice.status !== InvoiceStatus.DRAFT) {
+    const run = (tx: Prisma.TransactionClient) =>
+      this.applyInTransaction(tx, cmd, discardablePendingIds);
+
+    return cmd.transaction
+      ? run(cmd.transaction)
+      : this.rlsTransaction.withTransaction(run);
+  }
+
+  /**
+   * Ask Moyasar about PENDING card rows using the non-transactional client.
+   * Settled/unknown sessions throw; abandoned sessions are returned so the
+   * subsequent DB transaction can delete them.
+   */
+  private async preflightDiscardablePendingIds(invoiceId: string): Promise<string[]> {
+    const pending = await this.prisma.payment.findMany({
+      where: { invoiceId, status: PaymentStatus.PENDING },
+      select: { id: true, status: true, gatewayRef: true },
+    });
+    const discardable: string[] = [];
+    for (const p of pending.filter((row) => row.status === PaymentStatus.PENDING)) {
+      if (!p.gatewayRef) {
+        throw new BadRequestException('لا يمكن تعديل الخصم أثناء وجود دفعة قيد التنفيذ');
+      }
+      let gatewayStatus: string;
+      try {
+        const gw = await this.moyasar.getPaymentStatus(DEFAULT_ORG_ID, p.gatewayRef);
+        gatewayStatus = gw.status;
+      } catch {
         throw new BadRequestException(
-          `Cannot change the discount of an invoice in status ${invoice.status}`,
+          'تعذّر التحقق من حالة دفعة قيد التنفيذ، حاول مرة أخرى لاحقاً',
         );
       }
-      // Z3: a discount lowers subtotal/VAT/total, but the original `aggregate
-      // COMPLETED` guard only saw settled money. An invoice with a PENDING card
-      // payment stays ISSUED, so it slipped past both guards; the webhook later
-      // settled PAID at the higher pre-discount amount (`hasExistingRow` skips
-      // amount_mismatch) = silent overcharge. Block on the EXISTENCE of any
-      // non-final payment, and reconcile in-flight card rows against Moyasar so
-      // an abandoned attempt cannot lock the invoice against discounts forever.
-      const inFlight = await tx.payment.findMany({
-        where: {
-          invoiceId: cmd.invoiceId,
-          status: {
-            in: [
-              PaymentStatus.COMPLETED,
-              PaymentStatus.PENDING_VERIFICATION,
-              PaymentStatus.PENDING,
-            ],
-          },
-        },
-        select: { id: true, status: true, gatewayRef: true },
-      });
-
-      // Settled money (COMPLETED) or a bank transfer awaiting manual review
-      // (PENDING_VERIFICATION) — both are committed against the current total.
-      if (inFlight.some((p) => p.status === PaymentStatus.COMPLETED)) {
+      if ((MOYASAR_SETTLED_STATES as readonly string[]).includes(gatewayStatus)) {
         throw new BadRequestException('Cannot change the discount after a payment has been recorded');
       }
-      if (inFlight.some((p) => p.status === PaymentStatus.PENDING_VERIFICATION)) {
-        throw new BadRequestException(
-          'لا يمكن تعديل الخصم أثناء وجود تحويل بنكي قيد المراجعة',
-        );
-      }
+      discardable.push(p.id);
+    }
+    return discardable;
+  }
 
-      // PENDING card rows: ask Moyasar for the truth. A settled/authorized
-      // session blocks the discount; an abandoned `initiated`/`failed`/`voided`
-      // session is discarded here so a late webhook is rejected as an
-      // amount_mismatch instead of settling an overcharge against the old total.
-      for (const p of inFlight.filter((x) => x.status === PaymentStatus.PENDING)) {
-        if (!p.gatewayRef) {
-          // No gateway session yet (e.g. an unfinished manual entry) — block to
-          // stay safe; we cannot prove the money has not moved.
-          throw new BadRequestException('لا يمكن تعديل الخصم أثناء وجود دفعة قيد التنفيذ');
-        }
-        let gatewayStatus: string;
-        try {
-          const gw = await this.moyasar.getPaymentStatus(DEFAULT_ORG_ID, p.gatewayRef);
-          gatewayStatus = gw.status;
-        } catch {
-          // Fail closed: if we cannot confirm the gateway state, do not risk an
-          // overcharge — refuse the discount and let the operator retry.
-          throw new BadRequestException(
-            'تعذّر التحقق من حالة دفعة قيد التنفيذ، حاول مرة أخرى لاحقاً',
-          );
-        }
-        if ((MOYASAR_SETTLED_STATES as readonly string[]).includes(gatewayStatus)) {
-          throw new BadRequestException('Cannot change the discount after a payment has been recorded');
-        }
-        await tx.payment.delete({ where: { id: p.id } });
-      }
+  private async applyInTransaction(
+    tx: Prisma.TransactionClient,
+    cmd: ApplyInvoiceDiscountCommand,
+    discardablePendingIds: readonly string[],
+  ) {
+    const invoice = await tx.invoice.findFirst({ where: { id: cmd.invoiceId } });
+    if (!invoice) throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
 
-      const subtotal = toHalalas(invoice.subtotal);
-      const discountAmt = toHalalas(cmd.discountAmt);
-      if (discountAmt.greaterThan(subtotal)) {
-        throw new BadRequestException('Discount cannot exceed the invoice subtotal');
-      }
-
-      let reasonId: string | null = null;
-      if (cmd.discountAmt > 0) {
-        const reason = await tx.discountReason.findFirst({
-          where: { id: cmd.discountReasonId, isActive: true },
-          select: { id: true },
-        });
-        if (!reason) throw new BadRequestException('Discount reason not found or inactive');
-        reasonId = reason.id;
-      }
-
-      // P1-6: A manual discount fully overwrites the invoice's discountAmt. Any
-      // coupon redemptions previously applied to this invoice would otherwise be
-      // left orphaned — their `discount` no longer sums to invoice.discountAmt
-      // and their parent coupon's usedCount stays inflated (so a one-shot coupon
-      // could be silently "spent" without ever discounting an invoice, and a
-      // per-user-limited coupon would be wrongly blocked on the next attempt).
-      // Reverse them in the SAME transaction: drop the redemption rows and
-      // decrement each coupon's usedCount by the number of rows removed. This is
-      // order-independent — applying a manual discount always supersedes coupons.
-      const redemptions = await tx.couponRedemption.findMany({
-        where: { invoiceId: cmd.invoiceId },
-        select: { id: true, couponId: true },
-      });
-      if (redemptions.length > 0) {
-        const removedPerCoupon = new Map<string, number>();
-        for (const r of redemptions) {
-          removedPerCoupon.set(r.couponId, (removedPerCoupon.get(r.couponId) ?? 0) + 1);
-        }
-        await tx.couponRedemption.deleteMany({ where: { invoiceId: cmd.invoiceId } });
-        for (const [couponId, removed] of removedPerCoupon) {
-          // Guard against driving usedCount negative on legacy/inconsistent rows.
-          await tx.coupon.updateMany({
-            where: { id: couponId, usedCount: { gte: removed } },
-            data: { usedCount: { decrement: removed } },
-          });
-        }
-      }
-
-      const vatBase = subtotal.minus(discountAmt);
-      const vatRate = new Prisma.Decimal(invoice.vatRate.toString());
-      const { vatAmtHalalas, totalHalalas } = computeVat(vatBase, vatRate);
-
-      return tx.invoice.update({
-        where: { id: cmd.invoiceId },
-        data: {
-          discountAmt,
-          vatAmt: vatAmtHalalas,
-          total: totalHalalas,
-          discountReasonId: reasonId,
-          discountAppliedBy: cmd.discountAmt > 0 ? cmd.appliedBy : null,
-          discountAppliedAt: cmd.discountAmt > 0 ? new Date() : null,
-          ...(cmd.note !== undefined && { notes: cmd.note }),
+    // A discount changes subtotal/VAT/total, so it is only safe while the
+    // invoice is still unpaid. Once any payment has landed the totals are
+    // locked against the amount the client already paid.
+    if (invoice.status !== InvoiceStatus.ISSUED && invoice.status !== InvoiceStatus.DRAFT) {
+      throw new BadRequestException(
+        `Cannot change the discount of an invoice in status ${invoice.status}`,
+      );
+    }
+    // Z3: a discount lowers subtotal/VAT/total, but the original `aggregate
+    // COMPLETED` guard only saw settled money. An invoice with a PENDING card
+    // payment stays ISSUED, so it slipped past both guards; the webhook later
+    // settled PAID at the higher pre-discount amount (`hasExistingRow` skips
+    // amount_mismatch) = silent overcharge. Block on the EXISTENCE of any
+    // non-final payment, and reconcile in-flight card rows against Moyasar so
+    // an abandoned attempt cannot lock the invoice against discounts forever.
+    const inFlight = await tx.payment.findMany({
+      where: {
+        invoiceId: cmd.invoiceId,
+        status: {
+          in: [
+            PaymentStatus.COMPLETED,
+            PaymentStatus.PENDING_VERIFICATION,
+            PaymentStatus.PENDING,
+          ],
         },
+      },
+      select: { id: true, status: true, gatewayRef: true },
+    });
+
+    // Settled money (COMPLETED) or a bank transfer awaiting manual review
+    // (PENDING_VERIFICATION) — both are committed against the current total.
+    if (inFlight.some((p) => p.status === PaymentStatus.COMPLETED)) {
+      throw new BadRequestException('Cannot change the discount after a payment has been recorded');
+    }
+    if (inFlight.some((p) => p.status === PaymentStatus.PENDING_VERIFICATION)) {
+      throw new BadRequestException(
+        'لا يمكن تعديل الخصم أثناء وجود تحويل بنكي قيد المراجعة',
+      );
+    }
+
+    // PENDING card rows: never call Moyasar here. Preflight already classified
+    // abandoned sessions; anything else (including an outer-transaction collect
+    // that skipped preflight) fails closed so we cannot overcharge.
+    for (const p of inFlight.filter((x) => x.status === PaymentStatus.PENDING)) {
+      if (discardablePendingIds.includes(p.id)) {
+        await tx.payment.delete({ where: { id: p.id } });
+        continue;
+      }
+      throw new BadRequestException('لا يمكن تعديل الخصم أثناء وجود دفعة قيد التنفيذ');
+    }
+
+    const subtotal = toHalalas(invoice.subtotal);
+    const discountAmt = toHalalas(cmd.discountAmt);
+    if (discountAmt.greaterThan(subtotal)) {
+      throw new BadRequestException('Discount cannot exceed the invoice subtotal');
+    }
+
+    let reasonId: string | null = null;
+    if (cmd.discountAmt > 0) {
+      const reason = await tx.discountReason.findFirst({
+        where: { id: cmd.discountReasonId, isActive: true },
+        select: { id: true },
       });
+      if (!reason) throw new BadRequestException('Discount reason not found or inactive');
+      reasonId = reason.id;
+    }
+
+    // P1-6: A manual discount fully overwrites the invoice's discountAmt. Any
+    // coupon redemptions previously applied to this invoice would otherwise be
+    // left orphaned — their `discount` no longer sums to invoice.discountAmt
+    // and their parent coupon's usedCount stays inflated (so a one-shot coupon
+    // could be silently "spent" without ever discounting an invoice, and a
+    // per-user-limited coupon would be wrongly blocked on the next attempt).
+    // Reverse them in the SAME transaction: drop the redemption rows and
+    // decrement each coupon's usedCount by the number of rows removed. This is
+    // order-independent — applying a manual discount always supersedes coupons.
+    const redemptions = await tx.couponRedemption.findMany({
+      where: { invoiceId: cmd.invoiceId },
+      select: { id: true, couponId: true },
+    });
+    if (redemptions.length > 0) {
+      const removedPerCoupon = new Map<string, number>();
+      for (const r of redemptions) {
+        removedPerCoupon.set(r.couponId, (removedPerCoupon.get(r.couponId) ?? 0) + 1);
+      }
+      await tx.couponRedemption.deleteMany({ where: { invoiceId: cmd.invoiceId } });
+      for (const [couponId, removed] of removedPerCoupon) {
+        // Guard against driving usedCount negative on legacy/inconsistent rows.
+        await tx.coupon.updateMany({
+          where: { id: couponId, usedCount: { gte: removed } },
+          data: { usedCount: { decrement: removed } },
+        });
+      }
+    }
+
+    const vatBase = subtotal.minus(discountAmt);
+    const vatRate = new Prisma.Decimal(invoice.vatRate.toString());
+    const { vatAmtHalalas, totalHalalas } = computeVat(vatBase, vatRate);
+
+    return tx.invoice.update({
+      where: { id: cmd.invoiceId },
+      data: {
+        discountAmt,
+        vatAmt: vatAmtHalalas,
+        total: totalHalalas,
+        discountReasonId: reasonId,
+        discountAppliedBy: cmd.discountAmt > 0 ? cmd.appliedBy : null,
+        discountAppliedAt: cmd.discountAmt > 0 ? new Date() : null,
+        ...(cmd.note !== undefined && { notes: cmd.note }),
+      },
     });
   }
 }

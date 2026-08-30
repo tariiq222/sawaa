@@ -1,5 +1,12 @@
 import { z } from "zod"
 
+/** Email is optional during employee edits so records without one can be saved unchanged. */
+export function createEmployeeEmailSchema(t?: (key: string) => string) {
+  const message =
+    t?.("employees.form.validation.emailInvalid") ?? "Invalid email address"
+  return z.string().email(message).optional().or(z.literal(""))
+}
+
 /* ─── Edit employee service schema (edit-employee-service-sheet) ─── */
 
 export const editEmployeeServiceSchema = z.object({
@@ -7,7 +14,9 @@ export const editEmployeeServiceSchema = z.object({
   isActive: z.boolean(),
 })
 
-export type EditEmployeeServiceFormData = z.infer<typeof editEmployeeServiceSchema>
+export type EditEmployeeServiceFormData = z.infer<
+  typeof editEmployeeServiceSchema
+>
 
 /* ─── Assign service schema (assign-service-sheet) ─── */
 

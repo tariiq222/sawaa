@@ -3,12 +3,18 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { PublicHealthController } from './health.controller';
 import { HealthCheckHandler } from '../../modules/ops/health-check/health-check.handler';
 import * as shutdownState from '../../common/shutdown.state';
+import packageJson from '../../../package.json';
 
 describe('PublicHealthController', () => {
   let controller: PublicHealthController;
   let healthCheck: HealthCheckHandler;
+  let originalAppVersion: string | undefined;
+  let originalGitSha: string | undefined;
 
   beforeEach(async () => {
+    originalAppVersion = process.env.APP_VERSION;
+    originalGitSha = process.env.GIT_SHA;
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PublicHealthController],
       providers: [
@@ -22,12 +28,36 @@ describe('PublicHealthController', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    if (originalAppVersion === undefined) delete process.env.APP_VERSION;
+    else process.env.APP_VERSION = originalAppVersion;
+    if (originalGitSha === undefined) delete process.env.GIT_SHA;
+    else process.env.GIT_SHA = originalGitSha;
   });
 
   it('should return liveness', () => {
     const result = controller.getLiveness();
     expect(result.status).toBe('ok');
     expect(result.timestamp).toBeDefined();
+  });
+
+  it('includes configured build metadata in liveness', () => {
+    process.env.APP_VERSION = '2.2.0';
+    process.env.GIT_SHA = 'a1b2c3d';
+
+    expect(controller.getLiveness()).toEqual(expect.objectContaining({
+      version: '2.2.0',
+      gitSha: 'a1b2c3d',
+    }));
+  });
+
+  it('uses safe fallback metadata when build metadata is absent', () => {
+    delete process.env.APP_VERSION;
+    delete process.env.GIT_SHA;
+
+    expect(controller.getLiveness()).toEqual(expect.objectContaining({
+      version: packageJson.version,
+      gitSha: 'unknown',
+    }));
   });
 
   it('should return readiness', async () => {

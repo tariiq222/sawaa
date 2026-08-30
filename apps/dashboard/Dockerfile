@@ -103,6 +103,13 @@ ENV PORT=5103
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Keep the same optional build metadata available to the dashboard image for
+# future diagnostics; no UI is coupled to these values in this change.
+ARG APP_VERSION=""
+ARG GIT_SHA=""
+ENV APP_VERSION=$APP_VERSION
+ENV GIT_SHA=$GIT_SHA
+
 # Create non-root user for security
 RUN groupadd -g 1001 app && useradd -u 1001 -g app -s /bin/sh -d /app app
 

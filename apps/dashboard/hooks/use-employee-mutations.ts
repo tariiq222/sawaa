@@ -40,9 +40,26 @@ export function useEmployeeMutations() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...payload }: { id: string } & Parameters<typeof updateEmployee>[1]) =>
+    mutationFn: ({
+      id,
+      ...payload
+    }: { id: string } & Parameters<typeof updateEmployee>[1]) =>
       updateEmployee(id, payload),
-    onSuccess: invalidate,
+    onSuccess: (_, vars) => {
+      invalidate()
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.employees.list(),
+        refetchType: "all",
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.employees.detail(vars.id),
+        refetchType: "all",
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.employees.account(vars.id),
+        refetchType: "all",
+      })
+    },
   })
 
   return { createMutation, onboardMutation, updateMutation }
@@ -53,7 +70,10 @@ export function useEmployeeMutations() {
 export function useSetAvailability() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...payload }: { id: string } & Parameters<typeof setAvailability>[1]) =>
+    mutationFn: ({
+      id,
+      ...payload
+    }: { id: string } & Parameters<typeof setAvailability>[1]) =>
       setAvailability(id, payload),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({
@@ -68,7 +88,10 @@ export function useSetAvailability() {
 export function useSetBreaks() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...payload }: { id: string } & Parameters<typeof setBreaks>[1]) =>
+    mutationFn: ({
+      id,
+      ...payload
+    }: { id: string } & Parameters<typeof setBreaks>[1]) =>
       setBreaks(id, payload),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({
@@ -94,8 +117,7 @@ export function useVacationMutations(employeeId: string) {
   })
 
   const deleteMut = useMutation({
-    mutationFn: (vacationId: string) =>
-      deleteVacation(employeeId, vacationId),
+    mutationFn: (vacationId: string) => deleteVacation(employeeId, vacationId),
     onSuccess: invalidate,
   })
 

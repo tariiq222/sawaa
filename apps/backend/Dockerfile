@@ -122,6 +122,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5100
 
+# Optional non-sensitive build metadata for the public health endpoints.
+# Empty values intentionally fall back to the package version / "unknown".
+ARG APP_VERSION=""
+ARG GIT_SHA=""
+ENV APP_VERSION=$APP_VERSION
+ENV GIT_SHA=$GIT_SHA
+
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates wget curl \
  && rm -rf /var/lib/apt/lists/*
 
@@ -159,4 +166,4 @@ EXPOSE 5100
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:5100/api/v1/health/ready || exit 1
 
-CMD ["sh", "-c", "if [ -n \"${DATABASE_URL:-}\" ]; then echo '[boot] DATABASE_URL: set'; else echo '[boot] DATABASE_URL: MISSING'; fi && npx prisma migrate deploy --schema=prisma/schema && node dist/main.js"]
+CMD ["sh", "-c", "if [ -n \"${DATABASE_URL:-}\" ]; then echo '[boot] DATABASE_URL: set'; else echo '[boot] DATABASE_URL: MISSING'; fi && npx prisma migrate deploy --schema=prisma/schema && node dist/src/main.js"]

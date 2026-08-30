@@ -29590,6 +29590,10 @@
                       "example": "ok",
                       "type": "string"
                     },
+                    "gitSha": {
+                      "example": "a1b2c3d",
+                      "type": "string"
+                    },
                     "queue": {
                       "example": "ok",
                       "type": "string"
@@ -29600,6 +29604,10 @@
                     },
                     "status": {
                       "example": "ok",
+                      "type": "string"
+                    },
+                    "version": {
+                      "example": "2.1.9",
                       "type": "string"
                     }
                   },

@@ -135,6 +135,8 @@ describe('envValidationSchema', () => {
 
     expect(result.error).toBeUndefined();
     expect(result.value).toEqual(expect.objectContaining({
+      APP_VERSION: '2.1.9',
+      GIT_SHA: 'unknown',
       WEB_CHAT_ENABLED: false,
       CHAT_MAX_MESSAGE_LENGTH: 4000,
       CHAT_RATE_LIMIT_PER_MINUTE: 20,
@@ -142,6 +144,30 @@ describe('envValidationSchema', () => {
       CHAT_GUEST_SESSION_DAYS: 30,
       RETENTION_CHAT_DAYS: 365,
     }));
+  });
+
+  it('accepts configured non-sensitive build metadata', () => {
+    const result = envValidationSchema.validate({
+      ...baseValidEnv,
+      APP_VERSION: '2.2.0',
+      GIT_SHA: 'a1b2c3d',
+    }, { abortEarly: false });
+
+    expect(result.error).toBeUndefined();
+    expect(result.value).toEqual(expect.objectContaining({
+      APP_VERSION: '2.2.0',
+      GIT_SHA: 'a1b2c3d',
+    }));
+  });
+
+  it('allows metadata to be omitted or supplied as empty Docker build values', () => {
+    const result = envValidationSchema.validate({
+      ...baseValidEnv,
+      APP_VERSION: '',
+      GIT_SHA: '',
+    }, { abortEarly: false });
+
+    expect(result.error).toBeUndefined();
   });
 
   it.each([

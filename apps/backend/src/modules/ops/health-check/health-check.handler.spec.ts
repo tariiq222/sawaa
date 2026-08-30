@@ -5,6 +5,7 @@ import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { HealthCheckHandler } from './health-check.handler';
+import packageJson from '../../../../package.json';
 
 describe('HealthCheckHandler', () => {
   let handler: HealthCheckHandler;
@@ -14,8 +15,13 @@ describe('HealthCheckHandler', () => {
   let redis: any;
   let bullMq: any;
   let minio: any;
+  let originalAppVersion: string | undefined;
+  let originalGitSha: string | undefined;
 
   beforeEach(async () => {
+    originalAppVersion = process.env.APP_VERSION;
+    originalGitSha = process.env.GIT_SHA;
+
     health = { check: jest.fn().mockImplementation((checks) => {
       const results: Record<string, any> = {};
       for (const check of checks) {
@@ -51,6 +57,13 @@ describe('HealthCheckHandler', () => {
     handler = module.get<HealthCheckHandler>(HealthCheckHandler);
   });
 
+  afterEach(() => {
+    if (originalAppVersion === undefined) delete process.env.APP_VERSION;
+    else process.env.APP_VERSION = originalAppVersion;
+    if (originalGitSha === undefined) delete process.env.GIT_SHA;
+    else process.env.GIT_SHA = originalGitSha;
+  });
+
   it('should be defined', () => expect(handler).toBeDefined());
 
   it('should return health check result', async () => {
@@ -63,6 +76,28 @@ describe('HealthCheckHandler', () => {
     const result = await handler.execute();
     expect(result).toBeDefined();
     expect(prismaIndicator.pingCheck).toHaveBeenCalledWith('database', prisma);
+  });
+
+  it('includes configured build metadata in readiness results', async () => {
+    process.env.APP_VERSION = '2.2.0';
+    process.env.GIT_SHA = 'a1b2c3d';
+
+    const result = await handler.execute();
+
+    expect(result).toEqual(expect.objectContaining({
+      version: '2.2.0',
+      gitSha: 'a1b2c3d',
+    }));
+  });
+
+  it('uses safe fallback metadata when build metadata is absent', async () => {
+    delete process.env.APP_VERSION;
+    delete process.env.GIT_SHA;
+
+    const result = await handler.execute();
+
+    expect(result.gitSha).toBe('unknown');
+    expect(result.version).toBe(packageJson.version);
   });
 
   it('should handle redis down', async () => {
