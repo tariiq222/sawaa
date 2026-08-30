@@ -61,4 +61,18 @@ describe('TelemetryModule', () => {
     expect(text).toContain('outbox_terminal_failures_total{event_type="bookings.booking.created"} 2');
     expect(text).toContain('outbox_terminal_failures_total{event_type="finance.payment.completed"} 1');
   });
+
+  it('registers default process metrics and HTTP histogram metrics on the scrape registry', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [TelemetryModule],
+    }).compile();
+
+    const appMetrics = moduleRef.get(AppMetricsService);
+    const text = await appMetrics.registry.metrics();
+
+    expect(text).toContain('# HELP sawaa_process_');
+    expect(text).toContain('# TYPE sawaa_process_');
+    expect(text).toContain('# HELP http_request_duration_seconds');
+    expect(text).toContain('# TYPE http_request_duration_seconds histogram');
+  });
 });

@@ -60,6 +60,42 @@ describe('AiProviderClientService', () => {
     expect((result?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe('https://api.openai.com/v1');
   });
 
+  describe('OPENAI_BASE_URL env override', () => {
+    const originalOpenaiBaseUrl = process.env.OPENAI_BASE_URL;
+    const validOverrides = [
+      'https://api.minimaxi.com/v1',
+      'https://api.minimax.io/v1',
+      'https://api.minimax.chat/v1',
+    ];
+    const invalidOverrides = ['', 'not-a-url', 'ftp://example.com/v1'];
+
+    afterEach(() => {
+      if (originalOpenaiBaseUrl === undefined) delete process.env.OPENAI_BASE_URL;
+      else process.env.OPENAI_BASE_URL = originalOpenaiBaseUrl;
+    });
+
+    it.each(validOverrides)('routes OpenAI traffic to %s while keeping OpenRouter on its official URL', async (override) => {
+      process.env.OPENAI_BASE_URL = override;
+      const svc = new AiProviderClientService(prisma, credentials);
+
+      prisma.aiProviderConfig.findUnique.mockResolvedValueOnce(row({ provider: AiProvider.OPENAI, model: 'gpt-4o' }));
+      const openaiResult = await svc.getReadyClient();
+      expect((openaiResult?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe(override);
+
+      prisma.aiProviderConfig.findUnique.mockResolvedValueOnce(row());
+      const openrouterResult = await svc.getReadyClient();
+      expect((openrouterResult?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe('https://openrouter.ai/api/v1');
+    });
+
+    it.each(invalidOverrides)('ignores invalid override %p and keeps the official OpenAI URL', async (override) => {
+      process.env.OPENAI_BASE_URL = override;
+      const svc = new AiProviderClientService(prisma, credentials);
+      prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: AiProvider.OPENAI, model: 'gpt-4o' }));
+      const result = await svc.getReadyClient();
+      expect((result?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe('https://api.openai.com/v1');
+    });
+  });
+
   it('atomically marks the singleton for retesting without provider details', async () => {
     await service.markRetestRequired();
     expect(prisma.aiProviderConfig.updateMany).toHaveBeenCalledWith({

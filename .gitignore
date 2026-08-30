@@ -104,6 +104,9 @@ docs/*
 !docs/operations/**
 !docs/superpowers/
 !docs/superpowers/**
+!docs/performance/
+docs/performance/*
+!docs/performance/capacity-runbook.md
 .superpowers/
 _archived_dashboard/
 

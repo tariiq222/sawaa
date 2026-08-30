@@ -1,0 +1,818 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sawa capacity-test report",
+  "description": "Unified result document for capacity runs. MUST NOT contain secrets: passwords, tokens, API keys, connection strings, cookies, Authorization values, private keys, OTP codes, or host identifiers (IP addresses, server IDs, hostnames). Use counts and relative artifact paths only. Do not record concurrent-user capacity; RPS is not a user count.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metadata",
+    "run",
+    "scenario",
+    "http",
+    "resources",
+    "dependencies",
+    "verdict",
+    "artifacts"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "generatedAt",
+        "gitSha",
+        "appVersion",
+        "secretsPolicy"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "gitSha": {
+          "type": "string",
+          "description": "Build git SHA from health/live only. Never a token or hostname.",
+          "pattern": "^(unknown|[0-9a-f]{7,40})$"
+        },
+        "appVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "secretsPolicy": {
+          "type": "string",
+          "const": "no-secrets-in-report",
+          "description": "Reports MUST omit passwords, tokens, keys, connection strings, cookies, Authorization headers, and host identifiers (IP, server ID, hostname)."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Free text without secrets or host identifiers."
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "startedAt",
+        "endedAt",
+        "environment",
+        "targetKind",
+        "loadGenerator",
+        "sourceIpCount",
+        "warmUpSeconds",
+        "steadyStateSeconds",
+        "soakSeconds",
+        "repeatIndex",
+        "repeatTotal",
+        "aborted",
+        "hostProof"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Opaque run id (uuid or slug). Not a hostname."
+        },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "endedAt": { "type": "string", "format": "date-time" },
+        "environment": {
+          "type": "string",
+          "enum": ["staging", "production-like", "local-prod-compose", "unknown"]
+        },
+        "targetKind": {
+          "type": "string",
+          "enum": ["edge", "backend-direct"]
+        },
+        "loadGenerator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Tool name only (e.g. k6). No command lines with credentials."
+        },
+        "sourceIpCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Count of load-source addresses. Do not list IPs."
+        },
+        "warmUpSeconds": { "type": "number", "minimum": 0 },
+        "steadyStateSeconds": { "type": "number", "minimum": 0 },
+        "soakSeconds": { "type": "number", "minimum": 0 },
+        "repeatIndex": { "type": "integer", "minimum": 1 },
+        "repeatTotal": { "type": "integer", "minimum": 1 },
+        "aborted": { "type": "boolean" },
+        "abortReason": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Safety-gate name or short reason. No secrets or host identifiers."
+        },
+        "hostProof": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpuCountObserved",
+            "memoryBytesObserved",
+            "provenAsActualHost",
+            "claimedDedicatedCpu",
+            "claimedMemoryGib",
+            "limitsEnforced",
+            "limitsEnforcementMethod"
+          ],
+          "properties": {
+            "cpuCountObserved": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            },
+            "memoryBytesObserved": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            },
+            "provenAsActualHost": { "type": "boolean" },
+            "claimedDedicatedCpu": {
+              "type": "integer",
+              "const": 4,
+              "description": "Observed claim (4 dedicated CPU). Not proof; see provenAsActualHost."
+            },
+            "claimedMemoryGib": {
+              "type": "integer",
+              "const": 16,
+              "description": "Observed claim (16 GiB). Not proof; see provenAsActualHost."
+            },
+            "limitsEnforced": { "type": "boolean" },
+            "limitsEnforcementMethod": {
+              "type": "string",
+              "enum": ["swarm", "cgroup", "none", "unknown"]
+            }
+          }
+        }
+      },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "phase1Allowed",
+        "method",
+        "paths",
+        "writeOperations",
+        "providersTouched"
+      ],
+      "properties": {
+        "profile": {
+          "type": "string",
+          "enum": [
+            "edge_public",
+            "backend_direct_read",
+            "dashboard_browser",
+            "availability",
+            "report_upload"
+          ]
+        },
+        "phase1Allowed": {
+          "type": "boolean",
+          "description": "false for report_upload in phase 1."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "HEAD", "MIXED_READ"]
+        },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^/",
+            "maxLength": 256,
+            "description": "Path templates only. No query tokens or session ids."
+          }
+        },
+        "writeOperations": {
+          "type": "boolean",
+          "description": "Must be false for phase-1 profiles."
+        },
+        "providersTouched": {
+          "type": "array",
+          "maxItems": 0,
+          "items": { "type": "string" },
+          "description": "Must stay empty. Production providers are forbidden."
+        },
+        "browserEquivalent": {
+          "type": "boolean",
+          "description": "true only if a real browser (or faithful query replay) was used. Raw HTTP floods of dashboard APIs are not browser-equivalent."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      }
+    },
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "offeredRps",
+        "acceptedRps",
+        "p50Ms",
+        "p95Ms",
+        "p99Ms",
+        "statusCounts",
+        "collapseErrorRate",
+        "samples"
+      ],
+      "properties": {
+        "offeredRps": { "type": ["number", "null"], "minimum": 0 },
+        "acceptedRps": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Completed HTTP responses per second, including 429."
+        },
+        "p50Ms": { "type": ["number", "null"], "minimum": 0 },
+        "p95Ms": { "type": ["number", "null"], "minimum": 0 },
+        "p99Ms": { "type": ["number", "null"], "minimum": 0 },
+        "sloP95Ms": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Pre-declared latency SLO for this profile. Not a user-capacity claim."
+        },
+        "statusCounts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "http2xx",
+            "http429",
+            "http4xxOther",
+            "http5xx",
+            "timeouts",
+            "other"
+          ],
+          "properties": {
+            "http2xx": { "type": "integer", "minimum": 0 },
+            "http429": { "type": "integer", "minimum": 0 },
+            "http4xxOther": { "type": "integer", "minimum": 0 },
+            "http5xx": { "type": "integer", "minimum": 0 },
+            "timeouts": { "type": "integer", "minimum": 0 },
+            "other": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "collapseErrorRate": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "(5xx + timeouts + other) / offered. 429 is protection, not collapse."
+        },
+        "samples": { "type": "integer", "minimum": 0 },
+        "byPath": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "p95Ms", "offeredRps"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^/",
+                "maxLength": 256
+              },
+              "p50Ms": { "type": ["number", "null"], "minimum": 0 },
+              "p95Ms": { "type": ["number", "null"], "minimum": 0 },
+              "p99Ms": { "type": ["number", "null"], "minimum": 0 },
+              "offeredRps": { "type": ["number", "null"], "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend"],
+      "description": "Process and cgroup samples. No container names that embed host identifiers.",
+      "properties": {
+        "backend": { "$ref": "#/definitions/processSample" },
+        "website": { "$ref": "#/definitions/processSample" },
+        "dashboard": { "$ref": "#/definitions/processSample" },
+        "nginx": { "$ref": "#/definitions/processSample" },
+        "postgres": { "$ref": "#/definitions/processSample" },
+        "redis": { "$ref": "#/definitions/processSample" },
+        "host": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpuPercent": { "type": ["number", "null"], "minimum": 0 },
+            "memoryUsedBytes": { "type": ["integer", "null"], "minimum": 0 },
+            "memoryTotalBytes": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prisma", "redis", "bullmq", "dataInvariants"],
+      "properties": {
+        "prisma": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["configuredMax"],
+          "properties": {
+            "configuredMax": {
+              "type": "integer",
+              "const": 25,
+              "description": "PrismaPg max from prisma.service.ts."
+            },
+            "urlConnectionLimitNoted": {
+              "type": ["integer", "null"],
+              "description": "DATABASE_URL connection_limit if observed as a query param (compose default 10). Not a secret; never store the URL."
+            },
+            "observedActive": { "type": ["integer", "null"], "minimum": 0 },
+            "observedIdle": { "type": ["integer", "null"], "minimum": 0 },
+            "observedWaiting": { "type": ["integer", "null"], "minimum": 0 },
+            "pgStatActivityCount": {
+              "type": ["integer", "null"],
+              "minimum": 0
+            }
+          }
+        },
+        "redis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxmemoryBytes", "policy"],
+          "properties": {
+            "maxmemoryBytes": {
+              "type": "integer",
+              "const": 209715200,
+              "description": "200mb from docker/redis.conf."
+            },
+            "policy": { "type": "string", "const": "noeviction" },
+            "usedMemoryBytes": { "type": ["integer", "null"], "minimum": 0 },
+            "evictedKeys": { "type": ["integer", "null"], "minimum": 0 },
+            "rejectedConnections": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        },
+        "bullmq": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["waiting", "active", "delayed", "failed", "stalled"],
+          "properties": {
+            "waiting": { "type": ["integer", "null"], "minimum": 0 },
+            "active": { "type": ["integer", "null"], "minimum": 0 },
+            "delayed": { "type": ["integer", "null"], "minimum": 0 },
+            "failed": { "type": ["integer", "null"], "minimum": 0 },
+            "stalled": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        },
+        "dataInvariants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "before", "after", "unchanged"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Table or counter name only. No row payloads."
+              },
+              "before": { "type": "integer", "minimum": 0 },
+              "after": { "type": "integer", "minimum": 0 },
+              "unchanged": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "sustainableCandidateRps",
+        "breakingPointRps",
+        "protectionVsCollapse",
+        "sloHeld",
+        "breakReason",
+        "claimsForbidden",
+        "summary"
+      ],
+      "properties": {
+        "classification": {
+          "type": "string",
+          "enum": [
+            "sustainable",
+            "breaking",
+            "protected_429",
+            "aborted_safety",
+            "invalid_run",
+            "not_measured"
+          ]
+        },
+        "sustainableCandidateRps": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Highest offered RPS that held SLO across repeats. null if not measured. Not a user count."
+        },
+        "breakingPointRps": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "First offered RPS that collapsed or missed SLO. null if not measured. 429-only is not this field."
+        },
+        "protectionVsCollapse": {
+          "type": "string",
+          "enum": ["protection_429", "collapse", "mixed", "not_applicable"]
+        },
+        "sloHeld": { "type": "boolean" },
+        "breakReason": {
+          "type": ["string", "null"],
+          "enum": [
+            "slo_miss",
+            "http_collapse",
+            "dependency_failure",
+            "resource_saturation",
+            "not_applicable",
+            null
+          ],
+          "description": "Required causal label for breaking runs. Draft-07 cannot compare p95Ms with sloP95Ms; use slo_miss only as the recorded reason, not as a schema-computed comparison."
+        },
+        "claimsForbidden": {
+          "type": "string",
+          "const": "do-not-infer-concurrent-users",
+          "description": "Never translate RPS into concurrent users or 'the system handles X users'."
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Measured facts only. No user-capacity claims, secrets, or host identifiers."
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "path"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "load-summary",
+              "http-raw",
+              "cgroup-sample",
+              "health-snapshot",
+              "other"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 512,
+            "description": "Repo-relative path. No absolute host paths that reveal machine identity."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "scenario": {
+            "type": "object",
+            "properties": {
+              "phase1Allowed": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "scenario": {
+            "type": "object",
+            "properties": {
+              "writeOperations": { "const": false },
+              "providersTouched": {
+                "type": "array",
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "type": "object",
+            "properties": {
+              "classification": { "const": "not_measured" }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "verdict": {
+            "type": "object",
+            "properties": {
+              "sustainableCandidateRps": { "const": null },
+              "breakingPointRps": { "const": null },
+              "sloHeld": { "const": false },
+              "protectionVsCollapse": { "const": "not_applicable" },
+              "breakReason": { "enum": [null, "not_applicable"] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "type": "object",
+            "properties": {
+              "classification": { "const": "sustainable" }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "run": {
+            "type": "object",
+            "properties": {
+              "aborted": { "const": false },
+              "steadyStateSeconds": { "type": "number", "exclusiveMinimum": 0 },
+              "soakSeconds": { "type": "number", "minimum": 900 },
+              "repeatTotal": { "type": "integer", "minimum": 3 },
+              "hostProof": {
+                "type": "object",
+                "properties": {
+                  "provenAsActualHost": { "const": true }
+                }
+              }
+            }
+          },
+          "http": {
+            "type": "object",
+            "properties": {
+              "offeredRps": { "type": "number", "minimum": 0 },
+              "acceptedRps": { "type": "number", "minimum": 0 },
+              "p50Ms": { "type": "number", "minimum": 0 },
+              "p95Ms": { "type": "number", "minimum": 0 },
+              "p99Ms": { "type": "number", "minimum": 0 },
+              "sloP95Ms": { "type": "number", "minimum": 0 },
+              "samples": { "type": "integer", "minimum": 1 }
+            }
+          },
+            "verdict": {
+              "type": "object",
+              "properties": {
+                "sustainableCandidateRps": { "type": "number", "minimum": 0 },
+                "breakReason": { "enum": [null, "not_applicable"] },
+                "protectionVsCollapse": {
+                  "enum": ["protection_429", "mixed", "not_applicable"]
+                },
+                "sloHeld": { "const": true }
+              }
+            },
+            "resources": {
+              "type": "object",
+              "properties": {
+                "backend": {
+                  "type": "object",
+                  "required": ["cpuPercent", "rssBytes"],
+                  "properties": {
+                    "cpuPercent": { "type": "number", "minimum": 0 },
+                    "rssBytes": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            },
+            "dependencies": {
+              "type": "object",
+              "properties": {
+                "prisma": {
+                  "type": "object",
+                  "required": ["observedActive", "observedIdle", "observedWaiting", "pgStatActivityCount"],
+                  "properties": {
+                    "observedActive": { "type": "integer", "minimum": 0 },
+                    "observedIdle": { "type": "integer", "minimum": 0 },
+                    "observedWaiting": { "type": "integer", "minimum": 0 },
+                    "pgStatActivityCount": { "type": "integer", "minimum": 0 }
+                  }
+                },
+                "redis": {
+                  "type": "object",
+                  "required": ["usedMemoryBytes", "evictedKeys", "rejectedConnections"],
+                  "properties": {
+                    "usedMemoryBytes": { "type": "integer", "minimum": 0 },
+                    "evictedKeys": { "type": "integer", "minimum": 0 },
+                    "rejectedConnections": { "type": "integer", "minimum": 0 }
+                  }
+                },
+                "bullmq": {
+                  "type": "object",
+                  "required": ["waiting", "active", "delayed", "failed", "stalled"],
+                  "properties": {
+                    "waiting": { "type": "integer", "minimum": 0 },
+                    "active": { "type": "integer", "minimum": 0 },
+                    "delayed": { "type": "integer", "minimum": 0 },
+                    "failed": { "type": "integer", "minimum": 0 },
+                    "stalled": { "type": "integer", "minimum": 0 }
+                  }
+                },
+                "dataInvariants": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "unchanged": { "const": true }
+                    }
+                  }
+                }
+              }
+            },
+            "allOf": [
+              {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "run": {
+                        "properties": {
+                          "hostProof": {
+                            "properties": { "limitsEnforced": { "const": true } }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "run": {
+                        "properties": {
+                          "hostProof": {
+                            "properties": {
+                              "limitsEnforcementMethod": { "enum": ["swarm", "cgroup", "none"] }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "if": {
+                  "properties": {
+                    "run": {
+                      "properties": {
+                        "hostProof": {
+                          "properties": { "limitsEnforced": { "const": true } }
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "resources": {
+                      "properties": {
+                        "backend": {
+                          "required": ["cgroupMemoryCurrentBytes", "cgroupMemoryLimitBytes"],
+                          "properties": {
+                            "cgroupMemoryCurrentBytes": { "type": "integer", "minimum": 0 },
+                            "cgroupMemoryLimitBytes": { "type": "integer", "minimum": 0 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "type": "object",
+            "properties": {
+              "classification": { "const": "breaking" }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "run": {
+            "type": "object",
+            "properties": {
+              "aborted": { "const": false },
+              "steadyStateSeconds": { "type": "number", "exclusiveMinimum": 0 },
+              "hostProof": {
+                "type": "object",
+                "properties": {
+                  "provenAsActualHost": { "const": true }
+                }
+              }
+            }
+          },
+          "http": {
+            "type": "object",
+            "properties": {
+              "offeredRps": { "type": "number", "minimum": 0 },
+              "p50Ms": { "type": "number", "minimum": 0 },
+              "p95Ms": { "type": "number", "minimum": 0 },
+              "p99Ms": { "type": "number", "minimum": 0 },
+              "sloP95Ms": { "type": "number", "minimum": 0 },
+              "samples": { "type": "integer", "minimum": 1 }
+            }
+          },
+          "verdict": {
+            "type": "object",
+            "properties": {
+              "breakingPointRps": {
+                "type": "number",
+                "minimum": 0
+              },
+              "breakReason": {
+                "enum": ["slo_miss", "http_collapse", "dependency_failure", "resource_saturation"]
+              },
+              "protectionVsCollapse": {
+                "enum": ["collapse", "mixed"]
+              },
+              "sloHeld": { "const": false }
+            }
+          },
+          "anyOf": [
+            {
+              "properties": {
+                "http": {
+                  "properties": {
+                    "collapseErrorRate": { "type": "number", "exclusiveMinimum": 0 }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "http": {
+                  "properties": {
+                    "statusCounts": {
+                      "anyOf": [
+                        { "properties": { "http5xx": { "type": "integer", "minimum": 1 } } },
+                        { "properties": { "timeouts": { "type": "integer", "minimum": 1 } } },
+                        { "properties": { "other": { "type": "integer", "minimum": 1 } } }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "verdict": {
+                  "properties": { "breakReason": { "const": "slo_miss" } }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "processSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpuPercent": { "type": ["number", "null"], "minimum": 0 },
+        "rssBytes": { "type": ["integer", "null"], "minimum": 0 },
+        "cgroupMemoryCurrentBytes": { "type": ["integer", "null"], "minimum": 0 },
+        "cgroupMemoryLimitBytes": { "type": ["integer", "null"], "minimum": 0 },
+        "cgroupCpuLimit": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "CPU quota as cores (e.g. 1.5). null if not enforced."
+        }
+      }
+    }
+  }
+}
+}

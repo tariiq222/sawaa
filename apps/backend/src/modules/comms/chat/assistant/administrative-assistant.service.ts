@@ -48,7 +48,7 @@ const MAX_TOOL_ROUNDS = 4;
 const MAX_COMPLETE_BOOKING_TOOL_ROUNDS = 6;
 const MAX_TOOL_CALLS_PER_ROUND = 3;
 const MAX_TOTAL_TOOL_CALLS = 8;
-const MAX_OUTPUT_TOKENS = 800;
+const MAX_OUTPUT_TOKENS = 2400;
 const MAX_PROVIDER_MESSAGE_BYTES = 24_000;
 const MAX_PROVIDER_SYSTEM_PROMPT_BYTES = 6_000;
 const MAX_PROVIDER_TOOL_DEFINITION_BYTES = 12_000;
@@ -612,9 +612,9 @@ export class AdministrativeAssistantService {
         if (error instanceof ChatDailyBudgetExceeded) throw new AdministrativeLimitReached();
         throw error;
       }
-      tokensUsed += result.tokensUsed;
-      model = result.model;
-      if (result.toolCalls.length === 0) {
+        tokensUsed += result.tokensUsed;
+        model = result.model;
+        if (result.toolCalls.length === 0) {
         if (decision) return { executions, model, tokensUsed, decision };
         if (hasSuccessfulPreparedOperation(executions)) return { executions, model, tokensUsed };
         throw new AdministrativeNoFinalReply();

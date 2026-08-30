@@ -289,7 +289,7 @@ describe('AdministrativeAssistantService', () => {
   it('reserves the daily budget before provider use and settles it to actual tokens', async () => {
     await service.processMessage(messageId);
 
-    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash', 36_800);
+    expect(limits.reserveDailyTokenBudget).toHaveBeenCalledWith('guest:opaque-guest-hash', 38_400);
     expect(limits.reserveDailyTokenBudget.mock.invocationCallOrder[0])
       .toBeLessThan(chat.completeWithTools.mock.invocationCallOrder[0]);
     expect(limits.settleDailyTokenReservation).toHaveBeenCalledWith(
@@ -1111,7 +1111,7 @@ describe('AdministrativeAssistantService', () => {
       expect(Buffer.byteLength(JSON.stringify(definitions), 'utf8')).toBeLessThanOrEqual(12_000);
     }
     expect(limits.reserveDailyTokenBudget).toHaveBeenCalledTimes(4);
-    expect(limits.reserveDailyTokenBudget).toHaveBeenLastCalledWith('guest:opaque-guest-hash', 36_800);
+    expect(limits.reserveDailyTokenBudget).toHaveBeenLastCalledWith('guest:opaque-guest-hash', 38_400);
   });
 
   it('keeps maximum-size assistant tool-call groups with their results or omits the full group', async () => {

@@ -4,9 +4,32 @@ import { PrismaService } from '../database/prisma.service';
 import { AiConnectionStatus, AiProvider, parseAiProviderConfig } from '../../modules/ai/provider-config/ai-provider-config.types';
 import { AiProviderCredentialsService } from './ai-provider-credentials.service';
 
-const BASE_URLS: Record<AiProvider, string> = {
-  [AiProvider.OPENROUTER]: 'https://openrouter.ai/api/v1',
-  [AiProvider.OPENAI]: 'https://api.openai.com/v1',
+const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
+const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+
+const isHttpUrl = (value: unknown): value is string => {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Resolves the baseURL for an AI provider client. The OPENAI provider can be
+ * redirected to an OpenAI-compatible deployment via OPENAI_BASE_URL (env only —
+ * DB rows are never trusted to supply a base URL). OPENROUTER always uses the
+ * official OpenRouter endpoint.
+ */
+const resolveBaseUrl = (provider: AiProvider): string => {
+  if (provider === AiProvider.OPENAI) {
+    const override = process.env.OPENAI_BASE_URL;
+    if (isHttpUrl(override)) return override;
+    return DEFAULT_OPENAI_BASE_URL;
+  }
+  return DEFAULT_OPENROUTER_BASE_URL;
 };
 
 @Injectable()
@@ -20,7 +43,7 @@ export class AiProviderClientService {
   createCandidateClient(provider: AiProvider, apiKey: string): OpenAI {
     return new OpenAI({
       apiKey,
-      baseURL: BASE_URLS[provider],
+      baseURL: resolveBaseUrl(provider),
       timeout: 10_000,
       maxRetries: 0,
       ...(provider === AiProvider.OPENROUTER ? { defaultHeaders: { 'HTTP-Referer': 'https://sawaa.app', 'X-Title': 'Sawaa AI' } } : {}),

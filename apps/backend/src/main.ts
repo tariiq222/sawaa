@@ -77,7 +77,7 @@ async function bootstrap(): Promise<void> {
   );
 
   app.useGlobalInterceptors(new RequestContextInterceptor());
-  app.useGlobalInterceptors(new LoggingInterceptor());
+  app.useGlobalInterceptors(new LoggingInterceptor(app.get(AppMetricsService)));
   app.useGlobalInterceptors(
     new AuditInterceptor(app.get(PrismaService), app.get(AppMetricsService)),
   );
