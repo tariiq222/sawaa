@@ -134,9 +134,7 @@ export class DashboardAiController {
   @ApiOkResponse({ type: AiProviderModelSuggestionDto, isArray: true })
   getAiProviderModels() {
     return [
-      { provider: AiProvider.OPENROUTER, models: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet'], allowCustom: true },
-      { provider: AiProvider.OPENAI, models: ['gpt-4o-mini', 'gpt-4.1-mini'], allowCustom: true },
-      { provider: AiProvider.MINIMAX, models: ['MiniMax-M3'], allowCustom: true },
+      { provider: AiProvider.OPENROUTER, models: ['deepseek/deepseek-v4-flash-0731'], allowCustom: true },
     ];
   }
   @CheckPermissions({ action: 'read', subject: 'Setting' })

@@ -1,8 +1,8 @@
 export enum AiProvider {
   OPENROUTER = 'OPENROUTER',
-  OPENAI = 'OPENAI',
-  MINIMAX = 'MINIMAX',
 }
+
+export const DEFAULT_OPENROUTER_MODEL = 'deepseek/deepseek-v4-flash-0731';
 
 export enum AiConnectionStatus {
   NOT_CONFIGURED = 'NOT_CONFIGURED',
@@ -52,7 +52,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
 const isDateOrNull = (value: unknown): value is Date | null => value === null || value instanceof Date;
 
 function assertProvider(value: unknown): asserts value is AiProvider {
-  if (value !== AiProvider.OPENROUTER && value !== AiProvider.OPENAI && value !== AiProvider.MINIMAX) throw new Error('Invalid provider');
+  if (value !== AiProvider.OPENROUTER) throw new Error('Invalid provider');
 }
 
 function assertModel(provider: AiProvider, model: unknown): asserts model is string {
@@ -66,10 +66,8 @@ function assertModel(provider: AiProvider, model: unknown): asserts model is str
     throw new Error('Invalid model');
   }
   const valid = provider === AiProvider.OPENROUTER
-    ? model.split('/').length === 2 && model.split('/').every(isSafeSegment)
-    : provider === AiProvider.MINIMAX
-      ? isSafeSegment(model) && !model.includes('/') && model.startsWith('MiniMax-')
-      : isSafeSegment(model) && !model.includes('/');
+    && model.split('/').length === 2
+    && model.split('/').every(isSafeSegment);
   if (!valid) throw new Error('Invalid model for provider');
 }
 

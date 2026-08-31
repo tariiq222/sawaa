@@ -17,7 +17,7 @@ describe('ChatAdapter', () => {
 
   beforeEach(async () => {
     mockCreate.mockReset();
-    provider = { getReadyClient: jest.fn().mockReturnValue({ client: new (require('openai'))({ apiKey: 'placeholder' }), model: 'gpt-4', provider: 'OPENAI' }), markRetestRequired: jest.fn() };
+    provider = { getReadyClient: jest.fn().mockReturnValue({ client: new (require('openai'))({ apiKey: 'placeholder' }), model: 'deepseek/deepseek-v4-flash-0731', provider: 'OPENROUTER' }), markRetestRequired: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -219,31 +219,9 @@ describe('ChatAdapter', () => {
     provider: providerName,
   });
 
-  it('disables MiniMax thinking on complete, completeWithTools, and stream', async () => {
-    provider.getReadyClient.mockReturnValue(ready(AiProvider.MINIMAX, 'MiniMax-M3'));
-    mockCreate.mockResolvedValue({ choices: [{ message: { content: 'ok', tool_calls: [] } }], usage: {}, model: 'MiniMax-M3' });
-    await adapter.complete([{ role: 'user', content: 'hi' }]);
-    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'MiniMax-M3',
-      thinking: { type: 'disabled' },
-    }));
-    await adapter.completeWithTools([{ role: 'user', content: 'hi' }], []);
-    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'MiniMax-M3',
-      thinking: { type: 'disabled' },
-    }));
-    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () { yield { choices: [{ delta: { content: 'ok' } }] }; } });
-    for await (const _ of adapter.stream([{ role: 'user', content: 'hi' }])) { /* consume */ }
-    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'MiniMax-M3',
-      stream: true,
-      thinking: { type: 'disabled' },
-    }));
-  });
-
-  it.each([AiProvider.OPENAI, AiProvider.OPENROUTER] as const)('does not send thinking for %s', async (providerName) => {
-    provider.getReadyClient.mockReturnValue(ready(providerName, providerName === AiProvider.OPENROUTER ? 'openai/gpt-4o-mini' : 'gpt-4'));
-    mockCreate.mockResolvedValue({ choices: [{ message: { content: 'ok', tool_calls: [] } }], usage: {}, model: 'gpt-4' });
+  it('does not send thinking for OpenRouter complete, completeWithTools, and stream', async () => {
+    provider.getReadyClient.mockReturnValue(ready(AiProvider.OPENROUTER, 'deepseek/deepseek-v4-flash-0731'));
+    mockCreate.mockResolvedValue({ choices: [{ message: { content: 'ok', tool_calls: [] } }], usage: {}, model: 'deepseek/deepseek-v4-flash-0731' });
     await adapter.complete([{ role: 'user', content: 'hi' }]);
     expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('thinking');
     await adapter.completeWithTools([{ role: 'user', content: 'hi' }], []);
@@ -253,21 +231,21 @@ describe('ChatAdapter', () => {
     expect(mockCreate.mock.calls[2][0]).not.toHaveProperty('thinking');
   });
 
-  it('sends MiniMax tools and tool_choice and parses returned tool calls', async () => {
-    provider.getReadyClient.mockReturnValue(ready(AiProvider.MINIMAX, 'MiniMax-M3'));
+  it('sends OpenRouter tools and tool_choice and parses returned tool calls', async () => {
+    provider.getReadyClient.mockReturnValue(ready(AiProvider.OPENROUTER, 'deepseek/deepseek-v4-flash-0731'));
     mockCreate.mockResolvedValue({
       choices: [{
         message: {
           content: null,
           tool_calls: [{
-            id: 'call-minimax-1',
+            id: 'call-openrouter-1',
             type: 'function',
             function: { name: 'replyToCustomer', arguments: '{"text":"ok"}' },
           }],
         },
       }],
       usage: { total_tokens: 7 },
-      model: 'MiniMax-M3',
+      model: 'deepseek/deepseek-v4-flash-0731',
     });
     const tools = [{
       type: 'function' as const,
@@ -285,16 +263,16 @@ describe('ChatAdapter', () => {
     );
 
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'MiniMax-M3',
+      model: 'deepseek/deepseek-v4-flash-0731',
       tools,
       tool_choice: { type: 'function', function: { name: 'replyToCustomer' } },
-      thinking: { type: 'disabled' },
     }));
+    expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('thinking');
     expect(result.toolCalls).toEqual([{
-      id: 'call-minimax-1',
+      id: 'call-openrouter-1',
       function: { name: 'replyToCustomer', arguments: '{"text":"ok"}' },
     }]);
     expect(result.content).toBeNull();
-    expect(result.model).toBe('MiniMax-M3');
+    expect(result.model).toBe('deepseek/deepseek-v4-flash-0731');
   });
 });

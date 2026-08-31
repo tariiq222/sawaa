@@ -111,7 +111,7 @@ npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit 
 
 ## AI cluster (`src/modules/ai/`)
 
-- **ChatAdapter uses runtime-selectable OpenRouter/OpenAI/MiniMax** via encrypted singleton config, not Anthropic SDK directly. Official MiniMax Token Plan URL is `https://api.minimax.io/v1` with default model `MiniMax-M3`. ChatAdapter disables MiniMax thinking (`thinking: { type: 'disabled' }`) on every request so reasoning is not leaked to customers.
+- **ChatAdapter uses OpenRouter only** via encrypted singleton config, not Anthropic SDK directly. The official OpenRouter URL is `https://openrouter.ai/api/v1` with pinned default/curated model `deepseek/deepseek-v4-flash-0731`. `OPENAI_API_KEY` remains embeddings-only.
 - **Prompt structure in `chat-completion.handler.ts`:** system + KB context first, user message last — this is the correct ordering for any cache-friendly model. Do not rearrange.
 - **To enable Anthropic native prompt caching** (cache_control breakpoints, ~10× cheaper reads): requires switching ChatAdapter from OpenRouter to `@anthropic-ai/sdk` directly. This is an intentional future decision, not an oversight.
 - **Semantic search** (`semantic-search.handler.ts`) uses `pgvector` via `PrismaService.$queryRaw`. Always pass `topK` to limit chunks; default is 5.

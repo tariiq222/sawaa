@@ -3,7 +3,7 @@ import { ActivityAction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { AiProviderClientService } from '../../../infrastructure/ai/ai-provider-client.service';
 import { AiProviderCredentialsService } from '../../../infrastructure/ai/ai-provider-credentials.service';
-import { AiConnectionStatus, AiProvider, assertProviderModel } from './ai-provider-config.types';
+import { AiConnectionStatus, assertProviderModel } from './ai-provider-config.types';
 import { RlsTransactionService } from '../../../common/database/rls-transaction';
 import { TestAiProviderConfigDto } from './provider-config.dto';
 
@@ -31,7 +31,7 @@ export class TestAiProviderConfigHandler {
     for (let attempt = 0; attempt < 2 && !ok; attempt += 1) {
       try {
         const client = this.clients.createCandidateClient(dto.provider, dto.candidateApiKey);
-        await client.chat.completions.create({ model: dto.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, temperature: 0, ...(dto.provider === AiProvider.MINIMAX ? { thinking: { type: 'disabled' as const } } : {}) });
+        await client.chat.completions.create({ model: dto.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, temperature: 0 });
         ok = true;
       } catch (error) { errorCode = timeoutCode(error); if (!['PROVIDER_TIMEOUT', 'PROVIDER_UNAVAILABLE'].includes(errorCode)) break; }
     }

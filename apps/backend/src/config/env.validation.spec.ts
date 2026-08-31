@@ -56,7 +56,7 @@ const baseValidEnv = {
   INTERNAL_METRICS_ALLOWED_IPS: '127.0.0.1',
   INTERNAL_METRICS_TOKEN: 'internal-metrics-token-that-is-very-long-32b',
   OPENROUTER_BASE_URL: 'https://openrouter.ai/api/v1',
-  OPENROUTER_CHAT_MODEL: 'anthropic/claude-3.5-haiku',
+  OPENROUTER_CHAT_MODEL: 'deepseek/deepseek-v4-flash-0731',
   OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
   SMTP_PORT: '587',
 };

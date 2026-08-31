@@ -19,7 +19,7 @@ export function SawaaAiSettingsContent() {
   const save = useSaveSawaaAiSettings()
   const test = useTestSawaaAiConnection()
   const [provider, setProvider] = useState<AiProvider>("OPENROUTER")
-  const [model, setModel] = useState("openai/gpt-4o-mini")
+  const [model, setModel] = useState("deepseek/deepseek-v4-flash-0731")
   const [apiKey, setApiKey] = useState("")
   const [temperature, setTemperature] = useState("0.4")
   const [maxTokens, setMaxTokens] = useState("800")
@@ -79,7 +79,7 @@ export function SawaaAiSettingsContent() {
     <CardHeader><div className="flex items-center gap-3"><span className="rounded-xl bg-primary/10 p-2 text-primary"><HugeiconsIcon icon={AiChat02Icon} size={22} /></span><div><CardTitle>{t("sawaaAi.title")}</CardTitle><p className="text-sm text-muted-foreground">{t("sawaaAi.description")}</p></div></div></CardHeader>
     <CardContent className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2"><Label htmlFor="sawaa-ai-provider">{t("sawaaAi.provider")}</Label><Select value={provider} onValueChange={(value) => changeProvider(value as AiProvider)} disabled={!canManage}><SelectTrigger id="sawaa-ai-provider"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="OPENROUTER">OpenRouter</SelectItem><SelectItem value="OPENAI">OpenAI</SelectItem><SelectItem value="MINIMAX">MiniMax</SelectItem></SelectContent></Select></div>
+        <div className="space-y-2"><Label htmlFor="sawaa-ai-provider">{t("sawaaAi.provider")}</Label><Select value={provider} onValueChange={(value) => changeProvider(value as AiProvider)} disabled={!canManage}><SelectTrigger id="sawaa-ai-provider"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="OPENROUTER">OpenRouter</SelectItem></SelectContent></Select></div>
         <div className="space-y-2"><Label htmlFor="sawaa-ai-model">{t("sawaaAi.model")}</Label><Select value={model} onValueChange={changeModel} disabled={!canManage}><SelectTrigger id="sawaa-ai-model"><SelectValue /></SelectTrigger><SelectContent>{providerModels.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}{!providerModels.includes(model) && <SelectItem value={model}>{model}</SelectItem>}</SelectContent></Select></div>
       </div>
       <div className="space-y-2"><Label htmlFor="sawaa-ai-key">{t("sawaaAi.apiKey")}</Label><Input id="sawaa-ai-key" type="password" autoComplete="new-password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={config?.hasCredential ? t("sawaaAi.keyPreserved") : t("sawaaAi.keyPlaceholder")} disabled={!canManage} dir="ltr" /><p className="text-xs text-muted-foreground">{t("sawaaAi.writeOnly")}</p></div>

@@ -1,13 +1,12 @@
-import OpenAI from 'openai';
 import { AiProviderClientService } from './ai-provider-client.service';
-import { AiConnectionStatus, AiProvider } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiConnectionStatus, AiProvider, DEFAULT_OPENROUTER_MODEL } from '../../modules/ai/provider-config/ai-provider-config.types';
 
 jest.mock('openai', () => jest.fn().mockImplementation((options) => ({ options })));
 
 const now = new Date();
 const row = (overrides: Record<string, unknown> = {}) => ({
   id: 'config-1', singletonKey: 'singleton', provider: AiProvider.OPENROUTER,
-  credentialCiphertext: 'v1.ciphertext', model: 'anthropic/claude-3.5-haiku', temperature: 0.4,
+  credentialCiphertext: 'v1.ciphertext', model: DEFAULT_OPENROUTER_MODEL, temperature: 0.4,
   configVersion: 1, testedConfigHash: 'tested-hash',
   maxTokens: 800, isEnabled: true, connectionStatus: AiConnectionStatus.CONNECTED,
   lastTestedAt: now, lastTestOk: true, lastTestErrorCode: null, createdAt: now, updatedAt: now, ...overrides,
@@ -40,11 +39,18 @@ describe('AiProviderClientService', () => {
     expect(credentials.decrypt).not.toHaveBeenCalled();
   });
 
-  it('resolves OpenRouter with its fixed official URL', async () => {
+  it('resolves OpenRouter with its fixed official URL and default headers', async () => {
     prisma.aiProviderConfig.findUnique.mockResolvedValue(row());
     const result = await service.getReadyClient();
-    expect(result?.model).toBe('anthropic/claude-3.5-haiku');
-    expect((result?.client as unknown as { options: Record<string, unknown> }).options).toEqual(expect.objectContaining({ apiKey: 'secret-placeholder', baseURL: 'https://openrouter.ai/api/v1' }));
+    expect(result?.model).toBe(DEFAULT_OPENROUTER_MODEL);
+    expect(result?.provider).toBe(AiProvider.OPENROUTER);
+    expect((result?.client as unknown as { options: Record<string, unknown> }).options).toEqual(expect.objectContaining({
+      apiKey: 'secret-placeholder',
+      baseURL: 'https://openrouter.ai/api/v1',
+      timeout: 10_000,
+      maxRetries: 0,
+      defaultHeaders: { 'HTTP-Referer': 'https://sawaa.app', 'X-Title': 'Sawaa AI' },
+    }));
   });
 
   it('does not resolve when the stored test fingerprint no longer matches the decrypted credential', async () => {
@@ -54,66 +60,25 @@ describe('AiProviderClientService', () => {
     await expect(service.getReadyClient()).resolves.toBeNull();
   });
 
-  it('resolves OpenAI with its fixed official URL and never accepts a row URL', async () => {
-    prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: AiProvider.OPENAI, model: 'gpt-4o' }));
-    const result = await service.getReadyClient();
-    expect((result?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe('https://api.openai.com/v1');
-  });
-
-  it('resolves MiniMax with its fixed official URL and keeps fingerprint readiness', async () => {
-    prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: AiProvider.MINIMAX, model: 'MiniMax-M3' }));
-    const result = await service.getReadyClient();
-    expect(result?.provider).toBe(AiProvider.MINIMAX);
-    expect(result?.model).toBe('MiniMax-M3');
-    expect((result?.client as unknown as { options: Record<string, unknown> }).options).toEqual(expect.objectContaining({
-      apiKey: 'secret-placeholder',
-      baseURL: 'https://api.minimax.io/v1',
-      timeout: 10_000,
-      maxRetries: 0,
-    }));
-    expect(credentials.fingerprint).toHaveBeenCalledWith('secret-placeholder', AiProvider.MINIMAX, 'MiniMax-M3');
-  });
-
-  it('does not resolve MiniMax when the stored test fingerprint no longer matches', async () => {
-    prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: AiProvider.MINIMAX, model: 'MiniMax-M3' }));
-    credentials.fingerprint.mockReturnValue('different-hash');
+  it('does not resolve leftover OpenAI or MiniMax rows', async () => {
+    prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: 'OPENAI', model: 'gpt-4o' }));
+    await expect(service.getReadyClient()).resolves.toBeNull();
+    prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: 'MINIMAX', model: 'MiniMax-M3' }));
     await expect(service.getReadyClient()).resolves.toBeNull();
   });
 
-  describe('OPENAI_BASE_URL env override', () => {
-    const originalOpenaiBaseUrl = process.env.OPENAI_BASE_URL;
-    const validOverrides = [
-      'https://api.minimaxi.com/v1',
-      'https://api.minimax.io/v1',
-      'https://api.minimax.chat/v1',
-    ];
-    const invalidOverrides = ['', 'not-a-url', 'ftp://example.com/v1'];
-
-    afterEach(() => {
-      if (originalOpenaiBaseUrl === undefined) delete process.env.OPENAI_BASE_URL;
-      else process.env.OPENAI_BASE_URL = originalOpenaiBaseUrl;
-    });
-
-    it.each(validOverrides)('routes OpenAI traffic to %s while keeping OpenRouter on its official URL', async (override) => {
-      process.env.OPENAI_BASE_URL = override;
+  it('ignores OPENAI_BASE_URL and always uses the official OpenRouter URL', async () => {
+    const original = process.env.OPENAI_BASE_URL;
+    process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1';
+    try {
       const svc = new AiProviderClientService(prisma, credentials);
-
-      prisma.aiProviderConfig.findUnique.mockResolvedValueOnce(row({ provider: AiProvider.OPENAI, model: 'gpt-4o' }));
-      const openaiResult = await svc.getReadyClient();
-      expect((openaiResult?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe(override);
-
-      prisma.aiProviderConfig.findUnique.mockResolvedValueOnce(row());
-      const openrouterResult = await svc.getReadyClient();
-      expect((openrouterResult?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe('https://openrouter.ai/api/v1');
-    });
-
-    it.each(invalidOverrides)('ignores invalid override %p and keeps the official OpenAI URL', async (override) => {
-      process.env.OPENAI_BASE_URL = override;
-      const svc = new AiProviderClientService(prisma, credentials);
-      prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: AiProvider.OPENAI, model: 'gpt-4o' }));
+      prisma.aiProviderConfig.findUnique.mockResolvedValue(row());
       const result = await svc.getReadyClient();
-      expect((result?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe('https://api.openai.com/v1');
-    });
+      expect((result?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe('https://openrouter.ai/api/v1');
+    } finally {
+      if (original === undefined) delete process.env.OPENAI_BASE_URL;
+      else process.env.OPENAI_BASE_URL = original;
+    }
   });
 
   it('atomically marks the singleton for retesting without provider details', async () => {

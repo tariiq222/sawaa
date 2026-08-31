@@ -12,7 +12,6 @@ enum DocumentStatus {
 enum AiProvider {
   OPENROUTER
   OPENAI
-  MINIMAX
 }
 
 enum AiConnectionStatus {

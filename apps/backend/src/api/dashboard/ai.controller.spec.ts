@@ -255,48 +255,51 @@ describe('DashboardAiController (e2e)', () => {
 
   describe('AI provider settings', () => {
     it('returns 200 with a safe provider projection', async () => {
-      mockGetProvider.execute.mockResolvedValue({ provider: 'OPENAI', model: 'gpt-4o-mini', hasCredential: false });
+      mockGetProvider.execute.mockResolvedValue({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731', hasCredential: false });
       const res = await request(app.getHttpServer()).get('/dashboard/ai/provider-config').expect(200);
       expect(res.body.hasCredential).toBe(false);
       expect(res.body.credentialCiphertext).toBeUndefined();
     });
 
     it('passes provider settings updates to the handler', async () => {
-      mockUpsertProvider.execute.mockResolvedValue({ provider: 'OPENAI', model: 'gpt-4o-mini' });
-      await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENAI', model: 'gpt-4o-mini' }).expect(200);
-      expect(mockUpsertProvider.execute).toHaveBeenCalledWith(expect.objectContaining({ provider: 'OPENAI', model: 'gpt-4o-mini' }), undefined);
+      mockUpsertProvider.execute.mockResolvedValue({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731' });
+      await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731' }).expect(200);
+      expect(mockUpsertProvider.execute).toHaveBeenCalledWith(expect.objectContaining({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731' }), undefined);
     });
 
     it('passes write-only candidate credentials to the test handler', async () => {
       mockTestProvider.execute.mockResolvedValue({ ok: true, persisted: false });
-      await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENAI', model: 'gpt-4o-mini', candidateApiKey: 'candidate-key' }).expect(200);
+      await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key' }).expect(200);
       expect(mockTestProvider.execute).toHaveBeenCalledWith(expect.objectContaining({ candidateApiKey: 'candidate-key' }), undefined);
     });
 
-    it('returns MiniMax among curated model suggestions', async () => {
+    it('returns only the pinned OpenRouter model among curated suggestions', async () => {
       const res = await request(app.getHttpServer()).get('/dashboard/ai/provider-config/models').expect(200);
-      expect(res.body).toEqual(expect.arrayContaining([
-        { provider: 'OPENROUTER', models: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet'], allowCustom: true },
-        { provider: 'OPENAI', models: ['gpt-4o-mini', 'gpt-4.1-mini'], allowCustom: true },
-        { provider: 'MINIMAX', models: ['MiniMax-M3'], allowCustom: true },
-      ]));
+      expect(res.body).toEqual([
+        { provider: 'OPENROUTER', models: ['deepseek/deepseek-v4-flash-0731'], allowCustom: true },
+      ]);
     });
 
-    it('accepts MiniMax-M3 and rejects invalid MiniMax models on the test endpoint', async () => {
+    it('accepts the pinned OpenRouter model and rejects OpenAI or MiniMax providers', async () => {
       mockTestProvider.execute.mockResolvedValue({ ok: true, persisted: false });
       await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({
-        provider: 'MINIMAX',
-        model: 'MiniMax-M3',
+        provider: 'OPENROUTER',
+        model: 'deepseek/deepseek-v4-flash-0731',
         candidateApiKey: 'candidate-key',
       }).expect(200);
       expect(mockTestProvider.execute).toHaveBeenCalledWith(expect.objectContaining({
-        provider: 'MINIMAX',
-        model: 'MiniMax-M3',
+        provider: 'OPENROUTER',
+        model: 'deepseek/deepseek-v4-flash-0731',
         candidateApiKey: 'candidate-key',
       }), undefined);
       await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({
+        provider: 'OPENAI',
+        model: 'gpt-4o-mini',
+        candidateApiKey: 'candidate-key',
+      }).expect(400);
+      await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({
         provider: 'MINIMAX',
-        model: 'minimax-m3',
+        model: 'MiniMax-M3',
         candidateApiKey: 'candidate-key',
       }).expect(400);
     });

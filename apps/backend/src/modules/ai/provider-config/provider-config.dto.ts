@@ -1,14 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength, Matches, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments, Validate } from 'class-validator';
-import { AiProvider } from './ai-provider-config.types';
+import { AiProvider, DEFAULT_OPENROUTER_MODEL } from './ai-provider-config.types';
 
-const MODEL = /^[A-Za-z0-9._:-]+(?:\/[A-Za-z0-9._:-]+)?$/;
+const MODEL = /^[A-Za-z0-9._:-]+\/[A-Za-z0-9._:-]+$/;
 @ValidatorConstraint({ name: 'providerModel', async: false })
-class ProviderModelConstraint implements ValidatorConstraintInterface { validate(model: unknown, args: ValidationArguments) { const provider = (args.object as { provider?: AiProvider }).provider; return typeof model === 'string' && (provider === AiProvider.OPENAI ? !model.includes('/') : provider === AiProvider.OPENROUTER ? model.includes('/') : provider === AiProvider.MINIMAX ? !model.includes('/') && model.startsWith('MiniMax-') : false); } }
+class ProviderModelConstraint implements ValidatorConstraintInterface {
+  validate(model: unknown, args: ValidationArguments) {
+    const provider = (args.object as { provider?: AiProvider }).provider;
+    return typeof model === 'string' && provider === AiProvider.OPENROUTER && model.includes('/');
+  }
+}
 
 export class UpsertAiProviderConfigDto {
   @ApiProperty({ enum: AiProvider }) @IsEnum(AiProvider) provider!: AiProvider;
-  @ApiProperty({ example: 'openai/gpt-4o-mini' }) @IsString() @MinLength(1) @MaxLength(200) @Matches(MODEL) @Validate(ProviderModelConstraint) model!: string;
+  @ApiProperty({ example: DEFAULT_OPENROUTER_MODEL }) @IsString() @MinLength(1) @MaxLength(200) @Matches(MODEL) @Validate(ProviderModelConstraint) model!: string;
   @ApiPropertyOptional({ minimum: 0, maximum: 2, default: 0.4 }) @IsOptional() @IsNumber() @Min(0) @Max(2) temperature?: number;
   @ApiPropertyOptional({ minimum: 1, maximum: 32000, default: 800 }) @IsOptional() @IsInt() @Min(1) @Max(32000) maxTokens?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isEnabled?: boolean;

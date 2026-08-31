@@ -4,8 +4,8 @@ import { UpsertAiProviderConfigHandler } from './upsert-ai-provider-config.handl
 import { GetAiProviderConfigHandler } from './get-ai-provider-config.handler';
 import { AiConnectionStatus, AiProvider } from './ai-provider-config.types';
 
-const row = (overrides: Record<string, unknown> = {}) => ({ id: 'id', singletonKey: 'singleton', provider: AiProvider.OPENAI, credentialCiphertext: 'v1.fake', model: 'gpt-4o-mini', temperature: .4, maxTokens: 800, isEnabled: false, connectionStatus: AiConnectionStatus.CONNECTED, lastTestedAt: new Date(), lastTestOk: true, lastTestErrorCode: null, configVersion: 3, testedConfigHash: 'hash', createdAt: new Date(), updatedAt: new Date(), ...overrides });
-const dto = (overrides: Record<string, unknown> = {}) => ({ provider: AiProvider.OPENAI, model: 'gpt-4o-mini', candidateApiKey: 'candidate-key', saveCredential: true, ...overrides }) as any;
+const row = (overrides: Record<string, unknown> = {}) => ({ id: 'id', singletonKey: 'singleton', provider: AiProvider.OPENROUTER, credentialCiphertext: 'v1.fake', model: 'deepseek/deepseek-v4-flash-0731', temperature: .4, maxTokens: 800, isEnabled: false, connectionStatus: AiConnectionStatus.CONNECTED, lastTestedAt: new Date(), lastTestOk: true, lastTestErrorCode: null, configVersion: 3, testedConfigHash: 'hash', createdAt: new Date(), updatedAt: new Date(), ...overrides });
+const dto = (overrides: Record<string, unknown> = {}) => ({ provider: AiProvider.OPENROUTER, model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key', saveCredential: true, ...overrides }) as any;
 
 describe('AI provider settings handlers', () => {
   const noSecretAudit = (audit: jest.Mock) => {
@@ -41,7 +41,7 @@ describe('AI provider settings handlers', () => {
 
   it('maps an exact matching 401 to RETEST_REQUIRED and timeout/5xx to FAILED', async () => {
     for (const error of [{ status: 401 }, { name: 'AbortError' }, { status: 503 }]) {
-      const audit = jest.fn(); const current = row({ provider: AiProvider.OPENAI, model: 'gpt-4o-mini', testedConfigHash: 'hash' });
+      const audit = jest.fn(); const current = row({ provider: AiProvider.OPENROUTER, model: 'deepseek/deepseek-v4-flash-0731', testedConfigHash: 'hash' });
       const updateMany = jest.fn().mockResolvedValue({ count: 1 });
       const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(current) } };
       const rls = { withTransaction: jest.fn(async (fn: any) => fn({ aiProviderConfig: { updateMany }, activityLog: { create: audit } })) };
@@ -66,9 +66,9 @@ describe('AI provider settings handlers', () => {
   });
 
   it('invalidates and disables when provider or model changes', async () => {
-    const current = row({ provider: AiProvider.OPENAI, model: 'gpt-4o-mini', testedConfigHash: 'hash' }); const updateMany = jest.fn().mockResolvedValue({ count: 1 });
-    const tx = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(current), updateMany, findUniqueOrThrow: jest.fn().mockResolvedValue(row({ provider: AiProvider.OPENROUTER, model: 'anthropic/claude-3.5-sonnet', isEnabled: false, testedConfigHash: null })) }, activityLog: { create: jest.fn() } };
-    const result = await new UpsertAiProviderConfigHandler({} as any, { withTransaction: jest.fn(async (fn: any) => fn(tx)) } as any, { decrypt: jest.fn(), fingerprint: jest.fn() } as any).execute({ provider: AiProvider.OPENROUTER, model: 'anthropic/claude-3.5-sonnet', isEnabled: false } as any);
+    const current = row({ provider: AiProvider.OPENROUTER, model: 'deepseek/deepseek-v4-flash-0731', testedConfigHash: 'hash' }); const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const tx = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(current), updateMany, findUniqueOrThrow: jest.fn().mockResolvedValue(row({ provider: AiProvider.OPENROUTER, model: 'openai/gpt-4o-mini', isEnabled: false, testedConfigHash: null })) }, activityLog: { create: jest.fn() } };
+    const result = await new UpsertAiProviderConfigHandler({} as any, { withTransaction: jest.fn(async (fn: any) => fn(tx)) } as any, { decrypt: jest.fn(), fingerprint: jest.fn() } as any).execute({ provider: AiProvider.OPENROUTER, model: 'openai/gpt-4o-mini', isEnabled: false } as any);
     expect(result.isEnabled).toBe(false); expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ isEnabled: false, testedConfigHash: null, connectionStatus: AiConnectionStatus.RETEST_REQUIRED }) }));
   });
 
@@ -76,7 +76,7 @@ describe('AI provider settings handlers', () => {
     const current = row({ isEnabled: false, connectionStatus: AiConnectionStatus.CONNECTED, lastTestOk: true, testedConfigHash: 'hash' });
     const run = async (decrypt: jest.Mock, fingerprint: jest.Mock) => {
       const tx = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(current), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findUniqueOrThrow: jest.fn().mockResolvedValue(row({ isEnabled: true })) }, activityLog: { create: jest.fn() } };
-      return new UpsertAiProviderConfigHandler({} as any, { withTransaction: jest.fn(async (fn: any) => fn(tx)) } as any, { decrypt, fingerprint } as any).execute({ provider: AiProvider.OPENAI, model: 'gpt-4o-mini', isEnabled: true } as any);
+      return new UpsertAiProviderConfigHandler({} as any, { withTransaction: jest.fn(async (fn: any) => fn(tx)) } as any, { decrypt, fingerprint } as any).execute({ provider: AiProvider.OPENROUTER, model: 'deepseek/deepseek-v4-flash-0731', isEnabled: true } as any);
     };
     await expect(run(jest.fn().mockReturnValue('key'), jest.fn().mockReturnValue('hash'))).resolves.toMatchObject({ isEnabled: true });
     await expect(run(jest.fn().mockImplementation(() => { throw new Error('bad decrypt'); }), jest.fn())).rejects.toBeInstanceOf(BadRequestException);
@@ -85,7 +85,7 @@ describe('AI provider settings handlers', () => {
 
   it('maps upsert CAS count zero to ConflictException', async () => {
     const current = row(); const tx = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(current), updateMany: jest.fn().mockResolvedValue({ count: 0 }) } };
-    await expect(new UpsertAiProviderConfigHandler({} as any, { withTransaction: jest.fn(async (fn: any) => fn(tx)) } as any, { decrypt: jest.fn().mockReturnValue('key'), fingerprint: jest.fn().mockReturnValue('hash') } as any).execute({ provider: AiProvider.OPENAI, model: 'gpt-4o-mini', isEnabled: false } as any)).rejects.toBeInstanceOf(ConflictException);
+    await expect(new UpsertAiProviderConfigHandler({} as any, { withTransaction: jest.fn(async (fn: any) => fn(tx)) } as any, { decrypt: jest.fn().mockReturnValue('key'), fingerprint: jest.fn().mockReturnValue('hash') } as any).execute({ provider: AiProvider.OPENROUTER, model: 'deepseek/deepseek-v4-flash-0731', isEnabled: false } as any)).rejects.toBeInstanceOf(ConflictException);
   });
   it('returns a safe unconfigured projection', async () => {
     const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(null) } } as any;
@@ -112,7 +112,7 @@ describe('AI provider settings handlers', () => {
     const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(row()), updateMany: jest.fn() } };
     const rls = { withTransaction: jest.fn(async (fn: any) => fn(prisma)) };
     const creds = { decrypt: jest.fn().mockReturnValue('key'), fingerprint: jest.fn().mockReturnValue('wrong') };
-    await expect(new UpsertAiProviderConfigHandler(prisma as any, rls as any, creds as any).execute({ provider: AiProvider.OPENAI, model: 'gpt-4o-mini', isEnabled: true } as any)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(new UpsertAiProviderConfigHandler(prisma as any, rls as any, creds as any).execute({ provider: AiProvider.OPENROUTER, model: 'deepseek/deepseek-v4-flash-0731', isEnabled: true } as any)).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('does not mutate live config for a successful non-save test and audits no secret', async () => {
@@ -137,36 +137,20 @@ describe('AI provider settings handlers', () => {
       expect(create).toHaveBeenCalledTimes(attempts); expect(result.errorCode).toBe(code); expect(audit).toHaveBeenCalled(); noSecretAudit(audit);
   });
 
-  it('sends MiniMax thinking-disabled on the candidate test body only', async () => {
+  it('does not send thinking on OpenRouter candidate tests', async () => {
     const create = jest.fn().mockResolvedValue({});
     const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(null) } };
     const rls = { withTransaction: jest.fn(async (fn: any) => fn({ activityLog: { create: jest.fn() } })) };
     const client = { createCandidateClient: jest.fn(() => ({ chat: { completions: { create } } })) };
-    const result = await new TestAiProviderConfigHandler(prisma as any, client as any, { fingerprint: jest.fn() } as any, rls as any)
-      .execute(dto({ provider: AiProvider.MINIMAX, model: 'MiniMax-M3', saveCredential: false }));
-    expect(result).toMatchObject({ ok: true, persisted: false });
+    await new TestAiProviderConfigHandler(prisma as any, client as any, { fingerprint: jest.fn() } as any, rls as any)
+      .execute(dto({ saveCredential: false }));
+    expect(create.mock.calls[0][0]).not.toHaveProperty('thinking');
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'MiniMax-M3',
+      model: 'deepseek/deepseek-v4-flash-0731',
       messages: [{ role: 'user', content: 'ping' }],
       max_tokens: 1,
       temperature: 0,
-      thinking: { type: 'disabled' },
     }));
-  });
-
-  it('does not send thinking on OpenAI or OpenRouter candidate tests', async () => {
-    for (const candidate of [
-      { provider: AiProvider.OPENAI, model: 'gpt-4o-mini' },
-      { provider: AiProvider.OPENROUTER, model: 'openai/gpt-4o-mini' },
-    ]) {
-      const create = jest.fn().mockResolvedValue({});
-      const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(null) } };
-      const rls = { withTransaction: jest.fn(async (fn: any) => fn({ activityLog: { create: jest.fn() } })) };
-      const client = { createCandidateClient: jest.fn(() => ({ chat: { completions: { create } } })) };
-      await new TestAiProviderConfigHandler(prisma as any, client as any, { fingerprint: jest.fn() } as any, rls as any)
-        .execute(dto({ ...candidate, saveCredential: false }));
-      expect(create.mock.calls[0][0]).not.toHaveProperty('thinking');
-    }
   });
 
   it('reports CAS loss instead of clobbering an existing row', async () => {

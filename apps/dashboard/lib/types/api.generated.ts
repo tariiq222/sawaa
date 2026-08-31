@@ -4782,14 +4782,14 @@ export interface components {
             maxTokens: number;
             model: string;
             /** @enum {string} */
-            provider: "OPENROUTER" | "OPENAI" | "MINIMAX";
+            provider: "OPENROUTER";
             temperature: number;
         };
         AiProviderModelSuggestionDto: {
             allowCustom: boolean;
             models: string[];
             /** @enum {string} */
-            provider: "OPENROUTER" | "OPENAI" | "MINIMAX";
+            provider: "OPENROUTER";
         };
         AiProviderTestResponseDto: {
             errorCode: string | null;
@@ -8260,10 +8260,10 @@ export interface components {
             isEnabled?: boolean;
             /** @default 800 */
             maxTokens: number;
-            /** @example openai/gpt-4o-mini */
+            /** @example deepseek/deepseek-v4-flash-0731 */
             model: string;
             /** @enum {string} */
-            provider: "OPENROUTER" | "OPENAI" | "MINIMAX";
+            provider: "OPENROUTER";
             /** @description Persist the candidate only after the bounded test succeeds. */
             saveCredential?: boolean;
             /** @default 0.4 */
@@ -9071,10 +9071,10 @@ export interface components {
             isEnabled?: boolean;
             /** @default 800 */
             maxTokens: number;
-            /** @example openai/gpt-4o-mini */
+            /** @example deepseek/deepseek-v4-flash-0731 */
             model: string;
             /** @enum {string} */
-            provider: "OPENROUTER" | "OPENAI" | "MINIMAX";
+            provider: "OPENROUTER";
             /** @default 0.4 */
             temperature: number;
         };

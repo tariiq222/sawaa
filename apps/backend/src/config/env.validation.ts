@@ -128,7 +128,7 @@ export const envValidationSchema = Joi.object({
   // OpenRouter (AI BC — chat/completion) — optional until Phase 11
   OPENROUTER_API_KEY: Joi.string().allow('').optional(),
   OPENROUTER_BASE_URL: Joi.string().uri().default('https://openrouter.ai/api/v1'),
-  OPENROUTER_CHAT_MODEL: Joi.string().default('anthropic/claude-3.5-haiku'),
+  OPENROUTER_CHAT_MODEL: Joi.string().default('deepseek/deepseek-v4-flash-0731'),
 
   // AI provider credential envelope key — required at boot; base64 of exactly 32 random bytes.
   AI_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).custom((value, helpers) => {

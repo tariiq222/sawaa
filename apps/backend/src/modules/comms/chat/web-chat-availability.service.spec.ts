@@ -16,7 +16,7 @@ describe('WebChatAvailabilityService', () => {
   });
 
   it('reports ready only for a connected, tested provider client', async () => {
-    const providerClient = { getReadyClient: jest.fn().mockResolvedValue({ client: {}, model: 'model', provider: 'OPENAI', configVersion: 4, testedConfigHash: 'hash-4' }) };
+    const providerClient = { getReadyClient: jest.fn().mockResolvedValue({ client: {}, model: 'deepseek/deepseek-v4-flash-0731', provider: 'OPENROUTER', configVersion: 4, testedConfigHash: 'hash-4' }) };
     const service = new WebChatAvailabilityService(
       { get: (key: string) => key === 'WEB_CHAT_ENABLED' ? true : undefined } as unknown as ConfigService,
       providerClient as unknown as AiProviderClientService,

@@ -43,22 +43,22 @@ describe('DashboardAiController provider permissions (real CaslGuard)', () => {
     permissions = [{ action: 'read', subject: 'Setting' }];
     await request(app.getHttpServer()).get('/dashboard/ai/provider-config').expect(200);
     await request(app.getHttpServer()).get('/dashboard/ai/provider-config/models').expect(200);
-    await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENAI', model: 'gpt-4o-mini' }).expect(403);
-    await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENAI', model: 'gpt-4o-mini', candidateApiKey: 'candidate-key' }).expect(403);
+    await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731' }).expect(403);
+    await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key' }).expect(403);
   });
 
   it('allows Setting manage to mutate provider settings', async () => {
     permissions = [{ action: 'manage', subject: 'Setting' }];
-    await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENAI', model: 'gpt-4o-mini' }).expect(200);
-    await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENAI', model: 'gpt-4o-mini', candidateApiKey: 'candidate-key' }).expect(200);
+    await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731' }).expect(200);
+    await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key' }).expect(200);
   });
 
   it('forbids users without Setting permission', async () => {
     permissions = [{ action: 'read', subject: 'Booking' }];
     await request(app.getHttpServer()).get('/dashboard/ai/provider-config').expect(403);
     await request(app.getHttpServer()).get('/dashboard/ai/provider-config/models').expect(403);
-    await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENAI', model: 'gpt-4o-mini' }).expect(403);
-    await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENAI', model: 'gpt-4o-mini', candidateApiKey: 'candidate-key' }).expect(403);
+    await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731' }).expect(403);
+    await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key' }).expect(403);
   });
 
   it('enforces read/manage permissions for every knowledge-base verb', async () => {
