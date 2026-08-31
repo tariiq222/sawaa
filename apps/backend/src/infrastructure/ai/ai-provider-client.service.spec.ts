@@ -60,6 +60,26 @@ describe('AiProviderClientService', () => {
     expect((result?.client as unknown as { options: Record<string, unknown> }).options.baseURL).toBe('https://api.openai.com/v1');
   });
 
+  it('resolves MiniMax with its fixed official URL and keeps fingerprint readiness', async () => {
+    prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: AiProvider.MINIMAX, model: 'MiniMax-M3' }));
+    const result = await service.getReadyClient();
+    expect(result?.provider).toBe(AiProvider.MINIMAX);
+    expect(result?.model).toBe('MiniMax-M3');
+    expect((result?.client as unknown as { options: Record<string, unknown> }).options).toEqual(expect.objectContaining({
+      apiKey: 'secret-placeholder',
+      baseURL: 'https://api.minimax.io/v1',
+      timeout: 10_000,
+      maxRetries: 0,
+    }));
+    expect(credentials.fingerprint).toHaveBeenCalledWith('secret-placeholder', AiProvider.MINIMAX, 'MiniMax-M3');
+  });
+
+  it('does not resolve MiniMax when the stored test fingerprint no longer matches', async () => {
+    prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ provider: AiProvider.MINIMAX, model: 'MiniMax-M3' }));
+    credentials.fingerprint.mockReturnValue('different-hash');
+    await expect(service.getReadyClient()).resolves.toBeNull();
+  });
+
   it('atomically marks the singleton for retesting without provider details', async () => {
     await service.markRetestRequired();
     expect(prisma.aiProviderConfig.updateMany).toHaveBeenCalledWith({

@@ -272,5 +272,33 @@ describe('DashboardAiController (e2e)', () => {
       await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENAI', model: 'gpt-4o-mini', candidateApiKey: 'candidate-key' }).expect(200);
       expect(mockTestProvider.execute).toHaveBeenCalledWith(expect.objectContaining({ candidateApiKey: 'candidate-key' }), undefined);
     });
+
+    it('returns MiniMax among curated model suggestions', async () => {
+      const res = await request(app.getHttpServer()).get('/dashboard/ai/provider-config/models').expect(200);
+      expect(res.body).toEqual(expect.arrayContaining([
+        { provider: 'OPENROUTER', models: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet'], allowCustom: true },
+        { provider: 'OPENAI', models: ['gpt-4o-mini', 'gpt-4.1-mini'], allowCustom: true },
+        { provider: 'MINIMAX', models: ['MiniMax-M3'], allowCustom: true },
+      ]));
+    });
+
+    it('accepts MiniMax-M3 and rejects invalid MiniMax models on the test endpoint', async () => {
+      mockTestProvider.execute.mockResolvedValue({ ok: true, persisted: false });
+      await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({
+        provider: 'MINIMAX',
+        model: 'MiniMax-M3',
+        candidateApiKey: 'candidate-key',
+      }).expect(200);
+      expect(mockTestProvider.execute).toHaveBeenCalledWith(expect.objectContaining({
+        provider: 'MINIMAX',
+        model: 'MiniMax-M3',
+        candidateApiKey: 'candidate-key',
+      }), undefined);
+      await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({
+        provider: 'MINIMAX',
+        model: 'minimax-m3',
+        candidateApiKey: 'candidate-key',
+      }).expect(400);
+    });
   });
 });

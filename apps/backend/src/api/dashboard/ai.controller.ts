@@ -136,6 +136,7 @@ export class DashboardAiController {
     return [
       { provider: AiProvider.OPENROUTER, models: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet'], allowCustom: true },
       { provider: AiProvider.OPENAI, models: ['gpt-4o-mini', 'gpt-4.1-mini'], allowCustom: true },
+      { provider: AiProvider.MINIMAX, models: ['MiniMax-M3'], allowCustom: true },
     ];
   }
   @CheckPermissions({ action: 'read', subject: 'Setting' })

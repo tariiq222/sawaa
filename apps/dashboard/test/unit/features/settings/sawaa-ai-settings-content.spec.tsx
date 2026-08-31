@@ -14,7 +14,7 @@ vi.mock("@/components/locale-provider", () => ({ useLocale: () => ({ t: (key: st
 vi.mock("@/components/providers/auth-provider", () => ({ useAuth: () => ({ canDo: (_module: string, action: string) => canManage && (action === "read" || action === "manage") }) }))
 vi.mock("@/hooks/use-sawaa-ai-settings", () => ({
   useSawaaAiSettings: () => ({ config, loading: false, error: null }),
-  useSawaaAiModels: () => ({ data: [{ provider: "OPENROUTER", models: ["openai/gpt-4o-mini"], allowCustom: true }, { provider: "OPENAI", models: ["gpt-4o-mini"], allowCustom: true }], isError: modelsError, isFetching: false, refetch: refetchModels }),
+  useSawaaAiModels: () => ({ data: [{ provider: "OPENROUTER", models: ["openai/gpt-4o-mini"], allowCustom: true }, { provider: "OPENAI", models: ["gpt-4o-mini"], allowCustom: true }, { provider: "MINIMAX", models: ["MiniMax-M3"], allowCustom: true }], isError: modelsError, isFetching: false, refetch: refetchModels }),
   useTestSawaaAiConnection: () => ({ mutateAsync: mutateTest, isPending: false }),
   useSaveSawaaAiSettings: () => ({ mutateAsync: mutateSave, isPending: false }),
 }))
@@ -49,6 +49,26 @@ describe("Sawaa Ai settings", () => {
     const toggle = screen.getByRole("switch", { name: "sawaaAi.enable" })
     expect(toggle).toBeDisabled()
     expect(screen.getByText("sawaaAi.enableRequiresTest")).toBeInTheDocument()
+  })
+
+  it("selects MiniMax-M3, clears the typed key, and tests with the MiniMax payload", async () => {
+    render(<SawaaAiSettingsContent />)
+    fireEvent.change(screen.getByLabelText("sawaaAi.apiKey"), { target: { value: "sk-cp-placeholder" } })
+    fireEvent.click(screen.getByRole("combobox", { name: "sawaaAi.provider" }))
+    fireEvent.click(screen.getByRole("option", { name: "MiniMax" }))
+    expect(screen.getByRole("combobox", { name: "sawaaAi.provider" })).toHaveTextContent("MiniMax")
+    expect(screen.getByRole("combobox", { name: "sawaaAi.model" })).toHaveTextContent("MiniMax-M3")
+    expect(screen.getByLabelText("sawaaAi.apiKey")).toHaveValue("")
+    expect(screen.getByRole("switch", { name: "sawaaAi.enable" })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText("sawaaAi.apiKey"), { target: { value: "sk-cp-placeholder" } })
+    fireEvent.click(screen.getByRole("button", { name: "sawaaAi.test" }))
+    await waitFor(() => expect(mutateTest).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "MINIMAX",
+      model: "MiniMax-M3",
+      candidateApiKey: "sk-cp-placeholder",
+      saveCredential: true,
+    })))
+    expect(mutateSave).not.toHaveBeenCalled()
   })
 
   it("supports switching provider and model and invalidates the local test identity", () => {

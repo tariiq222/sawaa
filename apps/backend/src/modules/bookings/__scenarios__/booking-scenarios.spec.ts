@@ -564,10 +564,26 @@ describe("Scenario 5 — Client reschedules to new time, Zoom updated, notificat
 				data: expect.objectContaining({ scheduledAt: newTime }),
 			}),
 		);
-		expect(zoomService.updateMeeting).toHaveBeenCalledWith(
-			DEFAULT_ORG_ID,
-			"zoom-555",
-			expect.objectContaining({ startTime: newTime.toISOString() }),
+		// Zoom PATCH is no longer issued in-process. Reschedule writes a
+		// revisioned desired state + outbox event; booking-zoom-reschedule
+		// consumes it. The new start time must still be the desired start.
+		expect(zoomService.updateMeeting).not.toHaveBeenCalled();
+		expect(prisma.bookingZoomSync.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					zoomMeetingId: "zoom-555",
+					desiredStartAt: newTime,
+					desiredDurationMins: 60,
+				}),
+			}),
+		);
+		expect(prisma.outboxEvent.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					eventType: "bookings.zoom.reschedule_requested",
+					status: "PENDING_V2",
+				}),
+			}),
 		);
 	});
 });

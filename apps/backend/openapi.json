@@ -64,7 +64,8 @@
           "provider": {
             "enum": [
               "OPENROUTER",
-              "OPENAI"
+              "OPENAI",
+              "MINIMAX"
             ],
             "type": "string"
           },
@@ -100,7 +101,8 @@
           "provider": {
             "enum": [
               "OPENROUTER",
-              "OPENAI"
+              "OPENAI",
+              "MINIMAX"
             ],
             "type": "string"
           }
@@ -5685,7 +5687,8 @@
           "provider": {
             "enum": [
               "OPENROUTER",
-              "OPENAI"
+              "OPENAI",
+              "MINIMAX"
             ],
             "type": "string"
           },
@@ -6830,7 +6833,8 @@
           "provider": {
             "enum": [
               "OPENROUTER",
-              "OPENAI"
+              "OPENAI",
+              "MINIMAX"
             ],
             "type": "string"
           },

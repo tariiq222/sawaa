@@ -1,6 +1,6 @@
 import { api } from "@/lib/api"
 
-export type AiProvider = "OPENROUTER" | "OPENAI"
+export type AiProvider = "OPENROUTER" | "OPENAI" | "MINIMAX"
 export type AiProviderConfig = {
   provider: AiProvider
   model: string

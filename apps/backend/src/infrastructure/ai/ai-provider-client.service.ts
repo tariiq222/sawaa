@@ -7,6 +7,7 @@ import { AiProviderCredentialsService } from './ai-provider-credentials.service'
 const BASE_URLS: Record<AiProvider, string> = {
   [AiProvider.OPENROUTER]: 'https://openrouter.ai/api/v1',
   [AiProvider.OPENAI]: 'https://api.openai.com/v1',
+  [AiProvider.MINIMAX]: 'https://api.minimax.io/v1',
 };
 
 @Injectable()

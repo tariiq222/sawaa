@@ -51,6 +51,15 @@ describe('PublicChatController (e2e)', () => {
     jest.clearAllMocks();
   });
 
+  it('applies an IP-scoped 5/minute throttle to guest conversation creation', () => {
+    // The controller spec is a lightweight TestingModule without
+    // ThrottlerModule/Redis. Invoking SingleTenantThrottlerGuard here would
+    // re-test Nest plumbing, not this route. Metadata is what the installed
+    // @nestjs/throttler v6 guard reads (THROTTLER:LIMIT/TTL + "default").
+    expect(Reflect.getMetadata('THROTTLER:LIMITdefault', PublicChatController.prototype.create)).toBe(5);
+    expect(Reflect.getMetadata('THROTTLER:TTLdefault', PublicChatController.prototype.create)).toBe(60_000);
+  });
+
   it('returns 404 without invoking chat handlers when WEB_CHAT_ENABLED is false', async () => {
     webChatEnabled = false;
 

@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
-import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
+import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
+import { AiProvider } from '../../modules/ai/provider-config/ai-provider-config.types';
 import { AiProviderClientService } from './ai-provider-client.service';
+
+type MiniMaxThinkingDisabled = { thinking: { type: 'disabled' } };
+type ChatCreateBody = ChatCompletionCreateParams & Partial<MiniMaxThinkingDisabled>;
+
+function providerChatExtensions(provider: AiProvider): MiniMaxThinkingDisabled | Record<string, never> {
+  return provider === AiProvider.MINIMAX ? { thinking: { type: 'disabled' } } : {};
+}
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -55,7 +63,7 @@ export class ChatAdapter implements IChatService {
     try { return (await this.providerClient.getReadyClient()) !== null; } catch { return false; }
   }
 
-  private async ready(): Promise<{ client: OpenAI; model: string }> {
+  private async ready(): Promise<{ client: OpenAI; model: string; provider: AiProvider }> {
     const resolved = await this.providerClient.getReadyClient();
     if (!resolved) throw new Error('ChatAdapter is not available — configure and test an AI provider');
     return resolved;
@@ -104,7 +112,8 @@ export class ChatAdapter implements IChatService {
     const ready = await this.ready();
     let response;
     try {
-      response = await ready.client.chat.completions.create({ model: model ?? ready.model, messages: this.toOpenAIMessages(messages), ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}) });
+      const body: ChatCreateBody = { model: model ?? ready.model, messages: this.toOpenAIMessages(messages), ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}), ...providerChatExtensions(ready.provider) };
+      response = await ready.client.chat.completions.create(body);
     } catch (error) { return this.providerError(error); }
     return {
       content: response.choices[0]?.message?.content ?? '',
@@ -121,7 +130,8 @@ export class ChatAdapter implements IChatService {
     const ready = await this.ready();
     let response;
     try {
-      response = await ready.client.chat.completions.create({ model: options?.model ?? ready.model, messages: this.toOpenAIMessages(messages), tools, ...(tools.length > 0 ? { tool_choice: options?.toolChoice ?? 'required' as const } : {}), ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}), ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}) });
+      const body: ChatCreateBody = { model: options?.model ?? ready.model, messages: this.toOpenAIMessages(messages), tools, ...(tools.length > 0 ? { tool_choice: options?.toolChoice ?? 'required' as const } : {}), ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}), ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}), ...providerChatExtensions(ready.provider) };
+      response = await ready.client.chat.completions.create(body);
     } catch (error) { return this.providerError(error); }
     const message = response.choices[0]?.message;
     const toolCalls: ToolCall[] = [];
@@ -147,7 +157,8 @@ export class ChatAdapter implements IChatService {
   async *stream(messages: ChatMessage[], model?: string): AsyncIterable<string> {
     const ready = await this.ready();
     try {
-      const streamResult = await ready.client.chat.completions.create({ model: model ?? ready.model, messages: this.toOpenAIMessages(messages), stream: true });
+      const body: ChatCreateBody = { model: model ?? ready.model, messages: this.toOpenAIMessages(messages), stream: true, ...providerChatExtensions(ready.provider) };
+      const streamResult = await ready.client.chat.completions.create(body);
       for await (const chunk of streamResult) {
         const delta = chunk.choices[0]?.delta?.content;
         if (delta) yield delta;

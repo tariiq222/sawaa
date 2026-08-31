@@ -139,6 +139,8 @@ describe('envValidationSchema', () => {
       CHAT_MAX_MESSAGE_LENGTH: 4000,
       CHAT_RATE_LIMIT_PER_MINUTE: 20,
       CHAT_DAILY_TOKEN_BUDGET: 100000,
+      CHAT_DAILY_TOKEN_BUDGET_PER_IP: 500000,
+      CHAT_DAILY_TOKEN_BUDGET_GLOBAL: 5000000,
       CHAT_GUEST_SESSION_DAYS: 30,
       RETENTION_CHAT_DAYS: 365,
     }));
@@ -147,6 +149,8 @@ describe('envValidationSchema', () => {
   it.each([
     ['CHAT_RATE_LIMIT_PER_MINUTE', '0'],
     ['CHAT_DAILY_TOKEN_BUDGET', '0'],
+    ['CHAT_DAILY_TOKEN_BUDGET_PER_IP', '0'],
+    ['CHAT_DAILY_TOKEN_BUDGET_GLOBAL', '0'],
     ['CHAT_GUEST_SESSION_DAYS', '0'],
     ['RETENTION_CHAT_DAYS', '0'],
   ])('rejects a non-positive %s', (key, value) => {

@@ -23,7 +23,9 @@ const buildPrisma = () => {
   const prisma: {
     payment: {
       findFirst: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
       aggregate: jest.Mock;
     };
     invoice: {
@@ -31,10 +33,15 @@ const buildPrisma = () => {
       update: jest.Mock;
       findUniqueOrThrow: jest.Mock;
     };
+    outboxEvent: {
+      create: jest.Mock;
+    };
     refundRequest: {
       findFirst: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
     };
     booking: {
       findFirst: jest.Mock;
@@ -47,7 +54,16 @@ const buildPrisma = () => {
   } = {
     payment: {
       findFirst: jest.fn(),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        id: 'pay-1',
+        status: PaymentStatus.REFUNDED,
+        gatewayRef: 'pay_test_gw_123',
+        amount: 100,
+        refundedAmount: 0,
+        currency: 'SAR',
+      }),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       aggregate: jest.fn(),
     },
     invoice: {
@@ -57,8 +73,28 @@ const buildPrisma = () => {
     },
     refundRequest: {
       findFirst: jest.fn().mockResolvedValue(null),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        id: 'rr-1',
+        paymentId: 'pay-1',
+        amount: 100,
+        invoiceId: 'inv-1',
+        status: 'PROCESSING',
+        gatewayRef: null,
+        idempotencyKey: null,
+        sourceEventId: null,
+        providerState: 'BEFORE_CALL',
+        providerLeaseOwner: null,
+        providerLeaseExpiresAt: null,
+        baselineRefundedAmount: null,
+        targetCumulativeRefundedAmount: null,
+        observedCumulativeRefundedAmount: null,
+      }),
       create: jest.fn().mockResolvedValue({ id: 'rr-1' }),
       update: jest.fn().mockResolvedValue({ id: 'rr-1' }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
+    outboxEvent: {
+      create: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
     },
     // resolveInvoiceDeposit (VerifyPaymentHandler) loads booking → service via
     // scalar bookingId. Default to a service with NO deposit.
@@ -84,7 +120,18 @@ const buildEventBus = () => ({
   subscribe: jest.fn(),
 });
 const buildMoyasar = () => ({
-  createRefund: jest.fn().mockResolvedValue({ id: 'refund-gw-1' }),
+  getPaymentStatus: jest.fn().mockResolvedValue({
+    id: 'pay_test_gw_123',
+    status: 'paid',
+    amount: 100,
+    refunded: 0,
+    currency: 'SAR',
+  }),
+  createRefund: jest.fn().mockResolvedValue({
+    id: 'pay_test_gw_123',
+    currency: 'SAR',
+    refunded: 100,
+  }),
 });
 
 const PAY_ID = 'pay-1';
@@ -123,24 +170,28 @@ describe('RefundPaymentHandler', () => {
         }),
       }),
     );
-    expect(prisma.refundRequest.update).toHaveBeenCalledWith(
+    expect(prisma.refundRequest.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: 'COMPLETED', gatewayRef: 'refund-gw-1' }),
+        data: expect.objectContaining({ status: 'COMPLETED', gatewayRef: 'pay_test_gw_123' }),
       }),
     );
     expect(prisma.payment.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: PAY_ID },
-        data: expect.objectContaining({ status: PaymentStatus.REFUNDED, failureReason: 'client request' }),
+        data: expect.objectContaining({ status: PaymentStatus.REFUNDED }),
       }),
     );
-    expect(eventBus.publish).toHaveBeenCalledWith(
-      'finance.refund.completed',
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        payload: expect.objectContaining({
-          paymentId: PAY_ID,
-          bookingId: 'book-1',
-          organizationId: DEFAULT_ORG_ID,
+        data: expect.objectContaining({
+          eventType: 'finance.refund.completed',
+          payload: expect.objectContaining({
+            payload: expect.objectContaining({
+              paymentId: PAY_ID,
+              bookingId: 'book-1',
+              organizationId: DEFAULT_ORG_ID,
+            }),
+          }),
         }),
       }),
     );

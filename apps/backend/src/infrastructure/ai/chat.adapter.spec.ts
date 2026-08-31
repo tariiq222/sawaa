@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatAdapter } from './chat.adapter';
 import { AiProviderClientService } from './ai-provider-client.service';
+import { AiProvider } from '../../modules/ai/provider-config/ai-provider-config.types';
 
 const mockCreate = jest.fn();
 
@@ -210,5 +211,90 @@ describe('ChatAdapter', () => {
       chunks.push(chunk);
     }
     expect(chunks).toEqual(['Hello', ' world']);
+  });
+
+  const ready = (providerName: AiProvider, model: string) => ({
+    client: new (require('openai'))({ apiKey: 'placeholder' }),
+    model,
+    provider: providerName,
+  });
+
+  it('disables MiniMax thinking on complete, completeWithTools, and stream', async () => {
+    provider.getReadyClient.mockReturnValue(ready(AiProvider.MINIMAX, 'MiniMax-M3'));
+    mockCreate.mockResolvedValue({ choices: [{ message: { content: 'ok', tool_calls: [] } }], usage: {}, model: 'MiniMax-M3' });
+    await adapter.complete([{ role: 'user', content: 'hi' }]);
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      model: 'MiniMax-M3',
+      thinking: { type: 'disabled' },
+    }));
+    await adapter.completeWithTools([{ role: 'user', content: 'hi' }], []);
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      model: 'MiniMax-M3',
+      thinking: { type: 'disabled' },
+    }));
+    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () { yield { choices: [{ delta: { content: 'ok' } }] }; } });
+    for await (const _ of adapter.stream([{ role: 'user', content: 'hi' }])) { /* consume */ }
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      model: 'MiniMax-M3',
+      stream: true,
+      thinking: { type: 'disabled' },
+    }));
+  });
+
+  it.each([AiProvider.OPENAI, AiProvider.OPENROUTER] as const)('does not send thinking for %s', async (providerName) => {
+    provider.getReadyClient.mockReturnValue(ready(providerName, providerName === AiProvider.OPENROUTER ? 'openai/gpt-4o-mini' : 'gpt-4'));
+    mockCreate.mockResolvedValue({ choices: [{ message: { content: 'ok', tool_calls: [] } }], usage: {}, model: 'gpt-4' });
+    await adapter.complete([{ role: 'user', content: 'hi' }]);
+    expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('thinking');
+    await adapter.completeWithTools([{ role: 'user', content: 'hi' }], []);
+    expect(mockCreate.mock.calls[1][0]).not.toHaveProperty('thinking');
+    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () { yield { choices: [{ delta: { content: 'ok' } }] }; } });
+    for await (const _ of adapter.stream([{ role: 'user', content: 'hi' }])) { /* consume */ }
+    expect(mockCreate.mock.calls[2][0]).not.toHaveProperty('thinking');
+  });
+
+  it('sends MiniMax tools and tool_choice and parses returned tool calls', async () => {
+    provider.getReadyClient.mockReturnValue(ready(AiProvider.MINIMAX, 'MiniMax-M3'));
+    mockCreate.mockResolvedValue({
+      choices: [{
+        message: {
+          content: null,
+          tool_calls: [{
+            id: 'call-minimax-1',
+            type: 'function',
+            function: { name: 'replyToCustomer', arguments: '{"text":"ok"}' },
+          }],
+        },
+      }],
+      usage: { total_tokens: 7 },
+      model: 'MiniMax-M3',
+    });
+    const tools = [{
+      type: 'function' as const,
+      function: {
+        name: 'replyToCustomer',
+        description: 'Return the final customer reply',
+        parameters: { type: 'object', properties: {} },
+      },
+    }];
+
+    const result = await adapter.completeWithTools(
+      [{ role: 'user', content: 'السلام عليكم' }],
+      tools,
+      { toolChoice: { type: 'function', function: { name: 'replyToCustomer' } } },
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      model: 'MiniMax-M3',
+      tools,
+      tool_choice: { type: 'function', function: { name: 'replyToCustomer' } },
+      thinking: { type: 'disabled' },
+    }));
+    expect(result.toolCalls).toEqual([{
+      id: 'call-minimax-1',
+      function: { name: 'replyToCustomer', arguments: '{"text":"ok"}' },
+    }]);
+    expect(result.content).toBeNull();
+    expect(result.model).toBe('MiniMax-M3');
   });
 });
