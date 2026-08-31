@@ -306,6 +306,19 @@ describe('AdministrativeAssistantService', () => {
     expect(chat.completeWithTools).not.toHaveBeenCalled();
   });
 
+  it('falls back to a reception handoff offer when the global daily token cap is exhausted', async () => {
+    limits.reserveDailyTokenBudget.mockRejectedValueOnce(new ChatDailyBudgetExceeded('global'));
+
+    await service.processMessage(messageId);
+
+    expect(chat.completeWithTools).not.toHaveBeenCalled();
+    expect(tx.commsChatMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: { action: 'OFFER_HANDOFF', reason: 'LIMIT_REACHED' },
+      }),
+    });
+  });
+
   it('retains a reservation when the provider timeout leaves charging ambiguous', async () => {
     chat.completeWithTools.mockRejectedValueOnce(new Error('provider timeout'));
 

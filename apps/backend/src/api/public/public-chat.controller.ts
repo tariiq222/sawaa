@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Ip, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
@@ -38,6 +39,7 @@ export class PublicChatController {
   ) {}
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('conversations')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a guest chat conversation' })

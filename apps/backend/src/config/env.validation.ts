@@ -93,6 +93,15 @@ export const envValidationSchema = Joi.object({
   CHAT_MAX_MESSAGE_LENGTH: Joi.number().integer().min(1).max(4000).default(4000),
   CHAT_RATE_LIMIT_PER_MINUTE: Joi.number().integer().min(1).max(600).default(20),
   CHAT_DAILY_TOKEN_BUDGET: Joi.number().integer().min(1).default(100_000),
+  // Shared by every identity behind one caller IP. Default is 5× the
+  // per-identity budget so a household/NAT of several legitimate users
+  // is not blocked, while cookie-rotation cannot mint unbounded spend.
+  CHAT_DAILY_TOKEN_BUDGET_PER_IP: Joi.number().integer().min(1).default(500_000),
+  // Deployment-wide hard ceiling for one UTC day, across every identity
+  // and IP. Default 5_000_000 ≈ 100 conversations × 10_000 tokens × 5×
+  // safety (covers in-flight 36_800-token reservations). Generous for one
+  // counseling centre; still bounds worst-case rotated-identity spend.
+  CHAT_DAILY_TOKEN_BUDGET_GLOBAL: Joi.number().integer().min(1).default(5_000_000),
   CHAT_GUEST_SESSION_DAYS: Joi.number().integer().min(1).max(365).default(30),
   RETENTION_CHAT_DAYS: Joi.number().integer().min(1).max(3650).default(365),
 

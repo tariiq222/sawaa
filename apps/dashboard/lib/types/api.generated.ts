@@ -4782,14 +4782,14 @@ export interface components {
             maxTokens: number;
             model: string;
             /** @enum {string} */
-            provider: "OPENROUTER" | "OPENAI";
+            provider: "OPENROUTER" | "OPENAI" | "MINIMAX";
             temperature: number;
         };
         AiProviderModelSuggestionDto: {
             allowCustom: boolean;
             models: string[];
             /** @enum {string} */
-            provider: "OPENROUTER" | "OPENAI";
+            provider: "OPENROUTER" | "OPENAI" | "MINIMAX";
         };
         AiProviderTestResponseDto: {
             errorCode: string | null;
@@ -8263,7 +8263,7 @@ export interface components {
             /** @example openai/gpt-4o-mini */
             model: string;
             /** @enum {string} */
-            provider: "OPENROUTER" | "OPENAI";
+            provider: "OPENROUTER" | "OPENAI" | "MINIMAX";
             /** @description Persist the candidate only after the bounded test succeeds. */
             saveCredential?: boolean;
             /** @default 0.4 */
@@ -9074,7 +9074,7 @@ export interface components {
             /** @example openai/gpt-4o-mini */
             model: string;
             /** @enum {string} */
-            provider: "OPENROUTER" | "OPENAI";
+            provider: "OPENROUTER" | "OPENAI" | "MINIMAX";
             /** @default 0.4 */
             temperature: number;
         };

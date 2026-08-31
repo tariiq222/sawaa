@@ -571,6 +571,7 @@ describe("Scenario 5 — Client reschedules to new time, Zoom sync queued, notif
 					bookingId: "book-5",
 					zoomMeetingId: "zoom-555",
 					desiredStartAt: newTime,
+					desiredDurationMins: 60,
 					revision: 1,
 				}),
 			}),

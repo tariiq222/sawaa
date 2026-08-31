@@ -137,6 +137,38 @@ describe('AI provider settings handlers', () => {
       expect(create).toHaveBeenCalledTimes(attempts); expect(result.errorCode).toBe(code); expect(audit).toHaveBeenCalled(); noSecretAudit(audit);
   });
 
+  it('sends MiniMax thinking-disabled on the candidate test body only', async () => {
+    const create = jest.fn().mockResolvedValue({});
+    const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(null) } };
+    const rls = { withTransaction: jest.fn(async (fn: any) => fn({ activityLog: { create: jest.fn() } })) };
+    const client = { createCandidateClient: jest.fn(() => ({ chat: { completions: { create } } })) };
+    const result = await new TestAiProviderConfigHandler(prisma as any, client as any, { fingerprint: jest.fn() } as any, rls as any)
+      .execute(dto({ provider: AiProvider.MINIMAX, model: 'MiniMax-M3', saveCredential: false }));
+    expect(result).toMatchObject({ ok: true, persisted: false });
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      model: 'MiniMax-M3',
+      messages: [{ role: 'user', content: 'ping' }],
+      max_tokens: 1,
+      temperature: 0,
+      thinking: { type: 'disabled' },
+    }));
+  });
+
+  it('does not send thinking on OpenAI or OpenRouter candidate tests', async () => {
+    for (const candidate of [
+      { provider: AiProvider.OPENAI, model: 'gpt-4o-mini' },
+      { provider: AiProvider.OPENROUTER, model: 'openai/gpt-4o-mini' },
+    ]) {
+      const create = jest.fn().mockResolvedValue({});
+      const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(null) } };
+      const rls = { withTransaction: jest.fn(async (fn: any) => fn({ activityLog: { create: jest.fn() } })) };
+      const client = { createCandidateClient: jest.fn(() => ({ chat: { completions: { create } } })) };
+      await new TestAiProviderConfigHandler(prisma as any, client as any, { fingerprint: jest.fn() } as any, rls as any)
+        .execute(dto({ ...candidate, saveCredential: false }));
+      expect(create.mock.calls[0][0]).not.toHaveProperty('thinking');
+    }
+  });
+
   it('reports CAS loss instead of clobbering an existing row', async () => {
     const current = row({ testedConfigHash: 'hash' }); const txUpdate = jest.fn().mockResolvedValue({ count: 0 });
     const tx = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue({ configVersion: 3 }), updateMany: txUpdate }, activityLog: { create: jest.fn() } };

@@ -4,7 +4,7 @@ import { AiProvider } from './ai-provider-config.types';
 
 const MODEL = /^[A-Za-z0-9._:-]+(?:\/[A-Za-z0-9._:-]+)?$/;
 @ValidatorConstraint({ name: 'providerModel', async: false })
-class ProviderModelConstraint implements ValidatorConstraintInterface { validate(model: unknown, args: ValidationArguments) { const provider = (args.object as { provider?: AiProvider }).provider; return typeof model === 'string' && (provider === AiProvider.OPENAI ? !model.includes('/') : provider === AiProvider.OPENROUTER ? model.includes('/') : false); } }
+class ProviderModelConstraint implements ValidatorConstraintInterface { validate(model: unknown, args: ValidationArguments) { const provider = (args.object as { provider?: AiProvider }).provider; return typeof model === 'string' && (provider === AiProvider.OPENAI ? !model.includes('/') : provider === AiProvider.OPENROUTER ? model.includes('/') : provider === AiProvider.MINIMAX ? !model.includes('/') && model.startsWith('MiniMax-') : false); } }
 
 export class UpsertAiProviderConfigDto {
   @ApiProperty({ enum: AiProvider }) @IsEnum(AiProvider) provider!: AiProvider;

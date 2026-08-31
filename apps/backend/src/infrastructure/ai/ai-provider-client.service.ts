@@ -6,6 +6,7 @@ import { AiProviderCredentialsService } from './ai-provider-credentials.service'
 
 const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+const DEFAULT_MINIMAX_BASE_URL = 'https://api.minimax.io/v1';
 
 const isHttpUrl = (value: unknown): value is string => {
   if (typeof value !== 'string' || value.length === 0) return false;
@@ -20,8 +21,8 @@ const isHttpUrl = (value: unknown): value is string => {
 /**
  * Resolves the baseURL for an AI provider client. The OPENAI provider can be
  * redirected to an OpenAI-compatible deployment via OPENAI_BASE_URL (env only —
- * DB rows are never trusted to supply a base URL). OPENROUTER always uses the
- * official OpenRouter endpoint.
+ * DB rows are never trusted to supply a base URL). OpenRouter and MiniMax use
+ * their official endpoints.
  */
 const resolveBaseUrl = (provider: AiProvider): string => {
   if (provider === AiProvider.OPENAI) {
@@ -29,6 +30,7 @@ const resolveBaseUrl = (provider: AiProvider): string => {
     if (isHttpUrl(override)) return override;
     return DEFAULT_OPENAI_BASE_URL;
   }
+  if (provider === AiProvider.MINIMAX) return DEFAULT_MINIMAX_BASE_URL;
   return DEFAULT_OPENROUTER_BASE_URL;
 };
 

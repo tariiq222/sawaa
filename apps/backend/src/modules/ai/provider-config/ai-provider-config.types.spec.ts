@@ -78,4 +78,17 @@ describe('AI provider configuration contracts', () => {
     );
     expect(parseAiProviderConfig({ ...stored, model: 'vendor/model.v2' }).model).toBe('vendor/model.v2');
   });
+
+  it('accepts MiniMax-M3 and rejects unsafe or foreign MiniMax models', () => {
+    expect(parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: 'MiniMax-M3' }).model).toBe('MiniMax-M3');
+    expect(parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: 'MiniMax-M3.1' }).model).toBe('MiniMax-M3.1');
+    expect(() => parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: 'minimax-m3' })).toThrow('model');
+    expect(() => parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: 'MiniMax/M3' })).toThrow('model');
+    expect(() => parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: 'https://evil.test/key' })).toThrow('model');
+    expect(() => parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: '.' })).toThrow('model');
+    expect(() => parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: '..' })).toThrow('model');
+    expect(() => parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: 'MiniMax-M3\u0000' })).toThrow('model');
+    expect(() => parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: 'gpt-4o-mini' })).toThrow('model');
+    expect(() => parseAiProviderConfig({ ...stored, provider: AiProvider.MINIMAX, model: 'openai/gpt-4o-mini' })).toThrow('model');
+  });
 });
