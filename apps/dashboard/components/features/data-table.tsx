@@ -8,6 +8,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   type SortingState,
+  type RowData,
 } from "@tanstack/react-table"
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -24,6 +25,15 @@ import { Button } from "@sawaa/ui"
 import { EmptyState } from "@/components/features/empty-state"
 import { useLocale } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"
+
+declare module "@tanstack/react-table" {
+  // The generic parameters are required to match TanStack Table's declaration.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    className?: string
+    sizing?: "compact"
+  }
+}
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -66,6 +76,7 @@ export function DataTable<TData, TValue>({
   const [internalSorting, setInternalSorting] = useState<SortingState>([])
   const sorting = manualSorting ? (externalSorting ?? []) : internalSorting
   const { t } = useLocale()
+  const hasCompactColumns = columns.some((column) => column.meta?.sizing === "compact")
 
   const table = useReactTable({
     data: data ?? [],
@@ -87,7 +98,7 @@ export function DataTable<TData, TValue>({
   return (
     <div>
       <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-sm">
-        <Table>
+        <Table className={hasCompactColumns ? "w-max min-w-full" : undefined}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -95,7 +106,7 @@ export function DataTable<TData, TValue>({
                   const canSort = header.column.getCanSort()
                   const sorted = header.column.getIsSorted()
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className={header.column.columnDef.meta?.className}>
                       {header.isPlaceholder ? null : canSort ? (
                         <button
                           onClick={header.column.getToggleSortingHandler()}
@@ -125,7 +136,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

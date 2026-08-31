@@ -252,11 +252,13 @@ export function getBookingColumns(
     {
       id: "paymentStatus",
       header: t("bookings.col.header.paymentStatus"),
+      meta: { sizing: "compact", className: "w-px" },
       cell: ({ row }) => <PaymentStatusCell booking={row.original} />,
     },
     {
       accessorKey: "status",
       header: t("bookings.col.header.status"),
+      meta: { sizing: "compact", className: "w-px" },
       cell: ({ row }) => (
         <StatusCell booking={row.original} onStatusAction={onStatusAction} onDelete={onDelete} />
       ),
@@ -264,6 +266,7 @@ export function getBookingColumns(
     {
       id: "actions",
       header: t("bookings.col.header.actions"),
+      meta: { sizing: "compact", className: "w-px" },
       cell: ({ row }) => (
         <ActionsCell
           booking={row.original}

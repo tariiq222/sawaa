@@ -86,10 +86,10 @@ const CANCELLABLE_STATUSES = new Set([
    action is which, even before hovering. Neutrals stay for read/edit (view,
    edit, invoice) — those are non-destructive and don't need a hue. */
 const intentIconBtn: Record<string, string> = {
-  neutral: "flex size-9 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-all duration-200 hover:bg-primary-ultra-light hover:border-primary/30 hover:text-primary",
-  approve: "flex size-9 items-center justify-center rounded-md border border-transparent text-success transition-all duration-200 bg-success-soft hover:bg-success hover:text-white hover:border-success",
-  reject:  "flex size-9 items-center justify-center rounded-md border border-transparent text-error transition-all duration-200 bg-error-soft hover:bg-error hover:text-white hover:border-error",
-  danger:  "flex size-9 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-all duration-200 hover:bg-error-soft hover:border-error/40 hover:text-error",
+  neutral: "flex size-9 shrink-0 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-all duration-200 hover:bg-primary-ultra-light hover:border-primary/30 hover:text-primary",
+  approve: "flex size-9 shrink-0 items-center justify-center rounded-md border border-transparent text-success transition-all duration-200 bg-success-soft hover:bg-success hover:text-white hover:border-success",
+  reject:  "flex size-9 shrink-0 items-center justify-center rounded-md border border-transparent text-error transition-all duration-200 bg-error-soft hover:bg-error hover:text-white hover:border-error",
+  danger:  "flex size-9 shrink-0 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-all duration-200 hover:bg-error-soft hover:border-error/40 hover:text-error",
 }
 
 export function ActionsCell({
@@ -150,7 +150,7 @@ export function ActionsCell({
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex w-max items-center gap-1 whitespace-nowrap">
       {canVerify && payment && (
         <>
           <button
@@ -238,7 +238,7 @@ export function StatusCell({
     return <StatusBadge status={booking.status} />
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex w-max items-center gap-1 whitespace-nowrap">
       {showCheckinButton && (
         <button
           type="button"

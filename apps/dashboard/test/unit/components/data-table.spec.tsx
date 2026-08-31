@@ -91,4 +91,17 @@ describe("DataTable", () => {
     render(<DataTable columns={columns} data={data} />)
     expect(screen.queryByText(/صفحة/)).toBeNull()
   })
+
+  it("applies compact sizing only when a column declares it", () => {
+    const compactColumns: ColumnDef<TestRow>[] = [
+      { accessorKey: "name", header: "الاسم", meta: { sizing: "compact", className: "w-px" } },
+      columns[1],
+    ]
+
+    render(<DataTable columns={compactColumns} data={data} />)
+
+    expect(screen.getByRole("table")).toHaveClass("w-max", "min-w-full")
+    expect(screen.getByRole("columnheader", { name: "الاسم" })).toHaveClass("w-px")
+    expect(screen.getByRole("cell", { name: "أحمد" })).toHaveClass("w-px")
+  })
 })
