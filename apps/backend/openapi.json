@@ -4254,6 +4254,11 @@
             "example": "pay_abc123",
             "type": "string"
           },
+          "invoice_id": {
+            "description": "Moyasar hosted-checkout invoice ID",
+            "example": "inv_abc123",
+            "type": "string"
+          },
           "message": {
             "description": "Human-readable message from Moyasar (e.g. failure reason)",
             "example": "Insufficient funds",
@@ -4316,6 +4321,11 @@
           "id": {
             "description": "Payment ID (flat shape) OR event ID (nested shape)",
             "example": "pay_abc123",
+            "type": "string"
+          },
+          "invoice_id": {
+            "description": "Moyasar hosted-checkout invoice ID (flat shape)",
+            "example": "inv_abc123",
             "type": "string"
           },
           "live": {

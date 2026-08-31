@@ -4,38 +4,43 @@ import {
 	InternalServerErrorException,
 	NotFoundException,
 } from "@nestjs/common";
-import { PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PrismaService } from "../../../infrastructure/database";
 import { fetchWithTimeout } from "../../../infrastructure/http";
 import { MoyasarCredentialsService } from "../../../infrastructure/payments/moyasar-credentials.service";
 import { PAYMENT_CONFIG_SINGLETON_KEY } from "../../../common/constants";
 
-export interface MoyasarCreatePaymentParams {
+export interface MoyasarCreateCheckoutInvoiceParams {
 	amountHalalas: number;
 	currency: string;
 	description: string;
-	callbackUrl: string;
+	successUrl: string;
+	backUrl: string;
 	metadata: Record<string, string>;
-	/**
-	 * Moyasar idempotency identity (UUIDv4). Sent as the `given_id` body field —
-	 * the gateway's only supported create-payment idempotency mechanism; it
-	 * becomes `payment.id`. Re-sending the same value returns the existing
-	 * payment, so it must be unique per distinct charge attempt (a different
-	 * outstanding amount is a different attempt and needs a fresh value).
-	 */
-	givenId: string;
 }
 
-export interface MoyasarPayment {
+export type MoyasarCheckoutInvoiceStatus =
+	| "initiated"
+	| "paid"
+	| "expired"
+	| "failed"
+	| "canceled"
+	| "refunded"
+	| "voided"
+	| "on_hold";
+
+export interface MoyasarCheckoutInvoicePayment {
 	id: string;
+	status: MoyasarPaymentStatus;
+}
+
+export interface MoyasarCheckoutInvoice {
+	id: string;
+	status: MoyasarCheckoutInvoiceStatus;
 	amount: number;
 	currency: string;
-	status: "initiated" | "paid" | "failed" | "refunded";
-	description: string | null;
+	url: string;
 	metadata: Record<string, string>;
-	redirectUrl: string | null;
-	createdAt: string;
-	updatedAt: string;
+	payments: MoyasarCheckoutInvoicePayment[];
 }
 
 export type MoyasarRefundStatus = "paid" | "failed" | "pending";
@@ -61,6 +66,8 @@ export interface MoyasarPaymentStatusResult {
 	/** Cumulative amount already refunded by Moyasar, in halalas. */
 	refunded: number;
 	currency: string;
+	/** Hosted invoice that originated this payment, when Moyasar supplies it. */
+	invoiceId?: string;
 }
 
 export interface MoyasarRefund {
@@ -80,17 +87,17 @@ export interface MoyasarRefundStatusResult {
 	status: MoyasarRefundStatus;
 }
 
-interface MoyasarApiResponse {
+interface MoyasarCheckoutInvoiceApiResponse {
 	id: string;
-	object: string;
+	status: MoyasarCheckoutInvoiceStatus;
 	amount: number;
 	currency: string;
-	status: MoyasarPayment["status"];
-	description: string | null;
+	url: string;
 	metadata: Record<string, string>;
-	redirect_url: string | null;
-	created_at: string;
-	updated_at: string;
+	payments?: Array<{
+		id: string;
+		status: MoyasarPaymentStatus;
+	}>;
 }
 
 interface MoyasarErrorResponse {
@@ -164,12 +171,13 @@ export class MoyasarApiClient {
 		options: RequestInit,
 	): Promise<T> {
 		const apiKey = await this.getApiKeyForOrg(organizationId);
+		const basicAuth = Buffer.from(`${apiKey}:`, "utf8").toString("base64");
 		const response = await fetchWithTimeout(
 			`${this.baseUrl}${path}`,
 			{
 				...options,
 				headers: {
-					Authorization: `Bearer ${apiKey}`,
+					Authorization: `Basic ${basicAuth}`,
 					"Content-Type": "application/json",
 					...options.headers,
 				},
@@ -198,58 +206,61 @@ export class MoyasarApiClient {
 		return response.json() as Promise<T>;
 	}
 
-	async createPayment(
+	/**
+	 * Creates a Moyasar-hosted checkout page. No card source is collected by
+	 * Sawaa; the returned `url` is the page clients open.
+	 */
+	async createCheckoutInvoice(
 		organizationId: string,
-		params: MoyasarCreatePaymentParams,
-	): Promise<MoyasarPayment> {
-		const body = {
-			amount: params.amountHalalas,
-			currency: params.currency,
-			description: params.description,
-			callback_url: params.callbackUrl,
-			metadata: params.metadata,
-			source: { type: "card" },
-			given_id: params.givenId,
-		};
-
-		const data = await this.request<MoyasarApiResponse>(
+		params: MoyasarCreateCheckoutInvoiceParams,
+	): Promise<MoyasarCheckoutInvoice> {
+		const data = await this.request<MoyasarCheckoutInvoiceApiResponse>(
 			organizationId,
-			"/payments",
+			"/invoices",
 			{
 				method: "POST",
-				body: JSON.stringify(body),
+				body: JSON.stringify({
+					amount: params.amountHalalas,
+					currency: params.currency,
+					description: params.description,
+					success_url: params.successUrl,
+					back_url: params.backUrl,
+					metadata: params.metadata,
+				}),
 			},
 		);
 
-		return {
-			id: data.id,
-			amount: data.amount,
-			currency: data.currency,
-			status: data.status,
-			description: data.description,
-			metadata: data.metadata,
-			redirectUrl: data.redirect_url,
-			createdAt: data.created_at,
-			updatedAt: data.updated_at,
-		};
+		return this.mapCheckoutInvoice(data);
 	}
 
-	toPaymentStatus(moyasarStatus: MoyasarPayment["status"]): PaymentStatus {
-		switch (moyasarStatus) {
-			case "paid":
-				return PaymentStatus.COMPLETED;
-			case "failed":
-				return PaymentStatus.FAILED;
-			case "refunded":
-				return PaymentStatus.REFUNDED;
-			case "initiated":
-			default:
-				return PaymentStatus.PENDING;
-		}
+	async getCheckoutInvoice(
+		organizationId: string,
+		invoiceId: string,
+	): Promise<MoyasarCheckoutInvoice> {
+		const data = await this.request<MoyasarCheckoutInvoiceApiResponse>(
+			organizationId,
+			`/invoices/${encodeURIComponent(invoiceId)}`,
+			{ method: "GET" },
+		);
+		return this.mapCheckoutInvoice(data);
 	}
 
-	toPaymentMethod(): PaymentMethod {
-		return PaymentMethod.ONLINE_CARD;
+	/**
+	 * Recovers a create call whose outcome was unknown by querying the immutable
+	 * internal payment identity stored in Moyasar invoice metadata.
+	 */
+	async findCheckoutInvoiceByMetadata(
+		organizationId: string,
+		internalPaymentId: string,
+	): Promise<MoyasarCheckoutInvoice | null> {
+		const query = new URLSearchParams({
+			"metadata[internalPaymentId]": internalPaymentId,
+		});
+		const data = await this.request<
+			MoyasarCheckoutInvoiceApiResponse[] | { invoices: MoyasarCheckoutInvoiceApiResponse[] }
+		>(organizationId, `/invoices?${query.toString()}`, { method: "GET" });
+		const invoices = Array.isArray(data) ? data : data.invoices;
+		return invoices[0] ? this.mapCheckoutInvoice(invoices[0]) : null;
 	}
 
 	async createRefund(
@@ -336,6 +347,7 @@ export class MoyasarApiClient {
 			amount: number;
 			refunded: number;
 			currency: string;
+			invoice_id?: string;
 		}>(organizationId, `/payments/${paymentId}`, { method: "GET" });
 
 		return {
@@ -344,6 +356,24 @@ export class MoyasarApiClient {
 			amount: data.amount,
 			refunded: data.refunded ?? 0,
 			currency: data.currency,
+			...(data.invoice_id ? { invoiceId: data.invoice_id } : {}),
+		};
+	}
+
+	private mapCheckoutInvoice(
+		data: MoyasarCheckoutInvoiceApiResponse,
+	): MoyasarCheckoutInvoice {
+		return {
+			id: data.id,
+			status: data.status,
+			amount: data.amount,
+			currency: data.currency,
+			url: data.url,
+			metadata: data.metadata,
+			payments: (data.payments ?? []).map((payment) => ({
+				id: payment.id,
+				status: payment.status,
+			})),
 		};
 	}
 }

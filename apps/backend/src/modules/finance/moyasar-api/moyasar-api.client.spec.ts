@@ -4,8 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PaymentMethod, PaymentStatus } from '@prisma/client';
-import { MoyasarApiClient, MoyasarCreatePaymentParams, MoyasarRefundStatus } from './moyasar-api.client';
+import {
+  MoyasarApiClient,
+  MoyasarRefundStatus,
+} from './moyasar-api.client';
 import { PrismaService } from '../../../infrastructure/database';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 
@@ -106,7 +108,7 @@ describe('MoyasarApiClient', () => {
         expect.objectContaining({
           method: 'GET',
           headers: expect.objectContaining({
-            Authorization: 'Bearer sk_live_abc',
+            Authorization: 'Basic c2tfbGl2ZV9hYmM6',
             'Content-Type': 'application/json',
           }),
         }),
@@ -159,87 +161,136 @@ describe('MoyasarApiClient', () => {
     });
   });
 
-  describe('createPayment', () => {
-    it('builds body, calls request, and maps response', async () => {
+  describe('hosted checkout invoices', () => {
+    const hostedInvoiceResponse = {
+      id: 'inv_hosted_123',
+      status: 'initiated',
+      amount: 12500,
+      currency: 'SAR',
+      description: 'Sawaa invoice #42',
+      url: 'https://moyasar.com/invoices/inv_hosted_123',
+      success_url: 'https://sawaa.example/payments/success',
+      back_url: 'https://sawaa.example/payments/cancel',
+      metadata: {
+        internalPaymentId: 'payment/with spaces',
+        invoiceId: 'invoice-42',
+      },
+      payments: [
+        { id: 'pay_hosted_123', status: 'paid' },
+      ],
+    };
+
+    it('creates a hosted invoice with Basic auth, the exact gateway body, and hosted URL mapping', async () => {
       (fetchWithTimeout as jest.Mock).mockResolvedValue({
         ok: true,
-        json: async () => ({
-          id: 'a1168bd1-47a4-4b97-8a50-dd5caaccacf2',
-          object: 'payment',
-          amount: 1000,
-          currency: 'SAR',
-          status: 'initiated',
-          description: 'Invoice #1',
-          metadata: { invoiceId: 'inv_1' },
-          redirect_url: 'https://example.com/callback',
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        }),
+        json: async () => hostedInvoiceResponse,
       });
 
-      const params: MoyasarCreatePaymentParams = {
-        amountHalalas: 1000,
+      const result = await client.createCheckoutInvoice(ORG_ID, {
+        amountHalalas: 12500,
         currency: 'SAR',
-        description: 'Invoice #1',
-        callbackUrl: 'https://example.com/callback',
-        metadata: { invoiceId: 'inv_1' },
-        givenId: 'a1168bd1-47a4-4b97-8a50-dd5caaccacf2',
-      };
-
-      const result = await client.createPayment(ORG_ID, params);
+        description: 'Sawaa invoice #42',
+        successUrl: 'https://sawaa.example/payments/success',
+        backUrl: 'https://sawaa.example/payments/cancel',
+        metadata: {
+          internalPaymentId: 'payment/with spaces',
+          invoiceId: 'invoice-42',
+        },
+      });
 
       expect(result).toEqual({
-        id: 'a1168bd1-47a4-4b97-8a50-dd5caaccacf2',
-        amount: 1000,
-        currency: 'SAR',
+        id: 'inv_hosted_123',
         status: 'initiated',
-        description: 'Invoice #1',
-        metadata: { invoiceId: 'inv_1' },
-        redirectUrl: 'https://example.com/callback',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
+        amount: 12500,
+        currency: 'SAR',
+        url: 'https://moyasar.com/invoices/inv_hosted_123',
+        metadata: {
+          internalPaymentId: 'payment/with spaces',
+          invoiceId: 'invoice-42',
+        },
+        payments: [{ id: 'pay_hosted_123', status: 'paid' }],
       });
-
       expect(fetchWithTimeout).toHaveBeenCalledWith(
-        'https://api.moyasar.com/v1/payments',
+        'https://api.moyasar.com/v1/invoices',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({
-            amount: 1000,
+            amount: 12500,
             currency: 'SAR',
-            description: 'Invoice #1',
-            callback_url: 'https://example.com/callback',
-            metadata: { invoiceId: 'inv_1' },
-            source: { type: 'card' },
-            given_id: 'a1168bd1-47a4-4b97-8a50-dd5caaccacf2',
+            description: 'Sawaa invoice #42',
+            success_url: 'https://sawaa.example/payments/success',
+            back_url: 'https://sawaa.example/payments/cancel',
+            metadata: {
+              internalPaymentId: 'payment/with spaces',
+              invoiceId: 'invoice-42',
+            },
           }),
           headers: expect.objectContaining({
-            Authorization: 'Bearer sk_live_abc',
+            Authorization: 'Basic c2tfbGl2ZV9hYmM6',
             'Content-Type': 'application/json',
           }),
         }),
         15_000,
       );
     });
-  });
 
-  describe('toPaymentStatus', () => {
-    const cases: Array<{ input: Parameters<MoyasarApiClient['toPaymentStatus']>[0]; expected: PaymentStatus }> = [
-      { input: 'paid', expected: PaymentStatus.COMPLETED },
-      { input: 'failed', expected: PaymentStatus.FAILED },
-      { input: 'refunded', expected: PaymentStatus.REFUNDED },
-      { input: 'initiated', expected: PaymentStatus.PENDING },
-      { input: 'unknown' as any, expected: PaymentStatus.PENDING },
-    ];
+    it('fetches and maps one hosted invoice by gateway id', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ ...hostedInvoiceResponse, status: 'paid' }),
+      });
 
-    it.each(cases)('maps $input to $expected', ({ input, expected }) => {
-      expect(client.toPaymentStatus(input)).toBe(expected);
+      await expect(
+        client.getCheckoutInvoice(ORG_ID, 'inv_hosted_123'),
+      ).resolves.toEqual({
+        id: 'inv_hosted_123',
+        status: 'paid',
+        amount: 12500,
+        currency: 'SAR',
+        url: 'https://moyasar.com/invoices/inv_hosted_123',
+        metadata: hostedInvoiceResponse.metadata,
+        payments: [{ id: 'pay_hosted_123', status: 'paid' }],
+      });
+      expect(fetchWithTimeout).toHaveBeenCalledWith(
+        'https://api.moyasar.com/v1/invoices/inv_hosted_123',
+        expect.objectContaining({ method: 'GET' }),
+        15_000,
+      );
     });
-  });
 
-  describe('toPaymentMethod', () => {
-    it('returns ONLINE_CARD', () => {
-      expect(client.toPaymentMethod()).toBe(PaymentMethod.ONLINE_CARD);
+    it('finds the first hosted invoice by URL-encoded internalPaymentId metadata', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => [hostedInvoiceResponse],
+      });
+
+      await expect(
+        client.findCheckoutInvoiceByMetadata(ORG_ID, 'payment/with spaces'),
+      ).resolves.toEqual({
+        id: 'inv_hosted_123',
+        status: 'initiated',
+        amount: 12500,
+        currency: 'SAR',
+        url: 'https://moyasar.com/invoices/inv_hosted_123',
+        metadata: hostedInvoiceResponse.metadata,
+        payments: [{ id: 'pay_hosted_123', status: 'paid' }],
+      });
+      expect(fetchWithTimeout).toHaveBeenCalledWith(
+        'https://api.moyasar.com/v1/invoices?metadata%5BinternalPaymentId%5D=payment%2Fwith+spaces',
+        expect.objectContaining({ method: 'GET' }),
+        15_000,
+      );
+    });
+
+    it('returns null when no hosted invoice matches the metadata filter', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      });
+
+      await expect(
+        client.findCheckoutInvoiceByMetadata(ORG_ID, 'missing-payment'),
+      ).resolves.toBeNull();
     });
   });
 
@@ -348,7 +399,7 @@ describe('MoyasarApiClient', () => {
         expect.objectContaining({
           method: 'GET',
           headers: expect.objectContaining({
-            Authorization: 'Bearer sk_live_abc',
+            Authorization: 'Basic c2tfbGl2ZV9hYmM6',
             'Content-Type': 'application/json',
           }),
         }),
@@ -369,6 +420,31 @@ describe('MoyasarApiClient', () => {
 
       const result = await client.getPaymentStatus(ORG_ID, 'pay_a');
       expect(result.status).toBe('authorized');
+    });
+
+    it('maps the hosted invoice id exposed by the payment fetch response', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 'pay_hosted_123',
+          status: 'paid',
+          amount: 12500,
+          refunded: 0,
+          currency: 'SAR',
+          invoice_id: 'inv_hosted_123',
+        }),
+      });
+
+      await expect(
+        client.getPaymentStatus(ORG_ID, 'pay_hosted_123'),
+      ).resolves.toEqual({
+        id: 'pay_hosted_123',
+        status: 'paid',
+        amount: 12500,
+        refunded: 0,
+        currency: 'SAR',
+        invoiceId: 'inv_hosted_123',
+      });
     });
 
     it('throws NotFoundException when Moyasar returns 404 (payment does not exist)', async () => {

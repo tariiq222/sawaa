@@ -1,7 +1,11 @@
 import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { ActivityAction, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { MoyasarApiClient, MoyasarPaymentStatus } from '../../finance/moyasar-api/moyasar-api.client';
+import {
+  MoyasarApiClient,
+  MoyasarPaymentStatus,
+  MoyasarPaymentStatusResult,
+} from '../../finance/moyasar-api/moyasar-api.client';
 import { PaymentCompletedEvent } from '../../finance/events/payment-completed.event';
 import { PaymentFailedEvent } from '../../finance/events/payment-failed.event';
 import { DepositPaidEvent } from '../../finance/events/deposit-paid.event';
@@ -112,19 +116,66 @@ export class ReconcilePaymentsCron {
     const { paymentRowId, invoiceId, rowAmount, gatewayRef } = args;
 
     // Source of truth: re-fetch the authoritative status from Moyasar.
-    let fetched: { id: string; status: MoyasarPaymentStatus; amount: number; currency: string };
+    let fetched: MoyasarPaymentStatusResult | null = null;
     try {
       fetched = await this.moyasar.getPaymentStatus(DEFAULT_ORG_ID, gatewayRef);
     } catch (err) {
       if (err instanceof NotFoundException) {
-        // Moyasar has no such payment — the gatewayRef is unusable. Leave the
-        // row for an operator; retrying will not help.
-        this.logger.warn(
-          `reconcile-payments: payment ${paymentRowId} not found at Moyasar (gatewayRef=${gatewayRef}) — leaving as-is`,
-        );
-        return;
+        // New hosted-checkout rows initially carry the Moyasar *invoice* ID.
+        // If the payment webhook was lost, resolve its terminal payment from
+        // that hosted invoice and then re-fetch the payment authoritatively.
+        try {
+          const checkoutInvoice = await this.moyasar.getCheckoutInvoice(
+            DEFAULT_ORG_ID,
+            gatewayRef,
+          );
+          const successfulAttempt = checkoutInvoice.payments.find((payment) =>
+            ['paid', 'captured'].includes(payment.status),
+          );
+          const failedAttempt = [...checkoutInvoice.payments]
+            .reverse()
+            .find((payment) => ['failed', 'voided'].includes(payment.status));
+          const terminalAttempt = successfulAttempt ?? failedAttempt;
+
+          if (!terminalAttempt) {
+            this.logger.debug(
+              `reconcile-payments: hosted invoice ${gatewayRef} has no terminal payment — skipping`,
+            );
+            return;
+          }
+
+          fetched = await this.moyasar.getPaymentStatus(
+            DEFAULT_ORG_ID,
+            terminalAttempt.id,
+          );
+          if (fetched.invoiceId && fetched.invoiceId !== gatewayRef) {
+            this.logger.error(
+              `reconcile-payments: payment ${fetched.id} belongs to hosted invoice ` +
+                `${fetched.invoiceId}, expected ${gatewayRef} — leaving for manual review`,
+            );
+            return;
+          }
+        } catch (invoiceErr) {
+          if (invoiceErr instanceof NotFoundException) {
+            this.logger.warn(
+              `reconcile-payments: gateway reference ${gatewayRef} is neither a Moyasar ` +
+                `payment nor hosted invoice — leaving as-is`,
+            );
+            return;
+          }
+          throw invoiceErr;
+        }
       }
-      throw err; // transient — surface so the cron retries
+      if (!(err instanceof NotFoundException)) {
+        throw err; // transient — surface so the cron retries
+      }
+    }
+
+    if (!fetched) {
+      this.logger.warn(
+        `reconcile-payments: could not resolve gateway reference ${gatewayRef} — leaving as-is`,
+      );
+      return;
     }
 
     const terminal = this.toTerminalStatus(fetched.status);
@@ -164,9 +215,19 @@ export class ReconcilePaymentsCron {
         );
         return;
       }
-      await this.finalizeCompleted({ paymentRowId, invoice, amountHalalas: fetched.amount });
+      await this.finalizeCompleted({
+        paymentRowId,
+        invoice,
+        amountHalalas: fetched.amount,
+        gatewayPaymentId: fetched.id,
+      });
     } else {
-      await this.finalizeFailed({ paymentRowId, invoice, amountHalalas: fetched.amount });
+      await this.finalizeFailed({
+        paymentRowId,
+        invoice,
+        amountHalalas: fetched.amount,
+        gatewayPaymentId: fetched.id,
+      });
     }
   }
 
@@ -181,8 +242,9 @@ export class ReconcilePaymentsCron {
       clientId: string;
     };
     amountHalalas: number;
+    gatewayPaymentId: string;
   }): Promise<void> {
-    const { paymentRowId, invoice, amountHalalas } = args;
+    const { paymentRowId, invoice, amountHalalas, gatewayPaymentId } = args;
 
     // Read the deposit config once (read-only) so a deposit-sized payment can
     // emit DepositPaidEvent instead of confirming the booking.
@@ -205,7 +267,12 @@ export class ReconcilePaymentsCron {
 
       await tx.payment.update({
         where: { id: paymentRowId },
-        data: { status: PaymentStatus.COMPLETED, processedAt: new Date() },
+        data: {
+          status: PaymentStatus.COMPLETED,
+          processedAt: new Date(),
+          gatewayRef: gatewayPaymentId,
+          idempotencyKey: `moyasar:${gatewayPaymentId}`,
+        },
       });
 
       // Re-aggregate COMPLETED payments AFTER the write and derive the invoice
@@ -310,8 +377,9 @@ export class ReconcilePaymentsCron {
     paymentRowId: string;
     invoice: { id: string; currency: string; clientId: string };
     amountHalalas: number;
+    gatewayPaymentId: string;
   }): Promise<void> {
-    const { paymentRowId, invoice, amountHalalas } = args;
+    const { paymentRowId, invoice, amountHalalas, gatewayPaymentId } = args;
 
     let applied = false;
     await this.rlsTransaction.withTransaction(async (tx) => {
@@ -324,7 +392,12 @@ export class ReconcilePaymentsCron {
       }
       await tx.payment.update({
         where: { id: paymentRowId },
-        data: { status: PaymentStatus.FAILED, failureReason: 'Reconciled from Moyasar (failed/voided)' },
+        data: {
+          status: PaymentStatus.FAILED,
+          failureReason: 'Reconciled from Moyasar (failed/voided)',
+          gatewayRef: gatewayPaymentId,
+          idempotencyKey: `moyasar:${gatewayPaymentId}`,
+        },
       });
       await tx.activityLog.create({
         data: {

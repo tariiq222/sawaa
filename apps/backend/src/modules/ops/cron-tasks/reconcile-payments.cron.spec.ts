@@ -1,4 +1,5 @@
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { NotFoundException } from '@nestjs/common';
 import { ReconcilePaymentsCron } from './reconcile-payments.cron';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
@@ -81,12 +82,40 @@ function buildPrisma(args: {
   };
 }
 
-function buildMoyasar(statusByRef: Record<string, { status: string; amount: number; currency?: string }>) {
+function buildMoyasar(
+  statusByRef: Record<
+    string,
+    { status: string; amount: number; currency?: string; invoiceId?: string }
+  >,
+  checkoutByRef: Record<
+    string,
+    { status: string; amount?: number; currency?: string; payments?: Array<{ id: string; status: string }> }
+  > = {},
+) {
   return {
     getPaymentStatus: jest.fn().mockImplementation(async (_org: string, ref: string) => {
       const s = statusByRef[ref];
-      if (!s) return { id: ref, status: 'initiated', amount: 0, currency: 'SAR' };
-      return { id: ref, status: s.status, amount: s.amount, currency: s.currency ?? 'SAR' };
+      if (!s) throw new NotFoundException('payment not found');
+      return {
+        id: ref,
+        status: s.status,
+        amount: s.amount,
+        currency: s.currency ?? 'SAR',
+        ...(s.invoiceId ? { invoiceId: s.invoiceId } : {}),
+      };
+    }),
+    getCheckoutInvoice: jest.fn().mockImplementation(async (_org: string, ref: string) => {
+      const invoice = checkoutByRef[ref];
+      if (!invoice) throw new NotFoundException('invoice not found');
+      return {
+        id: ref,
+        status: invoice.status,
+        amount: invoice.amount ?? 10_000,
+        currency: invoice.currency ?? 'SAR',
+        url: `https://checkout.test/${ref}`,
+        metadata: {},
+        payments: invoice.payments ?? [],
+      };
     }),
   };
 }
@@ -218,6 +247,94 @@ describe('ReconcilePaymentsCron', () => {
     const tx = buildTx();
     const prisma = buildPrisma({ stuckRows: [row()] });
     const moyasar = buildMoyasar({ m_1: { status: 'initiated', amount: 10_000 } });
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(tx.payment.update).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('recovers a paid hosted invoice after a missed webhook and stores the payment identity', async () => {
+    const tx = buildTx();
+    const prisma = buildPrisma({
+      stuckRows: [row({ gatewayRef: 'hosted_inv_1' })],
+    });
+    const moyasar = buildMoyasar(
+      {
+        gateway_pay_1: {
+          status: 'paid',
+          amount: 10_000,
+          invoiceId: 'hosted_inv_1',
+        },
+      },
+      {
+        hosted_inv_1: {
+          status: 'paid',
+          payments: [{ id: 'gateway_pay_1', status: 'paid' }],
+        },
+      },
+    );
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(moyasar.getCheckoutInvoice).toHaveBeenCalledWith(
+      DEFAULT_ORG_ID,
+      'hosted_inv_1',
+    );
+    expect(moyasar.getPaymentStatus).toHaveBeenNthCalledWith(
+      2,
+      DEFAULT_ORG_ID,
+      'gateway_pay_1',
+    );
+    expect(tx.payment.update).toHaveBeenCalledWith({
+      where: { id: 'pay_1' },
+      data: expect.objectContaining({
+        status: PaymentStatus.COMPLETED,
+        gatewayRef: 'gateway_pay_1',
+        idempotencyKey: 'moyasar:gateway_pay_1',
+      }),
+    });
+  });
+
+  it('leaves an initiated hosted invoice without a terminal payment untouched', async () => {
+    const tx = buildTx();
+    const prisma = buildPrisma({
+      stuckRows: [row({ gatewayRef: 'hosted_inv_1' })],
+    });
+    const moyasar = buildMoyasar({}, {
+      hosted_inv_1: { status: 'initiated', payments: [] },
+    });
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(moyasar.getCheckoutInvoice).toHaveBeenCalledWith(
+      DEFAULT_ORG_ID,
+      'hosted_inv_1',
+    );
+    expect(tx.payment.update).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a hosted-invoice payment that belongs to a different gateway invoice', async () => {
+    const tx = buildTx();
+    const prisma = buildPrisma({
+      stuckRows: [row({ gatewayRef: 'hosted_inv_1' })],
+    });
+    const moyasar = buildMoyasar(
+      {
+        gateway_pay_1: {
+          status: 'paid',
+          amount: 10_000,
+          invoiceId: 'different_hosted_invoice',
+        },
+      },
+      {
+        hosted_inv_1: {
+          status: 'paid',
+          payments: [{ id: 'gateway_pay_1', status: 'paid' }],
+        },
+      },
+    );
 
     await buildCron(prisma, tx, moyasar).execute();
 

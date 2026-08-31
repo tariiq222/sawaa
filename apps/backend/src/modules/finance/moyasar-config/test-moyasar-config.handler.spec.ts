@@ -45,6 +45,12 @@ describe('TestMoyasarConfigHandler', () => {
     const result = await handler.execute();
     expect(result.ok).toBe(true);
     expect(result.status).toBe('OK');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.moyasar.com/v1/payments?per=1',
+      {
+        headers: { Authorization: 'Basic c2tfdGVzdF94eHg6' },
+      },
+    );
     expect(prisma.organizationPaymentConfig.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ lastVerifiedStatus: 'OK' }) }),
     );

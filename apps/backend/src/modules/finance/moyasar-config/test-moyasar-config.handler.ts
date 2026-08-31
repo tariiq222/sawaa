@@ -43,8 +43,9 @@ export class TestMoyasarConfigHandler {
 		let status: TestMoyasarConfigResult["status"];
 		let ok = false;
 		try {
+			const basicAuth = Buffer.from(`${secretKey}:`, "utf8").toString("base64");
 			const res = await fetch("https://api.moyasar.com/v1/payments?per=1", {
-				headers: { Authorization: `Bearer ${secretKey}` },
+				headers: { Authorization: `Basic ${basicAuth}` },
 			});
 			if (res.status === 200) {
 				status = "OK";

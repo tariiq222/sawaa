@@ -97,18 +97,36 @@ function buildPricing(finalPrice = FINAL_PRICE) {
 }
 
 function buildMoyasar(
-  redirectUrl: string | null = "https://checkout.moyasar.com/pay/abc",
+  url: string | null = "https://checkout.moyasar.com/invoices/abc",
 ) {
   return {
-    createPayment: jest
+    createCheckoutInvoice: jest
       .fn()
       .mockImplementation(
-        async (_organizationId: string, input: { givenId: string }) => ({
-          id: input.givenId,
-          redirectUrl,
+        async (_organizationId: string, input: { amountHalalas: number; metadata: Record<string, string> }) => ({
+          id: "moy-invoice-1",
+          status: "initiated",
+          amount: input.amountHalalas,
+          currency: "SAR",
+          url,
+          metadata: input.metadata,
         }),
       ),
-    getPaymentStatus: jest.fn().mockResolvedValue({ status: "failed" }),
+    getCheckoutInvoice: jest.fn().mockResolvedValue({
+      id: "moy-invoice-existing",
+      status: "expired",
+      amount: FINAL_PRICE,
+      currency: "SAR",
+      url: null,
+      metadata: { internalPaymentId: "old-pay" },
+    }),
+    findCheckoutInvoiceByMetadata: jest.fn().mockResolvedValue(null),
+    getPaymentStatus: jest.fn().mockResolvedValue({
+      id: "legacy-payment",
+      status: "failed",
+      amount: FINAL_PRICE,
+      currency: "SAR",
+    }),
   };
 }
 
@@ -144,7 +162,7 @@ describe("InitPackagePurchaseHandler", () => {
 
   describe("happy path — self-purchase init", () => {
     it("freezes the price, creates a PENDING purchase, an invoice + PENDING payment, and returns the Moyasar redirect", async () => {
-      const { handler, tx, moyasar, pricing } = buildHandler();
+      const { handler, prisma, tx, moyasar, pricing } = buildHandler();
 
       const result = await handler.execute(cmd());
 
@@ -183,31 +201,34 @@ describe("InitPackagePurchaseHandler", () => {
       const paymentData = tx.payment.create.mock.calls[0][0].data;
       expect(paymentData.status).toBe(PaymentStatus.PENDING);
       expect(paymentData.idempotencyKey).toBe(`client-pkg:${INVOICE_ID}`);
-      expect(paymentData.gatewayRef).toMatch(/^[0-9a-f-]{36}$/);
+      expect(paymentData.gatewayRef).toBeUndefined();
 
       // Moyasar called with halalas amount + metadata the UNCHANGED webhook reads.
-      expect(moyasar.createPayment).toHaveBeenCalledWith(
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
         DEFAULT_ORG_ID,
         expect.objectContaining({
           amountHalalas: FINAL_PRICE,
           currency: "SAR",
+          successUrl: expect.stringContaining("/packages/payment-callback"),
+          backUrl: expect.stringContaining("/packages/payment-callback"),
           metadata: expect.objectContaining({
             invoiceId: INVOICE_ID,
             packagePurchaseId: PURCHASE_ID,
             source: "self-purchase",
+            internalPaymentId: PAYMENT_ID,
           }),
         }),
       );
-      // given_id is a fresh UUID per attempt (gateway idempotency identity).
-      const moyasarArg = moyasar.createPayment.mock.calls[0][1];
-      expect(moyasarArg.givenId).toMatch(/^[0-9a-f-]{36}$/);
-      expect(moyasarArg.givenId).toBe(paymentData.gatewayRef);
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: PAYMENT_ID },
+        data: { gatewayRef: "moy-invoice-1" },
+      });
 
       expect(result).toEqual({
         purchaseId: PURCHASE_ID,
         invoiceId: INVOICE_ID,
         paymentId: PAYMENT_ID,
-        redirectUrl: "https://checkout.moyasar.com/pay/abc",
+        redirectUrl: "https://checkout.moyasar.com/invoices/abc",
       });
     });
 
@@ -229,22 +250,18 @@ describe("InitPackagePurchaseHandler", () => {
       expect(tx.packageCredit).toBeUndefined();
     });
 
-    it("keeps the durable givenId as the Moyasar payment identity", async () => {
+    it("persists the hosted invoice id on the internal payment", async () => {
       const prisma = buildPrisma();
       const tx = buildTx();
       const moyasar = buildMoyasar();
-      moyasar.createPayment.mockImplementation(async (_org, input) => ({
-        id: input.givenId,
-        redirectUrl: "https://checkout.moyasar.com/pay/abc",
-      }));
       const { handler } = buildHandler(prisma, buildPricing(), moyasar, tx);
 
       await handler.execute(cmd());
 
-      expect(prisma.payment.update).not.toHaveBeenCalled();
-      expect(moyasar.createPayment.mock.calls[0][1].givenId).toBe(
-        tx.payment.create.mock.calls[0][0].data.gatewayRef,
-      );
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: PAYMENT_ID },
+        data: { gatewayRef: "moy-invoice-1" },
+      });
     });
   });
 
@@ -286,7 +303,7 @@ describe("InitPackagePurchaseHandler", () => {
       );
 
       await expect(handler.execute(cmd())).rejects.toThrow(BadRequestException);
-      expect(moyasar.createPayment).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
   });
 
@@ -306,7 +323,7 @@ describe("InitPackagePurchaseHandler", () => {
     it("propagates a Moyasar create failure (no redirect issued)", async () => {
       const prisma = buildPrisma();
       const moyasar = buildMoyasar();
-      moyasar.createPayment.mockRejectedValue(new Error("gateway 500"));
+      moyasar.createCheckoutInvoice.mockRejectedValue(new Error("gateway 500"));
       const { handler } = buildHandler(prisma, buildPricing(), moyasar);
 
       await expect(handler.execute(cmd())).rejects.toThrow("gateway 500");
@@ -341,7 +358,7 @@ describe("InitPackagePurchaseHandler", () => {
       });
 
       expect(tx.packagePurchase.create).toHaveBeenCalledTimes(1);
-      expect(moyasar.createPayment).toHaveBeenCalledTimes(1);
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledTimes(1);
     });
 
     it("retries from the frozen purchase snapshot even when the live package is no longer available", async () => {
@@ -387,7 +404,7 @@ describe("InitPackagePurchaseHandler", () => {
 
       expect(prisma.sessionPackage.findFirst).not.toHaveBeenCalled();
       expect(pricing.compute).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).toHaveBeenCalledWith(
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
         DEFAULT_ORG_ID,
         expect.objectContaining({ amountHalalas: FINAL_PRICE }),
       );
@@ -404,7 +421,7 @@ describe("InitPackagePurchaseHandler", () => {
 
       await expect(handler.execute(cmd())).rejects.toThrow(ConflictException);
       expect(tx.packagePurchase.create).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
 
     it("reuses an existing PENDING purchase + invoice and re-issues a fresh payment instead of creating duplicates", async () => {
@@ -484,7 +501,7 @@ describe("InitPackagePurchaseHandler", () => {
         /already been paid/i,
       );
       expect(prisma.payment.create).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
 
     it("finds a COMPLETED invoice payment even after the webhook replaced its checkout idempotency key", async () => {
@@ -514,7 +531,7 @@ describe("InitPackagePurchaseHandler", () => {
         /already been paid/i,
       );
       expect(prisma.payment.create).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
   });
 
@@ -542,41 +559,60 @@ describe("InitPackagePurchaseHandler", () => {
     it("rejects (no re-charge) when the in-flight gateway session is already paid", async () => {
       const prisma = buildReusePrisma("moy-live-1");
       const moyasar = buildMoyasar();
-      moyasar.getPaymentStatus.mockResolvedValue({ status: "paid" });
+      moyasar.getCheckoutInvoice.mockResolvedValue({
+        id: "moy-live-1",
+        status: "paid",
+        amount: FINAL_PRICE,
+        currency: "SAR",
+        url: "https://checkout.moyasar.com/invoices/moy-live-1",
+        metadata: { internalPaymentId: "old-pay" },
+      });
       const { handler } = buildHandler(prisma, buildPricing(), moyasar);
 
       await expect(handler.execute(cmd())).rejects.toThrow(ConflictException);
       expect(prisma.payment.delete).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
 
-    it("replays the same givenId when the in-flight gateway session is still initiated", async () => {
+    it("reuses the same hosted URL when the package checkout is still unpaid", async () => {
       const prisma = buildReusePrisma("moy-live-2");
       const moyasar = buildMoyasar();
-      moyasar.getPaymentStatus.mockResolvedValue({ status: "initiated" });
+      moyasar.getCheckoutInvoice.mockResolvedValue({
+        id: "moy-live-2",
+        status: "initiated",
+        amount: FINAL_PRICE,
+        currency: "SAR",
+        url: "https://checkout.moyasar.com/invoices/moy-live-2",
+        metadata: { internalPaymentId: "old-pay" },
+      });
       const { handler } = buildHandler(prisma, buildPricing(), moyasar);
 
       await expect(handler.execute(cmd())).resolves.toMatchObject({
         purchaseId: PURCHASE_ID,
         invoiceId: INVOICE_ID,
+        redirectUrl: "https://checkout.moyasar.com/invoices/moy-live-2",
       });
       expect(prisma.payment.delete).not.toHaveBeenCalled();
       expect(prisma.payment.create).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).toHaveBeenCalledWith(
-        DEFAULT_ORG_ID,
-        expect.objectContaining({ givenId: "moy-live-2" }),
-      );
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
 
     it("discards and recreates when the in-flight gateway session is terminally failed", async () => {
       const prisma = buildReusePrisma("moy-dead-1");
       const moyasar = buildMoyasar();
-      moyasar.getPaymentStatus.mockResolvedValue({ status: "failed" });
+      moyasar.getCheckoutInvoice.mockResolvedValue({
+        id: "moy-dead-1",
+        status: "expired",
+        amount: FINAL_PRICE,
+        currency: "SAR",
+        url: null,
+        metadata: { internalPaymentId: "old-pay" },
+      });
       const { handler } = buildHandler(prisma, buildPricing(), moyasar);
 
       const result = await handler.execute(cmd());
 
-      expect(moyasar.getPaymentStatus).toHaveBeenCalledWith(
+      expect(moyasar.getCheckoutInvoice).toHaveBeenCalledWith(
         DEFAULT_ORG_ID,
         "moy-dead-1",
       );
@@ -590,48 +626,78 @@ describe("InitPackagePurchaseHandler", () => {
     it("fails closed (ConflictException) when the gateway status cannot be verified", async () => {
       const prisma = buildReusePrisma("moy-unknown-1");
       const moyasar = buildMoyasar();
-      moyasar.getPaymentStatus.mockRejectedValue(new Error("gateway 500"));
+      moyasar.getCheckoutInvoice.mockRejectedValue(new Error("gateway 500"));
       const { handler } = buildHandler(prisma, buildPricing(), moyasar);
 
       await expect(handler.execute(cmd())).rejects.toThrow(ConflictException);
       expect(prisma.payment.delete).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
 
-    it("replays the same durable givenId when Moyasar confirms the attempt does not exist", async () => {
-      const prisma = buildReusePrisma("moy-missing-1");
+    it("blocks a new package checkout while a legacy payment session is initiated", async () => {
+      const prisma = buildReusePrisma("legacy-payment-id");
       const moyasar = buildMoyasar();
-      moyasar.getPaymentStatus.mockRejectedValue(
-        new NotFoundException("not found"),
+      moyasar.getCheckoutInvoice.mockRejectedValue(
+        new NotFoundException("hosted invoice not found"),
       );
-      moyasar.createPayment.mockImplementation(async (_org, input) => ({
-        id: input.givenId,
-        redirectUrl: "https://checkout.moyasar.com/pay/recovered",
-      }));
+      moyasar.findCheckoutInvoiceByMetadata.mockResolvedValue(null);
+      moyasar.getPaymentStatus.mockResolvedValue({
+        id: "legacy-payment-id",
+        status: "initiated",
+        amount: FINAL_PRICE,
+        currency: "SAR",
+      });
+      const { handler } = buildHandler(prisma, buildPricing(), moyasar);
+
+      await expect(handler.execute(cmd())).rejects.toThrow(ConflictException);
+      expect(moyasar.getPaymentStatus).toHaveBeenCalledWith(
+        DEFAULT_ORG_ID,
+        "legacy-payment-id",
+      );
+      expect(prisma.payment.delete).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+    });
+
+    it("recovers an unknown create outcome by internalPaymentId", async () => {
+      const prisma = buildPrisma();
+      const moyasar = buildMoyasar();
+      moyasar.createCheckoutInvoice.mockRejectedValue(new Error("timeout"));
+      moyasar.findCheckoutInvoiceByMetadata.mockResolvedValue({
+        id: "moy-recovered",
+        status: "initiated",
+        amount: FINAL_PRICE,
+        currency: "SAR",
+        url: "https://checkout.moyasar.com/invoices/recovered",
+        metadata: { internalPaymentId: PAYMENT_ID },
+      });
       const { handler } = buildHandler(prisma, buildPricing(), moyasar);
 
       await expect(handler.execute(cmd())).resolves.toMatchObject({
-        paymentId: "old-pay",
-        redirectUrl: "https://checkout.moyasar.com/pay/recovered",
+        paymentId: PAYMENT_ID,
+        redirectUrl: "https://checkout.moyasar.com/invoices/recovered",
       });
       expect(prisma.payment.delete).not.toHaveBeenCalled();
-      expect(prisma.payment.create).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).toHaveBeenCalledWith(
+      expect(moyasar.findCheckoutInvoiceByMetadata).toHaveBeenCalledWith(
         DEFAULT_ORG_ID,
-        expect.objectContaining({ givenId: "moy-missing-1" }),
+        PAYMENT_ID,
       );
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: PAYMENT_ID },
+        data: { gatewayRef: "moy-recovered" },
+      });
     });
 
-    it("fails closed when a concurrent initialization has not attached a gatewayRef yet", async () => {
+    it("fails closed when metadata reconciliation for an orphan attempt errors", async () => {
       const prisma = buildReusePrisma(null);
       const moyasar = buildMoyasar();
+      moyasar.findCheckoutInvoiceByMetadata.mockRejectedValue(new Error("gateway 500"));
       const { handler } = buildHandler(prisma, buildPricing(), moyasar);
 
       await expect(handler.execute(cmd())).rejects.toThrow(ConflictException);
 
-      expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+      expect(moyasar.getCheckoutInvoice).not.toHaveBeenCalled();
       expect(prisma.payment.delete).not.toHaveBeenCalled();
-      expect(moyasar.createPayment).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
   });
 });

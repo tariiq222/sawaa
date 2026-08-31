@@ -16,6 +16,9 @@ export class MoyasarWebhookDataDto {
   @ApiPropertyOptional({ description: 'Moyasar payment ID', example: 'pay_abc123' })
   @IsOptional() @IsString() id?: string;
 
+  @ApiPropertyOptional({ description: 'Moyasar hosted-checkout invoice ID', example: 'inv_abc123' })
+  @IsOptional() @IsString() invoice_id?: string;
+
   @ApiPropertyOptional({ description: 'Payment status reported by Moyasar', enum: ['paid', 'failed', 'refunded', 'authorized', 'captured', 'voided'], example: 'paid' })
   @IsOptional() @IsIn(['paid', 'failed', 'refunded', 'authorized', 'captured', 'voided'])
   status?: 'paid' | 'failed' | 'refunded' | 'authorized' | 'captured' | 'voided';
@@ -52,6 +55,9 @@ export class MoyasarWebhookDataDto {
 export class MoyasarWebhookDto {
   @ApiPropertyOptional({ description: 'Payment ID (flat shape) OR event ID (nested shape)', example: 'pay_abc123' })
   @IsOptional() @IsString() id?: string;
+
+  @ApiPropertyOptional({ description: 'Moyasar hosted-checkout invoice ID (flat shape)', example: 'inv_abc123' })
+  @IsOptional() @IsString() invoice_id?: string;
 
   @ApiPropertyOptional({ description: 'Payment status reported by Moyasar (flat shape only)', enum: ['paid', 'failed', 'refunded', 'authorized', 'captured', 'voided'], example: 'paid' })
   @IsOptional() @IsIn(['paid', 'failed', 'refunded', 'authorized', 'captured', 'voided'])

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -68,34 +67,6 @@ export class InitClientPaymentHandler {
       }
     }
 
-    const idempotencyKey = `client:${invoice.id}`;
-    const existingPayment = await this.prisma.payment.findFirst({
-      where: { idempotencyKey },
-      select: { id: true, status: true, gatewayRef: true },
-    });
-
-    if (existingPayment) {
-      if (existingPayment.status === PaymentStatus.COMPLETED) {
-        throw new ConflictException('Payment for this invoice has already been completed');
-      }
-      // G3: reconcile the in-flight session against the gateway before discarding
-      // it, then delete so a fresh PENDING payment can be created below. Shared
-      // verbatim with InitPackagePurchaseHandler to prevent drift (a drift =
-      // double charge). The `client:<invoiceId>` idempotencyKey is @unique, so at
-      // most one row exists per invoice — this also guards concurrent inits.
-      await reconcileOrDiscardInFlightPayment(
-        this.prisma,
-        this.moyasar,
-        this.logger,
-        existingPayment,
-        {
-          alreadyPaid: 'Payment for this invoice has already been completed',
-          inFlight:
-            'هناك دفعة قيد التنفيذ لهذه الفاتورة، أكمل الدفع الحالي أو انتظر انتهاء الجلسة',
-        },
-      );
-    }
-
     // P0: charge only the OUTSTANDING balance, not the full invoice total. An
     // invoice may already carry a collected deposit (e.g. pay-at-clinic or a
     // prior partial). Sending the full total to Moyasar would double-charge the
@@ -110,6 +81,57 @@ export class InitClientPaymentHandler {
     const outstanding = Math.round(Number(invoice.total)) - alreadyPaid;
     if (outstanding <= 0) {
       throw new BadRequestException('Invoice is already fully paid');
+    }
+
+    const idempotencyKey = `client:${invoice.id}`;
+    const existingPayment = await this.prisma.payment.findFirst({
+      where: { idempotencyKey },
+      select: { id: true, status: true, gatewayRef: true },
+    });
+
+    if (existingPayment) {
+      if (existingPayment.status === PaymentStatus.COMPLETED) {
+        throw new ConflictException('Payment for this invoice has already been completed');
+      }
+      const recovered = await this.findHostedInvoice(
+        existingPayment.id,
+        existingPayment.gatewayRef,
+      );
+      if (!recovered) {
+        // Releases before hosted checkout stored a Moyasar Payment ID in
+        // gatewayRef. Reconcile that legacy attempt before replacing it so a
+        // live or paid charge cannot be duplicated.
+        await reconcileOrDiscardInFlightPayment(
+          this.prisma,
+          this.moyasar,
+          this.logger,
+          existingPayment,
+          {
+            alreadyPaid: 'Payment for this invoice has already been completed',
+            inFlight:
+              'هناك دفعة قيد التنفيذ لهذه الفاتورة، أكمل الدفع الحالي أو انتظر انتهاء الجلسة',
+          },
+        );
+      } else {
+        this.assertHostedInvoiceMatches(recovered, outstanding, invoice.currency);
+        if (existingPayment.gatewayRef !== recovered.id) {
+          await this.prisma.payment.update({
+            where: { id: existingPayment.id },
+            data: { gatewayRef: recovered.id },
+            select: { id: true },
+          });
+        }
+        if (this.isPaidCheckoutStatus(recovered.status)) {
+          throw new ConflictException('Payment for this invoice has already been completed');
+        }
+        if (!this.isTerminalFailedCheckoutStatus(recovered.status)) {
+          if (!recovered.url) {
+            throw new ConflictException('Payment checkout exists but has no hosted URL');
+          }
+          return { paymentId: existingPayment.id, redirectUrl: recovered.url };
+        }
+        await this.prisma.payment.delete({ where: { id: existingPayment.id } });
+      }
     }
 
     // invoice.total and Payment.amount are both stored in halalas — bill the
@@ -127,62 +149,99 @@ export class InitClientPaymentHandler {
       select: { id: true },
     });
 
-    // Fresh idempotency identity per attempt. Keying on the invoice alone would
-    // pin the FIRST amount: after a deposit, a top-up bills a smaller outstanding
-    // and Moyasar would reject the changed amount with `400 already created`,
-    // making the invoice impossible to finish by card. A unique value per
-    // attempt sidesteps that while still using the gateway's real `given_id`
-    // mechanism (vs the unsupported Idempotency-Key header).
-    const givenId = randomUUID();
-    let moyasarPayment: Awaited<ReturnType<MoyasarApiClient['createPayment']>>;
+    let checkout: Awaited<ReturnType<MoyasarApiClient['createCheckoutInvoice']>>;
     try {
-      moyasarPayment = await this.moyasar.createPayment(DEFAULT_ORG_ID, {
+      checkout = await this.moyasar.createCheckoutInvoice(DEFAULT_ORG_ID, {
         amountHalalas,
         currency: invoice.currency,
         description: `Invoice payment - ${invoice.id}`,
-        callbackUrl: this.buildCallbackUrl(invoice.bookingId ?? '', invoice.id),
+        successUrl: this.buildCallbackUrl(invoice.bookingId ?? '', invoice.id),
+        backUrl: this.buildCallbackUrl(invoice.bookingId ?? '', invoice.id),
         metadata: {
           invoiceId: invoice.id,
           bookingId: invoice.bookingId ?? '',
           source: 'mobile-client',
+          internalPaymentId: payment.id,
         },
-        givenId,
       });
     } catch (error) {
-      await this.deleteFailedPaymentInit(payment.id);
-      if (error instanceof Error) {
-        this.logger.error(`Moyasar payment creation failed for payment ${payment.id}`, error.stack);
+      const recovered = await this.findHostedInvoice(payment.id, null);
+      if (!recovered) {
+        if (error instanceof Error) {
+          this.logger.error(
+            `Moyasar hosted invoice creation outcome is unknown for payment ${payment.id}`,
+            error.stack,
+          );
+        }
+        throw error;
       }
-      throw error;
+      checkout = recovered;
     }
 
-    const redirectUrl = moyasarPayment.redirectUrl;
-    if (!redirectUrl) {
-      await this.deleteFailedPaymentInit(payment.id);
+    this.assertHostedInvoiceMatches(checkout, amountHalalas, invoice.currency);
+    const updatedPayment = await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: { gatewayRef: checkout.id },
+      select: { id: true },
+    });
+    if (this.isPaidCheckoutStatus(checkout.status)) {
+      throw new ConflictException('Payment for this invoice has already been completed');
+    }
+    if (!checkout.url) {
       throw new BadRequestException('Payment gateway did not return a redirect URL');
     }
 
-    const updatedPayment = await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: { gatewayRef: moyasarPayment.id },
-      select: { id: true },
-    });
-
     return {
       paymentId: updatedPayment.id,
-      redirectUrl,
+      redirectUrl: checkout.url,
     };
   }
 
-  private async deleteFailedPaymentInit(paymentId: string): Promise<void> {
+  private async findHostedInvoice(paymentId: string, gatewayRef: string | null) {
     try {
-      await this.prisma.payment.delete({ where: { id: paymentId } });
+      if (gatewayRef) {
+        try {
+          return await this.moyasar.getCheckoutInvoice(DEFAULT_ORG_ID, gatewayRef);
+        } catch (error) {
+          if (!(error instanceof NotFoundException)) throw error;
+          // The stored reference may be missing after an unknown create/update
+          // boundary. Metadata is the durable recovery identity.
+        }
+      }
+      return await this.moyasar.findCheckoutInvoiceByMetadata(
+        DEFAULT_ORG_ID,
+        paymentId,
+      );
     } catch (error) {
       this.logger.error(
-        `Failed to delete client payment ${paymentId} after Moyasar failure`,
+        `Failed to reconcile hosted invoice for payment ${paymentId}`,
         error instanceof Error ? error.stack : undefined,
       );
+      throw new ConflictException('تعذّر التحقق من حالة الدفعة الجارية، حاول مرة أخرى لاحقاً');
     }
+  }
+
+  private assertHostedInvoiceMatches(
+    checkout: { amount: number; currency: string },
+    amountHalalas: number,
+    currency: string,
+  ): void {
+    if (
+      Math.round(checkout.amount) !== amountHalalas ||
+      checkout.currency.toUpperCase() !== currency.toUpperCase()
+    ) {
+      throw new ConflictException('Hosted invoice does not match the payment attempt');
+    }
+  }
+
+  private isPaidCheckoutStatus(status: string): boolean {
+    return ['paid', 'completed'].includes(status.toLowerCase());
+  }
+
+  private isTerminalFailedCheckoutStatus(status: string): boolean {
+    return ['expired', 'failed', 'canceled', 'cancelled', 'voided', 'refunded'].includes(
+      status.toLowerCase(),
+    );
   }
 
   private buildCallbackUrl(bookingId: string, invoiceId: string): string {

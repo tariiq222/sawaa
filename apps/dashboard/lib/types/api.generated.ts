@@ -7396,6 +7396,11 @@ export interface components {
              */
             id?: string;
             /**
+             * @description Moyasar hosted-checkout invoice ID
+             * @example inv_abc123
+             */
+            invoice_id?: string;
+            /**
              * @description Human-readable message from Moyasar (e.g. failure reason)
              * @example Insufficient funds
              */
@@ -7437,6 +7442,11 @@ export interface components {
              * @example pay_abc123
              */
             id?: string;
+            /**
+             * @description Moyasar hosted-checkout invoice ID (flat shape)
+             * @example inv_abc123
+             */
+            invoice_id?: string;
             /**
              * @description Indicates if the payment was made in live mode
              * @example true

@@ -188,7 +188,14 @@ interface HandlerOverrides {
   cls?: ReturnType<typeof buildCls>;
   /** Authoritative payment as returned by the Moyasar re-fetch. Defaults to a
    *  `paid` payment whose amount matches the 230-halala invoice. */
-  fetchedPayment?: { id: string; status: string; amount: number; currency: string };
+  fetchedPayment?: {
+    id: string;
+    status: string;
+    amount: number;
+    currency: string;
+    invoiceId?: string;
+    invoice_id?: string;
+  };
   /** When set, the moyasarApi.getPaymentStatus mock rejects with this error. */
   fetchError?: unknown;
 }
@@ -381,6 +388,162 @@ describe('MoyasarWebhookHandler', () => {
       expect(result.skipped).toBe(true);
       expect(result.reason).toBe('missing_metadata');
       expect(prisma.payment.upsert).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {
+        label: 'FLAT',
+        payload: {
+          id: 'moyasar-pay-1',
+          invoice_id: 'moyasar-invoice-1',
+          status: 'paid',
+          amount: 230,
+          currency: 'SAR',
+        } as MoyasarWebhookDto,
+      },
+      {
+        label: 'NESTED',
+        payload: {
+          id: 'evt-invoice-routing',
+          type: 'payment_paid',
+          data: {
+            id: 'moyasar-pay-1',
+            invoice_id: 'moyasar-invoice-1',
+            status: 'paid',
+            amount: 230,
+            currency: 'SAR',
+          },
+        } as MoyasarWebhookDto,
+      },
+    ])('routes a $label invoice-payment webhook through invoice_id without metadata', async ({ payload }) => {
+      const prisma = buildPrisma();
+      prisma.payment.findFirst.mockResolvedValue({
+        id: 'payment-pending-1',
+        invoiceId: 'inv-1',
+        status: PaymentStatus.PENDING,
+      });
+      const { handler } = makeHandler({ prisma });
+
+      const result = await handler.execute(makeReq(payload));
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(prisma.payment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            invoiceId: 'inv-1',
+            OR: expect.arrayContaining([
+              { gatewayRef: 'moyasar-invoice-1' },
+              { gatewayRef: 'moyasar-pay-1' },
+            ]),
+          }),
+        }),
+      );
+      expect(prisma.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'payment-pending-1' },
+          data: expect.objectContaining({
+            gatewayRef: 'moyasar-pay-1',
+            idempotencyKey: 'moyasar:moyasar-pay-1',
+            status: PaymentStatus.COMPLETED,
+          }),
+        }),
+      );
+    });
+
+    it('uses authoritative fetched invoiceId when the webhook omits invoice_id and metadata', async () => {
+      const prisma = buildPrisma();
+      prisma.payment.findFirst.mockImplementation(
+        ({ where }: { where: { OR?: Array<{ gatewayRef?: string }> } }) => {
+          const refs = where.OR?.map((part) => part.gatewayRef).filter(Boolean) ?? [];
+          return Promise.resolve(
+            refs.includes('moyasar-invoice-1')
+              ? {
+                  id: 'payment-pending-1',
+                  invoiceId: 'inv-1',
+                  status: PaymentStatus.PENDING,
+                }
+              : null,
+          );
+        },
+      );
+      const payload = {
+        id: 'moyasar-pay-1',
+        status: 'paid',
+        amount: 230,
+        currency: 'SAR',
+      } as MoyasarWebhookDto;
+      const { handler } = makeHandler({
+        prisma,
+        fetchedPayment: {
+          id: 'moyasar-pay-1',
+          invoiceId: 'moyasar-invoice-1',
+          status: 'paid',
+          amount: 230,
+          currency: 'SAR',
+        },
+      });
+
+      const result = await handler.execute(makeReq(payload));
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'payment-pending-1' } }),
+      );
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it('safely skips an unknown gateway invoice without creating a Payment', async () => {
+      const prisma = buildPrisma();
+      const payload = {
+        id: 'moyasar-pay-1',
+        invoice_id: 'moyasar-invoice-unknown',
+        status: 'paid',
+        amount: 230,
+        currency: 'SAR',
+      } as MoyasarWebhookDto;
+      const { handler } = makeHandler({ prisma });
+
+      const result = await handler.execute(makeReq(payload));
+
+      expect(result).toEqual({ skipped: true, reason: 'invoice_not_found' });
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects conflicting metadata and hosted-invoice routing identities', async () => {
+      const prisma = buildPrisma({
+        ...buildInvoice(ORG_A, 'inv-metadata'),
+        total: 230,
+      });
+      prisma.payment.findFirst.mockImplementation(
+        ({ where }: { where: { invoiceId?: string; OR?: Array<{ gatewayRef?: string }> } }) => {
+          const refs = where.OR?.map((part) => part.gatewayRef).filter(Boolean) ?? [];
+          if (!where.invoiceId && refs.includes('moyasar-invoice-1')) {
+            return Promise.resolve({
+              id: 'payment-pending-1',
+              invoiceId: 'inv-routed',
+              status: PaymentStatus.PENDING,
+            });
+          }
+          return Promise.resolve(null);
+        },
+      );
+      const payload = {
+        id: 'moyasar-pay-1',
+        invoice_id: 'moyasar-invoice-1',
+        status: 'paid',
+        amount: 230,
+        currency: 'SAR',
+        metadata: { invoiceId: 'inv-metadata' },
+      } as MoyasarWebhookDto;
+      const { handler } = makeHandler({ prisma });
+
+      const result = await handler.execute(makeReq(payload));
+
+      expect(result).toEqual({ skipped: true, reason: 'invoice_mismatch' });
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
     });
   });
 
@@ -789,6 +952,43 @@ describe('MoyasarWebhookHandler', () => {
         }),
       }));
     });
+
+    it('routes a retry through the payment id after gatewayRef was replaced', async () => {
+      const prisma = buildPrisma();
+      prisma.payment.findFirst.mockImplementation(
+        ({ where }: { where: { OR?: Array<{ gatewayRef?: string }> } }) => {
+          const refs = where.OR?.map((part) => part.gatewayRef).filter(Boolean) ?? [];
+          return Promise.resolve(
+            refs.includes('moyasar-pay-1')
+              ? {
+                  id: 'payment-existing',
+                  invoiceId: 'inv-1',
+                  status: PaymentStatus.PENDING,
+                }
+              : null,
+          );
+        },
+      );
+      const payload = {
+        id: 'moyasar-pay-1',
+        invoice_id: 'moyasar-invoice-1',
+        status: 'paid',
+        amount: 230,
+        currency: 'SAR',
+      } as MoyasarWebhookDto;
+      const { handler } = makeHandler({ prisma });
+
+      const result = await handler.execute(makeReq(payload));
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(prisma.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'payment-existing' },
+          data: expect.objectContaining({ gatewayRef: 'moyasar-pay-1' }),
+        }),
+      );
+    });
   });
 
   describe('execute — context & credentials', () => {
@@ -831,6 +1031,22 @@ describe('MoyasarWebhookHandler', () => {
       const errors = await validate(dto);
       const amountErrors = errors.filter((e) => e.property === 'amount');
       expect(amountErrors.length).toBeGreaterThan(0);
+    });
+
+    it.each([
+      {
+        label: 'flat',
+        plain: { id: 'pay-1', invoice_id: 'invoice-gateway-1' },
+      },
+      {
+        label: 'nested',
+        plain: { id: 'event-1', data: { id: 'pay-1', invoice_id: 'invoice-gateway-1' } },
+      },
+    ])('accepts invoice_id in the $label webhook shape under whitelist validation', async ({ plain }) => {
+      const dto = plainToInstance(MoyasarWebhookDto, plain);
+      const errors = await validate(dto, { whitelist: true, forbidNonWhitelisted: true });
+
+      expect(errors).toEqual([]);
     });
   });
 });

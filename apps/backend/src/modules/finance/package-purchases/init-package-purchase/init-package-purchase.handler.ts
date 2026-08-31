@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -26,6 +26,7 @@ import {
   parsePackageCreditSnapshot,
   type PackageCreditSnapshotItem,
 } from "../package-credit-snapshot";
+import { reconcileOrDiscardInFlightPayment } from "../../payments/client/init-client-payment/reconcile-in-flight-payment.helper";
 
 export type InitPackagePurchaseCommand = InitPackagePurchaseDto & {
   /** Authenticated client id (set by the controller from the client session). */
@@ -62,10 +63,8 @@ export function selfPurchaseFingerprint(
  * (CreatePackagePurchaseHandler). It REUSES the existing client-payment Moyasar
  * infrastructure rather than reinventing it:
  *   - the price is frozen with the SAME ComputePackagePriceService;
- *   - the Moyasar charge is created with the SAME MoyasarApiClient.createPayment
- *     contract used by InitClientPaymentHandler (amount in halalas, fresh
- *     `given_id` UUID per attempt, metadata.invoiceId so the UNCHANGED webhook
- *     can resolve the invoice);
+ *   - checkout uses Moyasar's hosted Invoice URL, with amount in halalas and
+ *     internalPaymentId metadata for unknown-outcome recovery;
  *   - on a successful webhook the EXISTING MoyasarWebhookHandler emits
  *     PaymentCompletedEvent carrying `invoice.packagePurchaseId`, which the
  *     ActivatePackagePurchaseHandler consumes to flip the purchase ACTIVE and
@@ -79,9 +78,8 @@ export function selfPurchaseFingerprint(
  *   3. Freeze the price (subtotal / discount / final). Reject a zero-price
  *      package — Moyasar's minimum charge is 100 halalas.
  *   4. Idempotency: an in-flight PENDING purchase for the same (client, package)
- *      with a still-PENDING payment is reused; we re-issue a fresh Moyasar charge
- *      against its existing invoice (mirrors InitClientPaymentHandler, which
- *      deletes-and-recreates the non-completed payment). A purchase that has
+ *      with a still-PENDING payment is reused; a live hosted URL is returned,
+ *      while only a provider-confirmed terminal checkout is replaced. A purchase that has
  *      already gone ACTIVE is never reused — multiple purchases of the same
  *      package are allowed (the plan's "التعدد" decision).
  *   5. Create PackagePurchase(status=PENDING) — NO credits yet: a PENDING
@@ -220,7 +218,7 @@ export class InitPackagePurchaseHandler {
     }
 
     // 4 + 5 + 6 — materialize (or reuse) the PENDING purchase + invoice + payment.
-    const { purchaseId, invoiceId, paymentId, amountHalalas, givenId } =
+    const { purchaseId, invoiceId, paymentId, amountHalalas, checkout } =
       await this.materializePending(
         cmd,
         price,
@@ -228,47 +226,61 @@ export class InitPackagePurchaseHandler {
         requestFingerprint,
       );
 
-    // 7. The attempt's given_id was persisted on Payment before this external
-    // call. An unknown outcome can therefore be reconciled and retried with the
-    // same gateway-idempotent identity instead of creating a second charge.
-    let moyasarPayment: Awaited<ReturnType<MoyasarApiClient["createPayment"]>>;
+    if (checkout) {
+      return {
+        purchaseId,
+        invoiceId,
+        paymentId,
+        redirectUrl: checkout.url,
+      };
+    }
+
+    let hostedInvoice: Awaited<
+      ReturnType<MoyasarApiClient["createCheckoutInvoice"]>
+    >;
     try {
-      moyasarPayment = await this.moyasar.createPayment(DEFAULT_ORG_ID, {
+      hostedInvoice = await this.moyasar.createCheckoutInvoice(DEFAULT_ORG_ID, {
         amountHalalas,
         currency: "SAR",
         description: `Package purchase - ${packageNameAr}`,
-        callbackUrl: this.buildCallbackUrl(purchaseId, invoiceId),
+        successUrl: this.buildCallbackUrl(purchaseId, invoiceId),
+        backUrl: this.buildCallbackUrl(purchaseId, invoiceId),
         metadata: {
           invoiceId,
           packagePurchaseId: purchaseId,
           source: "self-purchase",
+          internalPaymentId: paymentId,
         },
-        givenId,
       });
     } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Moyasar payment creation failed for package purchase ${purchaseId}`,
-          error.stack,
-        );
+      const recovered = await this.findHostedInvoice(paymentId, null);
+      if (!recovered) {
+        if (error instanceof Error) {
+          this.logger.error(
+            `Moyasar hosted invoice creation outcome is unknown for package purchase ${purchaseId}`,
+            error.stack,
+          );
+        }
+        throw error;
       }
-      throw error;
+      hostedInvoice = recovered;
     }
 
-    const redirectUrl = moyasarPayment.redirectUrl;
-    if (!redirectUrl) {
+    this.assertHostedInvoiceMatches(hostedInvoice, amountHalalas, "SAR");
+    await this.prisma.payment.update({
+      where: { id: paymentId },
+      data: { gatewayRef: hostedInvoice.id },
+    });
+    if (this.isPaidCheckoutStatus(hostedInvoice.status)) {
+      throw new ConflictException("This purchase has already been paid");
+    }
+    if (!hostedInvoice.url) {
       throw new BadRequestException(
         "Payment gateway did not return a redirect URL",
       );
     }
 
-    if (moyasarPayment.id !== givenId) {
-      throw new ConflictException(
-        "Payment gateway returned a different attempt identity",
-      );
-    }
-
-    return { purchaseId, invoiceId, paymentId, redirectUrl };
+    return { purchaseId, invoiceId, paymentId, redirectUrl: hostedInvoice.url };
   }
 
   /**
@@ -286,7 +298,7 @@ export class InitPackagePurchaseHandler {
     invoiceId: string;
     paymentId: string;
     amountHalalas: number;
-    givenId: string;
+    checkout?: { id: string; url: string };
   }> {
     // Reuse an in-flight PENDING purchase for the same (client, package) whose
     // payment has not completed. We re-issue a fresh charge against its existing
@@ -346,32 +358,58 @@ export class InitPackagePurchaseHandler {
           throw new BadRequestException("This purchase has already been paid");
         }
         if (payment) {
-          if (payment.status === PaymentStatus.PENDING && !payment.gatewayRef) {
-            throw new ConflictException(
-              "Package payment initialization is already in progress",
+          const recovered = await this.findHostedInvoice(
+            payment.id,
+            payment.gatewayRef,
+          );
+          if (!recovered) {
+            // Legacy releases stored a Moyasar Payment ID rather than a hosted
+            // invoice ID. The shared guard fails closed for live/paid sessions
+            // and deletes only a provider-confirmed terminal failure.
+            await reconcileOrDiscardInFlightPayment(
+              this.prisma,
+              this.moyasar,
+              this.logger,
+              payment,
+              {
+                alreadyPaid: "This purchase has already been paid",
+                inFlight:
+                  "هناك دفعة قيد التنفيذ لهذه الباقة، أكمل الدفع الحالي أو انتظر انتهاء الجلسة",
+              },
             );
-          }
-          if (payment.gatewayRef) {
-            const shouldReuse = await this.shouldReuseGatewayAttempt({
-              id: payment.id,
-              gatewayRef: payment.gatewayRef,
-            });
-            if (shouldReuse) {
+          } else {
+            this.assertHostedInvoiceMatches(
+              recovered,
+              Number(invoice.total),
+              "SAR",
+            );
+            if (payment.gatewayRef !== recovered.id) {
+              await this.prisma.payment.update({
+                where: { id: payment.id },
+                data: { gatewayRef: recovered.id },
+              });
+            }
+            if (this.isPaidCheckoutStatus(recovered.status)) {
+              throw new ConflictException("This purchase has already been paid");
+            }
+            if (!this.isTerminalFailedCheckoutStatus(recovered.status)) {
+              if (!recovered.url) {
+                throw new ConflictException(
+                  "Package checkout exists but has no hosted URL",
+                );
+              }
               return {
                 purchaseId: existing.id,
                 invoiceId: invoice.id,
                 paymentId: payment.id,
                 amountHalalas: Number(invoice.total),
-                givenId: payment.gatewayRef,
+                checkout: { id: recovered.id, url: recovered.url },
               };
             }
+            await this.prisma.payment.delete({ where: { id: payment.id } });
           }
-          // Only a provider-confirmed terminal failure (or a legacy FAILED row
-          // without an identity) reaches here, so replacing it is safe.
-          await this.prisma.payment.delete({ where: { id: payment.id } });
         }
         const amountHalalas = Number(invoice.total);
-        const givenId = randomUUID();
         const fresh = await this.prisma.payment.create({
           data: {
             invoiceId: invoice.id,
@@ -380,7 +418,6 @@ export class InitPackagePurchaseHandler {
             method: PaymentMethod.ONLINE_CARD,
             status: PaymentStatus.PENDING,
             idempotencyKey,
-            gatewayRef: givenId,
           },
           select: { id: true },
         });
@@ -389,7 +426,6 @@ export class InitPackagePurchaseHandler {
           invoiceId: invoice.id,
           paymentId: fresh.id,
           amountHalalas,
-          givenId,
         };
       }
     }
@@ -436,7 +472,6 @@ export class InitPackagePurchaseHandler {
           select: { id: true },
         });
 
-        const givenId = randomUUID();
         const payment = await tx.payment.create({
           data: {
             invoiceId: invoice.id,
@@ -445,7 +480,6 @@ export class InitPackagePurchaseHandler {
             method: PaymentMethod.ONLINE_CARD,
             status: PaymentStatus.PENDING,
             idempotencyKey: `client-pkg:${invoice.id}`,
-            gatewayRef: givenId,
           },
           select: { id: true },
         });
@@ -455,7 +489,6 @@ export class InitPackagePurchaseHandler {
           invoiceId: invoice.id,
           paymentId: payment.id,
           amountHalalas: price.finalPrice,
-          givenId,
         };
       });
     } catch (error) {
@@ -494,31 +527,27 @@ export class InitPackagePurchaseHandler {
     return `${baseUrl}/packages/payment-callback?purchaseId=${purchaseId}&invoiceId=${invoiceId}`;
   }
 
-  private async shouldReuseGatewayAttempt(payment: {
-    id: string;
-    gatewayRef: string;
-  }): Promise<boolean> {
+  private async findHostedInvoice(paymentId: string, gatewayRef: string | null) {
     try {
-      const gateway = await this.moyasar.getPaymentStatus(
+      if (gatewayRef) {
+        try {
+          return await this.moyasar.getCheckoutInvoice(
+            DEFAULT_ORG_ID,
+            gatewayRef,
+          );
+        } catch (error) {
+          if (!(error instanceof NotFoundException)) throw error;
+          // Fall through to the durable metadata identity.
+        }
+      }
+      return await this.moyasar.findCheckoutInvoiceByMetadata(
         DEFAULT_ORG_ID,
-        payment.gatewayRef,
+        paymentId,
       );
-      if (["paid", "captured", "authorized"].includes(gateway.status)) {
-        throw new ConflictException("This purchase has already been paid");
-      }
-      // Re-POSTing an initiated attempt with the same given_id returns the
-      // exact provider payment and restores its redirect idempotently.
-      return gateway.status === "initiated";
     } catch (error) {
-      if (error instanceof ConflictException) throw error;
-      if (error instanceof NotFoundException) {
-        // The provider authoritatively confirmed this durable identity does not
-        // exist. Creating it with the same given_id remains the same attempt.
-        return true;
-      }
       if (error instanceof Error) {
         this.logger.error(
-          `Failed to reconcile package payment attempt ${payment.id}`,
+          `Failed to reconcile package checkout for payment ${paymentId}`,
           error.stack,
         );
       }
@@ -526,5 +555,35 @@ export class InitPackagePurchaseHandler {
         "تعذّر التحقق من حالة الدفعة الجارية، حاول مرة أخرى لاحقاً",
       );
     }
+  }
+
+  private assertHostedInvoiceMatches(
+    checkout: { amount: number; currency: string },
+    amountHalalas: number,
+    currency: string,
+  ): void {
+    if (
+      Math.round(checkout.amount) !== amountHalalas ||
+      checkout.currency.toUpperCase() !== currency.toUpperCase()
+    ) {
+      throw new ConflictException(
+        "Hosted invoice does not match the package payment attempt",
+      );
+    }
+  }
+
+  private isPaidCheckoutStatus(status: string): boolean {
+    return ["paid", "completed"].includes(status.toLowerCase());
+  }
+
+  private isTerminalFailedCheckoutStatus(status: string): boolean {
+    return [
+      "expired",
+      "failed",
+      "canceled",
+      "cancelled",
+      "voided",
+      "refunded",
+    ].includes(status.toLowerCase());
   }
 }

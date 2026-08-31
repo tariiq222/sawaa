@@ -37,16 +37,18 @@ export interface MoyasarWebhookResult {
  * at the root. Stage 1 normalizes both into one internal object.
  *
  * Stage order:
- *   1. Parse + normalize payload — resolve paymentId/invoiceId/status from
+ *   1. Parse + normalize payload — resolve paymentId/invoice_id/status from
  *      either the nested `data` object or the flat root.
- *   2. System-context lookup of Invoice.
+ *   2. Resolve the internal Invoice from metadata or the hosted-checkout
+ *      Payment row keyed by the gateway invoice/payment identity.
  *   3. System-context lookup of OrganizationPaymentConfig.
  *   4. Decrypt the webhook secret (HKDF context = SINGLE_TENANT_CONTEXT_ID).
  *   5. Verify the shared secret — via the HMAC
  *      `X-Moyasar-Signature` header when present, else the body `secret_token`.
  *   6. Idempotency check (keyed on paymentId:status, not the root event id).
- *   7. Re-fetch the payment from the Moyasar API (authoritative source of truth)
- *      and validate its amount/currency against the invoice (anti-spoof).
+ *   7. Re-fetch the payment from the Moyasar API (authoritative source of truth),
+ *      use its invoiceId as a final routing fallback, and validate the
+ *      amount/currency against the invoice (anti-spoof).
  *   8. Mutations under the default org compatibility CLS context.
  *
  * ── Error classification ──────────────────────────────────────────────────
@@ -124,25 +126,49 @@ export class MoyasarWebhookHandler {
     const payload = req.payload;
     const paymentId = payload.data?.id ?? payload.id;
     const normalizedStatus = payload.data?.status ?? payload.status;
-    const invoiceId = payload.data?.metadata?.invoiceId ?? payload.metadata?.invoiceId;
+    const metadataInvoiceId =
+      payload.data?.metadata?.invoiceId ?? payload.metadata?.invoiceId;
+    const payloadGatewayInvoiceId = payload.data?.invoice_id ?? payload.invoice_id;
     const message = payload.data?.message ?? payload.message;
     const bodySecret = payload.secret_token;
 
-    if (!paymentId || !invoiceId) {
-      // Permanent: a payload that resolves to neither a payment id nor an
-      // invoice id can never be acted on — drop-and-ack.
+    if (!paymentId) {
+      // Permanent: without a payment id there is nothing authoritative to
+      // re-fetch and no stable webhook/payment identity to process.
       this.logger.warn(
-        `Moyasar webhook missing metadata (payment=${paymentId ?? 'none'} invoice=${invoiceId ?? 'none'})`,
+        'Moyasar webhook missing metadata (payment=none invoice=unresolved)',
       );
       return { skipped: true, reason: 'missing_metadata' };
     }
 
-    // STAGE 2 — read invoice in system context.
-    const invoice = await this.cls.run(async () => {
+    // Hosted invoice checkout creates a PENDING Payment before redirecting to
+    // Moyasar. At that point gatewayRef is the Moyasar invoice UUID, not the
+    // eventual payment UUID. Route through either identity so the webhook can
+    // recover the internal Invoice even when Moyasar omitted our metadata.
+    const initialGatewayRefs = [paymentId, payloadGatewayInvoiceId].filter(
+      (value): value is string => Boolean(value),
+    );
+    let routedPayment = await this.findPaymentRoute(initialGatewayRefs);
+    let invoiceId = metadataInvoiceId ?? routedPayment?.invoiceId;
+
+    // An explicit gateway invoice that maps to no hosted-checkout attempt is
+    // unknown to this deployment. Ack safely without creating a new Payment.
+    if (payloadGatewayInvoiceId && !metadataInvoiceId && !routedPayment) {
+      this.logger.warn(
+        `Moyasar webhook references unknown gateway invoice ${payloadGatewayInvoiceId} ` +
+          `(payment ${paymentId})`,
+      );
+      return { skipped: true, reason: 'invoice_not_found' };
+    }
+
+    // Preserve the fast/safe metadata path: reject an unknown internal invoice
+    // before loading secrets or calling Moyasar. The fetched-invoice fallback
+    // below is used only when neither metadata nor the initial route resolved.
+    let invoice = invoiceId ? await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return this.prisma.invoice.findFirst({ where: { id: invoiceId } });
-    });
-    if (!invoice) {
+    }) : null;
+    if (invoiceId && !invoice) {
       this.logger.warn(
         `Moyasar webhook references unknown invoice ${invoiceId} (payment ${paymentId})`,
       );
@@ -195,7 +221,8 @@ export class MoyasarWebhookHandler {
         // Permanent: a forged/invalid signature will never become valid on retry.
         // Returning 200 stops the retry storm and avoids acting as an oracle.
         this.logger.warn(
-          `Moyasar webhook rejected: invalid signature for payment ${paymentId} (invoice ${invoiceId})`,
+          `Moyasar webhook rejected: invalid signature for payment ${paymentId} ` +
+            `(invoice ${invoiceId ?? payloadGatewayInvoiceId ?? 'unresolved'})`,
         );
         return { skipped: true, reason: 'invalid_signature' };
       }
@@ -203,7 +230,8 @@ export class MoyasarWebhookHandler {
       if (!this.verifySecretToken(bodySecret, webhookSecret)) {
         // Permanent: a wrong body secret_token will never become valid on retry.
         this.logger.warn(
-          `Moyasar webhook rejected: invalid secret_token for payment ${paymentId} (invoice ${invoiceId})`,
+          `Moyasar webhook rejected: invalid secret_token for payment ${paymentId} ` +
+            `(invoice ${invoiceId ?? payloadGatewayInvoiceId ?? 'unresolved'})`,
         );
         return { skipped: true, reason: 'invalid_signature' };
       }
@@ -212,7 +240,8 @@ export class MoyasarWebhookHandler {
       // cannot be authenticated. Drop-and-ack with HTTP 200.
       this.logger.warn(
         `Moyasar webhook rejected: no signature header and no secret_token ` +
-          `for payment ${paymentId} (invoice ${invoiceId})`,
+          `for payment ${paymentId} ` +
+            `(invoice ${invoiceId ?? payloadGatewayInvoiceId ?? 'unresolved'})`,
       );
       return { skipped: true, reason: 'missing_signature' };
     }
@@ -261,14 +290,22 @@ export class MoyasarWebhookHandler {
       // A signed webhook only proves the message came from Moyasar; the body
       // could be a stale/replayed (but validly-signed) payload. We trust the
       // re-fetched status/amount/currency, NOT the request body.
-      let fetched: { id: string; status: MoyasarPaymentStatus; amount: number; currency: string };
+      let fetched: {
+        id: string;
+        status: MoyasarPaymentStatus;
+        amount: number;
+        currency: string;
+        invoiceId?: string;
+        invoice_id?: string;
+      };
       try {
         fetched = await this.moyasarApi.getPaymentStatus(DEFAULT_ORG_ID, paymentId);
       } catch (err) {
         if (err instanceof NotFoundException) {
           // Permanent: Moyasar says this payment does not exist. Drop-and-ack.
           this.logger.error(
-            `Moyasar webhook rejected: payment ${paymentId} not found on re-fetch (invoice ${invoiceId})`,
+            `Moyasar webhook rejected: payment ${paymentId} not found on re-fetch ` +
+              `(invoice ${invoiceId ?? payloadGatewayInvoiceId ?? 'unresolved'})`,
           );
           await this.markWebhookEvent(webhookEventRowId, 'error');
           return { skipped: true, reason: 'payment_not_found' };
@@ -277,6 +314,78 @@ export class MoyasarWebhookHandler {
         throw err;
       }
 
+      const authoritativeGatewayInvoiceId = fetched.invoiceId ?? fetched.invoice_id;
+      const gatewayRefs = [
+        paymentId,
+        payloadGatewayInvoiceId,
+        authoritativeGatewayInvoiceId,
+      ].filter((value, index, values): value is string =>
+        Boolean(value) && values.indexOf(value) === index,
+      );
+
+      // A signed payload can still carry merchant-supplied metadata from a
+      // different checkout. Never let metadata redirect a hosted-invoice
+      // payment away from the internal Payment row already bound to that
+      // gateway identity.
+      if (!routedPayment && authoritativeGatewayInvoiceId) {
+        routedPayment = await this.findPaymentRoute([
+          authoritativeGatewayInvoiceId,
+          paymentId,
+        ]);
+      }
+      if (
+        metadataInvoiceId &&
+        routedPayment &&
+        routedPayment.invoiceId &&
+        metadataInvoiceId !== routedPayment.invoiceId
+      ) {
+        this.logger.error(
+          `Moyasar webhook invoice mismatch for payment ${paymentId} ` +
+            `(metadata=${metadataInvoiceId} routed=${routedPayment.invoiceId})`,
+        );
+        await this.markWebhookEvent(webhookEventRowId, 'error');
+        return { skipped: true, reason: 'invoice_mismatch' };
+      }
+
+      if (!invoice) {
+        routedPayment ??= await this.findPaymentRoute(gatewayRefs);
+        invoiceId = metadataInvoiceId ?? routedPayment?.invoiceId;
+        if (!invoiceId) {
+          const hasGatewayInvoice = Boolean(
+            payloadGatewayInvoiceId ?? authoritativeGatewayInvoiceId,
+          );
+          this.logger.warn(
+            `Moyasar webhook could not resolve an internal invoice for payment ${paymentId}`,
+          );
+          await this.markWebhookEvent(webhookEventRowId, 'error');
+          return {
+            skipped: true,
+            reason: hasGatewayInvoice ? 'invoice_not_found' : 'missing_metadata',
+          };
+        }
+        invoice = await this.cls.run(async () => {
+          this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+          return this.prisma.invoice.findFirst({ where: { id: invoiceId } });
+        });
+        if (!invoice) {
+          this.logger.warn(
+            `Moyasar webhook references unknown invoice ${invoiceId} (payment ${paymentId})`,
+          );
+          await this.markWebhookEvent(webhookEventRowId, 'error');
+          return { skipped: true, reason: 'invoice_not_found' };
+        }
+      }
+
+      const resolvedInvoice = invoice;
+
+      const paymentMatchWhere: Prisma.PaymentWhereInput = {
+        invoiceId: resolvedInvoice.id,
+        OR: [
+          ...gatewayRefs.map((gatewayRef) => ({ gatewayRef })),
+          { idempotencyKey: `moyasar:${paymentId}` },
+        ],
+      };
+
       // Verify the re-fetched payment matches the OUTSTANDING balance it claims
       // to pay. invoice.total and Payment.amount are both in halalas; Moyasar
       // amount is in halalas. An invoice may already carry a collected deposit,
@@ -284,12 +393,12 @@ export class MoyasarWebhookHandler {
       // (total − Σ COMPLETED), NOT the full total. Sum COMPLETED payments in
       // system context (this is a read; the mutation transaction re-derives the
       // figures below for atomicity).
-      const expectedTotal = Math.round(Number(invoice.total));
+      const expectedTotal = Math.round(Number(resolvedInvoice.total));
       const { outstanding, alreadyPaid, hasExistingRow, depositAmount } = await this.cls.run(
         async () => {
           this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
           const priorPaid = await this.prisma.payment.aggregate({
-            where: { invoiceId: invoice.id, status: PaymentStatus.COMPLETED },
+            where: { invoiceId: resolvedInvoice.id, status: PaymentStatus.COMPLETED },
             _sum: { amount: true },
           });
           // A Payment row already keyed to THIS Moyasar payment means this is a
@@ -297,12 +406,15 @@ export class MoyasarWebhookHandler {
           // be the COMPLETED one folded into priorPaid). Such retries must not be
           // re-validated against a now-shrunken outstanding — they are exempt.
           const existing = await this.prisma.payment.findFirst({
-            where: { OR: [{ gatewayRef: paymentId }, { idempotencyKey: `moyasar:${paymentId}` }] },
+            where: paymentMatchWhere,
             select: { id: true },
           });
           // Resolve the configured deposit for the invoice's service so a
           // deposit-sized first payment is accepted by the anti-spoof guard.
-          const deposit = await resolveInvoiceDeposit(this.prisma, invoice.bookingId);
+          const deposit = await resolveInvoiceDeposit(
+            this.prisma,
+            resolvedInvoice.bookingId,
+          );
           const paidSoFar = Number(priorPaid._sum?.amount ?? 0);
           return {
             outstanding: expectedTotal - paidSoFar,
@@ -321,17 +433,17 @@ export class MoyasarWebhookHandler {
       if (!hasExistingRow && fetched.amount !== outstanding && !acceptsDeposit) {
         // Permanent: a spoofed/mismatched amount will never match on retry.
         this.logger.error(
-          `Moyasar webhook rejected: amount mismatch for invoice ${invoice.id} ` +
+          `Moyasar webhook rejected: amount mismatch for invoice ${resolvedInvoice.id} ` +
             `(outstanding=${outstanding} total=${expectedTotal} fetched=${fetched.amount} payment=${paymentId})`,
         );
         await this.markWebhookEvent(webhookEventRowId, 'error');
         return { skipped: true, reason: 'amount_mismatch' };
       }
-      if (fetched.currency.toUpperCase() !== invoice.currency.toUpperCase()) {
+      if (fetched.currency.toUpperCase() !== resolvedInvoice.currency.toUpperCase()) {
         // Permanent: currency mismatch will never match on retry.
         this.logger.error(
-          `Moyasar webhook rejected: currency mismatch for invoice ${invoice.id} ` +
-            `(expected=${invoice.currency} fetched=${fetched.currency} payment=${paymentId})`,
+          `Moyasar webhook rejected: currency mismatch for invoice ${resolvedInvoice.id} ` +
+            `(expected=${resolvedInvoice.currency} fetched=${fetched.currency} payment=${paymentId})`,
         );
         await this.markWebhookEvent(webhookEventRowId, 'error');
         return { skipped: true, reason: 'currency_mismatch' };
@@ -347,7 +459,7 @@ export class MoyasarWebhookHandler {
         // yet. A later webhook will carry the terminal status — ack this one.
         this.logger.log(
           `Moyasar webhook: payment ${paymentId} not yet terminal ` +
-            `(status=${fetched.status}, invoice ${invoice.id}) — skipping`,
+            `(status=${fetched.status}, invoice ${resolvedInvoice.id}) — skipping`,
         );
         await this.markWebhookEvent(webhookEventRowId, 'processed');
         return { skipped: true, reason: `non_terminal_status:${fetched.status}` };
@@ -369,7 +481,7 @@ export class MoyasarWebhookHandler {
 
         // Guard: never overwrite a terminal (REFUNDED) payment back to COMPLETED/FAILED.
         const existingPayment = await this.prisma.payment.findFirst({
-          where: { OR: [{ gatewayRef: paymentId }, { idempotencyKey: `moyasar:${paymentId}` }] },
+          where: paymentMatchWhere,
           orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
           select: { status: true },
         });
@@ -401,7 +513,7 @@ export class MoyasarWebhookHandler {
         // payment id — they are distinct values.
         await this.rlsTransaction.withTransaction(async (tx) => {
           const payment = await tx.payment.findFirst({
-            where: { OR: [{ gatewayRef: paymentId }, { idempotencyKey: `moyasar:${paymentId}` }] },
+            where: paymentMatchWhere,
             orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
             select: { id: true },
           });
@@ -419,7 +531,7 @@ export class MoyasarWebhookHandler {
               })
             : await tx.payment.create({
                 data: {
-              invoiceId,
+              invoiceId: resolvedInvoice.id,
               amount: amountHalalas,
               currency: fetched.currency,
               method: PaymentMethod.ONLINE_CARD,
@@ -439,20 +551,23 @@ export class MoyasarWebhookHandler {
             // paidAt is stamped ONLY when the invoice is fully settled. Mirrors
             // ProcessPaymentHandler so card and operator payments agree.
             const totalPaid = await tx.payment.aggregate({
-              where: { invoiceId, status: PaymentStatus.COMPLETED },
+              where: {
+                invoiceId: resolvedInvoice.id,
+                status: PaymentStatus.COMPLETED,
+              },
               _sum: { amount: true },
             });
             const paid = Number(totalPaid._sum?.amount ?? 0);
-            const total = Math.round(Number(invoice.total));
+            const total = Math.round(Number(resolvedInvoice.total));
             fullyPaid = paid >= total;
             paidAfterWrite = paid;
             await tx.invoice.update({
-              where: { id: invoiceId },
+              where: { id: resolvedInvoice.id },
               data: {
                 status: fullyPaid ? 'PAID' : 'PARTIALLY_PAID',
                 // Stamp issuance time on the first payment that lifts the invoice
                 // out of DRAFT; keep an existing issuedAt untouched.
-                issuedAt: invoice.issuedAt ?? new Date(),
+                issuedAt: resolvedInvoice.issuedAt ?? new Date(),
                 paidAt: fullyPaid ? new Date() : undefined,
               },
             });
@@ -474,16 +589,16 @@ export class MoyasarWebhookHandler {
           if (status === PaymentStatus.COMPLETED && fullyPaid) {
             const event = new PaymentCompletedEvent({
               paymentId: savedPayment.id,
-              invoiceId: invoice.id,
-              bookingId: invoice.bookingId,
-              packagePurchaseId: invoice.packagePurchaseId,
+              invoiceId: resolvedInvoice.id,
+              bookingId: resolvedInvoice.bookingId,
+              packagePurchaseId: resolvedInvoice.packagePurchaseId,
               amount: amountHalalas,
-              currency: invoice.currency,
+              currency: resolvedInvoice.currency,
               organizationId: DEFAULT_ORG_ID,
             });
             await tx.outboxEvent.create({
               data: {
-                aggregateId: invoice.id,
+                aggregateId: resolvedInvoice.id,
                 eventType: event.eventName,
                 payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
               },
@@ -492,7 +607,7 @@ export class MoyasarWebhookHandler {
             status === PaymentStatus.COMPLETED &&
             isDepositPayment({
               paidAfter: paidAfterWrite,
-              total: Math.round(Number(invoice.total)),
+              total: Math.round(Number(resolvedInvoice.total)),
               depositAmount,
             })
           ) {
@@ -501,15 +616,15 @@ export class MoyasarWebhookHandler {
             // (reserving staff time) without confirming the appointment.
             const event = new DepositPaidEvent({
               paymentId: savedPayment.id,
-              invoiceId: invoice.id,
-              bookingId: invoice.bookingId,
+              invoiceId: resolvedInvoice.id,
+              bookingId: resolvedInvoice.bookingId,
               amount: amountHalalas,
-              currency: invoice.currency,
+              currency: resolvedInvoice.currency,
               organizationId: DEFAULT_ORG_ID,
             });
             await tx.outboxEvent.create({
               data: {
-                aggregateId: invoice.id,
+                aggregateId: resolvedInvoice.id,
                 eventType: event.eventName,
                 payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
               },
@@ -517,15 +632,15 @@ export class MoyasarWebhookHandler {
           } else if (status === PaymentStatus.FAILED) {
             const failedEvent = new PaymentFailedEvent({
               paymentId: savedPayment.id,
-              invoiceId: invoice.id,
-              clientId: invoice.clientId,
+              invoiceId: resolvedInvoice.id,
+              clientId: resolvedInvoice.clientId,
               amount: amountHalalas,
-              currency: invoice.currency,
+              currency: resolvedInvoice.currency,
               reason: message,
             });
             await tx.outboxEvent.create({
               data: {
-                aggregateId: invoice.id,
+                aggregateId: resolvedInvoice.id,
                 eventType: failedEvent.eventName,
                 payload: failedEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
               },
@@ -575,6 +690,24 @@ export class MoyasarWebhookHandler {
         // authorized, initiated, refunded (handled by the REFUNDED guard), …
         return null;
     }
+  }
+
+  private async findPaymentRoute(gatewayRefs: readonly string[]): Promise<{
+    id: string;
+    invoiceId: string;
+    status: PaymentStatus;
+  } | null> {
+    if (gatewayRefs.length === 0) return null;
+    return this.cls.run(async () => {
+      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+      return this.prisma.payment.findFirst({
+        where: {
+          OR: gatewayRefs.map((gatewayRef) => ({ gatewayRef })),
+        },
+        orderBy: { updatedAt: 'desc' },
+        select: { id: true, invoiceId: true, status: true },
+      });
+    });
   }
 
   private async markWebhookEvent(
