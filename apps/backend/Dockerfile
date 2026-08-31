@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.6
+# Backend redeploy/cache refresh marker — 2026-08-31 (no runtime/build semantics change).
 # Sawaa Backend — NestJS 11 + Prisma 7
 # Build context MUST be the monorepo root.
 #
