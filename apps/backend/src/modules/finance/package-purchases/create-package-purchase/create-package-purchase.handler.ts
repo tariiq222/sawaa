@@ -85,6 +85,11 @@ export class CreatePackagePurchaseHandler {
         'ONLINE_CARD payments must come through the Moyasar webhook flow, not the reception manual-payment endpoint',
       );
     }
+    if (dto.method === PaymentMethod.COUPON) {
+      throw new BadRequestException(
+        'COUPON payments must use the coupon redemption flow, not package purchase payment recording',
+      );
+    }
 
     const requestFingerprint = packagePurchaseRequestFingerprint(dto);
     const existingPurchase = await this.prisma.packagePurchase.findUnique({

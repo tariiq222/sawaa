@@ -1,5 +1,5 @@
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { BookingStatus, InvoiceStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { BookingStatus, InvoiceStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { ProcessPaymentHandler } from './process-payment.handler';
 
@@ -25,7 +25,8 @@ const mockPayment = {
 // Build a tx object that execute() will see inside $transaction. The $transaction
 // mock immediately invokes its callback with this tx, simulating a real Prisma
 // interactive transaction against the mock.
-const buildTx = (overrides: Record<string, unknown> = {}) => ({
+const buildTx = (overrides: Record<string, unknown> = {}) => {
+  const base = {
   $queryRaw: jest.fn().mockResolvedValue([{ id: mockInvoice.id }]),
   invoice: {
     findFirst: jest.fn().mockResolvedValue(mockInvoice),
@@ -33,6 +34,7 @@ const buildTx = (overrides: Record<string, unknown> = {}) => ({
   },
   payment: {
     findFirst: jest.fn().mockResolvedValue(mockPayment),
+    findMany: jest.fn().mockResolvedValue([]),
     create: jest.fn().mockResolvedValue(mockPayment),
     aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 230 } }),
   },
@@ -45,17 +47,30 @@ const buildTx = (overrides: Record<string, unknown> = {}) => ({
   service: {
     findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
   },
-  ...overrides,
-});
+    ...overrides,
+  } as Record<string, any>;
+  if (overrides.payment) {
+    base.payment = {
+      ...base.payment,
+      ...(overrides.payment as Record<string, unknown>),
+    };
+  }
+  return base;
+};
 
-const buildPrisma = (tx = buildTx()) => ({
-  ...tx,
-  // Outside-of-transaction reads use the Proxy-scoped findFirst.
-  invoice: {
-    ...tx.invoice,
-  },
-  $transaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) => cb(tx)),
-});
+const buildPrisma = (tx = buildTx()) => {
+  if (!tx.payment.findMany) {
+    tx.payment.findMany = jest.fn().mockResolvedValue([]);
+  }
+  return {
+    ...tx,
+    // Outside-of-transaction reads use the Proxy-scoped findFirst.
+    invoice: {
+      ...tx.invoice,
+    },
+    $transaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) => cb(tx)),
+  };
+};
 
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 
@@ -208,6 +223,33 @@ describe('ProcessPaymentHandler', () => {
     );
     expect(result.id).toBe('pay-1');
   });
+
+  it.each([PaymentStatus.PENDING, PaymentStatus.PENDING_VERIFICATION])(
+    'rejects a manual payment while an invoice has a %s payment in flight',
+    async (status) => {
+      const tx = buildTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          findMany: jest.fn().mockResolvedValue([{ status }]),
+          create: jest.fn(),
+          aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+        },
+      });
+      const handler = new ProcessPaymentHandler(
+        buildPrisma(tx) as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        buildEventBus() as never,
+      );
+
+      await expect(handler.execute({
+        invoiceId: 'inv-1',
+        amount: 230,
+        method: PaymentMethod.CASH,
+      })).rejects.toThrow('has a payment pending completion or verification');
+      expect(tx.payment.create).not.toHaveBeenCalled();
+    },
+  );
 
   it('marks invoice PARTIALLY_PAID when underpaid and does not publish event', async () => {
     const tx = buildTx({

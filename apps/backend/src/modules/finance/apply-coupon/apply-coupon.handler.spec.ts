@@ -1,5 +1,6 @@
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ApplyCouponHandler } from './apply-coupon.handler';
+import { InvoiceStatus, PaymentStatus } from '@prisma/client';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -28,6 +29,7 @@ const defaultInvoice: {
   vatRate: number;
   vatAmt: number;
   total: number;
+  status?: InvoiceStatus;
 } = {
   id: 'inv-1',
   clientId: 'client-1',
@@ -38,6 +40,7 @@ const defaultInvoice: {
   vatRate: 0.15,
   vatAmt: 1500,
   total: 11500,
+  status: InvoiceStatus.ISSUED,
 };
 
 // Default coupon: 10% percentage discount, no limits, no service restriction
@@ -77,6 +80,8 @@ const buildPrisma = (
     coupon: { findFirst: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
     couponRedemption: { findUnique: jest.Mock; count: jest.Mock; create: jest.Mock };
     booking: { findFirst: jest.Mock };
+    payment: { findMany: jest.Mock };
+    $queryRaw: jest.Mock;
     $transaction: jest.Mock;
   } = {
     invoice: {
@@ -98,6 +103,10 @@ const buildPrisma = (
         bookingServiceId === null ? null : { id: invoice.bookingId, serviceId: bookingServiceId },
       ),
     },
+    payment: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    $queryRaw: jest.fn().mockResolvedValue([]),
     $transaction: jest.fn(),
   };
   db.$transaction = jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(db));
@@ -306,6 +315,30 @@ describe('ApplyCouponHandler — halalas invariants', () => {
 // ---------------------------------------------------------------------------
 
 describe('ApplyCouponHandler — guard tests', () => {
+  it.each([InvoiceStatus.PAID, InvoiceStatus.PARTIALLY_PAID])(
+    'rejects applying a coupon to an invoice in %s status',
+    async (status) => {
+      const { handler, prisma } = buildHandler(buildInvoice({ status }));
+
+      await expect(handler.execute(cmd)).rejects.toThrow(
+        `Cannot apply a coupon to an invoice in status ${status}`,
+      );
+      expect(prisma.couponRedemption.create).not.toHaveBeenCalled();
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects applying a coupon while a payment is pending completion or verification', async () => {
+    const { handler, prisma } = buildHandler();
+    prisma.payment.findMany.mockResolvedValue([{ status: PaymentStatus.PENDING }]);
+
+    await expect(handler.execute(cmd)).rejects.toThrow(
+      'Cannot apply a coupon while a payment is pending completion or verification',
+    );
+    expect(prisma.couponRedemption.create).not.toHaveBeenCalled();
+    expect(prisma.invoice.update).not.toHaveBeenCalled();
+  });
+
   it('throws NotFoundException when invoice not found', async () => {
     const { handler, prisma } = buildHandler();
     prisma.invoice.findFirst = jest.fn().mockResolvedValue(null);

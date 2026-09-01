@@ -50,6 +50,7 @@ interface MockPrisma {
   webhookEvent: {
     create: jest.Mock;
     update: jest.Mock;
+    delete: jest.Mock;
   };
   outboxEvent: {
     create: jest.Mock;
@@ -129,6 +130,7 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
     webhookEvent: {
       create: jest.fn().mockResolvedValue({ id: 'whe-1' }),
       update: jest.fn().mockResolvedValue({ id: 'whe-1' }),
+      delete: jest.fn().mockResolvedValue({ id: 'whe-1' }),
     },
     outboxEvent: {
       create: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
@@ -638,6 +640,43 @@ describe('MoyasarWebhookHandler', () => {
       });
       await expect(handler.execute(makeReq())).rejects.toThrow(/Bad Gateway/);
       expect(prisma.payment.upsert).not.toHaveBeenCalled();
+    });
+
+    it('allows the same webhook to succeed after a transient re-fetch failure', async () => {
+      const transientError = new Error('Moyasar API error: Bad Gateway (status: 502)');
+      const { handler, prisma, moyasarApi } = makeHandler({ fetchError: transientError });
+
+      await expect(handler.execute(makeReq())).rejects.toThrow(/Bad Gateway/);
+      expect(prisma.webhookEvent.delete).toHaveBeenCalledWith({ where: { id: 'whe-1' } });
+
+      (moyasarApi.getPaymentStatus as jest.Mock).mockResolvedValue({
+        id: 'moyasar-pay-1',
+        status: 'paid',
+        amount: 230,
+        currency: 'SAR',
+      });
+      const result = await handler.execute(makeReq());
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.create).toHaveBeenCalled();
+    });
+
+    it('allows retry after a mutation transaction failure because the event claim is released', async () => {
+      const { handler, prisma } = makeHandler();
+      prisma.outboxEvent.create.mockRejectedValueOnce(new Error('database temporarily unavailable'));
+
+      await expect(handler.execute(makeReq())).rejects.toThrow(/temporarily unavailable/);
+      expect(prisma.webhookEvent.delete).toHaveBeenCalledWith({ where: { id: 'whe-1' } });
+
+      // The failed transaction rolled back its aggregate too; reset the fake to
+      // model the fresh retry against the same database state.
+      prisma.payment.aggregate
+        .mockReset()
+        .mockResolvedValueOnce({ _sum: { amount: 0 } })
+        .mockResolvedValueOnce({ _sum: { amount: 230 } });
+      const result = await handler.execute(makeReq());
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.create).toHaveBeenCalled();
     });
 
     it('skips (200 ack) for a non-terminal fetched status (authorized) — does not mutate', async () => {

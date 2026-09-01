@@ -40,7 +40,7 @@ export class ManualRefundPaymentHandler {
   ) {}
 
   async execute(cmd: ManualRefundPaymentCommand) {
-    const { updatedPayment, refundAmount, invoice, refundRequestId } =
+    const { updatedPayment } =
       await this.rlsTransaction.withTransaction(async (tx) => {
         const rows = await tx.$queryRaw<
           Array<{
@@ -144,21 +144,30 @@ export class ManualRefundPaymentHandler {
           },
         });
 
+        // Stage the completion event in the same transaction as the refund
+        // state. Publishing after commit could lose the event in a process
+        // crash, leaving downstream booking/receipt consumers unaware of the
+        // completed refund with no durable retry path.
+        const event = new RefundCompletedEvent({
+          refundRequestId,
+          organizationId: DEFAULT_ORG_ID,
+          invoiceId: invoice.id,
+          paymentId: cmd.paymentId,
+          bookingId: invoice.bookingId,
+          amount: requestedAmount,
+          currency: invoice.currency,
+        }, refundRequestId);
+        await tx.outboxEvent.create({
+          data: {
+            id: event.eventId,
+            aggregateId: refundRequestId,
+            eventType: event.eventName,
+            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+          },
+        });
+
         return { updatedPayment: updated, refundAmount: requestedAmount, invoice, refundRequestId };
       });
-
-    const event = new RefundCompletedEvent({
-      refundRequestId,
-      organizationId: DEFAULT_ORG_ID,
-      invoiceId: invoice.id,
-      paymentId: cmd.paymentId,
-      bookingId: invoice.bookingId,
-      amount: refundAmount,
-      currency: invoice.currency,
-    });
-    await this.eventBus
-      .publish(event.eventName, event.toEnvelope())
-      .catch((err) => this.logger.error('Failed to publish RefundCompletedEvent', err));
 
     return updatedPayment;
   }

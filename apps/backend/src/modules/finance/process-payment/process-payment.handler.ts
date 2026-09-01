@@ -98,6 +98,23 @@ export class ProcessPaymentHandler {
         }
       }
 
+      // A manual payment must not race an in-flight card checkout or a bank
+      // transfer awaiting verification. Both rows reserve money that may still
+      // become COMPLETED; checking them inside the invoice lock prevents a
+      // cash payment from creating an overpayment while the UI is stale.
+      const pendingPayments = await tx.payment.findMany({
+        where: {
+          invoiceId: dto.invoiceId,
+          status: { in: [PaymentStatus.PENDING, PaymentStatus.PENDING_VERIFICATION] },
+        },
+        select: { status: true },
+      });
+      if (pendingPayments.length > 0) {
+        throw new ConflictException(
+          'Invoice has a payment pending completion or verification',
+        );
+      }
+
       if (invoice.bookingId) {
         const booking = await tx.booking.findFirst({
           where: { id: invoice.bookingId },

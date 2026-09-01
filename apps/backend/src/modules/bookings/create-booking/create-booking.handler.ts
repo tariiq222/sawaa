@@ -85,6 +85,7 @@ export class CreateBookingHandler {
       branchId: dto.branchId,
       transaction: dto.transaction,
     });
+    const resolvedSource = dto.source ?? 'RECEPTION';
 
     if (dto.payAtClinic) {
       const orgSettings = await db.organizationSettings.findFirst({
@@ -92,6 +93,14 @@ export class CreateBookingHandler {
       });
       if (!orgSettings?.paymentAtClinicEnabled) {
         throw new BadRequestException('Pay at clinic is not enabled');
+      }
+    }
+    if (resolvedSource === 'ONLINE' && !dto.payAtClinic) {
+      const orgSettings = await db.organizationSettings.findFirst({
+        select: { paymentMoyasarEnabled: true },
+      });
+      if (orgSettings?.paymentMoyasarEnabled === false) {
+        throw new BadRequestException('Online payment is not enabled');
       }
     }
 
@@ -282,49 +291,6 @@ export class CreateBookingHandler {
 
     let discountedPrice: number | null = null;
 
-    // RECEPTION bookings (dashboard/employee) are confirmed immediately —
-    // a staff member created them, so the appointment itself is settled.
-    // ONLINE bookings (mobile client / public website) are confirmed immediately
-    // only when: payAtClinic=true (no payment needed) or the service is free
-    // (price=0). Otherwise ONLINE bookings start as AWAITING_PAYMENT with a
-    // 15-minute expiry so the payment step can complete before the slot is
-    // released.
-    const resolvedSource = dto.source ?? 'RECEPTION';
-    const needsOnlinePayment =
-      resolvedSource === 'ONLINE' &&
-      !dto.payAtClinic &&
-      price > 0;
-
-    const initialStatus = needsOnlinePayment ? 'AWAITING_PAYMENT' : 'CONFIRMED';
-    const effectiveExpiresAt = initialStatus === 'CONFIRMED'
-      ? null
-      : dto.expiresAt ?? new Date(Date.now() + 15 * 60 * 1000);
-    const normalizedRequestHash = bookingCreationRequestHash({
-      branchId: dto.branchId,
-      clientId: dto.clientId,
-      employeeId: dto.employeeId,
-      serviceId: dto.serviceId,
-      scheduledAt,
-      endsAt,
-      durationMins,
-      durationOptionId: resolved.durationOptionId || null,
-      bookingType,
-      deliveryType,
-      price,
-      currency,
-      source: resolvedSource,
-      expiresAt: effectiveExpiresAt,
-      payAtClinic: dto.payAtClinic,
-      couponCode: dto.couponCode,
-      notes: dto.notes,
-    });
-    if (
-      dto.creationIdempotencyKey
-      && normalizedRequestHash !== dto.creationRequestHash
-    ) {
-      throw new ConflictException('Creation request hash does not match the validated booking quote');
-    }
-
     const createInTransaction = async (tx: Prisma.TransactionClient) => {
         // Global booking lock order: client -> employee/slot -> coupon -> booking number.
         // Chat callers already hold the same client lock after locking the
@@ -410,6 +376,45 @@ export class CreateBookingHandler {
           });
         }
 
+        // Coupon validation happens inside the transaction, so the booking
+        // state and invoice decision must use the discounted amount rather
+        // than the pre-coupon service price. A full coupon is a settled free
+        // booking: it must not enter the payment flow with a zero invoice.
+        const effectivePrice = discountedPrice ?? price;
+        const needsOnlinePayment =
+          resolvedSource === 'ONLINE' &&
+          !dto.payAtClinic &&
+          effectivePrice > 0;
+        const initialStatus = needsOnlinePayment ? 'AWAITING_PAYMENT' : 'CONFIRMED';
+        const effectiveExpiresAt = initialStatus === 'CONFIRMED'
+          ? null
+          : dto.expiresAt ?? new Date(Date.now() + 15 * 60 * 1000);
+        const normalizedRequestHash = bookingCreationRequestHash({
+          branchId: dto.branchId,
+          clientId: dto.clientId,
+          employeeId: dto.employeeId,
+          serviceId: dto.serviceId,
+          scheduledAt,
+          endsAt,
+          durationMins,
+          durationOptionId: resolved.durationOptionId || null,
+          bookingType,
+          deliveryType,
+          price,
+          currency,
+          source: resolvedSource,
+          expiresAt: effectiveExpiresAt,
+          payAtClinic: dto.payAtClinic,
+          couponCode: dto.couponCode,
+          notes: dto.notes,
+        });
+        if (
+          dto.creationIdempotencyKey
+          && normalizedRequestHash !== dto.creationRequestHash
+        ) {
+          throw new ConflictException('Creation request hash does not match the validated booking quote');
+        }
+
         // P1-2: serialize bookingNumber generation within the org using an
         // advisory lock so two concurrent transactions cannot read the same
         // 'last' number and both insert it.
@@ -472,7 +477,7 @@ export class CreateBookingHandler {
         // ("awaiting payment") until the first COMPLETED payment, which stamps
         // issuedAt and flips it to PARTIALLY_PAID/PAID.
         // Skip: pay-at-clinic (no online payment) and zero-price bookings.
-        if (!dto.payAtClinic && price > 0) {
+        if (!dto.payAtClinic && effectivePrice > 0) {
           const orgSettings = await tx.organizationSettings.findFirst({
             where: {},
             select: { vatRate: true },

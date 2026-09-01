@@ -521,6 +521,14 @@ describe('CreatePackagePurchaseHandler', () => {
         handler.execute({ ...validDto(), method: PaymentMethod.ONLINE_CARD }),
       ).rejects.toThrow(/ONLINE_CARD/i);
     });
+
+    it('rejects COUPON payments because coupons use the redemption flow', async () => {
+      const { handler } = buildHandler(prisma);
+
+      await expect(
+        handler.execute({ ...validDto(), method: PaymentMethod.COUPON }),
+      ).rejects.toThrow(/COUPON/i);
+    });
   });
 
   describe('multiple ACTIVE purchases', () => {

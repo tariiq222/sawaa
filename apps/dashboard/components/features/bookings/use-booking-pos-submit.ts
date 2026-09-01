@@ -35,6 +35,7 @@ import { useBookFromCredit } from "@/hooks/use-credit-bookings"
 import { useRecordPaymentMutations } from "@/hooks/use-payments"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
 import { showApiError } from "@/lib/mutation-helpers"
+import { createIdempotencyKey } from "@/lib/idempotency"
 import { combineDateTimeToISO } from "@/lib/utils"
 import { bookingPosPayloadSchema } from "@/lib/schemas/booking.schema"
 import { resolveActiveMethod } from "@/components/features/shared/payment-method-picker"
@@ -176,6 +177,7 @@ export function useBookingPosSubmit({
           const result = await collectMut.mutateAsync({
             bookingId: created.id,
             method,
+            idempotencyKey: createIdempotencyKey(),
           })
           // Backend truth: when the booking has zero outstanding (e.g.
           // a 100%-discount or coupon edge case), the server returns

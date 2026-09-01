@@ -45,6 +45,9 @@ const buildPrisma = () => ({
     // No prior COMPLETED payments by default → outstanding == total.
     aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
   },
+  organizationSettings: {
+    findFirst: jest.fn().mockResolvedValue({ paymentMoyasarEnabled: true }),
+  },
 });
 
 const buildMoyasar = () => ({
@@ -131,6 +134,16 @@ describe('InitClientPaymentHandler', () => {
     prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, clientId: 'foreign-client' });
 
     await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(ForbiddenException);
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects checkout when Moyasar payments are disabled', async () => {
+    const { handler, prisma } = buildHandler();
+    prisma.organizationSettings.findFirst.mockResolvedValue({ paymentMoyasarEnabled: false });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(
+      'Online payment is not enabled',
+    );
     expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 

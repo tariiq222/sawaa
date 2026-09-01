@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { InvoiceStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 import { ApplyCouponDto } from './apply-coupon.dto';
@@ -134,6 +134,38 @@ export class ApplyCouponHandler {
     const discountHalalas = discountDecimal.toNumber();
 
     return this.rlsTransaction.withTransaction(async (tx) => {
+      // Re-read under the invoice lock. The initial read is only for ownership
+      // and coupon eligibility; payment state may change while the request is
+      // waiting to enter the transaction.
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${cmd.invoiceId} FOR UPDATE`,
+      );
+      const lockedInvoice = await tx.invoice.findFirst({ where: { id: cmd.invoiceId } });
+      if (!lockedInvoice) throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
+      if (lockedInvoice.status !== InvoiceStatus.DRAFT && lockedInvoice.status !== InvoiceStatus.ISSUED) {
+        throw new BadRequestException(
+          `Cannot apply a coupon to an invoice in status ${lockedInvoice.status}`,
+        );
+      }
+      const inFlightPayments = await tx.payment.findMany({
+        where: {
+          invoiceId: cmd.invoiceId,
+          status: {
+            in: [
+              PaymentStatus.COMPLETED,
+              PaymentStatus.PENDING,
+              PaymentStatus.PENDING_VERIFICATION,
+            ],
+          },
+        },
+        select: { status: true },
+      });
+      if (inFlightPayments.length > 0) {
+        throw new BadRequestException(
+          'Cannot apply a coupon while a payment is pending completion or verification',
+        );
+      }
+
       if (coupon.maxUses !== null) {
         const { count } = await tx.coupon.updateMany({
           where: { id: coupon.id, usedCount: { lt: coupon.maxUses } },

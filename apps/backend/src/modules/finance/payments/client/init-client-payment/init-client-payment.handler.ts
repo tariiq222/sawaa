@@ -51,6 +51,13 @@ export class InitClientPaymentHandler {
       throw new ForbiddenException('Invoice does not belong to this client');
     }
 
+    const organizationSettings = await this.prisma.organizationSettings.findFirst({
+      select: { paymentMoyasarEnabled: true },
+    });
+    if (organizationSettings?.paymentMoyasarEnabled === false) {
+      throw new BadRequestException('Online payment is not enabled');
+    }
+
     // For package invoices, bookingId may be null — skip booking status check.
     if (invoice.bookingId) {
       const booking = await this.prisma.booking.findFirst({

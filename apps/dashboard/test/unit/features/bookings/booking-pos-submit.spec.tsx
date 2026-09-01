@@ -489,6 +489,7 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
     expect(payload).toMatchObject({
       bookingId: "bk-new",
       method: "CASH",
+      idempotencyKey: expect.any(String),
     })
     // W1-T4 contract — server collects the full outstanding amount, so
     // the hook must NOT send amount or discount from the client.

@@ -37,6 +37,9 @@ function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOve
     payment: {
       update: jest.fn().mockImplementation(({ data }) => ({ id: 'pay-1', status: data.status })),
     },
+    outboxEvent: {
+      create: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
+    },
   };
   const prisma = {} as never;
   const rlsTransaction = { withTransaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) => cb(tx)) };
@@ -77,7 +80,11 @@ describe('ManualRefundPaymentHandler', () => {
     expect(tx.invoice.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'REFUNDED', refundedAmount: 20000 }) }),
     );
-    expect(eventBus.publish).toHaveBeenCalled();
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ eventType: 'finance.refund.completed' }),
+      }),
+    );
   });
 
   it('partial refund flips payment to PARTIALLY_REFUNDED', async () => {

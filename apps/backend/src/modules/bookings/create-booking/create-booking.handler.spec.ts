@@ -1019,6 +1019,17 @@ describe('CreateBookingHandler', () => {
     );
   });
 
+  it('rejects a paid ONLINE booking when Moyasar is disabled in organization settings', async () => {
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({
+      paymentMoyasarEnabled: false,
+    });
+
+    await expect(handler.execute({ ...baseDto, source: 'ONLINE' })).rejects.toThrow(
+      'Online payment is not enabled',
+    );
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
   it('creates ONLINE booking as CONFIRMED when price=0 (free service)', async () => {
     priceResolver.resolve = jest.fn().mockResolvedValue({
       price: 0,
@@ -1038,6 +1049,29 @@ describe('CreateBookingHandler', () => {
         }),
       }),
     );
+  });
+
+  it('creates a CONFIRMED ONLINE booking without an invoice when a coupon makes the price zero', async () => {
+    couponValidator.validate = jest.fn().mockResolvedValue({ couponId: 'c-1', discount: 200 });
+    prisma.booking.create = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      price: 200,
+      status: 'CONFIRMED',
+      source: 'ONLINE',
+    });
+
+    await handler.execute({ ...baseDto, source: 'ONLINE', couponCode: 'FREE200' });
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'CONFIRMED',
+          expiresAt: undefined,
+          discountedPrice: 0,
+        }),
+      }),
+    );
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
 
   it('creates dashboard booking (no source) as CONFIRMED regardless of price', async () => {

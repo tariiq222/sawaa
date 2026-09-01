@@ -666,9 +666,12 @@ export class MoyasarWebhookHandler {
 
       return result;
     } catch (err) {
-      // Genuine infrastructure failure — mark the event row and re-throw so the
-      // controller responds 5xx and Moyasar retries (a retry may succeed).
-      await this.markWebhookEvent(webhookEventRowId, 'error');
+      // The event row is a dedup claim until this delivery is marked processed.
+      // Delete it on any thrown infrastructure error so Moyasar can retry —
+      // including failures after the mutation transaction, which rolled back
+      // atomically. If a commit did happen before a later exception, payment
+      // idempotency and the transition guard make the retry a no-op.
+      await this.discardWebhookEvent(webhookEventRowId);
       throw err;
     }
   }
@@ -722,6 +725,16 @@ export class MoyasarWebhookHandler {
       .catch((updateErr) => {
         this.logger.error(
           `Failed to mark webhook event as ${result} (${webhookEventRowId}): ${String(updateErr)}`,
+        );
+      });
+  }
+
+  private async discardWebhookEvent(webhookEventRowId: string): Promise<void> {
+    await this.prisma.webhookEvent
+      .delete({ where: { id: webhookEventRowId } })
+      .catch((deleteErr) => {
+        this.logger.error(
+          `Failed to discard transient webhook event (${webhookEventRowId}): ${String(deleteErr)}`,
         );
       });
   }
