@@ -8260,8 +8260,11 @@ export interface components {
             isEnabled?: boolean;
             /** @default 800 */
             maxTokens: number;
-            /** @example deepseek/deepseek-v4-flash-0731 */
-            model: string;
+            /**
+             * @example deepseek/deepseek-v4-flash-0731
+             * @enum {string}
+             */
+            model: "deepseek/deepseek-v4-flash-0731";
             /** @enum {string} */
             provider: "OPENROUTER";
             /** @description Persist the candidate only after the bounded test succeeds. */
@@ -9071,8 +9074,11 @@ export interface components {
             isEnabled?: boolean;
             /** @default 800 */
             maxTokens: number;
-            /** @example deepseek/deepseek-v4-flash-0731 */
-            model: string;
+            /**
+             * @example deepseek/deepseek-v4-flash-0731
+             * @enum {string}
+             */
+            model: "deepseek/deepseek-v4-flash-0731";
             /** @enum {string} */
             provider: "OPENROUTER";
             /** @default 0.4 */

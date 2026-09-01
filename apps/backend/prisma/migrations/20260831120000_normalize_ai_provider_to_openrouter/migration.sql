@@ -1,5 +1,5 @@
--- Data-only normalization: leftover OPENAI chat-provider rows become OpenRouter
--- with the pinned model and must be retested before enablement.
+-- Data-only normalization: leftover OPENAI and MINIMAX chat-provider rows
+-- become OpenRouter with the pinned model and must be retested before enablement.
 -- No ALTER TYPE and no destructive operations.
 
 UPDATE "AiProviderConfig"
@@ -13,4 +13,4 @@ SET
   "testedConfigHash" = NULL,
   "configVersion" = "configVersion" + 1,
   "updatedAt" = CURRENT_TIMESTAMP
-WHERE "provider" = 'OPENAI';
+WHERE "provider" IN ('OPENAI', 'MINIMAX');

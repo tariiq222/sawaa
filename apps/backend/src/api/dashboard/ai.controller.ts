@@ -26,7 +26,7 @@ import { GetAiProviderConfigHandler } from '../../modules/ai/provider-config/get
 import { UpsertAiProviderConfigHandler } from '../../modules/ai/provider-config/upsert-ai-provider-config.handler';
 import { TestAiProviderConfigHandler } from '../../modules/ai/provider-config/test-ai-provider-config.handler';
 import { UpsertAiProviderConfigDto, TestAiProviderConfigDto, AiProviderConfigResponseDto, AiProviderTestResponseDto, AiProviderModelSuggestionDto } from '../../modules/ai/provider-config/provider-config.dto';
-import { AiProvider } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiProvider, DEFAULT_OPENROUTER_MODEL } from '../../modules/ai/provider-config/ai-provider-config.types';
 
 class KnowledgeDocumentSummaryResponseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
@@ -134,7 +134,7 @@ export class DashboardAiController {
   @ApiOkResponse({ type: AiProviderModelSuggestionDto, isArray: true })
   getAiProviderModels() {
     return [
-      { provider: AiProvider.OPENROUTER, models: ['deepseek/deepseek-v4-flash-0731'], allowCustom: true },
+      { provider: AiProvider.OPENROUTER, models: [DEFAULT_OPENROUTER_MODEL], allowCustom: false },
     ];
   }
   @CheckPermissions({ action: 'read', subject: 'Setting' })

@@ -5756,6 +5756,9 @@
             "type": "number"
           },
           "model": {
+            "enum": [
+              "deepseek/deepseek-v4-flash-0731"
+            ],
             "example": "deepseek/deepseek-v4-flash-0731",
             "type": "string"
           },
@@ -6900,6 +6903,9 @@
             "type": "number"
           },
           "model": {
+            "enum": [
+              "deepseek/deepseek-v4-flash-0731"
+            ],
             "example": "deepseek/deepseek-v4-flash-0731",
             "type": "string"
           },

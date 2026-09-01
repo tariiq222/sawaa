@@ -14,7 +14,7 @@ vi.mock("@/components/locale-provider", () => ({ useLocale: () => ({ t: (key: st
 vi.mock("@/components/providers/auth-provider", () => ({ useAuth: () => ({ canDo: (_module: string, action: string) => canManage && (action === "read" || action === "manage") }) }))
 vi.mock("@/hooks/use-sawaa-ai-settings", () => ({
   useSawaaAiSettings: () => ({ config, loading: false, error: null }),
-  useSawaaAiModels: () => ({ data: [{ provider: "OPENROUTER", models: ["deepseek/deepseek-v4-flash-0731", "openai/gpt-4o-mini"], allowCustom: true }], isError: modelsError, isFetching: false, refetch: refetchModels }),
+  useSawaaAiModels: () => ({ data: [{ provider: "OPENROUTER", models: ["deepseek/deepseek-v4-flash-0731"], allowCustom: false }], isError: modelsError, isFetching: false, refetch: refetchModels }),
   useTestSawaaAiConnection: () => ({ mutateAsync: mutateTest, isPending: false }),
   useSaveSawaaAiSettings: () => ({ mutateAsync: mutateSave, isPending: false }),
 }))
@@ -69,12 +69,11 @@ describe("Sawaa Ai settings", () => {
     expect(mutateSave).not.toHaveBeenCalled()
   })
 
-  it("supports switching model and invalidates the local test identity", () => {
+  it("offers only the pinned DeepSeek Flash model", () => {
     render(<SawaaAiSettingsContent />)
     fireEvent.click(screen.getByRole("combobox", { name: "sawaaAi.model" }))
-    fireEvent.click(screen.getByRole("option", { name: "openai/gpt-4o-mini" }))
-    expect(screen.getByRole("combobox", { name: "sawaaAi.model" })).toHaveTextContent("openai/gpt-4o-mini")
-    expect(screen.getByRole("switch", { name: "sawaaAi.enable" })).toBeDisabled()
+    expect(screen.getByRole("option", { name: "deepseek/deepseek-v4-flash-0731" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "openai/gpt-4o-mini" })).not.toBeInTheDocument()
   })
 
   it("shows a failed test and does not allow enabling", async () => {

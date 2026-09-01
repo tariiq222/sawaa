@@ -90,8 +90,40 @@ describe('AI provider settings handlers', () => {
   it('returns a safe unconfigured projection', async () => {
     const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(null) } } as any;
     const result = await new GetAiProviderConfigHandler(prisma).execute();
-    expect(result).toMatchObject({ hasCredential: false, connectionStatus: AiConnectionStatus.NOT_CONFIGURED });
+    expect(result).toMatchObject({ hasCredential: false, connectionStatus: AiConnectionStatus.NOT_CONFIGURED, model: 'deepseek/deepseek-v4-flash-0731' });
     expect(JSON.stringify(result)).not.toContain('credential');
+  });
+
+  it('fails closed for leftover OpenAI or MiniMax rows without throwing', async () => {
+    for (const leftover of [
+      { provider: 'OPENAI', model: 'gpt-4o-mini' },
+      { provider: 'MINIMAX', model: 'MiniMax-M3' },
+    ]) {
+      const prisma = { aiProviderConfig: { findUnique: jest.fn().mockResolvedValue(row(leftover)) } } as any;
+      const result = await new GetAiProviderConfigHandler(prisma).execute();
+      expect(result).toMatchObject({
+        provider: AiProvider.OPENROUTER,
+        model: 'deepseek/deepseek-v4-flash-0731',
+        isEnabled: false,
+        connectionStatus: AiConnectionStatus.RETEST_REQUIRED,
+        hasCredential: false,
+      });
+    }
+  });
+
+  it('fails closed when Prisma cannot decode a legacy stored provider enum', async () => {
+    const prisma = { aiProviderConfig: { findUnique: jest.fn().mockRejectedValue(new Error('Inconsistent column data: Could not convert value from string "MINIMAX" to enum `AiProvider`')) } } as any;
+    await expect(new GetAiProviderConfigHandler(prisma).execute()).resolves.toMatchObject({
+      provider: AiProvider.OPENROUTER,
+      model: 'deepseek/deepseek-v4-flash-0731',
+      isEnabled: false,
+      connectionStatus: AiConnectionStatus.RETEST_REQUIRED,
+    });
+  });
+
+  it('rethrows unrelated Prisma read failures from get config', async () => {
+    const prisma = { aiProviderConfig: { findUnique: jest.fn().mockRejectedValue(new Error('database connection refused')) } } as any;
+    await expect(new GetAiProviderConfigHandler(prisma).execute()).rejects.toThrow('database connection refused');
   });
 
   it('does not mutate a different candidate failure and emits safe audit', async () => {

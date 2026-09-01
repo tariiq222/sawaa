@@ -67,6 +67,23 @@ describe('AiProviderClientService', () => {
     await expect(service.getReadyClient()).resolves.toBeNull();
   });
 
+  it('does not resolve a non-pinned OpenRouter model', async () => {
+    prisma.aiProviderConfig.findUnique.mockResolvedValue(row({ model: 'openai/gpt-4o-mini' }));
+    await expect(service.getReadyClient()).resolves.toBeNull();
+  });
+
+  it('fails closed when Prisma cannot decode a legacy stored provider enum', async () => {
+    prisma.aiProviderConfig.findUnique.mockRejectedValue(
+      new Error('Inconsistent column data: Could not convert value from string "MINIMAX" to enum `AiProvider`'),
+    );
+    await expect(service.getReadyClient()).resolves.toBeNull();
+  });
+
+  it('rethrows unrelated Prisma read failures', async () => {
+    prisma.aiProviderConfig.findUnique.mockRejectedValue(new Error('database connection refused'));
+    await expect(service.getReadyClient()).rejects.toThrow('database connection refused');
+  });
+
   it('ignores OPENAI_BASE_URL and always uses the official OpenRouter URL', async () => {
     const original = process.env.OPENAI_BASE_URL;
     process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1';

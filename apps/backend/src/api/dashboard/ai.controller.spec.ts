@@ -276,7 +276,7 @@ describe('DashboardAiController (e2e)', () => {
     it('returns only the pinned OpenRouter model among curated suggestions', async () => {
       const res = await request(app.getHttpServer()).get('/dashboard/ai/provider-config/models').expect(200);
       expect(res.body).toEqual([
-        { provider: 'OPENROUTER', models: ['deepseek/deepseek-v4-flash-0731'], allowCustom: true },
+        { provider: 'OPENROUTER', models: ['deepseek/deepseek-v4-flash-0731'], allowCustom: false },
       ]);
     });
 
@@ -300,6 +300,11 @@ describe('DashboardAiController (e2e)', () => {
       await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({
         provider: 'MINIMAX',
         model: 'MiniMax-M3',
+        candidateApiKey: 'candidate-key',
+      }).expect(400);
+      await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({
+        provider: 'OPENROUTER',
+        model: 'openai/gpt-4o-mini',
         candidateApiKey: 'candidate-key',
       }).expect(400);
     });

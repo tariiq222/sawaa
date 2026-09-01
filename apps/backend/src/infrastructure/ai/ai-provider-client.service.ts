@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { PrismaService } from '../database/prisma.service';
-import { AiConnectionStatus, AiProvider, parseAiProviderConfig } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiConnectionStatus, AiProvider, DEFAULT_OPENROUTER_MODEL, parseAiProviderConfig } from '../../modules/ai/provider-config/ai-provider-config.types';
 import { AiProviderCredentialsService } from './ai-provider-credentials.service';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const OPENROUTER_DEFAULT_HEADERS = { 'HTTP-Referer': 'https://sawaa.app', 'X-Title': 'Sawaa AI' };
+
+/** Prisma throws when a stored enum value cannot be decoded into the client enum. */
+export const isProviderEnumDecodeError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  return /inconsistent column data|unlisted value|could not convert value.*enum|invalid.*enum.*aiprovider/i.test(message);
+};
 
 @Injectable()
 export class AiProviderClientService {
@@ -32,10 +38,17 @@ export class AiProviderClientService {
     configVersion: number;
     testedConfigHash: string;
   } | null> {
-    const row = await this.prisma.aiProviderConfig.findUnique({ where: { singletonKey: 'singleton' } });
+    let row;
+    try {
+      row = await this.prisma.aiProviderConfig.findUnique({ where: { singletonKey: 'singleton' } });
+    } catch (error) {
+      if (isProviderEnumDecodeError(error)) return null;
+      throw error;
+    }
     if (!row) return null;
     let config;
     try { config = parseAiProviderConfig(row); } catch { return null; }
+    if (config.model !== DEFAULT_OPENROUTER_MODEL) return null;
     if (
       !config.isEnabled
       || config.connectionStatus !== AiConnectionStatus.CONNECTED
