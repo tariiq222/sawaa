@@ -7,6 +7,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 import { GetEmployeeEarningsHandler } from '../../../modules/finance/get-employee-earnings/get-employee-earnings.handler';
+import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 
 describe('MobileEmployeeEarningsController (e2e)', () => {
   let app: INestApplication;
@@ -25,6 +26,7 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
       findMany: jest.fn(),
     },
   };
+  const mockResolveEmployeeId = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -32,6 +34,7 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
       providers: [
         { provide: PrismaService, useValue: mockPrisma },
         GetEmployeeEarningsHandler,
+        { provide: ResolveEmployeeIdHandler, useValue: mockResolveEmployeeId },
       ],
     })
       .overrideGuard(JwtGuard)
@@ -66,7 +69,21 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
     jest.clearAllMocks();
   });
 
+  beforeEach(() => {
+    mockResolveEmployeeId.execute.mockResolvedValue('employee-1');
+  });
+
   describe('GET /mobile/employee/earnings', () => {
+    it('uses the centralized employee profile resolution result', async () => {
+      mockPrisma.employee.findFirst.mockResolvedValue(null);
+      mockPrisma.invoice.findMany.mockResolvedValue([]);
+
+      await request(app.getHttpServer())
+        .get('/mobile/employee/earnings')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+    });
+
     it('returns 200 with commission-based earnings summary (single method)', async () => {
       // Employee has 70% commission rate. The JWT carries sub = 'emp-1' (a User.id)
       // and no employeeId claim, so the controller resolves the real Employee.id

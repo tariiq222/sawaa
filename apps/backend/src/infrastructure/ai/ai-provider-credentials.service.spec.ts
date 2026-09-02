@@ -36,6 +36,16 @@ describe('AiProviderCredentialsService', () => {
     const service = new AiProviderCredentialsService(config());
     expect(() => service.encrypt('')).toThrow();
     expect(() => new AiProviderCredentialsService(config(Buffer.alloc(31).toString('base64')))).toThrow(/32 bytes/);
-    expect(() => new AiProviderCredentialsService(config(''))).toThrow(/missing/);
+    const previousKey = process.env.AI_PROVIDER_ENCRYPTION_KEY;
+    delete process.env.AI_PROVIDER_ENCRYPTION_KEY;
+    try {
+      expect(() => new AiProviderCredentialsService(config(''))).toThrow(/missing/);
+    } finally {
+      if (previousKey === undefined) {
+        delete process.env.AI_PROVIDER_ENCRYPTION_KEY;
+      } else {
+        process.env.AI_PROVIDER_ENCRYPTION_KEY = previousKey;
+      }
+    }
   });
 });

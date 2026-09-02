@@ -59,7 +59,7 @@ describe('GetIntakeFormResponsesHandler', () => {
         findMany: jest.fn().mockResolvedValue([makeResponse({ scope: 'SERVICE', scopeId: 'svc-1' })]),
         groupBy: jest.fn().mockResolvedValue([{ formId: 'form-1', _count: 1 }]),
       },
-      service: { findUnique: jest.fn().mockResolvedValue({ nameAr: 'استشارة أسرية' }) },
+      service: { findMany: jest.fn().mockResolvedValue([{ id: 'svc-1', nameAr: 'استشارة أسرية' }]) },
       employee: { findUnique: jest.fn() },
       branch: { findUnique: jest.fn() },
     });
@@ -77,7 +77,7 @@ describe('GetIntakeFormResponsesHandler', () => {
         groupBy: jest.fn().mockResolvedValue([{ formId: 'form-1', _count: 2 }]),
       },
       service: { findUnique: jest.fn() },
-      employee: { findUnique: jest.fn().mockResolvedValue({ name: 'د. منى' }) },
+      employee: { findMany: jest.fn().mockResolvedValue([{ id: 'emp-1', name: 'د. منى' }]) },
       branch: { findUnique: jest.fn() },
     });
 
@@ -94,12 +94,49 @@ describe('GetIntakeFormResponsesHandler', () => {
       },
       service: { findUnique: jest.fn() },
       employee: { findUnique: jest.fn() },
-      branch: { findUnique: jest.fn().mockResolvedValue({ nameAr: 'فرع الرياض' }) },
+      branch: { findMany: jest.fn().mockResolvedValue([{ id: 'br-1', nameAr: 'فرع الرياض' }]) },
     });
 
     const result = await handler.execute({ bookingId: 'booking-1' });
     expect(result[0].form.scopeLabel).toBe('فرع الرياض');
     expect(result[0].form.branchId).toBe('br-1');
+  });
+
+  it('loads scope labels in one query per scope type instead of one query per form', async () => {
+    const serviceFindMany = jest.fn().mockResolvedValue([
+      { id: 'svc-1', nameAr: 'استشارة أسرية' },
+      { id: 'svc-2', nameAr: 'استشارة زوجية' },
+    ]);
+    const handler = await buildHandler({
+      intakeResponse: {
+        findMany: jest.fn().mockResolvedValue([
+          makeResponse({ formId: 'form-1', scope: 'SERVICE', scopeId: 'svc-1' }),
+          makeResponse({ formId: 'form-2', scope: 'SERVICE', scopeId: 'svc-2' }),
+        ]),
+        groupBy: jest.fn().mockResolvedValue([
+          { formId: 'form-1', _count: 1 },
+          { formId: 'form-2', _count: 1 },
+        ]),
+      },
+      service: {
+        findMany: serviceFindMany,
+        findUnique: jest.fn().mockResolvedValue({ nameAr: 'legacy per-form lookup' }),
+      },
+      employee: { findMany: jest.fn(), findUnique: jest.fn() },
+      branch: { findMany: jest.fn(), findUnique: jest.fn() },
+    });
+
+    const result = await handler.execute({ bookingId: 'booking-1' });
+
+    expect(result.map((response) => response.form.scopeLabel)).toEqual([
+      'استشارة أسرية',
+      'استشارة زوجية',
+    ]);
+    expect(serviceFindMany).toHaveBeenCalledTimes(1);
+    expect(serviceFindMany).toHaveBeenCalledWith({
+      where: { id: { in: ['svc-1', 'svc-2'] } },
+      select: { id: true, nameAr: true },
+    });
   });
 
   it('returns empty array when no responses exist', async () => {

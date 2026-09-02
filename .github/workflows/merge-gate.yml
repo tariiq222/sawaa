@@ -117,6 +117,9 @@ jobs:
       - name: OpenAPI snapshot drift
         run: cd apps/backend && pnpm run openapi:build-and-snapshot && git diff --exit-code -- openapi.json
 
+      - name: OpenAPI documentation coverage ratchet
+        run: pnpm --filter=backend run check:openapi-coverage
+
       - name: api-client endpoint drift
         run: node scripts/check-api-client-drift.mjs
 

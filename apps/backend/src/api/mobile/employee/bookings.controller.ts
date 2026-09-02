@@ -1,11 +1,9 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -28,8 +26,8 @@ import { endOfDayInTz, startOfDayInTz } from '../../../common/helpers/date-tz.he
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
-import { PrismaService } from '../../../infrastructure/database';
-import { resolveEmployeeId } from './resolve-employee-id.helper';
+import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
+import { AssertEmployeeBookingOwnershipHandler } from '../../../modules/bookings/assert-employee-booking-ownership/assert-employee-booking-ownership.handler';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { ListBookingsDto } from '../../../modules/bookings/list-bookings/list-bookings.dto';
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
@@ -84,7 +82,8 @@ export class EmployeeCancelRequestDto {
 @Controller('mobile/employee/bookings')
 export class MobileEmployeeBookingsController {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly resolveEmployeeId: ResolveEmployeeIdHandler,
+    private readonly assertEmployeeBookingOwnership: AssertEmployeeBookingOwnershipHandler,
     private readonly listHandler: ListBookingsHandler,
     private readonly getHandler: GetBookingHandler,
     private readonly checkInHandler: CheckInBookingHandler,
@@ -103,7 +102,10 @@ export class MobileEmployeeBookingsController {
     @CurrentUser() user: JwtUser,
     @Body() dto: CreateEmployeeBookingDto,
   ) {
-    const employeeId = await resolveEmployeeId(this.prisma, user);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
     return this.createEmployeeHandler.execute({
       ...dto,
       employeeId,
@@ -116,7 +118,10 @@ export class MobileEmployeeBookingsController {
   @ApiOkResponse({ description: 'Paginated list of bookings', schema: { type: 'object' } })
   async listMyBookings(@CurrentUser() user: JwtUser, @Query() q: ListBookingsDto) {
     const { page, limit, fromDate, toDate, ...rest } = q;
-    const employeeId = await resolveEmployeeId(this.prisma, user);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
     return this.listHandler.execute({
       ...rest,
       employeeId,
@@ -136,8 +141,11 @@ export class MobileEmployeeBookingsController {
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    const employeeId = await resolveEmployeeId(this.prisma, user);
-    await this.assertOwnership(id, employeeId);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
+    await this.assertEmployeeBookingOwnership.execute({ bookingId: id, employeeId });
     return this.getHandler.execute({ bookingId: id });
   }
 
@@ -151,8 +159,11 @@ export class MobileEmployeeBookingsController {
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    const employeeId = await resolveEmployeeId(this.prisma, user);
-    await this.assertOwnership(id, employeeId);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
+    await this.assertEmployeeBookingOwnership.execute({ bookingId: id, employeeId });
     return this.checkInHandler.execute({ bookingId: id, changedBy: user.sub });
   }
 
@@ -167,8 +178,11 @@ export class MobileEmployeeBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CompleteBookingDto,
   ) {
-    const employeeId = await resolveEmployeeId(this.prisma, user);
-    await this.assertOwnership(id, employeeId);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
+    await this.assertEmployeeBookingOwnership.execute({ bookingId: id, employeeId });
     return this.completeHandler.execute({
       bookingId: id,
       changedBy: user.sub,
@@ -187,8 +201,11 @@ export class MobileEmployeeBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: EmployeeCancelBookingDto,
   ) {
-    const employeeId = await resolveEmployeeId(this.prisma, user);
-    await this.assertOwnership(id, employeeId);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
+    await this.assertEmployeeBookingOwnership.execute({ bookingId: id, employeeId });
     return this.cancelHandler.execute({
       bookingId: id,
       changedBy: user.sub,
@@ -209,8 +226,11 @@ export class MobileEmployeeBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: EmployeeCancelRequestDto,
   ) {
-    const employeeId = await resolveEmployeeId(this.prisma, user);
-    await this.assertOwnership(id, employeeId);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
+    await this.assertEmployeeBookingOwnership.execute({ bookingId: id, employeeId });
     return this.requestCancelHandler.execute({
       bookingId: id,
       reason: body.reason ?? CancellationReason.EMPLOYEE_UNAVAILABLE,
@@ -219,21 +239,4 @@ export class MobileEmployeeBookingsController {
     });
   }
 
-  /**
-   * Confirms the booking exists and is assigned to the calling employee.
-   * Throws NotFoundException if the booking is missing, ForbiddenException if it belongs
-   * to a different employee.
-   */
-  private async assertOwnership(bookingId: string, employeeId: string): Promise<void> {
-    const booking = await this.prisma.booking.findFirst({
-      where: { id: bookingId },
-      select: { id: true, employeeId: true },
-    });
-    if (!booking) {
-      throw new NotFoundException(`Booking ${bookingId} not found`);
-    }
-    if (booking.employeeId !== employeeId) {
-      throw new ForbiddenException('Booking is not assigned to you');
-    }
-  }
 }

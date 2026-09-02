@@ -8,8 +8,7 @@ import { ApiStandardResponses } from '../../../common/swagger';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
-import { PrismaService } from '../../../infrastructure/database';
-import { resolveEmployeeId } from './resolve-employee-id.helper';
+import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 import { GetEmployeeEarningsHandler } from '../../../modules/finance/get-employee-earnings/get-employee-earnings.handler';
 
 export class EarningsQuery {
@@ -27,7 +26,7 @@ export class EarningsQuery {
 @Controller('mobile/employee/earnings')
 export class MobileEmployeeEarningsController {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly resolveEmployeeId: ResolveEmployeeIdHandler,
     private readonly getEmployeeEarnings: GetEmployeeEarningsHandler,
   ) {}
 
@@ -80,7 +79,10 @@ export class MobileEmployeeEarningsController {
       ? new Date(q.to)
       : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-    const employeeId = await resolveEmployeeId(this.prisma, user);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
 
     return this.getEmployeeEarnings.execute({ employeeId, from, to });
   }

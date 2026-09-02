@@ -13,6 +13,7 @@
     "check:legacy-multitenant": "node scripts/check-legacy-multitenant.js",
     "check:api-client-drift": "node scripts/check-api-client-drift.mjs",
     "check:dashboard-api-drift": "node scripts/check-dashboard-api-drift.mjs",
+    "check:openapi-coverage": "pnpm --filter=backend run check:openapi-coverage",
     "test": "turbo run test",
     "test:cov": "turbo run test:cov",
     "typecheck": "turbo run typecheck",

@@ -61,6 +61,7 @@ import { GetMatchingCreditsHandler } from './get-matching-credits/get-matching-c
 import { TransferCreditHandler } from './transfer-credit/transfer-credit.handler';
 import { BookingZoomRescheduleHandler } from './zoom-reschedule/booking-zoom-reschedule.handler';
 import { BookingZoomCreateRequestedHandler } from './create-zoom-meeting/booking-zoom-create-requested.handler';
+import { AssertEmployeeBookingOwnershipHandler } from './assert-employee-booking-ownership/assert-employee-booking-ownership.handler';
 
 const handlers = [
   CreateBookingHandler,
@@ -114,6 +115,7 @@ const handlers = [
   TransferCreditHandler,
   BookingZoomRescheduleHandler,
   BookingZoomCreateRequestedHandler,
+  AssertEmployeeBookingOwnershipHandler,
 ];
 
 @Module({

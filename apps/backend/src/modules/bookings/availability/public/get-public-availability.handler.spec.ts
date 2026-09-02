@@ -57,6 +57,22 @@ describe('GetPublicAvailabilityHandler', () => {
     expect(result).toEqual([{ start: '09:00', end: '10:00' }]);
   });
 
+  it('passes an explicit duration override to the availability calculation', async () => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+
+    await handler.execute({
+      employeeId: 'emp-1',
+      branchId: 'branch-1',
+      serviceId: 'svc-1',
+      date: '2026-01-01',
+      durationMins: 45,
+    });
+
+    expect(checkAvailability.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ durationMins: 45 }),
+    );
+  });
+
   it('should resolve branchId and serviceId from DB when not provided', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.employeeBranch.findFirst.mockResolvedValue({ branchId: 'branch-1' });

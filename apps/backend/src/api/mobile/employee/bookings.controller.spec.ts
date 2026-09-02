@@ -10,6 +10,8 @@ import { CompleteBookingHandler } from '../../../modules/bookings/complete-booki
 import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
 import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
 import { CreateEmployeeBookingHandler } from '../../../modules/bookings/create-employee-booking/create-employee-booking.handler';
+import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
+import { AssertEmployeeBookingOwnershipHandler } from '../../../modules/bookings/assert-employee-booking-ownership/assert-employee-booking-ownership.handler';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 
@@ -31,6 +33,7 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
   const mockCancel = { execute: jest.fn() };
   const mockRequestCancel = { execute: jest.fn() };
   const mockCreateEmployeeBooking = { execute: jest.fn() };
+  const mockResolveEmployeeId = { execute: jest.fn() };
 
   const buildApp = async (user: any) => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -44,6 +47,8 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
         { provide: CancelBookingHandler, useValue: mockCancel },
         { provide: RequestCancelBookingHandler, useValue: mockRequestCancel },
         { provide: CreateEmployeeBookingHandler, useValue: mockCreateEmployeeBooking },
+        { provide: ResolveEmployeeIdHandler, useValue: mockResolveEmployeeId },
+        AssertEmployeeBookingOwnershipHandler,
       ],
     })
       .overrideGuard(JwtGuard)
@@ -76,9 +81,7 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
       isSuperAdmin: false,
     });
     jest.clearAllMocks();
-    // JWT user carries sub = 'emp-1' (a User.id) and no employeeId claim, so the
-    // controller resolves the real Employee.id via prisma.employee.findFirst.
-    // Returning a DIFFERENT id ('employee-1') proves resolution actually happens.
+    mockResolveEmployeeId.execute.mockResolvedValue('employee-1');
     mockPrisma.employee.findFirst.mockResolvedValue({ id: 'employee-1' });
   });
 
@@ -87,6 +90,16 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
   });
 
   describe('GET /mobile/employee/bookings', () => {
+    it('uses the centralized employee profile resolution result', async () => {
+      mockPrisma.employee.findFirst.mockResolvedValue(null);
+      mockListBookings.execute.mockResolvedValue({ data: [], total: 0 });
+
+      await request(app.getHttpServer())
+        .get('/mobile/employee/bookings')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+    });
+
     it('returns 200 with employee bookings', async () => {
       mockListBookings.execute.mockResolvedValue({ data: [{ id: uuid(1) }], total: 1 });
 

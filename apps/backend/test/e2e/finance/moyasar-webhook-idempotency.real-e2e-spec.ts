@@ -27,6 +27,15 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
 
   let app: INestApplication;
   let prisma: PrismaService;
+  let previousPaymentConfig: {
+    id: string;
+    publishableKey: string;
+    secretKeyEnc: string;
+    webhookSecretEnc: string;
+    isLive: boolean;
+    lastVerifiedAt: Date | null;
+    lastVerifiedStatus: string | null;
+  } | null = null;
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const invoiceId = `00000000-0000-4000-8000-${suffix.replace(/[^0-9a-f]/gi, '0').slice(0, 12).padEnd(12, '0')}`;
@@ -74,6 +83,18 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
     prisma = app.get(PrismaService);
     await prisma.$queryRaw`SELECT 1`;
 
+    previousPaymentConfig = await prisma.organizationPaymentConfig.findUnique({
+      where: { singletonKey: 'singleton' },
+      select: {
+        id: true,
+        publishableKey: true,
+        secretKeyEnc: true,
+        webhookSecretEnc: true,
+        isLive: true,
+        lastVerifiedAt: true,
+        lastVerifiedStatus: true,
+      },
+    });
     await cleanup();
 
     await prisma.invoice.create({
@@ -91,8 +112,15 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
       },
     });
 
-    await prisma.organizationPaymentConfig.create({
-      data: {
+    await prisma.organizationPaymentConfig.upsert({
+      where: { singletonKey: 'singleton' },
+      update: {
+        publishableKey: 'pk_test_realE2e',
+        secretKeyEnc: 'enc',
+        webhookSecretEnc: 'enc',
+        isLive: false,
+      },
+      create: {
         publishableKey: 'pk_test_realE2e',
         secretKeyEnc: 'enc',
         webhookSecretEnc: 'enc',
@@ -110,7 +138,25 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
     await prisma.webhookEvent.deleteMany({ where: { eventId } }).catch(() => undefined);
     await prisma.payment.deleteMany({ where: { invoiceId } }).catch(() => undefined);
     await prisma.invoice.deleteMany({ where: { id: invoiceId } }).catch(() => undefined);
-    await prisma.organizationPaymentConfig.deleteMany({ where: { publishableKey: 'pk_test_realE2e' } }).catch(() => undefined);
+    if (previousPaymentConfig) {
+      await prisma.organizationPaymentConfig
+        .update({
+          where: { id: previousPaymentConfig.id },
+          data: {
+            publishableKey: previousPaymentConfig.publishableKey,
+            secretKeyEnc: previousPaymentConfig.secretKeyEnc,
+            webhookSecretEnc: previousPaymentConfig.webhookSecretEnc,
+            isLive: previousPaymentConfig.isLive,
+            lastVerifiedAt: previousPaymentConfig.lastVerifiedAt,
+            lastVerifiedStatus: previousPaymentConfig.lastVerifiedStatus,
+          },
+        })
+        .catch(() => undefined);
+    } else {
+      await prisma.organizationPaymentConfig
+        .deleteMany({ where: { singletonKey: 'singleton' } })
+        .catch(() => undefined);
+    }
   }
 
   function buildWebhook() {

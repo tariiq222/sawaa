@@ -172,6 +172,9 @@ jobs:
           MINIO_BUCKET: sawaa-test
           MINIO_USE_SSL: false
 
+      - name: OpenAPI documentation coverage ratchet
+        run: pnpm --filter=backend run check:openapi-coverage
+
       - name: api-client endpoint drift
         # packages/api-client is hand-written, so nothing rebuilds it when a
         # backend route is renamed or removed. Cross-check the endpoints it

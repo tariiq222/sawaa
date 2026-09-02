@@ -5,6 +5,9 @@ import { MobileEmployeeClientsController } from './clients.controller';
 import { PrismaService } from '../../../infrastructure/database';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
+import { ListEmployeeClientsHandler } from '../../../modules/people/clients/list-employee-clients.handler';
+import { GetEmployeeClientHistoryHandler } from '../../../modules/people/clients/get-employee-client-history.handler';
+import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 
 describe('MobileEmployeeClientsController (e2e)', () => {
   let app: INestApplication;
@@ -18,7 +21,12 @@ describe('MobileEmployeeClientsController (e2e)', () => {
   const buildApp = async (user: any) => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [MobileEmployeeClientsController],
-      providers: [{ provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        ResolveEmployeeIdHandler,
+        ListEmployeeClientsHandler,
+        GetEmployeeClientHistoryHandler,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
     })
       .overrideGuard(JwtGuard)
       .useValue({

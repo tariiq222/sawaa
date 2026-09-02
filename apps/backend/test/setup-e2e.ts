@@ -91,6 +91,7 @@ jest.mock("nodemailer", () => ({
 jest.mock("bullmq", () => ({
   Queue: fn().mockImplementation(() => ({
     add: fn().mockResolvedValue({ id: "job-1" }),
+    removeRepeatable: fn().mockResolvedValue(true),
     getJob: fn().mockResolvedValue(null),
     close: fn().mockResolvedValue(undefined),
   })),

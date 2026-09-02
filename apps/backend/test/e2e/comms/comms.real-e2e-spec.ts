@@ -636,10 +636,10 @@ describeRealE2e(
         expect(ours.isActive).toBe(true);
         expect(typeof ours.htmlBody).toBe("string");
 
-        // Canonical list-response shape: meta carries total + perPage.
+        // Canonical list-response shape: meta carries total + limit.
         expect(res.body.meta).toBeDefined();
         expect(typeof res.body.meta.total).toBe("number");
-        expect(typeof res.body.meta.perPage).toBe("number");
+        expect(typeof res.body.meta.limit).toBe("number");
       });
 
       it("GET /email-templates/:id returns the template with blocks/htmlBody", async () => {

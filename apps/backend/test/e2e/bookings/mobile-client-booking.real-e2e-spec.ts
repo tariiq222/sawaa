@@ -514,13 +514,13 @@ describeRealE2e(
         // AWAITING_PAYMENT bookings carry a 15-min expiry window.
         expect(persisted!.expiresAt).not.toBeNull();
 
-        // ── Invoice: ISSUED with correct halala math (30000 + 15% VAT =
+        // ── Invoice: DRAFT with correct halala math (30000 + 15% VAT =
         //    34500 halalas). Re-read from DB, not just response.
         const invoice = await prisma.invoice.findFirst({
           where: { bookingId },
         });
         expect(invoice).not.toBeNull();
-        expect(invoice!.status).toBe("ISSUED");
+        expect(invoice!.status).toBe("DRAFT");
         expect(Number(invoice!.subtotal)).toBe(30_000);
         expect(Number(invoice!.vatAmt)).toBe(4_500);
         expect(Number(invoice!.total)).toBe(34_500);

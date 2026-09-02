@@ -14,5 +14,6 @@
     "^@react-pdf/renderer$": "<rootDir>/src/__mocks__/react-pdf-renderer.ts"
   },
   "transformIgnorePatterns": ["node_modules/(?!(uuid)/)"],
+  "modulePathIgnorePatterns": ["<rootDir>/dist/"],
   "setupFilesAfterEnv": ["<rootDir>/test/setup-e2e.ts"]
 }
