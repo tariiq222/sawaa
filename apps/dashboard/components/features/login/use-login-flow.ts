@@ -4,6 +4,7 @@ import { useState, useCallback } from "react"
 import { login as apiLogin, requestDashboardOtp, verifyDashboardOtp, lookupUser } from "@/lib/api/auth"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useLocale } from "@/components/locale-provider"
+import { getSessionGeneration } from "@/lib/api"
 
 type LoginStep = "identifier" | "method" | "password" | "otp"
 
@@ -67,6 +68,7 @@ export function useLoginFlow() {
   const submitPassword = useCallback(async (password: string, rememberMe?: boolean) => {
     setLoading(true)
     setError(null)
+    const sessionGeneration = getSessionGeneration()
     try {
       const res = await apiLogin(identifier, password, rememberMe)
       if (res.requiresOtp) {
@@ -75,7 +77,7 @@ export function useLoginFlow() {
         setOtpSentAt(Date.now())
         setStep("otp")
       } else {
-        loginWithTokens(res)
+        loginWithTokens(res, sessionGeneration)
       }
     } catch (e) {
       setError(e)
@@ -87,9 +89,10 @@ export function useLoginFlow() {
   const submitOtp = useCallback(async (code: string) => {
     setLoading(true)
     setError(null)
+    const sessionGeneration = getSessionGeneration()
     try {
       const res = await verifyDashboardOtp(identifier, code, twoFactorChallenge ?? undefined)
-      loginWithTokens(res)
+      loginWithTokens(res, sessionGeneration)
     } catch (e) {
       setError(e)
     } finally {

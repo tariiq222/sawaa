@@ -49,6 +49,8 @@ export function ScheduleProgramDialog({
             setSubmitting(true);
             try {
               await onConfirm(parsed.data.startDate);
+            } catch {
+              setError(t('common.errorLoading'));
             } finally {
               setSubmitting(false);
             }
@@ -69,7 +71,7 @@ export function ScheduleProgramDialog({
               />
             </label>
             {error && (
-              <p id="schedule-program-start-error" className="text-sm text-(--text-error)">
+              <p id="schedule-program-start-error" role="alert" className="text-sm text-(--text-error)">
                 {error}
               </p>
             )}

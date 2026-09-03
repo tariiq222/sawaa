@@ -21,9 +21,11 @@ const STATUS_OPTIONS: { value: ContactMessageStatus | "ALL"; labelKey: string }[
 export function ContactMessagesTable() {
   const { locale, t } = useLocale()
   const [statusFilter, setStatusFilter] = useState<ContactMessageStatus | "ALL">("ALL")
+  const [page, setPage] = useState(1)
 
   const { data, isLoading, error } = useContactMessages({
     status: statusFilter === "ALL" ? undefined : statusFilter,
+    page,
     limit: 50,
   })
   const update = useUpdateContactMessageStatus()
@@ -57,15 +59,15 @@ export function ContactMessagesTable() {
               value: opt.value,
               label: t(opt.labelKey),
             })),
-            onValueChange: (v) => setStatusFilter(v as ContactMessageStatus | "ALL"),
+            onValueChange: (v) => { setStatusFilter(v as ContactMessageStatus | "ALL"); setPage(1) },
             width: "w-44",
           },
         ]}
         hasFilters={statusFilter !== "ALL"}
-        onReset={() => setStatusFilter("ALL")}
+        onReset={() => { setStatusFilter("ALL"); setPage(1) }}
         resultCount={
           data?.items != null
-            ? t("contactMessages.resultCount").replace("{n}", String(data.items.length))
+            ? t("contactMessages.resultCount").replace("{n}", String(data.meta.total))
             : undefined
         }
       />
@@ -75,6 +77,12 @@ export function ContactMessagesTable() {
         data={data?.items ?? []}
         emptyTitle={t("contactMessages.empty")}
         emptyDescription={t("contactMessages.empty.description")}
+        serverPaginated
+        page={data?.meta.page ?? page}
+        totalPages={data?.meta.totalPages ?? 1}
+        hasPreviousPage={data?.meta.hasPreviousPage ?? false}
+        hasNextPage={data?.meta.hasNextPage ?? false}
+        onPageChange={setPage}
       />
     </div>
   )

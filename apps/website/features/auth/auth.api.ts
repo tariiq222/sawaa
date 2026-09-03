@@ -8,6 +8,7 @@
  */
 
 import {
+  apiRequest,
   setClientBaseUrl,
   clientLogin,
   clientRegister,
@@ -72,17 +73,9 @@ export async function getMyBookingsApi(
 
 export async function getMyBookingApi(bookingId: string): Promise<ClientBookingItem> {
   ensureInitialised()
-  const base = getApiBase()
-  const res = await fetch(`${base}/public/me/bookings/${encodeURIComponent(bookingId)}`, {
+  return apiRequest<ClientBookingItem>(`/public/me/bookings/${encodeURIComponent(bookingId)}`, {
     credentials: 'include',
   })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { message?: string }).message ?? 'Booking not found')
-  }
-  const json = await res.json()
-  if (json && typeof json === 'object' && 'data' in json) return json.data as ClientBookingItem
-  return json as ClientBookingItem
 }
 
 export async function cancelMyBookingApi(

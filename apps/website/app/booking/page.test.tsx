@@ -18,6 +18,7 @@ const { queryFns, runtimeState, EMPLOYEE, OTHER_EMPLOYEE, SERVICE, BRANCH, OPTIO
   const runtimeState = {
     slots: [] as Array<{ startTime: string; endTime: string }>,
     employees: [] as Array<Record<string, unknown>>,
+    errors: {} as Partial<Record<'branches' | 'slots' | 'days', Error>>,
   };
 
   const employee = (id: string, name: string) => ({
@@ -124,14 +125,17 @@ vi.mock('@tanstack/react-query', () => ({
     if (opts.queryFn) queryFns.set(JSON.stringify(opts.queryKey), opts.queryFn);
     const key = opts.queryKey as string[];
     if (key[1] === 'employees') {
-      return { data: runtimeState.employees, isLoading: false, error: null };
+      return { data: runtimeState.employees, isLoading: false, error: null, refetch: vi.fn() };
     }
-    if (key[1] === 'catalog') return { data: { services: [SERVICE], categories: [], vatRate: 0 }, isLoading: false, error: null };
-    if (key[1] === 'branches') return { data: [BRANCH], isLoading: false, error: null };
+    if (key[1] === 'catalog') return { data: { services: [SERVICE], categories: [], vatRate: 0 }, isLoading: false, error: null, refetch: vi.fn() };
+    if (key[1] === 'branches') return { data: runtimeState.errors.branches ? undefined : [BRANCH], isLoading: false, error: runtimeState.errors.branches ?? null, refetch: vi.fn() };
     if (key[1] === 'availability' && key[2] !== 'days') {
-      return { data: runtimeState.slots, isLoading: false, error: null };
+      return { data: runtimeState.errors.slots ? undefined : runtimeState.slots, isLoading: false, error: runtimeState.errors.slots ?? null, refetch: vi.fn() };
     }
-    return { data: [], isLoading: false, error: null };
+    if (key[1] === 'availability' && key[2] === 'days') {
+      return { data: runtimeState.errors.days ? undefined : [], isLoading: false, error: runtimeState.errors.days ?? null, refetch: vi.fn() };
+    }
+    return { data: [], isLoading: false, error: null, refetch: vi.fn() };
   },
 }));
 
@@ -209,6 +213,7 @@ describe('/booking wizard — date-strip days probe context', () => {
     queryFns.clear();
     runtimeState.slots = [];
     runtimeState.employees = [EMPLOYEE, OTHER_EMPLOYEE];
+    runtimeState.errors = {};
     daysMock.mockReset();
     daysMock.mockResolvedValue([]);
     slotsMock.mockReset();
@@ -265,6 +270,29 @@ describe('/booking wizard — date-strip days probe context', () => {
       }),
     );
   });
+
+  it('shows a localized load error instead of booking-unavailable when branches fail', async () => {
+    runtimeState.errors.branches = new Error('backend down');
+    render(<BookingWizardPage />);
+
+    expect(await screen.findByText('تعذّر تحميل البيانات، حاول مرة أخرى')).toBeTruthy();
+    expect(screen.queryByText('حجز المواعيد عبر الموقع غير متاح حالياً')).toBeNull();
+  });
+
+  it.each(['slots', 'days'] as const)(
+    'shows a localized load error when %s discovery fails',
+    async (surface) => {
+      runtimeState.slots = [SLOT];
+      runtimeState.errors[surface] = new Error('backend down');
+      render(<BookingWizardPage />);
+
+      fireEvent.click(await waitFor(() => screen.getByRole('radio', { name: /جلسة فردية/ })));
+      fireEvent.click(await waitFor(() => screen.getByRole('radio', { name: /سارة/ })));
+      fireEvent.click(await waitFor(() => screen.getByRole('button', { name: /أونلاين/ })));
+
+      expect(await screen.findByText('تعذّر تحميل البيانات، حاول مرة أخرى')).toBeTruthy();
+    },
+  );
 
   it('confirms a pay-at-center booking without initializing Moyasar', async () => {
     runtimeState.slots = [SLOT];

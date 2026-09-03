@@ -47,6 +47,8 @@ export function CancelProgramDialog({
             setSubmitting(true);
             try {
               await onConfirm(parsed.data.reason);
+            } catch {
+              setError(t('common.errorLoading'));
             } finally {
               setSubmitting(false);
             }
@@ -68,7 +70,7 @@ export function CancelProgramDialog({
               />
             </label>
             {error && (
-              <p id="cancel-program-reason-error" className="text-sm text-(--text-error)">
+              <p id="cancel-program-reason-error" role="alert" className="text-sm text-(--text-error)">
                 {error}
               </p>
             )}

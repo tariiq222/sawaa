@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
   ORG_SUSPENDED_CODE,
+  apiBlobRequest,
   apiRequest,
+  cancelInFlightRefresh,
   ensureCsrfToken,
   initClient,
   setApiRequestBaseUrl,
@@ -89,6 +91,28 @@ describe('apiRequest response unwrap', () => {
     const result = await apiRequest<void>('/dashboard/anything', { method: 'DELETE' })
 
     expect(result).toBeUndefined()
+  })
+})
+
+describe('apiBlobRequest response handling', () => {
+  it('returns binary data through the shared 401 refresh path', async () => {
+    storedAccess = 'old.access'
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: { accessToken: 'new.access' } }),
+      )
+      .mockResolvedValueOnce(new Response('xlsx-bytes', { status: 200 }))
+
+    const blob = await apiBlobRequest('/dashboard/ops/reports', {
+      method: 'POST',
+      body: JSON.stringify({ format: 'EXCEL' }),
+    })
+
+    expect(await blob.text()).toBe('xlsx-bytes')
+    expect(storedAccess).toBe('new.access')
+    expect(new Headers(vi.mocked(fetch).mock.calls[2]?.[1]?.headers).get('authorization'))
+      .toBe('Bearer new.access')
   })
 })
 
@@ -317,6 +341,30 @@ describe('apiRequest 401 refresh flow', () => {
       String(c[0]).endsWith('/auth/refresh'),
     )
     expect(refreshCalls).toHaveLength(1)
+  })
+
+  it('aborts an in-flight automatic refresh when the host invalidates the session', async () => {
+    storedAccess = 'old.access'
+    let refreshSignal: AbortSignal | undefined
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
+      .mockImplementationOnce((_url, init) => {
+        refreshSignal = init?.signal as AbortSignal | undefined
+        return new Promise<Response>((_resolve, reject) => {
+          refreshSignal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted', 'AbortError'))
+          })
+        })
+      })
+
+    const request = apiRequest('/dashboard/bookings/a')
+    await vi.waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2))
+
+    cancelInFlightRefresh()
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' })
+    expect(refreshSignal?.aborted).toBe(true)
+    expect(onTokenRefreshed).not.toHaveBeenCalled()
   })
 
   it('fires onAuthFailure and rejects with an ApiError when the refresh itself returns non-2xx', async () => {

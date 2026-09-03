@@ -59,6 +59,12 @@ describe('API Client (lib/api.ts)', () => {
     return Promise.resolve(response)
   }
 
+  function deferred<T>() {
+    let resolve!: (value: T) => void
+    const promise = new Promise<T>((r) => { resolve = r })
+    return { promise, resolve }
+  }
+
   // =========================================================================
   // Token injection
   // =========================================================================
@@ -237,8 +243,81 @@ describe('API Client (lib/api.ts)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
-  it('should clear token + localStorage and throw when refresh also fails', async () => {
+  it('should refresh and retry authenticated blob downloads after a 401', async () => {
     const { api, setAccessToken, getAccessToken } = await import('@/lib/api')
+    setAccessToken('old-token')
+    fetchMock
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { accessToken: 'new-token', expiresIn: 900 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response('xlsx-bytes', { status: 200 }))
+
+    const blob = await api.postBlob('/dashboard/ops/reports', { format: 'EXCEL' })
+
+    expect(await blob.text()).toBe('xlsx-bytes')
+    expect(getAccessToken()).toBe('new-token')
+    expect((fetchMock.mock.calls[2][1].headers as Record<string, string>).Authorization).toBe('Bearer new-token')
+  })
+
+  it('retries a blob with a token refreshed by a concurrent request', async () => {
+    const { api, setAccessToken } = await import('@/lib/api')
+    const firstResponse = deferred<Response>()
+    setAccessToken('old-token')
+    fetchMock
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockResolvedValueOnce(new Response('xlsx-bytes', { status: 200 }))
+
+    const download = api.postBlob('/dashboard/ops/reports', { format: 'EXCEL' })
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce())
+    setAccessToken('peer-refreshed-token')
+    firstResponse.resolve(new Response(null, { status: 401 }))
+
+    expect(await (await download).text()).toBe('xlsx-bytes')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect((fetchMock.mock.calls[1][1].headers as Record<string, string>).Authorization)
+      .toBe('Bearer peer-refreshed-token')
+  })
+
+  it('should abort a pending blob refresh when the session is cleared', async () => {
+    const { api, setAccessToken, getAccessToken } = await import('@/lib/api')
+    setAccessToken('old-token')
+    let refreshSignal: AbortSignal | undefined
+    fetchMock
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockImplementationOnce((_url: string, options: RequestInit) => {
+        refreshSignal = options.signal ?? undefined
+        return new Promise<Response>((_resolve, reject) => {
+          refreshSignal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+        })
+      })
+
+    const download = api.postBlob('/dashboard/ops/reports', { format: 'EXCEL' })
+    await vi.waitFor(() => expect(refreshSignal).toBeDefined())
+    setAccessToken(null)
+
+    await expect(download).rejects.toMatchObject({ name: 'AbortError' })
+    expect(refreshSignal?.aborted).toBe(true)
+    expect(getAccessToken()).toBeNull()
+  })
+
+  it('rejects a successful blob response from a session cleared while it was pending', async () => {
+    const { api, setAccessToken } = await import('@/lib/api')
+    const oldSessionResponse = deferred<Response>()
+    setAccessToken('old-token')
+    fetchMock.mockReturnValueOnce(oldSessionResponse.promise)
+
+    const download = api.postBlob('/dashboard/ops/reports', { format: 'EXCEL' })
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce())
+    setAccessToken(null)
+    setAccessToken('new-session-token')
+    oldSessionResponse.resolve(new Response('old-session-xlsx', { status: 200 }))
+
+    await expect(download).rejects.toThrow('Session changed during download')
+  })
+
+  it('should clear token + localStorage and throw when refresh also fails', async () => {
+    const { api, setAccessToken, getAccessToken, subscribeToAuthFailure } = await import('@/lib/api')
+    const onAuthFailure = vi.fn()
+    const unsubscribe = subscribeToAuthFailure(onAuthFailure)
     setAccessToken('stale-token')
     localStorage.setItem('sawaa_user', JSON.stringify({ id: 'u1' }))
 
@@ -264,6 +343,8 @@ describe('API Client (lib/api.ts)', () => {
     await expect(api.get('/clients')).rejects.toThrow()
     expect(getAccessToken()).toBeNull()
     expect(localStorage.getItem('sawaa_user')).toBeNull()
+    expect(onAuthFailure).toHaveBeenCalledOnce()
+    unsubscribe()
   })
 
   // =========================================================================
@@ -311,5 +392,32 @@ describe('API Client (lib/api.ts)', () => {
       call[0].includes('/auth/refresh'),
     )
     expect(refreshCalls.length).toBe(1)
+  })
+
+  it('does not restore a token when logout invalidates an in-flight automatic refresh', async () => {
+    const { api, setAccessToken, getAccessToken } = await import('@/lib/api')
+    const refreshResponse = deferred<ReturnType<typeof makeOkResponse> extends Promise<infer T> ? T : never>()
+    setAccessToken('expired-token')
+
+    const response401 = {
+      ok: false,
+      status: 401,
+      headers: new Headers(),
+      json: () => Promise.resolve({}),
+      clone: function() { return response401 },
+    }
+    fetchMock.mockResolvedValueOnce(response401)
+    fetchMock.mockReturnValueOnce(refreshResponse.promise)
+    fetchMock.mockResolvedValueOnce(makeOkResponse({ id: 'should-not-matter' }))
+
+    const request = api.get('/clients/1')
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    setAccessToken(null)
+    refreshResponse.resolve(await makeOkResponse({ accessToken: 'late-token', expiresIn: 900 }))
+    await request
+
+    expect(getAccessToken()).toBeNull()
+    const retryHeaders = fetchMock.mock.calls[2][1].headers as Record<string, string>
+    expect(retryHeaders.Authorization).toBeUndefined()
   })
 })

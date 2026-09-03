@@ -23,6 +23,11 @@ export function ProgramDetailPage({ id }: { id: string }) {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [enrollOpen, setEnrollOpen] = useState(false);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
+
+  const handleTransitionError = () => {
+    setTransitionError(t('common.errorLoading'));
+  };
 
   if (isLoading) return <p className="text-sm text-(--text-muted)">{t('common.loading')}</p>;
   if (isError || !program) return <p className="text-sm text-(--text-error)">{t('common.errorLoading')}</p>;
@@ -50,7 +55,10 @@ export function ProgramDetailPage({ id }: { id: string }) {
 
       <div className="flex flex-wrap gap-2">
         {canPublish && (
-          <Button variant="default" disabled={publish.isPending} onClick={() => publish.mutate(program.id)}>
+          <Button variant="default" disabled={publish.isPending} onClick={async () => {
+            setTransitionError(null);
+            try { await publish.mutateAsync(program.id); } catch { handleTransitionError(); }
+          }}>
             {t('programs.publish')}
           </Button>
         )}
@@ -70,6 +78,7 @@ export function ProgramDetailPage({ id }: { id: string }) {
           </Button>
         )}
       </div>
+      {transitionError && <p role="alert" className="text-sm text-(--text-error)">{transitionError}</p>}
 
       <div className="grid gap-4 md:grid-cols-3">
         <section className="rounded-lg border border-(--border) bg-(--surface) p-4">
@@ -129,6 +138,7 @@ export function ProgramDetailPage({ id }: { id: string }) {
         onOpenChange={setScheduleOpen}
         programId={program.id}
         onConfirm={async (startDate) => {
+          setTransitionError(null);
           await schedule.mutateAsync({ id: program.id, payload: { startDate } });
           setScheduleOpen(false);
         }}
@@ -137,6 +147,7 @@ export function ProgramDetailPage({ id }: { id: string }) {
         open={cancelOpen}
         onOpenChange={setCancelOpen}
         onConfirm={async (reason) => {
+          setTransitionError(null);
           await cancel.mutateAsync({ id: program.id, payload: { reason } });
           setCancelOpen(false);
           router.push('/programs');

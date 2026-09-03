@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { postMock } = vi.hoisted(() => ({
+const { postMock, postBlobMock } = vi.hoisted(() => ({
   postMock: vi.fn(),
+  postBlobMock: vi.fn(),
 }))
 
 vi.mock("@/lib/api", () => ({
-  api: { post: postMock },
+  api: { post: postMock, postBlob: postBlobMock },
   getAccessToken: vi.fn().mockReturnValue(null),
 }))
 
@@ -17,6 +18,7 @@ import {
   fetchRatingsReport,
   fetchRevenueReport,
   fetchServicesReport,
+  exportReportExcel,
 } from "@/lib/api/reports"
 
 describe("reports api", () => {
@@ -110,5 +112,25 @@ describe("reports api", () => {
       "/dashboard/ops/reports",
       expect.objectContaining({ compareWithPrevious: true }),
     )
+  })
+
+  it("downloads Excel through the authenticated API client path", async () => {
+    postBlobMock.mockResolvedValueOnce(new Blob(["xlsx"]))
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("xlsx")))
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {})
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:report")
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {})
+
+    await exportReportExcel({
+      type: "BOOKINGS",
+      dateFrom: "2026-01-01",
+      dateTo: "2026-01-31",
+    })
+
+    expect(postBlobMock).toHaveBeenCalledWith(
+      "/dashboard/ops/reports",
+      expect.objectContaining({ type: "BOOKINGS", format: "EXCEL" }),
+    )
+    expect(click).toHaveBeenCalledOnce()
   })
 })

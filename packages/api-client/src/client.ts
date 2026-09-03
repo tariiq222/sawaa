@@ -26,6 +26,7 @@ export interface ClientConfig {
 let config: ClientConfig | null = null
 let csrfToken: string | null = null
 let csrfBootstrap: Promise<string> | null = null
+let refreshAbortController: AbortController | null = null
 
 export function initClient(cfg: ClientConfig): void {
   config = cfg
@@ -108,12 +109,24 @@ function invalidateCsrfToken(): void {
 }
 
 async function doRefresh(refreshPath: string): Promise<string> {
-  return sendRefresh(refreshPath)
+  const controller = new AbortController()
+  refreshAbortController = controller
+  try {
+    return await sendRefresh(refreshPath, false, controller.signal)
+  } finally {
+    if (refreshAbortController === controller) refreshAbortController = null
+  }
+}
+
+export function cancelInFlightRefresh(): void {
+  refreshAbortController?.abort()
+  refreshAbortController = null
 }
 
 async function sendRefresh(
   refreshPath: string,
   csrfRetried = false,
+  signal?: AbortSignal,
 ): Promise<string> {
   if (!config) throw new Error('api-client not initialized')
   // CR-9: refresh token is an httpOnly cookie (ck_refresh); credentials: 'include'
@@ -128,6 +141,7 @@ async function sendRefresh(
     headers,
     credentials: 'include',
     body: JSON.stringify({}),
+    signal,
   })
   captureCsrfToken(res)
   if (!res.ok) {
@@ -141,7 +155,7 @@ async function sendRefresh(
       // empty JSON body and the rejected request never reaches its handler, so
       // one fresh-token replay is safe. A second failure is terminal.
       invalidateCsrfToken()
-      return sendRefresh(refreshPath, true)
+      return sendRefresh(refreshPath, true, signal)
     }
     config.onAuthFailure()
     throw new ApiError(res.status, peek.message, peek.body, peek.code)
@@ -178,6 +192,23 @@ export async function apiRequest<T>(
   retried = false,
   csrfRetried = false,
 ): Promise<T> {
+  return requestWithParser(path, options, parseJsonResponse<T>, retried, csrfRetried)
+}
+
+export async function apiBlobRequest(
+  path: string,
+  options: RequestInit = {},
+): Promise<Blob> {
+  return requestWithParser(path, options, (response) => response.blob())
+}
+
+async function requestWithParser<T>(
+  path: string,
+  options: RequestInit,
+  parseResponse: (response: Response) => Promise<T>,
+  retried = false,
+  csrfRetried = false,
+): Promise<T> {
   if (!config) throw new Error('api-client not initialized')
 
   const token = config.getAccessToken()
@@ -204,6 +235,13 @@ export async function apiRequest<T>(
       throw new ApiError(401, peek.message, peek.body, ORG_SUSPENDED_CODE)
     }
 
+    // A concurrent request may already have refreshed (or cleared) the token
+    // while this response was in flight. Retry once with the current session
+    // state instead of rotating the refresh cookie again.
+    if (config.getAccessToken() !== token) {
+      return requestWithParser(path, options, parseResponse, true, csrfRetried)
+    }
+
     let mutex = getRefreshMutex()
     if (!mutex) {
       mutex = doRefresh(getRefreshPath(path))
@@ -213,7 +251,7 @@ export async function apiRequest<T>(
       setRefreshMutex(mutex)
     }
     await mutex
-    return apiRequest<T>(path, options, true, csrfRetried)
+    return requestWithParser(path, options, parseResponse, true, csrfRetried)
   }
 
   if (!res.ok) {
@@ -228,12 +266,22 @@ export async function apiRequest<T>(
       // fresh safe GET cannot duplicate a mutation. A second 403 is surfaced.
       invalidateCsrfToken()
       const freshToken = await ensureCsrfToken()
-      return apiRequest<T>(path, withCsrfHeader(options, freshToken), retried, true)
+      return requestWithParser(
+        path,
+        withCsrfHeader(options, freshToken),
+        parseResponse,
+        retried,
+        true,
+      )
     }
     throw new ApiError(res.status, peek.message, peek.body, peek.code)
   }
 
   if (res.status === 204) return undefined as T
+  return parseResponse(res)
+}
+
+async function parseJsonResponse<T>(res: Response): Promise<T> {
   const json = (await res.json()) as unknown
   // Backend wraps every response as { success: true, data: T }.
   // Unwrap transparently so callers receive the raw T.

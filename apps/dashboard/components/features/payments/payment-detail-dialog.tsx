@@ -88,7 +88,7 @@ export function PaymentDetailDialog({
   onAction,
 }: PaymentDetailDialogProps) {
   const { t } = useLocale()
-  const { data: payment, isLoading } = useQuery({
+  const { data: payment, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.payments.detail(paymentId ?? ""),
     queryFn: () => fetchPayment(paymentId ?? ""),
     enabled: !!paymentId && open,
@@ -105,8 +105,12 @@ export function PaymentDetailDialog({
                 status={payment.status}
                 label={t(PAYMENT_STATUS_KEYS[payment.status] ?? "payments.status.pending")}
               />
-            ) : (
+            ) : isLoading ? (
               <span>{t("common.loading")}</span>
+            ) : isError ? (
+              <span>{t("common.errorLoading")}</span>
+            ) : (
+              <span>—</span>
             )}
           </DialogDescription>
         </DialogHeader>
@@ -117,6 +121,13 @@ export function PaymentDetailDialog({
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={`skeleton-${i}`} className="h-16 rounded-lg" />
               ))}
+            </div>
+          </DialogBody>
+        ) : isError ? (
+          <DialogBody>
+            <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              {t("error.server")}
+              <Button variant="link" size="sm" onClick={() => void refetch()}>{t("common.retry")}</Button>
             </div>
           </DialogBody>
         ) : payment ? (

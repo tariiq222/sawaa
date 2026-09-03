@@ -50,8 +50,7 @@ const cancelMock = vi.mocked(cancelMyBookingApi);
 const rescheduleMock = vi.mocked(rescheduleMyBookingApi);
 const riyadhConvertMock = vi.mocked(riyadhWallTimeToUtcIso);
 
-function wrap(locale: Locale, children: ReactNode) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function wrap(locale: Locale, children: ReactNode, qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return (
     <QueryClientProvider client={qc}>
       <LocaleProvider locale={locale}>{children}</LocaleProvider>
@@ -270,6 +269,18 @@ describe('BookingDetailFeature reschedule timezone conversion', () => {
     await waitFor(() => {
       expect(rescheduleMock).toHaveBeenCalledWith('bk_1', '2026-05-15T11:00:00.000Z');
     });
+  });
+
+  it('refetches the booking detail after a successful reschedule', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    rescheduleMock.mockResolvedValue({ booking: booking({ scheduledAt: '2026-05-15T11:00:00.000Z' }) });
+    render(wrap('ar', <BookingDetailFeature bookingId="bk_1" locale="ar" />, qc));
+    fireEvent.click(await screen.findByRole('button', { name: 'إعادة جدولة الموعد' }));
+    fireEvent.change(screen.getByLabelText('التاريخ الجديد'), { target: { value: '2026-05-15' } });
+    fireEvent.change(screen.getByLabelText('الوقت الجديد'), { target: { value: '14:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'تأكيد' }));
+
+    await waitFor(() => expect(getBookingMock).toHaveBeenCalledTimes(2));
   });
 
   it('shows a localized Asia/Riyadh timezone note next to the date/time controls', async () => {

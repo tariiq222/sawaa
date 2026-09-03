@@ -17620,6 +17620,7 @@
             "required": false,
             "schema": {
               "example": 20,
+              "maximum": 200,
               "type": "number"
             }
           }

@@ -37,10 +37,12 @@ vi.mock("@/lib/api", () => ({
   setAccessToken: setAccessTokenMock,
   clearLegacyAccessTokenStorage: clearLegacyAccessTokenStorageMock,
   getAccessToken: vi.fn(() => null),
+  getSessionGeneration: vi.fn(() => 0),
 }))
 
 import {
   login,
+  acceptAuthResponse,
   fetchMe,
   refreshToken,
   logoutApi,
@@ -63,6 +65,7 @@ const fakeUser = {
   customRoleId: null,
   isSuperAdmin: false,
   permissions: [],
+  onboardingCompletedAt: null,
 }
 
 describe("auth api", () => {
@@ -72,7 +75,7 @@ describe("auth api", () => {
     sessionStorage.clear()
   })
 
-  it("login delegates to authApi.login and keeps access token memory-only", async () => {
+  it("login delegates without accepting session state before its owner validates the response", async () => {
     // Refresh tokens are managed as HttpOnly cookies by @sawaa/api-client; the
     // dashboard wrapper only keeps the access token in memory and stores the
     // non-token user payload locally.
@@ -86,14 +89,9 @@ describe("auth api", () => {
     const result = await login("a@b.com", "pass")
 
     expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "pass" })
-    expect(setAccessTokenMock).toHaveBeenCalledWith("token123")
-    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
-    // PII and runtime org context are not persisted to localStorage.
-    const stored = localStorage.getItem("sawaa_user")
-    expect(stored).not.toContain("a@b.com")
-    expect(stored).not.toContain("organizationId")
-    expect(stored).toContain(fakeUser.id)
-    expect(stored).toContain(fakeUser.role)
+    expect(setAccessTokenMock).not.toHaveBeenCalled()
+    expect(clearLegacyAccessTokenStorageMock).not.toHaveBeenCalled()
+    expect(localStorage.getItem("sawaa_user")).toBeNull()
     expect(localStorage.getItem("sawaa_access_token")).toBeNull()
     expect(sessionStorage.getItem("sawaa_access_token")).toBeNull()
     expect(result.requiresOtp).not.toBe(true)
@@ -118,7 +116,37 @@ describe("auth api", () => {
     })
     expect(localStorage.getItem("sawaa_access_token")).toBeNull()
     expect(sessionStorage.getItem("sawaa_access_token")).toBeNull()
+    expect(clearLegacyAccessTokenStorageMock).not.toHaveBeenCalled()
+  })
+
+  it("acceptAuthResponse persists only the non-PII hint at the guarded owner boundary", () => {
+    acceptAuthResponse({
+      accessToken: "accepted-token",
+      refreshToken: "rt123",
+      expiresIn: 900,
+      user: fakeUser,
+    })
+
+    expect(setAccessTokenMock).toHaveBeenCalledWith("accepted-token")
     expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
+    const stored = localStorage.getItem("sawaa_user")
+    expect(stored).not.toContain("a@b.com")
+    expect(stored).not.toContain("organizationId")
+    expect(stored).toContain(fakeUser.id)
+    expect(stored).toContain(fakeUser.role)
+  })
+
+  it("acceptAuthResponse rejects a response from an invalidated session generation", () => {
+    const accepted = acceptAuthResponse({
+      accessToken: "late-token",
+      refreshToken: "rt123",
+      expiresIn: 900,
+      user: fakeUser,
+    }, 1)
+
+    expect(accepted).toBe(false)
+    expect(setAccessTokenMock).not.toHaveBeenCalled()
+    expect(localStorage.getItem("sawaa_user")).toBeNull()
   })
 
   it("fetchMe delegates to authApi.getMe and stores only a non-PII hint", async () => {
@@ -137,7 +165,7 @@ describe("auth api", () => {
     expect(result.email).toBe("a@b.com")
   })
 
-  it("refreshToken delegates to authApi.refreshToken and updates access token", async () => {
+  it("refreshToken returns tokens without mutating session state", async () => {
     // The api-client owns refresh-token retrieval (HttpOnly cookie); the
     // dashboard wrapper only forwards the call and keeps the new access token
     // returned by the server in memory.
@@ -150,12 +178,12 @@ describe("auth api", () => {
     const result = await refreshToken()
 
     expect(refreshTokenMock).toHaveBeenCalledOnce()
-    expect(setAccessTokenMock).toHaveBeenCalledWith("newToken")
-    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
+    expect(setAccessTokenMock).not.toHaveBeenCalled()
+    expect(clearLegacyAccessTokenStorageMock).not.toHaveBeenCalled()
     expect(result.accessToken).toBe("newToken")
   })
 
-  it("refreshToken keeps the refreshed access token in memory only", async () => {
+  it("refreshToken leaves token persistence to the session owner", async () => {
     localStorage.setItem("sawaa_token_storage", "local")
     localStorage.setItem("sawaa_access_token", "stale-local-token")
     sessionStorage.setItem("sawaa_access_token", "stale-session-token")
@@ -167,11 +195,11 @@ describe("auth api", () => {
 
     await refreshToken()
 
-    expect(setAccessTokenMock).toHaveBeenCalledWith("newToken")
-    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
-    expect(localStorage.getItem("sawaa_access_token")).toBeNull()
-    expect(localStorage.getItem("sawaa_token_storage")).toBeNull()
-    expect(sessionStorage.getItem("sawaa_access_token")).toBeNull()
+    expect(setAccessTokenMock).not.toHaveBeenCalled()
+    expect(clearLegacyAccessTokenStorageMock).not.toHaveBeenCalled()
+    expect(localStorage.getItem("sawaa_access_token")).toBe("stale-local-token")
+    expect(localStorage.getItem("sawaa_token_storage")).toBe("local")
+    expect(sessionStorage.getItem("sawaa_access_token")).toBe("stale-session-token")
   })
 
   it("refreshToken propagates errors from the api-client", async () => {

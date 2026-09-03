@@ -1,19 +1,10 @@
-/**
- * API Client — Sawaa Dashboard
- *
- * Thin wrapper that wires `@sawaa/api-client` for the dashboard:
- *   - in-memory access token + setter/getter
- *   - same-origin `/api/proxy` baseUrl (Next rewrite → backend)
- *
- * The actual fetch / 401-refresh / envelope-unwrap logic lives in
- * `packages/api-client/src/client.ts`. Keep the public surface
- * (`api`, `ApiError`, `setAccessToken`, `getAccessToken`) stable so
- * existing call sites remain untouched.
- */
+/** Dashboard adapter for the shared API client and same-origin proxy. */
 
 import {
   ApiError,
+  apiBlobRequest,
   apiRequest,
+  cancelInFlightRefresh,
   initClient,
 } from "@sawaa/api-client"
 import type { ApiResponse, PaginatedResponse } from "@/lib/types/common"
@@ -21,9 +12,6 @@ import type { ApiResponse, PaginatedResponse } from "@/lib/types/common"
 export type { ApiResponse, PaginatedResponse }
 export { ApiError }
 
-// Same-origin proxy — Next rewrite in next.config.mjs forwards to the
-// backend. Going through the proxy lets cookie-bearing endpoints
-// (login/refresh/logout) work without cross-port cookie rejection.
 const PROXY_BASE_URL = "/api/proxy"
 
 /* ─── Token Management ─── */
@@ -32,13 +20,28 @@ const ACCESS_TOKEN_KEY = "sawaa_access_token"
 const TOKEN_STORAGE_KEY = "sawaa_token_storage"
 
 let accessToken: string | null = null
+let sessionGeneration = 0
+// A fresh browser session may refresh from its httpOnly cookie before an
+// in-memory access token exists. Explicit session clearing flips this gate
+// off; a subsequent successful login re-enables it via setAccessToken(token).
+let acceptsRefreshedTokens = true
+const authFailureListeners = new Set<() => void>()
 
 export function setAccessToken(token: string | null) {
+  if (token === null) {
+    cancelInFlightRefresh()
+    sessionGeneration += 1
+  }
   accessToken = token
+  acceptsRefreshedTokens = token !== null
 }
 
 export function getAccessToken(): string | null {
   return accessToken
+}
+
+export function getSessionGeneration(): number {
+  return sessionGeneration
 }
 
 export function clearLegacyAccessTokenStorage(): void {
@@ -49,11 +52,24 @@ export function clearLegacyAccessTokenStorage(): void {
 }
 
 function clearAuthState() {
+  cancelInFlightRefresh()
   accessToken = null
+  sessionGeneration += 1
+  acceptsRefreshedTokens = false
   if (typeof window !== "undefined") {
     localStorage.removeItem("sawaa_user")
     clearLegacyAccessTokenStorage()
   }
+}
+
+export function subscribeToAuthFailure(listener: () => void): () => void {
+  authFailureListeners.add(listener)
+  return () => authFailureListeners.delete(listener)
+}
+
+function notifyAuthFailure(): void {
+  clearAuthState()
+  for (const listener of authFailureListeners) listener()
 }
 
 /* ─── Initialise the shared client (browser only) ─── */
@@ -66,11 +82,12 @@ if (typeof window !== "undefined") {
     baseUrl: PROXY_BASE_URL,
     getAccessToken: () => accessToken,
     onTokenRefreshed: (a) => {
+      if (!acceptsRefreshedTokens) return
       setAccessToken(a)
       clearLegacyAccessTokenStorage()
     },
     onAuthFailure: () => {
-      clearAuthState()
+      notifyAuthFailure()
     },
     onOrgSuspended: () => {
       // No-op in single-tenant mode — organizations cannot be suspended.
@@ -95,6 +112,10 @@ export const api = {
     })
   },
 
+  postBlob(endpoint: string, body?: unknown): Promise<Blob> {
+    return requestBlob(endpoint, body)
+  },
+
   put<T>(endpoint: string, body?: unknown): Promise<T> {
     return apiRequest<T>(endpoint, {
       method: "PUT",
@@ -116,16 +137,29 @@ export const api = {
     })
   },
 
-  /**
-   * Submit a multipart/form-data POST. apiRequest detects FormData and skips
-   * the JSON Content-Type so the browser can compute the boundary.
-   */
+  /** Submit multipart data; apiRequest lets the browser set its boundary. */
   postForm<T>(endpoint: string, form: FormData): Promise<T> {
     return apiRequest<T>(endpoint, {
       method: "POST",
       body: form,
     })
   },
+}
+
+async function requestBlob(
+  endpoint: string,
+  body?: unknown,
+): Promise<Blob> {
+  const generationAtRequest = sessionGeneration
+  const blob = await apiBlobRequest(endpoint, {
+    method: "POST",
+    credentials: "include",
+    body: JSON.stringify(body ?? {}),
+  })
+  if (generationAtRequest !== sessionGeneration) {
+    throw new Error("Session changed during download")
+  }
+  return blob
 }
 
 /* ─── Helpers ─── */

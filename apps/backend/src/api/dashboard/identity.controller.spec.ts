@@ -120,6 +120,47 @@ describe('DashboardIdentityController (e2e)', () => {
       });
     });
 
+    it('passes isActive=false when the query value is "false"', async () => {
+      mockListUsers.execute.mockResolvedValue({ data: [], total: 0, page: 1, totalPages: 0 });
+
+      await request(app.getHttpServer())
+        .get('/dashboard/identity/users?isActive=false')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(mockListUsers.execute).toHaveBeenCalledWith({
+        page: 1,
+        limit: 20,
+        search: undefined,
+        isActive: false,
+      });
+    });
+
+    it('accepts the shared pagination ceiling of 200', async () => {
+      mockListUsers.execute.mockResolvedValue({ data: [], total: 0, page: 1, totalPages: 0 });
+
+      await request(app.getHttpServer())
+        .get('/dashboard/identity/users?limit=200')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(mockListUsers.execute).toHaveBeenCalledWith({
+        page: 1,
+        limit: 200,
+        search: undefined,
+        isActive: undefined,
+      });
+    });
+
+    it('rejects a limit above the shared pagination ceiling', async () => {
+      await request(app.getHttpServer())
+        .get('/dashboard/identity/users?limit=201')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(400);
+
+      expect(mockListUsers.execute).not.toHaveBeenCalled();
+    });
+
     it('returns 400 for invalid page type', async () => {
       return request(app.getHttpServer())
         .get('/dashboard/identity/users?page=not-a-number')

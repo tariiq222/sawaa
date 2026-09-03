@@ -1,5 +1,5 @@
 import React from "react"
-import { render, waitFor } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 
@@ -38,6 +38,7 @@ vi.mock("@/components/features/payments/payment-actions", () => ({
 
 vi.mock("@sawaa/ui", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
   Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
     open ? <div data-testid="dialog">{children}</div> : null,
   DialogBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -109,5 +110,13 @@ describe("PaymentDetailDialog", () => {
       expect(fetchPaymentMock).toHaveBeenCalledWith("pay-target")
     })
     expect(fetchPaymentsMock).not.toHaveBeenCalled()
+  })
+
+  it("shows a retryable error instead of leaving the dialog in loading state", async () => {
+    fetchPaymentMock.mockRejectedValueOnce(new Error("network failed"))
+    renderDialog()
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("error.server")
+    expect(screen.queryByText("common.loading")).not.toBeInTheDocument()
   })
 })

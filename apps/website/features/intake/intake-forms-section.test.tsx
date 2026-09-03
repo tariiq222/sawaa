@@ -140,6 +140,16 @@ describe('IntakeFormsSection', () => {
     expect(screen.getByText('Your name')).toBeTruthy();
   });
 
+  it('renders a localized retry state when intake discovery fails', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down')).mockResolvedValueOnce([]);
+    render(wrap('en', <IntakeFormsSection bookingId="bk1" serviceId="svc1" />));
+
+    expect(await screen.findByText("Couldn't load your data. Try again.")).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+
   it('blocks submit when a required field is empty', async () => {
     fetchMock.mockResolvedValue([form]);
     render(wrap('en', <IntakeFormsSection bookingId="bk1" serviceId="svc1" />));

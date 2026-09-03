@@ -479,13 +479,13 @@ function BookingWizardInner() {
   // the real invoice; we just show gross amounts so the customer isn't surprised.
   const vatRate = catalog.vatRate ?? 0;
 
-  const { data: branches = [], isLoading: loadingBranches } = useQuery({
+  const { data: branches = [], isLoading: loadingBranches, error: branchesError } = useQuery({
     queryKey: ['public', 'branches'],
     queryFn: getPublicBranches,
   });
 
   const loadingData = loadingEmployees || loadingServices || loadingBranches;
-  const loadError = employeesError?.message ?? servicesError?.message ?? null;
+  const initialLoadError = employeesError ?? servicesError ?? branchesError;
   // Single-branch center: the branch step is never shown; the main branch is
   // auto-selected by the effects below and submitted transparently.
   const hasBranchStep = false;
@@ -672,7 +672,7 @@ function BookingWizardInner() {
   const employeeId = employee?.id;
   const serviceId = service?.id;
   const branchId = effectiveBranchId;
-  const { data: slots = [], isLoading: loadingSlots } = useQuery({
+  const { data: slots = [], isLoading: loadingSlots, error: slotsError } = useQuery({
     queryKey: [
       'public',
       'availability',
@@ -693,7 +693,7 @@ function BookingWizardInner() {
 
   // Per-day "has any slot?" probe drives the date-strip greying. Anchored to
   // today and renewed when employee/service/branch change.
-  const { data: availabilityDays = [] } = useQuery({
+  const { data: availabilityDays = [], error: availabilityDaysError } = useQuery({
     queryKey: [
       'public',
       'availability',
@@ -720,6 +720,7 @@ function BookingWizardInner() {
     () => new Set(availabilityDays.filter((d) => d.hasSlots).map((d) => d.date)),
     [availabilityDays],
   );
+  const loadError = initialLoadError ?? slotsError ?? availabilityDaysError;
 
   // === Handlers (entry-point aware) ===
 
@@ -942,6 +943,7 @@ function BookingWizardInner() {
     return set;
   }, [bookableEmployees]);
   const nothingBookable =
+    !loadError &&
     !loadingData &&
     (bookableEmployees.length === 0 ||
       globalBookableServiceIds.size === 0 ||
@@ -1201,7 +1203,9 @@ function BookingWizardInner() {
                     <circle cx="8" cy="8" r="6.5" />
                     <path d="M8 5v3.5M8 10.5v.5" strokeLinecap="round" />
                   </svg>
-                  <span className="font-medium">{loadError || submitError}</span>
+                  <span className="font-medium">
+                    {loadError ? t('account.loadError') : submitError}
+                  </span>
                 </div>
               )}
 

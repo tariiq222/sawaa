@@ -31,9 +31,17 @@ interface Props {
  */
 export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
   const { t } = useLocale()
-  const { data: purchases, isLoading } = useClientPackagePurchases(clientId, { status: "ACTIVE" })
+  const { data: purchases, isLoading, error, refetch } = useClientPackagePurchases(clientId, { status: "ACTIVE" })
 
   if (isLoading) return null
+  if (error) {
+    return (
+      <div role="alert" className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        {t("error.server")}
+        <Button variant="link" size="sm" onClick={() => void refetch()}>{t("common.retry")}</Button>
+      </div>
+    )
+  }
 
   // Flatten purchases × credits, drop exhausted, then dedupe using the
   // shared `creditDedupeKey` helper (pinned triple when all three members

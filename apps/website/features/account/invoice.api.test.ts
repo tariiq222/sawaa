@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getMyBookingInvoice, type InvoiceDetail } from './invoice.api';
+import { PublicFetchError } from '@/lib/public-fetch';
 
 const sample: InvoiceDetail = {
   id: 'inv_abc',
@@ -59,21 +60,28 @@ describe('invoice.api — getMyBookingInvoice', () => {
     expect(await getMyBookingInvoice('bk1', '')).toEqual(sample);
   });
 
-  it('throws the backend-provided message on non-ok response', async () => {
+  it('preserves the response status in a typed error on non-ok response', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
+      status: 404,
       statusText: 'Bad Request',
       json: () => Promise.resolve({ message: 'Invoice not found' }),
     });
-    await expect(getMyBookingInvoice('bk1', '')).rejects.toThrow('Invoice not found');
+    await expect(getMyBookingInvoice('bk1', '')).rejects.toMatchObject({
+      status: 404,
+      body: { message: 'Invoice not found' },
+    } satisfies Partial<PublicFetchError>);
   });
 
   it('falls back to statusText when the error body has no message', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
+      status: 504,
       statusText: 'Gateway Timeout',
       json: () => Promise.reject(new Error('not json')),
     });
-    await expect(getMyBookingInvoice('bk1', '')).rejects.toThrow('Gateway Timeout');
+    await expect(getMyBookingInvoice('bk1', '')).rejects.toMatchObject({
+      status: 504,
+    });
   });
 });

@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/components/providers/auth-provider'
 
 // ---------------------------------------------------------------------------
@@ -24,17 +25,30 @@ const mockLogin = vi.fn()
 const mockLogoutApi = vi.fn()
 const mockFetchMe = vi.fn()
 const mockRefreshToken = vi.fn()
+const mockAcceptAuthResponse = vi.fn()
+const mockSetAccessToken = vi.fn()
+const mockSubscribeToAuthFailure = vi.fn()
+let authFailureHandler: (() => void) | undefined
 
 vi.mock('@/lib/api/auth', () => ({
   login: (...args: unknown[]) => mockLogin(...args),
+  acceptAuthResponse: (...args: unknown[]) => mockAcceptAuthResponse(...args),
   logoutApi: (...args: unknown[]) => mockLogoutApi(...args),
   fetchMe: (...args: unknown[]) => mockFetchMe(...args),
   refreshToken: (...args: unknown[]) => mockRefreshToken(...args),
 }))
 
 vi.mock('@/lib/api', () => ({
-  setAccessToken: vi.fn(),
+  setAccessToken: (...args: unknown[]) => mockSetAccessToken(...args),
   getAccessToken: vi.fn(() => null),
+  getSessionGeneration: vi.fn(() => 0),
+  subscribeToAuthFailure: (listener: () => void) => {
+    authFailureHandler = listener
+    mockSubscribeToAuthFailure(listener)
+    return () => {
+      if (authFailureHandler === listener) authFailureHandler = undefined
+    }
+  },
 }))
 
 // ---------------------------------------------------------------------------
@@ -79,11 +93,23 @@ function TestConsumer() {
 }
 
 function renderWithProvider() {
-  return render(
-    <AuthProvider>
-      <TestConsumer />
-    </AuthProvider>,
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const result = render(
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    </QueryClientProvider>,
   )
+  return { ...result, queryClient }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((r) => { resolve = r })
+  return { promise, resolve }
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +122,11 @@ describe('AuthProvider', () => {
     mockLogoutApi.mockReset()
     mockFetchMe.mockReset()
     mockRefreshToken.mockReset()
+    mockAcceptAuthResponse.mockReset()
+    mockAcceptAuthResponse.mockReturnValue(true)
+    mockSetAccessToken.mockReset()
+    mockSubscribeToAuthFailure.mockReset()
+    authFailureHandler = undefined
   })
 
   afterEach(() => {
@@ -121,6 +152,7 @@ describe('AuthProvider', () => {
 
       expect(screen.getByTestId('user').textContent).toBe(mockUser.email)
       expect(screen.getByTestId('authenticated').textContent).toBe('yes')
+      expect(mockSetAccessToken).toHaveBeenCalledWith(mockAuthResponse.accessToken)
     })
 
     it('should set user null when refresh fails (expired session)', async () => {
@@ -148,6 +180,43 @@ describe('AuthProvider', () => {
 
       expect(localStorage.getItem('sawaa_user')).toBeNull()
     })
+
+    it('keeps the active restore when StrictMode aborts the first effect', async () => {
+      let firstSignal: AbortSignal | undefined
+      let secondSignal: AbortSignal | undefined
+      mockRefreshToken
+        .mockImplementationOnce((signal?: AbortSignal) => {
+          firstSignal = signal
+          return new Promise((_, reject) => {
+            signal?.addEventListener('abort', () => reject(new Error('aborted')))
+          })
+        })
+        .mockImplementationOnce((signal?: AbortSignal) => {
+          secondSignal = signal
+          return Promise.resolve(mockAuthResponse)
+        })
+      mockFetchMe.mockResolvedValue(mockUser)
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      })
+      render(
+        <React.StrictMode>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <TestConsumer />
+            </AuthProvider>
+          </QueryClientProvider>
+        </React.StrictMode>,
+      )
+
+      await waitFor(() => expect(mockRefreshToken).toHaveBeenCalledTimes(2))
+      expect(firstSignal?.aborted).toBe(true)
+      expect(secondSignal?.aborted).toBe(false)
+      await waitFor(() =>
+        expect(screen.getByTestId('user').textContent).toBe(mockUser.email),
+      )
+    })
   })
 
   // =========================================================================
@@ -171,6 +240,7 @@ describe('AuthProvider', () => {
 
       expect(screen.getByTestId('user').textContent).toBe(mockUser.email)
       expect(screen.getByTestId('authenticated').textContent).toBe('yes')
+      expect(mockAcceptAuthResponse).toHaveBeenCalledWith(mockAuthResponse, 0)
     })
 
     it('should call apiLogin with correct credentials', async () => {
@@ -187,6 +257,29 @@ describe('AuthProvider', () => {
       })
 
       expect(mockLogin).toHaveBeenCalledWith('test@test.com', 'Pass123!')
+    })
+
+    it('does not accept a login response that resolves after the session was cleared', async () => {
+      mockRefreshToken.mockRejectedValue(new Error('no session'))
+      const lateLogin = deferred<typeof mockAuthResponse>()
+      mockLogin.mockReturnValue(lateLogin.promise)
+
+      renderWithProvider()
+      await waitFor(() =>
+        expect(screen.getByTestId('loading').textContent).toBe('ready'),
+      )
+
+      act(() => screen.getByText('Login').click())
+      await waitFor(() => expect(mockLogin).toHaveBeenCalledOnce())
+      act(() => authFailureHandler?.())
+      await act(async () => {
+        lateLogin.resolve(mockAuthResponse)
+        await Promise.resolve()
+      })
+
+      expect(mockSetAccessToken).not.toHaveBeenCalledWith(mockAuthResponse.accessToken)
+      expect(mockAcceptAuthResponse).not.toHaveBeenCalledWith(mockAuthResponse)
+      expect(screen.getByTestId('authenticated').textContent).toBe('no')
     })
   })
 
@@ -228,6 +321,59 @@ describe('AuthProvider', () => {
       })
 
       expect(mockLogoutApi).toHaveBeenCalledOnce()
+    })
+
+    it('clears protected query data on logout', async () => {
+      mockRefreshToken.mockResolvedValue(mockAuthResponse)
+      mockFetchMe.mockResolvedValue(mockUser)
+      mockLogoutApi.mockResolvedValue(undefined)
+
+      const { queryClient } = renderWithProvider()
+      queryClient.setQueryData(['clients', 'detail', 'client-a'], { name: 'Sensitive client' })
+      await waitFor(() =>
+        expect(screen.getByTestId('user').textContent).toBe(mockUser.email),
+      )
+
+      await act(async () => {
+        await userEvent.click(screen.getByText('Logout'))
+      })
+
+      expect(queryClient.getQueryData(['clients', 'detail', 'client-a'])).toBeUndefined()
+    })
+
+    it('clears auth context and protected queries when the API refresh fails', async () => {
+      mockRefreshToken.mockResolvedValue(mockAuthResponse)
+      mockFetchMe.mockResolvedValue(mockUser)
+
+      const { queryClient } = renderWithProvider()
+      queryClient.setQueryData(['payments', 'detail', 'payment-a'], { amount: 500 })
+      await waitFor(() =>
+        expect(screen.getByTestId('user').textContent).toBe(mockUser.email),
+      )
+
+      act(() => authFailureHandler?.())
+
+      expect(screen.getByTestId('authenticated').textContent).toBe('no')
+      expect(queryClient.getQueryData(['payments', 'detail', 'payment-a'])).toBeUndefined()
+    })
+
+    it('clears the local session immediately while remote logout is pending', async () => {
+      mockRefreshToken.mockResolvedValue(mockAuthResponse)
+      mockFetchMe.mockResolvedValue(mockUser)
+      const pendingLogout = deferred<void>()
+      mockLogoutApi.mockReturnValue(pendingLogout.promise)
+
+      const { queryClient } = renderWithProvider()
+      queryClient.setQueryData(['clients'], [{ id: 'client-a' }])
+      await waitFor(() =>
+        expect(screen.getByTestId('user').textContent).toBe(mockUser.email),
+      )
+
+      act(() => screen.getByText('Logout').click())
+
+      expect(screen.getByTestId('authenticated').textContent).toBe('no')
+      expect(queryClient.getQueryData(['clients'])).toBeUndefined()
+      pendingLogout.resolve()
     })
   })
 
@@ -314,6 +460,39 @@ describe('AuthProvider', () => {
       await waitFor(() =>
         expect(screen.getByTestId('user').textContent).toBe('none'),
       )
+    })
+
+    it('does not restore a token when an in-flight refresh resolves after logout', async () => {
+      const lateRefresh = deferred<typeof mockAuthResponse>()
+      let lateRefreshSignal: AbortSignal | undefined
+      mockRefreshToken
+        .mockResolvedValueOnce(mockAuthResponse)
+        .mockImplementationOnce((signal?: AbortSignal) => {
+          lateRefreshSignal = signal
+          return lateRefresh.promise
+        })
+      mockFetchMe.mockResolvedValue(mockUser)
+      mockLogoutApi.mockResolvedValue(undefined)
+
+      renderWithProvider()
+      await waitFor(() =>
+        expect(screen.getByTestId('user').textContent).toBe(mockUser.email),
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(780_000)
+      })
+      await waitFor(() => expect(mockRefreshToken).toHaveBeenCalledTimes(2))
+
+      await act(async () => {
+        await userEvent.click(screen.getByText('Logout'))
+        expect(lateRefreshSignal?.aborted).toBe(true)
+        lateRefresh.resolve({ ...mockAuthResponse, accessToken: 'late-token' })
+        await Promise.resolve()
+      })
+
+      expect(mockSetAccessToken).not.toHaveBeenCalledWith('late-token')
+      expect(screen.getByTestId('authenticated').textContent).toBe('no')
     })
   })
 })

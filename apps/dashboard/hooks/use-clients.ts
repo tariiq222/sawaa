@@ -26,7 +26,7 @@ export function useClients() {
     isActive,
   }
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.clients.list(query),
     queryFn: () => fetchClients(query),
     placeholderData: keepPreviousData,
@@ -46,6 +46,7 @@ export function useClients() {
     clients: items,
     meta: data?.meta ?? null,
     isLoading,
+    isFetching,
     error: error?.message ?? null,
     page,
     setPage,
