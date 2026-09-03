@@ -5951,6 +5951,91 @@ export interface components {
              */
             completionNotes?: string;
         };
+        ContactMessageListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching records
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        ContactMessageResponseDto: {
+            /**
+             * Format: date-time
+             * @description Archive timestamp
+             */
+            archivedAt: string | null;
+            /**
+             * @description Message body
+             * @example أرغب بمعرفة المزيد عن الخدمات
+             */
+            body: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Sender email address
+             * @example user@example.com
+             */
+            email: string | null;
+            /**
+             * @description Contact message UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Sender name
+             * @example سارة أحمد
+             */
+            name: string;
+            /**
+             * @description Sender phone number
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * Format: date-time
+             * @description First-read timestamp
+             */
+            readAt: string | null;
+            /**
+             * @description Message workflow status
+             * @example NEW
+             * @enum {string}
+             */
+            status: "NEW" | "READ" | "REPLIED" | "ARCHIVED";
+            /**
+             * @description Message subject
+             * @example استفسار عن الحجز
+             */
+            subject: string | null;
+        };
         CreateBookingDto: {
             /**
              * @description Booking type
@@ -8458,6 +8543,12 @@ export interface components {
         PaginatedClientsDto: {
             items: components["schemas"]["ClientResponseDto"][];
             meta: components["schemas"]["ListMetaDto"];
+        };
+        PaginatedContactMessagesResponseDto: {
+            /** @description Contact messages on the requested page */
+            items: components["schemas"]["ContactMessageResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ContactMessageListMetaDto"];
         };
         PaginatedDepartmentsResponseDto: {
             /** @description Departments on the requested page */
@@ -13798,6 +13889,10 @@ export interface operations {
             query?: {
                 /** @description Filter by status */
                 status?: "NEW" | "READ" | "REPLIED" | "ARCHIVED";
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -13810,7 +13905,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedContactMessagesResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -13871,7 +13968,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ContactMessageResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -13893,6 +13992,15 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Contact message not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

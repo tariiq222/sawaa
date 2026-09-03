@@ -27,9 +27,16 @@ import { ListSmsDeliveriesHandler } from '../../modules/comms/list-sms-deliverie
 import { ListTenantDeliveryLogsHandler } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
+import {
+  DocumentBuilder,
+  OpenAPIObject,
+  SwaggerModule,
+} from '@nestjs/swagger';
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 describe('DashboardCommsController (e2e)', () => {
   let app: INestApplication;
+  let openApiDocument: OpenAPIObject;
 
   const mockListNotifications = { execute: jest.fn() };
   const mockGetUnreadCount = { execute: jest.fn() };
@@ -106,6 +113,10 @@ describe('DashboardCommsController (e2e)', () => {
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
     await app.init();
+    openApiDocument = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder().setTitle('Dashboard comms contract test').build(),
+    );
   });
 
   afterAll(async () => {
@@ -117,6 +128,12 @@ describe('DashboardCommsController (e2e)', () => {
   });
 
   const uuid = (n: number) => `00000000-0000-4000-a000-${String(n).padStart(12, '0')}`;
+
+  function schemaObject(name: string): SchemaObject {
+    const schema = openApiDocument.components?.schemas?.[name];
+    if (!schema || '$ref' in schema) throw new Error(`Missing object schema: ${name}`);
+    return schema;
+  }
 
   // ── Notifications ──────────────────────────────────────────────────────────
 
@@ -284,16 +301,146 @@ describe('DashboardCommsController (e2e)', () => {
 
   // ── Contact Messages ───────────────────────────────────────────────────────
 
+  describe('contact message OpenAPI contracts', () => {
+    it('documents list query, paginated response, entity, and update responses', () => {
+      const listOperation = openApiDocument.paths['/dashboard/comms/contact-messages']?.get;
+      expect(listOperation?.parameters).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          name: 'page', in: 'query', required: false,
+          schema: expect.objectContaining({ type: 'number' }),
+        }),
+        expect.objectContaining({
+          name: 'limit', in: 'query', required: false,
+          schema: expect.objectContaining({ type: 'number' }),
+        }),
+        expect.objectContaining({
+          name: 'status', in: 'query', required: false,
+          schema: { type: 'string', enum: ['NEW', 'READ', 'REPLIED', 'ARCHIVED'] },
+        }),
+      ]));
+      expect(listOperation?.responses?.['200']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/PaginatedContactMessagesResponseDto' },
+          },
+        },
+      });
+
+      const updateResponses = openApiDocument.paths[
+        '/dashboard/comms/contact-messages/{id}/status'
+      ]?.patch?.responses;
+      expect(updateResponses?.['200']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ContactMessageResponseDto' },
+          },
+        },
+      });
+      expect(updateResponses?.['404']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ApiErrorDto' },
+          },
+        },
+      });
+
+      const messageSchema = schemaObject('ContactMessageResponseDto');
+      expect(Object.keys(messageSchema.properties ?? {}).sort()).toEqual([
+        'archivedAt',
+        'body',
+        'createdAt',
+        'email',
+        'id',
+        'name',
+        'phone',
+        'readAt',
+        'status',
+        'subject',
+      ]);
+      expect(messageSchema.properties).toMatchObject({
+        id: { type: 'string' },
+        name: { type: 'string' },
+        phone: { type: 'string', nullable: true },
+        email: { type: 'string', nullable: true },
+        subject: { type: 'string', nullable: true },
+        body: { type: 'string' },
+        status: { type: 'string', enum: ['NEW', 'READ', 'REPLIED', 'ARCHIVED'] },
+        createdAt: { type: 'string', format: 'date-time' },
+        readAt: { type: 'string', format: 'date-time', nullable: true },
+        archivedAt: { type: 'string', format: 'date-time', nullable: true },
+      });
+      expect([...(messageSchema.required ?? [])].sort()).toEqual([
+        'archivedAt',
+        'body',
+        'createdAt',
+        'email',
+        'id',
+        'name',
+        'phone',
+        'readAt',
+        'status',
+        'subject',
+      ]);
+
+      const paginatedSchema = schemaObject('PaginatedContactMessagesResponseDto');
+      expect(paginatedSchema.properties).toMatchObject({
+        items: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/ContactMessageResponseDto' },
+        },
+        meta: {
+          allOf: [{ $ref: '#/components/schemas/ContactMessageListMetaDto' }],
+        },
+      });
+
+      const metaSchema = schemaObject('ContactMessageListMetaDto');
+      expect(Object.keys(metaSchema.properties ?? {}).sort()).toEqual([
+        'hasNextPage',
+        'hasPreviousPage',
+        'limit',
+        'page',
+        'total',
+        'totalPages',
+      ]);
+      expect(metaSchema.properties).toMatchObject({
+        total: { type: 'number' },
+        page: { type: 'number' },
+        limit: { type: 'number' },
+        totalPages: { type: 'number' },
+        hasNextPage: { type: 'boolean' },
+        hasPreviousPage: { type: 'boolean' },
+      });
+    });
+  });
+
   describe('GET /dashboard/comms/contact-messages', () => {
     it('returns 200 with contact messages', async () => {
-      mockListContactMessages.execute.mockResolvedValue({ data: [{ id: uuid(4) }], total: 1 });
+      mockListContactMessages.execute.mockResolvedValue({
+        items: [{ id: uuid(4) }],
+        meta: {
+          total: 1,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      });
 
       const res = await request(app.getHttpServer())
         .get('/dashboard/comms/contact-messages')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(res.body.data).toHaveLength(1);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.meta).toEqual({
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
     });
   });
 

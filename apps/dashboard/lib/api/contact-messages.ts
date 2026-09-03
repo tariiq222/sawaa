@@ -1,4 +1,4 @@
-import { api } from "@/lib/api"
+import { openApi } from "@/lib/api/openapi"
 import type { PaginatedResponse } from "@/lib/types/common"
 
 export type ContactMessageStatus = "NEW" | "READ" | "REPLIED" | "ARCHIVED"
@@ -25,10 +25,12 @@ export interface ContactMessageListQuery {
 export async function fetchContactMessages(
   query: ContactMessageListQuery = {},
 ): Promise<PaginatedResponse<ContactMessage>> {
-  return api.get<PaginatedResponse<ContactMessage>>("/dashboard/comms/contact-messages", {
-    page: query.page,
-    limit: query.limit,
-    status: query.status,
+  return openApi.get("/api/v1/dashboard/comms/contact-messages", {
+    query: {
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+    },
   })
 }
 
@@ -36,5 +38,8 @@ export async function updateContactMessageStatus(
   id: string,
   status: ContactMessageStatus,
 ): Promise<ContactMessage> {
-  return api.patch<ContactMessage>(`/dashboard/comms/contact-messages/${id}/status`, { status })
+  return openApi.patch("/api/v1/dashboard/comms/contact-messages/{id}/status", {
+    path: { id },
+    body: { status },
+  })
 }

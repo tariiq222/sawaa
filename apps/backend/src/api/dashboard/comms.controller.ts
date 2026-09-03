@@ -4,12 +4,13 @@ import {
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam,
-  ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse,
+  ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CurrentUser, JwtUser } from '../../common/auth/current-user.decorator';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
-import { ApiStandardResponses } from '../../common/swagger';
+import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
 import { ListNotificationsHandler } from '../../modules/comms/notifications/list-notifications.handler';
 import { ListNotificationsDto } from '../../modules/comms/notifications/list-notifications.dto';
 import { GetUnreadCountHandler } from '../../modules/comms/notifications/get-unread-count.handler';
@@ -49,6 +50,10 @@ import { TestEmailConfigDto } from '../../modules/comms/org-email-config/test-em
 import { ListSmsDeliveriesHandler } from '../../modules/comms/list-sms-deliveries/list-sms-deliveries.handler';
 import { ListTenantDeliveryLogsHandler } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { ListTenantDeliveryLogsDto } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.dto';
+import {
+  ContactMessageResponseDto,
+  PaginatedContactMessagesResponseDto,
+} from './dto/contact-message-response.dto';
 
 @ApiTags('Dashboard / Comms')
 @ApiBearerAuth()
@@ -146,7 +151,9 @@ export class DashboardCommsController {
   // ── Contact Messages ───────────────────────────────────────────────────────
 
   @ApiOperation({ summary: 'List contact messages' })
-  @ApiOkResponse({ description: 'Paginated contact messages' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Results per page', example: 20 })
+  @ApiOkResponse({ description: 'Paginated contact messages', type: PaginatedContactMessagesResponseDto })
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @Get('contact-messages')
   listContactMessagesEndpoint(@Query() query: ListContactMessagesDto) {
@@ -159,7 +166,8 @@ export class DashboardCommsController {
 
   @ApiOperation({ summary: 'Update contact message status' })
   @ApiParam({ name: 'id', description: 'Contact message UUID' })
-  @ApiOkResponse({ description: 'Updated message' })
+  @ApiOkResponse({ description: 'Updated message', type: ContactMessageResponseDto })
+  @ApiNotFoundResponse({ description: 'Contact message not found', type: ApiErrorDto })
   @CheckPermissions({ action: 'update', subject: 'Setting' })
   @Patch('contact-messages/:id/status')
   updateContactMessageStatusEndpoint(
