@@ -3,8 +3,8 @@ import { getApiBase } from './api-base';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 const CSRF_TOKEN_PATTERN = /^[a-f0-9]{64}$/i;
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 
-let csrfToken: string | null = null;
 let csrfBootstrap: Promise<string> | null = null;
 
 export class PublicFetchError extends Error {
@@ -32,7 +32,7 @@ export async function publicFetch<T>(path: string, init?: RequestInit): Promise<
 
   const token = unsafe ? await ensureCsrfToken(base) : null;
   let response = await sendRequest(url, init, token);
-  const responseCsrfToken = captureCsrfToken(response);
+  const responseCsrfToken = readCsrfToken(response);
 
   if (!response.ok) {
     let errorBody = await readErrorBody(response);
@@ -47,7 +47,6 @@ export async function publicFetch<T>(path: string, init?: RequestInit): Promise<
       responseCsrfToken
     ) {
       response = await sendRequest(url, init, responseCsrfToken);
-      captureCsrfToken(response);
       if (!response.ok) {
         errorBody = await readErrorBody(response);
       }
@@ -87,7 +86,6 @@ function isBrowser(): boolean {
 }
 
 function ensureCsrfToken(base: string): Promise<string> {
-  if (csrfToken) return Promise.resolve(csrfToken);
   if (csrfBootstrap) return csrfBootstrap;
 
   csrfBootstrap = bootstrapCsrfToken(base).finally(() => {
@@ -97,24 +95,20 @@ function ensureCsrfToken(base: string): Promise<string> {
 }
 
 async function bootstrapCsrfToken(base: string): Promise<string> {
-  const response = await fetch(`${base}/public/branding`, {
+  const response = await fetchWithTimeout(`${base}/public/branding`, {
     method: 'GET',
     credentials: 'include',
   });
-  const token = captureCsrfToken(response);
+  const token = readCsrfToken(response);
   if (token) return token;
 
   throw new PublicFetchError(response.status, { code: 'CSRF_BOOTSTRAP_FAILED' });
 }
 
-function captureCsrfToken(response: Response): string | null {
+function readCsrfToken(response: Response): string | null {
   if (!isBrowser()) return null;
   const candidate = response.headers?.get(CSRF_HEADER_NAME);
-  if (candidate && CSRF_TOKEN_PATTERN.test(candidate)) {
-    csrfToken = candidate;
-    return candidate;
-  }
-  return null;
+  return candidate && CSRF_TOKEN_PATTERN.test(candidate) ? candidate : null;
 }
 
 function sendRequest(url: string, init: RequestInit | undefined, token: string | null): Promise<Response> {
@@ -128,7 +122,33 @@ function sendRequest(url: string, init: RequestInit | undefined, token: string |
     headers.set(CSRF_HEADER_NAME, token);
   }
 
-  return fetch(url, { ...init, credentials: 'include', headers });
+  const requestInit = { ...init, credentials: 'include' as const, headers };
+  return isUnsafeMethod(init?.method)
+    ? fetch(url, requestInit)
+    : fetchWithTimeout(url, requestInit);
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const callerSignal = init.signal;
+  const forwardCallerAbort = () => controller.abort(callerSignal?.reason);
+
+  if (callerSignal?.aborted) {
+    forwardCallerAbort();
+  } else {
+    callerSignal?.addEventListener('abort', forwardCallerAbort, { once: true });
+  }
+
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException('Request timed out', 'TimeoutError'));
+  }, DEFAULT_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+    callerSignal?.removeEventListener('abort', forwardCallerAbort);
+  }
 }
 
 async function readErrorBody(response: Response): Promise<unknown> {

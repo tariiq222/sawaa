@@ -33,6 +33,7 @@ describe('publicFetch', () => {
     ({ publicFetch, PublicFetchError } = await import('./public-fetch'));
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -241,7 +242,7 @@ describe('publicFetch', () => {
     ]);
   });
 
-  it('uses a CSRF token bootstrapped from a safe response on the next mutation', async () => {
+  it('does not retain a long-lived CSRF token from an earlier safe response', async () => {
     fetchMock
       .mockResolvedValueOnce({
         ok: true,
@@ -251,6 +252,7 @@ describe('publicFetch', () => {
         }),
         json: () => Promise.resolve({ branches: [] }),
       })
+      .mockResolvedValueOnce(csrfBootstrapResponse())
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
@@ -261,11 +263,68 @@ describe('publicFetch', () => {
     await publicFetch('/public/branches');
     await publicFetch('/public/bookings', { method: 'POST', body: JSON.stringify({ slotId: 'slot-2' }) });
 
-    const [, mutationInit] = fetchMock.mock.calls[1];
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'http://api.local/api/v1/public/branches',
+      'http://api.local/api/v1/public/branding',
+      'http://api.local/api/v1/public/bookings',
+    ]);
+    const [, mutationInit] = fetchMock.mock.calls[2];
     expect(mutationInit.credentials).toBe('include');
-    expect(mutationInit.headers.get('X-CSRF-Token')).toBe(
-      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    expect(mutationInit.headers.get('X-CSRF-Token')).toBe(CSRF_TOKEN);
+  });
+
+  it('aborts a request after the default timeout', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+      }),
     );
+
+    const request = expect(publicFetch('/public/branches')).rejects.toMatchObject({
+      name: 'TimeoutError',
+    });
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    await request;
+  });
+
+  it('preserves a caller AbortSignal on a safe request with the default timeout', async () => {
+    const caller = new AbortController();
+    fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+      }),
+    );
+
+    const request = publicFetch('/public/branches', { signal: caller.signal });
+    caller.abort(new DOMException('caller cancelled', 'AbortError'));
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('does not add a timeout signal to a mutation and preserves the caller signal identity', async () => {
+    const caller = new AbortController();
+    fetchMock
+      .mockResolvedValueOnce(csrfBootstrapResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        headers: new Headers(),
+        json: () => Promise.resolve({ id: 'booking-3' }),
+      });
+
+    await publicFetch('/public/bookings', {
+      method: 'POST',
+      signal: caller.signal,
+      body: JSON.stringify({ slotId: 'slot-3' }),
+    });
+
+    const [, bootstrapInit] = fetchMock.mock.calls[0];
+    const [, mutationInit] = fetchMock.mock.calls[1];
+    expect(bootstrapInit.signal).toBeInstanceOf(AbortSignal);
+    expect(bootstrapInit.signal).not.toBe(caller.signal);
+    expect(mutationInit.signal).toBe(caller.signal);
   });
 
   it('does not replay a safe request when its response carries a CSRF token', async () => {

@@ -45,14 +45,13 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 
 const CSRF_TOKEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-async function primeCsrfToken() {
+function queueCsrfBootstrap() {
   fetchMock.mockResolvedValueOnce(
     jsonResponse(
-      { data: [] },
+      {},
       { headers: { 'content-type': 'application/json', 'x-csrf-token': CSRF_TOKEN } },
     ),
   );
-  await getPublicBranches();
 }
 
 describe('booking.api', () => {
@@ -145,7 +144,7 @@ describe('booking.api', () => {
 
   describe('createBooking', () => {
     it('POSTs to /public/bookings with credentials: include', async () => {
-      await primeCsrfToken();
+      queueCsrfBootstrap();
       fetchMock.mockResolvedValueOnce(jsonResponse({ data: { id: 'bk1', invoiceId: 'inv1' } }));
       const result = await createBooking({
         serviceId: 'svc1',
@@ -173,7 +172,7 @@ describe('booking.api', () => {
     });
 
     it('omits an empty-string durationOptionId so backend UUID validation passes', async () => {
-      await primeCsrfToken();
+      queueCsrfBootstrap();
       fetchMock.mockResolvedValueOnce(jsonResponse({ data: { id: 'bk1', invoiceId: null } }));
       await createBooking({
         serviceId: 'svc1',
@@ -187,7 +186,7 @@ describe('booking.api', () => {
     });
 
     it('serializes payAtClinic as a boolean for at-center bookings', async () => {
-      await primeCsrfToken();
+      queueCsrfBootstrap();
       fetchMock.mockResolvedValueOnce(
         jsonResponse({ data: { id: 'bk-center', status: 'CONFIRMED', invoiceId: null } }),
       );
@@ -208,7 +207,7 @@ describe('booking.api', () => {
 
   describe('initPayment', () => {
     it('POSTs the invoiceId to /public/payments/init with credentials', async () => {
-      await primeCsrfToken();
+      queueCsrfBootstrap();
       fetchMock.mockResolvedValueOnce(
         jsonResponse({ data: { paymentId: 'pay1', redirectUrl: 'https://moyasar/pay1' } }),
       );
@@ -223,7 +222,7 @@ describe('booking.api', () => {
     });
 
     it('throws when the init endpoint fails', async () => {
-      await primeCsrfToken();
+      queueCsrfBootstrap();
       fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify({ message: 'Invoice not found' }), { status: 404 }),
       );

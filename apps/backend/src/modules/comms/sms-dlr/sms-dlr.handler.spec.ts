@@ -1,6 +1,7 @@
 import { createHmac } from 'crypto';
 import { BadRequestException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { SmsCredentialsService } from '../../../infrastructure/sms/sms-credentials.service';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
@@ -22,6 +23,14 @@ function buildCreds(): SmsCredentialsService {
     get: () => Buffer.alloc(32, 7).toString('base64'),
   };
   return new SmsCredentialsService(cfg as ConfigService);
+}
+
+function buildTransaction<T>(tx: T) {
+  return {
+    withTransaction: jest.fn(async (work: (client: T) => Promise<unknown>) =>
+      work(tx),
+    ),
+  };
 }
 
 describe('SmsDlrHandler', () => {
@@ -59,6 +68,7 @@ describe('SmsDlrHandler', () => {
       prisma as never,
       factory,
       cls as never,
+      buildTransaction(prisma) as never,
     );
 
     const res = await handler.execute({
@@ -82,6 +92,148 @@ describe('SmsDlrHandler', () => {
     );
   });
 
+  it('keeps the dedup claim retriable when the delivery transaction fails', async () => {
+    const creds = buildCreds();
+    const ciphertext = creds.encrypt(
+      { appSid: 'a', apiKey: 'b' },
+      DEFAULT_ORG_ID,
+    );
+    const tx = {
+      webhookEvent: {
+        create: jest.fn().mockResolvedValue({ id: 'evt-1' }),
+      },
+      smsDelivery: {
+        updateMany: jest
+          .fn()
+          .mockRejectedValueOnce(new Error('database unavailable'))
+          .mockResolvedValueOnce({ count: 1 }),
+      },
+    };
+    const prisma = {
+      organizationSmsConfig: {
+        findFirst: jest.fn().mockResolvedValue({
+          provider: 'UNIFONIC',
+          credentialsCiphertext: ciphertext,
+          webhookSecret,
+        }),
+      },
+    };
+    const transaction = buildTransaction(tx);
+    const handler = new SmsDlrHandler(
+      prisma as never,
+      new SmsProviderFactory(prisma as never, creds),
+      buildCls() as never,
+      transaction as never,
+    );
+    const request = {
+      provider: 'UNIFONIC' as const,
+      organizationId: DEFAULT_ORG_ID,
+      rawBody,
+      signature: sig,
+    };
+
+    await expect(handler.execute(request)).rejects.toThrow('database unavailable');
+    await expect(handler.execute(request)).resolves.toEqual({});
+
+    expect(transaction.withTransaction).toHaveBeenCalledTimes(2);
+    expect(tx.webhookEvent.create).toHaveBeenCalledTimes(2);
+    expect(tx.smsDelivery.updateMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries successfully when the DLR arrives before its SmsDelivery row', async () => {
+    const creds = buildCreds();
+    const ciphertext = creds.encrypt(
+      { appSid: 'a', apiKey: 'b' },
+      DEFAULT_ORG_ID,
+    );
+    const tx = {
+      webhookEvent: {
+        create: jest.fn().mockResolvedValue({ id: 'evt-1' }),
+      },
+      smsDelivery: {
+        updateMany: jest
+          .fn()
+          .mockResolvedValueOnce({ count: 0 })
+          .mockResolvedValueOnce({ count: 1 }),
+      },
+    };
+    const prisma = {
+      organizationSmsConfig: {
+        findFirst: jest.fn().mockResolvedValue({
+          provider: 'UNIFONIC',
+          credentialsCiphertext: ciphertext,
+          webhookSecret,
+        }),
+      },
+    };
+    const transaction = buildTransaction(tx);
+    const handler = new SmsDlrHandler(
+      prisma as never,
+      new SmsProviderFactory(prisma as never, creds),
+      buildCls() as never,
+      transaction as never,
+    );
+    const request = {
+      provider: 'UNIFONIC' as const,
+      organizationId: DEFAULT_ORG_ID,
+      rawBody,
+      signature: sig,
+    };
+
+    await expect(handler.execute(request)).rejects.toThrow(
+      'SMS delivery not found for provider message m-org-a',
+    );
+    await expect(handler.execute(request)).resolves.toEqual({});
+
+    expect(transaction.withTransaction).toHaveBeenCalledTimes(2);
+    expect(tx.webhookEvent.create).toHaveBeenCalledTimes(2);
+    expect(tx.smsDelivery.updateMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips a concurrent duplicate when the transactional claim loses P2002', async () => {
+    const creds = buildCreds();
+    const ciphertext = creds.encrypt(
+      { appSid: 'a', apiKey: 'b' },
+      DEFAULT_ORG_ID,
+    );
+    const tx = {
+      webhookEvent: {
+        create: jest.fn().mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError('unique constraint', {
+            code: 'P2002',
+            clientVersion: 'test',
+          }),
+        ),
+      },
+      smsDelivery: { updateMany: jest.fn() },
+    };
+    const prisma = {
+      organizationSmsConfig: {
+        findFirst: jest.fn().mockResolvedValue({
+          provider: 'UNIFONIC',
+          credentialsCiphertext: ciphertext,
+          webhookSecret,
+        }),
+      },
+    };
+    const transaction = buildTransaction(tx);
+    const handler = new SmsDlrHandler(
+      prisma as never,
+      new SmsProviderFactory(prisma as never, creds),
+      buildCls() as never,
+      transaction as never,
+    );
+
+    await expect(handler.execute({
+      provider: 'UNIFONIC',
+      organizationId: DEFAULT_ORG_ID,
+      rawBody,
+      signature: sig,
+    })).resolves.toEqual({ skipped: true });
+
+    expect(tx.smsDelivery.updateMany).not.toHaveBeenCalled();
+  });
+
   it('skips when no config for organizationId', async () => {
     const creds = buildCreds();
     const prisma = {
@@ -95,6 +247,7 @@ describe('SmsDlrHandler', () => {
       prisma as never,
       factory,
       buildCls() as never,
+      buildTransaction(prisma) as never,
     );
     const res = await handler.execute({
       provider: 'UNIFONIC',
@@ -123,6 +276,7 @@ describe('SmsDlrHandler', () => {
       prisma as never,
       factory,
       buildCls() as never,
+      buildTransaction(prisma) as never,
     );
     const res = await handler.execute({
       provider: 'UNIFONIC', // wrong
@@ -155,6 +309,7 @@ describe('SmsDlrHandler', () => {
       prisma as never,
       factory,
       buildCls() as never,
+      buildTransaction(prisma) as never,
     );
     await expect(
       handler.execute({
@@ -184,6 +339,7 @@ describe('SmsDlrHandler', () => {
       prisma as never,
       factory,
       buildCls() as never,
+      buildTransaction(prisma) as never,
     );
     await expect(
       handler.execute({

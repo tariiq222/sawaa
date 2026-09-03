@@ -4,6 +4,11 @@
  */
 
 import { api } from "@/lib/api"
+import {
+  openApi,
+  type OpenApiRequestBody,
+  type OpenApiResponse,
+} from "@/lib/api/openapi"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type {
   Client,
@@ -96,22 +101,25 @@ export async function deleteClient(id: string): Promise<void> {
   return api.delete<void>(`/dashboard/people/clients/${id}`)
 }
 
-export interface SetClientActivePayload {
-  isActive: boolean
-  reason?: string
-}
+type SetClientActivePath =
+  "/api/v1/dashboard/people/clients/{id}/active"
 
-export interface SetClientActiveResult {
-  id: string
-  isActive: boolean
-}
+export type SetClientActivePayload = OpenApiRequestBody<
+  SetClientActivePath,
+  "patch"
+>
+
+export type SetClientActiveResult = OpenApiResponse<
+  SetClientActivePath,
+  "patch"
+>
 
 export async function setClientActive(
   id: string,
   payload: SetClientActivePayload,
 ): Promise<SetClientActiveResult> {
-  return api.patch<SetClientActiveResult>(
-    `/dashboard/people/clients/${id}/active`,
-    payload,
-  )
+  return openApi.patch("/api/v1/dashboard/people/clients/{id}/active", {
+    path: { id },
+    body: payload,
+  })
 }
