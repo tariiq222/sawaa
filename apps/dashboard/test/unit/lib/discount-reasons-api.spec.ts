@@ -21,8 +21,8 @@ const { getMock, postMock, patchMock, deleteMock } = vi.hoisted(() => ({
   deleteMock: vi.fn(),
 }))
 
-vi.mock("@/lib/api", () => ({
-  api: { get: getMock, post: postMock, patch: patchMock, delete: deleteMock },
+vi.mock("@/lib/api/openapi", () => ({
+  openApi: { get: getMock, post: postMock, patch: patchMock, delete: deleteMock },
 }))
 
 import {
@@ -46,8 +46,8 @@ describe("discount-reasons api", () => {
       // Default: includeInactive=false, the param must be `undefined` so the
       // api layer omits it from the query string.
       expect(getMock).toHaveBeenCalledWith(
-        "/dashboard/discount-reasons",
-        { includeInactive: undefined },
+        "/api/v1/dashboard/discount-reasons",
+        { query: { includeInactive: undefined } },
       )
     })
 
@@ -55,8 +55,8 @@ describe("discount-reasons api", () => {
       getMock.mockResolvedValueOnce([])
       await fetchDiscountReasons(true)
       expect(getMock).toHaveBeenCalledWith(
-        "/dashboard/discount-reasons",
-        { includeInactive: true },
+        "/api/v1/dashboard/discount-reasons",
+        { query: { includeInactive: true } },
       )
     })
 
@@ -92,7 +92,10 @@ describe("discount-reasons api", () => {
       })
       const input = { labelAr: "سبب إنساني", labelEn: "Compassionate", isActive: true, sortOrder: 1 }
       await createDiscountReason(input)
-      expect(postMock).toHaveBeenCalledWith("/dashboard/discount-reasons", input)
+      expect(postMock).toHaveBeenCalledWith(
+        "/api/v1/dashboard/discount-reasons",
+        { body: input },
+      )
     })
 
     it("returns the persisted DiscountReason (with backend-assigned id)", async () => {
@@ -139,8 +142,8 @@ describe("discount-reasons api", () => {
       })
       await updateDiscountReason("dr-1", { labelAr: "مسمّى جديد" })
       expect(patchMock).toHaveBeenCalledWith(
-        "/dashboard/discount-reasons/dr-1",
-        { labelAr: "مسمّى جديد" },
+        "/api/v1/dashboard/discount-reasons/{id}",
+        { path: { id: "dr-1" }, body: { labelAr: "مسمّى جديد" } },
       )
     })
 
@@ -170,13 +173,16 @@ describe("discount-reasons api", () => {
 
   describe("deleteDiscountReason", () => {
     it("DELETEs the row by id", async () => {
-      deleteMock.mockResolvedValueOnce({ id: "dr-1" })
+      deleteMock.mockResolvedValueOnce(undefined)
       await deleteDiscountReason("dr-1")
-      expect(deleteMock).toHaveBeenCalledWith("/dashboard/discount-reasons/dr-1")
+      expect(deleteMock).toHaveBeenCalledWith(
+        "/api/v1/dashboard/discount-reasons/{id}",
+        { path: { id: "dr-1" } },
+      )
     })
 
     it("returns the deleted id envelope", async () => {
-      deleteMock.mockResolvedValueOnce({ id: "dr-1" })
+      deleteMock.mockResolvedValueOnce(undefined)
       const result = await deleteDiscountReason("dr-1")
       expect(result).toEqual({ id: "dr-1" })
     })

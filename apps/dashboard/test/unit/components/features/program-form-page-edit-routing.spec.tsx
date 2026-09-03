@@ -29,6 +29,7 @@ const SUPERVISOR_ID = "00000000-0000-4000-a000-000000000003"
 const apiGet = vi.hoisted(() => vi.fn())
 const apiPost = vi.hoisted(() => vi.fn())
 const apiPatch = vi.hoisted(() => vi.fn())
+const openApiGet = vi.hoisted(() => vi.fn())
 
 // Replace the dashboard's `api` object with hoisted, observable mocks so the
 // REAL useCreateProgram / useUpdateProgram / useProgram / useEmployees /
@@ -50,6 +51,15 @@ vi.mock("@/lib/api", () => ({
     }
   },
   clearLegacyAccessTokenStorage: vi.fn(),
+}))
+
+vi.mock("@/lib/api/openapi", () => ({
+  openApi: {
+    get: openApiGet,
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  },
 }))
 
 // Keep the public-programs fetch on a stub so nothing else hits the wire.
@@ -123,6 +133,7 @@ function setupApiMocksForEdit() {
   })
   apiPatch.mockResolvedValueOnce({ id: PROGRAM_ID, ref: 1, status: "DRAFT", supervisorIds: [SUPERVISOR_ID] })
   apiPost.mockReset()
+  openApiGet.mockResolvedValue(paginatedEmpty())
 }
 
 function setupApiMocksForCreate() {
@@ -154,6 +165,65 @@ function setupApiMocksForCreate() {
   })
   apiPost.mockResolvedValueOnce({ id: "new-id" })
   apiPatch.mockReset()
+  openApiGet.mockImplementation((endpoint: string) => {
+    if (endpoint === "/api/v1/dashboard/organization/departments") {
+      return Promise.resolve({
+        items: [{
+          id: DEPARTMENT_ID,
+          nameAr: "قسم",
+          nameEn: null,
+          descriptionAr: null,
+          descriptionEn: null,
+          icon: null,
+          isVisible: true,
+          sortOrder: 0,
+          isActive: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          categories: [],
+          bookableCategoriesCount: 0,
+        }],
+        meta: {
+          page: 1,
+          limit: 100,
+          total: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      })
+    }
+    if (endpoint === "/api/v1/dashboard/organization/branches") {
+      return Promise.resolve({
+        items: [{
+          id: BRANCH_ID,
+          nameAr: "فرع",
+          nameEn: null,
+          addressAr: null,
+          addressEn: null,
+          phone: null,
+          city: null,
+          country: "SA",
+          latitude: null,
+          longitude: null,
+          isMain: false,
+          isActive: true,
+          timezone: "Asia/Riyadh",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        }],
+        meta: {
+          page: 1,
+          limit: 50,
+          total: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      })
+    }
+    return Promise.resolve(paginatedEmpty())
+  })
 }
 
 function makeWrapper() {
@@ -178,6 +248,7 @@ beforeEach(() => {
   apiGet.mockReset()
   apiPost.mockReset()
   apiPatch.mockReset()
+  openApiGet.mockReset()
   pushMock.mockReset()
   fetchSpy.mockClear()
 })
@@ -268,9 +339,10 @@ describe("ProgramFormPage — real component tree, edit vs create routing", () =
       // to set values on them.
       await waitFor(() => {
         const calls = apiGet.mock.calls.map((args) => args[0] as string)
-        expect(calls.some((u) => u.startsWith("/dashboard/organization/departments"))).toBe(true)
-        expect(calls.some((u) => u.startsWith("/dashboard/organization/branches"))).toBe(true)
         expect(calls.some((u) => u.startsWith("/dashboard/people/employees"))).toBe(true)
+        const openApiCalls = openApiGet.mock.calls.map((args) => args[0] as string)
+        expect(openApiCalls).toContain("/api/v1/dashboard/organization/departments")
+        expect(openApiCalls).toContain("/api/v1/dashboard/organization/branches")
       }, { timeout: 3000 })
 
       const setByName = (name: string, value: string) => {

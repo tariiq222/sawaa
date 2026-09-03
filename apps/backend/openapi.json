@@ -604,6 +604,411 @@
         ],
         "type": "string"
       },
+      "BranchAssignmentDeletedResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Deleted assignment UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "BranchBusinessHourResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "description": "Day of week, from Sunday (0) to Saturday (6)",
+            "example": 0,
+            "type": "number"
+          },
+          "endTime": {
+            "description": "Closing time in HH:mm format",
+            "example": "17:00",
+            "type": "string"
+          },
+          "id": {
+            "description": "Business-hour record UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "type": "string"
+          },
+          "isOpen": {
+            "description": "Whether the branch is open on this day",
+            "example": true,
+            "type": "boolean"
+          },
+          "startTime": {
+            "description": "Opening time in HH:mm format",
+            "example": "09:00",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "isOpen",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "BranchDetailResponseDto": {
+        "properties": {
+          "addressAr": {
+            "description": "Arabic address",
+            "example": "شارع الملك فهد، الرياض",
+            "nullable": true,
+            "type": "string"
+          },
+          "addressEn": {
+            "description": "English address",
+            "example": "King Fahd Road, Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "businessHours": {
+            "description": "Weekly business hours",
+            "items": {
+              "$ref": "#/components/schemas/BranchBusinessHourResponseDto"
+            },
+            "type": "array"
+          },
+          "city": {
+            "description": "City",
+            "example": "Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "country": {
+            "description": "ISO country code",
+            "example": "SA",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "holidays": {
+            "description": "Branch holidays",
+            "items": {
+              "$ref": "#/components/schemas/BranchHolidayResponseDto"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the branch is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isMain": {
+            "description": "Whether this is the main branch",
+            "example": true,
+            "type": "boolean"
+          },
+          "latitude": {
+            "description": "GPS latitude",
+            "example": 24.7136,
+            "nullable": true,
+            "type": "number"
+          },
+          "longitude": {
+            "description": "GPS longitude",
+            "example": 46.6753,
+            "nullable": true,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic branch name",
+            "example": "فرع الرياض",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English branch name",
+            "example": "Riyadh Branch",
+            "nullable": true,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Branch phone number",
+            "example": "+966112345678",
+            "nullable": true,
+            "type": "string"
+          },
+          "timezone": {
+            "description": "IANA timezone identifier",
+            "example": "Asia/Riyadh",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "phone",
+          "addressAr",
+          "addressEn",
+          "city",
+          "country",
+          "latitude",
+          "longitude",
+          "isActive",
+          "isMain",
+          "timezone",
+          "createdAt",
+          "updatedAt",
+          "businessHours",
+          "holidays"
+        ],
+        "type": "object"
+      },
+      "BranchEmployeeAssignmentResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "id": {
+            "description": "Assignment UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "branchId"
+        ],
+        "type": "object"
+      },
+      "BranchHolidayResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "date": {
+            "description": "Holiday date",
+            "example": "2026-09-23T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Holiday record UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic holiday name",
+            "example": "اليوم الوطني",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English holiday name",
+            "example": "National Day",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "date",
+          "nameAr",
+          "nameEn",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "BranchListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching records",
+            "example": 42,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "BranchResponseDto": {
+        "properties": {
+          "addressAr": {
+            "description": "Arabic address",
+            "example": "شارع الملك فهد، الرياض",
+            "nullable": true,
+            "type": "string"
+          },
+          "addressEn": {
+            "description": "English address",
+            "example": "King Fahd Road, Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "city": {
+            "description": "City",
+            "example": "Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "country": {
+            "description": "ISO country code",
+            "example": "SA",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the branch is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isMain": {
+            "description": "Whether this is the main branch",
+            "example": true,
+            "type": "boolean"
+          },
+          "latitude": {
+            "description": "GPS latitude",
+            "example": 24.7136,
+            "nullable": true,
+            "type": "number"
+          },
+          "longitude": {
+            "description": "GPS longitude",
+            "example": 46.6753,
+            "nullable": true,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic branch name",
+            "example": "فرع الرياض",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English branch name",
+            "example": "Riyadh Branch",
+            "nullable": true,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Branch phone number",
+            "example": "+966112345678",
+            "nullable": true,
+            "type": "string"
+          },
+          "timezone": {
+            "description": "IANA timezone identifier",
+            "example": "Asia/Riyadh",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "phone",
+          "addressAr",
+          "addressEn",
+          "city",
+          "country",
+          "latitude",
+          "longitude",
+          "isActive",
+          "isMain",
+          "timezone",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "BreakWindowDto": {
         "properties": {
           "dayOfWeek": {
@@ -3580,6 +3985,19 @@
         ],
         "type": "object"
       },
+      "DeleteDepartmentResponseDto": {
+        "properties": {
+          "deleted": {
+            "description": "Whether the department was deleted",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "type": "object"
+      },
       "DeliveryType": {
         "description": "Delivery channel (IN_PERSON or ONLINE)",
         "enum": [
@@ -3604,6 +4022,355 @@
         "required": [
           "refundRequestId",
           "reason"
+        ],
+        "type": "object"
+      },
+      "DepartmentCategoryResponseDto": {
+        "properties": {
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background color",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Category image URL",
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "DepartmentListItemResponseDto": {
+        "properties": {
+          "bookableCategoriesCount": {
+            "description": "Active categories with at least one bookable option",
+            "example": 2,
+            "type": "number"
+          },
+          "categories": {
+            "description": "Categories assigned to the department",
+            "items": {
+              "$ref": "#/components/schemas/DepartmentCategoryResponseDto"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic department description",
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English department description",
+            "nullable": true,
+            "type": "string"
+          },
+          "icon": {
+            "description": "Department icon identifier",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Department UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the department is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isVisible": {
+            "description": "Whether the department is shown in public navigation",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic department name",
+            "example": "قسم الاستشارات الأسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English department name",
+            "example": "Family Counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Department display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "icon",
+          "isVisible",
+          "sortOrder",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "categories",
+          "bookableCategoriesCount"
+        ],
+        "type": "object"
+      },
+      "DepartmentListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching records",
+            "example": 42,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "DepartmentResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic department description",
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English department description",
+            "nullable": true,
+            "type": "string"
+          },
+          "icon": {
+            "description": "Department icon identifier",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Department UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the department is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isVisible": {
+            "description": "Whether the department is shown in public navigation",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic department name",
+            "example": "قسم الاستشارات الأسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English department name",
+            "example": "Family Counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Department display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "icon",
+          "isVisible",
+          "sortOrder",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "DiscountReasonResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Discount reason UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the reason is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "labelAr": {
+            "description": "Reason label in Arabic",
+            "example": "خصم من المعالج",
+            "type": "string"
+          },
+          "labelEn": {
+            "description": "Reason label in English",
+            "example": "Therapist discount",
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Sort order (ascending)",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "labelAr",
+          "labelEn",
+          "isActive",
+          "sortOrder",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
@@ -5101,6 +5868,30 @@
         ],
         "type": "string"
       },
+      "PaginatedBranchesDto": {
+        "properties": {
+          "items": {
+            "description": "Branches on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/BranchResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BranchListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
       "PaginatedClientsDto": {
         "properties": {
           "items": {
@@ -5111,6 +5902,30 @@
           },
           "meta": {
             "$ref": "#/components/schemas/ListMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PaginatedDepartmentsResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Departments on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/DepartmentListItemResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DepartmentListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
           }
         },
         "required": [
@@ -14981,6 +15796,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DiscountReasonResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of discount reasons"
           },
           "400": {
@@ -15049,6 +15874,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountReasonResponseDto"
+                }
+              }
+            },
             "description": "Discount reason created"
           },
           "400": {
@@ -15219,6 +16051,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountReasonResponseDto"
+                }
+              }
+            },
             "description": "Discount reason updated"
           },
           "400": {
@@ -20638,6 +21477,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedBranchesDto"
+                }
+              }
+            },
             "description": "Paginated list of branches"
           },
           "400": {
@@ -20706,6 +21552,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchResponseDto"
+                }
+              }
+            },
             "description": "Branch created"
           },
           "400": {
@@ -20856,6 +21709,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchDetailResponseDto"
+                }
+              }
+            },
             "description": "Branch details"
           },
           "400": {
@@ -20945,6 +21805,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchResponseDto"
+                }
+              }
+            },
             "description": "Branch updated"
           },
           "400": {
@@ -21115,6 +21982,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchEmployeeAssignmentResponseDto"
+                }
+              }
+            },
             "description": "Employee assigned to branch"
           },
           "400": {
@@ -21205,7 +22079,14 @@
           }
         ],
         "responses": {
-          "204": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchAssignmentDeletedResponseDto"
+                }
+              }
+            },
             "description": "Employee unassigned from branch"
           },
           "400": {
@@ -21662,6 +22543,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedDepartmentsResponseDto"
+                }
+              }
+            },
             "description": "Paginated list of departments"
           },
           "400": {
@@ -21730,6 +22618,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentResponseDto"
+                }
+              }
+            },
             "description": "Department created"
           },
           "400": {
@@ -21800,7 +22695,14 @@
           }
         ],
         "responses": {
-          "204": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDepartmentResponseDto"
+                }
+              }
+            },
             "description": "Department deleted"
           },
           "400": {
@@ -21890,6 +22792,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentResponseDto"
+                }
+              }
+            },
             "description": "Department updated"
           },
           "400": {

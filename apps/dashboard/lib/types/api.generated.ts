@@ -5106,6 +5106,295 @@ export interface components {
          * @enum {string}
          */
         BookingType: "INDIVIDUAL" | "WALK_IN" | "GROUP";
+        BranchAssignmentDeletedResponseDto: {
+            /**
+             * @description Deleted assignment UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            id: string;
+        };
+        BranchBusinessHourResponseDto: {
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Day of week, from Sunday (0) to Saturday (6)
+             * @example 0
+             */
+            dayOfWeek: number;
+            /**
+             * @description Closing time in HH:mm format
+             * @example 17:00
+             */
+            endTime: string;
+            /**
+             * @description Business-hour record UUID
+             * @example 00000000-0000-4000-a000-000000000010
+             */
+            id: string;
+            /**
+             * @description Whether the branch is open on this day
+             * @example true
+             */
+            isOpen: boolean;
+            /**
+             * @description Opening time in HH:mm format
+             * @example 09:00
+             */
+            startTime: string;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        BranchDetailResponseDto: {
+            /**
+             * @description Arabic address
+             * @example شارع الملك فهد، الرياض
+             */
+            addressAr: string | null;
+            /**
+             * @description English address
+             * @example King Fahd Road, Riyadh
+             */
+            addressEn: string | null;
+            /** @description Weekly business hours */
+            businessHours: components["schemas"]["BranchBusinessHourResponseDto"][];
+            /**
+             * @description City
+             * @example Riyadh
+             */
+            city: string | null;
+            /**
+             * @description ISO country code
+             * @example SA
+             */
+            country: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Branch holidays */
+            holidays: components["schemas"]["BranchHolidayResponseDto"][];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the branch is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether this is the main branch
+             * @example true
+             */
+            isMain: boolean;
+            /**
+             * @description GPS latitude
+             * @example 24.7136
+             */
+            latitude: number | null;
+            /**
+             * @description GPS longitude
+             * @example 46.6753
+             */
+            longitude: number | null;
+            /**
+             * @description Arabic branch name
+             * @example فرع الرياض
+             */
+            nameAr: string;
+            /**
+             * @description English branch name
+             * @example Riyadh Branch
+             */
+            nameEn: string | null;
+            /**
+             * @description Branch phone number
+             * @example +966112345678
+             */
+            phone: string | null;
+            /**
+             * @description IANA timezone identifier
+             * @example Asia/Riyadh
+             */
+            timezone: string;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        BranchEmployeeAssignmentResponseDto: {
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            employeeId: string;
+            /**
+             * @description Assignment UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            id: string;
+        };
+        BranchHolidayResponseDto: {
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Holiday date
+             * @example 2026-09-23T00:00:00.000Z
+             */
+            date: string;
+            /**
+             * @description Holiday record UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            id: string;
+            /**
+             * @description Arabic holiday name
+             * @example اليوم الوطني
+             */
+            nameAr: string;
+            /**
+             * @description English holiday name
+             * @example National Day
+             */
+            nameEn: string | null;
+        };
+        BranchListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching records
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        BranchResponseDto: {
+            /**
+             * @description Arabic address
+             * @example شارع الملك فهد، الرياض
+             */
+            addressAr: string | null;
+            /**
+             * @description English address
+             * @example King Fahd Road, Riyadh
+             */
+            addressEn: string | null;
+            /**
+             * @description City
+             * @example Riyadh
+             */
+            city: string | null;
+            /**
+             * @description ISO country code
+             * @example SA
+             */
+            country: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the branch is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether this is the main branch
+             * @example true
+             */
+            isMain: boolean;
+            /**
+             * @description GPS latitude
+             * @example 24.7136
+             */
+            latitude: number | null;
+            /**
+             * @description GPS longitude
+             * @example 46.6753
+             */
+            longitude: number | null;
+            /**
+             * @description Arabic branch name
+             * @example فرع الرياض
+             */
+            nameAr: string;
+            /**
+             * @description English branch name
+             * @example Riyadh Branch
+             */
+            nameEn: string | null;
+            /**
+             * @description Branch phone number
+             * @example +966112345678
+             */
+            phone: string | null;
+            /**
+             * @description IANA timezone identifier
+             * @example Asia/Riyadh
+             */
+            timezone: string;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
         BreakWindowDto: {
             /**
              * @description Day of week (0 = Sunday, 6 = Saturday)
@@ -6987,6 +7276,13 @@ export interface components {
              */
             price: number;
         };
+        DeleteDepartmentResponseDto: {
+            /**
+             * @description Whether the department was deleted
+             * @example true
+             */
+            deleted: boolean;
+        };
         /**
          * @description Delivery channel (IN_PERSON or ONLINE)
          * @enum {string}
@@ -7003,6 +7299,242 @@ export interface components {
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
             refundRequestId: string;
+        };
+        DepartmentCategoryResponseDto: {
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Owning department UUID */
+            departmentId: string | null;
+            /** @description Category icon background color */
+            iconBgColor: string | null;
+            /** @description Category icon name */
+            iconName: string | null;
+            /**
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /** @description Category image URL */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        DepartmentListItemResponseDto: {
+            /**
+             * @description Active categories with at least one bookable option
+             * @example 2
+             */
+            bookableCategoriesCount: number;
+            /** @description Categories assigned to the department */
+            categories: components["schemas"]["DepartmentCategoryResponseDto"][];
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Arabic department description */
+            descriptionAr: string | null;
+            /** @description English department description */
+            descriptionEn: string | null;
+            /**
+             * @description Department icon identifier
+             * @example family
+             */
+            icon: string | null;
+            /**
+             * @description Department UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the department is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the department is shown in public navigation
+             * @example true
+             */
+            isVisible: boolean;
+            /**
+             * @description Arabic department name
+             * @example قسم الاستشارات الأسرية
+             */
+            nameAr: string;
+            /**
+             * @description English department name
+             * @example Family Counseling
+             */
+            nameEn: string | null;
+            /**
+             * @description Department display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        DepartmentListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching records
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        DepartmentResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Arabic department description */
+            descriptionAr: string | null;
+            /** @description English department description */
+            descriptionEn: string | null;
+            /**
+             * @description Department icon identifier
+             * @example family
+             */
+            icon: string | null;
+            /**
+             * @description Department UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the department is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the department is shown in public navigation
+             * @example true
+             */
+            isVisible: boolean;
+            /**
+             * @description Arabic department name
+             * @example قسم الاستشارات الأسرية
+             */
+            nameAr: string;
+            /**
+             * @description English department name
+             * @example Family Counseling
+             */
+            nameEn: string | null;
+            /**
+             * @description Department display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        DiscountReasonResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Discount reason UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Whether the reason is selectable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Reason label in Arabic
+             * @example خصم من المعالج
+             */
+            labelAr: string;
+            /**
+             * @description Reason label in English
+             * @example Therapist discount
+             */
+            labelEn: string | null;
+            /**
+             * @description Sort order (ascending)
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
         };
         DurationOptionInputDto: {
             /**
@@ -7917,9 +8449,21 @@ export interface components {
         };
         /** @enum {string} */
         PackagePurchaseStatus: "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED";
+        PaginatedBranchesDto: {
+            /** @description Branches on the requested page */
+            items: components["schemas"]["BranchResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["BranchListMetaDto"];
+        };
         PaginatedClientsDto: {
             items: components["schemas"]["ClientResponseDto"][];
             meta: components["schemas"]["ListMetaDto"];
+        };
+        PaginatedDepartmentsResponseDto: {
+            /** @description Departments on the requested page */
+            items: components["schemas"]["DepartmentListItemResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["DepartmentListMetaDto"];
         };
         PaginatedEmployeesDto: {
             items: components["schemas"]["EmployeeResponseDto"][];
@@ -14836,7 +15380,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DiscountReasonResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -14894,7 +15440,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DiscountReasonResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -15030,7 +15578,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DiscountReasonResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -18991,7 +19541,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedBranchesDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19049,7 +19601,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19106,7 +19660,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19242,7 +19798,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19378,7 +19936,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchEmployeeAssignmentResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19442,11 +20002,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Employee unassigned from branch */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchAssignmentDeletedResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19777,7 +20339,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedDepartmentsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19835,7 +20399,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19888,11 +20454,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Department deleted */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteDepartmentResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19962,7 +20530,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {

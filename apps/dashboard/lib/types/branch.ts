@@ -24,15 +24,6 @@ export interface BranchEmployeeAssignment {
   id: string
   employeeId: string
   branchId: string
-  employee: {
-    id: string
-    isActive: boolean
-    specialty: string | null
-    specialtyAr: string | null
-    name: string
-    nameEn: string
-    email: string | null
-  }
 }
 
 /* ─── Query ─── */
