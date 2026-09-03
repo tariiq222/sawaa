@@ -1102,15 +1102,17 @@
         "type": "object"
       },
       "ClientAccountType": {
-        "description": "Account type",
+        "description": "Account type (case-insensitive)",
         "enum": [
           "FULL",
-          "WALK_IN"
+          "WALK_IN",
+          "full",
+          "walk_in"
         ],
         "type": "string"
       },
       "ClientBloodType": {
-        "description": "Blood type",
+        "description": "Blood type (case-insensitive)",
         "enum": [
           "A_POS",
           "A_NEG",
@@ -1120,9 +1122,56 @@
           "AB_NEG",
           "O_POS",
           "O_NEG",
-          "UNKNOWN"
+          "UNKNOWN",
+          "a_pos",
+          "a_neg",
+          "b_pos",
+          "b_neg",
+          "ab_pos",
+          "ab_neg",
+          "o_pos",
+          "o_neg",
+          "unknown"
         ],
         "type": "string"
+      },
+      "ClientBookingSummaryDto": {
+        "properties": {
+          "date": {
+            "description": "Booking date (ISO 8601)",
+            "example": "2026-06-01T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Booking UUID",
+            "example": "00000000-0000-0000-0000-000000000002",
+            "type": "string"
+          },
+          "status": {
+            "description": "Booking status (uppercase)",
+            "enum": [
+              "PENDING",
+              "PENDING_GROUP_FILL",
+              "AWAITING_PAYMENT",
+              "CONFIRMED",
+              "CANCELLED",
+              "COMPLETED",
+              "NO_SHOW",
+              "EXPIRED",
+              "CANCEL_REQUESTED",
+              "DEPOSIT_PAID"
+            ],
+            "example": "CONFIRMED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "status"
+        ],
+        "type": "object"
       },
       "ClientCancelBookingDto": {
         "properties": {
@@ -1279,10 +1328,12 @@
         "type": "object"
       },
       "ClientGender": {
-        "description": "Client gender",
+        "description": "Client gender (case-insensitive)",
         "enum": [
           "MALE",
-          "FEMALE"
+          "FEMALE",
+          "male",
+          "female"
         ],
         "type": "string"
       },
@@ -1336,11 +1387,60 @@
             "example": "full",
             "type": "string"
           },
+          "allergies": {
+            "description": "Known allergies",
+            "example": "Penicillin",
+            "nullable": true,
+            "type": "string"
+          },
           "avatarUrl": {
             "description": "Avatar image URL",
             "example": "https://cdn.example.com/avatars/sara.jpg",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "bloodType": {
+            "description": "Blood type (uppercase)",
+            "enum": [
+              "A_POS",
+              "A_NEG",
+              "B_POS",
+              "B_NEG",
+              "AB_POS",
+              "AB_NEG",
+              "O_POS",
+              "O_NEG",
+              "UNKNOWN"
+            ],
+            "example": "A_POS",
+            "nullable": true,
+            "type": "string"
+          },
+          "chronicConditions": {
+            "description": "Chronic conditions",
+            "example": "Type 2 Diabetes",
+            "nullable": true,
+            "type": "string"
+          },
+          "claimedAt": {
+            "description": "Account claim timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentVersion": {
+            "description": "Accepted privacy consent version",
+            "example": "2026-01",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentedAt": {
+            "description": "Privacy consent timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
           },
           "createdAt": {
             "description": "Creation timestamp",
@@ -1350,21 +1450,48 @@
           },
           "dateOfBirth": {
             "description": "Date of birth (ISO 8601)",
-            "example": "1990-06-15",
+            "example": "1990-06-15T00:00:00.000Z",
+            "format": "date-time",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "deletedAt": {
+            "description": "Soft deletion timestamp",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
           },
           "email": {
             "description": "Email address",
             "example": "sara@example.com",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "emailVerified": {
+            "description": "Email verification timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "emergencyName": {
+            "description": "Emergency contact name",
+            "example": "Ahmad Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "emergencyPhone": {
+            "description": "Emergency contact phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
           },
           "firstName": {
             "description": "First name",
             "example": "Sara",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "gender": {
             "description": "Gender (lowercase)",
@@ -1386,46 +1513,172 @@
             "example": true,
             "type": "boolean"
           },
+          "lastBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Most recent past booking (populated for list results)",
+            "nullable": true,
+            "type": "object"
+          },
+          "lastLoginAt": {
+            "description": "Last login timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "lastName": {
             "description": "Last name",
             "example": "Al-Harbi",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "middleName": {
+            "description": "Middle name",
+            "example": "Ali",
+            "nullable": true,
+            "type": "string"
           },
           "name": {
             "description": "Full display name",
             "example": "Sara Al-Harbi",
             "type": "string"
           },
+          "nationalId": {
+            "description": "National ID or Iqama number",
+            "example": "1234567890",
+            "nullable": true,
+            "type": "string"
+          },
+          "nationality": {
+            "description": "Nationality",
+            "example": "Saudi",
+            "nullable": true,
+            "type": "string"
+          },
+          "nextBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Next future booking (populated for list results)",
+            "nullable": true,
+            "type": "object"
+          },
+          "notes": {
+            "description": "Internal notes about the client",
+            "example": "Prefers morning appointments",
+            "nullable": true,
+            "type": "string"
+          },
           "phone": {
             "description": "Mobile phone number",
             "example": "+966501234567",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "phoneVerified": {
+            "description": "Phone verification timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "preferredLocale": {
+            "description": "Preferred locale (ISO 639-1)",
+            "example": "ar",
+            "nullable": true,
+            "type": "string"
+          },
+          "pushEnabled": {
+            "description": "Whether push notifications are enabled",
+            "example": true,
+            "type": "boolean"
+          },
+          "ref": {
+            "description": "Sequential client reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "source": {
+            "description": "Acquisition source (uppercase)",
+            "enum": [
+              "WALK_IN",
+              "ONLINE",
+              "REFERRAL",
+              "WHATSAPP"
+            ],
+            "example": "WALK_IN",
+            "type": "string"
           },
           "updatedAt": {
             "description": "Last update timestamp",
             "example": "2026-01-01T00:00:00.000Z",
             "format": "date-time",
             "type": "string"
+          },
+          "userId": {
+            "description": "Linked user UUID",
+            "example": "00000000-0000-0000-0000-000000000001",
+            "nullable": true,
+            "type": "string"
           }
         },
         "required": [
           "id",
+          "ref",
+          "userId",
           "name",
+          "firstName",
+          "middleName",
+          "lastName",
+          "phone",
+          "email",
+          "emailVerified",
+          "phoneVerified",
+          "dateOfBirth",
+          "gender",
+          "nationality",
+          "nationalId",
+          "emergencyName",
+          "emergencyPhone",
+          "bloodType",
+          "allergies",
+          "chronicConditions",
+          "avatarUrl",
+          "notes",
+          "source",
+          "accountType",
+          "claimedAt",
           "isActive",
+          "deletedAt",
+          "lastLoginAt",
+          "preferredLocale",
+          "pushEnabled",
+          "consentedAt",
+          "consentVersion",
+          "lastBooking",
+          "nextBooking",
           "createdAt",
           "updatedAt"
         ],
         "type": "object"
       },
       "ClientSource": {
-        "description": "Acquisition source",
+        "description": "Acquisition source (case-insensitive)",
         "enum": [
           "WALK_IN",
           "ONLINE",
           "REFERRAL",
-          "WHATSAPP"
+          "WHATSAPP",
+          "walk_in",
+          "online",
+          "referral",
+          "whatsapp"
         ],
         "type": "string"
       },
@@ -1692,8 +1945,8 @@
                 "$ref": "#/components/schemas/ClientAccountType"
               }
             ],
-            "description": "Account type",
-            "example": "FULL"
+            "description": "Account type (case-insensitive)",
+            "example": "full"
           },
           "allergies": {
             "description": "Known allergies",
@@ -1711,8 +1964,8 @@
                 "$ref": "#/components/schemas/ClientBloodType"
               }
             ],
-            "description": "Blood type",
-            "example": "A_POS"
+            "description": "Blood type (case-insensitive)",
+            "example": "a_pos"
           },
           "chronicConditions": {
             "description": "Chronic conditions",
@@ -1750,8 +2003,8 @@
                 "$ref": "#/components/schemas/ClientGender"
               }
             ],
-            "description": "Client gender",
-            "example": "FEMALE"
+            "description": "Client gender (case-insensitive)",
+            "example": "female"
           },
           "isActive": {
             "description": "Whether the client is active",
@@ -1794,8 +2047,8 @@
                 "$ref": "#/components/schemas/ClientSource"
               }
             ],
-            "description": "Acquisition source",
-            "example": "REFERRAL"
+            "description": "Acquisition source (case-insensitive)",
+            "example": "referral"
           },
           "userId": {
             "description": "Linked user account UUID",
@@ -1807,6 +2060,304 @@
           "firstName",
           "lastName",
           "phone"
+        ],
+        "type": "object"
+      },
+      "CreateClientResponseDto": {
+        "properties": {
+          "accountType": {
+            "description": "Account type",
+            "enum": [
+              "full",
+              "walk_in"
+            ],
+            "example": "full",
+            "type": "string"
+          },
+          "allergies": {
+            "description": "Known allergies",
+            "example": "Penicillin",
+            "nullable": true,
+            "type": "string"
+          },
+          "avatarUrl": {
+            "description": "Avatar image URL",
+            "example": "https://cdn.example.com/avatars/sara.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "bloodType": {
+            "description": "Blood type (uppercase)",
+            "enum": [
+              "A_POS",
+              "A_NEG",
+              "B_POS",
+              "B_NEG",
+              "AB_POS",
+              "AB_NEG",
+              "O_POS",
+              "O_NEG",
+              "UNKNOWN"
+            ],
+            "example": "A_POS",
+            "nullable": true,
+            "type": "string"
+          },
+          "chronicConditions": {
+            "description": "Chronic conditions",
+            "example": "Type 2 Diabetes",
+            "nullable": true,
+            "type": "string"
+          },
+          "claimedAt": {
+            "description": "Account claim timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentVersion": {
+            "description": "Accepted privacy consent version",
+            "example": "2026-01",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentedAt": {
+            "description": "Privacy consent timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "description": "Date of birth (ISO 8601)",
+            "example": "1990-06-15T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "deletedAt": {
+            "description": "Soft deletion timestamp",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address",
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "emailVerified": {
+            "description": "Email verification timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "emergencyName": {
+            "description": "Emergency contact name",
+            "example": "Ahmad Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "emergencyPhone": {
+            "description": "Emergency contact phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "First name",
+            "example": "Sara",
+            "nullable": true,
+            "type": "string"
+          },
+          "gender": {
+            "description": "Gender (lowercase)",
+            "enum": [
+              "male",
+              "female"
+            ],
+            "example": "female",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Client UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the account is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isExisting": {
+            "description": "Whether an existing client was returned by phone deduplication",
+            "example": false,
+            "type": "boolean"
+          },
+          "lastBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Most recent past booking (populated for list results)",
+            "nullable": true,
+            "type": "object"
+          },
+          "lastLoginAt": {
+            "description": "Last login timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name",
+            "example": "Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "middleName": {
+            "description": "Middle name",
+            "example": "Ali",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Full display name",
+            "example": "Sara Al-Harbi",
+            "type": "string"
+          },
+          "nationalId": {
+            "description": "National ID or Iqama number",
+            "example": "1234567890",
+            "nullable": true,
+            "type": "string"
+          },
+          "nationality": {
+            "description": "Nationality",
+            "example": "Saudi",
+            "nullable": true,
+            "type": "string"
+          },
+          "nextBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Next future booking (populated for list results)",
+            "nullable": true,
+            "type": "object"
+          },
+          "notes": {
+            "description": "Internal notes about the client",
+            "example": "Prefers morning appointments",
+            "nullable": true,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Mobile phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "phoneVerified": {
+            "description": "Phone verification timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "preferredLocale": {
+            "description": "Preferred locale (ISO 639-1)",
+            "example": "ar",
+            "nullable": true,
+            "type": "string"
+          },
+          "pushEnabled": {
+            "description": "Whether push notifications are enabled",
+            "example": true,
+            "type": "boolean"
+          },
+          "ref": {
+            "description": "Sequential client reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "source": {
+            "description": "Acquisition source (uppercase)",
+            "enum": [
+              "WALK_IN",
+              "ONLINE",
+              "REFERRAL",
+              "WHATSAPP"
+            ],
+            "example": "WALK_IN",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Linked user UUID",
+            "example": "00000000-0000-0000-0000-000000000001",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "userId",
+          "name",
+          "firstName",
+          "middleName",
+          "lastName",
+          "phone",
+          "email",
+          "emailVerified",
+          "phoneVerified",
+          "dateOfBirth",
+          "gender",
+          "nationality",
+          "nationalId",
+          "emergencyName",
+          "emergencyPhone",
+          "bloodType",
+          "allergies",
+          "chronicConditions",
+          "avatarUrl",
+          "notes",
+          "source",
+          "accountType",
+          "claimedAt",
+          "isActive",
+          "deletedAt",
+          "lastLoginAt",
+          "preferredLocale",
+          "pushEnabled",
+          "consentedAt",
+          "consentVersion",
+          "lastBooking",
+          "nextBooking",
+          "createdAt",
+          "updatedAt",
+          "isExisting"
         ],
         "type": "object"
       },
@@ -5993,20 +6544,20 @@
                 "$ref": "#/components/schemas/ClientAccountType"
               }
             ],
-            "description": "Account type",
-            "example": "FULL"
+            "description": "Account type (case-insensitive)",
+            "example": "full"
           },
           "allergies": {
             "description": "Known allergies",
             "example": "Penicillin",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "avatarUrl": {
             "description": "Avatar image URL",
             "example": "https://cdn.example.com/avatars/sara.jpg",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "bloodType": {
             "allOf": [
@@ -6014,39 +6565,39 @@
                 "$ref": "#/components/schemas/ClientBloodType"
               }
             ],
-            "description": "Blood type",
-            "example": "A_POS",
+            "description": "Blood type (case-insensitive)",
+            "example": "a_pos",
             "nullable": true
           },
           "chronicConditions": {
             "description": "Chronic conditions",
             "example": "Type 2 Diabetes",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "dateOfBirth": {
             "description": "Date of birth (ISO 8601)",
             "example": "1990-06-15",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "email": {
             "description": "Email address",
             "example": "user@example.com",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "emergencyName": {
             "description": "Emergency contact name",
             "example": "Ahmad Al-Harbi",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "emergencyPhone": {
             "description": "Emergency contact Saudi mobile number",
             "example": "+966501234567",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "firstName": {
             "description": "Client's first name",
@@ -6059,8 +6610,8 @@
                 "$ref": "#/components/schemas/ClientGender"
               }
             ],
-            "description": "Client gender",
-            "example": "FEMALE",
+            "description": "Client gender (case-insensitive)",
+            "example": "female",
             "nullable": true
           },
           "isActive": {
@@ -6077,37 +6628,37 @@
             "description": "Client's middle name",
             "example": "Ali",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "nationalId": {
             "description": "National ID or Iqama number",
             "example": "1234567890",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "nationality": {
             "description": "Nationality",
             "example": "Saudi",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "notes": {
             "description": "Internal notes about the client",
             "example": "Prefers morning appointments",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "phone": {
             "description": "Saudi mobile number (any common format; normalized to E.164)",
             "example": "+966501234567",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "preferredLocale": {
             "description": "Preferred locale (ISO 639-1)",
             "example": "ar",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "pushEnabled": {
             "description": "Whether the client receives push notifications",
@@ -6120,8 +6671,8 @@
                 "$ref": "#/components/schemas/ClientSource"
               }
             ],
-            "description": "Acquisition source",
-            "example": "REFERRAL"
+            "description": "Acquisition source (case-insensitive)",
+            "example": "referral"
           }
         },
         "type": "object"
@@ -24138,11 +24689,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientResponseDto"
+                  "$ref": "#/components/schemas/CreateClientResponseDto"
                 }
               }
             },
-            "description": "Client created"
+            "description": "Client created or matched by phone"
           },
           "400": {
             "content": {

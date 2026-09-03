@@ -5331,15 +5331,34 @@ export interface components {
             updatedAt: string;
         };
         /**
-         * @description Account type
+         * @description Account type (case-insensitive)
          * @enum {string}
          */
-        ClientAccountType: "FULL" | "WALK_IN";
+        ClientAccountType: "FULL" | "WALK_IN" | "full" | "walk_in";
         /**
-         * @description Blood type
+         * @description Blood type (case-insensitive)
          * @enum {string}
          */
-        ClientBloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN";
+        ClientBloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN" | "a_pos" | "a_neg" | "b_pos" | "b_neg" | "ab_pos" | "ab_neg" | "o_pos" | "o_neg" | "unknown";
+        ClientBookingSummaryDto: {
+            /**
+             * Format: date-time
+             * @description Booking date (ISO 8601)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            date: string;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description Booking status (uppercase)
+             * @example CONFIRMED
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
+        };
         ClientCancelBookingDto: {
             /** @description Reason for cancellation */
             reason?: string;
@@ -5384,10 +5403,10 @@ export interface components {
             senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
         };
         /**
-         * @description Client gender
+         * @description Client gender (case-insensitive)
          * @enum {string}
          */
-        ClientGender: "MALE" | "FEMALE";
+        ClientGender: "MALE" | "FEMALE" | "male" | "female";
         ClientLoginDto: {
             /**
              * @description Client email address (provide either email or phone, not both)
@@ -5416,12 +5435,45 @@ export interface components {
              * @example full
              * @enum {string}
              */
-            accountType?: "full" | "walk_in";
+            accountType: "full" | "walk_in";
+            /**
+             * @description Known allergies
+             * @example Penicillin
+             */
+            allergies: string | null;
             /**
              * @description Avatar image URL
              * @example https://cdn.example.com/avatars/sara.jpg
              */
-            avatarUrl?: Record<string, never> | null;
+            avatarUrl: string | null;
+            /**
+             * @description Blood type (uppercase)
+             * @example A_POS
+             * @enum {string|null}
+             */
+            bloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN" | null;
+            /**
+             * @description Chronic conditions
+             * @example Type 2 Diabetes
+             */
+            chronicConditions: string | null;
+            /**
+             * Format: date-time
+             * @description Account claim timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            claimedAt: string | null;
+            /**
+             * @description Accepted privacy consent version
+             * @example 2026-01
+             */
+            consentVersion: string | null;
+            /**
+             * Format: date-time
+             * @description Privacy consent timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            consentedAt: string | null;
             /**
              * Format: date-time
              * @description Creation timestamp
@@ -5429,26 +5481,49 @@ export interface components {
              */
             createdAt: string;
             /**
+             * Format: date-time
              * @description Date of birth (ISO 8601)
-             * @example 1990-06-15
+             * @example 1990-06-15T00:00:00.000Z
              */
-            dateOfBirth?: Record<string, never> | null;
+            dateOfBirth: string | null;
+            /**
+             * Format: date-time
+             * @description Soft deletion timestamp
+             * @example null
+             */
+            deletedAt: string | null;
             /**
              * @description Email address
              * @example sara@example.com
              */
-            email?: Record<string, never> | null;
+            email: string | null;
+            /**
+             * Format: date-time
+             * @description Email verification timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            emailVerified: string | null;
+            /**
+             * @description Emergency contact name
+             * @example Ahmad Al-Harbi
+             */
+            emergencyName: string | null;
+            /**
+             * @description Emergency contact phone number
+             * @example +966501234567
+             */
+            emergencyPhone: string | null;
             /**
              * @description First name
              * @example Sara
              */
-            firstName?: Record<string, never> | null;
+            firstName: string | null;
             /**
              * @description Gender (lowercase)
              * @example female
              * @enum {string|null}
              */
-            gender?: "male" | "female" | null;
+            gender: "male" | "female" | null;
             /**
              * @description Client UUID
              * @example 00000000-0000-0000-0000-000000000000
@@ -5459,33 +5534,95 @@ export interface components {
              * @example true
              */
             isActive: boolean;
+            /** @description Most recent past booking (populated for list results) */
+            lastBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * Format: date-time
+             * @description Last login timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            lastLoginAt: string | null;
             /**
              * @description Last name
              * @example Al-Harbi
              */
-            lastName?: Record<string, never> | null;
+            lastName: string | null;
+            /**
+             * @description Middle name
+             * @example Ali
+             */
+            middleName: string | null;
             /**
              * @description Full display name
              * @example Sara Al-Harbi
              */
             name: string;
             /**
+             * @description National ID or Iqama number
+             * @example 1234567890
+             */
+            nationalId: string | null;
+            /**
+             * @description Nationality
+             * @example Saudi
+             */
+            nationality: string | null;
+            /** @description Next future booking (populated for list results) */
+            nextBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * @description Internal notes about the client
+             * @example Prefers morning appointments
+             */
+            notes: string | null;
+            /**
              * @description Mobile phone number
              * @example +966501234567
              */
-            phone?: Record<string, never> | null;
+            phone: string | null;
+            /**
+             * Format: date-time
+             * @description Phone verification timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            phoneVerified: string | null;
+            /**
+             * @description Preferred locale (ISO 639-1)
+             * @example ar
+             */
+            preferredLocale: string | null;
+            /**
+             * @description Whether push notifications are enabled
+             * @example true
+             */
+            pushEnabled: boolean;
+            /**
+             * @description Sequential client reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Acquisition source (uppercase)
+             * @example WALK_IN
+             * @enum {string}
+             */
+            source: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP";
             /**
              * Format: date-time
              * @description Last update timestamp
              * @example 2026-01-01T00:00:00.000Z
              */
             updatedAt: string;
+            /**
+             * @description Linked user UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            userId: string | null;
         };
         /**
-         * @description Acquisition source
+         * @description Acquisition source (case-insensitive)
          * @enum {string}
          */
-        ClientSource: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP";
+        ClientSource: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP" | "walk_in" | "online" | "referral" | "whatsapp";
         CollectBookingPaymentDto: {
             /**
              * @description Amount to collect in integer halalas (1 SAR = 100). Omit to collect the full outstanding AFTER any discount. Must not exceed the outstanding balance — ProcessPaymentHandler enforces this.
@@ -5693,8 +5830,8 @@ export interface components {
         };
         CreateClientDto: {
             /**
-             * @description Account type
-             * @example FULL
+             * @description Account type (case-insensitive)
+             * @example full
              */
             accountType?: components["schemas"]["ClientAccountType"];
             /**
@@ -5708,8 +5845,8 @@ export interface components {
              */
             avatarUrl?: string;
             /**
-             * @description Blood type
-             * @example A_POS
+             * @description Blood type (case-insensitive)
+             * @example a_pos
              */
             bloodType?: components["schemas"]["ClientBloodType"];
             /**
@@ -5743,8 +5880,8 @@ export interface components {
              */
             firstName: string;
             /**
-             * @description Client gender
-             * @example FEMALE
+             * @description Client gender (case-insensitive)
+             * @example female
              */
             gender?: components["schemas"]["ClientGender"];
             /**
@@ -5783,8 +5920,8 @@ export interface components {
              */
             phone: string;
             /**
-             * @description Acquisition source
-             * @example REFERRAL
+             * @description Acquisition source (case-insensitive)
+             * @example referral
              */
             source?: components["schemas"]["ClientSource"];
             /**
@@ -5792,6 +5929,200 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             userId?: string;
+        };
+        CreateClientResponseDto: {
+            /**
+             * @description Account type
+             * @example full
+             * @enum {string}
+             */
+            accountType: "full" | "walk_in";
+            /**
+             * @description Known allergies
+             * @example Penicillin
+             */
+            allergies: string | null;
+            /**
+             * @description Avatar image URL
+             * @example https://cdn.example.com/avatars/sara.jpg
+             */
+            avatarUrl: string | null;
+            /**
+             * @description Blood type (uppercase)
+             * @example A_POS
+             * @enum {string|null}
+             */
+            bloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN" | null;
+            /**
+             * @description Chronic conditions
+             * @example Type 2 Diabetes
+             */
+            chronicConditions: string | null;
+            /**
+             * Format: date-time
+             * @description Account claim timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            claimedAt: string | null;
+            /**
+             * @description Accepted privacy consent version
+             * @example 2026-01
+             */
+            consentVersion: string | null;
+            /**
+             * Format: date-time
+             * @description Privacy consent timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            consentedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Date of birth (ISO 8601)
+             * @example 1990-06-15T00:00:00.000Z
+             */
+            dateOfBirth: string | null;
+            /**
+             * Format: date-time
+             * @description Soft deletion timestamp
+             * @example null
+             */
+            deletedAt: string | null;
+            /**
+             * @description Email address
+             * @example sara@example.com
+             */
+            email: string | null;
+            /**
+             * Format: date-time
+             * @description Email verification timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            emailVerified: string | null;
+            /**
+             * @description Emergency contact name
+             * @example Ahmad Al-Harbi
+             */
+            emergencyName: string | null;
+            /**
+             * @description Emergency contact phone number
+             * @example +966501234567
+             */
+            emergencyPhone: string | null;
+            /**
+             * @description First name
+             * @example Sara
+             */
+            firstName: string | null;
+            /**
+             * @description Gender (lowercase)
+             * @example female
+             * @enum {string|null}
+             */
+            gender: "male" | "female" | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Whether the account is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether an existing client was returned by phone deduplication
+             * @example false
+             */
+            isExisting: boolean;
+            /** @description Most recent past booking (populated for list results) */
+            lastBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * Format: date-time
+             * @description Last login timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            lastLoginAt: string | null;
+            /**
+             * @description Last name
+             * @example Al-Harbi
+             */
+            lastName: string | null;
+            /**
+             * @description Middle name
+             * @example Ali
+             */
+            middleName: string | null;
+            /**
+             * @description Full display name
+             * @example Sara Al-Harbi
+             */
+            name: string;
+            /**
+             * @description National ID or Iqama number
+             * @example 1234567890
+             */
+            nationalId: string | null;
+            /**
+             * @description Nationality
+             * @example Saudi
+             */
+            nationality: string | null;
+            /** @description Next future booking (populated for list results) */
+            nextBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * @description Internal notes about the client
+             * @example Prefers morning appointments
+             */
+            notes: string | null;
+            /**
+             * @description Mobile phone number
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * Format: date-time
+             * @description Phone verification timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            phoneVerified: string | null;
+            /**
+             * @description Preferred locale (ISO 639-1)
+             * @example ar
+             */
+            preferredLocale: string | null;
+            /**
+             * @description Whether push notifications are enabled
+             * @example true
+             */
+            pushEnabled: boolean;
+            /**
+             * @description Sequential client reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Acquisition source (uppercase)
+             * @example WALK_IN
+             * @enum {string}
+             */
+            source: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Linked user UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            userId: string | null;
         };
         CreateContactMessageDto: {
             /**
@@ -8409,58 +8740,58 @@ export interface components {
         };
         UpdateClientDto: {
             /**
-             * @description Account type
-             * @example FULL
+             * @description Account type (case-insensitive)
+             * @example full
              */
             accountType?: components["schemas"]["ClientAccountType"];
             /**
              * @description Known allergies
              * @example Penicillin
              */
-            allergies?: Record<string, never> | null;
+            allergies?: string | null;
             /**
              * @description Avatar image URL
              * @example https://cdn.example.com/avatars/sara.jpg
              */
-            avatarUrl?: Record<string, never> | null;
+            avatarUrl?: string | null;
             /**
-             * @description Blood type
-             * @example A_POS
+             * @description Blood type (case-insensitive)
+             * @example a_pos
              */
             bloodType?: components["schemas"]["ClientBloodType"] | null;
             /**
              * @description Chronic conditions
              * @example Type 2 Diabetes
              */
-            chronicConditions?: Record<string, never> | null;
+            chronicConditions?: string | null;
             /**
              * @description Date of birth (ISO 8601)
              * @example 1990-06-15
              */
-            dateOfBirth?: Record<string, never> | null;
+            dateOfBirth?: string | null;
             /**
              * @description Email address
              * @example user@example.com
              */
-            email?: Record<string, never> | null;
+            email?: string | null;
             /**
              * @description Emergency contact name
              * @example Ahmad Al-Harbi
              */
-            emergencyName?: Record<string, never> | null;
+            emergencyName?: string | null;
             /**
              * @description Emergency contact Saudi mobile number
              * @example +966501234567
              */
-            emergencyPhone?: Record<string, never> | null;
+            emergencyPhone?: string | null;
             /**
              * @description Client's first name
              * @example Sara
              */
             firstName?: string;
             /**
-             * @description Client gender
-             * @example FEMALE
+             * @description Client gender (case-insensitive)
+             * @example female
              */
             gender?: components["schemas"]["ClientGender"] | null;
             /**
@@ -8477,40 +8808,40 @@ export interface components {
              * @description Client's middle name
              * @example Ali
              */
-            middleName?: Record<string, never> | null;
+            middleName?: string | null;
             /**
              * @description National ID or Iqama number
              * @example 1234567890
              */
-            nationalId?: Record<string, never> | null;
+            nationalId?: string | null;
             /**
              * @description Nationality
              * @example Saudi
              */
-            nationality?: Record<string, never> | null;
+            nationality?: string | null;
             /**
              * @description Internal notes about the client
              * @example Prefers morning appointments
              */
-            notes?: Record<string, never> | null;
+            notes?: string | null;
             /**
              * @description Saudi mobile number (any common format; normalized to E.164)
              * @example +966501234567
              */
-            phone?: Record<string, never> | null;
+            phone?: string | null;
             /**
              * @description Preferred locale (ISO 639-1)
              * @example ar
              */
-            preferredLocale?: Record<string, never> | null;
+            preferredLocale?: string | null;
             /**
              * @description Whether the client receives push notifications
              * @example true
              */
             pushEnabled?: boolean;
             /**
-             * @description Acquisition source
-             * @example REFERRAL
+             * @description Acquisition source (case-insensitive)
+             * @example referral
              */
             source?: components["schemas"]["ClientSource"];
         };
@@ -21887,13 +22218,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Client created */
+            /** @description Client created or matched by phone */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ClientResponseDto"];
+                    "application/json": components["schemas"]["CreateClientResponseDto"];
                 };
             };
             /** @description Validation failed */

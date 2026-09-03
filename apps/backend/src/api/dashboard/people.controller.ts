@@ -12,7 +12,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
 import {
-  ClientResponseDto, EmployeeResponseDto,
+  ClientResponseDto, CreateClientResponseDto, EmployeeResponseDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
   EmployeeStatsResponseDto, SetClientActiveResponseDto,
   UploadAvatarResponseDto,
@@ -179,7 +179,7 @@ export class DashboardPeopleController {
   @CheckPermissions({ action: 'create', subject: 'Client' })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a client' })
-  @ApiCreatedResponse({ type: ClientResponseDto, description: 'Client created' })
+  @ApiCreatedResponse({ type: CreateClientResponseDto, description: 'Client created or matched by phone' })
   createClientEndpoint(@Body() body: CreateClientDto) {
     return this.createClient.execute(body);
   }

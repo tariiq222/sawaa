@@ -18,6 +18,16 @@ import { NormalizePhone } from '../../identity/shared/normalize-phone.transform'
 const toUpper = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.toUpperCase() : value;
 
+const inputEnum = (values: string[]) => [
+  ...values,
+  ...values.map((value) => value.toLowerCase()),
+];
+
+const GENDER_INPUT_VALUES = inputEnum(Object.values(ClientGender));
+const BLOOD_TYPE_INPUT_VALUES = inputEnum(Object.values(ClientBloodType));
+const SOURCE_INPUT_VALUES = inputEnum(Object.values(ClientSource));
+const ACCOUNT_TYPE_INPUT_VALUES = inputEnum(Object.values(ClientAccountType));
+
 // Saudi phone only: +966 then 5 then 8 digits (local number 5XXXXXXXX)
 const PHONE_REGEX = /^\+9665\d{8}$/;
 
@@ -37,7 +47,7 @@ export class CreateClientDto {
   @ApiPropertyOptional({ description: 'Email address', example: 'user@example.com' })
   @IsOptional() @IsEmail() email?: string;
 
-  @ApiPropertyOptional({ description: 'Client gender', enum: ClientGender, enumName: 'ClientGender', example: ClientGender.FEMALE })
+  @ApiPropertyOptional({ description: 'Client gender (case-insensitive)', enum: GENDER_INPUT_VALUES, enumName: 'ClientGender', example: 'female' })
   @IsOptional() @Transform(toUpper) @IsEnum(ClientGender) gender?: ClientGender;
 
   @ApiPropertyOptional({ description: 'Date of birth (ISO 8601)', example: '1990-06-15' })
@@ -55,7 +65,7 @@ export class CreateClientDto {
   @ApiPropertyOptional({ description: 'Emergency contact Saudi mobile number', example: '+966501234567' })
   @IsOptional() @IsString() @NormalizePhone() @Matches(PHONE_REGEX, { message: 'emergencyPhone must be a Saudi number +9665XXXXXXXX' }) emergencyPhone?: string;
 
-  @ApiPropertyOptional({ description: 'Blood type', enum: ClientBloodType, enumName: 'ClientBloodType', example: ClientBloodType.A_POS })
+  @ApiPropertyOptional({ description: 'Blood type (case-insensitive)', enum: BLOOD_TYPE_INPUT_VALUES, enumName: 'ClientBloodType', example: 'a_pos' })
   @IsOptional() @Transform(toUpper) @IsEnum(ClientBloodType) bloodType?: ClientBloodType;
 
   @ApiPropertyOptional({ description: 'Known allergies', example: 'Penicillin' })
@@ -70,10 +80,10 @@ export class CreateClientDto {
   @ApiPropertyOptional({ description: 'Internal notes about the client', example: 'Prefers morning appointments' })
   @IsOptional() @IsString() @MaxLength(2000) notes?: string;
 
-  @ApiPropertyOptional({ description: 'Acquisition source', enum: ClientSource, enumName: 'ClientSource', example: ClientSource.REFERRAL })
+  @ApiPropertyOptional({ description: 'Acquisition source (case-insensitive)', enum: SOURCE_INPUT_VALUES, enumName: 'ClientSource', example: 'referral' })
   @IsOptional() @Transform(toUpper) @IsEnum(ClientSource) source?: ClientSource;
 
-  @ApiPropertyOptional({ description: 'Account type', enum: ClientAccountType, enumName: 'ClientAccountType', example: ClientAccountType.FULL })
+  @ApiPropertyOptional({ description: 'Account type (case-insensitive)', enum: ACCOUNT_TYPE_INPUT_VALUES, enumName: 'ClientAccountType', example: 'full' })
   @IsOptional() @Transform(toUpper) @IsEnum(ClientAccountType) accountType?: ClientAccountType;
 
   @ApiPropertyOptional({ description: 'Whether the client is active', example: true })
