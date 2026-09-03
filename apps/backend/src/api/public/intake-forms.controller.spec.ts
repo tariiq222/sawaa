@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import request from 'supertest';
 import { IntakeFormType } from '@prisma/client';
 import { PublicIntakeFormsController } from './intake-forms.controller';
 import { ResolveApplicableIntakeFormsHandler } from '../../modules/org-experience/resolve-applicable-intake-forms/resolve-applicable-intake-forms.handler';
 import { SubmitIntakeResponseHandler } from '../../modules/org-experience/submit-intake-response/submit-intake-response.handler';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
+import { IS_PUBLIC_KEY } from '../../common/guards/jwt.guard';
 
 describe('PublicIntakeFormsController (e2e)', () => {
   let app: INestApplication;
@@ -50,6 +52,21 @@ describe('PublicIntakeFormsController (e2e)', () => {
   });
 
   const serviceId = '00000000-0000-4000-a000-000000000010';
+
+  it('exempts client intake submission from the global staff JWT guard', () => {
+    const reflector = new Reflector();
+    const submitHandler = Object.getOwnPropertyDescriptor(
+      PublicIntakeFormsController.prototype,
+      'submit',
+    )?.value;
+
+    expect(
+      reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+        submitHandler,
+        PublicIntakeFormsController,
+      ]),
+    ).toBe(true);
+  });
 
   describe('GET /public/intake-forms/applicable', () => {
     it('returns 200 with the handler result when no query is supplied', async () => {

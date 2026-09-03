@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 
 import { getApiBase } from '@/lib/api-base';
+import { PublicFetchError, publicFetch } from '@/lib/public-fetch';
 
 /**
  * Public-facing Program shape (alias of the new /api/v1/public/programs
@@ -116,17 +117,26 @@ export async function getPublicGroupSession(id: string): Promise<SupportGroup | 
 }
 
 export async function bookGroupSession(id: string): Promise<BookGroupSessionResponse> {
-  const base = getApiBase();
-  const url = `${base}/public/programs/${id}/enroll`;
-  const res = await fetch(url, {
-    method: 'POST',
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Failed to enroll in program: ${res.status} ${errText}`);
+  try {
+    return await publicFetch<BookGroupSessionResponse>(`/public/programs/${id}/enroll`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch (err) {
+    if (err instanceof PublicFetchError) {
+      const message = getErrorMessage(err.body);
+      throw new Error(`Failed to enroll in program: ${err.status}${message ? ` ${message}` : ''}`);
+    }
+    throw err;
   }
-  return (await res.json()) as BookGroupSessionResponse;
+}
+
+function getErrorMessage(body: unknown): string {
+  if (typeof body === 'string') return body;
+  if (typeof body === 'object' && body !== null && 'message' in body && typeof body.message === 'string') {
+    return body.message;
+  }
+  return '';
 }
 
 function mapProgramToSupportGroup(p: Record<string, unknown>): SupportGroup {

@@ -43,6 +43,18 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   });
 }
 
+const CSRF_TOKEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+async function primeCsrfToken() {
+  fetchMock.mockResolvedValueOnce(
+    jsonResponse(
+      { data: [] },
+      { headers: { 'content-type': 'application/json', 'x-csrf-token': CSRF_TOKEN } },
+    ),
+  );
+  await getPublicBranches();
+}
+
 describe('booking.api', () => {
   beforeEach(() => {
     fetchMock.mockReset();
@@ -133,7 +145,8 @@ describe('booking.api', () => {
 
   describe('createBooking', () => {
     it('POSTs to /public/bookings with credentials: include', async () => {
-      fetchMock.mockResolvedValue(jsonResponse({ data: { id: 'bk1', invoiceId: 'inv1' } }));
+      await primeCsrfToken();
+      fetchMock.mockResolvedValueOnce(jsonResponse({ data: { id: 'bk1', invoiceId: 'inv1' } }));
       const result = await createBooking({
         serviceId: 'svc1',
         employeeId: 'emp1',
@@ -143,10 +156,11 @@ describe('booking.api', () => {
         deliveryType: 'ONLINE',
       });
       expect(result).toEqual({ id: 'bk1', invoiceId: 'inv1' });
-      const [url, init] = fetchMock.mock.calls[0];
+      const [url, init] = fetchMock.mock.calls[1];
       expect(url).toBe('http://api.local/api/v1/public/bookings');
       expect(init.method).toBe('POST');
       expect(init.credentials).toBe('include');
+      expect(init.headers.get('X-CSRF-Token')).toBe(CSRF_TOKEN);
       expect(init.headers.get('Content-Type')).toBe('application/json');
       expect(JSON.parse(init.body as string)).toEqual({
         serviceId: 'svc1',
@@ -159,7 +173,8 @@ describe('booking.api', () => {
     });
 
     it('omits an empty-string durationOptionId so backend UUID validation passes', async () => {
-      fetchMock.mockResolvedValue(jsonResponse({ data: { id: 'bk1', invoiceId: null } }));
+      await primeCsrfToken();
+      fetchMock.mockResolvedValueOnce(jsonResponse({ data: { id: 'bk1', invoiceId: null } }));
       await createBooking({
         serviceId: 'svc1',
         employeeId: 'emp1',
@@ -167,12 +182,13 @@ describe('booking.api', () => {
         startsAt: '2026-07-01T10:00:00.000Z',
         durationOptionId: '',
       });
-      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      const body = JSON.parse(fetchMock.mock.calls[1][1].body as string);
       expect(body).not.toHaveProperty('durationOptionId');
     });
 
     it('serializes payAtClinic as a boolean for at-center bookings', async () => {
-      fetchMock.mockResolvedValue(
+      await primeCsrfToken();
+      fetchMock.mockResolvedValueOnce(
         jsonResponse({ data: { id: 'bk-center', status: 'CONFIRMED', invoiceId: null } }),
       );
 
@@ -185,27 +201,30 @@ describe('booking.api', () => {
         payAtClinic: true,
       });
 
-      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      const body = JSON.parse(fetchMock.mock.calls[1][1].body as string);
       expect(body.payAtClinic).toBe(true);
     });
   });
 
   describe('initPayment', () => {
     it('POSTs the invoiceId to /public/payments/init with credentials', async () => {
-      fetchMock.mockResolvedValue(
+      await primeCsrfToken();
+      fetchMock.mockResolvedValueOnce(
         jsonResponse({ data: { paymentId: 'pay1', redirectUrl: 'https://moyasar/pay1' } }),
       );
       const result = await initPayment('inv1');
       expect(result).toEqual({ paymentId: 'pay1', redirectUrl: 'https://moyasar/pay1' });
-      const [url, init] = fetchMock.mock.calls[0];
+      const [url, init] = fetchMock.mock.calls[1];
       expect(url).toBe('http://api.local/api/v1/public/payments/init');
       expect(init.method).toBe('POST');
       expect(init.credentials).toBe('include');
+      expect(init.headers.get('X-CSRF-Token')).toBe(CSRF_TOKEN);
       expect(JSON.parse(init.body as string)).toEqual({ invoiceId: 'inv1' });
     });
 
     it('throws when the init endpoint fails', async () => {
-      fetchMock.mockResolvedValue(
+      await primeCsrfToken();
+      fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify({ message: 'Invoice not found' }), { status: 404 }),
       );
       await expect(initPayment('missing')).rejects.toMatchObject({ status: 404 });
