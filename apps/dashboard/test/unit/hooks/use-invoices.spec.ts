@@ -1,6 +1,15 @@
-import { describe, it, expect } from "vitest"
+import { renderHook, waitFor } from "@testing-library/react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { describe, it, expect, vi } from "vitest"
+import React from "react"
+import type { ReactNode } from "react"
 import type { InvoiceListRow } from "@/lib/types/invoice"
-import { toInvoiceListItem } from "@/hooks/use-invoices"
+
+const { fetchInvoices } = vi.hoisted(() => ({ fetchInvoices: vi.fn() }))
+vi.mock("@/lib/api/invoices", () => ({ fetchInvoices }))
+
+import { useInvoices, toInvoiceListItem } from "@/hooks/use-invoices"
+import { invalidateMutationImpact } from "@/lib/query-invalidation"
 
 function buildRow(overrides: Partial<InvoiceListRow> = {}): InvoiceListRow {
   return {
@@ -53,5 +62,38 @@ describe("toInvoiceListItem", () => {
   it("preserves a null client name", () => {
     const row = toInvoiceListItem(buildRow({ clientName: null }))
     expect(row.clientName).toBeNull()
+  })
+})
+
+describe("useInvoices cache refresh", () => {
+  it("explicitly refetches an inactive invoice list after a payment mutation", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      React.createElement(QueryClientProvider, { client }, children)
+    )
+    fetchInvoices
+      .mockResolvedValueOnce({ items: [buildRow({ status: "ISSUED", total: 11500 })], meta: { total: 1 } })
+      .mockResolvedValueOnce({ items: [buildRow({ status: "PAID", total: 12500 })], meta: { total: 1 } })
+
+    const query = renderHook(() => useInvoices(), { wrapper })
+    await waitFor(() => expect(query.result.current.isLoading).toBe(false))
+    query.unmount()
+
+    await invalidateMutationImpact(client, {
+      kind: "payment-settled",
+      invoiceId: "inv-1",
+    })
+
+    expect(fetchInvoices).toHaveBeenCalledTimes(2)
+    const updated = client.getQueryData<{ items: InvoiceListRow[] }>(
+      ["invoices", "list", { page: 1, search: "" }],
+    )
+    expect(updated?.items[0]).toMatchObject({ status: "PAID", total: 12500 })
+
+    const mountedAgain = renderHook(() => useInvoices(), { wrapper })
+    await waitFor(() => expect(mountedAgain.result.current.invoices[0]).toMatchObject({
+      status: "PAID",
+      totalAmount: 12500,
+    }))
   })
 })

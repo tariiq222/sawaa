@@ -10,6 +10,7 @@ import {
 } from '../../../infrastructure/database';
 import { UpdateProgramDto } from './update-program.dto';
 import { isProgramTerminalStatus } from '../program/program-state-machine';
+import { lockPersonReferences } from '../../../common/database/person-reference-lock.helper';
 
 /**
  * Edits an existing program. Mirrors the `CreateProgramDto` field set so
@@ -98,6 +99,11 @@ export class UpdateProgramHandler {
         }
       }
       if (dto.supervisorIds !== undefined) {
+        await lockPersonReferences(
+          tx,
+          dto.supervisorIds.map((id) => ({ kind: 'Employee' as const, id })),
+          'reference',
+        );
         const found = await tx.employee.findMany({
           where: { id: { in: dto.supervisorIds } },
           select: { id: true },

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CreateInvoiceHandler } from '../create-invoice/create-invoice.handler';
@@ -69,6 +74,13 @@ export class EnsureBookingInvoiceHandler {
       return this.shape(existingInvoice.id, db);
     }
 
+    if (cmd.transaction) {
+      throw new ConflictException({
+        code: 'INVOICE_CHANGED_DURING_COLLECTION',
+        bookingId: booking.id,
+      });
+    }
+
     if (!booking.clientId) {
       throw new BadRequestException('Cannot invoice a guest booking without a client');
     }
@@ -83,8 +95,8 @@ export class EnsureBookingInvoiceHandler {
         : undefined;
 
     try {
-      // CreateInvoiceHandler cannot join an outer transaction; the create
-      // commits independently. Shape the result from the committed client.
+      // This branch is available only without an outer transaction, so invoice
+      // creation commits before the result is shaped from the shared client.
       const invoice = await this.createInvoice.execute({
         branchId: booking.branchId,
         clientId: booking.clientId,

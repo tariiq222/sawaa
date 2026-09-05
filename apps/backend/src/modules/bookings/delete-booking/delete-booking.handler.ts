@@ -3,6 +3,7 @@ import {
 	Logger,
 	NotFoundException,
 	BadRequestException,
+	ConflictException,
 } from "@nestjs/common";
 import {
 	ActivityAction,
@@ -15,6 +16,7 @@ import {
 } from "../../../infrastructure/database";
 import { isTerminalStatus } from "../booking-state-machine";
 import { assertBookingIsMutable } from "../booking-lifecycle.helper";
+import { toIntakeRevisionData } from "../../../common/database/intake-response-history.helper";
 
 export interface DeleteBookingCommand {
 	bookingId: string;
@@ -28,7 +30,24 @@ const DELETE_BOOKING_MESSAGES = {
 		`لا يمكن حذف حجز بحالة "${status}". يُسمح بحذف الحجوزات المنتهية فقط (CANCELLED, COMPLETED, NO_SHOW, EXPIRED). يرجى إلغاء الحجز بدلاً من حذفه.`,
 	blockingPayment:
 		"لا يمكن حذف حجز مرتبط بعملية دفع مكتملة أو معاد صرفها أو قيد التحقق. يرجى استرداد المبلغ أولاً.",
+	financeBusy:
+		"لا يمكن حذف الحجز أثناء تحديث السجلات المالية المرتبطة به. يرجى المحاولة مرة أخرى.",
 } as const;
+
+function isLockNotAvailable(error: unknown): boolean {
+	const candidate = error as {
+		code?: unknown;
+		meta?: {
+			code?: unknown;
+			driverAdapterError?: { cause?: { originalCode?: unknown } };
+		};
+	} | null;
+	return (
+		candidate?.code === "55P03" ||
+		candidate?.meta?.code === "55P03" ||
+		candidate?.meta?.driverAdapterError?.cause?.originalCode === "55P03"
+	);
+}
 
 /**
  * Hard-deletes a booking and its dependent records.
@@ -94,45 +113,131 @@ export class DeleteBookingHandler {
 			throw new BadRequestException(DELETE_BOOKING_MESSAGES.blockingPayment);
 		}
 
-		await this.rlsTransaction.withTransaction(async (tx) => {
-			const invoice = await tx.invoice.findUnique({
-				where: { bookingId: booking.id },
-				select: { id: true },
+		try {
+			await this.rlsTransaction.withTransaction(async (tx) => {
+				const lockedBookingRows = await tx.$queryRaw<Array<{ id: string }>>`
+				SELECT "id" FROM "Booking" WHERE "id" = ${booking.id} FOR UPDATE
+			`;
+				if (lockedBookingRows.length === 0) {
+					throw new NotFoundException(
+						DELETE_BOOKING_MESSAGES.notFound(cmd.bookingId),
+					);
+				}
+				const lockedBooking = await tx.booking.findUnique({
+					where: { id: booking.id },
+					select: {
+						id: true,
+						status: true,
+						bookingNumber: true,
+						clientId: true,
+						serviceNameSnapshot: true,
+						scheduledAt: true,
+						isHistoricalImport: true,
+					},
+				});
+				if (!lockedBooking) {
+					throw new NotFoundException(
+						DELETE_BOOKING_MESSAGES.notFound(cmd.bookingId),
+					);
+				}
+				assertBookingIsMutable(lockedBooking);
+				if (!isTerminalStatus(lockedBooking.status)) {
+					throw new BadRequestException(
+						DELETE_BOOKING_MESSAGES.nonTerminal(lockedBooking.status),
+					);
+				}
+				const invoiceRows = await tx.$queryRaw<Array<{ id: string }>>`
+				SELECT "id" FROM "Invoice"
+				WHERE "bookingId" = ${lockedBooking.id}
+				FOR UPDATE NOWAIT
+			`;
+				const invoice = invoiceRows[0];
+				if (invoice) {
+					await tx.$queryRaw<Array<{ id: string }>>`
+					SELECT "id" FROM "PaymentCollectionIdempotency"
+					WHERE "invoiceId" = ${invoice.id}
+					ORDER BY "id" FOR UPDATE NOWAIT
+				`;
+					await tx.$queryRaw<Array<{ id: string }>>`
+					SELECT "id" FROM "RefundRequest"
+					WHERE "invoiceId" = ${invoice.id}
+					ORDER BY "id" FOR UPDATE NOWAIT
+				`;
+					await tx.$queryRaw<Array<{ id: string }>>`
+					SELECT "id" FROM "Payment"
+					WHERE "invoiceId" = ${invoice.id}
+					ORDER BY "id" FOR UPDATE NOWAIT
+					`;
+					const lockedBlockingPayment = await tx.payment.findFirst({
+						where: {
+							invoiceId: invoice.id,
+							status: { in: DeleteBookingHandler.BLOCKING_PAYMENT_STATUSES },
+						},
+						select: { id: true },
+					});
+					if (lockedBlockingPayment) {
+						throw new BadRequestException(DELETE_BOOKING_MESSAGES.blockingPayment);
+					}
+					await tx.refundRequest.deleteMany({ where: { invoiceId: invoice.id } });
+					await tx.paymentCollectionIdempotency.deleteMany({
+						where: { invoiceId: invoice.id },
+					});
+					await tx.payment.deleteMany({ where: { invoiceId: invoice.id } });
+					await tx.invoice.delete({ where: { id: invoice.id } });
+				}
+				await tx.bookingStatusLog.deleteMany({
+					where: { bookingId: booking.id },
+				});
+				await tx.rating.deleteMany({ where: { bookingId: booking.id } });
+
+				const intakeResponses = await tx.intakeResponse.findMany({
+					where: { bookingId: booking.id },
+					select: {
+						id: true,
+						bookingId: true,
+						formId: true,
+						clientId: true,
+						answers: true,
+					},
+				});
+				if (intakeResponses.length > 0) {
+					await tx.intakeResponseRevision.createMany({
+						data: intakeResponses.map((response) =>
+							toIntakeRevisionData(response, "AUTHORIZED_DELETE"),
+						),
+					});
+				}
+				await tx.intakeResponse.deleteMany({ where: { bookingId: booking.id } });
+
+				// Immutable audit row written inside the same transaction, BEFORE the
+				// booking row is removed, so a hard-delete never erases the record of who
+				// deleted what. Captures the snapshot identifiers since the row is gone
+				// after this. (R-11/R-17)
+				await tx.activityLog.create({
+					data: {
+						userId: cmd.changedBy,
+						action: ActivityAction.DELETE,
+						entity: "Booking",
+						entityId: booking.id,
+						description: `Hard-deleted booking ${booking.bookingNumber ?? booking.id}`,
+						metadata: {
+							bookingNumber: booking.bookingNumber,
+							clientId: booking.clientId,
+							status: booking.status,
+							serviceNameSnapshot: booking.serviceNameSnapshot,
+							scheduledAt: booking.scheduledAt?.toISOString() ?? null,
+						} as Prisma.InputJsonValue,
+					},
+				});
+
+				await tx.booking.delete({ where: { id: booking.id } });
 			});
-			if (invoice) {
-				await tx.refundRequest.deleteMany({ where: { invoiceId: invoice.id } });
-				await tx.payment.deleteMany({ where: { invoiceId: invoice.id } });
-				await tx.invoice.delete({ where: { id: invoice.id } });
+		} catch (error) {
+			if (isLockNotAvailable(error)) {
+				throw new ConflictException(DELETE_BOOKING_MESSAGES.financeBusy);
 			}
-			await tx.bookingStatusLog.deleteMany({
-				where: { bookingId: booking.id },
-			});
-			await tx.rating.deleteMany({ where: { bookingId: booking.id } });
-			await tx.intakeResponse.deleteMany({ where: { bookingId: booking.id } });
-
-			// Immutable audit row written inside the same transaction, BEFORE the
-			// booking row is removed, so a hard-delete never erases the record of who
-			// deleted what. Captures the snapshot identifiers since the row is gone
-			// after this. (R-11/R-17)
-			await tx.activityLog.create({
-				data: {
-					userId: cmd.changedBy,
-					action: ActivityAction.DELETE,
-					entity: "Booking",
-					entityId: booking.id,
-					description: `Hard-deleted booking ${booking.bookingNumber ?? booking.id}`,
-					metadata: {
-						bookingNumber: booking.bookingNumber,
-						clientId: booking.clientId,
-						status: booking.status,
-						serviceNameSnapshot: booking.serviceNameSnapshot,
-						scheduledAt: booking.scheduledAt?.toISOString() ?? null,
-					} as Prisma.InputJsonValue,
-				},
-			});
-
-			await tx.booking.delete({ where: { id: booking.id } });
-		});
+			throw error;
+		}
 
 		this.logger.log(`Booking ${booking.id} hard-deleted by ${cmd.changedBy}`);
 	}

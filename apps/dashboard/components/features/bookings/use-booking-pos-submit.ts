@@ -34,6 +34,7 @@ import { useBookingMutations } from "@/hooks/use-bookings"
 import { useBookFromCredit } from "@/hooks/use-credit-bookings"
 import { useRecordPaymentMutations } from "@/hooks/use-payments"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
+import { useBookingPaymentPolling } from "@/hooks/use-booking-payment-polling"
 import { showApiError } from "@/lib/mutation-helpers"
 import { createIdempotencyKey } from "@/lib/idempotency"
 import { combineDateTimeToISO } from "@/lib/utils"
@@ -69,6 +70,7 @@ export function useBookingPosSubmit({
   // in one call; we deliberately do NOT compute amount client-side
   // and we do NOT send a discount payload from this hook.
   const { collectMut } = useRecordPaymentMutations()
+  const { start: startBookingPaymentPolling } = useBookingPaymentPolling()
   const { data: paymentSettings } = usePaymentSettings()
 
   const isSubmitting =
@@ -185,6 +187,7 @@ export function useBookingPosSubmit({
           // the wizard and only toast paymentRecorded when a payment
           // actually landed.
           if (result?.payment) {
+            startBookingPaymentPolling(created.id)
             toast.success(t("bookings.wizard.step.confirm.paymentRecorded"))
           }
         } catch (paymentErr) {
@@ -213,6 +216,7 @@ export function useBookingPosSubmit({
     createMut,
     bookFromCreditMut,
     collectMut,
+    startBookingPaymentPolling,
     paymentSettings,
     reset,
     onSuccess,

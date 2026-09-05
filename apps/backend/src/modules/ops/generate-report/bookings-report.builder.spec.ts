@@ -8,6 +8,7 @@ function makePrisma() {
       groupBy: jest.fn().mockResolvedValue([]),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    $queryRaw: jest.fn().mockResolvedValue([]),
   } as any;
 }
 
@@ -16,6 +17,15 @@ describe('buildBookingsReport', () => {
 
   beforeEach(() => {
     prisma = makePrisma();
+  });
+
+  it('does not read the booking report dataset as full rows', async () => {
+    await buildBookingsReport(prisma, {
+      from: new Date('2025-01-01'),
+      to: new Date('2025-01-31'),
+    });
+
+    expect(prisma.booking.findMany).not.toHaveBeenCalled();
   });
 
   it('returns zero state when no bookings', async () => {
@@ -31,23 +41,30 @@ describe('buildBookingsReport', () => {
   });
 
   it('computes no-show and cancel rates correctly', async () => {
-    prisma.booking.count.mockResolvedValue(10);
-    prisma.booking.groupBy
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ total: 10n, avgDurationMins: '60' }])
       .mockResolvedValueOnce([
-        { status: BookingStatus.COMPLETED, _count: { status: 7 } },
-        { status: BookingStatus.NO_SHOW, _count: { status: 1 } },
-        { status: BookingStatus.CANCELLED, _count: { status: 2 } },
+        { status: BookingStatus.COMPLETED, count: 7n },
+        { status: BookingStatus.NO_SHOW, count: '1' },
+        { status: BookingStatus.CANCELLED, count: 2n },
       ])
       .mockResolvedValueOnce([
-        { bookingType: BookingType.INDIVIDUAL, _count: { bookingType: 8 } },
-        { bookingType: BookingType.GROUP, _count: { bookingType: 2 } },
+        { type: BookingType.INDIVIDUAL, count: 8 },
+        { type: BookingType.GROUP, count: 2 },
+      ])
+      .mockResolvedValueOnce([
+        { date: '2025-01-15', count: 2 },
+        { date: '2025-01-16', count: 2 },
+      ])
+      .mockResolvedValueOnce([
+        { dow: 3, hour: 10, count: 2 },
+        { dow: 3, hour: 11, count: 1 },
+        { dow: 4, hour: 10, count: 1 },
+      ])
+      .mockResolvedValueOnce([
+        { reason: CancellationReason.CLIENT_REQUESTED, count: 1 },
+        { reason: 'UNSPECIFIED', count: 1 },
       ]);
-    prisma.booking.findMany.mockResolvedValue([
-      { scheduledAt: new Date('2025-01-15T10:00:00Z'), status: BookingStatus.COMPLETED, durationMins: 60, cancelReason: null },
-      { scheduledAt: new Date('2025-01-15T11:00:00Z'), status: BookingStatus.CANCELLED, durationMins: 60, cancelReason: CancellationReason.CLIENT_REQUESTED },
-      { scheduledAt: new Date('2025-01-16T10:00:00Z'), status: BookingStatus.NO_SHOW, durationMins: 60, cancelReason: null },
-      { scheduledAt: new Date('2025-01-16T11:00:00Z'), status: BookingStatus.CANCELLED, durationMins: 60, cancelReason: null },
-    ]);
 
     const result = await buildBookingsReport(prisma, {
       from: new Date('2025-01-01'),

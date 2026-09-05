@@ -54,7 +54,12 @@ function lockedCreditRow(overrides: Partial<{ usedQuantity: number; totalQuantit
 function buildTx(lockedCredit = lockedCreditRow()) {
   const tx = {
     // FOR UPDATE raw select returns an array of rows.
-    $queryRaw: jest.fn().mockResolvedValue([lockedCredit]),
+    $queryRaw: jest.fn(async (strings: TemplateStringsArray, id: string) => {
+      const sql = strings.join(' ');
+      if (sql.includes('"Client"')) return [{ id, isActive: true, deletedAt: null }];
+      if (sql.includes('"Employee"')) return [{ id, isActive: true }];
+      return [lockedCredit];
+    }),
     $executeRaw: jest.fn().mockResolvedValue(undefined),
     booking: {
       findFirst: jest.fn().mockResolvedValue(null), // no overlap by default
@@ -373,7 +378,11 @@ describe('BookFromCreditHandler', () => {
 
     it('creates the booking with price=0, discountedPrice=0 and packageCreditId set', async () => {
       const prisma = buildPrisma();
-      mockResolvedCredit(prisma);
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        ...lockedCreditRow(),
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
       const { handler, tx } = buildHandler({ prisma });
 
       await handler.execute(baseCmd());
@@ -564,10 +573,42 @@ describe('BookFromCreditHandler', () => {
           { code: 'P2034', clientVersion: '7.0.0' },
         ),
       );
+      rls.withTransaction.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError(
+          'Transaction failed due to a write conflict or a deadlock. Please retry your transaction',
+          { code: 'P2034', clientVersion: '7.0.0' },
+        ),
+      );
 
       await expect(handler.execute(baseCmd())).rejects.toEqual(
         new ConflictException('Package credit was consumed concurrently; please retry'),
       );
+    });
+
+    it('retries a serialization abort so a committed Client deletion returns NotFound', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        ...lockedCreditRow(),
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const tx = buildTx();
+      tx.$queryRaw.mockImplementation(async (strings: TemplateStringsArray) =>
+        strings.join(' ').includes('"Client"') ? [] : [lockedCreditRow()],
+      );
+      const { handler, rls } = buildHandler({ prisma, tx });
+      rls.withTransaction
+        .mockRejectedValueOnce(
+          new Prisma.PrismaClientKnownRequestError('serialization failure', {
+            code: 'P2034',
+            clientVersion: '7.0.0',
+          }),
+        )
+        .mockImplementationOnce((cb: (t: typeof tx) => Promise<unknown>) => cb(tx));
+
+      const error = await handler.execute(baseCmd()).catch((caught) => caught);
+      expect(error).toBeInstanceOf(NotFoundException);
+      expect(rls.withTransaction).toHaveBeenCalledTimes(2);
     });
 
     it('maps a PrismaPg raw-query 40001 driver error to the same deterministic 409', async () => {
@@ -594,6 +635,18 @@ describe('BookFromCreditHandler', () => {
             },
           },
         ),
+      );
+      rls.withTransaction.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Raw query failed. Code: `40001`.', {
+          code: 'P2010',
+          clientVersion: '7.0.0',
+          meta: {
+            driverAdapterError: {
+              name: 'DriverAdapterError',
+              cause: { kind: 'postgres', originalCode: '40001' },
+            },
+          },
+        }),
       );
 
       await expect(handler.execute(baseCmd())).rejects.toEqual(
@@ -650,8 +703,17 @@ describe('BookFromCreditHandler', () => {
 
       const makeTx = () => {
         const tx = buildTx();
-        tx.$queryRaw = jest.fn().mockImplementation(() =>
-          Promise.resolve([{ ...lockedCreditRow(), totalQuantity: credit.totalQuantity, usedQuantity: credit.usedQuantity }]),
+        tx.$queryRaw = jest.fn().mockImplementation(
+          (strings: TemplateStringsArray, id: string) => {
+            const sql = strings.join(' ');
+            if (sql.includes('"Client"')) {
+              return Promise.resolve([{ id, isActive: true, deletedAt: null }]);
+            }
+            if (sql.includes('"Employee"')) {
+              return Promise.resolve([{ id, isActive: true }]);
+            }
+            return Promise.resolve([{ ...lockedCreditRow(), totalQuantity: credit.totalQuantity, usedQuantity: credit.usedQuantity }]);
+          },
         );
         tx.packageCredit.update = jest.fn().mockImplementation((args: { data: { usedQuantity: { increment: number } } }) => {
           credit.usedQuantity += args.data.usedQuantity.increment;

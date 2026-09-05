@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/infrastructure/database';
+import { configureHttpContract } from '../../src/common/bootstrap/configure-http-contract';
 
 export type MockPrisma = {
   [model: string]: {
@@ -103,15 +104,7 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
     .compile();
 
   const app = moduleFixture.createNestApplication();
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
-    }),
-  );
-  app.setGlobalPrefix('api/v1');
+  configureHttpContract(app, 'development');
 
   await app.init();
 

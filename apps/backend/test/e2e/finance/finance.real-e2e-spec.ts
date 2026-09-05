@@ -288,11 +288,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
     return randomUUID();
   }
 
-  async function seedIssuedInvoice(opts: {
-    subtotalHalalas: number;
-    vatRate?: number;
-    totalHalalas?: number;
-  }) {
+  async function seedBooking(subtotalHalalas: number): Promise<string> {
     const bookingId = makeBookingId();
     ctx.bookingIds.push(bookingId);
     const scheduledAt = new Date(
@@ -310,11 +306,20 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
         scheduledAt,
         endsAt: new Date(scheduledAt.getTime() + 60 * 60 * 1_000),
         durationMins: 60,
-        price: opts.subtotalHalalas,
+        price: subtotalHalalas,
         currency: "SAR",
         bookingNumber: Math.floor(1_000_000 + Math.random() * 8_000_000),
       },
     });
+    return bookingId;
+  }
+
+  async function seedIssuedInvoice(opts: {
+    subtotalHalalas: number;
+    vatRate?: number;
+    totalHalalas?: number;
+  }) {
+    const bookingId = await seedBooking(opts.subtotalHalalas);
     // Mirror the create-invoice handler's halala-safe math: total = subtotal
     // minus discount, plus VAT at the configured rate (round half-up). When
     // the caller overrides totalHalalas we trust that value verbatim.
@@ -348,8 +353,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
 
   describe("Invoice lifecycle: create, list, get", () => {
     it("creates an invoice with exact halala amounts persisted (no float drift)", async () => {
-      const bookingId = makeBookingId();
-      ctx.bookingIds.push(bookingId);
+      const bookingId = await seedBooking(23_499);
 
       const res = await withAuth(ctx.authToken)(
         api().post("/api/v1/dashboard/finance/invoices"),
@@ -419,8 +423,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
     });
 
     it("rejects a second invoice for the same booking with 409 (UNIQUE bookingId)", async () => {
-      const bookingId = makeBookingId();
-      ctx.bookingIds.push(bookingId);
+      const bookingId = await seedBooking(10_000);
 
       const first = await withAuth(ctx.authToken)(
         api().post("/api/v1/dashboard/finance/invoices"),

@@ -20,6 +20,11 @@ import {
   specificityScore,
 } from '../package-credit-matching.helper';
 import { BookFromCreditDto } from './book-from-credit.dto';
+import {
+  isSerializableTransactionConflict,
+  lockPersonReferences,
+  retrySerializableTransaction,
+} from '../../../common/database/person-reference-lock.helper';
 
 export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
   scheduledAt: Date;
@@ -45,26 +50,7 @@ interface LockedCreditRow {
  * expose the concurrent loser as a domain conflict instead of leaking a 500.
  */
 function mapConcurrentCreditConflict(error: unknown): never {
-  const candidate = error as {
-    code?: unknown;
-    meta?: {
-      code?: unknown;
-      driverAdapterError?: {
-        cause?: { originalCode?: unknown };
-      };
-    };
-  } | null;
-  const code = candidate?.code;
-  const postgresCode = candidate?.meta?.code;
-  const driverPostgresCode =
-    candidate?.meta?.driverAdapterError?.cause?.originalCode;
-
-  if (
-    code === 'P2034' ||
-    code === '40001' ||
-    postgresCode === '40001' ||
-    driverPostgresCode === '40001'
-  ) {
+  if (isSerializableTransactionConflict(error)) {
     throw new ConflictException('Package credit was consumed concurrently; please retry');
   }
 
@@ -198,8 +184,17 @@ export class BookFromCreditHandler {
     });
 
     // ── One Serializable transaction: lock the credit, recount, consume ──
-    const booking = await this.rlsTransaction.withTransaction(
-      async (tx) => {
+    const booking = await retrySerializableTransaction(() =>
+      this.rlsTransaction.withTransaction(async (tx) => {
+        await lockPersonReferences(
+          tx,
+          [
+            { kind: 'Client', id: cmd.clientId },
+            { kind: 'Employee', id: creditEmployeeId },
+          ],
+          'reference',
+        );
+
         // Advisory lock on employee + slot window — same pattern as
         // create-booking — so two concurrent bookings cannot both pass the
         // overlap check.
@@ -377,8 +372,7 @@ export class BookFromCreditHandler {
         });
 
         return created;
-      },
-      { isolationLevel: 'Serializable' },
+      }, { isolationLevel: 'Serializable' }),
     ).catch(mapConcurrentCreditConflict);
 
     return booking;

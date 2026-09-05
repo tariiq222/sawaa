@@ -332,9 +332,27 @@ model IntakeResponse {
   clientId  String?
   answers   Json // Record<fieldId, string | string[]>
   createdAt DateTime   @default(now())
+  supersededAt   DateTime?
+  supersededById String?
 
   @@index([bookingId])
   @@index([formId])
+}
+
+// Append-only snapshots retain answers after an authorized live-row deletion.
+// Source identifiers deliberately have no cascading foreign keys.
+model IntakeResponseRevision {
+  id               String   @id @default(uuid())
+  sourceResponseId String
+  bookingId        String
+  formId           String
+  clientId         String?
+  answers          Json
+  capturedAt       DateTime @default(now())
+  reason           String
+
+  @@index([sourceResponseId, capturedAt])
+  @@index([bookingId, formId])
 }
 
 // ─── Ratings ──────────────────────────────────────────────────────────────────

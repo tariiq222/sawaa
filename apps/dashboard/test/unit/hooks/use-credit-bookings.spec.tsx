@@ -143,7 +143,7 @@ describe("useMatchingCredits — gate", () => {
 describe("useBookFromCredit", () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it("posts the payload and invalidates bookings + package-purchases on success", async () => {
+  it("posts the payload and invalidates the affected credit, schedule, and booking queries", async () => {
     bookFromCredit.mockResolvedValueOnce({ id: "bk-new" })
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -164,6 +164,7 @@ describe("useBookFromCredit", () => {
     await result.current.mutateAsync({
       clientId: "cl-1",
       creditId: "cr-1",
+      employeeId: "emp-1",
       branchId: "br-1",
       scheduledAt: "2026-12-31T09:00:00.000Z",
     })
@@ -171,6 +172,7 @@ describe("useBookFromCredit", () => {
     expect(bookFromCredit).toHaveBeenCalledWith({
       clientId: "cl-1",
       creditId: "cr-1",
+      employeeId: "emp-1",
       branchId: "br-1",
       scheduledAt: "2026-12-31T09:00:00.000Z",
     })
@@ -183,6 +185,16 @@ describe("useBookFromCredit", () => {
     expect(
       invalidated.some(
         (k) => Array.isArray(k) && k[0] === "package-purchases",
+      ),
+    ).toBe(true)
+    expect(
+      invalidated.some(
+        (k) => Array.isArray(k) && k[0] === "credit-bookings",
+      ),
+    ).toBe(true)
+    expect(
+      invalidated.some(
+        (k) => Array.isArray(k) && k[0] === "employees" && k[1] === "slots",
       ),
     ).toBe(true)
   })

@@ -25,6 +25,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { queryKeys } from "@/lib/query-keys"
+import { invalidateMutationImpact } from "@/lib/query-invalidation"
 import {
   bookFromCredit,
   fetchMatchingCredits,
@@ -78,15 +79,68 @@ export function useBookFromCredit() {
 
   return useMutation({
     mutationFn: (payload: BookFromCreditPayload) => bookFromCredit(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.bookings.all,
-        refetchType: "all",
-      })
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.packagePurchases.all,
-        refetchType: "all",
+    onSuccess: (_booking, payload) => {
+      // The explicit-credit form may omit the matching triple. In that case
+      // we cannot safely name a practitioner slot, so invalidate only the
+      // entity-wide credit surfaces rather than inventing an employee ID.
+      const bookingContext = readBookingContext(_booking)
+      const employeeId = payload.employeeId ?? bookingContext.employeeId
+      if (!employeeId) {
+        return Promise.allSettled([
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all, refetchType: "all" }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.packagePurchases.all, refetchType: "all" }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.packagePurchases.client(payload.clientId), refetchType: "all" }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.creditBookings.all, refetchType: "all" }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.packageReports.all, refetchType: "all" }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.reports.bookingsFamily(), refetchType: "all" }),
+        ]).then(() => undefined)
+      }
+
+      return invalidateMutationImpact(queryClient, {
+        kind: "credit-booked",
+        clientId: payload.clientId,
+        employeeId,
+        date: bookingContext.date ?? clinicDateFromIso(payload.scheduledAt),
+        bookingId: bookingContext.id,
       })
     },
   })
+}
+
+function readBookingContext(value: unknown): {
+  id?: string
+  employeeId?: string
+  date?: string
+} {
+  if (typeof value !== "object" || value === null) return {}
+  const row = value as Record<string, unknown>
+  const id = typeof row.id === "string" ? row.id : undefined
+  const employeeId = typeof row.employeeId === "string" ? row.employeeId : undefined
+  const dateValue = typeof row.date === "string"
+    ? row.date
+    : typeof row.scheduledAt === "string"
+      ? row.scheduledAt
+      : undefined
+  return {
+    id,
+    employeeId,
+    date: dateValue && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+      ? dateValue
+      : dateValue
+        ? clinicDateFromIso(dateValue)
+        : undefined,
+  }
+}
+
+function clinicDateFromIso(value: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Riyadh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(value))
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000"
+  const month = parts.find((part) => part.type === "month")?.value ?? "01"
+  const day = parts.find((part) => part.type === "day")?.value ?? "01"
+  return `${year}-${month}-${day}`
 }

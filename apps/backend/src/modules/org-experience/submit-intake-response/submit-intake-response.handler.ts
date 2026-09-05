@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { areIntakeAnswersEqual, toIntakeRevisionData } from '../../../common/database/intake-response-history.helper';
 
 export interface SubmitIntakeResponseCommand {
   bookingId: string;
@@ -18,6 +19,60 @@ function isNonEmpty(value: string | string[] | undefined): boolean {
   if (value === undefined || value === null) return false;
   if (Array.isArray(value)) return value.length > 0 && value.every((v) => typeof v === 'string' && v.trim() !== '');
   return typeof value === 'string' && value.trim() !== '';
+}
+
+function validateAnswers(
+  form: { fields: Array<{ id: string; labelAr: string; fieldType: string; isRequired: boolean; options: unknown }> },
+  answers: Record<string, string | string[]>,
+): void {
+  const fieldsById = new Map(form.fields.map((f) => [f.id, f]));
+
+  for (const fieldId of Object.keys(answers)) {
+    if (!fieldsById.has(fieldId)) {
+      throw new BadRequestException(`Answer references unknown field "${fieldId}"`);
+    }
+  }
+
+  for (const field of form.fields) {
+    const answer = answers[field.id];
+
+    if (field.isRequired && !isNonEmpty(answer)) {
+      throw new BadRequestException(`Field "${field.labelAr}" is required`);
+    }
+
+    if (answer === undefined || answer === null) continue;
+
+    if (OPTION_FIELD_TYPES.has(field.fieldType)) {
+      const allowed = new Set((field.options as string[] | null) ?? []);
+      const selected = Array.isArray(answer) ? answer : [answer];
+      if (field.fieldType !== 'CHECKBOX' && Array.isArray(answer)) {
+        throw new BadRequestException(`Field "${field.labelAr}" accepts a single value`);
+      }
+      for (const value of selected) {
+        if (!allowed.has(value)) {
+          throw new BadRequestException(`Invalid option "${value}" for field "${field.labelAr}"`);
+        }
+      }
+    }
+  }
+}
+
+function toPublicResponse(response: {
+  id: string;
+  bookingId: string;
+  formId: string;
+  clientId: string | null;
+  answers: unknown;
+  createdAt?: Date;
+}) {
+  return {
+    id: response.id,
+    bookingId: response.bookingId,
+    formId: response.formId,
+    clientId: response.clientId,
+    answers: response.answers,
+    ...(response.createdAt ? { createdAt: response.createdAt } : {}),
+  };
 }
 
 /**
@@ -66,57 +121,67 @@ export class SubmitIntakeResponseHandler {
       throw new BadRequestException('This intake form is no longer active');
     }
 
-    const fieldsById = new Map(form.fields.map((f) => [f.id, f]));
-
-    // Reject answers that reference fields not on this form.
-    for (const fieldId of Object.keys(answers)) {
-      if (!fieldsById.has(fieldId)) {
-        throw new BadRequestException(`Answer references unknown field "${fieldId}"`);
-      }
-    }
-
-    for (const field of form.fields) {
-      const answer = answers[field.id];
-
-      if (field.isRequired && !isNonEmpty(answer)) {
-        throw new BadRequestException(`Field "${field.labelAr}" is required`);
-      }
-
-      if (answer === undefined || answer === null) continue;
-
-      if (OPTION_FIELD_TYPES.has(field.fieldType)) {
-        const allowed = new Set((field.options as string[] | null) ?? []);
-        const selected = Array.isArray(answer) ? answer : [answer];
-        if (field.fieldType !== 'CHECKBOX' && Array.isArray(answer)) {
-          throw new BadRequestException(`Field "${field.labelAr}" accepts a single value`);
-        }
-        for (const value of selected) {
-          if (!allowed.has(value)) {
-            throw new BadRequestException(`Invalid option "${value}" for field "${field.labelAr}"`);
-          }
-        }
-      }
-    }
-
-    const resolvedClientId = booking.clientId;
+    validateAnswers(form, answers);
 
     return this.rlsTransaction.withTransaction(async (tx) => {
-      // No DB-level unique on (bookingId, formId); enforce idempotency manually.
-      const existing = await tx.intakeResponse.findFirst({
-        where: { bookingId, formId },
-        select: { id: true },
-      });
+      // Submit takes shared row locks before the pair advisory lock. Delete
+      // paths use the corresponding exclusive row lock, so submit/delete
+      // cannot race through an outdated booking or form snapshot.
+      await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${bookingId} FOR SHARE`;
+      await tx.$queryRaw`SELECT "id" FROM "IntakeForm" WHERE "id" = ${formId} FOR SHARE`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`intake:${bookingId}:${formId}`}, 0))`;
 
-      if (existing) {
-        return tx.intakeResponse.update({
-          where: { id: existing.id },
-          data: { answers, clientId: resolvedClientId },
-        });
+      const lockedBooking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        select: { id: true, clientId: true },
+      });
+      if (!lockedBooking || (clientId && lockedBooking.clientId !== clientId)) {
+        throw new NotFoundException('Booking not found');
       }
 
-      return tx.intakeResponse.create({
+      const lockedForm = await tx.intakeForm.findUnique({
+        where: { id: formId },
+        include: { fields: true },
+      });
+      if (!lockedForm) throw new NotFoundException('Intake form not found');
+      if (!lockedForm.isActive) throw new BadRequestException('This intake form is no longer active');
+      validateAnswers(lockedForm, answers);
+
+      const currentResponses = await tx.intakeResponse.findMany({
+        where: { bookingId, formId, supersededAt: null },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      });
+      if (currentResponses.length > 1) {
+        throw new ConflictException('More than one current intake response requires review');
+      }
+
+      const resolvedClientId = lockedBooking.clientId;
+      const current = currentResponses[0];
+      if (current) {
+        if (areIntakeAnswersEqual(current.answers, answers)) {
+          return toPublicResponse(current);
+        }
+
+        await tx.intakeResponseRevision.create({
+          data: toIntakeRevisionData({
+            id: current.id,
+            bookingId: current.bookingId,
+            formId: current.formId,
+            clientId: current.clientId,
+            answers: current.answers,
+          }, 'UPDATE'),
+        });
+        const updated = await tx.intakeResponse.update({
+          where: { id: current.id },
+          data: { answers, clientId: resolvedClientId },
+        });
+        return toPublicResponse(updated);
+      }
+
+      const created = await tx.intakeResponse.create({
         data: { bookingId, formId, clientId: resolvedClientId, answers },
       });
+      return toPublicResponse(created);
     });
   }
 }

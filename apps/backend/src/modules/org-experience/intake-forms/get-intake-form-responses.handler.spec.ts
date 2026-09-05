@@ -2,13 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database';
 import { GetIntakeFormResponsesHandler } from './get-intake-form-responses.handler';
 
-const makeResponse = (overrides: Partial<{ scope: string; scopeId: string | null; formId: string }> = {}) => ({
+const makeResponse = (overrides: Partial<{ scope: string; scopeId: string | null; formId: string; supersededAt: Date | null }> = {}) => ({
   id: 'resp-1',
   formId: overrides.formId ?? 'form-1',
   bookingId: 'booking-1',
   clientId: 'client-1',
   answers: { field1: 'نعم' },
   createdAt: new Date('2026-05-19T10:00:00Z'),
+  supersededAt: overrides.supersededAt ?? null,
   form: {
     id: overrides.formId ?? 'form-1',
     nameAr: 'نموذج',
@@ -34,6 +35,26 @@ const buildHandler = async (prismaValue: Record<string, unknown>) => {
 };
 
 describe('GetIntakeFormResponsesHandler', () => {
+  it('reads only current responses and counts only current rows', async () => {
+    const findMany = jest.fn().mockResolvedValue([makeResponse()]);
+    const groupBy = jest.fn().mockResolvedValue([{ formId: 'form-1', _count: 1 }]);
+    const handler = await buildHandler({
+      intakeResponse: { findMany, groupBy },
+      service: { findMany: jest.fn() },
+      employee: { findMany: jest.fn() },
+      branch: { findMany: jest.fn() },
+    });
+
+    await handler.execute({ bookingId: 'booking-1' });
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { bookingId: 'booking-1', supersededAt: null },
+    }));
+    expect(groupBy).toHaveBeenCalledWith(expect.objectContaining({
+      where: { formId: { in: ['form-1'] }, supersededAt: null },
+    }));
+  });
+
   it('returns mapped responses with null scope label for GLOBAL forms and real submission count', async () => {
     const handler = await buildHandler({
       intakeResponse: {

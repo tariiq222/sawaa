@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { SubmitIntakeResponseHandler } from './submit-intake-response.handler';
 
 const baseForm = {
@@ -14,19 +14,49 @@ const baseForm = {
 interface Opts {
   booking?: { id: string; clientId: string } | null;
   form?: typeof baseForm | null;
-  existingResponse?: { id: string } | null;
+  existingResponse?: {
+    id: string;
+    bookingId?: string;
+    formId?: string;
+    clientId?: string | null;
+    answers?: Record<string, string | string[]>;
+  } | null;
+  currentResponses?: Array<{ id: string; answers: Record<string, string | string[]> }>;
 }
 
 const build = (opts: Opts = {}) => {
   const booking = opts.booking === undefined ? { id: 'book-1', clientId: 'client-1' } : opts.booking;
   const form = opts.form === undefined ? baseForm : opts.form;
   const existingResponse = opts.existingResponse ?? null;
+  const currentResponses = opts.currentResponses ?? (existingResponse ? [existingResponse] : []);
+  const callOrder: string[] = [];
 
   const tx = {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'book-1' }]),
+    $executeRaw: jest.fn().mockImplementation(async () => {
+      callOrder.push('advisory-lock');
+      return 1;
+    }),
+    booking: {
+      findUnique: jest.fn().mockImplementation(async () => booking),
+    },
+    intakeForm: {
+      findUnique: jest.fn().mockImplementation(async () => form),
+    },
     intakeResponse: {
       findFirst: jest.fn().mockResolvedValue(existingResponse),
-      update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: existingResponse?.id, ...data })),
+      findMany: jest.fn().mockResolvedValue(currentResponses),
+      update: jest.fn().mockImplementation(({ data }) => {
+        callOrder.push('update');
+        return Promise.resolve({ id: existingResponse?.id, ...data });
+      }),
       create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'new-resp', ...data })),
+    },
+    intakeResponseRevision: {
+      create: jest.fn().mockImplementation(async () => {
+        callOrder.push('revision');
+        return { id: 'revision-1' };
+      }),
     },
   };
 
@@ -40,7 +70,7 @@ const build = (opts: Opts = {}) => {
   };
 
   const handler = new SubmitIntakeResponseHandler(prisma as never, rlsTransaction as never);
-  return { handler, prisma, tx };
+  return { handler, prisma, tx, callOrder };
 };
 
 describe('SubmitIntakeResponseHandler', () => {
@@ -107,18 +137,119 @@ describe('SubmitIntakeResponseHandler', () => {
     expect(result.clientId).toBe('client-1');
   });
 
-  it('upserts (updates) when a response already exists for (bookingId, formId)', async () => {
-    const { handler, tx } = build({ existingResponse: { id: 'existing-1' } });
+  it('serializes a submission with the booking/form advisory lock before reading current rows', async () => {
+    const { handler, tx } = build();
     await handler.execute({
       bookingId: 'book-1',
       formId: 'form-1',
       answers: { 'f-text': 'محمد' },
       clientId: 'client-1',
     });
+
+    expect(tx.$executeRaw).toHaveBeenCalled();
+    expect((tx.$executeRaw.mock.calls[0][0] as string[]).join('')).toMatch(/pg_advisory_xact_lock/);
+    expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.intakeResponse.findMany.mock.invocationCallOrder[0]);
+  });
+
+  it('rechecks booking ownership and form validity inside the locked transaction', async () => {
+    const { handler, tx } = build();
+    tx.booking.findUnique.mockResolvedValue({ id: 'book-1', clientId: 'other-client' });
+
+    await expect(handler.execute({
+      bookingId: 'book-1',
+      formId: 'form-1',
+      answers: { 'f-text': 'محمد' },
+      clientId: 'client-1',
+    })).rejects.toThrow(NotFoundException);
+
+    expect(tx.$executeRaw).toHaveBeenCalled();
+    expect(tx.booking.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'book-1' } }));
+    expect(tx.intakeForm.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns conflict without choosing when more than one current row exists', async () => {
+    const { handler, tx } = build({
+      currentResponses: [
+        { id: 'current-1', answers: { 'f-text': 'الأول' } },
+        { id: 'current-2', answers: { 'f-text': 'الثاني' } },
+      ],
+    });
+
+    await expect(handler.execute({
+      bookingId: 'book-1',
+      formId: 'form-1',
+      answers: { 'f-text': 'محمد' },
+      clientId: 'client-1',
+    })).rejects.toThrow(ConflictException);
+    expect(tx.intakeResponse.update).not.toHaveBeenCalled();
+    expect(tx.intakeResponse.create).not.toHaveBeenCalled();
+  });
+
+  it('snapshots changed answers before updating the same current row', async () => {
+    const { handler, tx, callOrder } = build({
+      existingResponse: {
+        id: 'existing-1',
+        bookingId: 'book-1',
+        formId: 'form-1',
+        clientId: 'client-1',
+        answers: { 'f-text': 'القديم' },
+      },
+    });
+    await handler.execute({
+      bookingId: 'book-1',
+      formId: 'form-1',
+      answers: { 'f-text': 'محمد' },
+      clientId: 'client-1',
+    });
+    expect(tx.intakeResponseRevision.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        sourceResponseId: 'existing-1',
+        bookingId: 'book-1',
+        formId: 'form-1',
+        clientId: 'client-1',
+        answers: { 'f-text': 'القديم' },
+        reason: 'UPDATE',
+      }),
+    });
     expect(tx.intakeResponse.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'existing-1' } }),
     );
+    expect(callOrder).toEqual(['advisory-lock', 'revision', 'update']);
     expect(tx.intakeResponse.create).not.toHaveBeenCalled();
+  });
+
+  it('treats an identical submission as a no-op without creating a revision', async () => {
+    const existingAnswers = { 'f-text': 'ثابت', 'f-select': 'ذكر' };
+    const answers = { 'f-select': 'ذكر', 'f-text': 'ثابت' };
+    const { handler, tx } = build({ existingResponse: {
+      id: 'existing-1', bookingId: 'book-1', formId: 'form-1', clientId: 'client-1', answers: existingAnswers,
+    } });
+    await handler.execute({ bookingId: 'book-1', formId: 'form-1', answers, clientId: 'client-1' });
+
+    expect(tx.intakeResponseRevision.create).not.toHaveBeenCalled();
+    expect(tx.intakeResponse.update).not.toHaveBeenCalled();
+  });
+
+  it('treats a changed array order as a real answer change', async () => {
+    const { handler, tx } = build({ existingResponse: {
+      id: 'existing-1',
+      bookingId: 'book-1',
+      formId: 'form-1',
+      clientId: 'client-1',
+      answers: { 'f-text': 'ثابت', 'f-check': ['أ', 'ب'] },
+    } });
+
+    await handler.execute({
+      bookingId: 'book-1',
+      formId: 'form-1',
+      answers: { 'f-text': 'ثابت', 'f-check': ['ب', 'أ'] },
+      clientId: 'client-1',
+    });
+
+    expect(tx.intakeResponseRevision.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ reason: 'UPDATE', sourceResponseId: 'existing-1' }),
+    }));
+    expect(tx.intakeResponse.update).toHaveBeenCalled();
   });
 
   it('allows staff submit-on-behalf without a clientId (no ownership check)', async () => {

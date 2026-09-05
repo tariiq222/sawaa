@@ -50,6 +50,7 @@ export function PaymentActions({ payment, onAction, onRefund }: PaymentActionsPr
 
       <VerifyDialog
         paymentId={payment.id}
+        payment={payment}
         open={verifyOpen}
         onOpenChange={setVerifyOpen}
         onSuccess={onAction}

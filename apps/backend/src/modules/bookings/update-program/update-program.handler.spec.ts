@@ -29,6 +29,7 @@ describe('UpdateProgramHandler', () => {
 
   beforeEach(async () => {
     tx = {
+      $queryRaw: jest.fn(async (_strings: TemplateStringsArray, id: string) => [{ id, isActive: true }]),
       program: {
         findUnique: jest.fn().mockResolvedValue(baseExisting()),
         update: jest.fn().mockResolvedValue({

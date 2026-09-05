@@ -20,6 +20,7 @@ import {
   assertProgramTransition,
   isProgramOpenForEnrollment,
 } from '../program/program-state-machine';
+import { lockPersonReferences } from '../../../common/database/person-reference-lock.helper';
 
 /**
  * Sentinel date used as Booking.scheduledAt until the program is SCHEDULED.
@@ -100,6 +101,15 @@ export class EnrollInProgramHandler {
       .withTransaction(async (tx) => {
         // Lock the program row so concurrent enrollment attempts serialise.
         await tx.$queryRaw`SELECT id FROM "Program" WHERE id = ${program.id} FOR UPDATE`;
+
+        await lockPersonReferences(
+          tx,
+          [
+            { kind: 'Client', id: cmd.clientId },
+            { kind: 'Employee', id: firstSupervisor },
+          ],
+          'reference',
+        );
 
         // Guarded capacity increment — the WHERE filter is the actual
         // capacity check. If another enrollment raced ahead and filled the

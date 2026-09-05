@@ -28,6 +28,7 @@ import {
   type PayMethod,
 } from "@/components/features/shared/payment-method-picker"
 import { useRecordPaymentMutations } from "@/hooks/use-payments"
+import { useBookingPaymentPolling } from "@/hooks/use-booking-payment-polling"
 import { useDiscountReasons } from "@/hooks/use-discount-reasons"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
 import { showApiError } from "@/lib/mutation-helpers"
@@ -61,6 +62,7 @@ export function RecordPaymentDialog({
   onOpenChange,
 }: RecordPaymentDialogProps) {
   const { t } = useLocale()
+  const { start: startBookingPaymentPolling } = useBookingPaymentPolling()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -75,6 +77,7 @@ export function RecordPaymentDialog({
           <RecordPaymentForm
             key={booking.id}
             booking={booking}
+            onPaymentSaved={() => startBookingPaymentPolling(booking.id)}
             onClose={() => onOpenChange(false)}
           />
         )}
@@ -85,9 +88,11 @@ export function RecordPaymentDialog({
 
 function RecordPaymentForm({
   booking,
+  onPaymentSaved,
   onClose,
 }: {
   booking: Booking
+  onPaymentSaved: () => void
   onClose: () => void
 }) {
   const { t } = useLocale()
@@ -192,10 +197,11 @@ function RecordPaymentForm({
     if (!fullDiscount) payload.amount = payableHalalas
 
     try {
-      await collectMut.mutateAsync({
+      const result = await collectMut.mutateAsync({
         bookingId: booking.id,
         ...payload,
       })
+      if (result?.payment) onPaymentSaved()
       toast.success(t("bookings.recordPayment.successToast"))
       setIdempotencyKey(createIdempotencyKey())
       onClose()

@@ -61,7 +61,8 @@ export interface CreatePaymentInput {
   invoiceId: string
   amount: number
   method?: PaymentMethod
-  gatewayRef?: string
+  /** null explicitly seeds an off-gateway payment; omission generates a unique ref. */
+  gatewayRef?: string | null
   idempotencyKey?: string
 }
 
@@ -1119,7 +1120,7 @@ export async function createPayment(
     invoiceId: input.invoiceId,
     amount: input.amount,
     method: input.method ?? "CASH",
-    gatewayRef: input.gatewayRef ?? `e2e-payment-${suffix}`,
+    gatewayRef: input.gatewayRef === undefined ? `e2e-payment-${suffix}` : input.gatewayRef,
     idempotencyKey: input.idempotencyKey ?? `e2e-payment-${suffix}`,
   })
 }

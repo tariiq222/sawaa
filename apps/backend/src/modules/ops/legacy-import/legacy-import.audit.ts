@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { hasIntakeHistorySchema } from './legacy-import.compatibility';
 
 export interface ProtectedCounts {
   invoices: number;
@@ -27,6 +28,10 @@ export interface LegacyImportAudit {
   intakeResponses: number;
   intakeAnswers: number;
   intakeResponsesWithoutClient: number;
+  // Older stored audit reports predate these additive counters.
+  intakeCurrentResponses?: number;
+  intakeSupersededResponses?: number;
+  intakeRevisionSnapshots?: number;
   financeCounts: ProtectedCounts;
   commsCounts: ProtectedCommsCounts;
 }
@@ -80,6 +85,7 @@ export async function collectLegacyImportAudit(
   prisma: PrismaClient,
   excludedAppointmentIds: readonly number[],
 ): Promise<LegacyImportAudit> {
+  const historyInstalled = await hasIntakeHistorySchema(prisma);
   const importedServiceIds = [
     ...new Set(
       (
@@ -114,7 +120,7 @@ export async function collectLegacyImportAudit(
   ).flatMap((row) => (row.targetId ? [row.targetId] : []));
   const intakeRows = await prisma.intakeResponse.findMany({
     where: { formId: { in: legacyFormIds } },
-    select: { answers: true, clientId: true },
+    select: { answers: true, clientId: true, supersededAt: historyInstalled },
   });
   const [
     importedAppointments,
@@ -132,6 +138,7 @@ export async function collectLegacyImportAudit(
     payments,
     notifications,
     outboxEvents,
+    intakeRevisionSnapshots,
   ] = await Promise.all([
     prisma.legacyImportRecord.count({ where: { entityType: 'APPOINTMENT', disposition: 'IMPORTED' } }),
     prisma.legacyImportRecord.count({ where: { entityType: 'APPOINTMENT', disposition: 'LINKED_EXISTING' } }),
@@ -148,6 +155,9 @@ export async function collectLegacyImportAudit(
     prisma.payment.count(),
     prisma.notification.count(),
     prisma.outboxEvent.count(),
+    historyInstalled
+      ? prisma.intakeResponseRevision.count({ where: { formId: { in: legacyFormIds } } })
+      : Promise.resolve(0),
   ]);
   return {
     importedAppointments,
@@ -169,6 +179,9 @@ export async function collectLegacyImportAudit(
       0,
     ),
     intakeResponsesWithoutClient: intakeRows.filter((row) => !row.clientId).length,
+    intakeCurrentResponses: intakeRows.filter((row) => !row.supersededAt).length,
+    intakeSupersededResponses: intakeRows.filter((row) => Boolean(row.supersededAt)).length,
+    intakeRevisionSnapshots,
     financeCounts: { invoices, payments },
     commsCounts: { notifications, outboxEvents },
   };

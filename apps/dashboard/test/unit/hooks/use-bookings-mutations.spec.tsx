@@ -62,6 +62,7 @@ vi.mock("@/lib/api/bookings", () => ({
 }))
 
 import { useBookingMutations } from "@/hooks/use-bookings"
+import { queryKeys } from "@/lib/query-keys"
 
 function makeWrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -205,5 +206,66 @@ describe("useBookingMutations", () => {
         "client arrived late",
       ),
     )
+  })
+
+  it("returns consumed credit and refreshes the affected program after no-show", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const invalidate = vi.spyOn(client, "invalidateQueries")
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const booking = {
+      id: "bk-1",
+      clientId: "client-1",
+      employeeId: "employee-1",
+      date: "2026-09-05",
+      status: "no_show",
+      packageFunding: { creditId: "credit-1" },
+      programId: "program-1",
+    }
+    client.setQueryData(queryKeys.bookings.list({ page: 1 }), { items: [booking] })
+    // Lifecycle responses are flat rows and omit the mapped packageFunding
+    // relation; the mutation must resolve that context from the QueryClient.
+    markNoShow.mockResolvedValueOnce({ id: "bk-1", status: "NO_SHOW" })
+
+    const { result } = renderHook(() => useBookingMutations(), { wrapper })
+    await act(async () => { await result.current.noShowMut.mutateAsync("bk-1") })
+
+    const keys = invalidate.mock.calls.map(([options]) => options?.queryKey)
+    expect(keys).toContainEqual(["package-purchases"])
+    expect(keys).toContainEqual(["employees", "slots", "employee-1", "2026-09-05"])
+    expect(keys).toContainEqual(["programs", "detail", "program-1"])
+  })
+
+  it("reclaims credit on no-show restore and refreshes the client balance", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const invalidate = vi.spyOn(client, "invalidateQueries")
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    client.setQueryData(queryKeys.bookings.list({ page: 1 }), {
+      items: [{
+        id: "bk-1",
+        clientId: "client-1",
+        employeeId: "employee-1",
+        date: "2026-09-05",
+        status: "no_show",
+        packageFunding: { creditId: "credit-1" },
+      }],
+    })
+    restoreNoShowBooking.mockResolvedValueOnce({
+      id: "bk-1",
+      status: "confirmed",
+    })
+
+    const { result } = renderHook(() => useBookingMutations(), { wrapper })
+    await act(async () => {
+      await result.current.restoreNoShowMut.mutateAsync({ id: "bk-1", reason: "late" })
+    })
+
+    const keys = invalidate.mock.calls.map(([options]) => options?.queryKey)
+    expect(keys).toContainEqual(["package-purchases", "client", "client-1"])
+    expect(keys).toContainEqual(["credit-bookings"])
+    expect(keys).toContainEqual(["reports", "bookings"])
   })
 })

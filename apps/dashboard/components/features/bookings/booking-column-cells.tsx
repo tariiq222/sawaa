@@ -30,6 +30,7 @@ import { useAuth } from "@/components/providers/auth-provider"
 import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { usePaymentMutations } from "@/hooks/use-payments"
+import { useBookingPaymentPolling } from "@/hooks/use-booking-payment-polling"
 import { ApiError } from "@/lib/api"
 import { generateInvoicePdf } from "@/lib/api/invoices"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
@@ -106,6 +107,7 @@ export function ActionsCell({
   const queryClient = useQueryClient()
   const { canDo } = useAuth()
   const { verifyMut } = usePaymentMutations()
+  const { start: startBookingPaymentPolling } = useBookingPaymentPolling()
   const [invoiceLoading, setInvoiceLoading] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
 
@@ -157,7 +159,22 @@ export function ActionsCell({
             className={intentIconBtn.approve}
             aria-label={t("bookings.payment.action.approveTransfer")}
             disabled={isPending}
-            onClick={() => verifyMut.mutate({ id: payment.id, action: "approve" }, { onSuccess: invalidateBookings })}
+            onClick={() => verifyMut.mutate(
+              {
+                id: payment.id,
+                action: "approve",
+                invoiceId: booking.invoice?.id,
+                bookingId: booking.id,
+                clientId: booking.clientId ?? undefined,
+                employeeId: booking.employeeId,
+              },
+              {
+                onSuccess: () => {
+                  startBookingPaymentPolling(booking.id)
+                  void invalidateBookings()
+                },
+              },
+            )}
           >
             <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2.2} />
           </button>
@@ -165,7 +182,17 @@ export function ActionsCell({
             className={intentIconBtn.reject}
             aria-label={t("bookings.payment.action.rejectTransfer")}
             disabled={isPending}
-            onClick={() => verifyMut.mutate({ id: payment.id, action: "reject" }, { onSuccess: invalidateBookings })}
+            onClick={() => verifyMut.mutate(
+              {
+                id: payment.id,
+                action: "reject",
+                invoiceId: booking.invoice?.id,
+                bookingId: booking.id,
+                clientId: booking.clientId ?? undefined,
+                employeeId: booking.employeeId,
+              },
+              { onSuccess: invalidateBookings },
+            )}
           >
             <HugeiconsIcon icon={CancelCircleIcon} size={16} strokeWidth={2.2} />
           </button>
@@ -196,6 +223,10 @@ export function ActionsCell({
           <BookingRefundDialog
             paymentId={payment.id}
             maxAmount={payment.amount}
+            invoiceId={booking.invoice?.id}
+            bookingId={booking.id}
+            clientId={booking.clientId ?? undefined}
+            employeeId={booking.employeeId}
             open={refundOpen}
             onOpenChange={setRefundOpen}
           />

@@ -278,6 +278,9 @@ function PaymentRefundStep({
         id: payment.id,
         reason: reason.trim(),
         amount: amountSar ? sarToHalalas(amountNum) : undefined,
+        invoiceId: payment.invoiceId,
+        bookingId: payment.invoice?.bookingId,
+        clientId: payment.invoice?.clientId,
       })
       toast.success(t("refund.successToast"))
       onDone()

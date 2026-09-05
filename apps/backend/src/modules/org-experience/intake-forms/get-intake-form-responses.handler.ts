@@ -18,7 +18,7 @@ export class GetIntakeFormResponsesHandler {
 
   async execute({ bookingId }: GetIntakeFormResponsesCommand) {
     const responses = await this.prisma.intakeResponse.findMany({
-      where: { bookingId },
+      where: { bookingId, supersededAt: null },
       include: {
         form: {
           include: {
@@ -66,7 +66,7 @@ export class GetIntakeFormResponsesHandler {
       formIds.length > 0
         ? this.prisma.intakeResponse.groupBy({
         by: ['formId'],
-        where: { formId: { in: formIds } },
+        where: { formId: { in: formIds }, supersededAt: null },
         _count: true,
           })
         : Promise.resolve([]),
