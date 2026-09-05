@@ -10,7 +10,7 @@ export class ClientRefreshHandler {
     private readonly clientTokens: ClientTokenService,
   ) {}
 
-  async execute(rawToken: string, clientId: string) {
+  async execute(rawToken: string, clientId?: string, accessToken?: string) {
     const selector = rawToken.slice(0, 8);
 
     const candidates = await this.prisma.clientRefreshToken.findMany({
@@ -31,6 +31,14 @@ export class ClientRefreshHandler {
     }
 
     if (!matched) throw new UnauthorizedException('Invalid or expired refresh token');
+
+    // The refresh credential authenticates the client even after access expiry.
+    // If a still-valid access credential is supplied, reject mixed identities.
+    const access = accessToken ? this.clientTokens.verifyToken(accessToken) : null;
+    if (access && (access.namespace !== 'client' || access.sub !== matched.clientId)) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    clientId = matched.clientId;
 
     const revoked = await this.prisma.clientRefreshToken.updateMany({
       where: { id: matched.id, revokedAt: null },
@@ -57,6 +65,7 @@ export class ClientRefreshHandler {
     });
 
     return {
+      clientId,
       accessToken: tokens.accessToken,
       accessMaxAgeMs: tokens.accessMaxAgeMs,
       refreshToken: tokens.rawRefresh,

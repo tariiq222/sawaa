@@ -4,8 +4,9 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Locale } from '@/features/locale/locale';
 import { useT } from '@/features/locale/locale-provider';
-import { useCurrentClient, clearAuth, clientLogoutApi } from '@/features/auth/public';
+import { useCurrentClient, clientLogoutApi } from '@/features/auth/public';
 import { ClientBookingsList } from '@/features/auth/client-bookings-list';
+import { AccountLoadError } from './load-error';
 import { OverviewTab } from './overview-tab';
 import { InvoicesTab } from './invoices-tab';
 import { ProfileTab } from './profile-tab';
@@ -21,12 +22,31 @@ type AccountTab = 'overview' | 'bookings' | 'invoices' | 'conversations' | 'prof
 const TABS: AccountTab[] = ['overview', 'bookings', 'invoices', 'conversations', 'profile'];
 
 const emptySubscribe = () => () => {};
+const LOGOUT_TIMEOUT_MS = 10_000;
+
+function isKnownSignedOutError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const status = (error as { status?: unknown }).status;
+  // Public logout is idempotent and normally returns 204 even for an absent
+  // or revoked refresh token. A 403 can be a retryable CSRF rejection, so only
+  // 401 is evidence that this request cannot use the current session.
+  return status === 401;
+}
 
 export function AccountFeature({ locale }: AccountFeatureProps) {
-  const { client, isLoading, error } = useCurrentClient();
+  const {
+    client,
+    isLoading,
+    error,
+    refetch: refetchCurrentClient,
+    clearSession,
+    confirmLogout,
+    sessionReadBlocked,
+  } = useCurrentClient();
   const router = useRouter();
   const tt = useT();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutRemoteUnknown, setLogoutRemoteUnknown] = useState(false);
   const [activeTab, setActiveTab] = useState<AccountTab>('overview');
   // Dismissible per render only — reappears on the next visit to /account.
   const [emailNoticeDismissed, setEmailNoticeDismissed] = useState(false);
@@ -41,23 +61,86 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
   );
 
   useEffect(() => {
-    if (!isLoading && (error || client === null)) {
+    if (
+      !isLoading &&
+      mounted &&
+      !error &&
+      client === null &&
+      !loggingOut &&
+      !logoutRemoteUnknown &&
+      !sessionReadBlocked
+    ) {
       router.push('/login');
     }
-  }, [client, error, router, isLoading]);
+  }, [client, error, loggingOut, logoutRemoteUnknown, router, isLoading, mounted, sessionReadBlocked]);
 
   async function handleLogout() {
     setLoggingOut(true);
+    setLogoutRemoteUnknown(false);
+    // Clear the browser-side session before waiting on a remote request. The
+    // httpOnly cookie may survive a timeout, so keep this page in a signed-out
+    // recovery state until revocation is confirmed rather than redirecting
+    // into middleware and bouncing back to /account.
+    clearSession();
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
-      await clientLogoutApi();
-    } catch {
-      // ignore — clear local + redirect anyway
+      await Promise.race([
+        clientLogoutApi(),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('logout_timeout')),
+            LOGOUT_TIMEOUT_MS,
+          );
+        }),
+      ]);
+      confirmLogout();
+      router.push('/login');
+    } catch (error) {
+      if (isKnownSignedOutError(error)) {
+        // Invalid or revoked credentials prove this browser session cannot be
+        // used. Treat that as known signed out; only indeterminate transport
+        // and server failures remain in the recovery state.
+        confirmLogout();
+        router.push('/login');
+      } else {
+        setLogoutRemoteUnknown(true);
+      }
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      setLoggingOut(false);
     }
-    clearAuth();
-    router.push('/login');
   }
 
-  if (!mounted || isLoading || error || client === null) {
+  if (loggingOut || logoutRemoteUnknown || sessionReadBlocked) {
+    return (
+      <div role="status" className="grid place-items-center gap-4 py-24 text-center text-[var(--sw-neutral-500)]">
+        <p>{loggingOut ? tt('account.loggingOut') : tt('account.logoutUnknown')}</p>
+        {(logoutRemoteUnknown || sessionReadBlocked) && (
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)]"
+          >
+            {tt('account.retry')}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (!mounted || isLoading) {
+    return (
+      <div className="grid place-items-center py-24 text-[var(--sw-neutral-500)]">
+        {tt('common.loading')}
+      </div>
+    );
+  }
+
+  if (error) {
+    return <AccountLoadError onRetry={() => void refetchCurrentClient()} />;
+  }
+
+  if (client === null) {
     return (
       <div className="grid place-items-center py-24 text-[var(--sw-neutral-500)]">
         {tt('common.loading')}

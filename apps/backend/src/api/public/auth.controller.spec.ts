@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { AuthController } from './auth.controller';
 import { LoginHandler } from '../../modules/identity/login/login.handler';
 import { LogoutHandler } from '../../modules/identity/logout/logout.handler';
-import { PrismaService } from '../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../infrastructure/database';
 import { TokenService } from '../../modules/identity/shared/token.service';
 import { GetCurrentUserHandler } from '../../modules/identity/get-current-user/get-current-user.handler';
 import { ChangePasswordHandler } from '../../modules/identity/users/change-password.handler';
@@ -61,7 +61,9 @@ describe('AuthController (e2e)', () => {
     tokenHash = await bcrypt.hash('raw-token', 10);
   });
 
-  const buildMockPrisma = () => ({
+  const buildMockPrisma = () => {
+    const db = {
+    $queryRaw: jest.fn().mockResolvedValue([]),
     refreshToken: {
       findMany: jest.fn(),
       update: jest.fn(),
@@ -73,7 +75,9 @@ describe('AuthController (e2e)', () => {
     },
     // P1-8: login/me now load DB system-role permissions (mirrors JwtStrategy).
     customRole: { findFirst: jest.fn().mockResolvedValue(null) },
-  });
+    };
+    return { ...db, $transaction: jest.fn(async (work: (tx: typeof db) => unknown) => work(db)) };
+  };
 
   const buildApp = async (mockPrisma: any, jwtGuardValue: any) => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -82,6 +86,7 @@ describe('AuthController (e2e)', () => {
         { provide: LoginHandler, useValue: mockLogin },
         { provide: LogoutHandler, useValue: mockLogout },
         { provide: PrismaService, useValue: mockPrisma },
+        RlsTransactionService,
         { provide: TokenService, useValue: mockTokens },
         { provide: GetCurrentUserHandler, useValue: mockGetCurrentUser },
         { provide: ChangePasswordHandler, useValue: mockChangePassword },
@@ -225,6 +230,48 @@ describe('AuthController (e2e)', () => {
 
       expect(res.body.message).toContain('No refresh token');
     });
+
+    it('has one winner when two requests rotate the same refresh token concurrently', async () => {
+      const mockPrisma = buildMockPrisma();
+      const rawToken = 'raw-token';
+      mockPrisma.refreshToken.findMany.mockResolvedValue([
+        {
+          id: 'rt-same-token',
+          tokenHash,
+          tokenSelector: 'raw-toke',
+          userId: 'user-1',
+          revokedAt: null,
+          expiresAt: new Date(Date.now() + 86400000),
+        },
+      ]);
+      mockPrisma.refreshToken.updateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 0 });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        isActive: true,
+        isSuperAdmin: false,
+        customRole: null,
+      });
+      mockTokens.issueTokenPair.mockResolvedValue({ accessToken: 'new-acc', refreshToken: 'new-ref' });
+      mockConfig.get.mockReturnValue('15m');
+
+      const concurrentApp = await buildApp(mockPrisma, { canActivate: () => true });
+      await concurrentApp.listen(0, "127.0.0.1");
+      const responses = await Promise.all([
+        request(concurrentApp.getHttpServer())
+          .post('/auth/refresh')
+          .set('Cookie', `ck_refresh=${rawToken}`),
+        request(concurrentApp.getHttpServer())
+          .post('/auth/refresh')
+          .set('Cookie', `ck_refresh=${rawToken}`),
+      ]);
+
+      expect(responses.map((res) => res.status).sort()).toEqual([200, 401]);
+      expect(mockTokens.issueTokenPair).toHaveBeenCalledTimes(1);
+      await concurrentApp.close();
+    });
+
   });
 
   describe('GET /auth/me', () => {

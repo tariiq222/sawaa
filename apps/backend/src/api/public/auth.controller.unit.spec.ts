@@ -2,6 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { AuthController } from './auth.controller';
+import { RlsTransactionService } from '../../infrastructure/database';
 
 describe('AuthController (unit)', () => {
   let controller: AuthController;
@@ -28,6 +29,8 @@ describe('AuthController (unit)', () => {
       // P1-8: login/me now load DB system-role permissions (mirrors JwtStrategy).
       customRole: { findFirst: jest.fn().mockResolvedValue(null) },
     };
+    mockPrisma.$queryRaw = jest.fn().mockResolvedValue([]);
+    mockPrisma.$transaction = jest.fn(async (work: (tx: typeof mockPrisma) => unknown) => work(mockPrisma));
     mockTokens = { issueTokenPair: jest.fn() };
     mockGetCurrentUser = { execute: jest.fn() };
     mockChangePassword = { execute: jest.fn() };
@@ -65,6 +68,7 @@ describe('AuthController (unit)', () => {
       mockVerifyDashboardOtp,
       mockAuthResponseBuilder,
       mockLookupUser,
+      new RlsTransactionService(mockPrisma),
     );
   });
 

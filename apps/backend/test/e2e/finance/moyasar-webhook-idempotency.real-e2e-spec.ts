@@ -2,9 +2,11 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../../src/app.module';
-import { PrismaService } from '../../../src/infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../src/infrastructure/database';
 import { MoyasarApiClient } from '../../../src/modules/finance/moyasar-api/moyasar-api.client';
 import { MoyasarCredentialsService } from '../../../src/infrastructure/payments/moyasar-credentials.service';
+import { stableEventId } from '../../../src/common/events';
+import { ReconcilePaymentsCron } from '../../../src/modules/ops/cron-tasks/reconcile-payments.cron';
 
 /**
  * R-26 (focused): the Moyasar booking-payment webhook must be idempotent at the
@@ -40,6 +42,9 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const invoiceId = `00000000-0000-4000-8000-${suffix.replace(/[^0-9a-f]/gi, '0').slice(0, 12).padEnd(12, '0')}`;
   const gatewayPaymentId = `pay_realE2e_${suffix}`;
+  const concurrentInvoiceId = `10000000-0000-4000-8000-${suffix.replace(/[^0-9a-f]/gi, '1').slice(0, 12).padEnd(12, '1')}`;
+  const concurrentGatewayPaymentId = `pay_concurrent_${suffix}`;
+  let concurrentPaymentId = '';
   // The handler keys WebhookEvent.eventId on `${paymentId}:${normalizedStatus}`,
   // where normalizedStatus is the raw Moyasar status string ('paid'), not the
   // internal PaymentStatus enum.
@@ -55,12 +60,13 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
       // the seeded invoice so the anti-spoof check passes.
       .overrideProvider(MoyasarApiClient)
       .useValue({
-        getPaymentStatus: jest.fn().mockResolvedValue({
-          id: gatewayPaymentId,
-          status: 'paid',
-          amount: TOTAL_HALALAS,
-          currency: 'SAR',
-        }),
+        getPaymentStatus: jest.fn().mockImplementation((_org: string, paymentId: string) =>
+          Promise.resolve({
+            id: paymentId,
+            status: 'paid',
+            amount: TOTAL_HALALAS,
+            currency: 'SAR',
+          })),
       })
       // Decrypt the per-tenant webhook secret to our known signing secret.
       .overrideProvider(MoyasarCredentialsService)
@@ -111,6 +117,33 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
         status: 'ISSUED',
       },
     });
+    await prisma.invoice.create({
+      data: {
+        id: concurrentInvoiceId,
+        branchId: 'real-e2e-branch',
+        clientId: 'real-e2e-client',
+        employeeId: 'real-e2e-employee',
+        bookingId: null,
+        packagePurchaseId: `real-e2e-package-${suffix}`,
+        subtotal: TOTAL_HALALAS,
+        vatAmt: 0,
+        total: TOTAL_HALALAS,
+        currency: 'SAR',
+        status: 'ISSUED',
+      },
+    });
+    const concurrentPayment = await prisma.payment.create({
+      data: {
+        invoiceId: concurrentInvoiceId,
+        amount: TOTAL_HALALAS,
+        currency: 'SAR',
+        method: 'ONLINE_CARD',
+        status: 'PENDING',
+        gatewayRef: concurrentGatewayPaymentId,
+        idempotencyKey: `client:${concurrentInvoiceId}`,
+      },
+    });
+    concurrentPaymentId = concurrentPayment.id;
 
     await prisma.organizationPaymentConfig.upsert({
       where: { singletonKey: 'singleton' },
@@ -135,9 +168,23 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
   });
 
   async function cleanup() {
-    await prisma.webhookEvent.deleteMany({ where: { eventId } }).catch(() => undefined);
-    await prisma.payment.deleteMany({ where: { invoiceId } }).catch(() => undefined);
-    await prisma.invoice.deleteMany({ where: { id: invoiceId } }).catch(() => undefined);
+    await prisma.outboxEvent.deleteMany({
+      where: { aggregateId: { in: [invoiceId, concurrentInvoiceId] } },
+    }).catch(() => undefined);
+    await prisma.webhookEvent.deleteMany({
+      where: {
+        OR: [
+          { eventId: { startsWith: gatewayPaymentId } },
+          { eventId: { startsWith: concurrentGatewayPaymentId } },
+        ],
+      },
+    }).catch(() => undefined);
+    await prisma.payment.deleteMany({
+      where: { invoiceId: { in: [invoiceId, concurrentInvoiceId] } },
+    }).catch(() => undefined);
+    await prisma.invoice.deleteMany({
+      where: { id: { in: [invoiceId, concurrentInvoiceId] } },
+    }).catch(() => undefined);
     if (previousPaymentConfig) {
       await prisma.organizationPaymentConfig
         .update({
@@ -178,8 +225,34 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
     };
   }
 
-  it('processes the first delivery and dedups the second (DB-level idempotency)', async () => {
+  async function waitForInvoiceLockWait(): Promise<void> {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*)::bigint AS count
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND wait_event_type = 'Lock'
+          AND query LIKE '%FROM "Invoice"%FOR UPDATE%'
+      `;
+      if (Number(rows[0]?.count ?? 0) > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error('reconcile transaction never reached the invoice lock wait');
+  }
+
+  it('reclaims a crashed claim, processes once, and dedups only after processedAt is set', async () => {
     const payload = buildWebhook();
+    await prisma.webhookEvent.create({
+      data: {
+        provider: 'MOYASAR_TENANT',
+        eventId,
+        eventType: 'paid',
+        payloadHash: 'abandoned-real-e2e',
+        processedAt: null,
+        result: null,
+        receivedAt: new Date(Date.now() - 10 * 60_000),
+      },
+    });
 
     const first = await request(app.getHttpServer())
       .post('/api/v1/public/payments/webhook')
@@ -201,7 +274,145 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
     expect(payments).toHaveLength(1);
     expect(payments[0].status).toBe('COMPLETED');
 
+    const durableEventId = stableEventId(
+      `finance:payment:${payments[0].id}:finance.payment.completed`,
+    );
+    const outbox = await prisma.outboxEvent.findUnique({ where: { id: durableEventId } });
+    expect(outbox).toMatchObject({
+      aggregateId: invoiceId,
+      eventType: 'finance.payment.completed',
+      status: 'PENDING_V2',
+      deliveryLane: 'PENDING_V2',
+    });
+
     const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
     expect(invoice?.status).toBe('PAID');
+  });
+
+  it('returns 503 rather than acknowledging a live unprocessed claim as duplicate', async () => {
+    const liveEventId = `${gatewayPaymentId}:captured`;
+    await prisma.webhookEvent.create({
+      data: {
+        provider: 'MOYASAR_TENANT',
+        eventId: liveEventId,
+        eventType: 'captured',
+        payloadHash: 'live-real-e2e',
+        processedAt: null,
+        result: 'processing:other-owner',
+        receivedAt: new Date(),
+      },
+    });
+    const payload = buildWebhook();
+    payload.data.status = 'captured';
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/public/payments/webhook')
+      .send(payload);
+
+    expect(response.status).toBe(503);
+    const live = await prisma.webhookEvent.findUnique({
+      where: { provider_eventId: { provider: 'MOYASAR_TENANT', eventId: liveEventId } },
+    });
+    expect(live).toMatchObject({ processedAt: null, result: 'processing:other-owner' });
+  });
+
+  it('serializes a webhook and reconcile completion into one payment transition and one outbox row', async () => {
+    const payload = {
+      ...buildWebhook(),
+      id: `evt_concurrent_${suffix}`,
+      data: {
+        ...buildWebhook().data,
+        id: concurrentGatewayPaymentId,
+        metadata: { invoiceId: concurrentInvoiceId },
+      },
+    };
+    const cron = app.get(ReconcilePaymentsCron) as unknown as {
+      finalizeCompleted(args: {
+        paymentRowId: string;
+        invoice: {
+          id: string;
+          total: number;
+          currency: string;
+          bookingId: null;
+          packagePurchaseId: null;
+          clientId: string;
+        };
+        amountHalalas: number;
+        gatewayPaymentId: string;
+      }): Promise<void>;
+    };
+
+    const rls = app.get(RlsTransactionService) as unknown as {
+      withTransaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>;
+    };
+    const originalWithTransaction = rls.withTransaction.bind(rls);
+    let lockEntered!: () => void;
+    let releaseLock!: () => void;
+    const entered = new Promise<void>((resolve) => { lockEntered = resolve; });
+    const release = new Promise<void>((resolve) => { releaseLock = resolve; });
+    let released = false;
+    const transactionSpy = jest.spyOn(rls, 'withTransaction').mockImplementationOnce(
+      (fn) => originalWithTransaction(async (tx) => {
+        const wrapped = new Proxy(tx as Record<PropertyKey, unknown>, {
+          get(target, property, receiver) {
+            if (property === '$queryRaw') {
+              return async (...args: unknown[]) => {
+                const query = Reflect.get(target, property) as (
+                  ...inner: unknown[]
+                ) => Promise<unknown>;
+                const result = await query.apply(tx, args);
+                lockEntered();
+                await release;
+                return result;
+              };
+            }
+            const value = Reflect.get(target, property, receiver);
+            return typeof value === 'function' ? value.bind(tx) : value;
+          },
+        });
+        return fn(wrapped);
+      }),
+    );
+
+    const webhookPromise = request(app.getHttpServer())
+        .post('/api/v1/public/payments/webhook')
+        .send(payload)
+        .then((response) => response);
+    try {
+      await entered;
+      const cronPromise = cron.finalizeCompleted({
+        paymentRowId: concurrentPaymentId,
+        invoice: {
+          id: concurrentInvoiceId,
+          total: TOTAL_HALALAS,
+          currency: 'SAR',
+          bookingId: null,
+          packagePurchaseId: null,
+          clientId: 'real-e2e-client',
+        },
+        amountHalalas: TOTAL_HALALAS,
+        gatewayPaymentId: concurrentGatewayPaymentId,
+      });
+      await waitForInvoiceLockWait();
+      released = true;
+      releaseLock();
+      const [webhookResponse] = await Promise.all([webhookPromise, cronPromise]);
+
+      expect(webhookResponse.status).toBe(200);
+      expect(await prisma.payment.findUnique({ where: { id: concurrentPaymentId } }))
+        .toMatchObject({ status: 'COMPLETED' });
+      expect(await prisma.invoice.findUnique({ where: { id: concurrentInvoiceId } }))
+        .toMatchObject({ status: 'PAID' });
+      const durableEventId = stableEventId(
+        `finance:payment:${concurrentPaymentId}:finance.payment.completed`,
+      );
+      expect(await prisma.outboxEvent.count({
+        where: { aggregateId: concurrentInvoiceId, eventType: 'finance.payment.completed' },
+      })).toBe(1);
+      expect(await prisma.outboxEvent.findUnique({ where: { id: durableEventId } })).not.toBeNull();
+    } finally {
+      if (!released) releaseLock();
+      transactionSpy.mockRestore();
+    }
   });
 });

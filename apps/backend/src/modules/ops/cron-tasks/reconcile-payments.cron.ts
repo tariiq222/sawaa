@@ -1,5 +1,11 @@
 import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
-import { ActivityAction, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
+import {
+  ActivityAction,
+  InvoiceStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import {
   MoyasarApiClient,
@@ -13,6 +19,8 @@ import { resolveInvoiceDeposit, isDepositPayment } from '../../finance/deposit.h
 import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { stableEventId } from '../../../common/events';
+import { isNonPayableInvoiceStatus } from '../../finance/invoice-payment-state.helper';
 
 const CRON_ACTOR_EMAIL = 'system:reconcile-payments-cron';
 const BATCH_SIZE = 100;
@@ -246,24 +254,50 @@ export class ReconcilePaymentsCron {
   }): Promise<void> {
     const { paymentRowId, invoice, amountHalalas, gatewayPaymentId } = args;
 
-    // Read the deposit config once (read-only) so a deposit-sized payment can
-    // emit DepositPaidEvent instead of confirming the booking.
-    const deposit = await resolveInvoiceDeposit(this.prisma, invoice.bookingId);
-    const total = Math.round(Number(invoice.total));
-
     let applied = false;
     let fullyPaid = false;
     let paidAfterWrite = 0;
 
     await this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${invoice.id} FOR UPDATE`,
+      );
+      const lockedInvoice = await tx.invoice.findUnique({
+        where: { id: invoice.id },
+        select: {
+          id: true,
+          total: true,
+          currency: true,
+          bookingId: true,
+          packagePurchaseId: true,
+          clientId: true,
+          status: true,
+        },
+      });
       // Re-read inside the tx: if a webhook already finalized this row, no-op.
       const current = await tx.payment.findUnique({
         where: { id: paymentRowId },
-        select: { status: true },
+        select: { status: true, amount: true, currency: true },
       });
-      if (!current || current.status !== PaymentStatus.PENDING) {
+      if (
+        !lockedInvoice ||
+        !current ||
+        current.status !== PaymentStatus.PENDING ||
+        Math.round(Number(current.amount)) !== amountHalalas ||
+        current.currency.toUpperCase() !== lockedInvoice.currency.toUpperCase()
+      ) {
         return;
       }
+      if (isNonPayableInvoiceStatus(lockedInvoice.status as InvoiceStatus)) {
+        this.logger.error(
+          `reconcile-payments: Moyasar payment ${gatewayPaymentId} reports paid after invoice ` +
+            `${lockedInvoice.id} entered ${lockedInvoice.status}; internalPayment=${paymentRowId}; ` +
+            `preserving it for manual review`,
+        );
+        return;
+      }
+      const deposit = await resolveInvoiceDeposit(tx, lockedInvoice.bookingId);
+      const total = Math.round(Number(lockedInvoice.total));
 
       await tx.payment.update({
         where: { id: paymentRowId },
@@ -279,14 +313,14 @@ export class ReconcilePaymentsCron {
       // status — a top-up that only covers part of the balance lands
       // PARTIALLY_PAID, not PAID. Mirrors the webhook + ProcessPaymentHandler.
       const agg = await tx.payment.aggregate({
-        where: { invoiceId: invoice.id, status: PaymentStatus.COMPLETED },
+        where: { invoiceId: lockedInvoice.id, status: PaymentStatus.COMPLETED },
         _sum: { amount: true },
       });
       paidAfterWrite = Number(agg._sum?.amount ?? 0);
       fullyPaid = paidAfterWrite >= total;
 
       await tx.invoice.update({
-        where: { id: invoice.id },
+        where: { id: lockedInvoice.id },
         data: {
           status: fullyPaid ? 'PAID' : 'PARTIALLY_PAID',
           paidAt: fullyPaid ? new Date() : undefined,
@@ -318,18 +352,24 @@ export class ReconcilePaymentsCron {
       if (fullyPaid) {
         const event = new PaymentCompletedEvent({
           paymentId: paymentRowId,
-          invoiceId: invoice.id,
-          bookingId: invoice.bookingId,
-          packagePurchaseId: invoice.packagePurchaseId,
-          amount: amountHalalas,
-          currency: invoice.currency,
+          invoiceId: lockedInvoice.id,
+          bookingId: lockedInvoice.bookingId,
+          packagePurchaseId: lockedInvoice.packagePurchaseId,
+          amount: Math.round(Number(current.amount)),
+          currency: lockedInvoice.currency,
           organizationId: DEFAULT_ORG_ID,
         });
         await tx.outboxEvent.create({
           data: {
-            aggregateId: invoice.id,
+            id: stableEventId(`finance:payment:${paymentRowId}:${event.eventName}`),
+            aggregateId: lockedInvoice.id,
             eventType: event.eventName,
-            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+            status: 'PENDING_V2',
+            deliveryLane: 'PENDING_V2',
+            payload: {
+              ...event.toEnvelope(),
+              eventId: stableEventId(`finance:payment:${paymentRowId}:${event.eventName}`),
+            } as unknown as Prisma.InputJsonValue,
           },
         });
       } else if (
@@ -341,17 +381,23 @@ export class ReconcilePaymentsCron {
       ) {
         const event = new DepositPaidEvent({
           paymentId: paymentRowId,
-          invoiceId: invoice.id,
-          bookingId: invoice.bookingId,
-          amount: amountHalalas,
-          currency: invoice.currency,
+          invoiceId: lockedInvoice.id,
+          bookingId: lockedInvoice.bookingId,
+          amount: Math.round(Number(current.amount)),
+          currency: lockedInvoice.currency,
           organizationId: DEFAULT_ORG_ID,
         });
         await tx.outboxEvent.create({
           data: {
-            aggregateId: invoice.id,
+            id: stableEventId(`finance:payment:${paymentRowId}:${event.eventName}`),
+            aggregateId: lockedInvoice.id,
             eventType: event.eventName,
-            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+            status: 'PENDING_V2',
+            deliveryLane: 'PENDING_V2',
+            payload: {
+              ...event.toEnvelope(),
+              eventId: stableEventId(`finance:payment:${paymentRowId}:${event.eventName}`),
+            } as unknown as Prisma.InputJsonValue,
           },
         });
       }
@@ -383,11 +429,24 @@ export class ReconcilePaymentsCron {
 
     let applied = false;
     await this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${invoice.id} FOR UPDATE`,
+      );
+      const lockedInvoice = await tx.invoice.findUnique({
+        where: { id: invoice.id },
+        select: { id: true, currency: true, clientId: true },
+      });
       const current = await tx.payment.findUnique({
         where: { id: paymentRowId },
-        select: { status: true },
+        select: { status: true, amount: true, currency: true },
       });
-      if (!current || current.status !== PaymentStatus.PENDING) {
+      if (
+        !lockedInvoice ||
+        !current ||
+        current.status !== PaymentStatus.PENDING ||
+        Math.round(Number(current.amount)) !== amountHalalas ||
+        current.currency.toUpperCase() !== lockedInvoice.currency.toUpperCase()
+      ) {
         return;
       }
       await tx.payment.update({
@@ -414,17 +473,23 @@ export class ReconcilePaymentsCron {
       // — the OutboxPublisherCron delivers it at-least-once.
       const event = new PaymentFailedEvent({
         paymentId: paymentRowId,
-        invoiceId: invoice.id,
-        clientId: invoice.clientId,
-        amount: amountHalalas,
-        currency: invoice.currency,
+        invoiceId: lockedInvoice.id,
+        clientId: lockedInvoice.clientId,
+        amount: Math.round(Number(current.amount)),
+        currency: lockedInvoice.currency,
         reason: 'Reconciled from Moyasar (failed/voided)',
       });
       await tx.outboxEvent.create({
         data: {
-          aggregateId: invoice.id,
+          id: stableEventId(`finance:payment:${paymentRowId}:${event.eventName}`),
+          aggregateId: lockedInvoice.id,
           eventType: event.eventName,
-          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+          status: 'PENDING_V2',
+          deliveryLane: 'PENDING_V2',
+          payload: {
+            ...event.toEnvelope(),
+            eventId: stableEventId(`finance:payment:${paymentRowId}:${event.eventName}`),
+          } as unknown as Prisma.InputJsonValue,
         },
       });
 

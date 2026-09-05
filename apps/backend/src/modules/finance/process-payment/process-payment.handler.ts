@@ -13,13 +13,14 @@ import {
 import { decimalToHalalas } from '../money.helper';
 import { ProcessPaymentDto } from './process-payment.dto';
 import { assertBookingAcceptsPayment } from '../booking-payment-eligibility.helper';
+import { stableEventId } from '../../../common/events';
 
 export type ProcessPaymentCommand = ProcessPaymentDto & {
   /** Join an already-open interactive transaction (e.g. collect). */
   transaction?: Prisma.TransactionClient;
 };
 
-/** Event payload collected inside the payment write and published only after commit. */
+/** Event payload staged durably in the same transaction as the payment write. */
 export type DeferredPaymentEvent = {
   eventName: string;
   envelope: ReturnType<PaymentCompletedEvent['toEnvelope']> | ReturnType<DepositPaidEvent['toEnvelope']>;
@@ -41,6 +42,7 @@ type PaymentRunResult = {
   paidAfter: number;
   total: number;
   bookingId: string | null;
+  packagePurchaseId: string | null;
   currency: string;
 };
 
@@ -76,6 +78,7 @@ export class ProcessPaymentHandler {
 
       const meta = {
         bookingId: invoice.bookingId,
+        packagePurchaseId: invoice.packagePurchaseId,
         currency: invoice.currency,
       };
 
@@ -227,7 +230,7 @@ export class ProcessPaymentHandler {
         },
       });
 
-      return {
+      const outcome: PaymentRunResult = {
         payment: createdPayment,
         newStatus: status,
         depositAmount: deposit.depositAmount,
@@ -235,11 +238,13 @@ export class ProcessPaymentHandler {
         total,
         ...meta,
       };
+      await this.stageDeferredEvents(tx, this.toDeferredEvents(outcome, dto));
+      return outcome;
     };
 
     if (dto.transaction) {
       const outcome = await run(dto.transaction);
-      return { ...outcome.payment, deferredEvents: this.toDeferredEvents(outcome, dto) };
+      return outcome.payment;
     }
 
     let outcome: PaymentRunResult;
@@ -252,9 +257,28 @@ export class ProcessPaymentHandler {
       throw err;
     }
 
-    const deferredEvents = this.toDeferredEvents(outcome, dto);
-    await this.publishDeferredEvents(deferredEvents);
     return outcome.payment;
+  }
+
+  private async stageDeferredEvents(
+    tx: Prisma.TransactionClient,
+    events: readonly DeferredPaymentEvent[],
+  ): Promise<void> {
+    for (const event of events) {
+      const eventId = stableEventId(
+        `finance:payment:${event.envelope.payload.paymentId}:${event.eventName}`,
+      );
+      await tx.outboxEvent.create({
+        data: {
+          id: eventId,
+          aggregateId: event.envelope.payload.invoiceId,
+          eventType: event.eventName,
+          status: 'PENDING_V2',
+          deliveryLane: 'PENDING_V2',
+          payload: { ...event.envelope, eventId } as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
   }
 
   /**
@@ -319,6 +343,7 @@ export class ProcessPaymentHandler {
         paymentId: outcome.payment.id,
         invoiceId: dto.invoiceId,
         bookingId: outcome.bookingId,
+        packagePurchaseId: outcome.packagePurchaseId,
         amount: Number(dto.amount),
         currency: outcome.currency,
         organizationId: DEFAULT_ORG_ID,

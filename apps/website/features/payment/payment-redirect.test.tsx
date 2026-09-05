@@ -38,9 +38,10 @@ describe('PaymentRedirect', () => {
     expect(window.location.href).toBe('https://moyasar.test/pay/abc');
   });
 
-  it('reloads the page when the retry button is clicked', () => {
+  it('reuses the stored hosted checkout URL when the retry button is clicked', () => {
     render(<PaymentRedirect redirectUrl="https://moyasar.test/pay/abc" bookingId="bk_42" />);
+    window.location.href = '';
     fireEvent.click(screen.getByRole('button', { name: /اضغط هنا إذا لم يتم التحويل/i }));
-    expect(window.location.reload).toHaveBeenCalledTimes(1);
+    expect(window.location.href).toBe('https://moyasar.test/pay/abc');
   });
 });

@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { BookingStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { BookingStatus, InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { InitClientPaymentHandler } from './init-client-payment.handler';
 
 const organizationId = '00000000-0000-0000-0000-000000000001';
@@ -13,6 +13,7 @@ const mockInvoice = {
   bookingId,
   total: 230,
   currency: 'SAR',
+  status: InvoiceStatus.ISSUED,
   organizationId,
 };
 
@@ -30,25 +31,36 @@ const mockCheckoutInvoice = {
   metadata: { internalPaymentId: 'payment-1' },
 };
 
-const buildPrisma = () => ({
-  invoice: {
-    findFirst: jest.fn().mockResolvedValue(mockInvoice),
-  },
-  booking: {
-    findFirst: jest.fn().mockResolvedValue(mockBooking),
-  },
-  payment: {
-    findFirst: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockResolvedValue({ id: 'payment-1' }),
-    update: jest.fn().mockResolvedValue({ id: 'payment-1' }),
-    delete: jest.fn().mockResolvedValue({ id: 'payment-1' }),
-    // No prior COMPLETED payments by default → outstanding == total.
-    aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
-  },
-  organizationSettings: {
-    findFirst: jest.fn().mockResolvedValue({ paymentMoyasarEnabled: true }),
-  },
-});
+const buildPrisma = () => {
+  const prisma: Record<string, any> = {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: invoiceId }]),
+    invoice: {
+      findFirst: jest.fn().mockResolvedValue(mockInvoice),
+      findUnique: jest.fn().mockResolvedValue(mockInvoice),
+    },
+    booking: {
+      findFirst: jest.fn().mockResolvedValue(mockBooking),
+    },
+    payment: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn().mockResolvedValue({
+        status: PaymentStatus.PENDING,
+        gatewayRef: 'moyasar-payment-existing',
+      }),
+      create: jest.fn().mockResolvedValue({ id: 'payment-1' }),
+      update: jest.fn().mockResolvedValue({ id: 'payment-1' }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      delete: jest.fn().mockResolvedValue({ id: 'payment-1' }),
+      // No prior COMPLETED payments by default → outstanding == total.
+      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+    },
+    organizationSettings: {
+      findFirst: jest.fn().mockResolvedValue({ paymentMoyasarEnabled: true }),
+    },
+  };
+  prisma.$transaction = jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
+  return prisma;
+};
 
 const buildMoyasar = () => ({
   createCheckoutInvoice: jest
@@ -70,11 +82,15 @@ const buildMoyasar = () => ({
 const buildHandler = () => {
   const prisma = buildPrisma();
   const moyasar = buildMoyasar();
+  const rlsTransaction = {
+    withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
+  };
   const handler = new InitClientPaymentHandler(
     prisma as never,
     moyasar as never,
+    rlsTransaction as never,
   );
-  return { handler, prisma, moyasar };
+  return { handler, prisma, moyasar, rlsTransaction };
 };
 
 describe('InitClientPaymentHandler', () => {
@@ -112,10 +128,13 @@ describe('InitClientPaymentHandler', () => {
         internalPaymentId: 'payment-1',
       },
     });
-    expect(prisma.payment.update).toHaveBeenCalledWith({
-      where: { id: 'payment-1' },
+    expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'payment-1',
+        status: PaymentStatus.PENDING,
+        gatewayRef: null,
+      },
       data: { gatewayRef: 'moyasar-invoice-1' },
-      select: { id: true },
     });
   });
 
@@ -147,6 +166,25 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 
+  it.each([
+    InvoiceStatus.PAID,
+    InvoiceStatus.VOID,
+    InvoiceStatus.PARTIALLY_REFUNDED,
+    InvoiceStatus.REFUNDED,
+  ])('rejects a new card reservation after the locked invoice enters %s', async (status) => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.invoice.findFirst
+      .mockResolvedValueOnce(mockInvoice)
+      .mockResolvedValueOnce({ ...mockInvoice, status });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(
+      'cannot accept payments',
+    );
+
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+  });
+
   it('throws NotFoundException when the invoice is missing', async () => {
     const { handler, prisma } = buildHandler();
     prisma.invoice.findFirst.mockResolvedValue(null);
@@ -157,11 +195,13 @@ describe('InitClientPaymentHandler', () => {
 
   it('discards a terminally-failed gateway session and creates a fresh one', async () => {
     const { handler, prisma, moyasar } = buildHandler();
-    prisma.payment.findFirst.mockResolvedValue({
-      id: 'payment-existing',
-      status: PaymentStatus.PENDING,
-      gatewayRef: 'moyasar-payment-existing',
-    });
+    prisma.payment.findFirst
+      .mockResolvedValueOnce({
+        id: 'payment-existing',
+        status: PaymentStatus.PENDING,
+        gatewayRef: 'moyasar-payment-existing',
+      })
+      .mockResolvedValueOnce(null);
     moyasar.getCheckoutInvoice.mockResolvedValue({
       ...mockCheckoutInvoice,
       id: 'moyasar-payment-existing',
@@ -178,6 +218,32 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-existing' } });
     expect(prisma.payment.create).toHaveBeenCalled();
     expect(moyasar.createCheckoutInvoice).toHaveBeenCalled();
+  });
+
+  it('does not delete a payment completed by a webhook after terminal gateway lookup', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.payment.findFirst.mockResolvedValue({
+      id: 'payment-existing',
+      status: PaymentStatus.PENDING,
+      gatewayRef: 'moyasar-payment-existing',
+    });
+    moyasar.getCheckoutInvoice.mockResolvedValue({
+      ...mockCheckoutInvoice,
+      id: 'moyasar-payment-existing',
+      status: 'expired',
+    });
+    // The provider response was fetched outside the transaction. Before cleanup
+    // takes the invoice lock, the webhook wins and completes the internal row.
+    prisma.payment.findUnique.mockResolvedValue({
+      status: PaymentStatus.COMPLETED,
+      gatewayRef: 'moyasar-pay-completed',
+    });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(ConflictException);
+
+    expect(prisma.payment.delete).not.toHaveBeenCalled();
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
   });
 
   // ─── G3: double-charge guard on in-flight gateway sessions ───────────────────
@@ -203,6 +269,56 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.delete).not.toHaveBeenCalled();
     expect(prisma.payment.create).not.toHaveBeenCalled();
     expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+  });
+
+  it('does not overwrite a webhook gateway payment id while normalizing an active hosted invoice', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.payment.findFirst.mockResolvedValue({
+      id: 'payment-existing',
+      status: PaymentStatus.PENDING,
+      gatewayRef: null,
+    });
+    moyasar.findCheckoutInvoiceByMetadata.mockResolvedValue({
+      ...mockCheckoutInvoice,
+      id: 'hosted-invoice-existing',
+      status: 'initiated',
+    });
+    prisma.payment.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(
+      'Payment state changed',
+    );
+
+    expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'payment-existing',
+        status: PaymentStatus.PENDING,
+        gatewayRef: null,
+      },
+      data: { gatewayRef: 'hosted-invoice-existing' },
+    });
+    expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+  });
+
+  it('persists the provider reference but does not expose a URL if the invoice closes during provider creation', async () => {
+    const { handler, prisma } = buildHandler();
+    prisma.invoice.findUnique.mockResolvedValue({
+      ...mockInvoice,
+      status: InvoiceStatus.VOID,
+    });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(
+      'Invoice can no longer accept this payment',
+    );
+
+    expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'payment-1',
+        status: PaymentStatus.PENDING,
+        gatewayRef: null,
+      },
+      data: { gatewayRef: 'moyasar-invoice-1' },
+    });
   });
 
   it('G3: rejects a second init when the gateway session already settled (paid)', async () => {
@@ -300,10 +416,13 @@ describe('InitClientPaymentHandler', () => {
       'payment-1',
     );
     expect(prisma.payment.delete).not.toHaveBeenCalled();
-    expect(prisma.payment.update).toHaveBeenCalledWith({
-      where: { id: 'payment-1' },
+    expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'payment-1',
+        status: PaymentStatus.PENDING,
+        gatewayRef: null,
+      },
       data: { gatewayRef: 'recovered-invoice' },
-      select: { id: true },
     });
   });
 
@@ -320,7 +439,7 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.delete).not.toHaveBeenCalled();
   });
 
-  it('deletes an orphan idempotent payment and creates a fresh gateway payment', async () => {
+  it('retains an unresolved idempotent payment when gateway creation may still be in flight', async () => {
     const { handler, prisma, moyasar } = buildHandler();
     prisma.payment.findFirst.mockResolvedValue({
       id: 'payment-orphan',
@@ -328,38 +447,11 @@ describe('InitClientPaymentHandler', () => {
       gatewayRef: null,
     });
 
-    const result = await handler.execute({ invoiceId, clientId });
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(ConflictException);
 
-    expect(result).toEqual({
-      paymentId: 'payment-1',
-      redirectUrl: 'https://checkout.moyasar.com/invoices/moyasar-invoice-1',
-    });
-    expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-orphan' } });
-    // org scoping moved to RLS / removed in single-tenant migration
-    expect(prisma.payment.create).toHaveBeenCalledWith({
-      data: {
-        invoiceId,
-        amount: 230,
-        currency: 'SAR',
-        method: PaymentMethod.ONLINE_CARD,
-        status: PaymentStatus.PENDING,
-        idempotencyKey: `client:${invoiceId}`,
-      },
-      select: { id: true },
-    });
-    expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(organizationId, {
-      amountHalalas: 230,
-      currency: 'SAR',
-      description: `Invoice payment - ${invoiceId}`,
-      successUrl: `http://localhost:3000/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
-      backUrl: `http://localhost:3000/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
-      metadata: { invoiceId, bookingId, source: 'mobile-client', internalPaymentId: 'payment-1' },
-    });
-    expect(prisma.payment.update).toHaveBeenCalledWith({
-      where: { id: 'payment-1' },
-      data: { gatewayRef: 'moyasar-invoice-1' },
-      select: { id: true },
-    });
+    expect(prisma.payment.delete).not.toHaveBeenCalled();
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
   });
 
   it('throws ConflictException when an idempotent payment is already completed', async () => {
@@ -399,6 +491,41 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ amount: 7000 }),
     }));
+  });
+
+  it('locks and re-reads the invoice balance before reserving a card payment', async () => {
+    const prisma = buildPrisma();
+    const tx = buildPrisma();
+    const moyasar = buildMoyasar();
+
+    // A cash payment commits after the stale outer read but before this card
+    // reservation obtains its invoice lock.
+    prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    tx.payment.aggregate.mockResolvedValue({ _sum: { amount: 100 } });
+    tx.payment.create.mockResolvedValue({ id: 'payment-reserved' });
+    tx.payment.updateMany.mockResolvedValue({ count: 1 });
+    prisma.$transaction.mockImplementation((fn: (inner: unknown) => Promise<unknown>) => fn(tx));
+
+    const handler = new InitClientPaymentHandler(
+      prisma as never,
+      moyasar as never,
+      { withTransaction: (fn: (inner: unknown) => Promise<unknown>) => fn(tx) } as never,
+    );
+    await handler.execute({ invoiceId, clientId });
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
+    for (const [sql] of tx.$queryRaw.mock.calls) {
+      expect(sql.strings.join('')).toContain('FOR UPDATE');
+    }
+    expect(tx.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ amount: 130 }),
+    }));
+    expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
+      organizationId,
+      expect.objectContaining({ amountHalalas: 130 }),
+    );
+    expect(tx.payment.create.mock.invocationCallOrder[0])
+      .toBeLessThan(moyasar.createCheckoutInvoice.mock.invocationCallOrder[0]);
   });
 
   it('allows a DEPOSIT_PAID booking to initialize payment for the remaining balance', async () => {

@@ -426,7 +426,7 @@ describe('CollectBookingPaymentHandler', () => {
     });
     expect(result.invoice.outstanding).toBe(0);
     expect(result.invoice.status).toBe('PAID');
-    expect(processPayment.publishDeferredEvents).toHaveBeenCalledWith([]);
+    expect(processPayment.publishDeferredEvents).not.toHaveBeenCalled();
   });
 
   it('joins discount, payment, and rereads on one transaction client', async () => {
@@ -483,7 +483,7 @@ describe('CollectBookingPaymentHandler', () => {
     expect(tx.paymentCollectionIdempotency.create).not.toHaveBeenCalled();
     expect(result.payment).toBeNull();
     expect(result.invoice.outstanding).toBe(0);
-    expect(processPayment.publishDeferredEvents).toHaveBeenCalledWith([]);
+    expect(processPayment.publishDeferredEvents).not.toHaveBeenCalled();
   });
 
   it('rejects the same key when the note changed because note is part of the fingerprint', async () => {
@@ -737,7 +737,7 @@ describe('CollectBookingPaymentHandler', () => {
       method: PaymentMethod.CASH,
       status: 'COMPLETED',
     });
-    expect(processPayment.publishDeferredEvents).toHaveBeenCalledWith([]);
+    expect(processPayment.publishDeferredEvents).not.toHaveBeenCalled();
     await expect(failedTx.paymentCollectionIdempotency.findUnique()).rejects.toThrow(ABORTED_TX_MESSAGE);
   });
 
@@ -962,6 +962,6 @@ describe('CollectBookingPaymentHandler', () => {
       method: PaymentMethod.CASH,
     });
 
-    expect(processPayment.publishDeferredEvents).toHaveBeenCalledWith(deferredEvents);
+    expect(processPayment.publishDeferredEvents).not.toHaveBeenCalled();
   });
 });

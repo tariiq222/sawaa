@@ -52,6 +52,7 @@ beforeEach(() => {
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -82,12 +83,13 @@ const fakeProfile = {
 describe('auth.api', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    apiRequestMock.mockReset();
     getApiBaseMock.mockReturnValue('http://api.local/api/v1');
   });
 
   describe('initialisation', () => {
     it('sets the api base urls on the api-client modules exactly once across calls', async () => {
-      getMeMock.mockResolvedValue(fakeProfile);
+      apiRequestMock.mockResolvedValue(fakeProfile);
       await getMeApi();
       await clientLogoutApi();
       expect(setClientBaseUrlMock).toHaveBeenCalledTimes(1);
@@ -96,10 +98,13 @@ describe('auth.api', () => {
       expect(setMeBaseUrlMock).toHaveBeenCalledWith('http://api.local/api/v1');
     });
 
-    it('exposes getMeApi that calls through to the api-client getMe', async () => {
-      getMeMock.mockResolvedValue(fakeProfile);
+    it('exposes getMeApi through the shared request client with a bounded signal', async () => {
+      apiRequestMock.mockResolvedValue(fakeProfile);
       await getMeApi();
-      expect(getMeMock).toHaveBeenCalledTimes(1);
+      expect(apiRequestMock).toHaveBeenCalledWith('/public/me', {
+        credentials: 'include',
+        signal: expect.any(AbortSignal),
+      });
     });
   });
 
@@ -136,8 +141,25 @@ describe('auth.api', () => {
 
   describe('getMeApi', () => {
     it('returns the current client profile from the api-client', async () => {
-      getMeMock.mockResolvedValue(fakeProfile);
+      apiRequestMock.mockResolvedValue(fakeProfile);
       await expect(getMeApi()).resolves.toEqual(fakeProfile);
+    });
+
+    it('aborts and rejects a profile request that exceeds the auth deadline', async () => {
+      vi.useFakeTimers();
+      let requestSignal: AbortSignal | undefined;
+      apiRequestMock.mockImplementation((_path: string, init?: RequestInit) => {
+        requestSignal = init?.signal ?? undefined;
+        return new Promise((_resolve, reject) => {
+          requestSignal?.addEventListener('abort', () => reject(requestSignal?.reason), { once: true });
+        });
+      });
+
+      const request = expect(getMeApi()).rejects.toMatchObject({ name: 'TimeoutError' });
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      await request;
+      expect(requestSignal?.aborted).toBe(true);
     });
   });
 
@@ -223,10 +245,32 @@ describe('auth.api', () => {
   });
 
   describe('clientLogoutApi', () => {
-    it('awaits the api-client logout call', async () => {
-      clientLogoutMock.mockResolvedValue(undefined);
+    it('sends logout through the shared request client with a bounded signal', async () => {
+      apiRequestMock.mockResolvedValue(undefined);
       await expect(clientLogoutApi()).resolves.toBeUndefined();
-      expect(clientLogoutMock).toHaveBeenCalledTimes(1);
+      expect(apiRequestMock).toHaveBeenCalledWith('/public/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({}),
+        signal: expect.any(AbortSignal),
+      });
+    });
+
+    it('aborts and rejects logout when the revocation request hangs', async () => {
+      vi.useFakeTimers();
+      let requestSignal: AbortSignal | undefined;
+      apiRequestMock.mockImplementation((_path: string, init?: RequestInit) => {
+        requestSignal = init?.signal ?? undefined;
+        return new Promise((_resolve, reject) => {
+          requestSignal?.addEventListener('abort', () => reject(requestSignal?.reason), { once: true });
+        });
+      });
+
+      const request = expect(clientLogoutApi()).rejects.toMatchObject({ name: 'TimeoutError' });
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      await request;
+      expect(requestSignal?.aborted).toBe(true);
     });
   });
 

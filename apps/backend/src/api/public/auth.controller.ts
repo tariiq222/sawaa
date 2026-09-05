@@ -5,6 +5,7 @@ import {
 import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import * as bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiNoContentResponse, ApiResponse
@@ -18,7 +19,7 @@ import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashb
 import { RequestDashboardOtpDto } from '../../modules/identity/request-dashboard-otp/request-dashboard-otp.dto';
 import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
 import { VerifyDashboardOtpDto } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.dto';
-import { PrismaService } from '../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../infrastructure/database';
 import { TokenService } from '../../modules/identity/shared/token.service';
 import { UserId } from '../../common/auth/user-id.decorator';
 import { JwtGuard } from '../../common/guards/jwt.guard';
@@ -71,6 +72,7 @@ export class AuthController {
     private readonly verifyDashboardOtp: VerifyDashboardOtpHandler,
     private readonly authResponseBuilder: AuthResponseBuilder,
     private readonly lookupUser: LookupUserHandler,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   // SECURITY (P1): tight per-IP throttle on staff login. The handler already
@@ -166,28 +168,22 @@ export class AuthController {
 
     const record = await this.findActiveToken(rawToken);
 
-    // SECURITY (P1): conditional updateMany prevents refresh-token reuse race.
-    // If two parallel /auth/refresh calls arrive with the same token, only the
-    // first updateMany matches (revokedAt: null); the second sees count=0 and
-    // we refuse — otherwise both calls would mint fresh token pairs.
-    const { count } = await this.prisma.refreshToken.updateMany({
-      where: { id: record.id, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    if (count === 0) {
-      // Token already consumed by a parallel refresh — treat as replay.
-      throw new UnauthorizedException('Refresh token already consumed');
-    }
+    const tokens = await this.rlsTransaction.withTransaction(async (tx) => {
+      // Logout takes this same lock before revoking all refresh credentials.
+      // Rotation must persist its replacement before releasing that lock.
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "User" WHERE "id" = ${record.userId} FOR UPDATE`);
+      const { count } = await tx.refreshToken.updateMany({
+        where: { id: record.id, revokedAt: null, expiresAt: { gt: new Date() } },
+        data: { revokedAt: new Date() },
+      });
+      if (count === 0) throw new UnauthorizedException('Refresh token already consumed');
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: record.userId },
-      include: { customRole: { include: { permissions: true } } },
-    });
-
-    if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
-
-    const tokens = await this.tokens.issueTokenPair(user, {
-      isSuperAdmin: user.isSuperAdmin,
+      const user = await tx.user.findUnique({
+        where: { id: record.userId },
+        include: { customRole: { include: { permissions: true } } },
+      });
+      if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
+      return this.tokens.issueTokenPair(user, { isSuperAdmin: user.isSuperAdmin }, tx);
     });
     this.setRefreshCookie(res, tokens.refreshToken);
     return {

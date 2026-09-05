@@ -121,7 +121,11 @@ export class BankTransferUploadHandler {
           where: {
             invoiceId: lockedInvoice.id,
             status: {
-              in: [PaymentStatus.COMPLETED, PaymentStatus.PENDING_VERIFICATION],
+              in: [
+                PaymentStatus.COMPLETED,
+                PaymentStatus.PENDING,
+                PaymentStatus.PENDING_VERIFICATION,
+              ],
             },
           },
           _sum: { amount: true },

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { LogoutHandler } from './logout.handler';
 
 describe('LogoutHandler', () => {
@@ -10,6 +10,7 @@ describe('LogoutHandler', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LogoutHandler,
+        RlsTransactionService,
         { provide: PrismaService, useValue: {
     refreshToken: { updateMany: jest.fn() },
     user: { update: jest.fn() }
@@ -19,6 +20,8 @@ describe('LogoutHandler', () => {
 
     handler = module.get<LogoutHandler>(LogoutHandler);
     prisma = module.get<PrismaService>(PrismaService);
+    prisma.$queryRaw = jest.fn().mockResolvedValue([]);
+    prisma.$transaction = jest.fn(async (work) => work(prisma)) as never;
   });
 
   it('should be defined', () => {

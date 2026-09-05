@@ -289,6 +289,68 @@ describe('publicFetch', () => {
     await request;
   });
 
+  it('bounds a hung unsafe mutation so its outcome becomes explicitly unknown', async () => {
+    vi.useFakeTimers();
+    let rejectMutation!: (reason: unknown) => void;
+    fetchMock
+      .mockResolvedValueOnce(csrfBootstrapResponse())
+      .mockImplementationOnce((_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          rejectMutation = reject;
+          init?.signal?.addEventListener(
+            'abort',
+            () => reject(init.signal?.reason),
+            { once: true },
+          );
+        }),
+      );
+
+    let rejected = false;
+    let rejection: unknown;
+    const request = publicFetch('/public/bookings', {
+      method: 'POST',
+      body: JSON.stringify({ slotId: 'slot-hung' }),
+    }).then(
+      () => undefined,
+      (error: unknown) => {
+        rejected = true;
+        rejection = error;
+      },
+    );
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    if (!rejected) {
+      // Keep the RED test bounded if the current implementation leaves the
+      // unsafe request pending forever.
+      rejectMutation(new Error('test cleanup'));
+    }
+
+    await request;
+
+    expect(rejected).toBe(true);
+    expect(rejection).toMatchObject({ name: 'TimeoutError' });
+  });
+
+  it('keeps the deadline active while consuming a mutation response body', async () => {
+    vi.useFakeTimers();
+    fetchMock
+      .mockResolvedValueOnce(csrfBootstrapResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        headers: new Headers(),
+        json: () => new Promise<never>(() => undefined),
+      });
+
+    const request = expect(publicFetch('/public/bookings', {
+      method: 'POST',
+      body: JSON.stringify({ slotId: 'slot-slow-body' }),
+    })).rejects.toMatchObject({ name: 'TimeoutError' });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    await request;
+  });
+
   it('preserves a caller AbortSignal on a safe request with the default timeout', async () => {
     const caller = new AbortController();
     fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
@@ -303,7 +365,7 @@ describe('publicFetch', () => {
     await expect(request).rejects.toMatchObject({ name: 'AbortError' });
   });
 
-  it('does not add a timeout signal to a mutation and preserves the caller signal identity', async () => {
+  it('adds a timeout signal to a mutation while keeping caller abort forwarding separate', async () => {
     const caller = new AbortController();
     fetchMock
       .mockResolvedValueOnce(csrfBootstrapResponse())
@@ -324,7 +386,8 @@ describe('publicFetch', () => {
     const [, mutationInit] = fetchMock.mock.calls[1];
     expect(bootstrapInit.signal).toBeInstanceOf(AbortSignal);
     expect(bootstrapInit.signal).not.toBe(caller.signal);
-    expect(mutationInit.signal).toBe(caller.signal);
+    expect(mutationInit.signal).toBeInstanceOf(AbortSignal);
+    expect(mutationInit.signal).not.toBe(caller.signal);
   });
 
   it('does not replay a safe request when its response carries a CSRF token', async () => {

@@ -338,6 +338,46 @@ describe('/booking wizard — date-strip days probe context', () => {
     await waitFor(() => expect(initPaymentMock).toHaveBeenCalledWith('invoice-online'));
   });
 
+  it('recovers a failed payment init for the stored invoice without creating a second booking', async () => {
+    runtimeState.slots = [SLOT];
+    createBookingMock.mockResolvedValue({
+      id: 'booking-recover',
+      status: 'AWAITING_PAYMENT',
+      invoiceId: 'invoice-recover',
+    });
+    initPaymentMock
+      .mockRejectedValueOnce(new Error('payment gateway timeout'))
+      .mockResolvedValueOnce({
+        paymentId: 'payment-recovered',
+        redirectUrl: 'https://checkout.moyasar.com/pay/payment-recovered',
+      });
+
+    render(<BookingWizardPage />);
+    await advanceToInfoStep();
+    fireEvent.click(screen.getByRole('button', { name: 'Submit online' }));
+
+    await waitFor(() => expect(initPaymentMock).toHaveBeenCalledWith('invoice-recover'));
+    expect(createBookingMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: /عرض الحجز الحالي|View Existing Booking/ }).getAttribute('href'),
+      ).toBe('/account/bookings/booking-recover');
+    });
+    expect(screen.queryByRole('button', { name: /رجوع|Back/ })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: /احجز موعداً آخر|Book Another Appointment/ }),
+    ).toBeTruthy();
+
+    // The booking row and invoice remain the recovery anchor after init fails;
+    // even a stale/mutated payment-mode value can only reconcile the existing
+    // invoice; it cannot create a second booking.
+    fireEvent.click(screen.getByRole('button', { name: 'Submit at center' }));
+
+    await waitFor(() => expect(initPaymentMock).toHaveBeenCalledTimes(2));
+    expect(initPaymentMock).toHaveBeenLastCalledWith('invoice-recover');
+    expect(createBookingMock).toHaveBeenCalledTimes(1);
+  });
+
   describe('booking wizard header — Sawa logo branding (BOOKING-HEADER-LOGO-1)', () => {
     it('renders the Sawa center logo as an accessible image in the header', async () => {
       render(<BookingWizardPage />);

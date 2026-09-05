@@ -36,7 +36,7 @@ describe('ClientLogoutHandler', () => {
 
   it('revokes matching token', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 'tok-1', tokenHash: 'hash1' },
+      { id: 'tok-1', clientId: 'client-1', tokenHash: 'hash1' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     await handler.execute('rawtoken123', 'client-1');
@@ -49,7 +49,7 @@ describe('ClientLogoutHandler', () => {
 
   it('does nothing when no candidates match', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 'tok-1', tokenHash: 'hash1' },
+      { id: 'tok-1', clientId: 'client-1', tokenHash: 'hash1' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(false);
     await handler.execute('rawtoken123', 'client-1');

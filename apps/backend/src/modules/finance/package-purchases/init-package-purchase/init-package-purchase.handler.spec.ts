@@ -65,22 +65,34 @@ function buildTx() {
 }
 
 function buildPrisma() {
-  return {
+  const prisma: Record<string, any> = {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: INVOICE_ID }]),
     sessionPackage: { findFirst: jest.fn().mockResolvedValue(PACKAGE_ROW) },
     client: { findFirst: jest.fn().mockResolvedValue({ id: CLIENT_ID }) },
     packagePurchase: {
       findFirst: jest.fn().mockResolvedValue(null),
       findUnique: jest.fn().mockResolvedValue(null),
     },
-    invoice: { findFirst: jest.fn().mockResolvedValue(null) },
+    invoice: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn().mockResolvedValue({
+        id: INVOICE_ID,
+        total: FINAL_PRICE,
+        currency: 'SAR',
+        status: 'DRAFT',
+      }),
+    },
     payment: {
       findFirst: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ id: PAYMENT_ID }),
       update: jest.fn().mockResolvedValue({ id: PAYMENT_ID }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       delete: jest.fn().mockResolvedValue({}),
     },
   };
+  prisma.$transaction = jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
+  return prisma;
 }
 
 function buildPricing(finalPrice = FINAL_PRICE) {
@@ -136,9 +148,18 @@ function buildHandler(
   moyasar = buildMoyasar(),
   tx = buildTx(),
 ) {
+  // Use one shared payment-create spy while exposing the full Prisma read/CAS
+  // surface on every RlsTransactionService transaction client.
+  tx.payment.create = prisma.payment.create;
+  const transactionClient = {
+    ...prisma,
+    packagePurchase: { ...prisma.packagePurchase, create: tx.packagePurchase.create },
+    invoice: { ...prisma.invoice, create: tx.invoice.create },
+    payment: { ...prisma.payment, create: tx.payment.create },
+  };
   const rls = {
-    withTransaction: jest.fn((fn: (t: typeof tx) => Promise<unknown>) =>
-      fn(tx),
+    withTransaction: jest.fn((fn: (t: typeof transactionClient) => Promise<unknown>) =>
+      fn(transactionClient),
     ),
   };
   const handler = new InitPackagePurchaseHandler(
@@ -219,8 +240,12 @@ describe("InitPackagePurchaseHandler", () => {
           }),
         }),
       );
-      expect(prisma.payment.update).toHaveBeenCalledWith({
-        where: { id: PAYMENT_ID },
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: PAYMENT_ID,
+          status: PaymentStatus.PENDING,
+          gatewayRef: null,
+        },
         data: { gatewayRef: "moy-invoice-1" },
       });
 
@@ -258,8 +283,12 @@ describe("InitPackagePurchaseHandler", () => {
 
       await handler.execute(cmd());
 
-      expect(prisma.payment.update).toHaveBeenCalledWith({
-        where: { id: PAYMENT_ID },
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: PAYMENT_ID,
+          status: PaymentStatus.PENDING,
+          gatewayRef: null,
+        },
         data: { gatewayRef: "moy-invoice-1" },
       });
     });
@@ -317,7 +346,14 @@ describe("InitPackagePurchaseHandler", () => {
       );
 
       await expect(handler.execute(cmd())).rejects.toThrow(/redirect URL/i);
-      expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: PAYMENT_ID,
+          status: PaymentStatus.PENDING,
+          gatewayRef: null,
+        },
+        data: { gatewayRef: "moy-invoice-1" },
+      });
     });
 
     it("propagates a Moyasar create failure (no redirect issued)", async () => {
@@ -339,7 +375,7 @@ describe("InitPackagePurchaseHandler", () => {
         idempotencyKey: null,
         requestFingerprint: null,
       };
-      prisma.packagePurchase.findFirst.mockImplementation(({ where }) =>
+      prisma.packagePurchase.findFirst.mockImplementation(({ where }: { where: Record<string, any> }) =>
         where.idempotencyKey?.not === null
           ? Promise.resolve(null)
           : Promise.resolve(legacyPending),
@@ -391,8 +427,14 @@ describe("InitPackagePurchaseHandler", () => {
         id: INVOICE_ID,
         total: FINAL_PRICE,
       });
-      prisma.payment.findFirst.mockResolvedValue({
-        id: "old-pay",
+      prisma.payment.findFirst
+        .mockResolvedValueOnce({
+          id: "old-pay",
+          status: PaymentStatus.FAILED,
+          gatewayRef: null,
+        })
+        .mockResolvedValue(null);
+      prisma.payment.findUnique.mockResolvedValue({
         status: PaymentStatus.FAILED,
         gatewayRef: null,
       });
@@ -435,8 +477,14 @@ describe("InitPackagePurchaseHandler", () => {
         id: INVOICE_ID,
         total: FINAL_PRICE,
       });
-      prisma.payment.findFirst.mockResolvedValue({
-        id: "old-pay",
+      prisma.payment.findFirst
+        .mockResolvedValueOnce({
+          id: "old-pay",
+          status: PaymentStatus.PENDING,
+          gatewayRef: "terminal-failed-session",
+        })
+        .mockResolvedValue(null);
+      prisma.payment.findUnique.mockResolvedValue({
         status: PaymentStatus.PENDING,
         gatewayRef: "terminal-failed-session",
       });
@@ -494,12 +542,66 @@ describe("InitPackagePurchaseHandler", () => {
         total: FINAL_PRICE,
         status: "PAID",
       });
+      prisma.invoice.findUnique.mockResolvedValue({
+        id: INVOICE_ID,
+        total: FINAL_PRICE,
+        currency: "SAR",
+        status: "PAID",
+      });
       prisma.payment.findFirst.mockResolvedValue(null);
       const { handler, moyasar } = buildHandler(prisma);
 
       await expect(handler.execute(cmd())).rejects.toThrow(
         /already been paid/i,
       );
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+    });
+
+    it.each(["VOID", "PARTIALLY_REFUNDED", "REFUNDED"])(
+      "refuses to reserve against a locked %s package invoice",
+      async (status) => {
+        const prisma = buildPrisma();
+        prisma.packagePurchase.findFirst.mockResolvedValue({
+          id: PURCHASE_ID,
+          idempotencyKey: cmd().idempotencyKey,
+          requestFingerprint: selfPurchaseFingerprint(cmd()),
+        });
+        prisma.invoice.findFirst.mockResolvedValue({ id: INVOICE_ID });
+        prisma.invoice.findUnique.mockResolvedValue({
+          id: INVOICE_ID,
+          total: FINAL_PRICE,
+          currency: "SAR",
+          status,
+        });
+        const { handler, moyasar } = buildHandler(prisma);
+
+        await expect(handler.execute(cmd())).rejects.toThrow(
+          "This purchase has already been paid",
+        );
+        expect(prisma.payment.create).not.toHaveBeenCalled();
+        expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+      },
+    );
+
+    it("blocks a package reservation when another client payment already reserves the invoice", async () => {
+      const prisma = buildPrisma();
+      prisma.packagePurchase.findFirst.mockResolvedValue({
+        id: PURCHASE_ID,
+        idempotencyKey: cmd().idempotencyKey,
+        requestFingerprint: selfPurchaseFingerprint(cmd()),
+      });
+      prisma.invoice.findFirst.mockResolvedValue({ id: INVOICE_ID });
+      prisma.payment.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: "generic-card-reservation" });
+      const { handler, moyasar } = buildHandler(prisma);
+
+      await expect(handler.execute(cmd())).rejects.toThrow(
+        "Another payment is already pending",
+      );
+      expect(prisma.$queryRaw).toHaveBeenCalled();
       expect(prisma.payment.create).not.toHaveBeenCalled();
       expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
@@ -516,7 +618,7 @@ describe("InitPackagePurchaseHandler", () => {
         total: FINAL_PRICE,
         status: "DRAFT",
       });
-      prisma.payment.findFirst.mockImplementation(({ where }) =>
+      prisma.payment.findFirst.mockImplementation(({ where }: { where: Record<string, any> }) =>
         where.idempotencyKey
           ? Promise.resolve(null)
           : Promise.resolve({
@@ -548,8 +650,14 @@ describe("InitPackagePurchaseHandler", () => {
         id: INVOICE_ID,
         total: FINAL_PRICE,
       });
-      prisma.payment.findFirst.mockResolvedValue({
-        id: "old-pay",
+      prisma.payment.findFirst
+        .mockResolvedValueOnce({
+          id: "old-pay",
+          status: PaymentStatus.PENDING,
+          gatewayRef,
+        })
+        .mockResolvedValue(null);
+      prisma.payment.findUnique.mockResolvedValue({
         status: PaymentStatus.PENDING,
         gatewayRef,
       });
@@ -681,8 +789,12 @@ describe("InitPackagePurchaseHandler", () => {
         DEFAULT_ORG_ID,
         PAYMENT_ID,
       );
-      expect(prisma.payment.update).toHaveBeenCalledWith({
-        where: { id: PAYMENT_ID },
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: PAYMENT_ID,
+          status: PaymentStatus.PENDING,
+          gatewayRef: null,
+        },
         data: { gatewayRef: "moy-recovered" },
       });
     });

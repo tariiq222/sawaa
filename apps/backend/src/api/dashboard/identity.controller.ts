@@ -298,7 +298,7 @@ export class DashboardIdentityController {
   }
 
   @Post('users/:userId/roles')
-  @CheckPermissions({ action: 'manage', subject: 'User' })
+  @CheckPermissions({ action: 'manage', subject: 'Role' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Assign a role to a user' })
   @ApiParam({ name: 'userId', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
@@ -315,7 +315,7 @@ export class DashboardIdentityController {
   }
 
   @Delete('users/:userId/roles/:roleId')
-  @CheckPermissions({ action: 'manage', subject: 'User' })
+  @CheckPermissions({ action: 'manage', subject: 'Role' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove a role from a user' })
   @ApiParam({ name: 'userId', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })

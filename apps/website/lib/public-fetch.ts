@@ -31,6 +31,16 @@ export async function publicFetch<T>(path: string, init?: RequestInit): Promise<
   }
 
   const token = unsafe ? await ensureCsrfToken(base) : null;
+  return withRequestDeadline(init, (requestInit) =>
+    executeRequest<T>(url, requestInit, token),
+  );
+}
+
+async function executeRequest<T>(
+  url: string,
+  init: RequestInit,
+  token: string | null,
+): Promise<T> {
   let response = await sendRequest(url, init, token);
   const responseCsrfToken = readCsrfToken(response);
 
@@ -40,7 +50,7 @@ export async function publicFetch<T>(path: string, init?: RequestInit): Promise<
     // CSRF rejects before reaching the handler, so one replay using the token
     // carried by that rejection cannot duplicate a completed mutation.
     if (
-      unsafe &&
+      isUnsafeMethod(init.method) &&
       response.status === 403 &&
       isCsrfInvalid(errorBody) &&
       isReplayableBody(init?.body) &&
@@ -95,14 +105,16 @@ function ensureCsrfToken(base: string): Promise<string> {
 }
 
 async function bootstrapCsrfToken(base: string): Promise<string> {
-  const response = await fetchWithTimeout(`${base}/public/branding`, {
-    method: 'GET',
-    credentials: 'include',
-  });
-  const token = readCsrfToken(response);
-  if (token) return token;
+  return withRequestDeadline(
+    { method: 'GET', credentials: 'include' },
+    async (init) => {
+      const response = await fetch(`${base}/public/branding`, init);
+      const token = readCsrfToken(response);
+      if (token) return token;
 
-  throw new PublicFetchError(response.status, { code: 'CSRF_BOOTSTRAP_FAILED' });
+      throw new PublicFetchError(response.status, { code: 'CSRF_BOOTSTRAP_FAILED' });
+    },
+  );
 }
 
 function readCsrfToken(response: Response): string | null {
@@ -111,7 +123,7 @@ function readCsrfToken(response: Response): string | null {
   return candidate && CSRF_TOKEN_PATTERN.test(candidate) ? candidate : null;
 }
 
-function sendRequest(url: string, init: RequestInit | undefined, token: string | null): Promise<Response> {
+function sendRequest(url: string, init: RequestInit, token: string | null): Promise<Response> {
   const headers = new Headers(init?.headers);
   // Only declare a JSON body when one is actually sent — bodyless GET/DELETE
   // requests must not advertise a Content-Type they don't carry.
@@ -123,15 +135,25 @@ function sendRequest(url: string, init: RequestInit | undefined, token: string |
   }
 
   const requestInit = { ...init, credentials: 'include' as const, headers };
-  return isUnsafeMethod(init?.method)
-    ? fetch(url, requestInit)
-    : fetchWithTimeout(url, requestInit);
+  return fetch(url, requestInit);
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+async function withRequestDeadline<T>(
+  init: RequestInit | undefined,
+  operation: (init: RequestInit) => Promise<T>,
+): Promise<T> {
   const controller = new AbortController();
-  const callerSignal = init.signal;
-  const forwardCallerAbort = () => controller.abort(callerSignal?.reason);
+  const callerSignal = init?.signal;
+  let rejectDeadline!: (reason: unknown) => void;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    rejectDeadline = reject;
+  });
+  const abort = (reason: unknown) => {
+    const error = reason ?? new DOMException('Request aborted', 'AbortError');
+    rejectDeadline(error);
+    controller.abort(error);
+  };
+  const forwardCallerAbort = () => abort(callerSignal?.reason);
 
   if (callerSignal?.aborted) {
     forwardCallerAbort();
@@ -140,11 +162,16 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
   }
 
   const timeout = setTimeout(() => {
-    controller.abort(new DOMException('Request timed out', 'TimeoutError'));
+    abort(new DOMException('Request timed out', 'TimeoutError'));
   }, DEFAULT_REQUEST_TIMEOUT_MS);
 
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    // Keep the deadline alive through response-body consumption. Fetch itself
+    // resolves after headers, while response.json()/blob() can still stall.
+    return await Promise.race([
+      operation({ ...init, signal: controller.signal }),
+      deadline,
+    ]);
   } finally {
     clearTimeout(timeout);
     callerSignal?.removeEventListener('abort', forwardCallerAbort);
