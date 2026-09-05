@@ -41,6 +41,24 @@ const buildRedis = (existing: string | null = null) => {
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 
 describe('AppointmentRemindersCron', () => {
+  it('does not run the legacy Redis reminder lane while v2 capture owns reminders', async () => {
+    const prisma = buildPrisma([]);
+    const { service: redis, client } = buildRedis();
+    const eventBus = buildEventBus();
+    const cron = new AppointmentRemindersCron(
+      prisma as never,
+      redis as never,
+      eventBus as never,
+      { captureEnabled: true } as never,
+    );
+
+    await cron.execute();
+
+    expect(prisma.booking.findMany).not.toHaveBeenCalled();
+    expect(client.get).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+  });
+
   it('executes without throwing when no bookings match', async () => {
     const prisma = buildPrisma([]);
     const { service: redis } = buildRedis();
