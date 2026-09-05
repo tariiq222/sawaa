@@ -54,6 +54,10 @@ import {
   ContactMessageResponseDto,
   PaginatedContactMessagesResponseDto,
 } from './dto/contact-message-response.dto';
+import {
+  PaginatedNotificationsResponseDto,
+  UnreadNotificationCountResponseDto,
+} from './dto/notification-response.dto';
 
 @ApiTags('Dashboard / Comms')
 @ApiBearerAuth()
@@ -180,7 +184,21 @@ export class DashboardCommsController {
   // ── Notifications ──────────────────────────────────────────────────────────
 
   @ApiOperation({ summary: 'List notifications for the current staff user' })
-  @ApiOkResponse({ description: 'Paginated notification list' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based, default: 1)',
+    schema: { type: 'integer', minimum: 1, default: 1 },
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Results per page (1–200, default: 20)',
+    schema: { type: 'integer', minimum: 1, maximum: 200, default: 20 },
+    example: 20,
+  })
+  @ApiOkResponse({ description: 'Paginated notification list', type: PaginatedNotificationsResponseDto })
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @Get('notifications')
   listNotificationsEndpoint(
@@ -196,7 +214,7 @@ export class DashboardCommsController {
   }
 
   @ApiOperation({ summary: 'Get unread notification count for the current staff user' })
-  @ApiOkResponse({ description: 'Unread count value' })
+  @ApiOkResponse({ description: 'Unread count value', type: UnreadNotificationCountResponseDto })
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @Get('notifications/unread-count')
   getUnreadCountEndpoint(

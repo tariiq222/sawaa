@@ -1348,6 +1348,297 @@
         ],
         "type": "object"
       },
+      "CategoryCountResponseDto": {
+        "properties": {
+          "services": {
+            "description": "Effective bookable service count",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "services"
+        ],
+        "type": "object"
+      },
+      "CategoryDepartmentResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Department UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic department name",
+            "example": "قسم الاستشارات الأسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English department name",
+            "example": "Family Counseling",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn"
+        ],
+        "type": "object"
+      },
+      "CategoryListItemResponseDto": {
+        "properties": {
+          "_count": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CategoryCountResponseDto"
+              }
+            ],
+            "description": "Bookable service counts"
+          },
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "department": {
+            "description": "Owning department, when assigned",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CategoryDepartmentResponseDto"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background color",
+            "example": "#F0F4FF",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Displayable category image URL; stored keys are signed at read/create/update response time",
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt",
+          "department",
+          "_count"
+        ],
+        "type": "object"
+      },
+      "CategoryListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching records",
+            "example": 42,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "CategoryResponseDto": {
+        "properties": {
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background color",
+            "example": "#F0F4FF",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Displayable category image URL; stored keys are signed at read/create/update response time",
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "ChangePasswordDto": {
         "properties": {
           "currentPassword": {
@@ -2425,21 +2716,25 @@
             "type": "string"
           },
           "departmentId": {
-            "description": "UUID of the parent department",
+            "description": "UUID of the parent department, or null to leave unassigned",
             "example": "00000000-0000-0000-0000-000000000000",
+            "nullable": true,
             "type": "string"
           },
           "iconBgColor": {
             "example": "#F0F4FF",
+            "nullable": true,
             "type": "string"
           },
           "iconName": {
             "example": "scissors-01",
+            "nullable": true,
             "type": "string"
           },
           "imageUrl": {
-            "description": "Category image URL",
+            "description": "Category image URL or stored object key",
             "example": "https://example.com/logo.png",
+            "nullable": true,
             "type": "string"
           },
           "nameAr": {
@@ -2450,6 +2745,7 @@
           "nameEn": {
             "description": "Category name in English",
             "example": "Dentistry",
+            "nullable": true,
             "type": "string"
           },
           "sortOrder": {
@@ -4105,6 +4401,98 @@
           "deliveryType",
           "price",
           "durationMins"
+        ],
+        "type": "object"
+      },
+      "DeleteCategoryResponseDto": {
+        "properties": {
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background color",
+            "example": "#F0F4FF",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Persisted image reference returned without signing; may be a storage key or legacy external URL",
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
@@ -6337,6 +6725,144 @@
         },
         "type": "object"
       },
+      "NotificationListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Notifications per page",
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching notifications",
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "NotificationResponseDto": {
+        "properties": {
+          "body": {
+            "description": "Notification body",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Notification UUID",
+            "type": "string"
+          },
+          "isRead": {
+            "description": "Whether the notification has been read",
+            "type": "boolean"
+          },
+          "metadata": {
+            "description": "Notification metadata. JSON scalars, arrays, objects, or null are allowed.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "readAt": {
+            "description": "Read timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "recipientId": {
+            "description": "Recipient user UUID",
+            "type": "string"
+          },
+          "recipientType": {
+            "description": "Recipient type",
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "description": "Notification title",
+            "type": "string"
+          },
+          "type": {
+            "description": "Notification type",
+            "enum": [
+              "BOOKING_CREATED",
+              "BOOKING_CONFIRMED",
+              "BOOKING_CANCELLED",
+              "BOOKING_REMINDER",
+              "PAYMENT_RECEIVED",
+              "PAYMENT_FAILED",
+              "PAYMENT_COMPLETED",
+              "PAYMENT_REMINDER",
+              "WELCOME",
+              "GENERAL"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recipientId",
+          "recipientType",
+          "type",
+          "title",
+          "body",
+          "metadata",
+          "isRead",
+          "readAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "OnboardEmployeeDto": {
         "properties": {
           "avatarUrl": {
@@ -6532,6 +7058,30 @@
         ],
         "type": "object"
       },
+      "PaginatedCategoriesResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Categories on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/CategoryListItemResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CategoryListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
       "PaginatedClientsDto": {
         "properties": {
           "items": {
@@ -6608,6 +7158,30 @@
           },
           "meta": {
             "$ref": "#/components/schemas/ListMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PaginatedNotificationsResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Notifications on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
           }
         },
         "required": [
@@ -7871,6 +8445,18 @@
         ],
         "type": "object"
       },
+      "UnreadNotificationCountResponseDto": {
+        "properties": {
+          "count": {
+            "description": "Number of unread notifications",
+            "type": "number"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "type": "object"
+      },
       "UpdateAvailabilityBody": {
         "properties": {},
         "type": "object"
@@ -7977,19 +8563,22 @@
             "description": "UUID of the parent department, or null to unlink",
             "example": "00000000-0000-0000-0000-000000000000",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "iconBgColor": {
             "example": "#F0F4FF",
+            "nullable": true,
             "type": "string"
           },
           "iconName": {
             "example": "scissors-01",
+            "nullable": true,
             "type": "string"
           },
           "imageUrl": {
-            "description": "Category image URL",
+            "description": "Category image URL or stored object key",
             "example": "https://example.com/logo.png",
+            "nullable": true,
             "type": "string"
           },
           "isActive": {
@@ -8005,6 +8594,7 @@
           "nameEn": {
             "description": "Category name in English",
             "example": "Dentistry",
+            "nullable": true,
             "type": "string"
           },
           "sortOrder": {
@@ -15106,10 +15696,40 @@
               "example": true,
               "type": "boolean"
             }
+          },
+          {
+            "description": "Results per page (1–200, default: 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (1-based, default: 1)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedNotificationsResponseDto"
+                }
+              }
+            },
             "description": "Paginated notification list"
           },
           "400": {
@@ -15240,6 +15860,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadNotificationCountResponseDto"
+                }
+              }
+            },
             "description": "Unread count value"
           },
           "400": {
@@ -22935,7 +23562,10 @@
             "name": "limit",
             "required": false,
             "schema": {
-              "example": 20
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
             }
           },
           {
@@ -22944,12 +23574,21 @@
             "name": "page",
             "required": false,
             "schema": {
-              "example": 1
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
             }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCategoriesResponseDto"
+                }
+              }
+            },
             "description": "Paginated list of categories"
           },
           "400": {
@@ -23018,6 +23657,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            },
             "description": "Category created"
           },
           "400": {
@@ -23088,7 +23734,14 @@
           }
         ],
         "responses": {
-          "204": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteCategoryResponseDto"
+                }
+              }
+            },
             "description": "Category deleted"
           },
           "400": {
@@ -23099,7 +23752,7 @@
                 }
               }
             },
-            "description": "Validation failed"
+            "description": "Category has linked non-archived services"
           },
           "401": {
             "content": {
@@ -23178,6 +23831,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            },
             "description": "Category updated"
           },
           "400": {

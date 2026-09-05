@@ -5556,6 +5556,190 @@ export interface components {
              */
             sortOrder: number;
         };
+        CategoryCountResponseDto: {
+            /**
+             * @description Effective bookable service count
+             * @example 3
+             */
+            services: number;
+        };
+        CategoryDepartmentResponseDto: {
+            /**
+             * @description Department UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Arabic department name
+             * @example قسم الاستشارات الأسرية
+             */
+            nameAr: string;
+            /**
+             * @description English department name
+             * @example Family Counseling
+             */
+            nameEn: string | null;
+        };
+        CategoryListItemResponseDto: {
+            /** @description Bookable service counts */
+            _count: components["schemas"]["CategoryCountResponseDto"];
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Owning department, when assigned */
+            department: components["schemas"]["CategoryDepartmentResponseDto"] | (never | null);
+            /** @description Owning department UUID */
+            departmentId: string | null;
+            /**
+             * @description Category icon background color
+             * @example #F0F4FF
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Category icon name
+             * @example family
+             */
+            iconName: string | null;
+            /**
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /** @description Displayable category image URL; stored keys are signed at read/create/update response time */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        CategoryListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching records
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        CategoryResponseDto: {
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Owning department UUID */
+            departmentId: string | null;
+            /**
+             * @description Category icon background color
+             * @example #F0F4FF
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Category icon name
+             * @example family
+             */
+            iconName: string | null;
+            /**
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /** @description Displayable category image URL; stored keys are signed at read/create/update response time */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
         ChangePasswordDto: {
             /**
              * @description Current account password
@@ -6173,19 +6357,19 @@ export interface components {
              */
             bookingMode?: "DIRECT" | "SERVICES";
             /**
-             * @description UUID of the parent department
+             * @description UUID of the parent department, or null to leave unassigned
              * @example 00000000-0000-0000-0000-000000000000
              */
-            departmentId?: string;
+            departmentId?: string | null;
             /** @example #F0F4FF */
-            iconBgColor?: string;
+            iconBgColor?: string | null;
             /** @example scissors-01 */
-            iconName?: string;
+            iconName?: string | null;
             /**
-             * @description Category image URL
+             * @description Category image URL or stored object key
              * @example https://example.com/logo.png
              */
-            imageUrl?: string;
+            imageUrl?: string | null;
             /**
              * @description Category name in Arabic
              * @example طب الأسنان
@@ -6195,7 +6379,7 @@ export interface components {
              * @description Category name in English
              * @example Dentistry
              */
-            nameEn?: string;
+            nameEn?: string | null;
             /**
              * @description Display order (0-based, lower sorts first)
              * @example 0
@@ -7360,6 +7544,68 @@ export interface components {
              * @example 30000
              */
             price: number;
+        };
+        DeleteCategoryResponseDto: {
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Owning department UUID */
+            departmentId: string | null;
+            /**
+             * @description Category icon background color
+             * @example #F0F4FF
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Category icon name
+             * @example family
+             */
+            iconName: string | null;
+            /**
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /** @description Persisted image reference returned without signing; may be a storage key or legacy external URL */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
         };
         DeleteDepartmentResponseDto: {
             /**
@@ -8703,6 +8949,61 @@ export interface components {
              */
             invoiceId?: string;
         };
+        NotificationListMetaDto: {
+            /** @description Whether a next page exists */
+            hasNextPage: boolean;
+            /** @description Whether a previous page exists */
+            hasPreviousPage: boolean;
+            /** @description Notifications per page */
+            limit: number;
+            /** @description 1-based page number */
+            page: number;
+            /** @description Total matching notifications */
+            total: number;
+            /** @description Total number of pages */
+            totalPages: number;
+        };
+        NotificationResponseDto: {
+            /** @description Notification body */
+            body: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Notification UUID */
+            id: string;
+            /** @description Whether the notification has been read */
+            isRead: boolean;
+            /** @description Notification metadata. JSON scalars, arrays, objects, or null are allowed. */
+            metadata: string | number | boolean | unknown[] | ({
+                [key: string]: unknown;
+            } | null);
+            /**
+             * Format: date-time
+             * @description Read timestamp
+             */
+            readAt: string | null;
+            /** @description Recipient user UUID */
+            recipientId: string;
+            /**
+             * @description Recipient type
+             * @enum {string}
+             */
+            recipientType: "CLIENT" | "EMPLOYEE";
+            /** @description Notification title */
+            title: string;
+            /**
+             * @description Notification type
+             * @enum {string}
+             */
+            type: "BOOKING_CREATED" | "BOOKING_CONFIRMED" | "BOOKING_CANCELLED" | "BOOKING_REMINDER" | "PAYMENT_RECEIVED" | "PAYMENT_FAILED" | "PAYMENT_COMPLETED" | "PAYMENT_REMINDER" | "WELCOME" | "GENERAL";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
         OnboardEmployeeDto: {
             /**
              * @description Avatar image URL
@@ -8815,6 +9116,12 @@ export interface components {
             /** @description Pagination metadata */
             meta: components["schemas"]["BranchListMetaDto"];
         };
+        PaginatedCategoriesResponseDto: {
+            /** @description Categories on the requested page */
+            items: components["schemas"]["CategoryListItemResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["CategoryListMetaDto"];
+        };
         PaginatedClientsDto: {
             items: components["schemas"]["ClientResponseDto"][];
             meta: components["schemas"]["ListMetaDto"];
@@ -8834,6 +9141,12 @@ export interface components {
         PaginatedEmployeesDto: {
             items: components["schemas"]["EmployeeResponseDto"][];
             meta: components["schemas"]["ListMetaDto"];
+        };
+        PaginatedNotificationsResponseDto: {
+            /** @description Notifications on the requested page */
+            items: components["schemas"]["NotificationResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["NotificationListMetaDto"];
         };
         /**
          * @description Payment method used
@@ -9537,6 +9850,10 @@ export interface components {
             /** @description Unifonic App SID */
             appSid: string;
         };
+        UnreadNotificationCountResponseDto: {
+            /** @description Number of unread notifications */
+            count: number;
+        };
         UpdateAvailabilityBody: Record<string, never>;
         UpdateAvailabilityDto: {
             /** @description Date-range exceptions (holidays, leave) */
@@ -9617,16 +9934,16 @@ export interface components {
              * @description UUID of the parent department, or null to unlink
              * @example 00000000-0000-0000-0000-000000000000
              */
-            departmentId?: Record<string, never> | null;
+            departmentId?: string | null;
             /** @example #F0F4FF */
-            iconBgColor?: string;
+            iconBgColor?: string | null;
             /** @example scissors-01 */
-            iconName?: string;
+            iconName?: string | null;
             /**
-             * @description Category image URL
+             * @description Category image URL or stored object key
              * @example https://example.com/logo.png
              */
-            imageUrl?: string;
+            imageUrl?: string | null;
             /**
              * @description Whether the category is active
              * @example true
@@ -9641,7 +9958,7 @@ export interface components {
              * @description Category name in English
              * @example Dentistry
              */
-            nameEn?: string;
+            nameEn?: string | null;
             /**
              * @description Display order (0-based)
              * @example 1
@@ -14672,6 +14989,10 @@ export interface operations {
             query?: {
                 /** @description Return only unread notifications */
                 unreadOnly?: boolean;
+                /** @description Results per page (1–200, default: 20) */
+                limit?: number;
+                /** @description Page number (1-based, default: 1) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -14684,7 +15005,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedNotificationsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -14796,7 +15119,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UnreadNotificationCountResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20469,9 +20794,9 @@ export interface operations {
                 /** @description Search categories by name */
                 search?: string;
                 /** @description Results per page */
-                limit?: unknown;
+                limit?: number;
                 /** @description Page number (1-based) */
-                page?: unknown;
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -20484,7 +20809,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedCategoriesResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20542,7 +20869,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CategoryResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20595,13 +20924,15 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Category deleted */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteCategoryResponseDto"];
+                };
             };
-            /** @description Validation failed */
+            /** @description Category has linked non-archived services */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20669,7 +21000,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CategoryResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
