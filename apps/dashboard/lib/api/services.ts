@@ -3,6 +3,11 @@
  */
 
 import { api } from "@/lib/api"
+import {
+  openApi,
+  type OpenApiRequestBody,
+  type OpenApiResponse,
+} from "@/lib/api/openapi"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type {
   Service,
@@ -24,39 +29,56 @@ import type {
 
 /* ─── Categories ─── */
 
+type CategoriesPath = "/api/v1/dashboard/organization/categories"
+type CategoryPath = "/api/v1/dashboard/organization/categories/{categoryId}"
+const CategoriesPathValue: CategoriesPath = "/api/v1/dashboard/organization/categories"
+const CategoryPathValue: CategoryPath = "/api/v1/dashboard/organization/categories/{categoryId}"
+type CategoryWire = OpenApiResponse<CategoryPath, "patch">
+type CategoryListItemWire = OpenApiResponse<CategoriesPath, "get">["items"][number]
+type CreateCategoryBody = OpenApiRequestBody<CategoriesPath, "post">
+type UpdateCategoryBody = OpenApiRequestBody<CategoryPath, "patch">
+
+function toCategory(category: CategoryWire | CategoryListItemWire): ServiceCategory {
+  return category
+}
+
 export async function fetchCategories(
   query: CategoryListQuery = {},
 ): Promise<PaginatedResponse<ServiceCategory>> {
-  return api.get<PaginatedResponse<ServiceCategory>>("/dashboard/organization/categories", {
-    page: query.page,
-    limit: query.limit,
-    search: query.search,
-    isActive: query.isActive,
-    departmentId: query.departmentId,
+  const response = await openApi.get(CategoriesPathValue, {
+    query: {
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      isActive: query.isActive,
+      departmentId: query.departmentId,
+    },
   })
+  return { ...response, items: response.items.map(toCategory) }
 }
 
 export async function createCategory(
   payload: CreateCategoryPayload,
 ): Promise<ServiceCategory> {
-  return api.post<ServiceCategory>(
-    "/dashboard/organization/categories",
-    payload,
-  )
+  const body = payload satisfies CreateCategoryBody
+  const category = await openApi.post(CategoriesPathValue, { body })
+  return toCategory(category)
 }
 
 export async function updateCategory(
   id: string,
   payload: UpdateCategoryPayload,
 ): Promise<ServiceCategory> {
-  return api.patch<ServiceCategory>(
-    `/dashboard/organization/categories/${id}`,
-    payload,
+  const body = payload satisfies UpdateCategoryBody
+  const category = await openApi.patch(
+    CategoryPathValue,
+    { path: { categoryId: id }, body },
   )
+  return toCategory(category)
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  await api.delete(`/dashboard/organization/categories/${id}`)
+  await openApi.delete(CategoryPathValue, { path: { categoryId: id } })
 }
 
 /* ─── Category Image ─── */
@@ -71,7 +93,12 @@ export async function uploadCategoryImage(categoryId: string, file: File): Promi
   // Step 2: persist the bare object KEY (not a presigned URL). The backend
   // mints a short-lived presigned URL at read time. Storing the presigned URL
   // here would 403 once its signature expired (~15 min) — see audit D.1.
-  return api.patch<ServiceCategory>(`/dashboard/organization/categories/${categoryId}`, { imageUrl: uploaded.storageKey })
+  const body = { imageUrl: uploaded.storageKey } satisfies UpdateCategoryBody
+  const category = await openApi.patch(
+    CategoryPathValue,
+    { path: { categoryId }, body },
+  )
+  return toCategory(category)
 }
 
 /* ─── Services ─── */
@@ -203,4 +230,3 @@ export async function fetchServicesListStats(): Promise<ServiceListStats> {
   const activeCount = active.meta?.total ?? 0
   return { total, active: activeCount, inactive: total - activeCount }
 }
-

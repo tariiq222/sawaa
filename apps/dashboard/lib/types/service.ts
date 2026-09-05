@@ -14,11 +14,11 @@ export interface ServiceCategory {
   sortOrder: number
   isActive: boolean
   departmentId: string | null
-  bookingMode?: "DIRECT" | "SERVICES"
+  bookingMode: "DIRECT" | "SERVICES"
   department?: { id: string; nameEn: string | null; nameAr: string } | null
-  iconName?: string | null
-  iconBgColor?: string | null
-  imageUrl?: string | null
+  iconName: string | null
+  iconBgColor: string | null
+  imageUrl: string | null
   createdAt: string
   _count?: { services: number }
 }

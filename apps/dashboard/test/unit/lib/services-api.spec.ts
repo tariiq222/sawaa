@@ -1,17 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getMock, postMock, patchMock, deleteMock, putMock, getAccessTokenMock } = vi.hoisted(() => ({
+const {
+  getMock,
+  postMock,
+  patchMock,
+  deleteMock,
+  putMock,
+  openApiGetMock,
+  openApiPostMock,
+  openApiPatchMock,
+  openApiDeleteMock,
+  getAccessTokenMock,
+} = vi.hoisted(() => ({
   getMock: vi.fn(),
   postMock: vi.fn(),
   patchMock: vi.fn(),
   deleteMock: vi.fn(),
   putMock: vi.fn(),
+  openApiGetMock: vi.fn(),
+  openApiPostMock: vi.fn(),
+  openApiPatchMock: vi.fn(),
+  openApiDeleteMock: vi.fn(),
   getAccessTokenMock: vi.fn(() => "test-token"),
 }))
 
 vi.mock("@/lib/api", () => ({
   api: { get: getMock, post: postMock, patch: patchMock, delete: deleteMock, put: putMock },
   getAccessToken: getAccessTokenMock,
+}))
+
+vi.mock("@/lib/api/openapi", () => ({
+  openApi: {
+    get: openApiGetMock,
+    post: openApiPostMock,
+    patch: openApiPatchMock,
+    delete: openApiDeleteMock,
+  },
 }))
 
 import {
@@ -46,27 +70,39 @@ describe("services api", () => {
   })
 
   it("fetchCategories calls /dashboard/organization/categories", async () => {
-    getMock.mockResolvedValueOnce([])
+    openApiGetMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
     await fetchCategories()
-    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/categories", expect.anything())
+    expect(openApiGetMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard/organization/categories",
+      { query: expect.any(Object) },
+    )
   })
 
   it("createCategory posts to /dashboard/organization/categories", async () => {
-    postMock.mockResolvedValueOnce({ id: "cat-1" })
+    openApiPostMock.mockResolvedValueOnce({ id: "cat-1" })
     await createCategory({ nameEn: "Physio", nameAr: "علاج", departmentId: "dept-1" })
-    expect(postMock).toHaveBeenCalledWith("/dashboard/organization/categories", expect.objectContaining({ nameEn: "Physio" }))
+    expect(openApiPostMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard/organization/categories",
+      { body: expect.objectContaining({ nameEn: "Physio" }) },
+    )
   })
 
   it("updateCategory patches /dashboard/organization/categories/:id", async () => {
-    patchMock.mockResolvedValueOnce({ id: "cat-1" })
+    openApiPatchMock.mockResolvedValueOnce({ id: "cat-1" })
     await updateCategory("cat-1", { nameEn: "Physio" })
-    expect(patchMock).toHaveBeenCalledWith("/dashboard/organization/categories/cat-1", expect.anything())
+    expect(openApiPatchMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard/organization/categories/{categoryId}",
+      { path: { categoryId: "cat-1" }, body: expect.anything() },
+    )
   })
 
   it("deleteCategory calls DELETE /dashboard/organization/categories/:id", async () => {
-    deleteMock.mockResolvedValueOnce(undefined)
-    await deleteCategory("cat-1")
-    expect(deleteMock).toHaveBeenCalledWith("/dashboard/organization/categories/cat-1")
+    openApiDeleteMock.mockResolvedValueOnce({ id: "cat-1" })
+    await expect(deleteCategory("cat-1")).resolves.toBeUndefined()
+    expect(openApiDeleteMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard/organization/categories/{categoryId}",
+      { path: { categoryId: "cat-1" } },
+    )
   })
 
   it("fetchServices sends query params to /dashboard/organization/services", async () => {
