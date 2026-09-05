@@ -38,6 +38,12 @@ import { SetIntakeFieldsDto } from '../../modules/org-experience/intake-forms/se
 import { GetIntakeFormResponsesHandler } from '../../modules/org-experience/intake-forms/get-intake-form-responses.handler';
 import { SubmitIntakeResponseHandler } from '../../modules/org-experience/submit-intake-response/submit-intake-response.handler';
 import { SubmitIntakeResponseDto } from '../../modules/org-experience/submit-intake-response/submit-intake-response.dto';
+import {
+  IntakeBookingResponseDto,
+  IntakeFormListItemResponseDto,
+  IntakeFormResponseDto,
+  IntakeSubmissionResponseDto,
+} from './dto/intake-form-response.dto';
 import { SubmitRatingHandler } from '../../modules/org-experience/ratings/submit-rating.handler';
 import { SubmitRatingDto } from '../../modules/org-experience/ratings/submit-rating.dto';
 import { ListRatingsHandler } from '../../modules/org-experience/ratings/list-ratings.handler';
@@ -219,7 +225,7 @@ export class DashboardOrganizationSettingsController {
   @Post('intake-forms')
   @CheckPermissions({ action: 'manage', subject: 'Setting' })
   @ApiOperation({ summary: 'Create an intake form' })
-  @ApiCreatedResponse({ description: 'Intake form created' })
+  @ApiCreatedResponse({ description: 'Intake form created', type: IntakeFormResponseDto })
   createIntakeFormEndpoint(@Body() body: CreateIntakeFormDto) {
     return this.createIntakeForm.execute(body);
   }
@@ -227,7 +233,7 @@ export class DashboardOrganizationSettingsController {
   @Get('intake-forms')
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @ApiOperation({ summary: 'List intake forms' })
-  @ApiOkResponse({ description: 'List of intake forms' })
+  @ApiOkResponse({ description: 'List of intake forms', type: [IntakeFormListItemResponseDto] })
   listIntakeFormsEndpoint(@Query() query: ListIntakeFormsDto) {
     return this.listIntakeForms.execute(query);
   }
@@ -238,7 +244,7 @@ export class DashboardOrganizationSettingsController {
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @ApiOperation({ summary: 'Get intake form responses for a booking' })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'List of intake responses for the booking, each with its form, resolved scope label and submission count' })
+  @ApiOkResponse({ description: 'List of intake responses for the booking, each with its form, resolved scope label and submission count', type: [IntakeBookingResponseDto] })
   getIntakeFormResponsesEndpoint(@Param('bookingId', ParseUUIDPipe) bookingId: string) {
     return this.getIntakeFormResponses.execute({ bookingId });
   }
@@ -247,7 +253,7 @@ export class DashboardOrganizationSettingsController {
   @CheckPermissions({ action: 'manage', subject: 'Setting' })
   @ApiOperation({ summary: 'Submit (or overwrite) intake answers on behalf of a client for a booking' })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiCreatedResponse({ description: 'Persisted intake response' })
+  @ApiCreatedResponse({ description: 'Persisted intake response', type: IntakeSubmissionResponseDto })
   @ApiResponse({ status: 400, description: 'Validation failed (missing required field, unknown field, or invalid option)' })
   @ApiResponse({ status: 404, description: 'Booking or form not found' })
   submitIntakeResponseEndpoint(
@@ -265,7 +271,7 @@ export class DashboardOrganizationSettingsController {
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @ApiOperation({ summary: 'Get an intake form by ID' })
   @ApiParam({ name: 'formId', description: 'Intake form UUID or reference (e.g. FRM-1024)', example: 'FRM-1024' })
-  @ApiOkResponse({ description: 'Intake form detail' })
+  @ApiOkResponse({ description: 'Intake form detail', type: IntakeFormResponseDto })
   @ApiResponse({ status: 404, description: 'Intake form not found' })
   getIntakeFormEndpoint(@Param('formId') formId: string) {
     return this.getIntakeForm.execute({ formId });
@@ -276,7 +282,8 @@ export class DashboardOrganizationSettingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update an intake form' })
   @ApiParam({ name: 'formId', description: 'Intake form UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Intake form updated' })
+  @ApiOkResponse({ description: 'Intake form updated', type: IntakeFormResponseDto })
+  @ApiResponse({ status: 409, description: 'Answered intake forms cannot change their fields' })
   @ApiResponse({ status: 404, description: 'Intake form not found' })
   updateIntakeFormEndpoint(
     @Param('formId', ParseUUIDPipe) formId: string,
@@ -290,7 +297,8 @@ export class DashboardOrganizationSettingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Replace all fields on an intake form' })
   @ApiParam({ name: 'formId', description: 'Intake form UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Fields replaced, full form returned' })
+  @ApiOkResponse({ description: 'Fields replaced, full form returned', type: IntakeFormResponseDto })
+  @ApiResponse({ status: 409, description: 'Answered intake forms cannot change their fields' })
   @ApiResponse({ status: 404, description: 'Intake form not found' })
   setIntakeFieldsEndpoint(
     @Param('formId', ParseUUIDPipe) formId: string,

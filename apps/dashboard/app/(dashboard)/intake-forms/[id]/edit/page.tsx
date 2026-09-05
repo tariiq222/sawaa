@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { IntakeFormPage } from "@/components/features/intake-forms/intake-form-page"
@@ -10,29 +10,7 @@ import { showApiError } from "@/lib/mutation-helpers"
 import type { IntakeFormDraft } from "@/lib/types/intake-form"
 import type { IntakeFormApi } from "@/lib/types/intake-form-api"
 import { PermissionGuard } from "@/components/features/permission-guard"
-
-/* ─── Map API form → draft ─── */
-
-function mapToDraft(form: IntakeFormApi): Partial<IntakeFormDraft> {
-  const scopeId = form.scopeId ?? ""
-
-  return {
-    nameEn: form.nameEn,
-    nameAr: form.nameAr,
-    type: form.type,
-    scope: form.scope,
-    scopeId,
-    isActive: form.isActive,
-    fields: form.fields.map((f) => ({
-      id: f.id,
-      labelEn: f.labelEn,
-      labelAr: f.labelAr,
-      type: f.fieldType,
-      required: f.isRequired,
-      options: f.options ?? [],
-    })),
-  }
-}
+import { mapDraftToUpdate, mapFormToDraft } from "@/lib/mappers/intake-form"
 
 export default function EditIntakeFormPage({
   params,
@@ -52,35 +30,25 @@ function EditIntakeFormPageInner({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const { t } = useLocale()
+  const { data: form, isLoading, error } = useIntakeForm(id)
+  if (error) return <p role="alert" className="p-6 text-destructive">{t("intakeForms.page.loadError")}</p>
+  if (isLoading || !form) return <p className="p-6 text-muted-foreground">{t("common.loading")}</p>
+  return <LoadedIntakeFormEditor key={form.id} form={form} />
+}
+
+function LoadedIntakeFormEditor({ form }: { form: IntakeFormApi }) {
+  const [baseline] = useState(form)
   const router = useRouter()
   const { t } = useLocale()
-  const { data: form, isLoading } = useIntakeForm(id)
-  const { updateAsync, updateLoading, setFieldsAsync, setFieldsLoading } =
+  const { updateAsync, updateLoading } =
     useIntakeFormMutations()
 
   async function handleSave(draft: IntakeFormDraft) {
     try {
       await updateAsync({
-        formId: id,
-        payload: {
-          nameAr: draft.nameAr,
-          nameEn: draft.nameEn,
-          isActive: draft.isActive,
-        },
-      })
-
-      await setFieldsAsync({
-        formId: id,
-        payload: {
-          fields: draft.fields.map((f, i) => ({
-            labelAr: f.labelAr,
-            labelEn: f.labelEn,
-            fieldType: f.type,
-            options: f.options.length > 0 ? f.options : undefined,
-            isRequired: f.required,
-            position: i,
-          })),
-        },
+        formId: form.id,
+        payload: mapDraftToUpdate(draft, baseline),
       })
 
       toast.success(t("intakeForms.saveSuccess"))
@@ -92,12 +60,11 @@ function EditIntakeFormPageInner({
 
   return (
     <IntakeFormPage
-      key={form?.id ?? "loading"}
       mode="edit"
-      initialDraft={form ? mapToDraft(form) : undefined}
-      isLoadingDraft={isLoading}
+      initialDraft={mapFormToDraft(baseline)}
+      fieldsLocked={form.submissionsCount > 0}
       onSave={handleSave}
-      isSaving={updateLoading || setFieldsLoading}
+      isSaving={updateLoading}
     />
   )
 }

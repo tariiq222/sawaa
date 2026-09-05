@@ -17,6 +17,11 @@ const validPayload: Record<string, unknown> = {
 };
 
 describe('CreateIntakeFormDto', () => {
+  it.each(['fields', 'isActive'])('rejects null %s instead of treating it as omitted', async (property) => {
+    const errors = await validateCreate({ ...validPayload, [property]: null });
+    expect(errors.some((error) => error.property === property)).toBe(true);
+  });
+
   it('accepts a minimal valid payload (only required fields)', async () => {
     const errors = await validateCreate(validPayload);
     expect(errors).toHaveLength(0);
@@ -116,6 +121,11 @@ describe('CreateIntakeFormDto', () => {
 });
 
 describe('IntakeFieldInputDto', () => {
+  it.each(['isRequired', 'options', 'position'])('rejects null %s', async (property) => {
+    const errors = await validateField({ labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT, [property]: null });
+    expect(errors.some((error) => error.property === property)).toBe(true);
+  });
+
   it('accepts a valid text field directly', async () => {
     const errors = await validateField({ labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT });
     expect(errors).toHaveLength(0);

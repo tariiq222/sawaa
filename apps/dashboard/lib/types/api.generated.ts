@@ -6875,7 +6875,7 @@ export interface components {
              * @description Form name in English
              * @example Pre-session Questionnaire
              */
-            nameEn?: string;
+            nameEn?: string | null;
             /**
              * @description Form scope
              * @example GLOBAL
@@ -6886,7 +6886,7 @@ export interface components {
              * @description Scope entity ID (null for global scope)
              * @example null
              */
-            scopeId?: string;
+            scopeId?: string | null;
             /**
              * @description Form type
              * @example PRE_SESSION
@@ -8042,6 +8042,39 @@ export interface components {
              */
             packageId: string;
         };
+        IntakeBookingResponseDto: {
+            /** @description Answers keyed by field UUID */
+            answers: {
+                [key: string]: string | string[];
+            };
+            /**
+             * Format: uuid
+             * @description Booking UUID
+             */
+            bookingId: string;
+            /**
+             * @description Client UUID normalized for booking-response reads
+             * @example
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Submission timestamp
+             */
+            createdAt: string;
+            /** @description Form summary and resolved scope identifiers */
+            form: components["schemas"]["IntakeFormBookingResponseDto"];
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            formId: string;
+            /**
+             * Format: uuid
+             * @description Response UUID
+             */
+            id: string;
+        };
         IntakeFieldInputDto: {
             /**
              * @description Input field type
@@ -8063,7 +8096,7 @@ export interface components {
              * @description Field label in English
              * @example Do you have any allergies?
              */
-            labelEn?: string;
+            labelEn?: string | null;
             /**
              * @description Selectable options for RADIO/SELECT/CHECKBOX fields
              * @example [
@@ -8077,6 +8110,248 @@ export interface components {
              * @example 0
              */
             position?: number;
+        };
+        IntakeFieldResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Field input type
+             * @enum {string}
+             */
+            fieldType: "TEXT" | "TEXTAREA" | "NUMBER" | "DATE" | "SELECT" | "CHECKBOX" | "RADIO";
+            /**
+             * Format: uuid
+             * @description Parent form UUID
+             */
+            formId: string;
+            /**
+             * Format: uuid
+             * @description Field UUID
+             */
+            id: string;
+            /** @description Whether an answer is required */
+            isRequired: boolean;
+            /** @description Arabic field label */
+            labelAr: string;
+            /** @description English field label */
+            labelEn: string | null;
+            /** @description Options for selectable fields */
+            options: string[] | null;
+            /** @description Display order, zero-based */
+            position: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        IntakeFormBookingResponseDto: {
+            /**
+             * Format: uuid
+             * @description Resolved branch UUID
+             */
+            branchId: string | null;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Resolved employee UUID
+             */
+            employeeId: string | null;
+            /** @description Ordered form fields */
+            fields: components["schemas"]["IntakeFieldResponseDto"][];
+            /**
+             * @description Number of configured fields
+             * @example 4
+             */
+            fieldsCount: number;
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            id: string;
+            /** @description Whether the form is active */
+            isActive: boolean;
+            /** @description Arabic form name */
+            nameAr: string;
+            /** @description English form name */
+            nameEn: string | null;
+            /**
+             * @description Human-readable form reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Lowercase form scope for list clients
+             * @example service
+             * @enum {string}
+             */
+            scope: "global" | "service" | "employee" | "branch";
+            /** @description Scoped service, employee, or branch UUID */
+            scopeId: string | null;
+            /** @description Resolved scope target label */
+            scopeLabel: string | null;
+            /**
+             * Format: uuid
+             * @description Resolved service UUID
+             */
+            serviceId: string | null;
+            /**
+             * @description Number of stored submissions
+             * @example 3
+             */
+            submissionsCount: number;
+            /**
+             * @description Lowercase form type for list clients
+             * @example pre_session
+             * @enum {string}
+             */
+            type: "pre_booking" | "pre_session" | "post_session" | "registration";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        IntakeFormListItemResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Ordered form fields */
+            fields: components["schemas"]["IntakeFieldResponseDto"][];
+            /**
+             * @description Number of configured fields
+             * @example 4
+             */
+            fieldsCount: number;
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            id: string;
+            /** @description Whether the form is active */
+            isActive: boolean;
+            /** @description Arabic form name */
+            nameAr: string;
+            /** @description English form name */
+            nameEn: string | null;
+            /**
+             * @description Human-readable form reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Lowercase form scope for list clients
+             * @example service
+             * @enum {string}
+             */
+            scope: "global" | "service" | "employee" | "branch";
+            /** @description Scoped service, employee, or branch UUID */
+            scopeId: string | null;
+            /** @description Resolved scope target label */
+            scopeLabel: string | null;
+            /**
+             * @description Number of stored submissions
+             * @example 3
+             */
+            submissionsCount: number;
+            /**
+             * @description Lowercase form type for list clients
+             * @example pre_session
+             * @enum {string}
+             */
+            type: "pre_booking" | "pre_session" | "post_session" | "registration";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        IntakeFormResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Ordered form fields */
+            fields: components["schemas"]["IntakeFieldResponseDto"][];
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            id: string;
+            /** @description Whether the form is active */
+            isActive: boolean;
+            /** @description Arabic form name */
+            nameAr: string;
+            /** @description English form name */
+            nameEn: string | null;
+            /**
+             * @description Human-readable form reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Form scope
+             * @enum {string}
+             */
+            scope: "GLOBAL" | "SERVICE" | "EMPLOYEE" | "BRANCH";
+            /** @description Scoped service, employee, or branch UUID */
+            scopeId: string | null;
+            /**
+             * @description Number of stored submissions
+             * @example 3
+             */
+            submissionsCount: number;
+            /**
+             * @description Form type
+             * @enum {string}
+             */
+            type: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        IntakeSubmissionResponseDto: {
+            /** @description Answers keyed by field UUID */
+            answers: {
+                [key: string]: string | string[];
+            };
+            /**
+             * Format: uuid
+             * @description Booking UUID
+             */
+            bookingId: string;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             */
+            clientId: string | null;
+            /**
+             * Format: date-time
+             * @description Submission timestamp
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            formId: string;
+            /**
+             * Format: uuid
+             * @description Response UUID
+             */
+            id: string;
         };
         /** @enum {string} */
         InvoiceStatus: "DRAFT" | "ISSUED" | "PAID" | "PARTIALLY_PAID" | "PARTIALLY_REFUNDED" | "VOID" | "REFUNDED";
@@ -9783,6 +10058,8 @@ export interface components {
             title?: string;
         };
         UpdateIntakeFormDto: {
+            /** @description Optional replacement field list (max 100) */
+            fields?: components["schemas"]["IntakeFieldInputDto"][];
             /**
              * @description Whether the form is active and shown to clients
              * @example true
@@ -9797,7 +10074,24 @@ export interface components {
              * @description Form name in English
              * @example Pre-session Questionnaire
              */
-            nameEn?: string;
+            nameEn?: string | null;
+            /**
+             * @description Form scope
+             * @example GLOBAL
+             * @enum {string}
+             */
+            scope?: "GLOBAL" | "SERVICE" | "EMPLOYEE" | "BRANCH";
+            /**
+             * @description Scope entity ID; null clears the scope target
+             * @example null
+             */
+            scopeId?: string | null;
+            /**
+             * @description Form type
+             * @example PRE_SESSION
+             * @enum {string}
+             */
+            type?: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
         };
         UpdateProblemReportStatusDto: {
             /**
@@ -21031,7 +21325,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormListItemResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -21089,7 +21385,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -21146,7 +21444,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeBookingResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -21207,7 +21507,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeSubmissionResponseDto"];
+                };
             };
             /** @description Validation failed (missing required field, unknown field, or invalid option) */
             400: {
@@ -21269,7 +21571,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -21401,7 +21705,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -21432,6 +21738,13 @@ export interface operations {
             };
             /** @description Intake form not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Answered intake forms cannot change their fields */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21469,7 +21782,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -21500,6 +21815,13 @@ export interface operations {
             };
             /** @description Intake form not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Answered intake forms cannot change their fields */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -170,4 +170,21 @@ describe('GetIntakeFormResponsesHandler', () => {
     const result = await handler.execute({ bookingId: 'missing' });
     expect(result).toHaveLength(0);
   });
+
+  it('preserves the existing empty-string clientId normalization for booking responses', async () => {
+    const response = { ...makeResponse(), clientId: null };
+    const handler = await buildHandler({
+      intakeResponse: {
+        findMany: jest.fn().mockResolvedValue([response]),
+        groupBy: jest.fn().mockResolvedValue([{ formId: 'form-1', _count: 1 }]),
+      },
+      service: { findMany: jest.fn() },
+      employee: { findMany: jest.fn() },
+      branch: { findMany: jest.fn() },
+    });
+
+    const result = await handler.execute({ bookingId: 'booking-1' });
+
+    expect(result[0].clientId).toBe('');
+  });
 });

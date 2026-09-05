@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { mapApiForm } from "@/lib/mappers/intake-form"
+import { mapApiForm, mapFormToDraft, mapDraftToUpdate } from "@/lib/mappers/intake-form"
 import type { IntakeFormApi } from "@/lib/types/intake-form-api"
 
 function makeApiForm(overrides: Partial<IntakeFormApi> = {}): IntakeFormApi {
@@ -25,6 +25,8 @@ function makeApiForm(overrides: Partial<IntakeFormApi> = {}): IntakeFormApi {
         isRequired: true,
         options: ["متزوج", "أعزب"],
         position: 0,
+        createdAt: "2026-06-01T08:00:00.000Z",
+        updatedAt: "2026-06-01T08:00:00.000Z",
       },
     ],
     ...overrides,
@@ -32,6 +34,13 @@ function makeApiForm(overrides: Partial<IntakeFormApi> = {}): IntakeFormApi {
 }
 
 describe("mapApiForm", () => {
+  it("only patches edited properties, preserving concurrent scope/status changes and nullable English name", () => {
+    const original = makeApiForm({ nameEn: null, scopeId: null })
+    const draft = mapFormToDraft(original)
+    draft.nameAr = "اسم جديد"
+    expect(mapDraftToUpdate(draft, original)).toEqual({ nameAr: "اسم جديد" })
+  })
+
   it("maps API field names to the frontend shape (fieldType→type, isRequired→required)", () => {
     const mapped = mapApiForm(makeApiForm())
     expect(mapped.fields).toEqual([
@@ -64,7 +73,7 @@ describe("mapApiForm", () => {
 
   it("defaults a field's options to [] when the API sends null", () => {
     const apiForm = makeApiForm()
-    apiForm.fields![0].options = null as unknown as string[]
+    apiForm.fields![0].options = null
     const mapped = mapApiForm(apiForm)
     expect(mapped.fields?.[0]?.options).toEqual([])
   })

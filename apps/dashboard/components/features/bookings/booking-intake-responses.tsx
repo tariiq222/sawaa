@@ -13,14 +13,14 @@ import type {
 
 function fieldLabel(field: IntakeFieldApi, locale: "ar" | "en"): string {
   return locale === "ar"
-    ? field.labelAr || field.labelEn
-    : field.labelEn || field.labelAr
+    ? field.labelAr || field.labelEn || ""
+    : field.labelEn || field.labelAr || ""
 }
 
 function formName(form: IntakeResponseApi["form"], locale: "ar" | "en"): string {
   return locale === "ar"
-    ? form.nameAr || form.nameEn
-    : form.nameEn || form.nameAr
+    ? form.nameAr || form.nameEn || ""
+    : form.nameEn || form.nameAr || ""
 }
 
 /** Render a single answer (string | string[]) into a display node. */

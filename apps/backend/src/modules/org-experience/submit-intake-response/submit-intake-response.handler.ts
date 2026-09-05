@@ -126,7 +126,8 @@ export class SubmitIntakeResponseHandler {
     return this.rlsTransaction.withTransaction(async (tx) => {
       // Submit takes shared row locks before the pair advisory lock. Delete
       // paths use the corresponding exclusive row lock, so submit/delete
-      // cannot race through an outdated booking or form snapshot.
+      // cannot race through an outdated booking or form snapshot. Form edits
+      // take FOR UPDATE, which also waits for this shared form lock.
       await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${bookingId} FOR SHARE`;
       await tx.$queryRaw`SELECT "id" FROM "IntakeForm" WHERE "id" = ${formId} FOR SHARE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`intake:${bookingId}:${formId}`}, 0))`;

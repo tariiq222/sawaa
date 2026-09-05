@@ -13,8 +13,6 @@ import {
   CheckListIcon,
   Select01Icon,
   Calendar01Icon,
-  StarIcon,
-  FileUploadIcon,
 } from "@hugeicons/core-free-icons"
 import type { IconSvgElement } from "@hugeicons/react"
 import { Button } from "@sawaa/ui"
@@ -31,10 +29,9 @@ import {
 import { useLocale } from "@/components/locale-provider"
 import type { FormField, FieldType } from "@/lib/types/intake-form"
 import { FIELD_TYPE_LABELS } from "@/lib/types/intake-form"
-import { FieldConditionEditor } from "@/components/features/intake-forms/field-condition-editor"
 
 const FIELD_TYPES: FieldType[] = [
-  "text", "textarea", "radio", "checkbox", "select", "number", "date", "rating", "file",
+  "text", "textarea", "radio", "checkbox", "select", "number", "date",
 ]
 
 const FIELD_TYPE_ICONS: Record<FieldType, IconSvgElement> = {
@@ -45,8 +42,6 @@ const FIELD_TYPE_ICONS: Record<FieldType, IconSvgElement> = {
   checkbox: CheckListIcon,
   select: Select01Icon,
   date: Calendar01Icon,
-  rating: StarIcon,
-  file: FileUploadIcon,
 }
 
 const OPTIONS_FIELD_TYPES: FieldType[] = ["radio", "checkbox", "select"]
@@ -55,7 +50,7 @@ interface FieldEditorProps {
   field: FormField
   index: number
   totalFields: number
-  prevFields: FormField[]
+  disabled?: boolean
   onChange: (updated: FormField) => void
   onRemove: () => void
   onMoveUp: () => void
@@ -66,7 +61,7 @@ export function FieldEditor({
   field,
   index,
   totalFields,
-  prevFields,
+  disabled = false,
   onChange,
   onRemove,
   onMoveUp,
@@ -96,7 +91,7 @@ export function FieldEditor({
   const needsOptions = OPTIONS_FIELD_TYPES.includes(field.type)
 
   return (
-    <div className="rounded-lg border border-border bg-surface-solid p-4 flex flex-col gap-4">
+    <fieldset disabled={disabled} className="min-w-0 rounded-lg border border-border bg-surface-solid p-4 flex flex-col gap-4">
       {/* Header row */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-muted-foreground tabular-nums">
@@ -165,6 +160,7 @@ export function FieldEditor({
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs">{t("intakeForms.field.type")}</Label>
           <Select
+            disabled={disabled}
             value={field.type}
             onValueChange={(v) =>
               update({ type: v as FieldType, options: OPTIONS_FIELD_TYPES.includes(v as FieldType) ? field.options : [] })
@@ -192,6 +188,7 @@ export function FieldEditor({
         </div>
         <div className="flex items-center gap-3 pt-5">
           <Switch
+            disabled={disabled}
             id={`required-${field.id}`}
             checked={field.required}
             onCheckedChange={(v) => update({ required: v })}
@@ -240,10 +237,6 @@ export function FieldEditor({
         </div>
       )}
 
-      {/* Conditional Logic */}
-      {prevFields.length > 0 && (
-        <FieldConditionEditor field={field} prevFields={prevFields} onUpdate={update} />
-      )}
-    </div>
+    </fieldset>
   )
 }

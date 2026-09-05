@@ -259,4 +259,21 @@ describe('SubmitIntakeResponseHandler', () => {
       expect.objectContaining({ data: expect.objectContaining({ clientId: 'client-1' }) }),
     );
   });
+
+  it('locks and re-reads the form inside the response transaction before writing answers', async () => {
+    const { handler, tx } = build();
+
+    await handler.execute({
+      bookingId: 'book-1',
+      formId: 'form-1',
+      answers: { 'f-text': 'سارة' },
+      clientId: 'client-1',
+    });
+
+    expect(tx.$queryRaw).toHaveBeenCalled();
+    expect(tx.intakeForm.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'form-1' },
+      include: { fields: true },
+    }));
+  });
 });

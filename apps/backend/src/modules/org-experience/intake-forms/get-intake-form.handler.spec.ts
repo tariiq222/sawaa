@@ -25,9 +25,21 @@ describe('GetIntakeFormHandler', () => {
   });
 
   it('should execute successfully', async () => {
-    (prisma.intakeForm.findFirst as jest.Mock).mockResolvedValue({ id: 'test-id' });
+    (prisma.intakeForm.findFirst as jest.Mock).mockResolvedValue({
+      id: 'test-id',
+      type: 'PRE_SESSION',
+      scope: 'GLOBAL',
+      _count: { responses: 0 },
+    });
     const result = await handler.execute({formId:"00000000-0000-0000-0000-000000000001"});
     expect(result).toBeDefined();
+    expect(result.type).toBe('PRE_SESSION');
+    expect(result.scope).toBe('GLOBAL');
+    expect(result.submissionsCount).toBe(0);
+    expect(result._count).toBeUndefined();
+    expect(prisma.intakeForm.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      include: expect.objectContaining({ _count: { select: { responses: true } } }),
+    }));
     
     (prisma.intakeForm.findFirst as jest.Mock).mockResolvedValue(null);
     await expect(handler.execute({formId:"00000000-0000-0000-0000-000000000001"})).rejects.toThrow();

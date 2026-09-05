@@ -16,6 +16,7 @@ const mockForm = {
   createdAt: new Date(),
   updatedAt: new Date(),
   fields: [],
+  _count: { responses: 0 },
 };
 
 const buildPrisma = () => ({
