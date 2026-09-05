@@ -20,7 +20,13 @@ describe('ListIntakeFormsHandler', () => {
 
   it('should list all forms without filter', async () => {
     prisma.intakeForm.findMany.mockResolvedValue([
-      { id: 'f1', type: 'CONSULTATION', scope: 'SERVICE', fields: [{ id: 'fld1' }] },
+      {
+        id: 'f1',
+        type: 'CONSULTATION',
+        scope: 'SERVICE',
+        fields: [{ id: 'fld1' }],
+      _count: { responses: 3 },
+      },
     ]);
 
     const result = await handler.execute({});
@@ -28,7 +34,11 @@ describe('ListIntakeFormsHandler', () => {
     expect(result[0].type).toBe('consultation');
     expect(result[0].scope).toBe('service');
     expect(result[0].fieldsCount).toBe(1);
-    expect(prisma.intakeForm.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+    expect(result[0].submissionsCount).toBe(3);
+    expect(prisma.intakeForm.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {},
+      include: expect.objectContaining({ _count: { select: { responses: true } } }),
+    }));
   });
 
   it('should filter by isActive', async () => {

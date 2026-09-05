@@ -3394,6 +3394,7 @@
           "nameEn": {
             "description": "Form name in English",
             "example": "Pre-session Questionnaire",
+            "nullable": true,
             "type": "string"
           },
           "scope": {
@@ -3410,6 +3411,7 @@
           "scopeId": {
             "description": "Scope entity ID (null for global scope)",
             "example": null,
+            "nullable": true,
             "type": "string"
           },
           "type": {
@@ -5109,6 +5111,70 @@
         ],
         "type": "object"
       },
+      "IntakeBookingResponseDto": {
+        "properties": {
+          "answers": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "Answers keyed by field UUID",
+            "type": "object"
+          },
+          "bookingId": {
+            "description": "Booking UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID normalized for booking-response reads",
+            "example": "",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Submission timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "form": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IntakeFormBookingResponseDto"
+              }
+            ],
+            "description": "Form summary and resolved scope identifiers"
+          },
+          "formId": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Response UUID",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "formId",
+          "bookingId",
+          "clientId",
+          "answers",
+          "createdAt",
+          "form"
+        ],
+        "type": "object"
+      },
       "IntakeFieldInputDto": {
         "properties": {
           "fieldType": {
@@ -5138,6 +5204,7 @@
           "labelEn": {
             "description": "Field label in English",
             "example": "Do you have any allergies?",
+            "nullable": true,
             "type": "string"
           },
           "options": {
@@ -5160,6 +5227,458 @@
         "required": [
           "labelAr",
           "fieldType"
+        ],
+        "type": "object"
+      },
+      "IntakeFieldResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "fieldType": {
+            "description": "Field input type",
+            "enum": [
+              "TEXT",
+              "TEXTAREA",
+              "NUMBER",
+              "DATE",
+              "SELECT",
+              "CHECKBOX",
+              "RADIO"
+            ],
+            "type": "string"
+          },
+          "formId": {
+            "description": "Parent form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Field UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isRequired": {
+            "description": "Whether an answer is required",
+            "type": "boolean"
+          },
+          "labelAr": {
+            "description": "Arabic field label",
+            "type": "string"
+          },
+          "labelEn": {
+            "description": "English field label",
+            "nullable": true,
+            "type": "string"
+          },
+          "options": {
+            "description": "Options for selectable fields",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "position": {
+            "description": "Display order, zero-based",
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "formId",
+          "labelAr",
+          "labelEn",
+          "fieldType",
+          "isRequired",
+          "options",
+          "position",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "IntakeFormBookingResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Resolved branch UUID",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Resolved employee UUID",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "fields": {
+            "description": "Ordered form fields",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldResponseDto"
+            },
+            "type": "array"
+          },
+          "fieldsCount": {
+            "description": "Number of configured fields",
+            "example": 4,
+            "minimum": 0,
+            "type": "number"
+          },
+          "id": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the form is active",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic form name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English form name",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Human-readable form reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "scope": {
+            "description": "Lowercase form scope for list clients",
+            "enum": [
+              "global",
+              "service",
+              "employee",
+              "branch"
+            ],
+            "example": "service",
+            "type": "string"
+          },
+          "scopeId": {
+            "description": "Scoped service, employee, or branch UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "scopeLabel": {
+            "description": "Resolved scope target label",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Resolved service UUID",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "submissionsCount": {
+            "description": "Number of stored submissions",
+            "example": 3,
+            "minimum": 0,
+            "type": "number"
+          },
+          "type": {
+            "description": "Lowercase form type for list clients",
+            "enum": [
+              "pre_booking",
+              "pre_session",
+              "post_session",
+              "registration"
+            ],
+            "example": "pre_session",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "type",
+          "scope",
+          "scopeId",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "fields",
+          "submissionsCount",
+          "fieldsCount",
+          "scopeLabel",
+          "serviceId",
+          "employeeId",
+          "branchId"
+        ],
+        "type": "object"
+      },
+      "IntakeFormListItemResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Ordered form fields",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldResponseDto"
+            },
+            "type": "array"
+          },
+          "fieldsCount": {
+            "description": "Number of configured fields",
+            "example": 4,
+            "minimum": 0,
+            "type": "number"
+          },
+          "id": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the form is active",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic form name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English form name",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Human-readable form reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "scope": {
+            "description": "Lowercase form scope for list clients",
+            "enum": [
+              "global",
+              "service",
+              "employee",
+              "branch"
+            ],
+            "example": "service",
+            "type": "string"
+          },
+          "scopeId": {
+            "description": "Scoped service, employee, or branch UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "scopeLabel": {
+            "description": "Resolved scope target label",
+            "nullable": true,
+            "type": "string"
+          },
+          "submissionsCount": {
+            "description": "Number of stored submissions",
+            "example": 3,
+            "minimum": 0,
+            "type": "number"
+          },
+          "type": {
+            "description": "Lowercase form type for list clients",
+            "enum": [
+              "pre_booking",
+              "pre_session",
+              "post_session",
+              "registration"
+            ],
+            "example": "pre_session",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "type",
+          "scope",
+          "scopeId",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "fields",
+          "submissionsCount",
+          "fieldsCount",
+          "scopeLabel"
+        ],
+        "type": "object"
+      },
+      "IntakeFormResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Ordered form fields",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldResponseDto"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the form is active",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic form name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English form name",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Human-readable form reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "scope": {
+            "description": "Form scope",
+            "enum": [
+              "GLOBAL",
+              "SERVICE",
+              "EMPLOYEE",
+              "BRANCH"
+            ],
+            "type": "string"
+          },
+          "scopeId": {
+            "description": "Scoped service, employee, or branch UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "submissionsCount": {
+            "description": "Number of stored submissions",
+            "example": 3,
+            "minimum": 0,
+            "type": "number"
+          },
+          "type": {
+            "description": "Form type",
+            "enum": [
+              "PRE_BOOKING",
+              "PRE_SESSION",
+              "POST_SESSION",
+              "REGISTRATION"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "type",
+          "scope",
+          "scopeId",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "fields",
+          "submissionsCount"
+        ],
+        "type": "object"
+      },
+      "IntakeSubmissionResponseDto": {
+        "properties": {
+          "answers": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "Answers keyed by field UUID",
+            "type": "object"
+          },
+          "bookingId": {
+            "description": "Booking UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Submission timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "formId": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Response UUID",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "formId",
+          "bookingId",
+          "clientId",
+          "answers",
+          "createdAt"
         ],
         "type": "object"
       },
@@ -8025,6 +8544,13 @@
       },
       "UpdateIntakeFormDto": {
         "properties": {
+          "fields": {
+            "description": "Optional replacement field list (max 100)",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldInputDto"
+            },
+            "type": "array"
+          },
           "isActive": {
             "description": "Whether the form is active and shown to clients",
             "example": true,
@@ -8038,6 +8564,35 @@
           "nameEn": {
             "description": "Form name in English",
             "example": "Pre-session Questionnaire",
+            "nullable": true,
+            "type": "string"
+          },
+          "scope": {
+            "description": "Form scope",
+            "enum": [
+              "GLOBAL",
+              "SERVICE",
+              "EMPLOYEE",
+              "BRANCH"
+            ],
+            "example": "GLOBAL",
+            "type": "string"
+          },
+          "scopeId": {
+            "description": "Scope entity ID; null clears the scope target",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "description": "Form type",
+            "enum": [
+              "PRE_BOOKING",
+              "PRE_SESSION",
+              "POST_SESSION",
+              "REGISTRATION"
+            ],
+            "example": "PRE_SESSION",
             "type": "string"
           }
         },
@@ -23470,6 +24025,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IntakeFormListItemResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of intake forms"
           },
           "400": {
@@ -23538,6 +24103,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeFormResponseDto"
+                }
+              }
+            },
             "description": "Intake form created"
           },
           "400": {
@@ -23609,6 +24181,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IntakeBookingResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of intake responses for the booking, each with its form, resolved scope label and submission count"
           },
           "400": {
@@ -23688,6 +24270,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeSubmissionResponseDto"
+                }
+              }
+            },
             "description": "Persisted intake response"
           },
           "400": {
@@ -23827,6 +24416,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeFormResponseDto"
+                }
+              }
+            },
             "description": "Intake form detail"
           },
           "400": {
@@ -23909,6 +24505,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeFormResponseDto"
+                }
+              }
+            },
             "description": "Intake form updated"
           },
           "400": {
@@ -23943,6 +24546,9 @@
           },
           "404": {
             "description": "Intake form not found"
+          },
+          "409": {
+            "description": "Answered intake forms cannot change their fields"
           },
           "500": {
             "content": {
@@ -23993,6 +24599,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeFormResponseDto"
+                }
+              }
+            },
             "description": "Fields replaced, full form returned"
           },
           "400": {
@@ -24027,6 +24640,9 @@
           },
           "404": {
             "description": "Intake form not found"
+          },
+          "409": {
+            "description": "Answered intake forms cannot change their fields"
           },
           "500": {
             "content": {

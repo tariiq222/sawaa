@@ -29,7 +29,7 @@ describe("intake-forms api", () => {
   it("fetchIntakeForms calls /intake-forms", async () => {
     getMock.mockResolvedValueOnce([])
     await fetchIntakeForms()
-    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms", undefined)
+    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms")
   })
 
   it("fetchIntakeForm calls /intake-forms/:id", async () => {
@@ -72,5 +72,49 @@ describe("intake-forms api", () => {
     getMock.mockResolvedValueOnce([])
     await fetchBookingIntakeResponses("bk-2")
     expect(getMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms/responses/bk-2")
+  })
+
+  it("serializes false explicitly and encodes reference path parameters", async () => {
+    getMock.mockResolvedValueOnce([])
+    await fetchIntakeForms({ isActive: false })
+    expect(getMock).toHaveBeenLastCalledWith("/dashboard/organization/intake-forms?isActive=false")
+    getMock.mockResolvedValueOnce({ id: "form-1", type: "PRE_BOOKING", scope: "GLOBAL", fields: [] })
+    await fetchIntakeForm("FRM/1")
+    expect(getMock).toHaveBeenLastCalledWith("/dashboard/organization/intake-forms/FRM%2F1")
+  })
+
+  it("normalizes nested field enums in both atomic create and patch requests", async () => {
+    const response = { id: "form-1", type: "POST_SESSION", scope: "GLOBAL", fields: [] }
+    const fields = [{ labelAr: "السؤال", fieldType: "select" as const, options: ["نعم", "لا"] }]
+    postMock.mockResolvedValueOnce(response)
+    await createIntakeForm({ nameAr: "نموذج", nameEn: "Form", type: "post_session", scope: "global", fields })
+    expect(postMock).toHaveBeenLastCalledWith("/dashboard/organization/intake-forms", {
+      nameAr: "نموذج", nameEn: "Form", type: "POST_SESSION", scope: "GLOBAL",
+      fields: [{ labelAr: "السؤال", fieldType: "SELECT", options: ["نعم", "لا"] }],
+    })
+    patchMock.mockResolvedValueOnce(response)
+    await updateIntakeForm("form-1", { type: "post_session", scope: "global", scopeId: null, fields })
+    expect(patchMock).toHaveBeenLastCalledWith("/dashboard/organization/intake-forms/form-1", {
+      type: "POST_SESSION", scope: "GLOBAL", scopeId: null,
+      fields: [{ labelAr: "السؤال", fieldType: "SELECT", options: ["نعم", "لا"] }],
+    })
+  })
+
+  it("preserves nullable labels, actual counts and response scope enrichment", async () => {
+    getMock.mockResolvedValueOnce([{
+      id: "response-1", formId: "form-1", bookingId: "bk-1", clientId: "",
+      answers: { "field-1": ["نعم"] }, createdAt: "2026-09-05T00:00:00.000Z",
+      form: { id: "form-1", nameAr: "نموذج", nameEn: null,
+        type: "pre_session", scope: "service", scopeId: "svc-1", submissionsCount: 7,
+        scopeLabel: "استشارة", serviceId: "svc-1", employeeId: null, branchId: null,
+        fields: [{ id: "field-1", labelEn: null, fieldType: "CHECKBOX", options: null }] },
+    }])
+    const [response] = await fetchIntakeResponses("bk-1")
+    expect(response.form).toMatchObject({
+      nameEn: null, type: "pre_session", scope: "service", submissionsCount: 7,
+      scopeLabel: "استشارة", serviceId: "svc-1", employeeId: null, branchId: null,
+      fields: [{ labelEn: null, fieldType: "checkbox", options: null }],
+    })
+    expect(response.answers).toEqual({ "field-1": ["نعم"] })
   })
 })

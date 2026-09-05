@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { CreateIntakeFormDto } from './create-intake-form.dto';
+import { mapIntakeFormResult, validateIntakeFormScope } from './intake-form.helpers';
 
 export type CreateIntakeFormCommand = CreateIntakeFormDto;
 
@@ -11,13 +12,14 @@ export class CreateIntakeFormHandler {
   ) {}
 
   async execute(dto: CreateIntakeFormCommand) {
-    return this.prisma.intakeForm.create({
+    const scopeId = await validateIntakeFormScope(this.prisma, dto.scope, dto.scopeId);
+    const form = await this.prisma.intakeForm.create({
       data: {
         nameAr: dto.nameAr,
         nameEn: dto.nameEn,
         type: dto.type,
         scope: dto.scope,
-        scopeId: dto.scopeId,
+        scopeId,
         isActive: dto.isActive,
         fields: dto.fields?.length
           ? {
@@ -32,7 +34,11 @@ export class CreateIntakeFormHandler {
             }
           : undefined,
       },
-      include: { fields: { orderBy: { position: 'asc' } } },
+      include: {
+        fields: { orderBy: { position: 'asc' } },
+        _count: { select: { responses: true } },
+      },
     });
+    return mapIntakeFormResult(form);
   }
 }

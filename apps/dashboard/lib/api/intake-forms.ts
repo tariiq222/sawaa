@@ -1,116 +1,97 @@
-/**
- * Intake Forms API — Sawaa Dashboard
- */
-
-import { api } from "@/lib/api"
+import { openApi } from "@/lib/api/openapi"
 import type {
-  IntakeFormApi,
-  IntakeFieldApi,
-  IntakeFormListQuery,
-  CreateIntakeFormApiPayload,
-  UpdateIntakeFormApiPayload,
-  SetFieldsApiPayload,
-  IntakeResponseApi,
+  IntakeFormApi, IntakeFieldApi, IntakeFormListQuery, CreateIntakeFormApiPayload,
+  UpdateIntakeFormApiPayload, SetFieldsApiPayload, IntakeResponseApi,
+  IntakeFormWire, IntakeFormListWire, CreateIntakeFormWire, IntakeFieldInputWire,
+  SetFieldItemApiPayload,
 } from "@/lib/types/intake-form-api"
-import type {
-  FormType,
-  FormScope,
-  FieldType,
-} from "@/lib/types/intake-form-shared"
+import type { FormType, FormScope, FieldType } from "@/lib/types/intake-form-shared"
 
-/* ─── Enum casing normalization ───
- * Backend Prisma enums are UPPERCASE (PRE_BOOKING / GLOBAL / TEXT) and the
- * @IsEnum validator runs under whitelist+forbidNonWhitelisted, so writes must
- * send UPPERCASE. The whole frontend works in lowercase. Normalize at this
- * boundary: UPPERCASE on write, lowercase on read — so create + list + edit
- * all agree on lowercase internally regardless of which read endpoint
- * (some lowercase server-side, some don't) served the data.
- */
+const FORM_TYPE = {
+  pre_booking: "PRE_BOOKING", pre_session: "PRE_SESSION",
+  post_session: "POST_SESSION", registration: "REGISTRATION",
+} satisfies Record<FormType, CreateIntakeFormWire["type"]>
+const FORM_SCOPE = {
+  global: "GLOBAL", service: "SERVICE", employee: "EMPLOYEE", branch: "BRANCH",
+} satisfies Record<FormScope, CreateIntakeFormWire["scope"]>
+const FIELD_TYPE = {
+  text: "TEXT", textarea: "TEXTAREA", number: "NUMBER", radio: "RADIO",
+  checkbox: "CHECKBOX", select: "SELECT", date: "DATE",
+} satisfies Record<FieldType, IntakeFieldInputWire["fieldType"]>
 
-function toBackendEnum<T extends string>(value: T): string {
-  return value.toUpperCase()
+const TYPE_FROM_API = {
+  PRE_BOOKING: "pre_booking", PRE_SESSION: "pre_session", POST_SESSION: "post_session", REGISTRATION: "registration",
+  pre_booking: "pre_booking", pre_session: "pre_session", post_session: "post_session", registration: "registration",
+} satisfies Record<CreateIntakeFormWire["type"] | FormType, FormType>
+const SCOPE_FROM_API = {
+  GLOBAL: "global", SERVICE: "service", EMPLOYEE: "employee", BRANCH: "branch",
+  global: "global", service: "service", employee: "employee", branch: "branch",
+} satisfies Record<CreateIntakeFormWire["scope"] | FormScope, FormScope>
+const FIELD_FROM_API = {
+  TEXT: "text", TEXTAREA: "textarea", NUMBER: "number", RADIO: "radio",
+  CHECKBOX: "checkbox", SELECT: "select", DATE: "date",
+} satisfies Record<IntakeFieldInputWire["fieldType"], FieldType>
+
+function normalizeField(field: IntakeFormWire["fields"][number]): IntakeFieldApi {
+  return { ...field, fieldType: FIELD_FROM_API[field.fieldType] }
 }
 
-function normalizeFieldFromApi(field: IntakeFieldApi): IntakeFieldApi {
-  return { ...field, fieldType: field.fieldType.toLowerCase() as FieldType }
-}
-
-function normalizeFormFromApi(form: IntakeFormApi): IntakeFormApi {
+function normalizeForm(form: IntakeFormWire | IntakeFormListWire): IntakeFormApi {
   return {
-    ...form,
-    type: form.type.toLowerCase() as FormType,
-    scope: form.scope.toLowerCase() as FormScope,
-    fields: form.fields?.map(normalizeFieldFromApi) ?? [],
+    ...form, type: TYPE_FROM_API[form.type], scope: SCOPE_FROM_API[form.scope],
+    fields: form.fields.map(normalizeField),
   }
 }
 
-/* ─── List & Get ─── */
+function toWireFields(fields: SetFieldItemApiPayload[]): IntakeFieldInputWire[] {
+  return fields.map((field) => ({ ...field, fieldType: FIELD_TYPE[field.fieldType] }))
+}
 
-export async function fetchIntakeForms(
-  query?: IntakeFormListQuery,
-): Promise<IntakeFormApi[]> {
-  const forms = await api.get<IntakeFormApi[]>("/dashboard/organization/intake-forms", query as Record<string, string | boolean | undefined>)
-  return forms.map(normalizeFormFromApi)
+export async function fetchIntakeForms(query?: IntakeFormListQuery): Promise<IntakeFormApi[]> {
+  const forms = await openApi.get("/api/v1/dashboard/organization/intake-forms", { query })
+  return forms.map(normalizeForm)
 }
 
 export async function fetchIntakeForm(formId: string): Promise<IntakeFormApi> {
-  const form = await api.get<IntakeFormApi>(`/dashboard/organization/intake-forms/${formId}`)
-  return normalizeFormFromApi(form)
+  return normalizeForm(await openApi.get("/api/v1/dashboard/organization/intake-forms/{formId}", { path: { formId } }))
 }
 
-/* ─── Create / Update / Delete ─── */
-
-export async function createIntakeForm(
-  payload: CreateIntakeFormApiPayload,
-): Promise<IntakeFormApi> {
-  const form = await api.post<IntakeFormApi>("/dashboard/organization/intake-forms", {
-    ...payload,
-    type: toBackendEnum(payload.type),
-    scope: toBackendEnum(payload.scope),
-  })
-  return normalizeFormFromApi(form)
-}
-
-export async function updateIntakeForm(
-  formId: string,
-  payload: UpdateIntakeFormApiPayload,
-): Promise<IntakeFormApi> {
-  const form = await api.patch<IntakeFormApi>(`/dashboard/organization/intake-forms/${formId}`, payload)
-  return normalizeFormFromApi(form)
-}
-
-/* ─── Fields ─── */
-
-export async function setIntakeFields(
-  formId: string,
-  payload: SetFieldsApiPayload,
-): Promise<IntakeFormApi> {
-  const form = await api.put<IntakeFormApi>(`/dashboard/organization/intake-forms/${formId}/fields`, {
-    fields: payload.fields.map((f) => ({
-      ...f,
-      fieldType: toBackendEnum(f.fieldType),
-    })),
-  })
-  return normalizeFormFromApi(form)
-}
-
-export async function deleteIntakeForm(formId: string): Promise<void> {
-  return api.delete<void>(`/dashboard/organization/intake-forms/${formId}`)
-}
-
-/* ─── Responses ─── */
-
-export async function fetchIntakeResponses(
-  bookingId: string,
-): Promise<IntakeResponseApi[]> {
-  const responses = await api.get<IntakeResponseApi[]>(`/dashboard/organization/intake-forms/responses/${bookingId}`)
-  return responses.map((r) => ({
-    ...r,
-    // normalizeFormFromApi spreads `r.form`, so the enriched scope fields
-    // (scopeLabel/serviceId/employeeId/branchId) on the responses form are preserved.
-    form: normalizeFormFromApi(r.form) as IntakeResponseApi["form"],
+export async function createIntakeForm(payload: CreateIntakeFormApiPayload): Promise<IntakeFormApi> {
+  const { type, scope, fields, ...metadata } = payload
+  return normalizeForm(await openApi.post("/api/v1/dashboard/organization/intake-forms", {
+    body: { ...metadata, type: FORM_TYPE[type], scope: FORM_SCOPE[scope],
+      ...(fields !== undefined ? { fields: toWireFields(fields) } : {}) },
   }))
 }
 
-/** Alias of {@link fetchIntakeResponses} — fetches a booking's submitted intake responses. */
+export async function updateIntakeForm(formId: string, payload: UpdateIntakeFormApiPayload): Promise<IntakeFormApi> {
+  const { type, scope, fields, ...metadata } = payload
+  return normalizeForm(await openApi.patch("/api/v1/dashboard/organization/intake-forms/{formId}", {
+    path: { formId },
+    body: { ...metadata,
+      ...(type !== undefined ? { type: FORM_TYPE[type] } : {}),
+      ...(scope !== undefined ? { scope: FORM_SCOPE[scope] } : {}),
+      ...(fields !== undefined ? { fields: toWireFields(fields) } : {}),
+    },
+  }))
+}
+
+export async function setIntakeFields(formId: string, payload: SetFieldsApiPayload): Promise<IntakeFormApi> {
+  return normalizeForm(await openApi.put("/api/v1/dashboard/organization/intake-forms/{formId}/fields", {
+    path: { formId }, body: { fields: toWireFields(payload.fields) },
+  }))
+}
+
+export async function deleteIntakeForm(formId: string): Promise<void> {
+  return openApi.delete("/api/v1/dashboard/organization/intake-forms/{formId}", { path: { formId } })
+}
+
+export async function fetchIntakeResponses(bookingId: string): Promise<IntakeResponseApi[]> {
+  const responses = await openApi.get("/api/v1/dashboard/organization/intake-forms/responses/{bookingId}", { path: { bookingId } })
+  return responses.map((response) => ({
+    ...response,
+    form: { ...response.form, ...normalizeForm(response.form) },
+  }))
+}
+
 export const fetchBookingIntakeResponses = fetchIntakeResponses

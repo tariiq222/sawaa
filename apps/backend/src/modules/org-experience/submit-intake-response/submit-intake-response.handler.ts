@@ -20,6 +20,51 @@ function isNonEmpty(value: string | string[] | undefined): boolean {
   return typeof value === 'string' && value.trim() !== '';
 }
 
+type IntakeFormWithFields = {
+  isActive: boolean;
+  fields: Array<{
+    id: string;
+    labelAr: string;
+    fieldType: string;
+    isRequired: boolean;
+    options: unknown;
+  }>;
+};
+
+function validateAnswers(form: IntakeFormWithFields, answers: Record<string, string | string[]>) {
+  if (!form.isActive) {
+    throw new BadRequestException('This intake form is no longer active');
+  }
+
+  const fieldsById = new Map(form.fields.map((f) => [f.id, f]));
+  for (const fieldId of Object.keys(answers)) {
+    if (!fieldsById.has(fieldId)) {
+      throw new BadRequestException(`Answer references unknown field "${fieldId}"`);
+    }
+  }
+
+  for (const field of form.fields) {
+    const answer = answers[field.id];
+    if (field.isRequired && !isNonEmpty(answer)) {
+      throw new BadRequestException(`Field "${field.labelAr}" is required`);
+    }
+    if (answer === undefined || answer === null) continue;
+
+    if (OPTION_FIELD_TYPES.has(field.fieldType)) {
+      const allowed = new Set((field.options as string[] | null) ?? []);
+      const selected = Array.isArray(answer) ? answer : [answer];
+      if (field.fieldType !== 'CHECKBOX' && Array.isArray(answer)) {
+        throw new BadRequestException(`Field "${field.labelAr}" accepts a single value`);
+      }
+      for (const value of selected) {
+        if (!allowed.has(value)) {
+          throw new BadRequestException(`Invalid option "${value}" for field "${field.labelAr}"`);
+        }
+      }
+    }
+  }
+}
+
 /**
  * Validates and persists a client's answers to an intake form for a booking.
  *
@@ -62,45 +107,19 @@ export class SubmitIntakeResponseHandler {
     if (!form) {
       throw new NotFoundException('Intake form not found');
     }
-    if (!form.isActive) {
-      throw new BadRequestException('This intake form is no longer active');
-    }
-
-    const fieldsById = new Map(form.fields.map((f) => [f.id, f]));
-
-    // Reject answers that reference fields not on this form.
-    for (const fieldId of Object.keys(answers)) {
-      if (!fieldsById.has(fieldId)) {
-        throw new BadRequestException(`Answer references unknown field "${fieldId}"`);
-      }
-    }
-
-    for (const field of form.fields) {
-      const answer = answers[field.id];
-
-      if (field.isRequired && !isNonEmpty(answer)) {
-        throw new BadRequestException(`Field "${field.labelAr}" is required`);
-      }
-
-      if (answer === undefined || answer === null) continue;
-
-      if (OPTION_FIELD_TYPES.has(field.fieldType)) {
-        const allowed = new Set((field.options as string[] | null) ?? []);
-        const selected = Array.isArray(answer) ? answer : [answer];
-        if (field.fieldType !== 'CHECKBOX' && Array.isArray(answer)) {
-          throw new BadRequestException(`Field "${field.labelAr}" accepts a single value`);
-        }
-        for (const value of selected) {
-          if (!allowed.has(value)) {
-            throw new BadRequestException(`Invalid option "${value}" for field "${field.labelAr}"`);
-          }
-        }
-      }
-    }
+    validateAnswers(form, answers);
 
     const resolvedClientId = booking.clientId;
 
     return this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "IntakeForm" WHERE id = ${formId} FOR UPDATE`;
+      const lockedForm = await tx.intakeForm.findUnique({
+        where: { id: formId },
+        include: { fields: true },
+      });
+      if (!lockedForm) throw new NotFoundException('Intake form not found');
+      validateAnswers(lockedForm, answers);
+
       // No DB-level unique on (bookingId, formId); enforce idempotency manually.
       const existing = await tx.intakeResponse.findFirst({
         where: { bookingId, formId },

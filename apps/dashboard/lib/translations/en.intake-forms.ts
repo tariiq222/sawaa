@@ -63,7 +63,9 @@ export const enIntakeForms: Record<string, string> = {
   // — Form Page —
   "intakeForms.page.editTitle": "Edit Form",
   "intakeForms.page.newTitle": "New Intake Form",
-  "intakeForms.page.description": "Set form details, build fields and conditions",
+  "intakeForms.page.description": "Set form details and build its fields",
+  "intakeForms.page.fieldsLocked": "This form has saved responses. You can edit its details; questions are locked to preserve those responses.",
+  "intakeForms.page.loadError": "Could not load the form. Reload the page to try again.",
   "intakeForms.page.cancel": "Cancel",
   "intakeForms.page.saving": "Saving...",
   "intakeForms.page.saveChanges": "Save Changes",

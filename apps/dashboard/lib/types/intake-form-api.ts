@@ -1,95 +1,43 @@
-/**
- * Intake Forms — API types (mirror of backend schema)
- * These match the NestJS backend response shapes exactly.
- */
-
+import type { OpenApiRequestBody, OpenApiResponse } from "@/lib/api/openapi"
+import type { paths } from "@/lib/types/api.generated"
 import type { FormScope, FormType, FieldType } from "./intake-form-shared"
 
 export type { FormScope, FormType, FieldType, ConditionOperator } from "./intake-form-shared"
 
-/* ─── Entities ─── */
+type FormsPath = "/api/v1/dashboard/organization/intake-forms"
+type FormPath = "/api/v1/dashboard/organization/intake-forms/{formId}"
+type ResponsesPath = "/api/v1/dashboard/organization/intake-forms/responses/{bookingId}"
 
-export interface IntakeFieldApi {
-  id: string
-  formId: string
-  labelAr: string
-  labelEn: string
+export type IntakeFormWire = OpenApiResponse<FormPath, "get">
+export type IntakeFormListWire = OpenApiResponse<FormsPath, "get">[number]
+export type IntakeResponseWire = OpenApiResponse<ResponsesPath, "get">[number]
+export type CreateIntakeFormWire = OpenApiRequestBody<FormsPath, "post">
+export type UpdateIntakeFormWire = OpenApiRequestBody<FormPath, "patch">
+export type IntakeFieldInputWire = NonNullable<CreateIntakeFormWire["fields"]>[number]
+
+// The UI uses lowercase enums. All other wire properties come from OpenAPI.
+export type IntakeFieldApi = Omit<IntakeFormWire["fields"][number], "fieldType"> & {
   fieldType: FieldType
-  options: string[] | null
-  isRequired: boolean
-  position: number
 }
-
-export interface IntakeFormApi {
-  id: string
-  ref: number
-  nameAr: string
-  nameEn: string
+export type IntakeFormApi = Omit<IntakeFormWire, "type" | "scope" | "fields"> & {
   type: FormType
   scope: FormScope
-  scopeId: string | null
-  isActive: boolean
-  submissionsCount: number
-  createdAt: string
-  updatedAt: string
   fields: IntakeFieldApi[]
 }
-
-export interface IntakeResponseApi {
-  id: string
-  formId: string
-  bookingId: string
-  clientId: string
-  answers: Record<string, string | string[]>
-  createdAt: string
-  /**
-   * The form this response belongs to. The responses endpoint enriches the
-   * base form with a computed `scopeLabel` and scope target ids, hence the
-   * intersection with the optional fields below.
-   */
-  form: IntakeFormApi & {
-    scopeLabel?: string | null
-    serviceId?: string | null
-    employeeId?: string | null
-    branchId?: string | null
-  }
+export type IntakeResponseApi = Omit<IntakeResponseWire, "form"> & {
+  form: IntakeFormApi & Pick<IntakeResponseWire["form"], "scopeLabel" | "serviceId" | "employeeId" | "branchId">
 }
 
-/* ─── Query params ─── */
-
-export interface IntakeFormListQuery {
-  scope?: FormScope
-  type?: FormType
-  scopeId?: string
-  isActive?: boolean
-}
-
-/* ─── Payloads ─── */
-
-export interface CreateIntakeFormApiPayload {
-  nameAr: string
-  nameEn: string
+export type IntakeFormListQuery = NonNullable<paths[FormsPath]["get"]["parameters"]["query"]>
+export type SetFieldItemApiPayload = Omit<IntakeFieldInputWire, "fieldType"> & { fieldType: FieldType }
+export type SetFieldsApiPayload = { fields: SetFieldItemApiPayload[] }
+export type CreateIntakeFormApiPayload = Omit<CreateIntakeFormWire, "type" | "scope" | "fields"> & {
   type: FormType
   scope: FormScope
-  scopeId?: string
-  isActive?: boolean
+  fields?: SetFieldItemApiPayload[]
 }
-
-export interface UpdateIntakeFormApiPayload {
-  nameAr?: string
-  nameEn?: string
-  isActive?: boolean
-}
-
-export interface SetFieldItemApiPayload {
-  labelAr: string
-  labelEn: string
-  fieldType: FieldType
-  options?: string[]
-  isRequired?: boolean
-  position?: number
-}
-
-export interface SetFieldsApiPayload {
-  fields: SetFieldItemApiPayload[]
+export type UpdateIntakeFormApiPayload = Omit<UpdateIntakeFormWire, "type" | "scope" | "fields"> & {
+  type?: FormType
+  scope?: FormScope
+  fields?: SetFieldItemApiPayload[]
 }

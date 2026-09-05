@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { IntakeFieldType, IntakeFormScope, IntakeFormType } from '@prisma/client';
 import { UpdateIntakeFormDto } from './update-intake-form.dto';
 
 async function validateDto(plain: Record<string, unknown>) {
@@ -19,8 +20,29 @@ describe('UpdateIntakeFormDto', () => {
       nameAr: 'استبيان ما قبل الجلسة',
       nameEn: 'Pre-session Questionnaire',
       isActive: true,
+      type: IntakeFormType.PRE_SESSION,
+      scope: IntakeFormScope.SERVICE,
+      scopeId: 'service-1',
+      fields: [{ labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT }],
     });
     expect(errors).toHaveLength(0);
+  });
+
+  it('accepts null scopeId when clearing a scoped form to GLOBAL', async () => {
+    const errors = await validateDto({ scope: IntakeFormScope.GLOBAL, scopeId: null });
+    expect(errors).toHaveLength(0);
+  });
+
+  it.each(['RATING', 'FILE'])('rejects unsupported field type %s', async (fieldType) => {
+    const errors = await validateDto({
+      fields: [{ labelAr: 'سؤال', fieldType }],
+    });
+    expect(errors.some((e) => e.property === 'fields')).toBe(true);
+  });
+
+  it.each(['nameAr', 'isActive', 'type', 'scope', 'fields'] as const)('rejects null %s instead of treating it as omitted', async (property) => {
+    const errors = await validateDto({ [property]: null });
+    expect(errors.some((e) => e.property === property)).toBe(true);
   });
 
   it('rejects a nameAr longer than 200 chars', async () => {

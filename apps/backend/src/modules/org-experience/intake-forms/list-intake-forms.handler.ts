@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { ListIntakeFormsDto } from './list-intake-forms.dto';
+import { mapIntakeFormResult } from './intake-form.helpers';
 
 export type ListIntakeFormsCommand = ListIntakeFormsDto;
 
@@ -15,16 +16,18 @@ export class ListIntakeFormsHandler {
       where: {
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
-      include: { fields: { orderBy: { position: 'asc' } } },
+      include: {
+        fields: { orderBy: { position: 'asc' } },
+        _count: { select: { responses: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
     return forms.map((form) => ({
-      ...form,
+      ...mapIntakeFormResult(form),
       type: form.type.toLowerCase(),
       scope: form.scope.toLowerCase(),
       fieldsCount: form.fields.length,
-      submissionsCount: 0,
       scopeLabel: null, // TODO: resolve service/employee/branch name when scopeId is set
     }));
   }
