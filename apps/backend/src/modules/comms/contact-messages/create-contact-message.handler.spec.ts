@@ -204,3 +204,55 @@ describe('CreateContactMessageHandler', () => {
     }
   });
 });
+
+describe('CreateContactMessageHandler notification outbox transaction', () => {
+  it('persists the contact row and intent in one transaction with only the contact id payload', async () => {
+    const tx = {
+      contactMessage: {
+        create: jest.fn().mockResolvedValue({ id: 'msg-tx', createdAt: new Date('2026-09-05T12:00:00Z'), status: 'PENDING' }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn((callback: (value: typeof tx) => unknown) => callback(tx)),
+      contactMessage: tx.contactMessage,
+    };
+    const capture = { execute: jest.fn().mockResolvedValue('intent-contact') };
+    const notify = { execute: jest.fn() };
+    const staffTargets = { execute: jest.fn() };
+    const handler = new (CreateContactMessageHandler as any)(prisma, notify, staffTargets, capture, { shouldCapture: () => true });
+
+    await handler.execute({ name: 'Sensitive Name', phone: '+966500000000', subject: 'Private', body: 'Private body' });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(capture.execute).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: 'contact-message:msg-tx',
+      consumerKey: 'comms.contact-message-staff.v2',
+      payload: { kind: 'contact-message-staff', contactMessageId: 'msg-tx' },
+    }), tx);
+    expect(JSON.stringify(capture.execute.mock.calls[0][0])).not.toContain('Private body');
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+
+  it('rolls back the contact creation when durable capture fails', async () => {
+    const tx = { contactMessage: { create: jest.fn().mockResolvedValue({ id: 'msg-fail' }) } };
+    const prisma = { $transaction: jest.fn((callback: (value: typeof tx) => unknown) => callback(tx)), contactMessage: tx.contactMessage };
+    const capture = { execute: jest.fn().mockRejectedValue(new Error('capture unavailable')) };
+    const handler = new (CreateContactMessageHandler as any)(prisma, { execute: jest.fn() }, { execute: jest.fn() }, capture, { shouldCapture: () => true });
+
+    await expect(handler.execute({ name: 'A', email: 'a@example.com', subject: 'S', body: 'B' })).rejects.toThrow('capture unavailable');
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves legacy staff notification when capture is injected but disabled or before cutover', async () => {
+    const message = { id: 'legacy-contact' };
+    const prisma = { contactMessage: { create: jest.fn().mockResolvedValue(message) }, $transaction: jest.fn() };
+    const capture = { execute: jest.fn() }; const notify = { execute: jest.fn() };
+    const staff = { execute: jest.fn().mockResolvedValue([{ userId: 'staff' }]) };
+    const handler = new (CreateContactMessageHandler as any)(prisma, notify, staff, capture, { shouldCapture: () => false });
+    expect(await handler.execute({ name: 'A', email: 'test@example.test', subject: 'S', body: 'B' })).toEqual(message);
+    expect(capture.execute).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(notify.execute).toHaveBeenCalledTimes(1);
+  });
+
+});

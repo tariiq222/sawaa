@@ -81,3 +81,73 @@ describe('OnBookingReminderHandler', () => {
     await expect(handler.handle(envelope() as never)).resolves.toBeUndefined();
   });
 });
+
+describe('OnBookingReminderHandler v2 cutover', () => {
+  it('uses the reminder source identity and materializes an owned reminder while paused', async () => {
+    const notify = { execute: jest.fn() };
+    const pushTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue('intent-owned') };
+    const capture = { execute: jest.fn() };
+    const materialize = { execute: jest.fn().mockResolvedValue(undefined) };
+    const config = { shouldCapture: jest.fn().mockReturnValue(false) };
+    const handler = new (OnBookingReminderHandler as any)(notify, pushTargets, ownership, capture, materialize, config);
+
+    await handler.handle({ eventId: 'legacy-reminder-event', occurredAt: new Date(), payload: { bookingId: 'booking-1', clientId: 'client-1', scheduledAt: '2026-09-05T11:00:00.000Z' } });
+
+    expect(materialize.execute).toHaveBeenCalledWith('intent-owned');
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+
+  it('captures an eligible reminder after cutover and propagates materialization errors', async () => {
+    const notify = { execute: jest.fn() };
+    const pushTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue(null) };
+    const capture = { execute: jest.fn().mockResolvedValue('intent-new') };
+    const materialize = { execute: jest.fn().mockRejectedValue(new Error('reminder materialize failed')) };
+    const config = { shouldCapture: jest.fn().mockReturnValue(true) };
+    const handler = new (OnBookingReminderHandler as any)(notify, pushTargets, ownership, capture, materialize, config);
+
+    await expect(handler.handle({ eventId: 'legacy-reminder-event-2', version: 1, occurredAt: new Date(), payload: { bookingId: 'booking-2', clientId: 'client-2', scheduledAt: '2026-09-05T11:00:00.000Z' } })).rejects.toThrow('reminder materialize failed');
+    expect(capture.execute).toHaveBeenCalledWith(expect.objectContaining({ sourceKey: 'booking-reminder:booking-2:2026-09-05T11:00:00.000Z:v1', consumerKey: 'comms.booking-reminder-client.v2' }));
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+
+  it('gates a reminder on scheduledAt minus the configured reminder lead time', async () => {
+    const notify = { execute: jest.fn() };
+    const pushTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue(null) };
+    const capture = { execute: jest.fn().mockResolvedValue('intent-new') };
+    const materialize = { execute: jest.fn().mockResolvedValue(undefined) };
+    const config = { shouldCapture: jest.fn().mockReturnValue(true) };
+    const prisma = { organizationSettings: { findFirst: jest.fn().mockResolvedValue({ reminderBeforeMinutes: 120 }) } };
+    const handler = new (OnBookingReminderHandler as any)(notify, pushTargets, ownership, capture, materialize, config, prisma);
+
+    await handler.handle({
+      eventId: 'legacy-reminder-event-3', version: 1, occurredAt: new Date('2026-09-05T08:00:00.000Z'),
+      payload: { bookingId: 'booking-3', clientId: 'client-3', scheduledAt: '2026-09-05T11:00:00.000Z' },
+    });
+
+    expect(prisma.organizationSettings.findFirst).toHaveBeenCalledWith({ select: { reminderBeforeMinutes: true } });
+    expect(config.shouldCapture).toHaveBeenCalledWith(new Date('2026-09-05T09:00:00.000Z'));
+    expect(config.shouldCapture).not.toHaveBeenCalledWith(new Date('2026-09-05T11:00:00.000Z'));
+    expect(capture.execute).toHaveBeenCalled();
+  });
+
+  it('rejects an unsupported envelope version after ownership miss without legacy fallback', async () => {
+    const notify = { execute: jest.fn() };
+    const pushTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue(null) };
+    const capture = { execute: jest.fn() };
+    const materialize = { execute: jest.fn() };
+    const config = { shouldCapture: jest.fn().mockReturnValue(true) };
+    const handler = new (OnBookingReminderHandler as any)(notify, pushTargets, ownership, capture, materialize, config);
+
+    await expect(handler.handle({
+      eventId: 'event-unsupported', version: 2, occurredAt: new Date(),
+      payload: { bookingId: 'booking-1', clientId: 'client-1', scheduledAt: '2026-09-05T11:00:00.000Z' },
+    })).rejects.toThrow(/version/i);
+    expect(config.shouldCapture).not.toHaveBeenCalled();
+    expect(capture.execute).not.toHaveBeenCalled();
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+});

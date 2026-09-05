@@ -50,3 +50,53 @@ describe('OnBookingCancelledStaffHandler', () => {
     await expect(handler.handle({ payload: { bookingId: 'b1', clientId: 'c1', employeeId: 'e1', organizationId: 'org-1', reason: 'test' } } as any)).resolves.not.toThrow();
   });
 });
+
+describe('OnBookingCancelledStaffHandler v2 cutover', () => {
+  it('routes an existing owned cancellation to materialization while paused', async () => {
+    const notify = { execute: jest.fn() };
+    const staffTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue('intent-owned') };
+    const capture = { execute: jest.fn() };
+    const materialize = { execute: jest.fn().mockResolvedValue(undefined) };
+    const config = { shouldCapture: jest.fn().mockReturnValue(false) };
+    const handler = new (OnBookingCancelledStaffHandler as any)(notify, staffTargets, ownership, capture, materialize, config);
+
+    await handler.handle({ eventId: 'event-staff-cancel-1', occurredAt: new Date(), payload: { bookingId: 'booking-1', employeeId: 'employee-1', organizationId: 'org-1', clientId: 'client-1', reason: 'OTHER' } });
+
+    expect(materialize.execute).toHaveBeenCalledWith('intent-owned');
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+
+  it('captures a new staff cancellation with the preserved staff audience consumer key', async () => {
+    const notify = { execute: jest.fn() };
+    const staffTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue(null) };
+    const capture = { execute: jest.fn().mockResolvedValue('intent-new') };
+    const materialize = { execute: jest.fn().mockResolvedValue(undefined) };
+    const config = { shouldCapture: jest.fn().mockReturnValue(true) };
+    const handler = new (OnBookingCancelledStaffHandler as any)(notify, staffTargets, ownership, capture, materialize, config);
+
+    await handler.handle({ eventId: 'event-staff-cancel-2', version: 1, occurredAt: new Date(), payload: { bookingId: 'booking-2', employeeId: 'employee-2', organizationId: 'org-1', clientId: 'client-2', reason: 'OTHER' } });
+
+    expect(capture.execute).toHaveBeenCalledWith(expect.objectContaining({ consumerKey: 'comms.booking-cancelled-staff.v2' }));
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unsupported envelope version after ownership miss without legacy fallback', async () => {
+    const notify = { execute: jest.fn() };
+    const staffTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue(null) };
+    const capture = { execute: jest.fn() };
+    const materialize = { execute: jest.fn() };
+    const config = { shouldCapture: jest.fn().mockReturnValue(true) };
+    const handler = new (OnBookingCancelledStaffHandler as any)(notify, staffTargets, ownership, capture, materialize, config);
+
+    await expect(handler.handle({
+      eventId: 'event-unsupported', version: 2, occurredAt: new Date(),
+      payload: { bookingId: 'booking-1', employeeId: 'employee-1', organizationId: 'org-1', clientId: 'client-1', reason: 'OTHER' },
+    })).rejects.toThrow(/version/i);
+    expect(config.shouldCapture).not.toHaveBeenCalled();
+    expect(capture.execute).not.toHaveBeenCalled();
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+});

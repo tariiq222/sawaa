@@ -49,6 +49,7 @@
     "legacy:extract": "tsx scripts/legacy-import/extract-booknetic.ts",
     "legacy:import": "tsx src/ops/legacy-import-runner.ts",
     "rekey:credentials": "tsx scripts/rekey-credentials.ts",
+    "notification-outbox:retry": "tsx src/ops/notification-outbox-retry-runner.ts",
     "docs:api": "typedoc --options typedoc.json"
   },
   "dependencies": {

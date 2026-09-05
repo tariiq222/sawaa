@@ -44,6 +44,7 @@ import { ResolveEmployeeIdHandler } from './employees/resolve-employee-id.handle
 import { LogActivityHandler } from '../ops/log-activity/log-activity.handler';
 import { DashboardPeopleController } from '../../api/dashboard/people.controller';
 import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
+import { NotificationOutboxModule } from '../comms/notification-outbox/notification-outbox.module';
 
 const handlers = [
   CreateClientHandler, UpdateClientHandler, ListClientsHandler, GetClientHandler, DeleteClientHandler,
@@ -60,7 +61,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule, OrgConfigModule],
+  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule, OrgConfigModule, NotificationOutboxModule],
   controllers: [DashboardPeopleController],
   providers: [...handlers],
   exports: [...handlers],

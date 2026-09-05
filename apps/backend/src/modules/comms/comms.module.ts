@@ -102,6 +102,7 @@ import { AdministrativeAssistantRecoveryWorker } from './chat/assistant/administ
 import { ChatAuditService } from './chat/chat-audit.service';
 import { ChatUsageLimitsService } from './chat/chat-usage-limits.service';
 import { WebChatAvailabilityService, WebChatEnabledGuard } from './chat/web-chat-availability.service';
+import { NotificationOutboxModule } from './notification-outbox/notification-outbox.module';
 
 const handlers = [
   SendPushHandler,
@@ -212,6 +213,7 @@ const eventHandlers = [
     BookingsModule,
     OrgExperienceModule,
     forwardRef(() => PeopleModule),
+    NotificationOutboxModule,
   ],
   controllers: [DashboardCommsController, DashboardConversationsController],
   providers: [...handlers, ...eventHandlers],

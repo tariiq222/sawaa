@@ -337,6 +337,114 @@ model NotificationDeliveryLog {
   @@index([status, createdAt]) // DB-06: composite for retry sweep — replaces standalone (createdAt)
 }
 
+enum NotificationIntentStatus {
+  PENDING
+  MATERIALIZED
+  RETRY_WAIT
+  DEAD
+  EXPIRED
+}
+
+enum NotificationOutboxDeliveryStatus {
+  READY
+  SENDING
+  RETRY_WAIT
+  ACCEPTED
+  DELIVERED
+  SKIPPED
+  EXPIRED
+  DEAD
+  UNKNOWN
+}
+
+enum NotificationDeliveryAttemptOutcome {
+  STARTED
+  ACCEPTED
+  DELIVERED
+  RETRY_WAIT
+  SKIPPED
+  EXPIRED
+  DEAD
+  UNKNOWN
+}
+
+model NotificationIntent {
+  id             String                   @id @default(uuid()) @db.Uuid
+  sourceKey      String
+  consumerKey    String
+  sourceOutboxId String?                  @db.Uuid
+  payloadVersion Int
+  payload        Json
+  payloadHash    String
+  status         NotificationIntentStatus @default(PENDING)
+  attempts       Int                      @default(0)
+  nextAttemptAt  DateTime?                @db.Timestamptz(3)
+  expiresAt      DateTime?                @db.Timestamptz(3)
+  leaseToken     String?                  @db.Uuid
+  leaseUntil     DateTime?                @db.Timestamptz(3)
+  createdAt      DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime                 @updatedAt @db.Timestamptz(3)
+
+  deliveries NotificationDelivery[]
+
+  @@unique([sourceKey, consumerKey])
+  @@index([sourceOutboxId])
+  @@index([status, nextAttemptAt, id])
+  @@index([status, leaseUntil, id])
+}
+
+model NotificationDelivery {
+  id                String                           @id @default(uuid()) @db.Uuid
+  intentId          String                           @db.Uuid
+  intent            NotificationIntent               @relation(fields: [intentId], references: [id], onDelete: Cascade)
+  recipientType     RecipientType
+  recipientId       String
+  channel           DeliveryChannel
+  targetKey         String
+  targetAddress     String
+  notificationId    String?
+  deliveryLogId     String?                          @unique
+  channelPayload    Json
+  status            NotificationOutboxDeliveryStatus @default(READY)
+  attempts          Int                              @default(0)
+  nextAttemptAt     DateTime?                        @db.Timestamptz(3)
+  nextEnqueueAt     DateTime?                        @db.Timestamptz(3)
+  enqueueGeneration Int                              @default(0)
+  leaseToken        String?                          @db.Uuid
+  leaseUntil        DateTime?                        @db.Timestamptz(3)
+  providerName      String?
+  providerMessageId String?
+  acceptedAt        DateTime?                        @db.Timestamptz(3)
+  deliveredAt       DateTime?                        @db.Timestamptz(3)
+  outcomeReason     String?
+  createdAt         DateTime                         @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime                         @updatedAt @db.Timestamptz(3)
+
+  deliveryAttempts NotificationDeliveryAttempt[]
+
+  @@unique([intentId, recipientType, recipientId, channel, targetKey], map: "NotificationDelivery_dedup_key")
+  @@index([status, nextAttemptAt, id])
+  @@index([status, leaseUntil, id])
+  @@index([status, nextEnqueueAt, id])
+  @@index([providerName, providerMessageId])
+}
+
+model NotificationDeliveryAttempt {
+  id                String                             @id @default(uuid()) @db.Uuid
+  deliveryId        String                             @db.Uuid
+  delivery          NotificationDelivery               @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  attemptNumber     Int
+  leaseToken        String                             @db.Uuid
+  startedAt         DateTime                           @default(now()) @db.Timestamptz(3)
+  finishedAt        DateTime?                          @db.Timestamptz(3)
+  outcome           NotificationDeliveryAttemptOutcome @default(STARTED)
+  providerMessageId String?
+  errorCode         String?
+
+  @@unique([deliveryId, attemptNumber])
+  @@index([deliveryId, startedAt])
+}
+
 // ─── WhatsApp Agent ───────────────────────────────────────────────────────────
 // Single-tenant WhatsApp AI agent. Singleton config (findFirst + create-if-missing);
 // conversations and messages are persisted for live monitoring + audit trail.

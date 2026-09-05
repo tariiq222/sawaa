@@ -62,3 +62,52 @@ describe('OnBookingCancelledHandler', () => {
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ tags: { event: 'bookings.booking.cancelled', bookingId: 'b1' } }));
   });
 });
+
+describe('OnBookingCancelledHandler v2 cutover', () => {
+  it('uses ownership before the cutoff gate and never falls back to legacy sending', async () => {
+    const notify = { execute: jest.fn() };
+    const pushTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue('intent-owned') };
+    const capture = { execute: jest.fn() };
+    const materialize = { execute: jest.fn().mockResolvedValue(undefined) };
+    const config = { shouldCapture: jest.fn().mockReturnValue(false) };
+    const handler = new (OnBookingCancelledHandler as any)(notify, pushTargets, ownership, capture, materialize, config);
+
+    await handler.handle({ eventId: 'event-cancelled-1', occurredAt: new Date(), payload: { bookingId: 'booking-1', clientId: 'client-1', employeeId: 'employee-1', reason: 'OTHER' } });
+
+    expect(materialize.execute).toHaveBeenCalledWith('intent-owned');
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+
+  it('captures the client cancellation after cutover and propagates materialization failure', async () => {
+    const notify = { execute: jest.fn() };
+    const pushTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue(null) };
+    const capture = { execute: jest.fn().mockResolvedValue('intent-new') };
+    const materialize = { execute: jest.fn().mockRejectedValue(new Error('v2 failed')) };
+    const config = { shouldCapture: jest.fn().mockReturnValue(true) };
+    const handler = new (OnBookingCancelledHandler as any)(notify, pushTargets, ownership, capture, materialize, config);
+
+    await expect(handler.handle({ eventId: 'event-cancelled-2', version: 1, occurredAt: new Date(), payload: { bookingId: 'booking-2', clientId: 'client-2', employeeId: 'employee-2', reason: 'CLIENT_REQUESTED' } })).rejects.toThrow('v2 failed');
+    expect(capture.execute).toHaveBeenCalledWith(expect.objectContaining({ sourceKey: 'domain-event:event-cancelled-2', consumerKey: 'comms.booking-cancelled-client.v2' }));
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unsupported envelope version after ownership miss without legacy fallback', async () => {
+    const notify = { execute: jest.fn() };
+    const pushTargets = { execute: jest.fn() };
+    const ownership = { execute: jest.fn().mockResolvedValue(null) };
+    const capture = { execute: jest.fn() };
+    const materialize = { execute: jest.fn() };
+    const config = { shouldCapture: jest.fn().mockReturnValue(true) };
+    const handler = new (OnBookingCancelledHandler as any)(notify, pushTargets, ownership, capture, materialize, config);
+
+    await expect(handler.handle({
+      eventId: 'event-unsupported', version: 2, occurredAt: new Date(),
+      payload: { bookingId: 'booking-1', clientId: 'client-1', employeeId: 'employee-1', reason: 'OTHER' },
+    })).rejects.toThrow(/version/i);
+    expect(config.shouldCapture).not.toHaveBeenCalled();
+    expect(capture.execute).not.toHaveBeenCalled();
+    expect(notify.execute).not.toHaveBeenCalled();
+  });
+});
