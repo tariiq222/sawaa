@@ -8428,6 +8428,103 @@ export interface components {
              */
             invoiceId?: string;
         };
+        NotificationListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching notifications
+             * @example 21
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 2
+             */
+            totalPages: number;
+        };
+        NotificationResponseDto: {
+            /**
+             * @description Notification body
+             * @example Your appointment starts soon
+             */
+            body: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Notification UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the recipient has read the notification
+             * @example false
+             */
+            isRead: boolean;
+            /** @description Optional context supplied by notification writers */
+            metadata: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Format: date-time
+             * @description Read timestamp
+             */
+            readAt: string | null;
+            /**
+             * @description Recipient identifier
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            recipientId: string;
+            /**
+             * @description Recipient kind
+             * @example EMPLOYEE
+             * @enum {string}
+             */
+            recipientType: "CLIENT" | "EMPLOYEE";
+            /**
+             * @description Notification title
+             * @example Appointment reminder
+             */
+            title: string;
+            /**
+             * @description Notification event type
+             * @example GENERAL
+             * @enum {string}
+             */
+            type: "BOOKING_CREATED" | "BOOKING_CONFIRMED" | "BOOKING_CANCELLED" | "BOOKING_REMINDER" | "PAYMENT_RECEIVED" | "PAYMENT_FAILED" | "PAYMENT_COMPLETED" | "PAYMENT_REMINDER" | "WELCOME" | "GENERAL";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        NotificationUnreadCountResponseDto: {
+            /**
+             * @description Number of unread notifications
+             * @example 5
+             */
+            count: number;
+        };
         OnboardEmployeeDto: {
             /**
              * @description Avatar image URL
@@ -8559,6 +8656,12 @@ export interface components {
         PaginatedEmployeesDto: {
             items: components["schemas"]["EmployeeResponseDto"][];
             meta: components["schemas"]["ListMetaDto"];
+        };
+        PaginatedNotificationsResponseDto: {
+            /** @description Notifications on the requested page */
+            items: components["schemas"]["NotificationResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["NotificationListMetaDto"];
         };
         /**
          * @description Payment method used
@@ -14378,6 +14481,10 @@ export interface operations {
             query?: {
                 /** @description Return only unread notifications */
                 unreadOnly?: boolean;
+                /** @description Records per page */
+                limit?: number;
+                /** @description 1-based page number */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -14390,7 +14497,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedNotificationsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -14502,7 +14611,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["NotificationUnreadCountResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {

@@ -2,12 +2,11 @@
  * Notifications API — Sawaa Dashboard
  */
 
-import { api } from "@/lib/api"
+import { openApi } from "@/lib/api/openapi"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type {
   Notification,
   NotificationListQuery,
-  UnreadCount,
 } from "@/lib/types/notification"
 
 /* ─── Queries ─── */
@@ -15,15 +14,14 @@ import type {
 export async function fetchNotifications(
   query: NotificationListQuery = {},
 ): Promise<PaginatedResponse<Notification>> {
-  return api.get<PaginatedResponse<Notification>>("/dashboard/comms/notifications", {
-    page: query.page,
-    limit: query.limit,
+  return openApi.get("/api/v1/dashboard/comms/notifications", {
+    query: { page: query.page, limit: query.limit },
   })
 }
 
 export async function fetchUnreadCount(): Promise<number> {
-  const res = await api.get<UnreadCount>(
-    "/dashboard/comms/notifications/unread-count",
+  const res = await openApi.get(
+    "/api/v1/dashboard/comms/notifications/unread-count",
   )
   return res.count
 }
@@ -31,9 +29,11 @@ export async function fetchUnreadCount(): Promise<number> {
 /* ─── Mutations ─── */
 
 export async function markAllAsRead(): Promise<void> {
-  await api.patch("/dashboard/comms/notifications/mark-read")
+  await openApi.patch("/api/v1/dashboard/comms/notifications/mark-read", { body: {} })
 }
 
 export async function markOneAsRead(id: string): Promise<void> {
-  await api.patch("/dashboard/comms/notifications/mark-read", { notificationId: id })
+  await openApi.patch("/api/v1/dashboard/comms/notifications/mark-read", {
+    body: { notificationId: id },
+  })
 }

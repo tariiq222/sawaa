@@ -5818,6 +5818,153 @@
         },
         "type": "object"
       },
+      "NotificationListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching notifications",
+            "example": 21,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 2,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "NotificationResponseDto": {
+        "properties": {
+          "body": {
+            "description": "Notification body",
+            "example": "Your appointment starts soon",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Notification UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isRead": {
+            "description": "Whether the recipient has read the notification",
+            "example": false,
+            "type": "boolean"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "description": "Optional context supplied by notification writers",
+            "nullable": true,
+            "type": "object"
+          },
+          "readAt": {
+            "description": "Read timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "recipientId": {
+            "description": "Recipient identifier",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "recipientType": {
+            "description": "Recipient kind",
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE"
+            ],
+            "example": "EMPLOYEE",
+            "type": "string"
+          },
+          "title": {
+            "description": "Notification title",
+            "example": "Appointment reminder",
+            "type": "string"
+          },
+          "type": {
+            "description": "Notification event type",
+            "enum": [
+              "BOOKING_CREATED",
+              "BOOKING_CONFIRMED",
+              "BOOKING_CANCELLED",
+              "BOOKING_REMINDER",
+              "PAYMENT_RECEIVED",
+              "PAYMENT_FAILED",
+              "PAYMENT_COMPLETED",
+              "PAYMENT_REMINDER",
+              "WELCOME",
+              "GENERAL"
+            ],
+            "example": "GENERAL",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recipientId",
+          "recipientType",
+          "type",
+          "title",
+          "body",
+          "metadata",
+          "isRead",
+          "readAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "NotificationUnreadCountResponseDto": {
+        "properties": {
+          "count": {
+            "description": "Number of unread notifications",
+            "example": 5,
+            "type": "number"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "type": "object"
+      },
       "OnboardEmployeeDto": {
         "properties": {
           "avatarUrl": {
@@ -6089,6 +6236,30 @@
           },
           "meta": {
             "$ref": "#/components/schemas/ListMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PaginatedNotificationsResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Notifications on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
           }
         },
         "required": [
@@ -14551,10 +14722,40 @@
               "example": true,
               "type": "boolean"
             }
+          },
+          {
+            "description": "Records per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "1-based page number",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "number"
+            }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedNotificationsResponseDto"
+                }
+              }
+            },
             "description": "Paginated notification list"
           },
           "400": {
@@ -14685,6 +14886,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationUnreadCountResponseDto"
+                }
+              }
+            },
             "description": "Unread count value"
           },
           "400": {

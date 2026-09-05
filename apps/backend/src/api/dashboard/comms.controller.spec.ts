@@ -137,45 +137,145 @@ describe('DashboardCommsController (e2e)', () => {
 
   // ── Notifications ──────────────────────────────────────────────────────────
 
+  describe('notification OpenAPI contracts', () => {
+    it('documents list pagination and its complete response envelope', () => {
+      const operation = openApiDocument.paths['/dashboard/comms/notifications']?.get;
+      expect(operation?.responses['200']).toMatchObject({
+        content: { 'application/json': {
+          schema: { $ref: '#/components/schemas/PaginatedNotificationsResponseDto' },
+        } },
+      });
+      expect(operation?.parameters).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'page', in: 'query', required: false,
+          schema: expect.objectContaining({ type: 'number', default: 1 }) }),
+        expect.objectContaining({ name: 'limit', in: 'query', required: false,
+          schema: expect.objectContaining({ type: 'number', default: 20 }) }),
+        expect.objectContaining({ name: 'unreadOnly', in: 'query', required: false,
+          schema: expect.objectContaining({ type: 'boolean' }) }),
+      ]));
+      const envelope = schemaObject('PaginatedNotificationsResponseDto');
+      expect(envelope.required).toEqual(['items', 'meta']);
+      expect(envelope.properties).toMatchObject({
+        items: { type: 'array', items: { $ref: '#/components/schemas/NotificationResponseDto' } },
+        meta: { allOf: [{ $ref: '#/components/schemas/NotificationListMetaDto' }] },
+      });
+      const meta = schemaObject('NotificationListMetaDto');
+      expect(meta.required?.slice().sort()).toEqual([
+        'hasNextPage', 'hasPreviousPage', 'limit', 'page', 'total', 'totalPages',
+      ]);
+      expect(meta.properties).toMatchObject({
+        total: { type: 'number' }, page: { type: 'number' }, limit: { type: 'number' },
+        totalPages: { type: 'number' }, hasNextPage: { type: 'boolean' },
+        hasPreviousPage: { type: 'boolean' },
+      });
+    });
+
+    it('documents required fields, nullable data, enums and serialized dates', () => {
+      const entity = schemaObject('NotificationResponseDto');
+      expect(entity.required?.slice().sort()).toEqual([
+        'body', 'createdAt', 'id', 'isRead', 'metadata', 'readAt',
+        'recipientId', 'recipientType', 'title', 'type', 'updatedAt',
+      ]);
+      expect(entity.properties).toMatchObject({
+        id: { type: 'string' }, recipientId: { type: 'string' },
+        recipientType: { type: 'string', enum: ['CLIENT', 'EMPLOYEE'] },
+        type: { type: 'string', enum: [
+          'BOOKING_CREATED', 'BOOKING_CONFIRMED', 'BOOKING_CANCELLED', 'BOOKING_REMINDER',
+          'PAYMENT_RECEIVED', 'PAYMENT_FAILED', 'PAYMENT_COMPLETED', 'PAYMENT_REMINDER',
+          'WELCOME', 'GENERAL',
+        ] },
+        title: { type: 'string' }, body: { type: 'string' }, isRead: { type: 'boolean' },
+        metadata: { type: 'object', nullable: true, additionalProperties: true },
+        readAt: { type: 'string', format: 'date-time', nullable: true },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      });
+    });
+
+    it('documents count and a bodyless 204 for read mutations', () => {
+      expect(openApiDocument.paths['/dashboard/comms/notifications/unread-count']?.get?.responses['200'])
+        .toMatchObject({ content: { 'application/json': {
+          schema: { $ref: '#/components/schemas/NotificationUnreadCountResponseDto' },
+        } } });
+      expect(schemaObject('NotificationUnreadCountResponseDto')).toMatchObject({
+        required: ['count'], properties: { count: { type: 'number' } },
+      });
+      const operation = openApiDocument.paths['/dashboard/comms/notifications/mark-read']?.patch;
+      expect(operation?.responses['204']).toBeDefined();
+      expect(operation?.responses['204']).not.toHaveProperty('content');
+      expect(operation?.responses['200']).toBeUndefined();
+      expect(operation?.requestBody).toMatchObject({ content: { 'application/json': {
+        schema: { $ref: '#/components/schemas/MarkReadDto' },
+      } } });
+      expect(schemaObject('MarkReadDto').required ?? []).toEqual([]);
+    });
+  });
+
   describe('GET /dashboard/comms/notifications', () => {
-    it('returns 200 with notification list', async () => {
-      mockListNotifications.execute.mockResolvedValue({ data: [{ id: uuid(1) }], total: 1 });
+    it.each([null, { bookingId: 'booking-1', nested: { labels: ['reminder'] } }])(
+      'preserves the runtime envelope and nullable metadata %p', async (metadata) => {
+        const row = {
+          id: uuid(1), recipientId: 'user-1', recipientType: 'EMPLOYEE', type: 'GENERAL',
+          title: 'Reminder', body: 'Appointment reminder', metadata, isRead: false,
+          readAt: null, createdAt: new Date('2026-09-05T09:00:00.000Z'),
+          updatedAt: new Date('2026-09-05T09:00:00.000Z'),
+        };
+        const meta = { total: 1, page: 1, limit: 20, totalPages: 1,
+          hasNextPage: false, hasPreviousPage: false };
+        mockListNotifications.execute.mockResolvedValue({ items: [row], meta });
+        const res = await request(app.getHttpServer()).get('/dashboard/comms/notifications').expect(200);
+        expect(res.body).toEqual({ items: [{ ...row,
+          createdAt: '2026-09-05T09:00:00.000Z', updatedAt: '2026-09-05T09:00:00.000Z',
+        }], meta });
+        expect(mockListNotifications.execute).toHaveBeenCalledWith({
+          recipientId: 'user-1', unreadOnly: undefined, page: 1, limit: 20,
+        });
+      },
+    );
 
-      const res = await request(app.getHttpServer())
-        .get('/dashboard/comms/notifications')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
+    it.each(['true', 'false'])('parses pagination and unreadOnly=%s', async (unreadOnly) => {
+      mockListNotifications.execute.mockResolvedValue({ items: [], meta: {
+        total: 0, page: 2, limit: 5, totalPages: 1, hasNextPage: false, hasPreviousPage: true,
+      } });
+      await request(app.getHttpServer())
+        .get(`/dashboard/comms/notifications?page=2&limit=5&unreadOnly=${unreadOnly}`).expect(200);
+      expect(mockListNotifications.execute).toHaveBeenCalledWith({
+        recipientId: 'user-1', page: 2, limit: 5, unreadOnly: unreadOnly === 'true',
+      });
+    });
 
-      expect(res.body.data).toHaveLength(1);
-      expect(mockListNotifications.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ recipientId: 'user-1' }),
-      );
+    it.each(['page=0', 'limit=201', 'unreadOnly=invalid'])('rejects invalid query %s', async (query) => {
+      await request(app.getHttpServer()).get(`/dashboard/comms/notifications?${query}`).expect(400);
+      expect(mockListNotifications.execute).not.toHaveBeenCalled();
     });
   });
 
   describe('GET /dashboard/comms/notifications/unread-count', () => {
-    it('returns 200 with unread count', async () => {
-      mockGetUnreadCount.execute.mockResolvedValue({ count: 5 });
-
+    it.each([0, 5])('returns 200 with count %i', async (count) => {
+      mockGetUnreadCount.execute.mockResolvedValue({ count });
       const res = await request(app.getHttpServer())
-        .get('/dashboard/comms/notifications/unread-count')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
-
-      expect(res.body.count).toBe(5);
+        .get('/dashboard/comms/notifications/unread-count').expect(200);
+      expect(res.body).toEqual({ count });
+      expect(mockGetUnreadCount.execute).toHaveBeenCalledWith({ recipientId: 'user-1' });
     });
   });
 
   describe('PATCH /dashboard/comms/notifications/mark-read', () => {
-    it('returns 204 on mark read', async () => {
+    it.each([undefined, {}, { notificationId: uuid(1) }])('returns empty 204 for body %p', async (body) => {
       mockMarkRead.execute.mockResolvedValue(undefined);
-
-      return request(app.getHttpServer())
-        .patch('/dashboard/comms/notifications/mark-read')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({})
-        .expect(204);
+      const call = request(app.getHttpServer()).patch('/dashboard/comms/notifications/mark-read');
+      const res = await (body === undefined ? call : call.send(body)).expect(204);
+      expect(res.text).toBe('');
+      expect(mockMarkRead.execute).toHaveBeenCalledWith({ recipientId: 'user-1', ...body });
     });
+
+    it.each([{ notificationId: 'bad-id' }, { recipientId: 'another-user' }])(
+      'rejects malformed or unexpected fields %p', async (body) => {
+        await request(app.getHttpServer()).patch('/dashboard/comms/notifications/mark-read')
+          .send(body).expect(400);
+        expect(mockMarkRead.execute).not.toHaveBeenCalled();
+      },
+    );
   });
 
   // ── Email Templates ────────────────────────────────────────────────────────
