@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ClientProfile } from '@sawaa/shared';
 
 const CLIENT_KEY = 'sawa_client';
+const AUTH_SESSION_STATE_KEY = 'sawa_auth_session_state';
 
 function makeProfile(overrides: Partial<ClientProfile> = {}): ClientProfile {
   return {
@@ -28,6 +29,7 @@ async function freshStore(): Promise<typeof import('./auth-store')> {
 describe('auth-store', () => {
   beforeEach(() => {
     localStorage.clear();
+    document.cookie = 'sawa_local_signed_out=; Path=/; Max-Age=0';
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -59,7 +61,7 @@ describe('auth-store', () => {
       expect(parsed.savedAt).toBeLessThanOrEqual(Date.now());
     });
 
-    it('treats a null setClient as a clearAuth', async () => {
+    it('clears the cached profile when setClient receives null', async () => {
       const { setClient } = await freshStore();
       setClient(makeProfile());
       setClient(null);
@@ -91,6 +93,42 @@ describe('auth-store', () => {
       setClient(makeProfile());
       clearAuth();
       expect(isAuthenticated()).toBe(false);
+    });
+
+    it('preserves pending logout across reload until revocation is confirmed or login succeeds', async () => {
+      const firstStore = await freshStore();
+      firstStore.beginLocalLogout();
+
+      expect(firstStore.getAuthSessionStateSnapshot()).toBe('logout-pending');
+      expect(localStorage.getItem(AUTH_SESSION_STATE_KEY)).toBe('logout-pending');
+
+      const reloadedStore = await freshStore();
+      expect(reloadedStore.getAuthSessionStateSnapshot()).toBe('logout-pending');
+
+      reloadedStore.completeLocalLogout();
+      expect(reloadedStore.getAuthSessionStateSnapshot()).toBe('signed-out');
+      expect(localStorage.getItem(AUTH_SESSION_STATE_KEY)).toBe('signed-out');
+
+      reloadedStore.setClient(makeProfile());
+      expect(reloadedStore.getAuthSessionStateSnapshot()).toBe('enabled');
+      expect(localStorage.getItem(AUTH_SESSION_STATE_KEY)).toBeNull();
+    });
+
+    it('keeps generic local clearing separate from explicit logout state', async () => {
+      const store = await freshStore();
+      store.clearAuth();
+
+      expect(store.getAuthSessionStateSnapshot()).toBe('enabled');
+      expect(localStorage.getItem(AUTH_SESSION_STATE_KEY)).toBeNull();
+    });
+
+    it('marks a terminal profile session unusable for middleware and auth reads', async () => {
+      const store = await freshStore();
+      store.expireLocalSession();
+
+      expect(store.getAuthSessionStateSnapshot()).toBe('signed-out');
+      expect(document.cookie).toContain('sawa_local_signed_out=1');
+      expect(store.isAuthenticated()).toBe(false);
     });
 
     it('publishes identity changes so persistent clients can clear user-owned state', async () => {

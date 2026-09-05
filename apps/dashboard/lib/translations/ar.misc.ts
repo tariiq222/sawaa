@@ -563,6 +563,8 @@ export const arMisc: Record<string, string> = {
 
   // — Auth Gate —
   "authGate.loading": "جارٍ التحميل...",
+  "authGate.restoreError": "تعذّر التحقق من الجلسة مؤقتاً. حاول مرة أخرى.",
+  "authGate.retry": "إعادة المحاولة",
 
   // — Loading page —
   "loading.text": "جارٍ التحميل...",

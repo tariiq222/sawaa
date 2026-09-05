@@ -118,6 +118,33 @@ async function doRefresh(refreshPath: string): Promise<string> {
   }
 }
 
+function waitForRefresh(
+  refresh: Promise<string>,
+  callerSignal: AbortSignal | null | undefined,
+): Promise<string> {
+  if (!callerSignal) return refresh
+  const abortError = () => callerSignal.reason ?? new DOMException('Request aborted', 'AbortError')
+  if (callerSignal.aborted) return Promise.reject(abortError())
+
+  return new Promise<string>((resolve, reject) => {
+    const onAbort = () => {
+      callerSignal.removeEventListener('abort', onAbort)
+      reject(abortError())
+    }
+    callerSignal.addEventListener('abort', onAbort, { once: true })
+    refresh.then(
+      (token) => {
+        callerSignal.removeEventListener('abort', onAbort)
+        resolve(token)
+      },
+      (error: unknown) => {
+        callerSignal.removeEventListener('abort', onAbort)
+        reject(error)
+      },
+    )
+  })
+}
+
 export function cancelInFlightRefresh(): void {
   refreshAbortController?.abort()
   refreshAbortController = null
@@ -157,7 +184,9 @@ async function sendRefresh(
       invalidateCsrfToken()
       return sendRefresh(refreshPath, true, signal)
     }
-    config.onAuthFailure()
+    if (res.status === 401 || res.status === 403) {
+      config.onAuthFailure()
+    }
     throw new ApiError(res.status, peek.message, peek.body, peek.code)
   }
   const raw = (await res.json()) as unknown
@@ -250,7 +279,7 @@ async function requestWithParser<T>(
       // original rejection.
       setRefreshMutex(mutex)
     }
-    await mutex
+    await waitForRefresh(mutex, options.signal)
     return requestWithParser(path, options, parseResponse, true, csrfRetried)
   }
 

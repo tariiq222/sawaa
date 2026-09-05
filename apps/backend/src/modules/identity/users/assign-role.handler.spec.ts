@@ -12,13 +12,23 @@ describe('AssignRoleHandler', () => {
         AssignRoleHandler,
         { provide: PrismaService, useValue: {
           customRole: { findFirst: jest.fn() },
-          user: { updateMany: jest.fn() },
+          user: { findUnique: jest.fn(), updateMany: jest.fn() },
         } },
       ],
     }).compile();
 
     handler = module.get<AssignRoleHandler>(AssignRoleHandler);
     prisma = module.get<PrismaService>(PrismaService);
+
+    (prisma.user.findUnique as jest.Mock).mockImplementation(
+      ({ where }: { where: { id: string } }) =>
+        Promise.resolve(
+          where.id === 'actor-1'
+            ? { id: 'actor-1', role: 'ADMIN', isSuperAdmin: false }
+            : { id: 'u1', role: 'EMPLOYEE' },
+        ),
+    );
+    (prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
   });
 
   it('should be defined', () => {
@@ -50,4 +60,29 @@ describe('AssignRoleHandler', () => {
     expect(prisma.customRole.findFirst).not.toHaveBeenCalled();
     expect(prisma.user.updateMany).not.toHaveBeenCalled();
   });
+
+  it('should block assigning a custom role to a target at the actor rank or above', async () => {
+    (prisma.customRole.findFirst as jest.Mock).mockResolvedValue({ id: 'role' });
+    (prisma.user.findUnique as jest.Mock).mockImplementation(
+      ({ where }: { where: { id: string } }) =>
+        Promise.resolve(
+          where.id === 'actor-1'
+            ? { id: 'actor-1', role: 'ADMIN', isSuperAdmin: false }
+            : { id: 'u1', role: 'ADMIN' },
+        ),
+    );
+
+    await expect(
+      handler.execute({ actorUserId: 'actor-1', userId: 'u1', customRoleId: 'role' }),
+    ).rejects.toThrow('Cannot modify a user at or above your rank');
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+  it('rejects an equally privileged superadmin stored with the ADMIN enum', async () => {
+    (prisma.customRole.findFirst as jest.Mock).mockResolvedValue({ id: 'role' });
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'ADMIN', isSuperAdmin: true });
+    await expect(handler.execute({ actorUserId: 'actor-1', userId: 'u1', customRoleId: 'role' }))
+      .rejects.toThrow('Cannot modify a user at or above your rank');
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
 });

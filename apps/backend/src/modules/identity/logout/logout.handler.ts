@@ -1,22 +1,25 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { Prisma } from '@prisma/client';
+import { RlsTransactionService } from '../../../infrastructure/database';
 import type { LogoutCommand } from './logout.command';
 
 @Injectable()
 export class LogoutHandler {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(cmd: LogoutCommand): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { userId: cmd.userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-
-    await this.prisma.user.update({
-      where: { id: cmd.userId },
-      data: { tokenVersion: { increment: 1 } },
+    await this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "User" WHERE "id" = ${cmd.userId} FOR UPDATE`);
+      await tx.refreshToken.updateMany({
+        where: { userId: cmd.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await tx.user.update({
+        where: { id: cmd.userId },
+        data: { tokenVersion: { increment: 1 } },
+      });
     });
   }
 }

@@ -27,7 +27,7 @@ const PURCHASE_ID = '00000000-0000-4000-a000-000000000010';
 const INVOICE_ID = '00000000-0000-4000-a000-000000000011';
 const PAYMENT_ID = '00000000-0000-4000-a000-000000000012';
 const PAYMENT_EVENT_ID = stableEventId(
-  `finance:manual-package-purchase:${PAYMENT_ID}:finance.payment.completed`,
+  `finance:payment:${PAYMENT_ID}:finance.payment.completed`,
 );
 
 const ITEM = {
@@ -97,14 +97,16 @@ function buildPrisma() {
 
 function buildProcessPayment() {
   return {
-    execute: jest.fn().mockResolvedValue({
-      id: PAYMENT_ID,
-      invoiceId: INVOICE_ID,
-      deferredEvents: [
-        {
-          eventName: 'finance.payment.completed',
-          envelope: {
-            eventId: 'ephemeral-event-id',
+    execute: jest.fn().mockImplementation(async (cmd: { transaction: { outboxEvent: { create: jest.Mock } } }) => {
+      await cmd.transaction.outboxEvent.create({
+        data: {
+          id: PAYMENT_EVENT_ID,
+          aggregateId: INVOICE_ID,
+          eventType: 'finance.payment.completed',
+          status: 'PENDING_V2',
+          deliveryLane: 'PENDING_V2',
+          payload: {
+            eventId: PAYMENT_EVENT_ID,
             correlationId: 'correlation-1',
             source: 'finance',
             version: 1,
@@ -112,14 +114,12 @@ function buildProcessPayment() {
             payload: {
               paymentId: PAYMENT_ID,
               invoiceId: INVOICE_ID,
-              bookingId: null,
-              amount: FINAL_PRICE_HALALAS,
-              currency: 'SAR',
-              organizationId: DEFAULT_ORG_ID,
+              packagePurchaseId: PURCHASE_ID,
             },
           },
         },
-      ],
+      });
+      return { id: PAYMENT_ID, invoiceId: INVOICE_ID };
     }),
     publishDeferredEvents: jest.fn().mockResolvedValue(undefined),
   };
@@ -400,7 +400,7 @@ describe('CreatePackagePurchaseHandler', () => {
       expect(eventBus.publishOptional).not.toHaveBeenCalled();
     });
 
-    it('fails closed when the payment handler returns no completed-payment event', async () => {
+    it('does not stage a second event when the payment handler owns outbox staging', async () => {
       mockHappyPath(prisma);
       const { handler, processPayment, tx, eventBus } = buildHandler(prisma);
       processPayment.execute.mockResolvedValueOnce({
@@ -409,12 +409,14 @@ describe('CreatePackagePurchaseHandler', () => {
         deferredEvents: [],
       });
 
-      await expect(handler.execute(validDto())).rejects.toThrow(
-        'Manual package payment completed without a durable payment event',
-      );
+      await expect(handler.execute(validDto())).resolves.toBeDefined();
 
       expect(tx.outboxEvent.create).not.toHaveBeenCalled();
-      expect(eventBus.publishOptional).not.toHaveBeenCalled();
+      expect(eventBus.publishOptional).toHaveBeenCalledTimes(1);
+      expect(eventBus.publishOptional).toHaveBeenCalledWith(
+        'finance.invoice.created',
+        expect.any(Object),
+      );
     });
 
     it('keeps the durable event staged when optional post-commit publishing fails', async () => {

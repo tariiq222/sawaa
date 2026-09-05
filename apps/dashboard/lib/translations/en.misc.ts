@@ -563,6 +563,8 @@ export const enMisc: Record<string, string> = {
 
   // — Auth Gate —
   "authGate.loading": "Loading...",
+  "authGate.restoreError": "We could not verify your session. Try again.",
+  "authGate.retry": "Retry",
 
   // — Loading page —
   "loading.text": "Loading...",

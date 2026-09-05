@@ -6,14 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PackagePurchaseStatus, PaymentMethod, Prisma } from '@prisma/client';
-import { stableEventId } from '../../../../common/events';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { EventBusService } from '../../../../infrastructure/events';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
-import {
-  type DeferredPaymentEvent,
-  ProcessPaymentHandler,
-} from '../../process-payment/process-payment.handler';
+import { ProcessPaymentHandler } from '../../process-payment/process-payment.handler';
 import { buildCreditConstraintCreate } from '../build-credit-constraints.helper';
 import { CreatePackagePurchaseDto } from './create-package-purchase.dto';
 
@@ -227,14 +223,6 @@ export class CreatePackagePurchaseHandler {
         transaction: tx,
       });
 
-      await this.stagePaymentEvents(
-        tx,
-        invoice.id,
-        purchase.id,
-        payment.id,
-        payment.deferredEvents,
-      );
-
       return { purchase, invoiceId: invoice.id, payment };
     });
 
@@ -298,44 +286,6 @@ export class CreatePackagePurchaseHandler {
         usedQuantity: 0,
       })),
     };
-  }
-
-  private async stagePaymentEvents(
-    tx: Prisma.TransactionClient,
-    invoiceId: string,
-    purchaseId: string,
-    paymentId: string,
-    events: readonly DeferredPaymentEvent[] | undefined,
-  ): Promise<void> {
-    const completedEvent = events?.find(
-      (event) => event.eventName === 'finance.payment.completed',
-    );
-    if (!completedEvent) {
-      throw new ConflictException(
-        'Manual package payment completed without a durable payment event',
-      );
-    }
-
-    const eventId = stableEventId(
-      `finance:manual-package-purchase:${paymentId}:${completedEvent.eventName}`,
-    );
-    await tx.outboxEvent.create({
-      data: {
-        id: eventId,
-        aggregateId: invoiceId,
-        eventType: completedEvent.eventName,
-        status: 'PENDING_V2',
-        deliveryLane: 'PENDING_V2',
-        payload: {
-          ...completedEvent.envelope,
-          eventId,
-          payload: {
-            ...completedEvent.envelope.payload,
-            packagePurchaseId: purchaseId,
-          },
-        } as Prisma.InputJsonValue,
-      },
-    });
   }
 
   private async replaySale(purchase: {

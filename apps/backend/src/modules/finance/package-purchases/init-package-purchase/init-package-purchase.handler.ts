@@ -7,7 +7,6 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import {
-  InvoiceStatus,
   PackagePurchaseStatus,
   PaymentMethod,
   PaymentStatus,
@@ -26,7 +25,12 @@ import {
   parsePackageCreditSnapshot,
   type PackageCreditSnapshotItem,
 } from "../package-credit-snapshot";
-import { reconcileOrDiscardInFlightPayment } from "../../payments/client/init-client-payment/reconcile-in-flight-payment.helper";
+import {
+  reconcileOrDiscardInFlightPayment,
+  persistPendingGatewayRef,
+  replaceTerminalInFlightPayment,
+} from "../../payments/client/init-client-payment/reconcile-in-flight-payment.helper";
+import { isNonPayableInvoiceStatus } from "../../invoice-payment-state.helper";
 
 export type InitPackagePurchaseCommand = InitPackagePurchaseDto & {
   /** Authenticated client id (set by the controller from the client session). */
@@ -267,10 +271,12 @@ export class InitPackagePurchaseHandler {
     }
 
     this.assertHostedInvoiceMatches(hostedInvoice, amountHalalas, "SAR");
-    await this.prisma.payment.update({
-      where: { id: paymentId },
-      data: { gatewayRef: hostedInvoice.id },
-    });
+    await persistPendingGatewayRef(
+      this.rlsTransaction,
+      invoiceId,
+      { id: paymentId, status: PaymentStatus.PENDING, gatewayRef: null },
+      hostedInvoice.id,
+    );
     if (this.isPaidCheckoutStatus(hostedInvoice.status)) {
       throw new ConflictException("This purchase has already been paid");
     }
@@ -327,37 +333,34 @@ export class InitPackagePurchaseHandler {
       }
       const invoice = await this.prisma.invoice.findFirst({
         where: { packagePurchaseId: existing.id },
-        select: { id: true, total: true, status: true },
+        select: { id: true },
       });
       if (invoice) {
-        if (
-          invoice.status === InvoiceStatus.PAID ||
-          invoice.status === InvoiceStatus.PARTIALLY_REFUNDED ||
-          invoice.status === InvoiceStatus.REFUNDED
-        ) {
-          throw new BadRequestException("This purchase has already been paid");
-        }
         const idempotencyKey = `client-pkg:${invoice.id}`;
-        let payment = await this.prisma.payment.findFirst({
-          where: { idempotencyKey },
-          select: { id: true, status: true, gatewayRef: true },
-        });
-        if (!payment) {
-          // MoyasarWebhook replaces the checkout idempotency key with its
-          // provider identity before async package activation. Find the settled
-          // invoice payment directly so that window cannot mint a second link.
-          payment = await this.prisma.payment.findFirst({
-            where: { invoiceId: invoice.id, status: PaymentStatus.COMPLETED },
-            orderBy: { processedAt: "desc" },
-            select: { id: true, status: true, gatewayRef: true },
-          });
+        const reservation = await this.reserveExistingPackageInvoice(
+          existing.id,
+          invoice.id,
+          idempotencyKey,
+        );
+        if (!reservation.existing) return reservation.result;
+
+        const { payment } = reservation;
+        if (payment.status === PaymentStatus.FAILED) {
+          return replaceTerminalInFlightPayment(
+            this.rlsTransaction,
+            invoice.id,
+            payment,
+            (tx) =>
+              this.createExistingPackageReservation(
+                tx,
+                existing.id,
+                invoice.id,
+                idempotencyKey,
+              ).then((replacement) => replacement.result),
+          );
         }
-        // A completed payment means this purchase should already be (or is being)
-        // activated — do not re-charge. Treat it as a conflict-free no-op error.
-        if (payment?.status === PaymentStatus.COMPLETED) {
-          throw new BadRequestException("This purchase has already been paid");
-        }
-        if (payment) {
+
+        if (payment.status === PaymentStatus.PENDING) {
           const recovered = await this.findHostedInvoice(
             payment.id,
             payment.gatewayRef,
@@ -380,19 +383,21 @@ export class InitPackagePurchaseHandler {
           } else {
             this.assertHostedInvoiceMatches(
               recovered,
-              Number(invoice.total),
-              "SAR",
+              reservation.result.amountHalalas,
+              reservation.currency,
             );
-            if (payment.gatewayRef !== recovered.id) {
-              await this.prisma.payment.update({
-                where: { id: payment.id },
-                data: { gatewayRef: recovered.id },
-              });
-            }
             if (this.isPaidCheckoutStatus(recovered.status)) {
               throw new ConflictException("This purchase has already been paid");
             }
             if (!this.isTerminalFailedCheckoutStatus(recovered.status)) {
+              if (payment.gatewayRef !== recovered.id) {
+                await persistPendingGatewayRef(
+                  this.rlsTransaction,
+                  invoice.id,
+                  payment,
+                  recovered.id,
+                );
+              }
               if (!recovered.url) {
                 throw new ConflictException(
                   "Package checkout exists but has no hosted URL",
@@ -402,31 +407,29 @@ export class InitPackagePurchaseHandler {
                 purchaseId: existing.id,
                 invoiceId: invoice.id,
                 paymentId: payment.id,
-                amountHalalas: Number(invoice.total),
+                amountHalalas: reservation.result.amountHalalas,
                 checkout: { id: recovered.id, url: recovered.url },
               };
             }
-            await this.prisma.payment.delete({ where: { id: payment.id } });
           }
+
+          return replaceTerminalInFlightPayment(
+            this.rlsTransaction,
+            invoice.id,
+            payment,
+            (tx) =>
+              this.createExistingPackageReservation(
+                tx,
+                existing.id,
+                invoice.id,
+                idempotencyKey,
+              ).then((replacement) => replacement.result),
+          );
         }
-        const amountHalalas = Number(invoice.total);
-        const fresh = await this.prisma.payment.create({
-          data: {
-            invoiceId: invoice.id,
-            amount: new Prisma.Decimal(amountHalalas),
-            currency: "SAR",
-            method: PaymentMethod.ONLINE_CARD,
-            status: PaymentStatus.PENDING,
-            idempotencyKey,
-          },
-          select: { id: true },
-        });
-        return {
-          purchaseId: existing.id,
-          invoiceId: invoice.id,
-          paymentId: fresh.id,
-          amountHalalas,
-        };
+
+        throw new ConflictException(
+          "Another checkout is already pending for this client and package",
+        );
       }
     }
 
@@ -519,6 +522,100 @@ export class InitPackagePurchaseHandler {
         requestFingerprint,
       );
     }
+  }
+
+  private reserveExistingPackageInvoice(
+    purchaseId: string,
+    invoiceId: string,
+    idempotencyKey: string,
+  ) {
+    return this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${invoiceId} FOR UPDATE`,
+      );
+      return this.createExistingPackageReservation(
+        tx,
+        purchaseId,
+        invoiceId,
+        idempotencyKey,
+      );
+    });
+  }
+
+  private async createExistingPackageReservation(
+    tx: Prisma.TransactionClient,
+    purchaseId: string,
+    invoiceId: string,
+    idempotencyKey: string,
+  ) {
+    const invoice = await tx.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { id: true, total: true, currency: true, status: true },
+    });
+    if (!invoice || isNonPayableInvoiceStatus(invoice.status)) {
+      throw new BadRequestException("This purchase has already been paid");
+    }
+
+    const keyedPayment = await tx.payment.findFirst({
+      where: { idempotencyKey },
+      select: { id: true, status: true, gatewayRef: true },
+    });
+    const baseResult = {
+      purchaseId,
+      invoiceId,
+      amountHalalas: Number(invoice.total),
+    };
+    if (keyedPayment) {
+      if (keyedPayment.status === PaymentStatus.COMPLETED) {
+        throw new BadRequestException("This purchase has already been paid");
+      }
+      return {
+        existing: true as const,
+        payment: keyedPayment,
+        currency: invoice.currency,
+        result: { ...baseResult, paymentId: keyedPayment.id },
+      };
+    }
+
+    // The webhook replaces the checkout key with its provider identity. Check
+    // for a settled payment independently before considering a new reservation.
+    const completed = await tx.payment.findFirst({
+      where: { invoiceId, status: PaymentStatus.COMPLETED },
+      select: { id: true },
+    });
+    if (completed) {
+      throw new BadRequestException("This purchase has already been paid");
+    }
+
+    const competingReservation = await tx.payment.findFirst({
+      where: {
+        invoiceId,
+        status: { in: [PaymentStatus.PENDING, PaymentStatus.PENDING_VERIFICATION] },
+      },
+      select: { id: true },
+    });
+    if (competingReservation) {
+      throw new ConflictException(
+        "Another payment is already pending for this package invoice",
+      );
+    }
+
+    const payment = await tx.payment.create({
+      data: {
+        invoiceId,
+        amount: invoice.total,
+        currency: invoice.currency,
+        method: PaymentMethod.ONLINE_CARD,
+        status: PaymentStatus.PENDING,
+        idempotencyKey,
+      },
+      select: { id: true },
+    });
+    return {
+      existing: false as const,
+      currency: invoice.currency,
+      result: { ...baseResult, paymentId: payment.id },
+    };
   }
 
   private buildCallbackUrl(purchaseId: string, invoiceId: string): string {

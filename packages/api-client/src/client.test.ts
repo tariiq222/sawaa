@@ -367,6 +367,41 @@ describe('apiRequest 401 refresh flow', () => {
     expect(onTokenRefreshed).not.toHaveBeenCalled()
   })
 
+  it('lets one caller cancel its wait without aborting a shared refresh for another caller', async () => {
+    storedAccess = 'old.access'
+    const callerA = new AbortController()
+    let refreshSignal: AbortSignal | undefined
+    let resolveRefresh!: (response: Response) => void
+    vi.mocked(fetch).mockImplementation((url, init) => {
+      if (String(url).endsWith('/auth/refresh')) {
+        refreshSignal = init?.signal as AbortSignal | undefined
+        return new Promise<Response>((resolve) => {
+          resolveRefresh = resolve
+        })
+      }
+      if (storedAccess === 'old.access') {
+        return Promise.resolve(jsonResponse({ message: 'expired' }, 401))
+      }
+      return Promise.resolve(jsonResponse({ success: true, data: { id: String(url) } }))
+    })
+
+    const requestA = apiRequest('/dashboard/bookings/a', { signal: callerA.signal })
+    await vi.waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2))
+    const requestB = apiRequest<{ id: string }>('/dashboard/bookings/b')
+    await vi.waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(3))
+
+    callerA.abort(new DOMException('caller cancelled', 'AbortError'))
+    await expect(requestA).rejects.toMatchObject({ name: 'AbortError' })
+    expect(refreshSignal?.aborted).toBe(false)
+
+    resolveRefresh(jsonResponse({ accessToken: 'new.access' }))
+    await expect(requestB).resolves.toEqual({ id: 'http://api.test/dashboard/bookings/b' })
+    expect(onTokenRefreshed).toHaveBeenCalledWith('new.access')
+    expect(
+      vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh')),
+    ).toHaveLength(1)
+  })
+
   it('fires onAuthFailure and rejects with an ApiError when the refresh itself returns non-2xx', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
@@ -384,6 +419,22 @@ describe('apiRequest 401 refresh flow', () => {
       code: 'refresh invalid',
     })
     expect(onAuthFailure).toHaveBeenCalledTimes(1)
+    expect(onTokenRefreshed).not.toHaveBeenCalled()
+  })
+
+  it('preserves host auth state when refresh fails transiently', async () => {
+    storedAccess = 'still-valid.access'
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ message: 'expired soon' }, 401))
+      .mockResolvedValueOnce(jsonResponse({ message: 'temporary outage' }, 503))
+
+    await expect(apiRequest('/dashboard/bookings/x')).rejects.toMatchObject({
+      status: 503,
+      message: 'temporary outage',
+    })
+
+    expect(onAuthFailure).not.toHaveBeenCalled()
+    expect(storedAccess).toBe('still-valid.access')
     expect(onTokenRefreshed).not.toHaveBeenCalled()
   })
 

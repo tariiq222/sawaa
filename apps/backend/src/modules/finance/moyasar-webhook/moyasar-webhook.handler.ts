@@ -1,8 +1,8 @@
-import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
-import { createHmac, createHash, timingSafeEqual } from 'crypto';
+import { Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
+import { createHmac, createHash, randomUUID, timingSafeEqual } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
-import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 import { DEFAULT_ORG_ID, PAYMENT_CONFIG_SINGLETON_KEY, SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
@@ -15,6 +15,13 @@ import { MoyasarWebhookDto } from './moyasar-webhook.dto';
 import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
 import { MoyasarApiClient, MoyasarPaymentStatus } from '../moyasar-api/moyasar-api.client';
 import { assertValidTransition } from '../payment-state-machine';
+import { stableEventId } from '../../../common/events';
+import {
+  isClosedInvoiceStatus,
+  isNonPayableInvoiceStatus,
+} from '../invoice-payment-state.helper';
+
+const WEBHOOK_CLAIM_LEASE_MS = 5 * 60 * 1_000;
 
 export interface MoyasarWebhookRequest {
   payload: MoyasarWebhookDto;
@@ -26,6 +33,11 @@ export interface MoyasarWebhookResult {
   skipped?: boolean;
   /** Why a webhook was dropped-and-acked. Present only when `skipped` is true. */
   reason?: string;
+}
+
+interface WebhookClaim {
+  rowId: string;
+  ownerToken: string;
 }
 
 /**
@@ -262,27 +274,16 @@ export class MoyasarWebhookHandler {
     const webhookEventId = `${paymentId}:${normalizedStatus ?? 'unknown'}`;
     const payloadHash = createHash('sha256').update(req.rawBody).digest('hex');
 
-    let webhookEventRowId: string;
-    try {
-      const created = await this.prisma.webhookEvent.create({
-        data: {
-          provider: 'MOYASAR_TENANT',
-          eventId: webhookEventId,
-          eventType: normalizedStatus ?? 'unknown',
-          payloadHash,
-        },
-        select: { id: true },
-      });
-      webhookEventRowId = created.id;
-    } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        this.logger.log(
-          `Moyasar webhook: skipped_duplicate provider=MOYASAR_TENANT eventId=${webhookEventId}`,
-        );
-        return { skipped: true, reason: 'duplicate' };
-      }
-      // A non-P2002 DB error here is transient — let it propagate as a 5xx.
-      throw err;
+    const webhookClaim = await this.claimWebhookEvent(
+      webhookEventId,
+      normalizedStatus ?? 'unknown',
+      payloadHash,
+    );
+    if (!webhookClaim) {
+      this.logger.log(
+        `Moyasar webhook: skipped_duplicate provider=MOYASAR_TENANT eventId=${webhookEventId}`,
+      );
+      return { skipped: true, reason: 'duplicate' };
     }
 
     try {
@@ -307,7 +308,7 @@ export class MoyasarWebhookHandler {
             `Moyasar webhook rejected: payment ${paymentId} not found on re-fetch ` +
               `(invoice ${invoiceId ?? payloadGatewayInvoiceId ?? 'unresolved'})`,
           );
-          await this.markWebhookEvent(webhookEventRowId, 'error');
+          await this.markWebhookEvent(webhookClaim, 'error');
           return { skipped: true, reason: 'payment_not_found' };
         }
         // Transient: network error / 5xx / timeout — propagate so Moyasar retries.
@@ -343,7 +344,7 @@ export class MoyasarWebhookHandler {
           `Moyasar webhook invoice mismatch for payment ${paymentId} ` +
             `(metadata=${metadataInvoiceId} routed=${routedPayment.invoiceId})`,
         );
-        await this.markWebhookEvent(webhookEventRowId, 'error');
+        await this.markWebhookEvent(webhookClaim, 'error');
         return { skipped: true, reason: 'invoice_mismatch' };
       }
 
@@ -357,7 +358,7 @@ export class MoyasarWebhookHandler {
           this.logger.warn(
             `Moyasar webhook could not resolve an internal invoice for payment ${paymentId}`,
           );
-          await this.markWebhookEvent(webhookEventRowId, 'error');
+          await this.markWebhookEvent(webhookClaim, 'error');
           return {
             skipped: true,
             reason: hasGatewayInvoice ? 'invoice_not_found' : 'missing_metadata',
@@ -371,7 +372,7 @@ export class MoyasarWebhookHandler {
           this.logger.warn(
             `Moyasar webhook references unknown invoice ${invoiceId} (payment ${paymentId})`,
           );
-          await this.markWebhookEvent(webhookEventRowId, 'error');
+          await this.markWebhookEvent(webhookClaim, 'error');
           return { skipped: true, reason: 'invoice_not_found' };
         }
       }
@@ -386,69 +387,6 @@ export class MoyasarWebhookHandler {
         ],
       };
 
-      // Verify the re-fetched payment matches the OUTSTANDING balance it claims
-      // to pay. invoice.total and Payment.amount are both in halalas; Moyasar
-      // amount is in halalas. An invoice may already carry a collected deposit,
-      // so the authoritative figure to match is the outstanding remainder
-      // (total − Σ COMPLETED), NOT the full total. Sum COMPLETED payments in
-      // system context (this is a read; the mutation transaction re-derives the
-      // figures below for atomicity).
-      const expectedTotal = Math.round(Number(resolvedInvoice.total));
-      const { outstanding, alreadyPaid, hasExistingRow, depositAmount } = await this.cls.run(
-        async () => {
-          this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-          const priorPaid = await this.prisma.payment.aggregate({
-            where: { invoiceId: resolvedInvoice.id, status: PaymentStatus.COMPLETED },
-            _sum: { amount: true },
-          });
-          // A Payment row already keyed to THIS Moyasar payment means this is a
-          // retry / re-delivery of an event we already wrote (the row may itself
-          // be the COMPLETED one folded into priorPaid). Such retries must not be
-          // re-validated against a now-shrunken outstanding — they are exempt.
-          const existing = await this.prisma.payment.findFirst({
-            where: paymentMatchWhere,
-            select: { id: true },
-          });
-          // Resolve the configured deposit for the invoice's service so a
-          // deposit-sized first payment is accepted by the anti-spoof guard.
-          const deposit = await resolveInvoiceDeposit(
-            this.prisma,
-            resolvedInvoice.bookingId,
-          );
-          const paidSoFar = Number(priorPaid._sum?.amount ?? 0);
-          return {
-            outstanding: expectedTotal - paidSoFar,
-            alreadyPaid: paidSoFar,
-            hasExistingRow: existing !== null,
-            depositAmount: deposit.enabled ? deposit.depositAmount : null,
-          };
-        },
-      );
-      // Anti-spoof: a brand-new payment must match the outstanding balance
-      // exactly — OR, on a deposit-enabled service with no money collected yet,
-      // the exact configured deposit. Retries that re-fetch an existing payment
-      // row are exempt.
-      const acceptsDeposit =
-        depositAmount != null && alreadyPaid === 0 && fetched.amount === depositAmount;
-      if (!hasExistingRow && fetched.amount !== outstanding && !acceptsDeposit) {
-        // Permanent: a spoofed/mismatched amount will never match on retry.
-        this.logger.error(
-          `Moyasar webhook rejected: amount mismatch for invoice ${resolvedInvoice.id} ` +
-            `(outstanding=${outstanding} total=${expectedTotal} fetched=${fetched.amount} payment=${paymentId})`,
-        );
-        await this.markWebhookEvent(webhookEventRowId, 'error');
-        return { skipped: true, reason: 'amount_mismatch' };
-      }
-      if (fetched.currency.toUpperCase() !== resolvedInvoice.currency.toUpperCase()) {
-        // Permanent: currency mismatch will never match on retry.
-        this.logger.error(
-          `Moyasar webhook rejected: currency mismatch for invoice ${resolvedInvoice.id} ` +
-            `(expected=${resolvedInvoice.currency} fetched=${fetched.currency} payment=${paymentId})`,
-        );
-        await this.markWebhookEvent(webhookEventRowId, 'error');
-        return { skipped: true, reason: 'currency_mismatch' };
-      }
-
       // Map the AUTHORITATIVE Moyasar status to the internal PaymentStatus.
       //   paid / captured  → COMPLETED
       //   failed / voided  → FAILED
@@ -461,7 +399,7 @@ export class MoyasarWebhookHandler {
           `Moyasar webhook: payment ${paymentId} not yet terminal ` +
             `(status=${fetched.status}, invoice ${resolvedInvoice.id}) — skipping`,
         );
-        await this.markWebhookEvent(webhookEventRowId, 'processed');
+        await this.markWebhookEvent(webhookClaim, 'processed');
         return { skipped: true, reason: `non_terminal_status:${fetched.status}` };
       }
 
@@ -479,44 +417,92 @@ export class MoyasarWebhookHandler {
           isSuperAdmin: false,
         });
 
-        // Guard: never overwrite a terminal (REFUNDED) payment back to COMPLETED/FAILED.
-        const existingPayment = await this.prisma.payment.findFirst({
-          where: paymentMatchWhere,
-          orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
-          select: { status: true },
-        });
-        if (existingPayment?.status === PaymentStatus.REFUNDED) {
-          this.logger.warn(
-            `Webhook: skipping update for REFUNDED payment (gatewayRef=${paymentId})`,
-          );
-          return { skipped: true, reason: 'already_refunded' } as MoyasarWebhookResult;
-        }
-        // SECURITY (P1): refuse webhook-driven status regressions. A replayed
-        // `failed` or `voided` event arriving after the payment is already
-        // COMPLETED must not flip it back — `payment.upsert` would otherwise
-        // silently overwrite status. Same for COMPLETED→PENDING.
-        if (existingPayment) {
-          try {
-            assertValidTransition(existingPayment.status, status);
-          } catch {
-            this.logger.warn(
-              `Webhook: refusing payment status regression ${existingPayment.status} → ${status} (gatewayRef=${paymentId})`,
-            );
-            return { skipped: true, reason: 'invalid_transition' } as MoyasarWebhookResult;
-          }
-        }
-
         // Wrap payment upsert + invoice update + domain-event outbox write in a
         // single transaction to ensure atomicity — if any step fails, all roll
         // back and no inconsistent state is stored. `savedPayment.id` is the
         // internal Payment ROW id; `paymentId` (above) is the Moyasar gateway
         // payment id — they are distinct values.
-        await this.rlsTransaction.withTransaction(async (tx) => {
+        const mutationSkip = await this.rlsTransaction.withTransaction<MoyasarWebhookResult | null>(async (tx) => {
+          await tx.$queryRaw(
+            Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${resolvedInvoice.id} FOR UPDATE`,
+          );
+          const lockedInvoice = await tx.invoice.findFirst({
+            where: { id: resolvedInvoice.id },
+            select: {
+              id: true,
+              total: true,
+              currency: true,
+              bookingId: true,
+              packagePurchaseId: true,
+              clientId: true,
+              issuedAt: true,
+              status: true,
+            },
+          });
+          if (!lockedInvoice) {
+            return { skipped: true, reason: 'invoice_not_found' };
+          }
           const payment = await tx.payment.findFirst({
             where: paymentMatchWhere,
             orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
-            select: { id: true },
+            select: { id: true, status: true, amount: true, currency: true },
           });
+
+          const invoiceStatus = lockedInvoice.status as InvoiceStatus;
+          const latePaidAgainstClosedInvoice =
+            status === PaymentStatus.COMPLETED &&
+            (isClosedInvoiceStatus(invoiceStatus) ||
+              (isNonPayableInvoiceStatus(invoiceStatus) &&
+                payment?.status !== PaymentStatus.COMPLETED));
+          if (latePaidAgainstClosedInvoice) {
+            this.logger.error(
+              `Moyasar payment ${paymentId} is paid after invoice ${lockedInvoice.id} entered ` +
+                `${lockedInvoice.status}; internalPayment=${payment?.id ?? 'unmatched'}; ` +
+                `preserving the invoice for manual review`,
+            );
+            return { skipped: true, reason: 'terminal_invoice' };
+          }
+
+          if (fetched.currency.toUpperCase() !== lockedInvoice.currency.toUpperCase()) {
+            return { skipped: true, reason: 'currency_mismatch' };
+          }
+          const lockedDeposit = await resolveInvoiceDeposit(tx, lockedInvoice.bookingId);
+
+          if (payment?.status === PaymentStatus.REFUNDED) {
+            return { skipped: true, reason: 'already_refunded' };
+          }
+          if (payment) {
+            try {
+              assertValidTransition(payment.status, status);
+            } catch {
+              return { skipped: true, reason: 'invalid_transition' };
+            }
+          }
+
+          if (payment) {
+            if (
+              Math.round(Number(payment.amount)) !== amountHalalas ||
+              payment.currency.toUpperCase() !== fetched.currency.toUpperCase()
+            ) {
+              return { skipped: true, reason: 'amount_mismatch' };
+            }
+          } else {
+            const priorPaid = await tx.payment.aggregate({
+              where: { invoiceId: lockedInvoice.id, status: PaymentStatus.COMPLETED },
+              _sum: { amount: true },
+            });
+            const alreadyPaid = Number(priorPaid._sum?.amount ?? 0);
+            const total = Math.round(Number(lockedInvoice.total));
+            const outstanding = total - alreadyPaid;
+            const acceptsDeposit =
+              lockedDeposit.enabled &&
+              lockedDeposit.depositAmount != null &&
+              alreadyPaid === 0 &&
+              amountHalalas === lockedDeposit.depositAmount;
+            if (amountHalalas !== outstanding && !acceptsDeposit) {
+              return { skipped: true, reason: 'amount_mismatch' };
+            }
+          }
 
           const savedPayment = payment
             ? await tx.payment.update({
@@ -531,9 +517,9 @@ export class MoyasarWebhookHandler {
               })
             : await tx.payment.create({
                 data: {
-              invoiceId: resolvedInvoice.id,
+              invoiceId: lockedInvoice.id,
               amount: amountHalalas,
-              currency: fetched.currency,
+              currency: lockedInvoice.currency,
               method: PaymentMethod.ONLINE_CARD,
               status,
               gatewayRef: paymentId,
@@ -552,22 +538,22 @@ export class MoyasarWebhookHandler {
             // ProcessPaymentHandler so card and operator payments agree.
             const totalPaid = await tx.payment.aggregate({
               where: {
-                invoiceId: resolvedInvoice.id,
+                invoiceId: lockedInvoice.id,
                 status: PaymentStatus.COMPLETED,
               },
               _sum: { amount: true },
             });
             const paid = Number(totalPaid._sum?.amount ?? 0);
-            const total = Math.round(Number(resolvedInvoice.total));
+            const total = Math.round(Number(lockedInvoice.total));
             fullyPaid = paid >= total;
             paidAfterWrite = paid;
             await tx.invoice.update({
-              where: { id: resolvedInvoice.id },
+              where: { id: lockedInvoice.id },
               data: {
                 status: fullyPaid ? 'PAID' : 'PARTIALLY_PAID',
                 // Stamp issuance time on the first payment that lifts the invoice
                 // out of DRAFT; keep an existing issuedAt untouched.
-                issuedAt: resolvedInvoice.issuedAt ?? new Date(),
+                issuedAt: lockedInvoice.issuedAt ?? new Date(),
                 paidAt: fullyPaid ? new Date() : undefined,
               },
             });
@@ -589,26 +575,32 @@ export class MoyasarWebhookHandler {
           if (status === PaymentStatus.COMPLETED && fullyPaid) {
             const event = new PaymentCompletedEvent({
               paymentId: savedPayment.id,
-              invoiceId: resolvedInvoice.id,
-              bookingId: resolvedInvoice.bookingId,
-              packagePurchaseId: resolvedInvoice.packagePurchaseId,
+              invoiceId: lockedInvoice.id,
+              bookingId: lockedInvoice.bookingId,
+              packagePurchaseId: lockedInvoice.packagePurchaseId,
               amount: amountHalalas,
-              currency: resolvedInvoice.currency,
+              currency: lockedInvoice.currency,
               organizationId: DEFAULT_ORG_ID,
             });
             await tx.outboxEvent.create({
               data: {
-                aggregateId: resolvedInvoice.id,
+                id: stableEventId(`finance:payment:${savedPayment.id}:${event.eventName}`),
+                aggregateId: lockedInvoice.id,
                 eventType: event.eventName,
-                payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+                status: 'PENDING_V2',
+                deliveryLane: 'PENDING_V2',
+                payload: {
+                  ...event.toEnvelope(),
+                  eventId: stableEventId(`finance:payment:${savedPayment.id}:${event.eventName}`),
+                } as unknown as Prisma.InputJsonValue,
               },
             });
           } else if (
             status === PaymentStatus.COMPLETED &&
             isDepositPayment({
               paidAfter: paidAfterWrite,
-              total: Math.round(Number(resolvedInvoice.total)),
-              depositAmount,
+              total: Math.round(Number(lockedInvoice.total)),
+              depositAmount: lockedDeposit.enabled ? lockedDeposit.depositAmount : null,
             })
           ) {
             // The card payment exactly matched the configured deposit and the
@@ -616,38 +608,55 @@ export class MoyasarWebhookHandler {
             // (reserving staff time) without confirming the appointment.
             const event = new DepositPaidEvent({
               paymentId: savedPayment.id,
-              invoiceId: resolvedInvoice.id,
-              bookingId: resolvedInvoice.bookingId,
+              invoiceId: lockedInvoice.id,
+              bookingId: lockedInvoice.bookingId,
               amount: amountHalalas,
-              currency: resolvedInvoice.currency,
+              currency: lockedInvoice.currency,
               organizationId: DEFAULT_ORG_ID,
             });
             await tx.outboxEvent.create({
               data: {
-                aggregateId: resolvedInvoice.id,
+                id: stableEventId(`finance:payment:${savedPayment.id}:${event.eventName}`),
+                aggregateId: lockedInvoice.id,
                 eventType: event.eventName,
-                payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+                status: 'PENDING_V2',
+                deliveryLane: 'PENDING_V2',
+                payload: {
+                  ...event.toEnvelope(),
+                  eventId: stableEventId(`finance:payment:${savedPayment.id}:${event.eventName}`),
+                } as unknown as Prisma.InputJsonValue,
               },
             });
           } else if (status === PaymentStatus.FAILED) {
             const failedEvent = new PaymentFailedEvent({
               paymentId: savedPayment.id,
-              invoiceId: resolvedInvoice.id,
-              clientId: resolvedInvoice.clientId,
+              invoiceId: lockedInvoice.id,
+              clientId: lockedInvoice.clientId,
               amount: amountHalalas,
-              currency: resolvedInvoice.currency,
+              currency: lockedInvoice.currency,
               reason: message,
             });
             await tx.outboxEvent.create({
               data: {
-                aggregateId: resolvedInvoice.id,
+                id: stableEventId(`finance:payment:${savedPayment.id}:${failedEvent.eventName}`),
+                aggregateId: lockedInvoice.id,
                 eventType: failedEvent.eventName,
-                payload: failedEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
+                status: 'PENDING_V2',
+                deliveryLane: 'PENDING_V2',
+                payload: {
+                  ...failedEvent.toEnvelope(),
+                  eventId: stableEventId(
+                    `finance:payment:${savedPayment.id}:${failedEvent.eventName}`,
+                  ),
+                } as unknown as Prisma.InputJsonValue,
               },
             });
           }
 
+          return null;
         });
+
+        if (mutationSkip) return mutationSkip;
 
         // Metrics are best-effort observability only — they carry no fulfillment
         // semantics, so they stay outside the transaction. The success metric
@@ -662,7 +671,15 @@ export class MoyasarWebhookHandler {
         return {} as MoyasarWebhookResult;
       });
 
-      await this.markWebhookEvent(webhookEventRowId, 'processed');
+      const claimResult = [
+        'amount_mismatch',
+        'currency_mismatch',
+        'invoice_not_found',
+        'terminal_invoice',
+      ].includes(result.reason ?? '')
+        ? 'error'
+        : 'processed';
+      await this.markWebhookEvent(webhookClaim, claimResult);
 
       return result;
     } catch (err) {
@@ -671,7 +688,7 @@ export class MoyasarWebhookHandler {
       // including failures after the mutation transaction, which rolled back
       // atomically. If a commit did happen before a later exception, payment
       // idempotency and the transition guard make the retry a no-op.
-      await this.discardWebhookEvent(webhookEventRowId);
+      await this.discardWebhookEvent(webhookClaim);
       throw err;
     }
   }
@@ -713,28 +730,104 @@ export class MoyasarWebhookHandler {
     });
   }
 
+  private async claimWebhookEvent(
+    eventId: string,
+    eventType: string,
+    payloadHash: string,
+  ): Promise<WebhookClaim | null> {
+    const now = new Date();
+    const ownerToken = randomUUID();
+    const processingResult = `processing:${ownerToken}`;
+    try {
+      const created = await this.prisma.webhookEvent.create({
+        data: {
+          provider: 'MOYASAR_TENANT',
+          eventId,
+          eventType,
+          payloadHash,
+          result: processingResult,
+          receivedAt: now,
+        },
+        select: { id: true },
+      });
+      return { rowId: created.id, ownerToken };
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+        throw error;
+      }
+    }
+
+    const existing = await this.prisma.webhookEvent.findUnique({
+      where: {
+        provider_eventId: { provider: 'MOYASAR_TENANT', eventId },
+      },
+      select: { id: true, processedAt: true, result: true, receivedAt: true },
+    });
+    if (existing?.processedAt) return null;
+    if (!existing) {
+      throw new ServiceUnavailableException('Webhook claim is temporarily unavailable');
+    }
+
+    const staleBefore = new Date(now.getTime() - WEBHOOK_CLAIM_LEASE_MS);
+    const leaseIsLive =
+      existing.result?.startsWith('processing:') && existing.receivedAt >= staleBefore;
+    if (leaseIsLive) {
+      // Moyasar must retry this delivery. A successful duplicate ACK is safe
+      // only after processedAt is present; the current owner may have crashed.
+      throw new ServiceUnavailableException('Webhook event is already being processed');
+    }
+    const claimed = await this.prisma.webhookEvent.updateMany({
+      where: {
+        id: existing.id,
+        processedAt: null,
+        result: existing.result,
+        receivedAt: existing.receivedAt,
+      },
+      data: {
+        result: processingResult,
+        receivedAt: now,
+        eventType,
+        payloadHash,
+      },
+    });
+    if (claimed.count !== 1) {
+      throw new ServiceUnavailableException('Webhook claim changed while retrying');
+    }
+    return { rowId: existing.id, ownerToken };
+  }
+
   private async markWebhookEvent(
-    webhookEventRowId: string,
+    claim: WebhookClaim,
     result: 'processed' | 'error',
   ): Promise<void> {
     await this.prisma.webhookEvent
-      .update({
-        where: { id: webhookEventRowId },
+      .updateMany({
+        where: {
+          id: claim.rowId,
+          processedAt: null,
+          result: `processing:${claim.ownerToken}`,
+        },
         data: { processedAt: new Date(), result },
       })
       .catch((updateErr) => {
         this.logger.error(
-          `Failed to mark webhook event as ${result} (${webhookEventRowId}): ${String(updateErr)}`,
+          `Failed to mark webhook event as ${result} (${claim.rowId}): ${String(updateErr)}`,
         );
       });
   }
 
-  private async discardWebhookEvent(webhookEventRowId: string): Promise<void> {
+  private async discardWebhookEvent(claim: WebhookClaim): Promise<void> {
     await this.prisma.webhookEvent
-      .delete({ where: { id: webhookEventRowId } })
+      .deleteMany({
+        where: {
+          id: claim.rowId,
+          processedAt: null,
+          result: `processing:${claim.ownerToken}`,
+        },
+      })
       .catch((deleteErr) => {
         this.logger.error(
-          `Failed to discard transient webhook event (${webhookEventRowId}): ${String(deleteErr)}`,
+          `Failed to discard transient webhook event (${claim.rowId}): ${String(deleteErr)}`,
         );
       });
   }

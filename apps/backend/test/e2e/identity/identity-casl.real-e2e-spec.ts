@@ -395,6 +395,85 @@ describeRealE2e("Identity — real-DB e2e (CASL allow/deny matrix)", () => {
       expect(res.status).toBe(403);
       expect(res.body.message).toMatch(/insufficient|forbidden/i);
     });
+
+    it("denies custom-role assignment and removal when the principal has manage:User but no manage:Role", async () => {
+      const customRole = await prisma.customRole.create({
+        data: {
+          name: tag("ManageUsersOnly"),
+          permissions: {
+            create: { action: "manage", subject: "User" },
+          },
+        },
+      });
+      ctx.createdCustomRoleIds.push(customRole.id);
+
+      const actor = await prisma.user.create({
+        data: {
+          email: uniqueEmail("manage-users-only"),
+          passwordHash: "not-used",
+          name: tag("ManageUsersOnlyActor"),
+          role: "EMPLOYEE",
+          customRoleId: customRole.id,
+          isActive: true,
+        },
+      });
+      ctx.createdUserIds.push(actor.id);
+      const actorToken = jwtService.sign({
+        sub: actor.id,
+        email: actor.email,
+        role: actor.role,
+        isSuperAdmin: false,
+      });
+
+      const assignTarget = await prisma.user.create({
+        data: {
+          email: uniqueEmail("assign-target"),
+          passwordHash: "not-used",
+          name: tag("AssignTarget"),
+          role: "CLIENT",
+          isActive: true,
+        },
+      });
+      ctx.createdUserIds.push(assignTarget.id);
+
+      const assignRes = await withAuth(actorToken)(
+        api().post(`/api/v1/dashboard/identity/users/${assignTarget.id}/roles`),
+      ).send({ customRoleId: customRole.id });
+
+      expect(assignRes.status).toBe(403);
+      expect(assignRes.body.message).toMatch(/insufficient|forbidden/i);
+      const assignAfter = await prisma.user.findUnique({
+        where: { id: assignTarget.id },
+        select: { customRoleId: true },
+      });
+      expect(assignAfter!.customRoleId).toBeNull();
+
+      const removeTarget = await prisma.user.create({
+        data: {
+          email: uniqueEmail("remove-target"),
+          passwordHash: "not-used",
+          name: tag("RemoveTarget"),
+          role: "CLIENT",
+          customRoleId: customRole.id,
+          isActive: true,
+        },
+      });
+      ctx.createdUserIds.push(removeTarget.id);
+
+      const removeRes = await withAuth(actorToken)(
+        api().delete(
+          `/api/v1/dashboard/identity/users/${removeTarget.id}/roles/${customRole.id}`,
+        ),
+      );
+
+      expect(removeRes.status).toBe(403);
+      expect(removeRes.body.message).toMatch(/insufficient|forbidden/i);
+      const removeAfter = await prisma.user.findUnique({
+        where: { id: removeTarget.id },
+        select: { customRoleId: true },
+      });
+      expect(removeAfter!.customRoleId).toBe(customRole.id);
+    });
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

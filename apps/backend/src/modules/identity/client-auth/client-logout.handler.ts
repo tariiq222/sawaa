@@ -7,7 +7,7 @@ export class ClientLogoutHandler {
     private readonly prisma: PrismaService,
   ) {}
 
-  async execute(rawToken: string, clientId: string) {
+  async execute(rawToken: string, clientId?: string) {
     const selector = rawToken.slice(0, 8);
 
     const candidates = await this.prisma.clientRefreshToken.findMany({
@@ -26,7 +26,7 @@ export class ClientLogoutHandler {
         // receiving push notifications for booking reminders, payments, chat —
         // a real privacy leak. We hard-delete the rows because FCM treats
         // expired tokens as unregistered and there is no audit-trail value.
-        await this.prisma.fcmToken.deleteMany({ where: { clientId } }).catch(() => undefined);
+        await this.prisma.fcmToken.deleteMany({ where: { clientId: c.clientId } }).catch(() => undefined);
 
         return;
       }

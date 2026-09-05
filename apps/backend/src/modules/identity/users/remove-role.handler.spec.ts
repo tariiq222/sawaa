@@ -25,7 +25,7 @@ describe('RemoveRoleHandler', () => {
    */
   function mockLookups(
     actor: { role: string; isSuperAdmin: boolean } | null,
-    target: { role: string } | null,
+    target: { role: string; isSuperAdmin?: boolean } | null,
   ) {
     prisma.user.findUnique.mockImplementation(({ where }: { where: { id: string } }) => {
       if (where.id === ACTOR_ID) return Promise.resolve(actor);
@@ -64,7 +64,7 @@ describe('RemoveRoleHandler', () => {
     await handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID });
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
       where: { id: TARGET_ID, customRoleId: ROLE_ID },
-      data: { customRoleId: null },
+      data: { customRoleId: null, tokenVersion: { increment: 1 } },
     });
     expect(prisma.user.updateMany).toHaveBeenCalledTimes(1);
   });
@@ -128,4 +128,20 @@ describe('RemoveRoleHandler', () => {
     ).rejects.toThrow(NotFoundException);
     expect(prisma.user.updateMany).not.toHaveBeenCalled();
   });
+  it('rejects an equally privileged superadmin stored with the ADMIN enum', async () => {
+    mockLookups({ role: 'ADMIN', isSuperAdmin: true }, { role: 'ADMIN', isSuperAdmin: true });
+    prisma.user.updateMany.mockResolvedValue({ count: 1 });
+    await expect(handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }))
+      .rejects.toThrow('Cannot modify a user at or above your rank');
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects removing your own role even with the superadmin flag', async () => {
+    mockLookups({ role: 'ADMIN', isSuperAdmin: true }, null);
+    prisma.user.updateMany.mockResolvedValue({ count: 1 });
+    await expect(handler.execute({ actorUserId: ACTOR_ID, userId: ACTOR_ID, customRoleId: ROLE_ID }))
+      .rejects.toThrow('Cannot change your own role');
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
 });

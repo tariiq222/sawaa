@@ -1,7 +1,12 @@
 import { ConflictException, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../../../infrastructure/database';
+import { InvoiceStatus, PaymentStatus, Prisma } from '@prisma/client';
+import {
+  PrismaService,
+  RlsTransactionService,
+} from '../../../../../infrastructure/database';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { DEFAULT_ORG_ID } from '../../../../../common/constants';
+import { isNonPayableInvoiceStatus } from '../../../invoice-payment-state.helper';
 
 /**
  * Minimal shape of the existing PENDING payment row a caller has already loaded
@@ -10,6 +15,10 @@ import { DEFAULT_ORG_ID } from '../../../../../common/constants';
 export interface InFlightPaymentRow {
   id: string;
   gatewayRef: string | null;
+}
+
+export interface ReplaceablePaymentRow extends InFlightPaymentRow {
+  status: PaymentStatus;
 }
 
 /**
@@ -24,6 +33,7 @@ export interface ReconcileMessages {
 }
 
 const TERMINAL_PAID_STATUSES: readonly string[] = ['paid', 'captured', 'authorized'];
+const TERMINAL_FAILED_STATUSES: readonly string[] = ['failed', 'voided', 'refunded'];
 
 /**
  * G3 reconciliation (P1-7 mitigation), shared verbatim by InitClientPaymentHandler
@@ -55,7 +65,15 @@ export async function reconcileOrDiscardInFlightPayment(
   logger: Logger,
   existingPayment: InFlightPaymentRow,
   messages: ReconcileMessages,
-): Promise<void> {
+): Promise<'TERMINAL_FAILED'> {
+  if (!existingPayment.gatewayRef) {
+    // A missing reference does not prove that Moyasar never created the hosted
+    // invoice: the process can fail after Moyasar accepts the POST and before
+    // gatewayRef is stored. Keep the reservation so a retry cannot create a
+    // second charge while the first outcome is still unknown.
+    throw new ConflictException('تعذّر التحقق من حالة الدفعة الجارية، حاول مرة أخرى لاحقاً');
+  }
+
   if (existingPayment.gatewayRef) {
     let gatewayStatus: string;
     try {
@@ -77,9 +95,82 @@ export async function reconcileOrDiscardInFlightPayment(
     if (gatewayStatus === 'initiated') {
       throw new ConflictException(messages.inFlight);
     }
-    // failed / voided / refunded → the session is dead, safe to discard.
+    if (!TERMINAL_FAILED_STATUSES.includes(gatewayStatus)) {
+      throw new ConflictException('تعذّر التحقق من حالة الدفعة الجارية، حاول مرة أخرى لاحقاً');
+    }
+    // Explicit failed / voided / refunded proof means the session is dead.
   }
-  // No gatewayRef yet, or a terminally-failed session: discard so the caller can
-  // recreate and always return a valid redirect URL.
-  await prisma.payment.delete({ where: { id: existingPayment.id } });
+  // The caller must delete and replace inside one invoice-locked transaction.
+  // Provider evidence is authoritative, but it can become stale before cleanup.
+  void prisma;
+  return 'TERMINAL_FAILED';
+}
+
+export async function replaceTerminalInFlightPayment<T>(
+  rlsTransaction: RlsTransactionService,
+  invoiceId: string,
+  expected: ReplaceablePaymentRow,
+  createReplacement: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  return rlsTransaction.withTransaction(async (tx) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${invoiceId} FOR UPDATE`,
+    );
+    const current = await tx.payment.findUnique({
+      where: { id: expected.id },
+      select: { status: true, gatewayRef: true },
+    });
+    if (
+      !current ||
+      current.status !== expected.status ||
+      (current.status !== PaymentStatus.PENDING && current.status !== PaymentStatus.FAILED) ||
+      current.gatewayRef !== expected.gatewayRef
+    ) {
+      throw new ConflictException('Payment state changed while reconciling the gateway');
+    }
+    await tx.payment.delete({ where: { id: expected.id } });
+    return createReplacement(tx);
+  });
+}
+
+/**
+ * Persist a hosted-invoice reference without overwriting a webhook's terminal
+ * gateway payment identity. The Invoice lock orders this write with every
+ * payment finalizer; the status/reference CAS detects a winner that ran first.
+ */
+export async function persistPendingGatewayRef(
+  rlsTransaction: RlsTransactionService,
+  invoiceId: string,
+  expected: ReplaceablePaymentRow,
+  gatewayRef: string,
+): Promise<void> {
+  const invoiceClosed = await rlsTransaction.withTransaction(async (tx) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${invoiceId} FOR UPDATE`,
+    );
+    const invoice = await tx.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { status: true },
+    });
+    if (!invoice) {
+      throw new ConflictException('Invoice state changed while storing the gateway reference');
+    }
+    const updated = await tx.payment.updateMany({
+      where: {
+        id: expected.id,
+        status: PaymentStatus.PENDING,
+        gatewayRef: expected.gatewayRef,
+      },
+      data: { gatewayRef },
+    });
+    if (updated.count !== 1) {
+      throw new ConflictException('Payment state changed while storing the gateway reference');
+    }
+    return isNonPayableInvoiceStatus(invoice.status as InvoiceStatus);
+  });
+  // Throw after commit so the provider identity remains durable for audit and
+  // reconciliation, while the caller cannot expose a checkout for a closed invoice.
+  if (invoiceClosed) {
+    throw new ConflictException('Invoice can no longer accept this payment');
+  }
 }

@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/database";
-import { ROLE_RANK, actorRankOf } from "../shared/role-rank";
+import { actorRankOf, targetRankOf } from "../shared/role-rank";
 
 export interface RemoveRoleCommand {
 	// actorUserId comes from the authenticated principal (req.user.id), never the body.
@@ -20,6 +20,7 @@ export class RemoveRoleHandler {
 	constructor(private readonly prisma: PrismaService) {}
 
 	async execute(cmd: RemoveRoleCommand): Promise<void> {
+		if (cmd.actorUserId === cmd.userId) throw new ForbiddenException("Cannot change your own role");
 		// Rank gate (mirrors UpdateUserRoleHandler): an actor may not strip a role
 		// from a user at or above their own rank. Without this check any actor with
 		// role-management permission could remove a higher-ranked user's role.
@@ -30,7 +31,7 @@ export class RemoveRoleHandler {
 			}),
 			this.prisma.user.findUnique({
 				where: { id: cmd.userId },
-				select: { role: true },
+				select: { role: true, isSuperAdmin: true },
 			}),
 		]);
 		if (!actor) throw new ForbiddenException("Actor not found");
@@ -39,13 +40,13 @@ export class RemoveRoleHandler {
 				REMOVE_ROLE_MESSAGES.notAssigned(cmd.userId, cmd.customRoleId),
 			);
 		}
-		if (actorRankOf(actor) <= ROLE_RANK[target.role]) {
+		if (actorRankOf(actor) <= targetRankOf(target)) {
 			throw new ForbiddenException("Cannot modify a user at or above your rank");
 		}
 
 		const { count } = await this.prisma.user.updateMany({
 			where: { id: cmd.userId, customRoleId: cmd.customRoleId },
-			data: { customRoleId: null },
+			data: { customRoleId: null, tokenVersion: { increment: 1 } },
 		});
 		if (count === 0) {
 			throw new NotFoundException(

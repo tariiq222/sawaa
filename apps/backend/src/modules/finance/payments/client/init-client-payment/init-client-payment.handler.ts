@@ -6,12 +6,26 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
-import { PrismaService } from '../../../../../infrastructure/database';
+import {
+  BookingStatus,
+  InvoiceStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
+} from '@prisma/client';
+import {
+  PrismaService,
+  RlsTransactionService,
+} from '../../../../../infrastructure/database';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitClientPaymentDto } from './init-client-payment.dto';
 import { DEFAULT_ORG_ID } from '../../../../../common/constants';
-import { reconcileOrDiscardInFlightPayment } from './reconcile-in-flight-payment.helper';
+import {
+  reconcileOrDiscardInFlightPayment,
+  persistPendingGatewayRef,
+  replaceTerminalInFlightPayment,
+} from './reconcile-in-flight-payment.helper';
+import { isNonPayableInvoiceStatus } from '../../../invoice-payment-state.helper';
 
 const PAYMENT_INIT_BOOKING_STATUSES: readonly BookingStatus[] = [
   BookingStatus.PENDING,
@@ -36,18 +50,21 @@ export class InitClientPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly moyasar: MoyasarApiClient,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(cmd: InitClientPaymentCommand): Promise<InitClientPaymentResult> {
-    const invoice = await this.prisma.invoice.findFirst({
+    // Keep the cheap ownership check before configuration lookup, then repeat
+    // it under the invoice lock before reserving money.
+    const visibleInvoice = await this.prisma.invoice.findFirst({
       where: { id: cmd.invoiceId },
-      select: { id: true, clientId: true, bookingId: true, total: true, currency: true },
+      select: { id: true, clientId: true },
     });
 
-    if (!invoice) {
+    if (!visibleInvoice) {
       throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
     }
-    if (invoice.clientId !== cmd.clientId) {
+    if (visibleInvoice.clientId !== cmd.clientId) {
       throw new ForbiddenException('Invoice does not belong to this client');
     }
 
@@ -58,51 +75,16 @@ export class InitClientPaymentHandler {
       throw new BadRequestException('Online payment is not enabled');
     }
 
-    // For package invoices, bookingId may be null — skip booking status check.
-    if (invoice.bookingId) {
-      const booking = await this.prisma.booking.findFirst({
-        where: { id: invoice.bookingId },
-        select: { id: true, status: true },
-      });
-      if (!booking) {
-        throw new NotFoundException(`Booking ${invoice.bookingId} not found`);
-      }
-      if (!PAYMENT_INIT_BOOKING_STATUSES.includes(booking.status)) {
-        throw new BadRequestException(
-          `Booking ${invoice.bookingId} cannot initialize payment in status ${booking.status}`,
-        );
-      }
-    }
+    let reservation = await this.reservePayment(cmd);
+    let { invoice, outstanding, payment, existing } = reservation;
 
-    // P0: charge only the OUTSTANDING balance, not the full invoice total. An
-    // invoice may already carry a collected deposit (e.g. pay-at-clinic or a
-    // prior partial). Sending the full total to Moyasar would double-charge the
-    // deposit and the webhook would then reject the top-up as an amount_mismatch,
-    // making the invoice impossible to complete by card. Sum COMPLETED payments
-    // (the only authoritative paid status) and bill the remainder.
-    const previouslyPaid = await this.prisma.payment.aggregate({
-      where: { invoiceId: invoice.id, status: PaymentStatus.COMPLETED },
-      _sum: { amount: true },
-    });
-    const alreadyPaid = Number(previouslyPaid._sum?.amount ?? 0);
-    const outstanding = Math.round(Number(invoice.total)) - alreadyPaid;
-    if (outstanding <= 0) {
-      throw new BadRequestException('Invoice is already fully paid');
-    }
-
-    const idempotencyKey = `client:${invoice.id}`;
-    const existingPayment = await this.prisma.payment.findFirst({
-      where: { idempotencyKey },
-      select: { id: true, status: true, gatewayRef: true },
-    });
-
-    if (existingPayment) {
-      if (existingPayment.status === PaymentStatus.COMPLETED) {
+    if (existing) {
+      if (payment.status === PaymentStatus.COMPLETED) {
         throw new ConflictException('Payment for this invoice has already been completed');
       }
       const recovered = await this.findHostedInvoice(
-        existingPayment.id,
-        existingPayment.gatewayRef,
+        payment.id,
+        payment.gatewayRef,
       );
       if (!recovered) {
         // Releases before hosted checkout stored a Moyasar Payment ID in
@@ -112,7 +94,7 @@ export class InitClientPaymentHandler {
           this.prisma,
           this.moyasar,
           this.logger,
-          existingPayment,
+          payment,
           {
             alreadyPaid: 'Payment for this invoice has already been completed',
             inFlight:
@@ -121,40 +103,40 @@ export class InitClientPaymentHandler {
         );
       } else {
         this.assertHostedInvoiceMatches(recovered, outstanding, invoice.currency);
-        if (existingPayment.gatewayRef !== recovered.id) {
-          await this.prisma.payment.update({
-            where: { id: existingPayment.id },
-            data: { gatewayRef: recovered.id },
-            select: { id: true },
-          });
-        }
         if (this.isPaidCheckoutStatus(recovered.status)) {
           throw new ConflictException('Payment for this invoice has already been completed');
         }
         if (!this.isTerminalFailedCheckoutStatus(recovered.status)) {
+          if (payment.gatewayRef !== recovered.id) {
+            await persistPendingGatewayRef(
+              this.rlsTransaction,
+              invoice.id,
+              payment,
+              recovered.id,
+            );
+          }
           if (!recovered.url) {
             throw new ConflictException('Payment checkout exists but has no hosted URL');
           }
-          return { paymentId: existingPayment.id, redirectUrl: recovered.url };
+          return { paymentId: payment.id, redirectUrl: recovered.url };
         }
-        await this.prisma.payment.delete({ where: { id: existingPayment.id } });
+      }
+
+      reservation = await replaceTerminalInFlightPayment(
+        this.rlsTransaction,
+        invoice.id,
+        payment,
+        (tx) => this.createReservation(tx, cmd),
+      );
+      ({ invoice, outstanding, payment, existing } = reservation);
+      if (existing) {
+        throw new ConflictException('تعذّر حجز دفعة جديدة لهذه الفاتورة، حاول مرة أخرى لاحقاً');
       }
     }
 
     // invoice.total and Payment.amount are both stored in halalas — bill the
     // outstanding remainder verbatim.
     const amountHalalas = outstanding;
-    const payment = await this.prisma.payment.create({
-      data: {
-        invoiceId: invoice.id,
-        amount: outstanding,
-        currency: invoice.currency,
-        method: PaymentMethod.ONLINE_CARD,
-        status: PaymentStatus.PENDING,
-        idempotencyKey,
-      },
-      select: { id: true },
-    });
 
     let checkout: Awaited<ReturnType<MoyasarApiClient['createCheckoutInvoice']>>;
     try {
@@ -186,11 +168,12 @@ export class InitClientPaymentHandler {
     }
 
     this.assertHostedInvoiceMatches(checkout, amountHalalas, invoice.currency);
-    const updatedPayment = await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: { gatewayRef: checkout.id },
-      select: { id: true },
-    });
+    await persistPendingGatewayRef(
+      this.rlsTransaction,
+      invoice.id,
+      payment,
+      checkout.id,
+    );
     if (this.isPaidCheckoutStatus(checkout.status)) {
       throw new ConflictException('Payment for this invoice has already been completed');
     }
@@ -199,9 +182,117 @@ export class InitClientPaymentHandler {
     }
 
     return {
-      paymentId: updatedPayment.id,
+      paymentId: payment.id,
       redirectUrl: checkout.url,
     };
+  }
+
+  private async reservePayment(cmd: InitClientPaymentCommand) {
+    const reserve = async (tx: Prisma.TransactionClient) => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${cmd.invoiceId} FOR UPDATE`,
+      );
+      return this.createReservation(tx, cmd);
+    };
+
+    try {
+      return await this.rlsTransaction.withTransaction(reserve);
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+        throw error;
+      }
+      // A concurrent initializer won the idempotency key. The failed tx has
+      // rolled back; re-enter under the invoice lock and reconcile its row.
+      return this.rlsTransaction.withTransaction(reserve);
+    }
+  }
+
+  private async createReservation(tx: Prisma.TransactionClient, cmd: InitClientPaymentCommand) {
+      const invoice = await tx.invoice.findFirst({
+        where: { id: cmd.invoiceId },
+        select: {
+          id: true,
+          clientId: true,
+          bookingId: true,
+          total: true,
+          currency: true,
+          status: true,
+        },
+      });
+      if (!invoice) {
+        throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
+      }
+      if (invoice.clientId !== cmd.clientId) {
+        throw new ForbiddenException('Invoice does not belong to this client');
+      }
+      if (isNonPayableInvoiceStatus(invoice.status as InvoiceStatus)) {
+        throw new BadRequestException(
+          `Invoice ${invoice.id} cannot accept payments (status: ${invoice.status})`,
+        );
+      }
+
+      if (invoice.bookingId) {
+        const booking = await tx.booking.findFirst({
+          where: { id: invoice.bookingId },
+          select: { id: true, status: true },
+        });
+        if (!booking) {
+          throw new NotFoundException(`Booking ${invoice.bookingId} not found`);
+        }
+        if (!PAYMENT_INIT_BOOKING_STATUSES.includes(booking.status)) {
+          throw new BadRequestException(
+            `Booking ${invoice.bookingId} cannot initialize payment in status ${booking.status}`,
+          );
+        }
+      }
+
+      const previouslyPaid = await tx.payment.aggregate({
+        where: { invoiceId: invoice.id, status: PaymentStatus.COMPLETED },
+        _sum: { amount: true },
+      });
+      const alreadyPaid = Number(previouslyPaid._sum?.amount ?? 0);
+      const outstanding = Math.round(Number(invoice.total)) - alreadyPaid;
+      if (outstanding <= 0) {
+        throw new BadRequestException('Invoice is already fully paid');
+      }
+
+      const idempotencyKey = `client:${invoice.id}`;
+      const existingPayment = await tx.payment.findFirst({
+        where: { idempotencyKey },
+        select: { id: true, status: true, gatewayRef: true },
+      });
+      if (existingPayment) {
+        return { invoice, outstanding, payment: existingPayment, existing: true as const };
+      }
+
+      const competingReservation = await tx.payment.findFirst({
+        where: {
+          invoiceId: invoice.id,
+          status: { in: [PaymentStatus.PENDING, PaymentStatus.PENDING_VERIFICATION] },
+        },
+        select: { id: true, status: true },
+      });
+      if (competingReservation) {
+        throw new ConflictException('Invoice has another payment pending completion or verification');
+      }
+
+      const payment = await tx.payment.create({
+        data: {
+          invoiceId: invoice.id,
+          amount: outstanding,
+          currency: invoice.currency,
+          method: PaymentMethod.ONLINE_CARD,
+          status: PaymentStatus.PENDING,
+          idempotencyKey,
+        },
+        select: { id: true },
+      });
+      return {
+        invoice,
+        outstanding,
+        payment: { ...payment, status: PaymentStatus.PENDING, gatewayRef: null },
+        existing: false as const,
+      };
   }
 
   private async findHostedInvoice(paymentId: string, gatewayRef: string | null) {

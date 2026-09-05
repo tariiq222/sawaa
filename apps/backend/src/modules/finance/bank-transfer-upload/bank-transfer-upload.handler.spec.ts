@@ -352,7 +352,11 @@ describe('BankTransferUploadHandler', () => {
         where: {
           invoiceId: 'inv-1',
           status: {
-            in: [PaymentStatus.COMPLETED, PaymentStatus.PENDING_VERIFICATION],
+            in: [
+              PaymentStatus.COMPLETED,
+              PaymentStatus.PENDING,
+              PaymentStatus.PENDING_VERIFICATION,
+            ],
           },
         },
         _sum: { amount: true },

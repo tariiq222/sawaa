@@ -184,6 +184,7 @@ describe('PublicAuthController (e2e)', () => {
   describe('POST /public/auth/refresh', () => {
     it('returns 200 with clientId', async () => {
       mockRefresh.execute.mockResolvedValue({
+        clientId: 'client-1',
         accessToken: 'new-acc-token',
         refreshToken: 'new-ref-token',
         accessMaxAgeMs: 900000,

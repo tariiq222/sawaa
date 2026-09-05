@@ -41,7 +41,7 @@ describe('ClientRefreshHandler', () => {
 
   it('should throw when hash does not match any candidate', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 't1', tokenHash: 'h1', tokenSelector: 'rawToken1' },
+      { id: 't1', clientId: 'c1', tokenHash: 'h1', tokenSelector: 'rawToken1' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(false);
     await expect(handler.execute('rawToken123', 'c1')).rejects.toThrow(UnauthorizedException);
@@ -49,7 +49,7 @@ describe('ClientRefreshHandler', () => {
 
   it('should throw when rotation race lost', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 't1', tokenHash: 'h1', tokenSelector: 'rawToken' },
+      { id: 't1', clientId: 'c1', tokenHash: 'h1', tokenSelector: 'rawToken' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 0 });
@@ -58,7 +58,7 @@ describe('ClientRefreshHandler', () => {
 
   it('should throw when client not found', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 't1', tokenHash: 'h1', tokenSelector: 'rawToken' },
+      { id: 't1', clientId: 'c1', tokenHash: 'h1', tokenSelector: 'rawToken' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
@@ -68,7 +68,7 @@ describe('ClientRefreshHandler', () => {
 
   it('should throw when client inactive', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 't1', tokenHash: 'h1', tokenSelector: 'rawToken' },
+      { id: 't1', clientId: 'c1', tokenHash: 'h1', tokenSelector: 'rawToken' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
@@ -78,7 +78,7 @@ describe('ClientRefreshHandler', () => {
 
   it('should throw when client deleted', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 't1', tokenHash: 'h1', tokenSelector: 'rawToken' },
+      { id: 't1', clientId: 'c1', tokenHash: 'h1', tokenSelector: 'rawToken' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
@@ -88,7 +88,7 @@ describe('ClientRefreshHandler', () => {
 
   it('should return new tokens on success', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 't1', tokenHash: 'h1', tokenSelector: 'rawToken' },
+      { id: 't1', clientId: 'c1', tokenHash: 'h1', tokenSelector: 'rawToken' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
@@ -104,7 +104,7 @@ describe('ClientRefreshHandler', () => {
   // not rejected by the strategy after a password reset bumped the version.
   it('passes the live tokenVersion through on refresh (P1-7)', async () => {
     prisma.clientRefreshToken.findMany.mockResolvedValue([
-      { id: 't1', tokenHash: 'h1', tokenSelector: 'rawToken' },
+      { id: 't1', clientId: 'c1', tokenHash: 'h1', tokenSelector: 'rawToken' },
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });

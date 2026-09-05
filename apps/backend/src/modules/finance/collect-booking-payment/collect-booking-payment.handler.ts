@@ -218,7 +218,7 @@ export class CollectBookingPaymentHandler {
             method: payment.method,
             status: payment.status as PaymentStatus,
           }),
-          deferredEvents: this.readDeferredEvents(payment),
+          deferredEvents: [],
         };
       });
     } catch (err) {
@@ -233,10 +233,6 @@ export class CollectBookingPaymentHandler {
       });
     }
 
-    // Publish only after the outer collect transaction committed. A reread or
-    // commit failure above never reaches here, so no payment/deposit events leak.
-    // Replay/conflict recovery returns deferredEvents: [] and must not emit.
-    await this.processPayment.publishDeferredEvents(outcome.deferredEvents);
     return outcome.result;
   }
 
@@ -275,10 +271,6 @@ export class CollectBookingPaymentHandler {
       result: this.toResult(cmd.bookingId, invoice, existing.payment),
       deferredEvents: [],
     };
-  }
-
-  private readDeferredEvents(payment: { deferredEvents?: DeferredPaymentEvent[] }): DeferredPaymentEvent[] {
-    return Array.isArray(payment.deferredEvents) ? payment.deferredEvents : [];
   }
 
   private toResult(
