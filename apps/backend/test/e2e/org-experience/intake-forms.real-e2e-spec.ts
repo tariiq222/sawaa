@@ -5,6 +5,7 @@ import { CreateIntakeFormHandler } from '../../../src/modules/org-experience/int
 import { UpdateIntakeFormHandler } from '../../../src/modules/org-experience/intake-forms/update-intake-form.handler';
 import { SetIntakeFieldsHandler } from '../../../src/modules/org-experience/intake-forms/set-intake-fields.handler';
 import { ListIntakeFormsHandler } from '../../../src/modules/org-experience/intake-forms/list-intake-forms.handler';
+import { GetIntakeFormHandler } from '../../../src/modules/org-experience/intake-forms/get-intake-form.handler';
 import { GetIntakeFormResponsesHandler } from '../../../src/modules/org-experience/intake-forms/get-intake-form-responses.handler';
 import { SubmitIntakeResponseHandler } from '../../../src/modules/org-experience/submit-intake-response/submit-intake-response.handler';
 
@@ -63,6 +64,18 @@ describeReal('Intake form persistence and locking (real PostgreSQL)', () => {
     await new SubmitIntakeResponseHandler(prisma, transaction).execute({
       formId: form.id, bookingId: booking.id, answers: { [fieldId]: 'إجابة' },
     });
+    const superseded = await prisma.intakeResponse.findFirstOrThrow({
+      where: { formId: form.id, bookingId: booking.id },
+    });
+    await prisma.intakeResponse.update({
+      where: { id: superseded.id },
+      data: { supersededAt: new Date('2026-01-01T00:00:00Z'), supersededById: randomUUID() },
+    });
+    await new SubmitIntakeResponseHandler(prisma, transaction).execute({
+      formId: form.id, bookingId: booking.id, answers: { [fieldId]: 'إجابة حالية' },
+    });
+    expect(await prisma.intakeResponse.count({ where: { formId: form.id } })).toBe(2);
+    expect(await prisma.intakeResponse.count({ where: { formId: form.id, supersededAt: null } })).toBe(1);
     const updated = await new UpdateIntakeFormHandler(prisma, transaction).execute({
       formId: form.id, nameAr: 'اسم معدل', type: 'POST_SESSION',
     });
@@ -76,12 +89,17 @@ describeReal('Intake form persistence and locking (real PostgreSQL)', () => {
     await expect(new UpdateIntakeFormHandler(prisma, transaction).execute({
       formId: form.id, nameAr: 'لا يجب حفظه', fields: [],
     })).rejects.toThrow(ConflictException);
+    await expect(new SetIntakeFieldsHandler(prisma, transaction).execute({
+      formId: form.id, fields: [],
+    })).rejects.toThrow(ConflictException);
     expect((await prisma.intakeForm.findUniqueOrThrow({ where: { id: form.id } })).nameAr).toBe('اسم معدل');
     const listed = await new ListIntakeFormsHandler(prisma).execute({});
     expect(listed.find((entry) => entry.id === form.id)?.submissionsCount).toBe(1);
+    const detailed = await new GetIntakeFormHandler(prisma).execute({ formId: form.id });
+    expect(detailed.submissionsCount).toBe(1);
     const [response] = await new GetIntakeFormResponsesHandler(prisma).execute({ bookingId: booking.id });
     expect(response.form.submissionsCount).toBe(1);
-    expect(response.answers[fieldId]).toBe('إجابة');
+    expect(response.answers[fieldId]).toBe('إجابة حالية');
   });
 
   it('rolls back metadata and deleted fields when a replacement cannot be persisted', async () => {

@@ -28,7 +28,11 @@ export class SetIntakeFieldsHandler {
         where: { id: formId },
         include: {
           fields: { orderBy: { position: 'asc' } },
-          _count: { select: { responses: true } },
+          _count: {
+            select: {
+              responses: { where: { supersededAt: null } },
+            },
+          },
         },
       });
 
@@ -36,11 +40,13 @@ export class SetIntakeFieldsHandler {
         throw new NotFoundException('Intake form not found');
       }
 
-      const hasResponses = (form._count?.responses ?? 0) > 0;
       if (fieldsSemanticallyEqual(form.fields, fields)) {
         return mapIntakeFormResult(form);
       }
-      if (hasResponses) {
+      // Historical rows also protect field IDs after being superseded, so the
+      // mutation guard intentionally counts every response row.
+      const totalResponses = await tx.intakeResponse.count({ where: { formId } });
+      if (totalResponses > 0) {
         throw new ConflictException('Answered intake forms cannot change their fields');
       }
 
@@ -64,7 +70,11 @@ export class SetIntakeFieldsHandler {
         where: { id: formId },
         include: {
           fields: { orderBy: { position: 'asc' } },
-          _count: { select: { responses: true } },
+          _count: {
+            select: {
+              responses: { where: { supersededAt: null } },
+            },
+          },
         },
       });
       if (!updated) throw new NotFoundException('Intake form not found');

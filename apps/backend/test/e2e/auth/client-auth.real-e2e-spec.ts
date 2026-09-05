@@ -335,7 +335,10 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
         name: "Happy Client",
       });
 
-      expect(regRes.status).toBe(200);
+      expect({ status: regRes.status, error: regRes.status === 200 ? undefined : regRes.body }).toEqual({
+        status: 200,
+        error: undefined,
+      });
       expect(regRes.body.clientId).toEqual(expect.any(String));
 
       const cookies = parseCookies(regRes.headers["set-cookie"]);

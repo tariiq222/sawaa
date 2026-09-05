@@ -37,7 +37,11 @@ describe('ListIntakeFormsHandler', () => {
     expect(result[0].submissionsCount).toBe(3);
     expect(prisma.intakeForm.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {},
-      include: expect.objectContaining({ _count: { select: { responses: true } } }),
+      include: expect.objectContaining({
+        _count: {
+          select: { responses: { where: { supersededAt: null } } },
+        },
+      }),
     }));
   });
 

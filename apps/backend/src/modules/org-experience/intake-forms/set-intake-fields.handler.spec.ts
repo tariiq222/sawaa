@@ -35,6 +35,7 @@ const buildPrisma = () => ({
     deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     createMany: jest.fn().mockResolvedValue({ count: 1 }),
   },
+  intakeResponse: { count: jest.fn().mockResolvedValue(0) },
   $transaction: jest.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
     const tx = {
       intakeForm: {
@@ -42,6 +43,7 @@ const buildPrisma = () => ({
         findUnique: jest.fn().mockResolvedValue(mockForm),
       },
       $queryRaw: jest.fn().mockResolvedValue([]),
+      intakeResponse: { count: jest.fn().mockResolvedValue(0) },
       intakeField: {
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         createMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -112,6 +114,7 @@ describe('SetIntakeFieldsHandler', () => {
         findUnique: jest.fn().mockResolvedValue({ id: 'form-1', fields: [existingField] }),
       },
       $queryRaw: jest.fn().mockResolvedValue([]),
+      intakeResponse: { count: jest.fn().mockResolvedValue(0) },
       intakeField: {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
@@ -140,6 +143,7 @@ describe('SetIntakeFieldsHandler', () => {
         findUnique: jest.fn().mockResolvedValue(mockForm),
       },
       $queryRaw: jest.fn().mockResolvedValue([]),
+      intakeResponse: { count: jest.fn().mockResolvedValue(1) },
       intakeField: {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
@@ -165,6 +169,7 @@ describe('SetIntakeFieldsHandler', () => {
         findUnique: jest.fn().mockResolvedValue(mockForm),
       },
       $queryRaw: jest.fn().mockResolvedValue([]),
+      intakeResponse: { count: jest.fn().mockResolvedValue(0) },
       intakeField: {
         deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
         createMany: jest.fn().mockRejectedValue(new Error('write failed')),

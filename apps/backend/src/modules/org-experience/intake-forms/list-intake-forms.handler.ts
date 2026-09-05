@@ -18,7 +18,11 @@ export class ListIntakeFormsHandler {
       },
       include: {
         fields: { orderBy: { position: 'asc' } },
-        _count: { select: { responses: true } },
+        _count: {
+          select: {
+            responses: { where: { supersededAt: null } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });

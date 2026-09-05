@@ -36,9 +36,13 @@ describe('GetIntakeFormHandler', () => {
     expect(result.type).toBe('PRE_SESSION');
     expect(result.scope).toBe('GLOBAL');
     expect(result.submissionsCount).toBe(0);
-    expect(result._count).toBeUndefined();
+    expect(result).not.toHaveProperty('_count');
     expect(prisma.intakeForm.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      include: expect.objectContaining({ _count: { select: { responses: true } } }),
+      include: expect.objectContaining({
+        _count: {
+          select: { responses: { where: { supersededAt: null } } },
+        },
+      }),
     }));
     
     (prisma.intakeForm.findFirst as jest.Mock).mockResolvedValue(null);

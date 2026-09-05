@@ -40,6 +40,19 @@ describe('Booking DeliveryType (e2e)', () => {
     prisma.branch.findFirst.mockResolvedValue({ id: BRANCH_ID, nameAr: 'الفرع', nameEn: 'Branch', isActive: true });
     prisma.client.findFirst.mockResolvedValue({ id: CLIENT_ID, isActive: true });
     prisma.employee.findFirst.mockResolvedValue({ id: EMPLOYEE_ID, name: 'موظف', nameAr: 'موظف', isActive: true });
+    // Booking creation now rechecks the same people under transaction row locks.
+    (prisma as unknown as { $queryRaw: jest.Mock }).$queryRaw.mockImplementation(
+      async (parts: TemplateStringsArray, id: string) => {
+        const sql = parts.join('');
+        if (sql.includes('FROM "Client"') && id === CLIENT_ID) {
+          return [{ id, isActive: true, deletedAt: null }];
+        }
+        if (sql.includes('FROM "Employee"') && id === EMPLOYEE_ID) {
+          return [{ id, isActive: true }];
+        }
+        return [];
+      },
+    );
     const serviceRow = {
       id: SERVICE_ID,
       nameAr: 'خدمة',

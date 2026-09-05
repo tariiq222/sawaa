@@ -3,6 +3,7 @@
   "rootDir": "..",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "testPathIgnorePatterns": ["/test/notification-outbox[^/]*\\.real-e2e-spec\\.ts$"],
   "transform": {
     "^.+\\.(t|j)sx?$": ["ts-jest", { "diagnostics": false }]
   },

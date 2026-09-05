@@ -31,7 +31,11 @@ export class UpdateIntakeFormHandler {
           where: { id: command.formId },
           include: {
             fields: { orderBy: { position: 'asc' } },
-            _count: { select: { responses: true } },
+            _count: {
+              select: {
+                responses: { where: { supersededAt: null } },
+              },
+            },
           },
         });
         if (!current) throw new NotFoundException('Intake form not found');
@@ -50,8 +54,15 @@ export class UpdateIntakeFormHandler {
 
         const fieldsChanged = command.fields !== undefined &&
           !fieldsSemanticallyEqual(current.fields, command.fields);
-        if (fieldsChanged && (current._count?.responses ?? 0) > 0) {
-          throw new ConflictException('Answered intake forms cannot change their fields');
+        if (fieldsChanged) {
+          // Keep the field lock conservative: historical rows also protect
+          // field IDs even after they are superseded.
+          const totalResponses = await tx.intakeResponse.count({
+            where: { formId: command.formId },
+          });
+          if (totalResponses > 0) {
+            throw new ConflictException('Answered intake forms cannot change their fields');
+          }
         }
 
         const data: Prisma.IntakeFormUpdateInput = {
@@ -94,7 +105,11 @@ export class UpdateIntakeFormHandler {
               where: { id: command.formId },
               include: {
                 fields: { orderBy: { position: 'asc' } },
-                _count: { select: { responses: true } },
+                _count: {
+                  select: {
+                    responses: { where: { supersededAt: null } },
+                  },
+                },
               },
             })
           : current;

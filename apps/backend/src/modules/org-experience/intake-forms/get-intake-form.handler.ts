@@ -17,7 +17,11 @@ export class GetIntakeFormHandler {
       where: idf.kind === 'uuid' ? { id: idf.id } : { ref: idf.ref },
       include: {
         fields: { orderBy: { position: 'asc' } },
-        _count: { select: { responses: true } },
+        _count: {
+          select: {
+            responses: { where: { supersededAt: null } },
+          },
+        },
       },
     });
     if (!form) throw new NotFoundException('Intake form not found');

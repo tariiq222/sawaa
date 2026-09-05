@@ -2,6 +2,7 @@
 // Website: W1 guest booking · W2 client invoice
 
 import { test, expect } from '@playwright/test';
+import { getPersonaCredentials } from '../fixtures/auth';
 
 /**
  * [D1] Dashboard login golden path — email + password flow
@@ -14,16 +15,17 @@ import { test, expect } from '@playwright/test';
  */
 test.describe('[D1] Dashboard login flow', () => {
   test('admin can log in, see home, and log out', async ({ page }) => {
+    const { email, password } = getPersonaCredentials('admin');
     // 1. Navigate to login page
     await page.goto('/login');
     await expect(page).toHaveURL(/\/login/);
     await page.waitForLoadState('domcontentloaded');
 
     // 2. Multi-step login wizard
-    await page.locator('#identifier').fill('admin@sawaa-test.com');
+    await page.locator('#identifier').fill(email);
     await page.getByRole('button', { name: 'متابعة' }).click();
     await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
-    await page.locator('#password').fill('Admin@1234');
+    await page.locator('#password').fill(password);
     await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
     // 3. Wait for redirect away from /login

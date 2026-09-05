@@ -30,6 +30,7 @@ const buildPrisma = () => ({
     deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     createMany: jest.fn().mockResolvedValue({ count: 1 }),
   },
+  intakeResponse: { count: jest.fn().mockResolvedValue(0) },
 });
 
 const buildTransaction = (prisma: ReturnType<typeof buildPrisma>) => ({
@@ -141,6 +142,7 @@ describe('UpdateIntakeFormHandler', () => {
       fields: [{ id: 'field-1', labelAr: 'قديم', labelEn: null, fieldType: IntakeFieldType.TEXT, isRequired: false, options: null, position: 0 }],
       _count: { responses: 1 },
     });
+    prisma.intakeResponse.count.mockResolvedValue(1);
     const handler = new UpdateIntakeFormHandler(prisma as never, buildTransaction(prisma) as never);
 
     await expect(handler.execute({
