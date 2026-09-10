@@ -53,10 +53,9 @@ describe("LocaleProvider", () => {
       await waitFor(() => {
         expect(screen.getByTestId("locale").textContent).toBe("ar")
         expect(screen.getByTestId("dir").textContent).toBe("rtl")
+        expect(document.documentElement.lang).toBe("ar")
+        expect(document.documentElement.dir).toBe("rtl")
       })
-
-      expect(document.documentElement.lang).toBe("ar")
-      expect(document.documentElement.dir).toBe("rtl")
     })
 
     it("persists the initial locale to localStorage on mount", async () => {
@@ -91,10 +90,10 @@ describe("LocaleProvider", () => {
       await waitFor(() => {
         expect(screen.getByTestId("locale").textContent).toBe("en")
         expect(screen.getByTestId("dir").textContent).toBe("ltr")
+        expect(document.documentElement.lang).toBe("en")
+        expect(document.documentElement.dir).toBe("ltr")
+        expect(localStorage.getItem("sawaa-locale")).toBe("en")
       })
-      expect(document.documentElement.lang).toBe("en")
-      expect(document.documentElement.dir).toBe("ltr")
-      expect(localStorage.getItem("sawaa-locale")).toBe("en")
     })
 
     it("switches back from en to ar and flips dir to rtl", async () => {
@@ -119,10 +118,10 @@ describe("LocaleProvider", () => {
       await waitFor(() => {
         expect(screen.getByTestId("locale").textContent).toBe("ar")
         expect(screen.getByTestId("dir").textContent).toBe("rtl")
+        expect(document.documentElement.lang).toBe("ar")
+        expect(document.documentElement.dir).toBe("rtl")
+        expect(localStorage.getItem("sawaa-locale")).toBe("ar")
       })
-      expect(document.documentElement.lang).toBe("ar")
-      expect(document.documentElement.dir).toBe("rtl")
-      expect(localStorage.getItem("sawaa-locale")).toBe("ar")
     })
 
     it("persists the toggled locale to localStorage", async () => {
@@ -161,9 +160,9 @@ describe("LocaleProvider", () => {
       await waitFor(() => {
         expect(screen.getByTestId("locale").textContent).toBe("en")
         expect(screen.getByTestId("dir").textContent).toBe("ltr")
+        expect(document.documentElement.lang).toBe("en")
+        expect(document.documentElement.dir).toBe("ltr")
       })
-      expect(document.documentElement.lang).toBe("en")
-      expect(document.documentElement.dir).toBe("ltr")
     })
 
     it("restores a previously persisted 'ar' locale after mount", async () => {
@@ -194,9 +193,9 @@ describe("LocaleProvider", () => {
 
       await waitFor(() => {
         expect(screen.getByTestId("locale").textContent).toBe("ar")
+        // Wait for the persistence effect to overwrite the bad value.
+        expect(localStorage.getItem("sawaa-locale")).toBe("ar")
       })
-      // The persistence effect still ran and overwrote the bad value with ar
-      expect(localStorage.getItem("sawaa-locale")).toBe("ar")
     })
   });
 
