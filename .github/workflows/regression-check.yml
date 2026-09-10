@@ -259,6 +259,7 @@ jobs:
           exit 1
         env:
           NODE_ENV: test
+          THROTTLER_DISABLED: 'true'
           PORT: '5200'
 
       - name: Build + boot dashboard (Playwright webServer)

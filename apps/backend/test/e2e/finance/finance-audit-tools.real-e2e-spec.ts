@@ -38,7 +38,9 @@ async function fixtureSnapshot(
   return [client, employee, booking, invoice, payment, refund, intake, form, outbox].map((rows) => rows[0]!);
 }
 
-describe('finance/bookings read-only audit (real database)', () => {
+const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
+
+describeRealE2e('finance/bookings read-only audit (real database)', () => {
   let prisma: ReturnType<typeof createLoggedClient>;
   const clientId = `${PREFIX}client`;
   const employeeId = `${PREFIX}employee`;
@@ -253,10 +255,10 @@ describe('finance/bookings read-only audit (real database)', () => {
       const page = await runAuditCli(['--output', output, '--batch-size', '1'], {
         DATABASE_URL: getRealE2eDatabaseUrl(),
       });
-      expect((await stat(output)).mode & 0o777).toBe(0o600);
       expect(JSON.parse(await readFile(output, 'utf8'))).toMatchObject({
         ruleVersion: page.ruleVersion, checksum: page.checksum,
       });
+      expect((await stat(output)).mode & 0o777).toBe(0o600);
       await expect(runAuditCli(['--output', output, '--batch-size', '1'], {
         DATABASE_URL: getRealE2eDatabaseUrl(),
       })).rejects.toThrow('Refusing to overwrite existing output');

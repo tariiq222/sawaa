@@ -253,7 +253,7 @@ describe('API Client (lib/api.ts)', () => {
 
     const blob = await api.postBlob('/dashboard/ops/reports', { format: 'EXCEL' })
 
-    expect(blob).toBeInstanceOf(Blob)
+    expect(await blob.text()).toBe('xlsx-bytes')
     expect(blob.size).toBe(new TextEncoder().encode('xlsx-bytes').byteLength)
     expect(getAccessToken()).toBe('new-token')
     expect((fetchMock.mock.calls[2][1].headers as Record<string, string>).Authorization).toBe('Bearer new-token')
@@ -273,7 +273,7 @@ describe('API Client (lib/api.ts)', () => {
     firstResponse.resolve(new Response(null, { status: 401 }))
 
     const blob = await download
-    expect(blob).toBeInstanceOf(Blob)
+    expect(await blob.text()).toBe('xlsx-bytes')
     expect(blob.size).toBe(new TextEncoder().encode('xlsx-bytes').byteLength)
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect((fetchMock.mock.calls[1][1].headers as Record<string, string>).Authorization)

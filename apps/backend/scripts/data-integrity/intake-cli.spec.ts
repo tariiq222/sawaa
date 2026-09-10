@@ -37,10 +37,10 @@ describe('intake integrity CLI', () => {
     try {
       await writeExclusiveJson(output, { version: 1, groups: [] });
       expect(JSON.parse(await readFile(output, 'utf8'))).toEqual({ version: 1, groups: [] });
-      expect((await stat(output)).mode & 0o777).toBe(0o600);
       await expect(writeExclusiveJson(output, { version: 1, groups: [{ id: 'changed' }] }))
         .rejects.toThrow('Refusing to overwrite existing output');
       expect(await readFile(output, 'utf8')).toContain('"groups": []');
+      expect((await stat(output)).mode & 0o777).toBe(0o600);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
