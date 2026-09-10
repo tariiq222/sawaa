@@ -34,6 +34,8 @@ jobs:
     name: tag
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -110,14 +112,9 @@ jobs:
           git commit -m "chore(release): record $TAGNAME as latest deployed"
           git push origin main
 
-      - name: Comment on triggering commit
+      - name: Summarize release
         if: steps.skip.outputs.skip == 'false'
         env:
           TAGNAME: ${{ steps.tagname.outputs.name }}
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: release
-          message: |
-            🚢 Tagged as **`${{ env.TAGNAME }}`**.
-            This commit is now considered the "latest deployed" reference
-            for the merge-gate's deploy-state check.
+        run: |
+          printf 'Tagged release **%s**.\n' "$TAGNAME" >> "$GITHUB_STEP_SUMMARY"
