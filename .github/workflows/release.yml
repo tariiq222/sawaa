@@ -54,7 +54,7 @@ jobs:
         run: |
           echo "🟡 [skip release] detected in commit subject — no tag created"
 
-      - name: Compute next tag name (calver: vYYYY.MM.DD.{N})
+      - name: "Compute next tag name (calver: vYYYY.MM.DD.{N})"
         if: steps.skip.outputs.skip == 'false'
         id: tagname
         run: |
