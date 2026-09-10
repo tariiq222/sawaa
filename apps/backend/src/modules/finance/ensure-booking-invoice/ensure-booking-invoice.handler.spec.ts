@@ -140,4 +140,21 @@ describe('EnsureBookingInvoiceHandler', () => {
     expect(result.id).toBe('inv-1');
     expect(result.outstanding).toBe(40000);
   });
+
+  it('fails the outer transaction when its invoice disappeared instead of creating independently', async () => {
+    const { handler, createInvoice } = build();
+    const tx = {
+      booking: { findUnique: jest.fn().mockResolvedValue(buildBooking()) },
+      invoice: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        findUniqueOrThrow: jest.fn(),
+      },
+      payment: { aggregate: jest.fn() },
+    };
+
+    await expect(
+      handler.execute({ bookingId: 'booking-1', transaction: tx as never }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(createInvoice.execute).not.toHaveBeenCalled();
+  });
 });

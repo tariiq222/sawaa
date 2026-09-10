@@ -148,6 +148,60 @@ describe('envValidationSchema', () => {
     }));
   });
 
+  it('defaults both notification outbox controls to disabled', () => {
+    const result = envValidationSchema.validate(baseValidEnv, { abortEarly: false });
+
+    expect(result.error).toBeUndefined();
+    expect(result.value).toEqual(expect.objectContaining({
+      NOTIFICATION_OUTBOX_CAPTURE_ENABLED: false,
+      NOTIFICATION_OUTBOX_DELIVERY_ENABLED: false,
+    }));
+  });
+
+  it('requires a stable notification outbox cutover when capture is enabled', () => {
+    const missing = envValidationSchema.validate(
+      { ...baseValidEnv, NOTIFICATION_OUTBOX_CAPTURE_ENABLED: 'true' },
+      { abortEarly: false },
+    );
+    const configured = envValidationSchema.validate(
+      {
+        ...baseValidEnv,
+        NOTIFICATION_OUTBOX_CAPTURE_ENABLED: 'true',
+        NOTIFICATION_OUTBOX_CUTOVER_AT: '2026-09-05T12:00:00.000Z',
+      },
+      { abortEarly: false },
+    );
+
+    expect(
+      missing.error?.details.some((detail) =>
+        detail.path.includes('NOTIFICATION_OUTBOX_CUTOVER_AT'),
+      ),
+    ).toBe(true);
+    expect(configured.error).toBeUndefined();
+  });
+
+  it('allows a blank cutover only while notification capture is disabled', () => {
+    const disabled = envValidationSchema.validate(
+      { ...baseValidEnv, NOTIFICATION_OUTBOX_CUTOVER_AT: '' },
+      { abortEarly: false },
+    );
+    const enabled = envValidationSchema.validate(
+      {
+        ...baseValidEnv,
+        NOTIFICATION_OUTBOX_CAPTURE_ENABLED: 'true',
+        NOTIFICATION_OUTBOX_CUTOVER_AT: '',
+      },
+      { abortEarly: false },
+    );
+
+    expect(disabled.error).toBeUndefined();
+    expect(
+      enabled.error?.details.some((detail) =>
+        detail.path.includes('NOTIFICATION_OUTBOX_CUTOVER_AT'),
+      ),
+    ).toBe(true);
+  });
+
   it('accepts configured non-sensitive build metadata', () => {
     const result = envValidationSchema.validate({
       ...baseValidEnv,

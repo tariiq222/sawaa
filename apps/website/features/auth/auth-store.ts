@@ -3,7 +3,10 @@
 import type { ClientProfile } from '@sawaa/shared';
 
 const CLIENT_KEY = 'sawa_client';
+const AUTH_SESSION_STATE_KEY = 'sawa_auth_session_state';
+const LOCAL_SIGNED_OUT_COOKIE = 'sawa_local_signed_out';
 const CLIENT_CACHE_TTL_MS = 15 * 60 * 1000;
+export type AuthSessionState = 'enabled' | 'logout-pending' | 'signed-out';
 
 interface StoredClient {
   profile: ClientProfile;
@@ -32,8 +35,23 @@ function writeLocalStorage(key: string, value: string | null): void {
   }
 }
 
+function writeLocalSignedOutHint(signedOut: boolean): void {
+  try {
+    if (typeof document !== 'undefined') {
+      document.cookie = signedOut
+        ? `${LOCAL_SIGNED_OUT_COOKIE}=1; Path=/; Max-Age=86400; SameSite=Lax`
+        : `${LOCAL_SIGNED_OUT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+    }
+  } catch {
+    // The marker only prevents middleware redirect loops; auth still fails
+    // closed when cookies are unavailable.
+  }
+}
+
 // `undefined` = not yet loaded from localStorage; `null` = loaded and absent/expired.
 let storedClient: ClientProfile | null | undefined = undefined;
+let authGeneration = 0;
+let authSessionState: AuthSessionState | undefined;
 const authListeners = new Set<() => void>();
 
 function publishAuthChange(): void {
@@ -69,6 +87,9 @@ export function setClient(client: ClientProfile | null): void {
     publishAuthChange();
     return;
   }
+  authSessionState = 'enabled';
+  writeLocalStorage(AUTH_SESSION_STATE_KEY, null);
+  writeLocalSignedOutHint(false);
   const payload: StoredClient = { profile: client, savedAt: Date.now() };
   writeLocalStorage(CLIENT_KEY, JSON.stringify(payload));
   publishAuthChange();
@@ -82,7 +103,59 @@ export function getClient(): ClientProfile | null {
 }
 
 export function clearAuth(): void {
+  authGeneration += 1;
   setClient(null);
+}
+
+/**
+ * Monotonic fence for async profile reads. A request started before logout
+ * must not restore the browser-side session after local clearing.
+ */
+export function getAuthGeneration(): number {
+  return authGeneration;
+}
+
+/**
+ * Prevent cookie-backed profile reads after a local logout until an explicit
+ * login stores a new client. The marker survives reloads while remote
+ * revocation is still unknown.
+ */
+export function getAuthSessionStateSnapshot(): AuthSessionState {
+  if (authSessionState === undefined) {
+    const storedState = readLocalStorage(AUTH_SESSION_STATE_KEY);
+    authSessionState = storedState === 'logout-pending' || storedState === 'signed-out'
+      ? storedState
+      : 'enabled';
+  }
+  return authSessionState;
+}
+
+export function getServerAuthSessionStateSnapshot(): AuthSessionState {
+  // Defer cookie-backed auth reads until the browser snapshot can check the
+  // durable local logout marker.
+  return 'signed-out';
+}
+
+export function beginLocalLogout(): void {
+  authSessionState = 'logout-pending';
+  writeLocalStorage(AUTH_SESSION_STATE_KEY, authSessionState);
+  clearAuth();
+}
+
+export function completeLocalLogout(): void {
+  markSessionSignedOut();
+}
+
+export function expireLocalSession(): void {
+  markSessionSignedOut();
+  clearAuth();
+}
+
+function markSessionSignedOut(): void {
+  authSessionState = 'signed-out';
+  writeLocalStorage(AUTH_SESSION_STATE_KEY, authSessionState);
+  writeLocalSignedOutHint(true);
+  publishAuthChange();
 }
 
 export function getAuthIdentitySnapshot(): string | null {

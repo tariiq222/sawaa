@@ -29,6 +29,7 @@ import {
   seedClient,
   seedEmployee,
   seedService,
+  setServiceBookingTypes,
   type SeededBooking,
   type SeededClient,
   type SeededEmployee,
@@ -51,6 +52,7 @@ let partialBooking: SeededBooking
 let unpaidInvoice: SeededInvoice
 let partialInvoice: SeededInvoice
 let partialPayment: SeededPayment
+const refundableBookingIds: string[] = []
 let seededClientName = ""
 let seededBranchId = ""
 
@@ -70,7 +72,16 @@ test.beforeAll(async () => {
     nameEn: "Finance Matrix Service",
     durationMins: 45,
     price: SUBTOTAL_HALALAS,
+    skipBookingConfig: true,
   })
+  // Service read responses serialize Decimal prices as strings. Pin a numeric
+  // input here so this production-validation fixture cannot silently lose its
+  // booking config through the shared seed helper's best-effort setup.
+  await setServiceBookingTypes(token, seededService.id, [{
+    deliveryType: "IN_PERSON",
+    durationMins: 45,
+    price: SUBTOTAL_HALALAS,
+  }])
 
   seededEmployee = await seedEmployee(token, {
     name: "موظف المصفوفة المالية",
@@ -118,6 +129,9 @@ test.beforeAll(async () => {
     invoiceId: partialInvoice.id,
     amount: PARTIAL_PAYMENT_HALALAS,
     method: "CASH",
+    // A null gatewayRef keeps this seeded CASH payment on the synchronous
+    // off-gateway refund path used by the dashboard refund flow.
+    gatewayRef: null,
   })
 })
 
@@ -127,6 +141,8 @@ test.afterAll(async () => {
   // claimed as cleaned up here.
   if (partialBooking?.id)
     await cleanupBooking(partialBooking.id, token).catch(() => undefined)
+  for (const bookingId of refundableBookingIds)
+    await cleanupBooking(bookingId, token).catch(() => undefined)
   if (unpaidBooking?.id)
     await cleanupBooking(unpaidBooking.id, token).catch(() => undefined)
   if (seededEmployee?.id)
@@ -139,10 +155,6 @@ test.afterAll(async () => {
 })
 
 test.describe("Finance invoice/payment status matrix", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page, "admin")
-  })
-
   test("keeps an invoice DRAFT and unpaid before any payment is recorded", async () => {
     const invoice = await getInvoice(token, unpaidInvoice.id)
 
@@ -166,6 +178,7 @@ test.describe("Finance invoice/payment status matrix", () => {
   test("shows the partial CASH payment row as 100.00 SAR, not raw 10000 halalas", async ({
     page,
   }) => {
+    await loginAs(page, "admin")
     await gotoFinancePage(page, "/payments", /المدفوعات|Payments/i)
 
     await expect(
@@ -199,10 +212,82 @@ test.describe("Finance invoice/payment status matrix", () => {
       paymentRow.getByText(rawHalalasPattern(PARTIAL_PAYMENT_HALALAS))
     ).toHaveCount(0)
   })
+
+  test("updates the mounted payment row after an off-gateway manual refund", async ({
+    page,
+  }) => {
+    await loginAs(page, "admin")
+    // This case mutates its own audit records. Playwright retries therefore
+    // receive a fresh payment instead of attempting to refund shared setup.
+    const refundBooking = await seedBooking(token, {
+      branchId: seededBranchId,
+      clientId: seededClient.id,
+      employeeId: seededEmployee.id,
+      serviceId: seededService.id,
+      scheduledAt: futureRiyadhIso(2 + refundableBookingIds.length, 9),
+      payAtClinic: true,
+    })
+    refundableBookingIds.push(refundBooking.id)
+    const refundInvoice = await createInvoice(token, {
+      bookingId: refundBooking.id,
+      branchId: seededBranchId,
+      clientId: seededClient.id,
+      employeeId: seededEmployee.id,
+      subtotal: SUBTOTAL_HALALAS,
+      vatRate: VAT_RATE,
+      notes: `isolated refund invoice ${refundBooking.id}`,
+    })
+    const refundPayment = await createPayment(token, {
+      invoiceId: refundInvoice.id,
+      amount: TOTAL_HALALAS,
+      method: "CASH",
+      gatewayRef: null,
+    })
+
+    await gotoFinancePage(page, "/payments", /المدفوعات|Payments/i)
+    const paymentRow = page
+      .getByRole("row")
+      .filter({ hasText: seededClientName })
+      .filter({ hasText: paymentListNumber(refundPayment) })
+      .first()
+
+    await expect(paymentRow).toBeVisible()
+    await paymentRow.getByRole("button", { name: /الإجراءات|Actions/i }).click()
+    await page.getByRole("menuitem", { name: /استرداد|Refund/i }).click()
+
+    const detailDialog = page.getByRole("dialog").filter({
+      has: page.getByRole("heading", { name: /تفاصيل الدفع|Payment Details/i }),
+    })
+    await expect(detailDialog).toBeVisible()
+    await detailDialog.getByRole("button", { name: /^استرجاع$|^Refund$/i }).click()
+    await detailDialog.getByRole("textbox", { name: /السبب|Reason/i })
+      .fill("Finance status matrix manual refund")
+
+    const refundResponsePromise = page.waitForResponse(
+      (response) => response.url().includes(`/payments/${refundPayment.id}/manual-refund`) &&
+        response.request().method() === "PATCH",
+    )
+    await detailDialog.getByRole("button", { name: /^استرجاع$|^Refund$/i }).click()
+    const refundResponse = await refundResponsePromise
+    expect(refundResponse.ok()).toBe(true)
+
+    await expect(detailDialog).toBeHidden()
+    await expect(paymentRow.getByText(sarAmountPattern(TOTAL_HALALAS)).first())
+      .toBeVisible()
+    await expect(paymentRow.getByText(/مُسترجع|Refunded/i)).toBeVisible()
+    await expect(paymentRow.getByText(rawHalalasPattern(TOTAL_HALALAS)))
+      .toHaveCount(0)
+
+    const invoice = await getInvoice(token, refundInvoice.id)
+    expect(invoice.status).toBe("REFUNDED")
+    expect(Number(invoice.total)).toBe(TOTAL_HALALAS)
+  })
 })
 
 async function gotoFinancePage(page: Page, path: "/payments", heading: RegExp) {
-  await page.goto(path, { waitUntil: "domcontentloaded" })
+  // Follow the same client-side navigation as staff. A hard navigation would
+  // restart auth hydration and consume another production refresh window.
+  await page.getByRole("button", { name: /^(المدفوعات|Payments)$/i }).click()
   await expectCurrentPath(page, path)
   await expectNoAppCrash(page)
   await expect(

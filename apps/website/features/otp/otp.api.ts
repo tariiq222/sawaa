@@ -1,17 +1,16 @@
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
 import type { OtpRequestPayload, OtpVerifyPayload, OtpVerifyResponse } from '@sawaa/shared';
 
-import { getApiBase } from '@/lib/api-base';
+import { PublicFetchError, publicFetch } from '@/lib/public-fetch';
 
 export async function requestOtp(payload: OtpRequestPayload): Promise<void> {
-  const res = await fetch(`${getApiBase()}/public/otp/request`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error((err as { message?: string }).message ?? 'Failed to send OTP');
+  try {
+    await publicFetch<void>('/public/otp/request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    throw otpRequestError(error, 'Failed to send OTP');
   }
 }
 
@@ -27,15 +26,38 @@ export async function verifyOtp(
     code,
     purpose,
   };
-  const res = await fetch(`${getApiBase()}/public/otp/verify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error((err as { message?: string }).message ?? 'Invalid OTP code');
+  try {
+    const json = await publicFetch<unknown>('/public/otp/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return unwrapOtpResponse(json);
+  } catch (error) {
+    throw otpRequestError(error, 'Invalid OTP code');
   }
-  const json = await res.json();
-  return (json.data ?? json) as OtpVerifyResponse;
+}
+
+function unwrapOtpResponse(json: unknown): OtpVerifyResponse {
+  if (typeof json === 'object' && json !== null && 'data' in json) {
+    return json.data as OtpVerifyResponse;
+  }
+
+  return json as OtpVerifyResponse;
+}
+
+function otpRequestError(error: unknown, fallback: string): Error {
+  if (!(error instanceof PublicFetchError)) {
+    return error instanceof Error ? error : new Error(fallback);
+  }
+
+  const message = readErrorMessage(error.body);
+  return new Error(message ?? fallback);
+}
+
+function readErrorMessage(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null || !('message' in body)) {
+    return undefined;
+  }
+
+  return typeof body.message === 'string' ? body.message : undefined;
 }

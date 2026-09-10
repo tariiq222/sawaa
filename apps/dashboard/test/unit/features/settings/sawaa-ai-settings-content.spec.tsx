@@ -106,7 +106,7 @@ describe("Sawaa Ai settings", () => {
       saveCredential: true,
     })))
     expect(mutateSave).not.toHaveBeenCalled()
-    expect(screen.getByRole("status")).toHaveTextContent("sawaaAi.saved")
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("sawaaAi.saved"))
   })
 
   it("offers retry when model suggestions fail", () => {

@@ -8,7 +8,10 @@ import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.serv
 describe('PublicMetricsController (e2e)', () => {
   let app: INestApplication;
 
-  const mockAppMetrics = { registry: { metrics: jest.fn() } };
+  const mockAppMetrics = {
+    refreshFinancialMetrics: jest.fn(),
+    registry: { metrics: jest.fn() },
+  };
   const mockDbMetrics = { registry: { metrics: jest.fn() } };
 
   const OLD_ENV = process.env;
@@ -71,6 +74,7 @@ describe('PublicMetricsController (e2e)', () => {
       expect(res.text).toContain('# app metrics');
       expect(res.text).toContain('# db metrics');
       expect(res.headers['content-type']).toContain('text/plain');
+      expect(mockAppMetrics.refreshFinancialMetrics).toHaveBeenCalledTimes(1);
     });
 
     it('returns 401 when source IP not in allowlist', async () => {

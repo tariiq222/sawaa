@@ -63,8 +63,8 @@ jobs:
       JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
       CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
       JWT_SMS_OTP_SECRET: ci-jwt-sms-otp-secret-32chars-long
-    MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
-    AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+      AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
       SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
       ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
       EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
@@ -98,6 +98,9 @@ jobs:
         # api-client, and the openapi snapshot step.
         run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
 
+      - name: Deploy-state regression tests
+        run: node --test scripts/check-deploy-state.test.mjs
+
       - name: Deploy-state consistency
         # Verifies that the candidate merge target is at-or-after the
         # last production release (most recent tag on main). Catches the
@@ -112,10 +115,13 @@ jobs:
         run: pnpm --filter dashboard typecheck && pnpm --filter dashboard test -- --run
 
       - name: Website — typecheck + unit
-        run: pnpm --filter website typecheck && pnpm --filter website test -- --run
+        run: pnpm --filter @sawaa/website typecheck && pnpm --filter @sawaa/website test -- --run
 
       - name: OpenAPI snapshot drift
         run: cd apps/backend && pnpm run openapi:build-and-snapshot && git diff --exit-code -- openapi.json
+
+      - name: OpenAPI documentation coverage ratchet
+        run: pnpm --filter=backend run check:openapi-coverage
 
       - name: api-client endpoint drift
         run: node scripts/check-api-client-drift.mjs
@@ -128,6 +134,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: '8.30.1'
 
       - name: Trivy filesystem scan (HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@v0.31.0

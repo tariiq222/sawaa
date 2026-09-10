@@ -1,7 +1,13 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
+import { ModelPropertiesAccessor } from '@nestjs/swagger/dist/services/model-properties-accessor';
+import { SchemaObjectFactory } from '@nestjs/swagger/dist/services/schema-object-factory';
+import { SwaggerTypesMapper } from '@nestjs/swagger/dist/services/swagger-types-mapper';
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import type { SerializedClient } from '../../../modules/people/clients/client.serializer';
 import {
   ClientResponseDto,
+  CreateClientResponseDto,
   EmployeeResponseDto,
   EmployeeStatsResponseDto,
   ListMetaDto,
@@ -22,16 +28,39 @@ import {
 function makeClient(overrides: Partial<ClientResponseDto> = {}): ClientResponseDto {
   return {
     id: '00000000-0000-0000-0000-000000000000',
+    ref: 1024,
+    userId: '00000000-0000-0000-0000-000000000001',
     name: 'Sara Al-Harbi',
     firstName: 'Sara',
+    middleName: 'Ali',
     lastName: 'Al-Harbi',
     phone: '+966501234567',
     email: 'sara@example.com',
+    emailVerified: new Date('2025-12-31T00:00:00.000Z'),
+    phoneVerified: new Date('2025-12-31T00:00:00.000Z'),
     dateOfBirth: new Date('1990-06-15'),
     gender: 'female',
+    nationality: 'Saudi',
+    nationalId: '1234567890',
+    emergencyName: 'Ahmad Al-Harbi',
+    emergencyPhone: '+966509876543',
+    bloodType: 'A_POS',
+    allergies: 'Penicillin',
+    chronicConditions: 'Type 2 Diabetes',
     isActive: true,
     avatarUrl: 'https://cdn.example.com/avatars/sara.jpg',
+    notes: 'Prefers morning appointments',
+    source: 'REFERRAL',
     accountType: 'full',
+    claimedAt: new Date('2025-12-30T00:00:00.000Z'),
+    deletedAt: null,
+    lastLoginAt: new Date('2026-01-01T00:00:00.000Z'),
+    preferredLocale: 'ar',
+    pushEnabled: true,
+    consentedAt: new Date('2025-12-30T00:00:00.000Z'),
+    consentVersion: '2026-01',
+    lastBooking: { id: 'booking-past', date: '2025-12-15T09:00:00.000Z', status: 'COMPLETED' },
+    nextBooking: { id: 'booking-next', date: '2026-01-15T09:00:00.000Z', status: 'CONFIRMED' },
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     ...overrides,
@@ -65,9 +94,27 @@ function makeEmployee(overrides: Partial<EmployeeResponseDto> = {}): EmployeeRes
 }
 
 describe('ClientResponseDto (output shape)', () => {
+  it('documents every key emitted by serializeClient with scalar metadata', () => {
+    const serializerFixture = makeClient() satisfies SerializedClient;
+    const schemas: Record<string, SchemaObject> = {};
+    const factory = new SchemaObjectFactory(new ModelPropertiesAccessor(), new SwaggerTypesMapper());
+
+    factory.exploreModelSchema(ClientResponseDto, schemas);
+    const schema = schemas['ClientResponseDto'];
+    expect(schema).toBeDefined();
+    if (!schema) throw new Error('ClientResponseDto schema was not generated');
+
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(Object.keys(serializerFixture).sort());
+    expect(schema.required?.sort()).toEqual(Object.keys(serializerFixture).sort());
+    expect(schema.properties?.emailVerified).toMatchObject({ type: 'string', format: 'date-time', nullable: true });
+    expect(schema.properties?.source).toMatchObject({ type: 'string', enum: ['WALK_IN', 'ONLINE', 'REFERRAL', 'WHATSAPP'] });
+    expect(schema.properties?.accountType).toMatchObject({ type: 'string', enum: ['full', 'walk_in'] });
+  });
+
   it('constructs a populated client with all fields populated', () => {
     const c = makeClient();
     expect(c.id).toBe('00000000-0000-0000-0000-000000000000');
+    expect(c.ref).toBe(1024);
     expect(c.name).toBe('Sara Al-Harbi');
     expect(c.firstName).toBe('Sara');
     expect(c.lastName).toBe('Al-Harbi');
@@ -75,25 +122,48 @@ describe('ClientResponseDto (output shape)', () => {
     expect(c.isActive).toBe(true);
     expect(c.accountType).toBe('full');
     expect(c.dateOfBirth).toBeInstanceOf(Date);
+    expect(c.emailVerified).toBeInstanceOf(Date);
   });
 
   it('accepts null for nullable fields (firstName, phone, email, avatarUrl, etc.)', () => {
     const c = makeClient({
       firstName: null,
+      middleName: null,
       lastName: null,
       phone: null,
       email: null,
+      emailVerified: null,
+      phoneVerified: null,
       dateOfBirth: null,
       gender: null,
+      nationality: null,
+      nationalId: null,
+      emergencyName: null,
+      emergencyPhone: null,
+      bloodType: null,
+      allergies: null,
+      chronicConditions: null,
       avatarUrl: null,
+      notes: null,
+      claimedAt: null,
+      lastLoginAt: null,
+      preferredLocale: null,
+      consentedAt: null,
+      consentVersion: null,
+      lastBooking: null,
+      nextBooking: null,
     });
     expect(c.firstName).toBeNull();
+    expect(c.middleName).toBeNull();
     expect(c.lastName).toBeNull();
     expect(c.phone).toBeNull();
     expect(c.email).toBeNull();
     expect(c.dateOfBirth).toBeNull();
     expect(c.gender).toBeNull();
     expect(c.avatarUrl).toBeNull();
+    expect(c.emailVerified).toBeNull();
+    expect(c.lastBooking).toBeNull();
+    expect(c.nextBooking).toBeNull();
   });
 
   it('round-trips through plainToInstance', () => {
@@ -102,6 +172,13 @@ describe('ClientResponseDto (output shape)', () => {
     expect(copy.id).toBe(c.id);
     expect(copy.name).toBe(c.name);
     expect(copy.gender).toBe(c.gender);
+  });
+});
+
+describe('CreateClientResponseDto (output shape)', () => {
+  it('includes the phone-deduplication result returned by create', () => {
+    const response: CreateClientResponseDto = { ...makeClient(), isExisting: true };
+    expect(response.isExisting).toBe(true);
   });
 });
 

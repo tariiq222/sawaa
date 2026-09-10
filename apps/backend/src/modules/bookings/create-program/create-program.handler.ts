@@ -5,6 +5,7 @@ import {
   RlsTransactionService,
 } from '../../../infrastructure/database';
 import { CreateProgramDto } from './create-program.dto';
+import { lockPersonReferences } from '../../../common/database/person-reference-lock.helper';
 
 export interface CreateProgramCommand extends CreateProgramDto {
   createdBy: string;
@@ -32,13 +33,9 @@ export class CreateProgramHandler {
     }
 
     return this.rlsTransaction.withTransaction(async (tx) => {
-      const [department, branch, supervisors] = await Promise.all([
+      const [department, branch] = await Promise.all([
         tx.department.findFirst({ where: { id: cmd.departmentId } }),
         tx.branch.findFirst({ where: { id: cmd.branchId } }),
-        tx.employee.findMany({
-          where: { id: { in: cmd.supervisorIds } },
-          select: { id: true },
-        }),
       ]);
       if (!department) {
         throw new NotFoundException(`Department ${cmd.departmentId} not found`);
@@ -46,6 +43,16 @@ export class CreateProgramHandler {
       if (!branch) {
         throw new NotFoundException(`Branch ${cmd.branchId} not found`);
       }
+
+      await lockPersonReferences(
+        tx,
+        cmd.supervisorIds.map((id) => ({ kind: 'Employee' as const, id })),
+        'reference',
+      );
+      const supervisors = await tx.employee.findMany({
+        where: { id: { in: cmd.supervisorIds } },
+        select: { id: true },
+      });
       if (supervisors.length !== cmd.supervisorIds.length) {
         const found = new Set(supervisors.map((s) => s.id));
         const missing = cmd.supervisorIds.filter((id) => !found.has(id));

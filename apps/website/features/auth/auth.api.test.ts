@@ -12,6 +12,7 @@ const {
   getMyBookingsMock,
   cancelMyBookingMock,
   rescheduleMyBookingMock,
+  apiRequestMock,
   getApiBaseMock,
 } = vi.hoisted(() => ({
   clientLoginMock: vi.fn(),
@@ -24,6 +25,7 @@ const {
   getMyBookingsMock: vi.fn(),
   cancelMyBookingMock: vi.fn(),
   rescheduleMyBookingMock: vi.fn(),
+  apiRequestMock: vi.fn(),
   getApiBaseMock: vi.fn(() => 'http://api.local/api/v1'),
 }));
 
@@ -38,6 +40,7 @@ vi.mock('@sawaa/api-client', () => ({
   getMyBookings: getMyBookingsMock,
   cancelMyBooking: cancelMyBookingMock,
   rescheduleMyBooking: rescheduleMyBookingMock,
+  apiRequest: apiRequestMock,
 }));
 
 vi.mock('@/lib/api-base', () => ({
@@ -49,6 +52,7 @@ beforeEach(() => {
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -79,12 +83,13 @@ const fakeProfile = {
 describe('auth.api', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    apiRequestMock.mockReset();
     getApiBaseMock.mockReturnValue('http://api.local/api/v1');
   });
 
   describe('initialisation', () => {
     it('sets the api base urls on the api-client modules exactly once across calls', async () => {
-      getMeMock.mockResolvedValue(fakeProfile);
+      apiRequestMock.mockResolvedValue(fakeProfile);
       await getMeApi();
       await clientLogoutApi();
       expect(setClientBaseUrlMock).toHaveBeenCalledTimes(1);
@@ -93,10 +98,13 @@ describe('auth.api', () => {
       expect(setMeBaseUrlMock).toHaveBeenCalledWith('http://api.local/api/v1');
     });
 
-    it('exposes getMeApi that calls through to the api-client getMe', async () => {
-      getMeMock.mockResolvedValue(fakeProfile);
+    it('exposes getMeApi through the shared request client with a bounded signal', async () => {
+      apiRequestMock.mockResolvedValue(fakeProfile);
       await getMeApi();
-      expect(getMeMock).toHaveBeenCalledTimes(1);
+      expect(apiRequestMock).toHaveBeenCalledWith('/public/me', {
+        credentials: 'include',
+        signal: expect.any(AbortSignal),
+      });
     });
   });
 
@@ -133,8 +141,25 @@ describe('auth.api', () => {
 
   describe('getMeApi', () => {
     it('returns the current client profile from the api-client', async () => {
-      getMeMock.mockResolvedValue(fakeProfile);
+      apiRequestMock.mockResolvedValue(fakeProfile);
       await expect(getMeApi()).resolves.toEqual(fakeProfile);
+    });
+
+    it('aborts and rejects a profile request that exceeds the auth deadline', async () => {
+      vi.useFakeTimers();
+      let requestSignal: AbortSignal | undefined;
+      apiRequestMock.mockImplementation((_path: string, init?: RequestInit) => {
+        requestSignal = init?.signal ?? undefined;
+        return new Promise((_resolve, reject) => {
+          requestSignal?.addEventListener('abort', () => reject(requestSignal?.reason), { once: true });
+        });
+      });
+
+      const request = expect(getMeApi()).rejects.toMatchObject({ name: 'TimeoutError' });
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      await request;
+      expect(requestSignal?.aborted).toBe(true);
     });
   });
 
@@ -153,34 +178,27 @@ describe('auth.api', () => {
   });
 
   describe('getMyBookingApi', () => {
-    it('hits the public/me/bookings/{id} endpoint with credentials and unwraps { data } envelope', async () => {
+    it('uses the shared API client so expired access cookies take its 401 refresh path', async () => {
       const booking = { id: 'b1', status: 'CONFIRMED' };
-      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ data: booking }) });
+      apiRequestMock.mockResolvedValue(booking);
       await expect(getMyBookingApi('b1')).resolves.toEqual(booking);
-      const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toBe('http://api.local/api/v1/public/me/bookings/b1');
-      expect(init.credentials).toBe('include');
-    });
-
-    it('passes through a bare booking payload (no envelope)', async () => {
-      const booking = { id: 'b2' };
-      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve(booking) });
-      await expect(getMyBookingApi('b2')).resolves.toEqual(booking);
+      expect(apiRequestMock).toHaveBeenCalledWith('/public/me/bookings/b1', {
+        credentials: 'include',
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('URL-encodes the booking id', async () => {
-      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'b3' }) });
+      apiRequestMock.mockResolvedValue({ id: 'b3' });
       await getMyBookingApi('a/b c');
-      const [url] = fetchMock.mock.calls[0];
-      expect(url).toContain(encodeURIComponent('a/b c'));
-      expect(url).not.toContain('a/b c');
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        `/public/me/bookings/${encodeURIComponent('a/b c')}`,
+        { credentials: 'include' },
+      );
     });
 
-    it('throws the backend message on a 4xx response', async () => {
-      fetchMock.mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({ message: 'Booking not found' }),
-      });
+    it('propagates typed errors from the shared API client', async () => {
+      apiRequestMock.mockRejectedValue(new Error('Booking not found'));
       await expect(getMyBookingApi('missing')).rejects.toThrow('Booking not found');
     });
   });
@@ -227,10 +245,32 @@ describe('auth.api', () => {
   });
 
   describe('clientLogoutApi', () => {
-    it('awaits the api-client logout call', async () => {
-      clientLogoutMock.mockResolvedValue(undefined);
+    it('sends logout through the shared request client with a bounded signal', async () => {
+      apiRequestMock.mockResolvedValue(undefined);
       await expect(clientLogoutApi()).resolves.toBeUndefined();
-      expect(clientLogoutMock).toHaveBeenCalledTimes(1);
+      expect(apiRequestMock).toHaveBeenCalledWith('/public/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({}),
+        signal: expect.any(AbortSignal),
+      });
+    });
+
+    it('aborts and rejects logout when the revocation request hangs', async () => {
+      vi.useFakeTimers();
+      let requestSignal: AbortSignal | undefined;
+      apiRequestMock.mockImplementation((_path: string, init?: RequestInit) => {
+        requestSignal = init?.signal ?? undefined;
+        return new Promise((_resolve, reject) => {
+          requestSignal?.addEventListener('abort', () => reject(requestSignal?.reason), { once: true });
+        });
+      });
+
+      const request = expect(clientLogoutApi()).rejects.toMatchObject({ name: 'TimeoutError' });
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      await request;
+      expect(requestSignal?.aborted).toBe(true);
     });
   });
 

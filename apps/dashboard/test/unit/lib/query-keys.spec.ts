@@ -70,6 +70,14 @@ describe("queryKeys", () => {
     })
   })
 
+  describe("packagePurchases", () => {
+    it("client scope matches every filtered query for one client", () => {
+      expect(queryKeys.packagePurchases.client("cl-1")).toEqual(
+        ["package-purchases", "client", "cl-1"],
+      )
+    })
+  })
+
   describe("chatbot", () => {
     it("sessions.detail includes session id", () => {
       expect(queryKeys.chatbot.sessions.detail("sess-1")).toEqual(

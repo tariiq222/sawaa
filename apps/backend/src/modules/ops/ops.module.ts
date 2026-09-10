@@ -30,6 +30,7 @@ import { OutboxPublisherCron } from './cron-tasks/outbox-publisher.cron';
 import { AuthenticaBalanceCheckCron } from './cron-tasks/authentica-balance-check.cron';
 import { ListTerminalFailedOutboxHandler } from './outbox/list-terminal-failed-outbox.handler';
 import { RetryFailedOutboxEventHandler } from './outbox/retry-failed-outbox-event.handler';
+import { NotificationOutboxModule } from '../comms/notification-outbox/notification-outbox.module';
 
 const handlers = [
   LogActivityHandler,
@@ -66,7 +67,7 @@ const cronHandlers = [
 // FinanceModule is imported to make MoyasarApiClient available to
 // ReconcileRefundsCron. MoyasarApiClient is exported by FinanceModule.
 @Module({
-  imports: [DatabaseModule, MessagingModule, TerminusModule, BookingsModule, FinanceModule, EmailModule, TelemetryModule],
+  imports: [DatabaseModule, MessagingModule, TerminusModule, BookingsModule, FinanceModule, EmailModule, TelemetryModule, NotificationOutboxModule],
   controllers: [DashboardOpsController],
   providers: [...handlers, ...cronHandlers, RedisService, CronTasksService, RunOrphanAuditHandler],
   exports: [...handlers, RunOrphanAuditHandler],

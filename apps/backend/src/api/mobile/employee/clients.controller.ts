@@ -6,29 +6,14 @@ import {
   ApiNotFoundResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import type { Prisma } from '@prisma/client';
 import { ApiStandardResponses } from '../../../common/swagger';
 import { ClientResponseDto } from '../../dashboard/dto/people-response.dto';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
-import { PrismaService } from '../../../infrastructure/database';
-import { resolveEmployeeId } from './resolve-employee-id.helper';
-
-const employeeClientSelect = {
-  id: true,
-  name: true,
-  firstName: true,
-  lastName: true,
-  phone: true,
-  email: true,
-  gender: true,
-  dateOfBirth: true,
-  avatarUrl: true,
-  isActive: true,
-  createdAt: true,
-  updatedAt: true,
-} satisfies Prisma.ClientSelect;
+import { ListEmployeeClientsHandler } from '../../../modules/people/clients/list-employee-clients.handler';
+import { GetEmployeeClientHistoryHandler } from '../../../modules/people/clients/get-employee-client-history.handler';
+import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 
 export class EmployeeClientListQuery {
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -48,7 +33,11 @@ export class EmployeeClientListQuery {
 @UseGuards(JwtGuard, CaslGuard)
 @Controller('mobile/employee/clients')
 export class MobileEmployeeClientsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly resolveEmployeeId: ResolveEmployeeIdHandler,
+    private readonly listEmployeeClients: ListEmployeeClientsHandler,
+    private readonly getEmployeeClientHistory: GetEmployeeClientHistoryHandler,
+  ) {}
 
   @CheckPermissions({ action: 'read', subject: 'Client' })
   @Get()
@@ -80,40 +69,16 @@ export class MobileEmployeeClientsController {
   ) {
     const page = q.page ?? 1;
     const limit = q.limit ?? 20;
-    const employeeId = await this.resolveEmployeeId(user);
-
-    const clientIdRows = await this.prisma.booking.findMany({
-      where: { employeeId },
-      select: { clientId: true },
-      distinct: ['clientId'],
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
     });
-
-    const ids = clientIdRows.map((b) => b.clientId);
-
-    const where = {
-      id: { in: ids },
-      ...(q.search
-        ? {
-            OR: [
-              { name: { contains: q.search, mode: 'insensitive' as const } },
-              { phone: { contains: q.search, mode: 'insensitive' as const } },
-            ],
-          }
-        : {}),
-    };
-
-    const [data, total] = await Promise.all([
-      this.prisma.client.findMany({
-        where,
-        select: employeeClientSelect,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { name: 'asc' },
-      }),
-      this.prisma.client.count({ where }),
-    ]);
-
-    return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    return this.listEmployeeClients.execute({
+      employeeId,
+      page,
+      limit,
+      search: q.search,
+    });
   }
 
   @CheckPermissions({ action: 'read', subject: 'Client' })
@@ -142,16 +107,10 @@ export class MobileEmployeeClientsController {
     @CurrentUser() user: JwtUser,
     @Param('clientId', ParseUUIDPipe) clientId: string,
   ) {
-    const employeeId = await this.resolveEmployeeId(user);
-
-    return this.prisma.booking.findMany({
-      where: { employeeId, clientId },
-      orderBy: { scheduledAt: 'desc' },
-      take: 20,
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
     });
-  }
-
-  private async resolveEmployeeId(user: JwtUser): Promise<string> {
-    return resolveEmployeeId(this.prisma, user);
+    return this.getEmployeeClientHistory.execute({ employeeId, clientId });
   }
 }

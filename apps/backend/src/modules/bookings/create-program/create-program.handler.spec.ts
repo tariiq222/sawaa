@@ -26,6 +26,7 @@ describe('CreateProgramHandler', () => {
 
   beforeEach(async () => {
     tx = {
+      $queryRaw: jest.fn(async (_strings: TemplateStringsArray, id: string) => [{ id, isActive: true }]),
       department: { findFirst: jest.fn().mockResolvedValue({ id: 'd-1' }) },
       branch: { findFirst: jest.fn().mockResolvedValue({ id: 'b-1' }) },
       employee: {

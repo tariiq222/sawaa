@@ -20,6 +20,7 @@ import type { NextRequest } from 'next/server'
 
 const PROTECTED_PATHS = ['/account', '/booking/confirm']
 const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password']
+const LOCAL_SIGNED_OUT_COOKIE = 'sawa_local_signed_out'
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
@@ -95,7 +96,12 @@ export function middleware(request: NextRequest): NextResponse {
   // 1. Auth routing (existing behavior).
   const { pathname } = request.nextUrl
   const accessToken = request.cookies.get('client_access_token')?.value
-  const isAuthenticated = Boolean(accessToken)
+  // A terminal client-auth response can prove the session unusable before an
+  // expired httpOnly access-cookie hint disappears. This non-authoritative,
+  // client-set marker may only force the signed-out path; it cannot grant
+  // access to a protected route.
+  const locallySignedOut = request.cookies.get(LOCAL_SIGNED_OUT_COOKIE)?.value === '1'
+  const isAuthenticated = Boolean(accessToken) && !locallySignedOut
 
   if (isProtectedPath(pathname) && !isAuthenticated) {
     const loginUrl = new URL('/login', request.url)

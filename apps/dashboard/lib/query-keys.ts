@@ -9,6 +9,7 @@ export const queryKeys = {
   /* ─── Bookings ─── */
   bookings: {
     all: ["bookings"] as const,
+    lists: () => ["bookings", "list"] as const,
     list: (filters?: object) => ["bookings", "list", filters] as const,
     detail: (id: string) => ["bookings", "detail", id] as const,
     statusLog: (id: string) => ["bookings", "status-log", id] as const,
@@ -116,15 +117,19 @@ export const queryKeys = {
 
   /* ─── Reports ─── */
   reports: {
+    overviewFamily: () => ["reports", "overview"] as const,
     overview: (filters?: object) => ["reports", "overview", filters] as const,
     dashboardHome: () => ["reports", "dashboard-home"] as const,
+    revenueFamily: () => ["reports", "revenue"] as const,
     revenue: (filters?: object) => ["reports", "revenue", filters] as const,
+    bookingsFamily: () => ["reports", "bookings"] as const,
     bookings: (filters?: object) => ["reports", "bookings", filters] as const,
     clients: (filters?: object) => ["reports", "clients", filters] as const,
     practitioners: (filters?: object) =>
       ["reports", "practitioners", filters] as const,
     services: (filters?: object) => ["reports", "services", filters] as const,
     ratings: (filters?: object) => ["reports", "ratings", filters] as const,
+    employeeFamily: (id: string) => ["reports", "employee", id] as const,
     employee: (id: string, filters?: object) =>
       ["reports", "employee", id, filters] as const,
   },
@@ -263,6 +268,8 @@ export const queryKeys = {
   /* ─── Package Purchases (Phase 2 — reception manual sale + balances) ─── */
   packagePurchases: {
     all: ["package-purchases"] as const,
+    client: (clientId: string) =>
+      ["package-purchases", "client", clientId] as const,
     byClient: (clientId: string, filters?: object) =>
       ["package-purchases", "client", clientId, filters ?? {}] as const,
   },

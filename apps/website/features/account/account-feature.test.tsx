@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { ClientProfile } from '@sawaa/shared';
 
@@ -7,11 +7,15 @@ const pushMock = vi.fn();
 const useCurrentClientMock = vi.fn();
 const clientLogoutApiMock = vi.fn();
 const clearAuthMock = vi.fn();
+const confirmLogoutMock = vi.fn();
 
 vi.mock('@/features/auth/public', () => ({
-  useCurrentClient: () => useCurrentClientMock(),
+  useCurrentClient: () => ({
+    clearSession: clearAuthMock,
+    confirmLogout: confirmLogoutMock,
+    ...useCurrentClientMock(),
+  }),
   clientLogoutApi: () => clientLogoutApiMock(),
-  clearAuth: () => clearAuthMock(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -68,6 +72,11 @@ describe('AccountFeature', () => {
     useCurrentClientMock.mockReset();
     clientLogoutApiMock.mockReset();
     clearAuthMock.mockReset();
+    confirmLogoutMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('renders the loading placeholder when isLoading is true', () => {
@@ -77,12 +86,11 @@ describe('AccountFeature', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('redirects to /login and renders placeholder when error is present after loading', () => {
+  it('shows retry without redirecting when a transient error occurs before a profile is cached', () => {
     useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: 'boom', refetch: vi.fn() });
     render(withLocale('en', <AccountFeature locale="en" />));
-    expect(pushMock).toHaveBeenCalledWith('/login');
-    // Still renders a non-crashing placeholder
-    expect(screen.getByText('Loading...')).toBeTruthy();
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toBeTruthy();
   });
 
   it('redirects to /login when client is null after loading', () => {
@@ -90,6 +98,23 @@ describe('AccountFeature', () => {
     render(withLocale('en', <AccountFeature locale="en" />));
     expect(pushMock).toHaveBeenCalledWith('/login');
     expect(screen.getByText('Loading...')).toBeTruthy();
+  });
+
+  it('keeps a transient profile error retryable without redirecting to login', () => {
+    const refetchMock = vi.fn();
+    useCurrentClientMock.mockReturnValue({
+      client: fakeClient,
+      isLoading: false,
+      error: 'temporary outage',
+      refetch: refetchMock,
+    });
+    render(withLocale('en', <AccountFeature locale="en" />));
+
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    fireEvent.click(retry);
+    expect(refetchMock).toHaveBeenCalledOnce();
   });
 
   it('renders profile name, email and phone when client is present', () => {
@@ -161,7 +186,98 @@ describe('AccountFeature', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign out/i }));
     await waitFor(() => expect(clientLogoutApiMock).toHaveBeenCalled());
     expect(clearAuthMock).toHaveBeenCalled();
+    expect(confirmLogoutMock).toHaveBeenCalledOnce();
     expect(pushMock).toHaveBeenCalledWith('/login');
+  });
+
+  it('clears local auth promptly and stays on the page when revocation remains unknown', async () => {
+    vi.useFakeTimers();
+    useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
+    clientLogoutApiMock.mockReturnValue(new Promise<void>(() => undefined));
+    render(withLocale('en', <AccountFeature locale="en" />));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /sign out/i }));
+      await Promise.resolve();
+    });
+
+    expect(clientLogoutApiMock).toHaveBeenCalledOnce();
+    expect(clearAuthMock).toHaveBeenCalledOnce();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.queryByText(/signed out successfully/i)).toBeNull();
+  });
+
+  it('treats logout 401 as known signed out', async () => {
+    useCurrentClientMock.mockReturnValue({
+      client: fakeClient,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    clientLogoutApiMock.mockRejectedValue(Object.assign(new Error('invalid session'), { status: 401 }));
+
+    render(withLocale('en', <AccountFeature locale="en" />));
+    fireEvent.click(screen.getByRole('button', { name: /sign out/i }));
+
+    await waitFor(() => expect(confirmLogoutMock).toHaveBeenCalledOnce());
+    expect(pushMock).toHaveBeenCalledWith('/login');
+    expect(screen.queryByText('Your local session was cleared, but server sign-out could not be confirmed.')).toBeNull();
+  });
+
+  it('keeps a logout 403 recoverable because it may be a CSRF rejection', async () => {
+    useCurrentClientMock.mockReturnValue({
+      client: fakeClient,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    clientLogoutApiMock.mockRejectedValue(Object.assign(new Error('csrf rejected'), { status: 403 }));
+
+    render(withLocale('en', <AccountFeature locale="en" />));
+    fireEvent.click(screen.getByRole('button', { name: /sign out/i }));
+
+    await waitFor(() => expect(screen.getByRole('status')).toBeTruthy());
+    expect(confirmLogoutMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
+  });
+
+  it('keeps logout recovery visible after remount while auth reads are blocked', () => {
+    useCurrentClientMock.mockReturnValue({
+      client: null,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      sessionReadBlocked: true,
+    });
+
+    render(withLocale('en', <AccountFeature locale="en" />));
+
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
+  });
+
+  it('redirects terminally expired auth to login without showing logout recovery', () => {
+    useCurrentClientMock.mockReturnValue({
+      client: null,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      sessionReadBlocked: false,
+    });
+
+    render(withLocale('en', <AccountFeature locale="en" />));
+
+    expect(pushMock).toHaveBeenCalledWith('/login');
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   describe('add-email notice', () => {

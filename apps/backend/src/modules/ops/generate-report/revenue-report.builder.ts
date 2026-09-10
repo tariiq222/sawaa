@@ -1,12 +1,7 @@
 import { PrismaService } from '../../../infrastructure/database';
-import { PaymentStatus, Prisma, RefundStatus } from '@prisma/client';
-
-export interface RevenueReportParams {
-  from: Date;
-  to: Date;
-  branchId?: string;
-  employeeId?: string;
-}
+import { PaymentStatus, Prisma } from '@prisma/client';
+import { buildRevenueReportQuery, type RevenueReportParams } from './revenue-report-query.helper';
+export type { RevenueReportParams } from './revenue-report-query.helper';
 
 export interface RevenueReportResult {
   totalRevenue: number;
@@ -38,51 +33,28 @@ export async function buildRevenueReport(
   prisma: PrismaService,
   params: RevenueReportParams,
 ): Promise<RevenueReportResult> {
-  const { from, to, branchId, employeeId } = params;
+  const query = buildRevenueReportQuery(params);
 
-  const bookingWhere = {
-    scheduledAt: { gte: from, lte: to },
-    ...(branchId ? { branchId } : {}),
-    ...(employeeId ? { employeeId } : {}),
-  };
-
-  const invoiceWhere = {
-    ...(branchId ? { branchId } : {}),
-    ...(employeeId ? { employeeId } : {}),
-  };
-  const hasInvoiceFilter = Object.keys(invoiceWhere).length > 0;
-
-  const [totalBookings, payments, refunds, redemptions, recentPaymentsRaw] =
+  const [paymentStatusRaw, paymentMethodRaw, paymentDayRaw, refundRaw, bookingRaw, redemptions, recentPaymentsRaw] =
     await Promise.all([
-      prisma.booking.count({ where: bookingWhere }),
+      prisma.$queryRaw<Array<{ status: string; amount: unknown; count: unknown }>>(
+        query.paymentStatusAggregate,
+      ),
+      prisma.$queryRaw<Array<{ method: string; amount: unknown; count: unknown }>>(
+        query.paymentMethodAggregate,
+      ),
+      prisma.$queryRaw<Array<{ date: string; amount: unknown; count: unknown }>>(
+        query.paymentDayAggregate,
+      ),
+      prisma.$queryRaw<Array<{ amount: unknown }>>(query.refundAggregate),
+      prisma.$queryRaw<Array<{ total: unknown; avgDurationMins: unknown }>>(
+        query.bookingAggregate,
+      ),
+      prisma.$queryRaw<Array<{ couponId: string; uses: unknown; discount: unknown }>>(
+        query.couponAggregate,
+      ),
       prisma.payment.findMany({
-        where: {
-          createdAt: { gte: from, lte: to },
-          ...(hasInvoiceFilter ? { invoice: { is: invoiceWhere } } : {}),
-        },
-        select: {
-          amount: true,
-          method: true,
-          status: true,
-          createdAt: true,
-        },
-      }),
-      prisma.refundRequest.findMany({
-        where: {
-          createdAt: { gte: from, lte: to },
-          status: RefundStatus.COMPLETED,
-        },
-        select: { amount: true },
-      }),
-      prisma.couponRedemption.findMany({
-        where: { redeemedAt: { gte: from, lte: to } },
-        select: { couponId: true, discount: true },
-      }),
-      prisma.payment.findMany({
-        where: {
-          createdAt: { gte: from, lte: to },
-          ...(hasInvoiceFilter ? { invoice: { is: invoiceWhere } } : {}),
-        },
+        where: query.paymentWhere,
         orderBy: { createdAt: 'desc' },
         take: 10,
         select: {
@@ -101,53 +73,22 @@ export async function buildRevenueReport(
       }),
     ]);
 
-  let totalRevenueDec = new Prisma.Decimal(0);
-  const methodMapDec = new Map<string, { amountDec: Prisma.Decimal; count: number }>();
-  const statusMapDec = new Map<
-    PaymentStatus,
-    { amountDec: Prisma.Decimal; count: number }
-  >();
-  const dayMapDec = new Map<string, { amountDec: Prisma.Decimal; count: number }>();
+  const asDecimal = (value: unknown) => new Prisma.Decimal(String(value ?? 0));
+  const asInt = (value: unknown) =>
+    typeof value === 'bigint' ? Number(value) : Number(value ?? 0);
+  const asHalalas = (value: unknown) =>
+    asDecimal(value).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP).toNumber();
 
-  for (const p of payments) {
-    const amountDec = new Prisma.Decimal(p.amount.toString());
+  const totalRevenueDec = paymentMethodRaw.reduce(
+    (sum, row) => sum.plus(asDecimal(row.amount)),
+    new Prisma.Decimal(0),
+  );
+  const refundsTotalDec = asDecimal(refundRaw[0]?.amount);
+  const totalBookings = asInt(bookingRaw[0]?.total);
 
-    const sEntry = statusMapDec.get(p.status) ?? {
-      amountDec: new Prisma.Decimal(0),
-      count: 0,
-    };
-    sEntry.amountDec = sEntry.amountDec.plus(amountDec);
-    sEntry.count += 1;
-    statusMapDec.set(p.status, sEntry);
-
-    if (p.status === PaymentStatus.COMPLETED) {
-      totalRevenueDec = totalRevenueDec.plus(amountDec);
-      const mEntry = methodMapDec.get(p.method) ?? {
-        amountDec: new Prisma.Decimal(0),
-        count: 0,
-      };
-      mEntry.amountDec = mEntry.amountDec.plus(amountDec);
-      mEntry.count += 1;
-      methodMapDec.set(p.method, mEntry);
-      const day = p.createdAt.toISOString().slice(0, 10);
-      const dEntry = dayMapDec.get(day) ?? {
-        amountDec: new Prisma.Decimal(0),
-        count: 0,
-      };
-      dEntry.amountDec = dEntry.amountDec.plus(amountDec);
-      dEntry.count += 1;
-      dayMapDec.set(day, dEntry);
-    }
-  }
-
-  let refundsTotalDec = new Prisma.Decimal(0);
-  for (const r of refunds) {
-    refundsTotalDec = refundsTotalDec.plus(new Prisma.Decimal(r.amount.toString()));
-  }
-
-  const totalRevenue = totalRevenueDec.toNumber();
-  const refundsTotal = refundsTotalDec.toNumber();
-  const netRevenue = totalRevenueDec.minus(refundsTotalDec).toNumber();
+  const totalRevenue = asHalalas(totalRevenueDec);
+  const refundsTotal = asHalalas(refundsTotalDec);
+  const netRevenue = asHalalas(totalRevenueDec.minus(refundsTotalDec));
 
   const averagePerBooking =
     totalBookings > 0
@@ -157,22 +98,8 @@ export async function buildRevenueReport(
           .toNumber()
       : 0;
 
-  const couponAgg = new Map<
-    string,
-    { uses: number; discountDec: Prisma.Decimal }
-  >();
-  for (const r of redemptions) {
-    const entry = couponAgg.get(r.couponId) ?? {
-      uses: 0,
-      discountDec: new Prisma.Decimal(0),
-    };
-    entry.uses += 1;
-    entry.discountDec = entry.discountDec.plus(
-      new Prisma.Decimal(r.discount.toString()),
-    );
-    couponAgg.set(r.couponId, entry);
-  }
-  const couponIds = [...couponAgg.keys()];
+  const couponIds = redemptions.map((row) => row.couponId);
+  const couponAgg = new Map(redemptions.map((row) => [row.couponId, row]));
   const coupons = couponIds.length
     ? await prisma.coupon.findMany({
         where: { id: { in: couponIds } },
@@ -188,8 +115,8 @@ export async function buildRevenueReport(
       const expired = rec?.expiresAt ? rec.expiresAt < now : false;
       return {
         code: rec?.code ?? '',
-        uses: agg.uses,
-        discountAmount: agg.discountDec.toNumber(),
+        uses: asInt(agg.uses),
+        discountAmount: asHalalas(agg.discount),
         isActive: rec?.isActive === true && !expired,
       };
     })
@@ -269,23 +196,21 @@ export async function buildRevenueReport(
     totalBookings,
     averagePerBooking,
     refundsTotal,
-    byMethod: [...methodMapDec.entries()].map(([method, v]) => ({
-      method,
-      amount: v.amountDec.toNumber(),
-      count: v.count,
+    byMethod: paymentMethodRaw.map((row) => ({
+      method: row.method,
+      amount: asHalalas(row.amount),
+      count: asInt(row.count),
     })),
-    byStatus: [...statusMapDec.entries()].map(([status, v]) => ({
-      status,
-      amount: v.amountDec.toNumber(),
-      count: v.count,
+    byStatus: paymentStatusRaw.map((row) => ({
+      status: row.status as PaymentStatus,
+      amount: asHalalas(row.amount),
+      count: asInt(row.count),
     })),
-    byDay: [...dayMapDec.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, v]) => ({
-        date,
-        amount: v.amountDec.toNumber(),
-        count: v.count,
-      })),
+    byDay: paymentDayRaw.map((row) => ({
+      date: row.date,
+      amount: asHalalas(row.amount),
+      count: asInt(row.count),
+    })),
     couponsUsed,
     recentPayments,
   };

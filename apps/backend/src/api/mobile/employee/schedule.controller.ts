@@ -10,8 +10,7 @@ import { ApiStandardResponses } from '../../../common/swagger';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
-import { PrismaService } from '../../../infrastructure/database';
-import { resolveEmployeeId } from './resolve-employee-id.helper';
+import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import {
   UpdateAvailabilityHandler,
@@ -46,7 +45,7 @@ export class UpdateAvailabilityBody {
 @Controller('mobile/employee/schedule')
 export class MobileEmployeeScheduleController {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly resolveEmployeeId: ResolveEmployeeIdHandler,
     private readonly listBookings: ListBookingsHandler,
     private readonly updateAvailability: UpdateAvailabilityHandler,
   ) {}
@@ -68,7 +67,10 @@ export class MobileEmployeeScheduleController {
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   async today(@CurrentUser() user: JwtUser) {
     const { start: today, end: tomorrow } = todayRangeInTz();
-    const employeeId = await resolveEmployeeId(this.prisma, user);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
     return this.listBookings.execute({
       employeeId,
       fromDate: today,
@@ -101,7 +103,10 @@ export class MobileEmployeeScheduleController {
     @CurrentUser() user: JwtUser,
     @Query() q: EmployeeScheduleQuery,
   ) {
-    const employeeId = await resolveEmployeeId(this.prisma, user);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
     return this.listBookings.execute({
       employeeId,
       fromDate: startOfDayInTz(q.fromDate),
@@ -129,7 +134,10 @@ export class MobileEmployeeScheduleController {
     @CurrentUser() user: JwtUser,
     @Body() body: UpdateAvailabilityBody,
   ) {
-    const employeeId = await resolveEmployeeId(this.prisma, user);
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
     return this.updateAvailability.execute({
       employeeId,
       windows: body.windows,

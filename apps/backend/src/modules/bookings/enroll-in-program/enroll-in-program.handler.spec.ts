@@ -20,7 +20,12 @@ describe('EnrollInProgramHandler', () => {
 
   beforeEach(async () => {
     tx = {
-      $queryRaw: jest.fn().mockResolvedValue(undefined),
+      $queryRaw: jest.fn(async (strings: TemplateStringsArray, id: string) => {
+        const sql = strings.join(' ');
+        if (sql.includes('"Client"')) return [{ id, isActive: true, deletedAt: null }];
+        if (sql.includes('"Employee"')) return [{ id, isActive: true }];
+        return [];
+      }),
       $executeRaw: jest.fn().mockResolvedValue(undefined),
       program: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),

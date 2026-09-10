@@ -68,6 +68,50 @@ jest.mock('./excel-export.builder', () => ({
 }));
 
 describe('GenerateReportHandler', () => {
+  it('normalizes date-only REVENUE ranges to full Riyadh days, including comparison', async () => {
+    const prisma = buildPrisma();
+    const revenueBuilder = jest.requireMock('./revenue-report.builder').buildRevenueReport as jest.Mock;
+    revenueBuilder.mockClear();
+    const handler = new GenerateReportHandler(prisma as never);
+
+    await handler.execute({
+      type: ReportType.REVENUE,
+      from: '2026-01-01',
+      to: '2026-01-31',
+      compareWithPrevious: true,
+      requestedBy: 'user-1',
+    });
+
+    expect(revenueBuilder).toHaveBeenNthCalledWith(1, prisma, expect.objectContaining({
+      from: new Date('2026-01-01T00:00:00+03:00'),
+      toExclusive: new Date('2026-02-01T00:00:00+03:00'),
+    }));
+    expect(revenueBuilder).toHaveBeenNthCalledWith(2, prisma, expect.objectContaining({
+      from: new Date('2025-12-01T00:00:00+03:00'),
+      toExclusive: new Date('2026-01-01T00:00:00+03:00'),
+    }));
+  });
+
+  it('preserves explicit REVENUE instants while swapping reversed inputs', async () => {
+    const prisma = buildPrisma();
+    const revenueBuilder = jest.requireMock('./revenue-report.builder').buildRevenueReport as jest.Mock;
+    revenueBuilder.mockClear();
+    const handler = new GenerateReportHandler(prisma as never);
+    const early = '2026-01-01T00:00:00.000Z';
+    const late = '2026-01-02T12:30:00.000Z';
+
+    await handler.execute({
+      type: ReportType.REVENUE,
+      from: late,
+      to: early,
+      requestedBy: 'user-1',
+    });
+
+    expect(revenueBuilder).toHaveBeenCalledWith(prisma, expect.objectContaining({
+      from: new Date(early),
+      toExclusive: new Date(late),
+    }));
+  });
   it('auto-swaps dates when from > to', async () => {
     const prisma = buildPrisma();
     const handler = new GenerateReportHandler(prisma as never);
@@ -158,6 +202,29 @@ describe('GenerateReportHandler', () => {
     });
     expect(result.status).toBe('COMPLETED');
     expect(result.data).toMatchObject({ previous: expect.any(Object) });
+  });
+
+  it('preserves inclusive comparison boundaries for non-REVENUE reports', async () => {
+    const prisma = buildPrisma();
+    const overviewBuilder = jest.requireMock('./overview-report.builder').buildOverviewReport as jest.Mock;
+    overviewBuilder.mockClear();
+    const handler = new GenerateReportHandler(prisma as never);
+    const from = new Date('2026-01-01T00:00:00.000Z');
+    const to = new Date('2026-01-31T23:59:59.999Z');
+
+    await handler.execute({
+      type: ReportType.OVERVIEW,
+      from: from.toISOString(),
+      to: to.toISOString(),
+      compareWithPrevious: true,
+      requestedBy: 'user-1',
+    });
+
+    expect(overviewBuilder).toHaveBeenNthCalledWith(1, prisma, expect.objectContaining({ from, to }));
+    expect(overviewBuilder).toHaveBeenNthCalledWith(2, prisma, expect.objectContaining({
+      from: new Date('2025-12-01T00:00:00.000Z'),
+      to: new Date('2025-12-31T23:59:59.999Z'),
+    }));
   });
 
   it('returns excelBuffer when format is EXCEL', async () => {

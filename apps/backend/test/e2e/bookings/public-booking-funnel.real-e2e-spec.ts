@@ -598,8 +598,9 @@ describeRealE2e(
       });
 
       it("GET /public/employees/:id/availability/days returns a day-strip probe", async () => {
-        const today = new Date();
-        const startDate = ymd(today);
+        const tomorrow = new Date();
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        const startDate = ymd(tomorrow);
         const res = await api()
           .get(
             `/api/v1/public/employees/${ctx.publicEmployeeId}/availability/days`,
@@ -637,7 +638,7 @@ describeRealE2e(
         expect(res.status).toBe(401);
       });
 
-      it("happy path: creates a Booking with snapshots + matching ISSUED Invoice (real DB writes)", async () => {
+      it("happy path: creates a Booking with snapshots + matching DRAFT Invoice (real DB writes)", async () => {
         // Pick a slot the handler's availability probe will return. We use
         // 14:00 on the next matching day — well past the 60-min min lead
         // and inside the 08:00–22:00 business window.
@@ -668,7 +669,7 @@ describeRealE2e(
         ctx.bookingIds.push(bookingId);
 
         // The create handler ALWAYS returns invoiceId; ONLINE bookings
-        // start as AWAITING_PAYMENT with an ISSUED invoice.
+        // start as AWAITING_PAYMENT with a DRAFT invoice until payment.
         const invoiceId = res.body.invoiceId as string;
         expect(invoiceId).toMatch(/^[0-9a-f-]{36}$/);
         ctx.invoiceIds.push(invoiceId);
@@ -690,13 +691,13 @@ describeRealE2e(
         // expiresAt is set for AWAITING_PAYMENT bookings (15-min window).
         expect(persisted!.expiresAt).not.toBeNull();
 
-        // ── Invoice: ISSUED, totals computed against 15% VAT.
+        // ── Invoice: DRAFT, totals computed against 15% VAT.
         // 30000 halalas subtotal + 15% VAT = 34500 halalas total.
         const invoice = await prisma.invoice.findUnique({
           where: { id: invoiceId },
         });
         expect(invoice).not.toBeNull();
-        expect(invoice!.status).toBe("ISSUED");
+        expect(invoice!.status).toBe("DRAFT");
         expect(invoice!.bookingId).toBe(bookingId);
         expect(Number(invoice!.subtotal)).toBe(30_000);
         expect(Number(invoice!.vatAmt)).toBe(4_500);

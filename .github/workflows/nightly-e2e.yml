@@ -96,8 +96,8 @@ jobs:
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
-         MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
-         AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
           SUPER_ADMIN_PASSWORD: SuperAdmin@123456
 
@@ -270,3 +270,70 @@ jobs:
           MINIO_SECRET_KEY: minioadmin123
           MINIO_BUCKET: sawaa-test
           MINIO_USE_SSL: false
+
+  # Keep the full real-database suite above and run the transport contract in
+  # its own isolated Redis namespace. The test may stop only this container
+  # during its controlled post-commit fault injection.
+  backend-outbox-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Start dedicated test Redis
+        run: |
+          redis_id=$(docker run -d --name sawaa-safe-ci-redis --label sawaa.test=true -p 35454:6379 redis:7-alpine)
+          echo "OUTBOX_TEST_REDIS_CONTAINER=$redis_id" >> "$GITHUB_ENV"
+          echo "OUTBOX_TEST_REDIS_PORT=35454" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            docker exec "$redis_id" redis-cli ping 2>/dev/null | rg -q '^PONG$' && break
+            sleep 1
+          done
+          docker exec "$redis_id" redis-cli ping | rg -q '^PONG$'
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      - name: Run real outbox transport tests
+        run: pnpm --filter=backend test:e2e:outbox
+        env:
+          REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 35454
+          OUTBOX_TEST_REDIS_TARGET: ci
+          OUTBOX_TEST_ALLOW_REDIS_FAULT: '1'
+      - name: Ensure dedicated Redis is running for teardown
+        if: always()
+        run: docker start "$OUTBOX_TEST_REDIS_CONTAINER" >/dev/null 2>&1 || true
+      - name: Upload outbox transport artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-outbox-transport-results
+          path: apps/backend/test-results-outbox.json
+          if-no-files-found: ignore

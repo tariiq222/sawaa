@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState, useCallback } from "react"
 import { queryKeys } from "@/lib/query-keys"
+import { invalidateMutationImpact } from "@/lib/query-invalidation"
 import {
   fetchPayments,
   refundPayment,
@@ -15,36 +16,77 @@ import {
   collectBookingPayment,
 } from "@/lib/api/payments"
 import type { CollectBookingPaymentPayload } from "@/lib/api/payments"
-import type { PaymentListQuery } from "@/lib/types/payment"
+import type { Payment, PaymentListQuery } from "@/lib/types/payment"
+import type { PaginatedResponse } from "@/lib/types/common"
 import type { PaymentStatus, PaymentMethod } from "@/lib/types/common"
+
+type KnownPaymentContext = {
+  invoiceId?: string
+  bookingId?: string
+  clientId?: string
+  employeeId?: string
+}
+
+type PaymentMutationVariables = KnownPaymentContext & {
+  id: string
+}
+
+function cachedPayment(queryClient: ReturnType<typeof useQueryClient>, paymentId: string) {
+  const rows = queryClient.getQueriesData<PaginatedResponse<Payment>>({
+    queryKey: queryKeys.payments.all,
+  })
+  return rows.flatMap(([, data]) => data?.items ?? []).find((item) => item.id === paymentId)
+}
+
+function invalidatePaymentResult(
+  queryClient: ReturnType<typeof useQueryClient>,
+  kind: "payment-settled" | "payment-refunded",
+  payment: Payment,
+  variables: KnownPaymentContext & { id?: string },
+) {
+  const cached = cachedPayment(queryClient, variables.id ?? payment.id)
+  const invoiceId = variables.invoiceId ?? payment.invoiceId ?? cached?.invoiceId
+  if (!invoiceId) {
+    // A malformed/legacy response must never invent an invoice scope. Keep
+    // the persisted mutation successful while refreshing the known payment
+    // surfaces so the user can reopen the row and retry a read.
+    return Promise.allSettled([
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all, refetchType: "all" }),
+      variables.id
+        ? queryClient.invalidateQueries({ queryKey: queryKeys.payments.detail(variables.id), refetchType: "all" })
+        : Promise.resolve(),
+    ]).then(() => undefined)
+  }
+  return invalidateMutationImpact(queryClient, {
+    kind,
+    invoiceId,
+    paymentId: variables.id ?? payment.id,
+    bookingId: variables.bookingId ?? cached?.invoice?.bookingId,
+    clientId: variables.clientId ?? cached?.invoice?.clientId,
+    employeeId: variables.employeeId,
+  })
+}
 
 export function usePaymentMutations() {
   const queryClient = useQueryClient()
 
   const refundMut = useMutation({
-    mutationFn: ({ id, reason, amount }: { id: string; reason: string; amount?: number }) =>
+    mutationFn: ({ id, reason, amount }: PaymentMutationVariables & { reason: string; amount?: number }) =>
       refundPayment(id, { reason, amount }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
-    },
+    onSuccess: (payment, variables) => invalidatePaymentResult(queryClient, "payment-refunded", payment, variables),
   })
 
   const verifyMut = useMutation({
-    mutationFn: ({ id, action, transferRef }: { id: string; action: 'approve' | 'reject'; transferRef?: string }) =>
+    mutationFn: ({ id, action, transferRef }: PaymentMutationVariables & { action: 'approve' | 'reject'; transferRef?: string }) =>
       verifyPayment(id, { action, transferRef }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
-    },
+    onSuccess: (payment, variables) => invalidatePaymentResult(queryClient, "payment-settled", payment, variables),
   })
 
   // Off-gateway (cash/bank-transfer) refund issued from the bookings list.
   const manualRefundMut = useMutation({
-    mutationFn: ({ id, reason, amount }: { id: string; reason: string; amount?: number }) =>
+    mutationFn: ({ id, reason, amount }: PaymentMutationVariables & { reason: string; amount?: number }) =>
       manualRefundPayment(id, { reason, amount }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
-    },
+    onSuccess: (payment, variables) => invalidatePaymentResult(queryClient, "payment-refunded", payment, variables),
   })
 
   return { refundMut, verifyMut, manualRefundMut }
@@ -55,11 +97,6 @@ export function usePaymentMutations() {
 export function useRecordPaymentMutations() {
   const queryClient = useQueryClient()
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
-    queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
-  }
-
   const applyDiscountMut = useMutation({
     mutationFn: ({
       invoiceId,
@@ -67,10 +104,10 @@ export function useRecordPaymentMutations() {
       discountReasonId,
     }: { invoiceId: string; discountAmt: number; discountReasonId?: string }) =>
       applyInvoiceDiscount(invoiceId, { discountAmt, discountReasonId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
-    },
+    onSuccess: () => Promise.allSettled([
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all, refetchType: "all" }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all, refetchType: "all" }),
+    ]).then(() => undefined),
   })
 
   const recordMut = useMutation({
@@ -80,7 +117,7 @@ export function useRecordPaymentMutations() {
       method,
     }: { invoiceId: string; amount: number; method: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY" }) =>
       recordPayment({ invoiceId, amount, method }),
-    onSuccess: invalidate,
+    onSuccess: (payment, variables) => invalidatePaymentResult(queryClient, "payment-settled", payment, variables),
   })
 
   // Lazily materialise a DRAFT invoice for a booking that has none (pay-at-clinic)
@@ -88,10 +125,10 @@ export function useRecordPaymentMutations() {
   // list will stale until refetched otherwise.
   const ensureInvoiceMut = useMutation({
     mutationFn: (bookingId: string) => ensureBookingInvoice(bookingId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
-    },
+    onSuccess: () => Promise.allSettled([
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all, refetchType: "all" }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all, refetchType: "all" }),
+    ]).then(() => undefined),
   })
 
   // Unified booking collection — single round trip that ensures the booking
@@ -103,11 +140,12 @@ export function useRecordPaymentMutations() {
       ...payload
     }: { bookingId: string } & CollectBookingPaymentPayload) =>
       collectBookingPayment(bookingId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
-    },
+    onSuccess: (result) => invalidateMutationImpact(queryClient, {
+      kind: "payment-settled",
+      invoiceId: result.invoice.id,
+      paymentId: result.payment?.id,
+      bookingId: result.bookingId,
+    }),
   })
 
   return { applyDiscountMut, recordMut, ensureInvoiceMut, collectMut }
@@ -137,6 +175,7 @@ export function usePayments() {
     queryKey: queryKeys.payments.list(query),
     queryFn: () => fetchPayments(query),
     staleTime: 30_000,
+    refetchOnMount: false,
     retry: 1,
   })
 
@@ -144,11 +183,13 @@ export function usePayments() {
     queryKey: queryKeys.payments.stats(),
     queryFn: fetchPaymentStats,
     staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
   })
 
   const hasFilters = !!search || status !== "all" || method !== "all" || !!dateFrom || !!dateTo
 
   const resetFilters = useCallback(() => {
+    setSearch("")
     setStatus("all")
     setMethod("all")
     setDateFrom("")

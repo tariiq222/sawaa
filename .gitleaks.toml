@@ -1,0 +1,17 @@
+# Public CI-only fixtures already present on origin/main before this release.
+# Only these exact assignments inside the named test workflows are allowed.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Existing disposable CI encryption and signing fixtures"
+condition = "AND"
+paths = ['''^\.github/workflows/(ci|nightly-e2e|merge-gate|regression-check)\.yml$''']
+regexTarget = "line"
+regexes = [
+  '''^\s*JWT_OTP_SECRET:\s*ci\-jwt\-otp\-secret\-32chars\-long\s*$''',
+  '''^\s*MOYASAR_ENCRYPTION_KEY:\s*svR0uFV6QvUvZYb\+qeN6cKdfMulWc3cNPkhW1QSFW5o=\s*$''',
+  '''^\s*AI_PROVIDER_ENCRYPTION_KEY:\s*(?:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=|0123456789abcdef0123456789abcdef)\s*$''',
+  '''^\s*SMS_PROVIDER_ENCRYPTION_KEY:\s*ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=\s*$''',
+  '''^\s*ZOOM_PROVIDER_ENCRYPTION_KEY:\s*Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=\s*$''',
+]

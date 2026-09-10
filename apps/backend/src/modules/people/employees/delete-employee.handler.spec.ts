@@ -3,6 +3,7 @@ import { NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { DeleteEmployeeHandler } from './delete-employee.handler';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { ACTIVE_BOOKING_STATUSES } from '../../bookings/active-booking-statuses';
 
 const buildPrisma = () => ({
   $queryRaw: jest.fn(),
@@ -47,6 +48,15 @@ describe('DeleteEmployeeHandler', () => {
     await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
   });
 
+  it.each(ACTIVE_BOOKING_STATUSES)('blocks deletion for %s', async (status) => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    prisma.booking.count.mockImplementation(({ where }) =>
+      Promise.resolve(where.status.in.includes(status) ? 1 : 0),
+    );
+    await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
+    expect(prisma.employee.delete).not.toHaveBeenCalled();
+  });
+
   it('should throw ConflictException when supervising active programs exist', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.booking.count.mockResolvedValue(0);
@@ -81,7 +91,7 @@ describe('DeleteEmployeeHandler', () => {
 
     await handler.execute({ employeeId: 'emp-1' });
     expect(rlsTransaction.withTransaction).toHaveBeenCalledWith(expect.any(Function), {
-      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
     });
     expect(prisma.$queryRaw).toHaveBeenCalled();
     expect(prisma.employee.delete).toHaveBeenCalledWith({ where: { id: 'emp-1' } });

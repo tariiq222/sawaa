@@ -96,15 +96,28 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
         createRefund: jest.fn().mockImplementation(
           (_org: string, params: { amount: number; paymentId: string }) =>
             Promise.resolve({
-              id: `rfnd_mock_${suffix}_${params.paymentId}`,
+              // Moyasar's refund endpoint returns the payment resource; the
+              // adapter deliberately stores that payment id as gatewayRef.
+              id: params.paymentId,
               amount: params.amount,
+              refunded: params.amount,
               currency: "SAR",
               status: "refunded",
               paymentId: params.paymentId,
               createdAt: new Date().toISOString(),
             }),
         ),
-        getPaymentStatus: jest.fn(),
+        getPaymentStatus: jest
+          .fn()
+          .mockImplementation((_org: string, paymentId: string) =>
+            Promise.resolve({
+              id: paymentId,
+              status: "paid",
+              amount: 50_000,
+              refunded: 0,
+              currency: "SAR",
+            }),
+          ),
         getRefundStatus: jest.fn(),
         invalidate: jest.fn(),
         toPaymentStatus: jest.fn(),
@@ -275,13 +288,38 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
     return randomUUID();
   }
 
+  async function seedBooking(subtotalHalalas: number): Promise<string> {
+    const bookingId = makeBookingId();
+    ctx.bookingIds.push(bookingId);
+    const scheduledAt = new Date(
+      Date.now() + 180 * 24 * 60 * 60 * 1_000 + ctx.bookingIds.length * 2 * 60 * 60 * 1_000,
+    );
+    await prisma.booking.create({
+      data: {
+        id: bookingId,
+        branchId: ctx.branchId,
+        clientId: ctx.clientId,
+        employeeId: ctx.employeeId,
+        serviceId: null,
+        deliveryType: "IN_PERSON",
+        status: "AWAITING_PAYMENT",
+        scheduledAt,
+        endsAt: new Date(scheduledAt.getTime() + 60 * 60 * 1_000),
+        durationMins: 60,
+        price: subtotalHalalas,
+        currency: "SAR",
+        bookingNumber: Math.floor(1_000_000 + Math.random() * 8_000_000),
+      },
+    });
+    return bookingId;
+  }
+
   async function seedIssuedInvoice(opts: {
     subtotalHalalas: number;
     vatRate?: number;
     totalHalalas?: number;
   }) {
-    const bookingId = makeBookingId();
-    ctx.bookingIds.push(bookingId);
+    const bookingId = await seedBooking(opts.subtotalHalalas);
     // Mirror the create-invoice handler's halala-safe math: total = subtotal
     // minus discount, plus VAT at the configured rate (round half-up). When
     // the caller overrides totalHalalas we trust that value verbatim.
@@ -315,8 +353,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
 
   describe("Invoice lifecycle: create, list, get", () => {
     it("creates an invoice with exact halala amounts persisted (no float drift)", async () => {
-      const bookingId = makeBookingId();
-      ctx.bookingIds.push(bookingId);
+      const bookingId = await seedBooking(23_499);
 
       const res = await withAuth(ctx.authToken)(
         api().post("/api/v1/dashboard/finance/invoices"),
@@ -341,7 +378,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
       expect(Number(res.body.vatAmt)).toBe(3_525);
       expect(Number(res.body.total)).toBe(27_024);
       expect(res.body.currency).toBe("SAR");
-      expect(res.body.status).toBe("ISSUED");
+      expect(res.body.status).toBe("DRAFT");
 
       // Re-read from DB to confirm persistence (not just the in-memory response).
       const row = await prisma.invoice.findUnique({ where: { id: res.body.id } });
@@ -386,8 +423,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
     });
 
     it("rejects a second invoice for the same booking with 409 (UNIQUE bookingId)", async () => {
-      const bookingId = makeBookingId();
-      ctx.bookingIds.push(bookingId);
+      const bookingId = await seedBooking(10_000);
 
       const first = await withAuth(ctx.authToken)(
         api().post("/api/v1/dashboard/finance/invoices"),
@@ -725,7 +761,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
       expect(refundReq).not.toBeNull();
       expect(refundReq!.status).toBe("COMPLETED");
       expect(Number(refundReq!.amount)).toBe(20_000);
-      expect(refundReq!.gatewayRef).toMatch(/^rfnd_mock_/); // stub id from override
+      expect(refundReq!.gatewayRef).toBe(payment.gatewayRef);
 
       // Payment row: PARTIALLY_REFUNDED with refundedAmount incremented.
       const paymentAfter = await prisma.payment.findUnique({ where: { id: payment.id } });

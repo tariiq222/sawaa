@@ -49,13 +49,15 @@ interface MockPrisma {
   };
   webhookEvent: {
     create: jest.Mock;
-    update: jest.Mock;
-    delete: jest.Mock;
+    findUnique: jest.Mock;
+    updateMany: jest.Mock;
+    deleteMany: jest.Mock;
   };
   outboxEvent: {
     create: jest.Mock;
   };
   $transaction: jest.Mock;
+  $queryRaw: jest.Mock;
 }
 
 /**
@@ -129,8 +131,9 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
     },
     webhookEvent: {
       create: jest.fn().mockResolvedValue({ id: 'whe-1' }),
-      update: jest.fn().mockResolvedValue({ id: 'whe-1' }),
-      delete: jest.fn().mockResolvedValue({ id: 'whe-1' }),
+      findUnique: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     outboxEvent: {
       create: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
@@ -138,6 +141,7 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
     $transaction: jest.fn(async <T>(fn: (tx: MockPrisma) => Promise<T>): Promise<T> => {
       return fn(prisma);
     }),
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'inv-1' }]),
   };
 
   return prisma;
@@ -268,6 +272,19 @@ describe('MoyasarWebhookHandler', () => {
       await handler.execute(makeReq());
       expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
       expect(outboxEventTypes(prisma)).toEqual(['finance.payment.completed']);
+    });
+
+    it('serializes the payment transition by locking its invoice inside the mutation transaction', async () => {
+      const { handler, prisma } = makeHandler();
+
+      await handler.execute(makeReq());
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      const sql = prisma.$queryRaw.mock.calls[0][0];
+      expect(sql.strings.join('')).toContain('Invoice');
+      expect(sql.strings.join('')).toContain('FOR UPDATE');
+      expect(prisma.$queryRaw.mock.invocationCallOrder[0])
+        .toBeLessThan(prisma.payment.create.mock.invocationCallOrder[0]);
     });
 
     // P1-12: the completion event must be written through the SAME transaction
@@ -423,6 +440,8 @@ describe('MoyasarWebhookHandler', () => {
         id: 'payment-pending-1',
         invoiceId: 'inv-1',
         status: PaymentStatus.PENDING,
+        amount: 230,
+        currency: 'SAR',
       });
       const { handler } = makeHandler({ prisma });
 
@@ -464,6 +483,8 @@ describe('MoyasarWebhookHandler', () => {
                   id: 'payment-pending-1',
                   invoiceId: 'inv-1',
                   status: PaymentStatus.PENDING,
+                  amount: 230,
+                  currency: 'SAR',
                 }
               : null,
           );
@@ -526,6 +547,8 @@ describe('MoyasarWebhookHandler', () => {
               id: 'payment-pending-1',
               invoiceId: 'inv-routed',
               status: PaymentStatus.PENDING,
+              amount: 230,
+              currency: 'SAR',
             });
           }
           return Promise.resolve(null);
@@ -647,7 +670,13 @@ describe('MoyasarWebhookHandler', () => {
       const { handler, prisma, moyasarApi } = makeHandler({ fetchError: transientError });
 
       await expect(handler.execute(makeReq())).rejects.toThrow(/Bad Gateway/);
-      expect(prisma.webhookEvent.delete).toHaveBeenCalledWith({ where: { id: 'whe-1' } });
+      expect(prisma.webhookEvent.deleteMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'whe-1',
+          processedAt: null,
+          result: expect.stringMatching(/^processing:/),
+        }),
+      }));
 
       (moyasarApi.getPaymentStatus as jest.Mock).mockResolvedValue({
         id: 'moyasar-pay-1',
@@ -666,7 +695,13 @@ describe('MoyasarWebhookHandler', () => {
       prisma.outboxEvent.create.mockRejectedValueOnce(new Error('database temporarily unavailable'));
 
       await expect(handler.execute(makeReq())).rejects.toThrow(/temporarily unavailable/);
-      expect(prisma.webhookEvent.delete).toHaveBeenCalledWith({ where: { id: 'whe-1' } });
+      expect(prisma.webhookEvent.deleteMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'whe-1',
+          processedAt: null,
+          result: expect.stringMatching(/^processing:/),
+        }),
+      }));
 
       // The failed transaction rolled back its aggregate too; reset the fake to
       // model the fresh retry against the same database state.
@@ -944,12 +979,70 @@ describe('MoyasarWebhookHandler', () => {
           { code: 'P2002', clientVersion: '7.8.0', meta: { target: ['provider', 'eventId'] } },
         ),
       );
+      prisma.webhookEvent.findUnique.mockResolvedValue({
+        id: 'whe-existing',
+        processedAt: new Date('2026-09-05T00:00:00Z'),
+        result: 'processed',
+        receivedAt: new Date('2026-09-05T00:00:00Z'),
+      });
       const { handler } = makeHandler({ prisma });
       const result = await handler.execute(makeReq());
       expect(prisma.payment.upsert).not.toHaveBeenCalled();
       expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
       expect(result.skipped).toBe(true);
       expect(result.reason).toBe('duplicate');
+    });
+
+    it('reclaims and processes an abandoned unprocessed webhook claim', async () => {
+      const prisma = buildPrisma();
+      prisma.webhookEvent.create = jest.fn().mockRejectedValue(
+        new (require('@prisma/client').Prisma.PrismaClientKnownRequestError)(
+          'Unique constraint failed',
+          { code: 'P2002', clientVersion: '7.8.0', meta: { target: ['provider', 'eventId'] } },
+        ),
+      );
+      prisma.webhookEvent.findUnique.mockResolvedValue({
+        id: 'whe-abandoned',
+        processedAt: null,
+        result: null,
+        receivedAt: new Date('2026-09-04T00:00:00Z'),
+      });
+      prisma.webhookEvent.updateMany.mockResolvedValue({ count: 1 });
+      const { handler } = makeHandler({ prisma });
+
+      const result = await handler.execute(makeReq());
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.webhookEvent.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ id: 'whe-abandoned', processedAt: null }),
+      }));
+      expect(prisma.payment.create).toHaveBeenCalledTimes(1);
+      expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
+      expect(prisma.webhookEvent.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ id: 'whe-abandoned', processedAt: null }),
+        data: expect.objectContaining({ processedAt: expect.any(Date), result: 'processed' }),
+      }));
+    });
+
+    it('returns a retryable error while another unprocessed claim still owns a live lease', async () => {
+      const prisma = buildPrisma();
+      prisma.webhookEvent.create = jest.fn().mockRejectedValue(
+        new (require('@prisma/client').Prisma.PrismaClientKnownRequestError)(
+          'Unique constraint failed',
+          { code: 'P2002', clientVersion: '7.8.0' },
+        ),
+      );
+      prisma.webhookEvent.findUnique.mockResolvedValue({
+        id: 'whe-live',
+        processedAt: null,
+        result: 'processing:other-owner',
+        receivedAt: new Date(),
+      });
+      const { handler } = makeHandler({ prisma });
+
+      await expect(handler.execute(makeReq())).rejects.toMatchObject({ status: 503 });
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
     });
 
     it('propagates a non-P2002 DB error from webhookEvent.create (transient → 5xx)', async () => {
@@ -961,7 +1054,12 @@ describe('MoyasarWebhookHandler', () => {
 
     it('does not overwrite a REFUNDED payment back to COMPLETED', async () => {
       const prisma = buildPrisma();
-      prisma.payment.findFirst = jest.fn().mockResolvedValue({ status: PaymentStatus.REFUNDED });
+      prisma.payment.findFirst = jest.fn().mockResolvedValue({
+        id: 'payment-refunded',
+        status: PaymentStatus.REFUNDED,
+        amount: 230,
+        currency: 'SAR',
+      });
       const { handler } = makeHandler({ prisma });
       const result = await handler.execute(makeReq());
       expect(result.skipped).toBe(true);
@@ -970,13 +1068,42 @@ describe('MoyasarWebhookHandler', () => {
       expect(prisma.invoice.update).not.toHaveBeenCalled();
     });
 
+    it.each(['PAID', 'VOID', 'PARTIALLY_REFUNDED', 'REFUNDED'])(
+      'leaves a pending card untouched when its invoice is already %s and marks the claim for review',
+      async (invoiceStatus) => {
+        const prisma = buildPrisma({ ...buildInvoice(ORG_A), status: invoiceStatus });
+        prisma.payment.findFirst.mockResolvedValue({
+          id: 'payment-late',
+          status: PaymentStatus.PENDING,
+          amount: 230,
+          currency: 'SAR',
+        });
+        const { handler } = makeHandler({ prisma });
+
+        const result = await handler.execute(makeReq());
+
+        expect(result).toMatchObject({ skipped: true, reason: 'terminal_invoice' });
+        expect(prisma.payment.update).not.toHaveBeenCalled();
+        expect(prisma.invoice.update).not.toHaveBeenCalled();
+        expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+        expect(prisma.webhookEvent.updateMany).toHaveBeenCalledWith(
+          expect.objectContaining({ data: expect.objectContaining({ result: 'error' }) }),
+        );
+      },
+    );
+
     it('updates an existing payment found by gatewayRef instead of creating a duplicate', async () => {
       const prisma = buildPrisma();
       // The same PENDING row is found by every gatewayRef lookup: the anti-spoof
       // existing-row check, the REFUNDED guard, and the in-transaction lookup.
       prisma.payment.findFirst = jest
         .fn()
-        .mockResolvedValue({ id: 'payment-existing', status: PaymentStatus.PENDING });
+        .mockResolvedValue({
+          id: 'payment-existing',
+          status: PaymentStatus.PENDING,
+          amount: 230,
+          currency: 'SAR',
+        });
       const { handler } = makeHandler({ prisma });
 
       await handler.execute(makeReq());
@@ -1003,6 +1130,8 @@ describe('MoyasarWebhookHandler', () => {
                   id: 'payment-existing',
                   invoiceId: 'inv-1',
                   status: PaymentStatus.PENDING,
+                  amount: 230,
+                  currency: 'SAR',
                 }
               : null,
           );

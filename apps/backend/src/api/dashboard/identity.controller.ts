@@ -27,8 +27,8 @@ import { ListPermissionsHandler } from '../../modules/identity/roles/list-permis
 import { CreateUserDto } from '../../modules/identity/users/create-user.dto';
 import { CreateRoleDto } from '../../modules/identity/roles/create-role.dto';
 import { AssignPermissionsDto } from '../../modules/identity/roles/assign-permissions.dto';
-import { IsEmail, IsEnum, IsOptional, IsString, IsBoolean, IsInt, IsUUID, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsEmail, IsEnum, IsOptional, IsString, IsBoolean, IsInt, IsUUID, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserGender, UserRole } from '@prisma/client';
 
@@ -37,13 +37,17 @@ class ListUsersQueryDto {
   @IsOptional() @IsString() search?: string;
 
   @ApiPropertyOptional({ description: 'Filter by active status', example: true })
-  @IsOptional() @Type(() => Boolean) @IsBoolean() isActive?: boolean;
+  @IsOptional()
+  @Type(() => String)
+  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  isActive?: boolean;
 
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
 
-  @ApiPropertyOptional({ description: 'Results per page', example: 20 })
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit?: number;
+  @ApiPropertyOptional({ description: 'Results per page', example: 20, maximum: 200 })
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(200) limit?: number;
 }
 
 class UpdateUserDto {
@@ -294,7 +298,7 @@ export class DashboardIdentityController {
   }
 
   @Post('users/:userId/roles')
-  @CheckPermissions({ action: 'manage', subject: 'User' })
+  @CheckPermissions({ action: 'manage', subject: 'Role' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Assign a role to a user' })
   @ApiParam({ name: 'userId', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
@@ -311,7 +315,7 @@ export class DashboardIdentityController {
   }
 
   @Delete('users/:userId/roles/:roleId')
-  @CheckPermissions({ action: 'manage', subject: 'User' })
+  @CheckPermissions({ action: 'manage', subject: 'Role' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove a role from a user' })
   @ApiParam({ name: 'userId', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })

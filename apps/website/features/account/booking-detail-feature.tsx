@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Locale } from '@/features/locale/locale';
 import { localizedName } from '@/features/locale/localized-name';
@@ -66,7 +65,6 @@ const INPUT =
 
 export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeatureProps) {
   const { client } = useCurrentClient();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const tt = useT();
   const [showCancel, setShowCancel] = useState(false);
@@ -320,7 +318,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
           onClose={() => setShowReschedule(false)}
           onSuccess={() => {
             setShowReschedule(false);
-            router.refresh();
+            void queryClient.invalidateQueries({ queryKey: ['client', 'bookings'] });
           }}
           rescheduleApi={(newScheduledAt) => rescheduleMyBookingApi(bookingId, newScheduledAt)}
         />

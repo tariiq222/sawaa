@@ -172,6 +172,9 @@ jobs:
           MINIO_BUCKET: sawaa-test
           MINIO_USE_SSL: false
 
+      - name: OpenAPI documentation coverage ratchet
+        run: pnpm --filter=backend run check:openapi-coverage
+
       - name: api-client endpoint drift
         # packages/api-client is hand-written, so nothing rebuilds it when a
         # backend route is renamed or removed. Cross-check the endpoints it
@@ -179,6 +182,154 @@ jobs:
         # openapi.json snapshot validated by the previous step — phase 1:
         # path+method existence only.
         run: node scripts/check-api-client-drift.mjs
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Critical real-DB tests — the explicit financial, booking, identity, and
+  # production-validation paths are required to run. Extend this set when a
+  # later change adds another critical real-e2e contract.
+  # The ordinary E2E job intentionally keeps its provider/queue mocks; this
+  # lane supplies isolated Postgres and fails closed on skipped real suites.
+  # ───────────────────────────────────────────────────────────────────────────
+  critical-real-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      - name: Validate isolated REAL_E2E_DATABASE_URL
+        run: node scripts/assert-critical-test-results.mjs --validate-real-e2e-database-url
+        env:
+          REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      - name: Run critical real-database tests
+        run: pnpm --filter=backend test:e2e:critical
+        env:
+          REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+          JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+          JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+          JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
+          MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
+          ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
+          EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
+          AUTHENTICA_API_KEY: ci-authentica-key
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: 9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin123
+          MINIO_BUCKET: sawaa-test
+          MINIO_USE_SSL: false
+      - name: Validate critical-results gate
+        run: node --test scripts/assert-critical-test-results.test.mjs
+      - name: Upload critical test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: critical-real-e2e-results
+          path: |
+            apps/backend/test-results-critical.json
+            apps/backend/test-results-critical.exitcode
+          if-no-files-found: ignore
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Real BullMQ transport fault-injection lane.
+  # ───────────────────────────────────────────────────────────────────────────
+  outbox-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Start dedicated test Redis
+        run: |
+          redis_id=$(docker run -d --name sawaa-safe-ci-redis --label sawaa.test=true -p 35454:6379 redis:7-alpine)
+          echo "OUTBOX_TEST_REDIS_CONTAINER=$redis_id" >> "$GITHUB_ENV"
+          echo "OUTBOX_TEST_REDIS_PORT=35454" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            docker exec "$redis_id" redis-cli ping 2>/dev/null | grep -q '^PONG$' && break
+            sleep 1
+          done
+          docker exec "$redis_id" redis-cli ping | grep -q '^PONG$'
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      - name: Run real outbox transport tests
+        run: pnpm --filter=backend test:e2e:outbox
+        env:
+          REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 35454
+          OUTBOX_TEST_REDIS_TARGET: ci
+          OUTBOX_TEST_ALLOW_REDIS_FAULT: '1'
+      - name: Ensure dedicated Redis is running for teardown
+        if: always()
+        run: docker start "$OUTBOX_TEST_REDIS_CONTAINER" >/dev/null 2>&1 || true
+      - name: Upload outbox transport artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: outbox-transport-results
+          path: apps/backend/test-results-outbox.json
+          if-no-files-found: ignore
 
   # ───────────────────────────────────────────────────────────────────────────
   # Dashboard
@@ -455,6 +606,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: '8.30.1'
 
       - name: Trivy filesystem scan (HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@v0.31.0

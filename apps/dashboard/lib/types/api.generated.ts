@@ -5106,6 +5106,295 @@ export interface components {
          * @enum {string}
          */
         BookingType: "INDIVIDUAL" | "WALK_IN" | "GROUP";
+        BranchAssignmentDeletedResponseDto: {
+            /**
+             * @description Deleted assignment UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            id: string;
+        };
+        BranchBusinessHourResponseDto: {
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Day of week, from Sunday (0) to Saturday (6)
+             * @example 0
+             */
+            dayOfWeek: number;
+            /**
+             * @description Closing time in HH:mm format
+             * @example 17:00
+             */
+            endTime: string;
+            /**
+             * @description Business-hour record UUID
+             * @example 00000000-0000-4000-a000-000000000010
+             */
+            id: string;
+            /**
+             * @description Whether the branch is open on this day
+             * @example true
+             */
+            isOpen: boolean;
+            /**
+             * @description Opening time in HH:mm format
+             * @example 09:00
+             */
+            startTime: string;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        BranchDetailResponseDto: {
+            /**
+             * @description Arabic address
+             * @example شارع الملك فهد، الرياض
+             */
+            addressAr: string | null;
+            /**
+             * @description English address
+             * @example King Fahd Road, Riyadh
+             */
+            addressEn: string | null;
+            /** @description Weekly business hours */
+            businessHours: components["schemas"]["BranchBusinessHourResponseDto"][];
+            /**
+             * @description City
+             * @example Riyadh
+             */
+            city: string | null;
+            /**
+             * @description ISO country code
+             * @example SA
+             */
+            country: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Branch holidays */
+            holidays: components["schemas"]["BranchHolidayResponseDto"][];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the branch is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether this is the main branch
+             * @example true
+             */
+            isMain: boolean;
+            /**
+             * @description GPS latitude
+             * @example 24.7136
+             */
+            latitude: number | null;
+            /**
+             * @description GPS longitude
+             * @example 46.6753
+             */
+            longitude: number | null;
+            /**
+             * @description Arabic branch name
+             * @example فرع الرياض
+             */
+            nameAr: string;
+            /**
+             * @description English branch name
+             * @example Riyadh Branch
+             */
+            nameEn: string | null;
+            /**
+             * @description Branch phone number
+             * @example +966112345678
+             */
+            phone: string | null;
+            /**
+             * @description IANA timezone identifier
+             * @example Asia/Riyadh
+             */
+            timezone: string;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        BranchEmployeeAssignmentResponseDto: {
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            employeeId: string;
+            /**
+             * @description Assignment UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            id: string;
+        };
+        BranchHolidayResponseDto: {
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Holiday date
+             * @example 2026-09-23T00:00:00.000Z
+             */
+            date: string;
+            /**
+             * @description Holiday record UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            id: string;
+            /**
+             * @description Arabic holiday name
+             * @example اليوم الوطني
+             */
+            nameAr: string;
+            /**
+             * @description English holiday name
+             * @example National Day
+             */
+            nameEn: string | null;
+        };
+        BranchListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching records
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        BranchResponseDto: {
+            /**
+             * @description Arabic address
+             * @example شارع الملك فهد، الرياض
+             */
+            addressAr: string | null;
+            /**
+             * @description English address
+             * @example King Fahd Road, Riyadh
+             */
+            addressEn: string | null;
+            /**
+             * @description City
+             * @example Riyadh
+             */
+            city: string | null;
+            /**
+             * @description ISO country code
+             * @example SA
+             */
+            country: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the branch is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether this is the main branch
+             * @example true
+             */
+            isMain: boolean;
+            /**
+             * @description GPS latitude
+             * @example 24.7136
+             */
+            latitude: number | null;
+            /**
+             * @description GPS longitude
+             * @example 46.6753
+             */
+            longitude: number | null;
+            /**
+             * @description Arabic branch name
+             * @example فرع الرياض
+             */
+            nameAr: string;
+            /**
+             * @description English branch name
+             * @example Riyadh Branch
+             */
+            nameEn: string | null;
+            /**
+             * @description Branch phone number
+             * @example +966112345678
+             */
+            phone: string | null;
+            /**
+             * @description IANA timezone identifier
+             * @example Asia/Riyadh
+             */
+            timezone: string;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
         BreakWindowDto: {
             /**
              * @description Day of week (0 = Sunday, 6 = Saturday)
@@ -5267,6 +5556,190 @@ export interface components {
              */
             sortOrder: number;
         };
+        CategoryCountResponseDto: {
+            /**
+             * @description Effective bookable service count
+             * @example 3
+             */
+            services: number;
+        };
+        CategoryDepartmentResponseDto: {
+            /**
+             * @description Department UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Arabic department name
+             * @example قسم الاستشارات الأسرية
+             */
+            nameAr: string;
+            /**
+             * @description English department name
+             * @example Family Counseling
+             */
+            nameEn: string | null;
+        };
+        CategoryListItemResponseDto: {
+            /** @description Bookable service counts */
+            _count: components["schemas"]["CategoryCountResponseDto"];
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Owning department, when assigned */
+            department: components["schemas"]["CategoryDepartmentResponseDto"] | (never | null);
+            /** @description Owning department UUID */
+            departmentId: string | null;
+            /**
+             * @description Category icon background color
+             * @example #F0F4FF
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Category icon name
+             * @example family
+             */
+            iconName: string | null;
+            /**
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /** @description Displayable category image URL; stored keys are signed at read/create/update response time */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        CategoryListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching records
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        CategoryResponseDto: {
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Owning department UUID */
+            departmentId: string | null;
+            /**
+             * @description Category icon background color
+             * @example #F0F4FF
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Category icon name
+             * @example family
+             */
+            iconName: string | null;
+            /**
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /** @description Displayable category image URL; stored keys are signed at read/create/update response time */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
         ChangePasswordDto: {
             /**
              * @description Current account password
@@ -5331,15 +5804,34 @@ export interface components {
             updatedAt: string;
         };
         /**
-         * @description Account type
+         * @description Account type (case-insensitive)
          * @enum {string}
          */
-        ClientAccountType: "FULL" | "WALK_IN";
+        ClientAccountType: "FULL" | "WALK_IN" | "full" | "walk_in";
         /**
-         * @description Blood type
+         * @description Blood type (case-insensitive)
          * @enum {string}
          */
-        ClientBloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN";
+        ClientBloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN" | "a_pos" | "a_neg" | "b_pos" | "b_neg" | "ab_pos" | "ab_neg" | "o_pos" | "o_neg" | "unknown";
+        ClientBookingSummaryDto: {
+            /**
+             * Format: date-time
+             * @description Booking date (ISO 8601)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            date: string;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description Booking status (uppercase)
+             * @example CONFIRMED
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
+        };
         ClientCancelBookingDto: {
             /** @description Reason for cancellation */
             reason?: string;
@@ -5384,10 +5876,10 @@ export interface components {
             senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
         };
         /**
-         * @description Client gender
+         * @description Client gender (case-insensitive)
          * @enum {string}
          */
-        ClientGender: "MALE" | "FEMALE";
+        ClientGender: "MALE" | "FEMALE" | "male" | "female";
         ClientLoginDto: {
             /**
              * @description Client email address (provide either email or phone, not both)
@@ -5416,12 +5908,45 @@ export interface components {
              * @example full
              * @enum {string}
              */
-            accountType?: "full" | "walk_in";
+            accountType: "full" | "walk_in";
+            /**
+             * @description Known allergies
+             * @example Penicillin
+             */
+            allergies: string | null;
             /**
              * @description Avatar image URL
              * @example https://cdn.example.com/avatars/sara.jpg
              */
-            avatarUrl?: Record<string, never> | null;
+            avatarUrl: string | null;
+            /**
+             * @description Blood type (uppercase)
+             * @example A_POS
+             * @enum {string|null}
+             */
+            bloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN" | null;
+            /**
+             * @description Chronic conditions
+             * @example Type 2 Diabetes
+             */
+            chronicConditions: string | null;
+            /**
+             * Format: date-time
+             * @description Account claim timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            claimedAt: string | null;
+            /**
+             * @description Accepted privacy consent version
+             * @example 2026-01
+             */
+            consentVersion: string | null;
+            /**
+             * Format: date-time
+             * @description Privacy consent timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            consentedAt: string | null;
             /**
              * Format: date-time
              * @description Creation timestamp
@@ -5429,26 +5954,49 @@ export interface components {
              */
             createdAt: string;
             /**
+             * Format: date-time
              * @description Date of birth (ISO 8601)
-             * @example 1990-06-15
+             * @example 1990-06-15T00:00:00.000Z
              */
-            dateOfBirth?: Record<string, never> | null;
+            dateOfBirth: string | null;
+            /**
+             * Format: date-time
+             * @description Soft deletion timestamp
+             * @example null
+             */
+            deletedAt: string | null;
             /**
              * @description Email address
              * @example sara@example.com
              */
-            email?: Record<string, never> | null;
+            email: string | null;
+            /**
+             * Format: date-time
+             * @description Email verification timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            emailVerified: string | null;
+            /**
+             * @description Emergency contact name
+             * @example Ahmad Al-Harbi
+             */
+            emergencyName: string | null;
+            /**
+             * @description Emergency contact phone number
+             * @example +966501234567
+             */
+            emergencyPhone: string | null;
             /**
              * @description First name
              * @example Sara
              */
-            firstName?: Record<string, never> | null;
+            firstName: string | null;
             /**
              * @description Gender (lowercase)
              * @example female
              * @enum {string|null}
              */
-            gender?: "male" | "female" | null;
+            gender: "male" | "female" | null;
             /**
              * @description Client UUID
              * @example 00000000-0000-0000-0000-000000000000
@@ -5459,33 +6007,95 @@ export interface components {
              * @example true
              */
             isActive: boolean;
+            /** @description Most recent past booking (populated for list results) */
+            lastBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * Format: date-time
+             * @description Last login timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            lastLoginAt: string | null;
             /**
              * @description Last name
              * @example Al-Harbi
              */
-            lastName?: Record<string, never> | null;
+            lastName: string | null;
+            /**
+             * @description Middle name
+             * @example Ali
+             */
+            middleName: string | null;
             /**
              * @description Full display name
              * @example Sara Al-Harbi
              */
             name: string;
             /**
+             * @description National ID or Iqama number
+             * @example 1234567890
+             */
+            nationalId: string | null;
+            /**
+             * @description Nationality
+             * @example Saudi
+             */
+            nationality: string | null;
+            /** @description Next future booking (populated for list results) */
+            nextBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * @description Internal notes about the client
+             * @example Prefers morning appointments
+             */
+            notes: string | null;
+            /**
              * @description Mobile phone number
              * @example +966501234567
              */
-            phone?: Record<string, never> | null;
+            phone: string | null;
+            /**
+             * Format: date-time
+             * @description Phone verification timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            phoneVerified: string | null;
+            /**
+             * @description Preferred locale (ISO 639-1)
+             * @example ar
+             */
+            preferredLocale: string | null;
+            /**
+             * @description Whether push notifications are enabled
+             * @example true
+             */
+            pushEnabled: boolean;
+            /**
+             * @description Sequential client reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Acquisition source (uppercase)
+             * @example WALK_IN
+             * @enum {string}
+             */
+            source: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP";
             /**
              * Format: date-time
              * @description Last update timestamp
              * @example 2026-01-01T00:00:00.000Z
              */
             updatedAt: string;
+            /**
+             * @description Linked user UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            userId: string | null;
         };
         /**
-         * @description Acquisition source
+         * @description Acquisition source (case-insensitive)
          * @enum {string}
          */
-        ClientSource: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP";
+        ClientSource: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP" | "walk_in" | "online" | "referral" | "whatsapp";
         CollectBookingPaymentDto: {
             /**
              * @description Amount to collect in integer halalas (1 SAR = 100). Omit to collect the full outstanding AFTER any discount. Must not exceed the outstanding balance — ProcessPaymentHandler enforces this.
@@ -5524,6 +6134,91 @@ export interface components {
              * @example Session completed successfully
              */
             completionNotes?: string;
+        };
+        ContactMessageListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching records
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        ContactMessageResponseDto: {
+            /**
+             * Format: date-time
+             * @description Archive timestamp
+             */
+            archivedAt: string | null;
+            /**
+             * @description Message body
+             * @example أرغب بمعرفة المزيد عن الخدمات
+             */
+            body: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Sender email address
+             * @example user@example.com
+             */
+            email: string | null;
+            /**
+             * @description Contact message UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Sender name
+             * @example سارة أحمد
+             */
+            name: string;
+            /**
+             * @description Sender phone number
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * Format: date-time
+             * @description First-read timestamp
+             */
+            readAt: string | null;
+            /**
+             * @description Message workflow status
+             * @example NEW
+             * @enum {string}
+             */
+            status: "NEW" | "READ" | "REPLIED" | "ARCHIVED";
+            /**
+             * @description Message subject
+             * @example استفسار عن الحجز
+             */
+            subject: string | null;
         };
         CreateBookingDto: {
             /**
@@ -5662,19 +6357,19 @@ export interface components {
              */
             bookingMode?: "DIRECT" | "SERVICES";
             /**
-             * @description UUID of the parent department
+             * @description UUID of the parent department, or null to leave unassigned
              * @example 00000000-0000-0000-0000-000000000000
              */
-            departmentId?: string;
+            departmentId?: string | null;
             /** @example #F0F4FF */
-            iconBgColor?: string;
+            iconBgColor?: string | null;
             /** @example scissors-01 */
-            iconName?: string;
+            iconName?: string | null;
             /**
-             * @description Category image URL
+             * @description Category image URL or stored object key
              * @example https://example.com/logo.png
              */
-            imageUrl?: string;
+            imageUrl?: string | null;
             /**
              * @description Category name in Arabic
              * @example طب الأسنان
@@ -5684,7 +6379,7 @@ export interface components {
              * @description Category name in English
              * @example Dentistry
              */
-            nameEn?: string;
+            nameEn?: string | null;
             /**
              * @description Display order (0-based, lower sorts first)
              * @example 0
@@ -5693,8 +6388,8 @@ export interface components {
         };
         CreateClientDto: {
             /**
-             * @description Account type
-             * @example FULL
+             * @description Account type (case-insensitive)
+             * @example full
              */
             accountType?: components["schemas"]["ClientAccountType"];
             /**
@@ -5708,8 +6403,8 @@ export interface components {
              */
             avatarUrl?: string;
             /**
-             * @description Blood type
-             * @example A_POS
+             * @description Blood type (case-insensitive)
+             * @example a_pos
              */
             bloodType?: components["schemas"]["ClientBloodType"];
             /**
@@ -5743,8 +6438,8 @@ export interface components {
              */
             firstName: string;
             /**
-             * @description Client gender
-             * @example FEMALE
+             * @description Client gender (case-insensitive)
+             * @example female
              */
             gender?: components["schemas"]["ClientGender"];
             /**
@@ -5783,8 +6478,8 @@ export interface components {
              */
             phone: string;
             /**
-             * @description Acquisition source
-             * @example REFERRAL
+             * @description Acquisition source (case-insensitive)
+             * @example referral
              */
             source?: components["schemas"]["ClientSource"];
             /**
@@ -5792,6 +6487,200 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             userId?: string;
+        };
+        CreateClientResponseDto: {
+            /**
+             * @description Account type
+             * @example full
+             * @enum {string}
+             */
+            accountType: "full" | "walk_in";
+            /**
+             * @description Known allergies
+             * @example Penicillin
+             */
+            allergies: string | null;
+            /**
+             * @description Avatar image URL
+             * @example https://cdn.example.com/avatars/sara.jpg
+             */
+            avatarUrl: string | null;
+            /**
+             * @description Blood type (uppercase)
+             * @example A_POS
+             * @enum {string|null}
+             */
+            bloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN" | null;
+            /**
+             * @description Chronic conditions
+             * @example Type 2 Diabetes
+             */
+            chronicConditions: string | null;
+            /**
+             * Format: date-time
+             * @description Account claim timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            claimedAt: string | null;
+            /**
+             * @description Accepted privacy consent version
+             * @example 2026-01
+             */
+            consentVersion: string | null;
+            /**
+             * Format: date-time
+             * @description Privacy consent timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            consentedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Date of birth (ISO 8601)
+             * @example 1990-06-15T00:00:00.000Z
+             */
+            dateOfBirth: string | null;
+            /**
+             * Format: date-time
+             * @description Soft deletion timestamp
+             * @example null
+             */
+            deletedAt: string | null;
+            /**
+             * @description Email address
+             * @example sara@example.com
+             */
+            email: string | null;
+            /**
+             * Format: date-time
+             * @description Email verification timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            emailVerified: string | null;
+            /**
+             * @description Emergency contact name
+             * @example Ahmad Al-Harbi
+             */
+            emergencyName: string | null;
+            /**
+             * @description Emergency contact phone number
+             * @example +966501234567
+             */
+            emergencyPhone: string | null;
+            /**
+             * @description First name
+             * @example Sara
+             */
+            firstName: string | null;
+            /**
+             * @description Gender (lowercase)
+             * @example female
+             * @enum {string|null}
+             */
+            gender: "male" | "female" | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Whether the account is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether an existing client was returned by phone deduplication
+             * @example false
+             */
+            isExisting: boolean;
+            /** @description Most recent past booking (populated for list results) */
+            lastBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * Format: date-time
+             * @description Last login timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            lastLoginAt: string | null;
+            /**
+             * @description Last name
+             * @example Al-Harbi
+             */
+            lastName: string | null;
+            /**
+             * @description Middle name
+             * @example Ali
+             */
+            middleName: string | null;
+            /**
+             * @description Full display name
+             * @example Sara Al-Harbi
+             */
+            name: string;
+            /**
+             * @description National ID or Iqama number
+             * @example 1234567890
+             */
+            nationalId: string | null;
+            /**
+             * @description Nationality
+             * @example Saudi
+             */
+            nationality: string | null;
+            /** @description Next future booking (populated for list results) */
+            nextBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * @description Internal notes about the client
+             * @example Prefers morning appointments
+             */
+            notes: string | null;
+            /**
+             * @description Mobile phone number
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * Format: date-time
+             * @description Phone verification timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            phoneVerified: string | null;
+            /**
+             * @description Preferred locale (ISO 639-1)
+             * @example ar
+             */
+            preferredLocale: string | null;
+            /**
+             * @description Whether push notifications are enabled
+             * @example true
+             */
+            pushEnabled: boolean;
+            /**
+             * @description Sequential client reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Acquisition source (uppercase)
+             * @example WALK_IN
+             * @enum {string}
+             */
+            source: "WALK_IN" | "ONLINE" | "REFERRAL" | "WHATSAPP";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Linked user UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            userId: string | null;
         };
         CreateContactMessageDto: {
             /**
@@ -6170,7 +7059,7 @@ export interface components {
              * @description Form name in English
              * @example Pre-session Questionnaire
              */
-            nameEn?: string;
+            nameEn?: string | null;
             /**
              * @description Form scope
              * @example GLOBAL
@@ -6181,7 +7070,7 @@ export interface components {
              * @description Scope entity ID (null for global scope)
              * @example null
              */
-            scopeId?: string;
+            scopeId?: string | null;
             /**
              * @description Form type
              * @example PRE_SESSION
@@ -6656,6 +7545,75 @@ export interface components {
              */
             price: number;
         };
+        DeleteCategoryResponseDto: {
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Owning department UUID */
+            departmentId: string | null;
+            /**
+             * @description Category icon background color
+             * @example #F0F4FF
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Category icon name
+             * @example family
+             */
+            iconName: string | null;
+            /**
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /** @description Persisted image reference returned without signing; may be a storage key or legacy external URL */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        DeleteDepartmentResponseDto: {
+            /**
+             * @description Whether the department was deleted
+             * @example true
+             */
+            deleted: boolean;
+        };
         /**
          * @description Delivery channel (IN_PERSON or ONLINE)
          * @enum {string}
@@ -6672,6 +7630,242 @@ export interface components {
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
             refundRequestId: string;
+        };
+        DepartmentCategoryResponseDto: {
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Owning department UUID */
+            departmentId: string | null;
+            /** @description Category icon background color */
+            iconBgColor: string | null;
+            /** @description Category icon name */
+            iconName: string | null;
+            /**
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /** @description Category image URL */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        DepartmentListItemResponseDto: {
+            /**
+             * @description Active categories with at least one bookable option
+             * @example 2
+             */
+            bookableCategoriesCount: number;
+            /** @description Categories assigned to the department */
+            categories: components["schemas"]["DepartmentCategoryResponseDto"][];
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Arabic department description */
+            descriptionAr: string | null;
+            /** @description English department description */
+            descriptionEn: string | null;
+            /**
+             * @description Department icon identifier
+             * @example family
+             */
+            icon: string | null;
+            /**
+             * @description Department UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the department is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the department is shown in public navigation
+             * @example true
+             */
+            isVisible: boolean;
+            /**
+             * @description Arabic department name
+             * @example قسم الاستشارات الأسرية
+             */
+            nameAr: string;
+            /**
+             * @description English department name
+             * @example Family Counseling
+             */
+            nameEn: string | null;
+            /**
+             * @description Department display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        DepartmentListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching records
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        DepartmentResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Arabic department description */
+            descriptionAr: string | null;
+            /** @description English department description */
+            descriptionEn: string | null;
+            /**
+             * @description Department icon identifier
+             * @example family
+             */
+            icon: string | null;
+            /**
+             * @description Department UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the department is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the department is shown in public navigation
+             * @example true
+             */
+            isVisible: boolean;
+            /**
+             * @description Arabic department name
+             * @example قسم الاستشارات الأسرية
+             */
+            nameAr: string;
+            /**
+             * @description English department name
+             * @example Family Counseling
+             */
+            nameEn: string | null;
+            /**
+             * @description Department display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        DiscountReasonResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Discount reason UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Whether the reason is selectable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Reason label in Arabic
+             * @example خصم من المعالج
+             */
+            labelAr: string;
+            /**
+             * @description Reason label in English
+             * @example Therapist discount
+             */
+            labelEn: string | null;
+            /**
+             * @description Sort order (ascending)
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
         };
         DurationOptionInputDto: {
             /**
@@ -7094,6 +8288,39 @@ export interface components {
              */
             packageId: string;
         };
+        IntakeBookingResponseDto: {
+            /** @description Answers keyed by field UUID */
+            answers: {
+                [key: string]: string | string[];
+            };
+            /**
+             * Format: uuid
+             * @description Booking UUID
+             */
+            bookingId: string;
+            /**
+             * @description Client UUID normalized for booking-response reads
+             * @example
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Submission timestamp
+             */
+            createdAt: string;
+            /** @description Form summary and resolved scope identifiers */
+            form: components["schemas"]["IntakeFormBookingResponseDto"];
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            formId: string;
+            /**
+             * Format: uuid
+             * @description Response UUID
+             */
+            id: string;
+        };
         IntakeFieldInputDto: {
             /**
              * @description Input field type
@@ -7115,7 +8342,7 @@ export interface components {
              * @description Field label in English
              * @example Do you have any allergies?
              */
-            labelEn?: string;
+            labelEn?: string | null;
             /**
              * @description Selectable options for RADIO/SELECT/CHECKBOX fields
              * @example [
@@ -7129,6 +8356,248 @@ export interface components {
              * @example 0
              */
             position?: number;
+        };
+        IntakeFieldResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * @description Field input type
+             * @enum {string}
+             */
+            fieldType: "TEXT" | "TEXTAREA" | "NUMBER" | "DATE" | "SELECT" | "CHECKBOX" | "RADIO";
+            /**
+             * Format: uuid
+             * @description Parent form UUID
+             */
+            formId: string;
+            /**
+             * Format: uuid
+             * @description Field UUID
+             */
+            id: string;
+            /** @description Whether an answer is required */
+            isRequired: boolean;
+            /** @description Arabic field label */
+            labelAr: string;
+            /** @description English field label */
+            labelEn: string | null;
+            /** @description Options for selectable fields */
+            options: string[] | null;
+            /** @description Display order, zero-based */
+            position: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        IntakeFormBookingResponseDto: {
+            /**
+             * Format: uuid
+             * @description Resolved branch UUID
+             */
+            branchId: string | null;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Resolved employee UUID
+             */
+            employeeId: string | null;
+            /** @description Ordered form fields */
+            fields: components["schemas"]["IntakeFieldResponseDto"][];
+            /**
+             * @description Number of configured fields
+             * @example 4
+             */
+            fieldsCount: number;
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            id: string;
+            /** @description Whether the form is active */
+            isActive: boolean;
+            /** @description Arabic form name */
+            nameAr: string;
+            /** @description English form name */
+            nameEn: string | null;
+            /**
+             * @description Human-readable form reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Lowercase form scope for list clients
+             * @example service
+             * @enum {string}
+             */
+            scope: "global" | "service" | "employee" | "branch";
+            /** @description Scoped service, employee, or branch UUID */
+            scopeId: string | null;
+            /** @description Resolved scope target label */
+            scopeLabel: string | null;
+            /**
+             * Format: uuid
+             * @description Resolved service UUID
+             */
+            serviceId: string | null;
+            /**
+             * @description Number of stored submissions
+             * @example 3
+             */
+            submissionsCount: number;
+            /**
+             * @description Lowercase form type for list clients
+             * @example pre_session
+             * @enum {string}
+             */
+            type: "pre_booking" | "pre_session" | "post_session" | "registration";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        IntakeFormListItemResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Ordered form fields */
+            fields: components["schemas"]["IntakeFieldResponseDto"][];
+            /**
+             * @description Number of configured fields
+             * @example 4
+             */
+            fieldsCount: number;
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            id: string;
+            /** @description Whether the form is active */
+            isActive: boolean;
+            /** @description Arabic form name */
+            nameAr: string;
+            /** @description English form name */
+            nameEn: string | null;
+            /**
+             * @description Human-readable form reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Lowercase form scope for list clients
+             * @example service
+             * @enum {string}
+             */
+            scope: "global" | "service" | "employee" | "branch";
+            /** @description Scoped service, employee, or branch UUID */
+            scopeId: string | null;
+            /** @description Resolved scope target label */
+            scopeLabel: string | null;
+            /**
+             * @description Number of stored submissions
+             * @example 3
+             */
+            submissionsCount: number;
+            /**
+             * @description Lowercase form type for list clients
+             * @example pre_session
+             * @enum {string}
+             */
+            type: "pre_booking" | "pre_session" | "post_session" | "registration";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        IntakeFormResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Ordered form fields */
+            fields: components["schemas"]["IntakeFieldResponseDto"][];
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            id: string;
+            /** @description Whether the form is active */
+            isActive: boolean;
+            /** @description Arabic form name */
+            nameAr: string;
+            /** @description English form name */
+            nameEn: string | null;
+            /**
+             * @description Human-readable form reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Form scope
+             * @enum {string}
+             */
+            scope: "GLOBAL" | "SERVICE" | "EMPLOYEE" | "BRANCH";
+            /** @description Scoped service, employee, or branch UUID */
+            scopeId: string | null;
+            /**
+             * @description Number of stored submissions
+             * @example 3
+             */
+            submissionsCount: number;
+            /**
+             * @description Form type
+             * @enum {string}
+             */
+            type: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        IntakeSubmissionResponseDto: {
+            /** @description Answers keyed by field UUID */
+            answers: {
+                [key: string]: string | string[];
+            };
+            /**
+             * Format: uuid
+             * @description Booking UUID
+             */
+            bookingId: string;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             */
+            clientId: string | null;
+            /**
+             * Format: date-time
+             * @description Submission timestamp
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Form UUID
+             */
+            formId: string;
+            /**
+             * Format: uuid
+             * @description Response UUID
+             */
+            id: string;
         };
         /** @enum {string} */
         InvoiceStatus: "DRAFT" | "ISSUED" | "PAID" | "PARTIALLY_PAID" | "PARTIALLY_REFUNDED" | "VOID" | "REFUNDED";
@@ -7480,6 +8949,61 @@ export interface components {
              */
             invoiceId?: string;
         };
+        NotificationListMetaDto: {
+            /** @description Whether a next page exists */
+            hasNextPage: boolean;
+            /** @description Whether a previous page exists */
+            hasPreviousPage: boolean;
+            /** @description Notifications per page */
+            limit: number;
+            /** @description 1-based page number */
+            page: number;
+            /** @description Total matching notifications */
+            total: number;
+            /** @description Total number of pages */
+            totalPages: number;
+        };
+        NotificationResponseDto: {
+            /** @description Notification body */
+            body: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /** @description Notification UUID */
+            id: string;
+            /** @description Whether the notification has been read */
+            isRead: boolean;
+            /** @description Notification metadata. JSON scalars, arrays, objects, or null are allowed. */
+            metadata: string | number | boolean | unknown[] | ({
+                [key: string]: unknown;
+            } | null);
+            /**
+             * Format: date-time
+             * @description Read timestamp
+             */
+            readAt: string | null;
+            /** @description Recipient user UUID */
+            recipientId: string;
+            /**
+             * @description Recipient type
+             * @enum {string}
+             */
+            recipientType: "CLIENT" | "EMPLOYEE";
+            /** @description Notification title */
+            title: string;
+            /**
+             * @description Notification type
+             * @enum {string}
+             */
+            type: "BOOKING_CREATED" | "BOOKING_CONFIRMED" | "BOOKING_CANCELLED" | "BOOKING_REMINDER" | "PAYMENT_RECEIVED" | "PAYMENT_FAILED" | "PAYMENT_COMPLETED" | "PAYMENT_REMINDER" | "WELCOME" | "GENERAL";
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
         OnboardEmployeeDto: {
             /**
              * @description Avatar image URL
@@ -7586,13 +9110,43 @@ export interface components {
         };
         /** @enum {string} */
         PackagePurchaseStatus: "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED";
+        PaginatedBranchesDto: {
+            /** @description Branches on the requested page */
+            items: components["schemas"]["BranchResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["BranchListMetaDto"];
+        };
+        PaginatedCategoriesResponseDto: {
+            /** @description Categories on the requested page */
+            items: components["schemas"]["CategoryListItemResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["CategoryListMetaDto"];
+        };
         PaginatedClientsDto: {
             items: components["schemas"]["ClientResponseDto"][];
             meta: components["schemas"]["ListMetaDto"];
         };
+        PaginatedContactMessagesResponseDto: {
+            /** @description Contact messages on the requested page */
+            items: components["schemas"]["ContactMessageResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ContactMessageListMetaDto"];
+        };
+        PaginatedDepartmentsResponseDto: {
+            /** @description Departments on the requested page */
+            items: components["schemas"]["DepartmentListItemResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["DepartmentListMetaDto"];
+        };
         PaginatedEmployeesDto: {
             items: components["schemas"]["EmployeeResponseDto"][];
             meta: components["schemas"]["ListMetaDto"];
+        };
+        PaginatedNotificationsResponseDto: {
+            /** @description Notifications on the requested page */
+            items: components["schemas"]["NotificationResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["NotificationListMetaDto"];
         };
         /**
          * @description Payment method used
@@ -8296,6 +9850,10 @@ export interface components {
             /** @description Unifonic App SID */
             appSid: string;
         };
+        UnreadNotificationCountResponseDto: {
+            /** @description Number of unread notifications */
+            count: number;
+        };
         UpdateAvailabilityBody: Record<string, never>;
         UpdateAvailabilityDto: {
             /** @description Date-range exceptions (holidays, leave) */
@@ -8376,16 +9934,16 @@ export interface components {
              * @description UUID of the parent department, or null to unlink
              * @example 00000000-0000-0000-0000-000000000000
              */
-            departmentId?: Record<string, never> | null;
+            departmentId?: string | null;
             /** @example #F0F4FF */
-            iconBgColor?: string;
+            iconBgColor?: string | null;
             /** @example scissors-01 */
-            iconName?: string;
+            iconName?: string | null;
             /**
-             * @description Category image URL
+             * @description Category image URL or stored object key
              * @example https://example.com/logo.png
              */
-            imageUrl?: string;
+            imageUrl?: string | null;
             /**
              * @description Whether the category is active
              * @example true
@@ -8400,7 +9958,7 @@ export interface components {
              * @description Category name in English
              * @example Dentistry
              */
-            nameEn?: string;
+            nameEn?: string | null;
             /**
              * @description Display order (0-based)
              * @example 1
@@ -8409,58 +9967,58 @@ export interface components {
         };
         UpdateClientDto: {
             /**
-             * @description Account type
-             * @example FULL
+             * @description Account type (case-insensitive)
+             * @example full
              */
             accountType?: components["schemas"]["ClientAccountType"];
             /**
              * @description Known allergies
              * @example Penicillin
              */
-            allergies?: Record<string, never> | null;
+            allergies?: string | null;
             /**
              * @description Avatar image URL
              * @example https://cdn.example.com/avatars/sara.jpg
              */
-            avatarUrl?: Record<string, never> | null;
+            avatarUrl?: string | null;
             /**
-             * @description Blood type
-             * @example A_POS
+             * @description Blood type (case-insensitive)
+             * @example a_pos
              */
             bloodType?: components["schemas"]["ClientBloodType"] | null;
             /**
              * @description Chronic conditions
              * @example Type 2 Diabetes
              */
-            chronicConditions?: Record<string, never> | null;
+            chronicConditions?: string | null;
             /**
              * @description Date of birth (ISO 8601)
              * @example 1990-06-15
              */
-            dateOfBirth?: Record<string, never> | null;
+            dateOfBirth?: string | null;
             /**
              * @description Email address
              * @example user@example.com
              */
-            email?: Record<string, never> | null;
+            email?: string | null;
             /**
              * @description Emergency contact name
              * @example Ahmad Al-Harbi
              */
-            emergencyName?: Record<string, never> | null;
+            emergencyName?: string | null;
             /**
              * @description Emergency contact Saudi mobile number
              * @example +966501234567
              */
-            emergencyPhone?: Record<string, never> | null;
+            emergencyPhone?: string | null;
             /**
              * @description Client's first name
              * @example Sara
              */
             firstName?: string;
             /**
-             * @description Client gender
-             * @example FEMALE
+             * @description Client gender (case-insensitive)
+             * @example female
              */
             gender?: components["schemas"]["ClientGender"] | null;
             /**
@@ -8477,40 +10035,40 @@ export interface components {
              * @description Client's middle name
              * @example Ali
              */
-            middleName?: Record<string, never> | null;
+            middleName?: string | null;
             /**
              * @description National ID or Iqama number
              * @example 1234567890
              */
-            nationalId?: Record<string, never> | null;
+            nationalId?: string | null;
             /**
              * @description Nationality
              * @example Saudi
              */
-            nationality?: Record<string, never> | null;
+            nationality?: string | null;
             /**
              * @description Internal notes about the client
              * @example Prefers morning appointments
              */
-            notes?: Record<string, never> | null;
+            notes?: string | null;
             /**
              * @description Saudi mobile number (any common format; normalized to E.164)
              * @example +966501234567
              */
-            phone?: Record<string, never> | null;
+            phone?: string | null;
             /**
              * @description Preferred locale (ISO 639-1)
              * @example ar
              */
-            preferredLocale?: Record<string, never> | null;
+            preferredLocale?: string | null;
             /**
              * @description Whether the client receives push notifications
              * @example true
              */
             pushEnabled?: boolean;
             /**
-             * @description Acquisition source
-             * @example REFERRAL
+             * @description Acquisition source (case-insensitive)
+             * @example referral
              */
             source?: components["schemas"]["ClientSource"];
         };
@@ -8817,6 +10375,8 @@ export interface components {
             title?: string;
         };
         UpdateIntakeFormDto: {
+            /** @description Optional replacement field list (max 100) */
+            fields?: components["schemas"]["IntakeFieldInputDto"][];
             /**
              * @description Whether the form is active and shown to clients
              * @example true
@@ -8831,7 +10391,24 @@ export interface components {
              * @description Form name in English
              * @example Pre-session Questionnaire
              */
-            nameEn?: string;
+            nameEn?: string | null;
+            /**
+             * @description Form scope
+             * @example GLOBAL
+             * @enum {string}
+             */
+            scope?: "GLOBAL" | "SERVICE" | "EMPLOYEE" | "BRANCH";
+            /**
+             * @description Scope entity ID; null clears the scope target
+             * @example null
+             */
+            scopeId?: string | null;
+            /**
+             * @description Form type
+             * @example PRE_SESSION
+             * @enum {string}
+             */
+            type?: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
         };
         UpdateProblemReportStatusDto: {
             /**
@@ -12923,6 +14500,10 @@ export interface operations {
             query?: {
                 /** @description Filter by status */
                 status?: "NEW" | "READ" | "REPLIED" | "ARCHIVED";
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -12935,7 +14516,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedContactMessagesResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -12996,7 +14579,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ContactMessageResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -13018,6 +14603,15 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Contact message not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13395,6 +14989,10 @@ export interface operations {
             query?: {
                 /** @description Return only unread notifications */
                 unreadOnly?: boolean;
+                /** @description Results per page (1–200, default: 20) */
+                limit?: number;
+                /** @description Page number (1-based, default: 1) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -13407,7 +15005,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedNotificationsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -13519,7 +15119,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UnreadNotificationCountResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -14505,7 +16107,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DiscountReasonResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -14563,7 +16167,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DiscountReasonResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -14699,7 +16305,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DiscountReasonResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -18660,7 +20268,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedBranchesDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -18718,7 +20328,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -18775,7 +20387,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -18911,7 +20525,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19047,7 +20663,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchEmployeeAssignmentResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19111,11 +20729,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Employee unassigned from branch */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchAssignmentDeletedResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19174,9 +20794,9 @@ export interface operations {
                 /** @description Search categories by name */
                 search?: string;
                 /** @description Results per page */
-                limit?: unknown;
+                limit?: number;
                 /** @description Page number (1-based) */
-                page?: unknown;
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -19189,7 +20809,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedCategoriesResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19247,7 +20869,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CategoryResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19300,13 +20924,15 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Category deleted */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteCategoryResponseDto"];
+                };
             };
-            /** @description Validation failed */
+            /** @description Category has linked non-archived services */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19374,7 +21000,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CategoryResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19446,7 +21074,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedDepartmentsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19504,7 +21134,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19557,11 +21189,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Department deleted */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteDepartmentResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19631,7 +21265,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20022,7 +21658,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormListItemResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20080,7 +21718,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20137,7 +21777,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeBookingResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20198,7 +21840,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeSubmissionResponseDto"];
+                };
             };
             /** @description Validation failed (missing required field, unknown field, or invalid option) */
             400: {
@@ -20260,7 +21904,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20392,7 +22038,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20423,6 +22071,13 @@ export interface operations {
             };
             /** @description Intake form not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Answered intake forms cannot change their fields */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20460,7 +22115,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IntakeFormResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -20491,6 +22148,13 @@ export interface operations {
             };
             /** @description Intake form not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Answered intake forms cannot change their fields */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21887,13 +23551,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Client created */
+            /** @description Client created or matched by phone */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ClientResponseDto"];
+                    "application/json": components["schemas"]["CreateClientResponseDto"];
                 };
             };
             /** @description Validation failed */

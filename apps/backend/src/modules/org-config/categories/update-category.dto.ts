@@ -6,10 +6,10 @@ export class UpdateCategoryDto {
   @ApiPropertyOptional({ description: 'Category name in Arabic', example: 'طب الأسنان' })
   @IsOptional() @IsString() @MaxLength(200) nameAr?: string;
 
-  @ApiPropertyOptional({ description: 'Category name in English', example: 'Dentistry' })
-  @IsOptional() @IsString() @MaxLength(200) nameEn?: string;
+  @ApiPropertyOptional({ description: 'Category name in English', type: String, example: 'Dentistry', nullable: true })
+  @IsOptional() @IsString() @MaxLength(200) nameEn?: string | null;
 
-  @ApiPropertyOptional({ description: 'UUID of the parent department, or null to unlink', example: '00000000-0000-0000-0000-000000000000', nullable: true })
+  @ApiPropertyOptional({ description: 'UUID of the parent department, or null to unlink', type: String, example: '00000000-0000-0000-0000-000000000000', nullable: true })
   @ValidateIf((_o, v) => v !== null) @IsOptional() @IsUUID() departmentId?: string | null;
 
   @ApiPropertyOptional({ description: 'Display order (0-based)', example: 1 })
@@ -25,12 +25,12 @@ export class UpdateCategoryDto {
   })
   @IsOptional() @IsEnum(CategoryBookingMode) bookingMode?: CategoryBookingMode;
 
-  @ApiPropertyOptional({ description: 'Category image URL', example: 'https://example.com/logo.png' })
-  @IsOptional() @IsString() imageUrl?: string;
+  @ApiPropertyOptional({ description: 'Category image URL or stored object key', type: String, example: 'https://example.com/logo.png', nullable: true })
+  @IsOptional() @IsString() imageUrl?: string | null;
 
-  @ApiPropertyOptional({ example: 'scissors-01' })
-  @IsOptional() @IsString() @MaxLength(50) iconName?: string;
+  @ApiPropertyOptional({ type: String, example: 'scissors-01', nullable: true })
+  @IsOptional() @IsString() @MaxLength(50) iconName?: string | null;
 
-  @ApiPropertyOptional({ example: '#F0F4FF' })
-  @IsOptional() @IsString() @MaxLength(20) iconBgColor?: string;
+  @ApiPropertyOptional({ type: String, example: '#F0F4FF', nullable: true })
+  @IsOptional() @IsString() @MaxLength(20) iconBgColor?: string | null;
 }

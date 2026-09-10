@@ -3,7 +3,7 @@
  * Backend: POST /dashboard/ops/reports — single polymorphic endpoint, type discriminator.
  */
 
-import { api, getAccessToken } from "@/lib/api"
+import { api } from "@/lib/api"
 import type {
   BookingReport,
   ClientsReport,
@@ -101,32 +101,14 @@ export async function exportReportExcel(params: {
   branchId?: string
   employeeId?: string
 }): Promise<void> {
-  const token = getAccessToken()
-  const res = await fetch("/api/proxy/dashboard/ops/reports", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({
-      type: params.type,
-      format: "EXCEL",
-      from: params.dateFrom,
-      to: params.dateTo,
-      branchId: params.branchId,
-      employeeId: params.employeeId,
-    }),
+  const blob = await api.postBlob("/dashboard/ops/reports", {
+    type: params.type,
+    format: "EXCEL",
+    from: params.dateFrom,
+    to: params.dateTo,
+    branchId: params.branchId,
+    employeeId: params.employeeId,
   })
-
-  if (!res.ok) {
-    const reason =
-      res.status === 401 || res.status === 403
-        ? "unauthorized"
-        : res.statusText || "request failed"
-    throw new Error(`Report export failed (${res.status} ${reason})`)
-  }
-
-  const blob = await res.blob()
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
   a.href = url

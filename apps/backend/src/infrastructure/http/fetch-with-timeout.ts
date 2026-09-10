@@ -18,6 +18,7 @@ export async function fetchWithTimeout(
     timedOut = true;
     controller.abort();
   }, timeoutMs);
+  (timeoutId as NodeJS.Timeout).unref?.();
 
   // Merge the timeout signal with any caller-supplied signal so that either
   // can abort the request independently.
@@ -26,19 +27,53 @@ export async function fetchWithTimeout(
     ? AbortSignal.any([controller.signal, callerSignal as AbortSignal])
     : controller.signal;
 
-  try {
-    return await fetch(url, { ...options, signal });
-  } catch (err) {
+  const translateAbort = (err: unknown): unknown => {
     if (err instanceof Error && err.name === 'AbortError' && timedOut) {
       const hostname = (() => {
         try { return new URL(url).hostname; } catch { return url; }
       })();
-      throw new Error(
+      return new Error(
         `fetchWithTimeout: request to ${hostname} timed out after ${timeoutMs}ms`,
       );
     }
-    throw err;
-  } finally {
+    return err;
+  };
+
+  try {
+    const response = await fetch(url, { ...options, signal });
+    const bodyMethods = ['arrayBuffer', 'blob', 'formData', 'json', 'text'] as const;
+    let wrappedBodyConsumer = false;
+
+    // Fetch resolves when headers arrive. Keep the same deadline alive until a
+    // standard body consumer settles, while preserving the Response object and
+    // every existing caller signature.
+    for (const method of bodyMethods) {
+      const consumer = response[method];
+      if (typeof consumer !== 'function') continue;
+      wrappedBodyConsumer = true;
+      Object.defineProperty(response, method, {
+        configurable: true,
+        value: async (...args: unknown[]) => {
+          try {
+            return await (consumer as (...inner: unknown[]) => Promise<unknown>).apply(
+              response,
+              args,
+            );
+          } catch (err) {
+            throw translateAbort(err);
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        },
+      });
+    }
+
+    // Lightweight Response-like test doubles and callers without a body have
+    // nothing left to consume, so their deadline is complete at headers.
+    if (!wrappedBodyConsumer) clearTimeout(timeoutId);
+    return response;
+  } catch (err) {
     clearTimeout(timeoutId);
+    throw translateAbort(err);
   }
 }

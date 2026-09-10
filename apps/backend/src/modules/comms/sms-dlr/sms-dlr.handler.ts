@@ -13,7 +13,10 @@ import {
   SYSTEM_CONTEXT_CLS_KEY,
   TENANT_CLS_KEY,
 } from '../../../common/constants';
-import { PrismaService } from '../../../infrastructure/database';
+import {
+  PrismaService,
+  RlsTransactionService,
+} from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 
 export type SmsDlrRequest = {
@@ -31,6 +34,7 @@ export class SmsDlrHandler {
     private readonly prisma: PrismaService,
     private readonly factory: SmsProviderFactory,
     private readonly cls: ClsService,
+    private readonly transaction: RlsTransactionService,
   ) {}
 
   async execute(req: SmsDlrRequest): Promise<{ skipped?: boolean }> {
@@ -75,22 +79,48 @@ export class SmsDlrHandler {
       cfg.webhookSecret,
     );
 
-    // STAGE 2.5 — idempotency dedup. The dedup key is keyed on
+    // STAGE 3 — idempotency dedup and delivery mutation. The dedup key is keyed on
     // `providerMessageId:status` (stable across retries of the same DLR, yet
     // distinct per status transition — so SENT → DELIVERED still processes).
-    // Optimistic insert (create → catch P2002) makes the dedup atomic under
-    // concurrent retries.
+    // The claim and mutation share one transaction so a failed mutation rolls
+    // the claim back and the provider can safely retry the webhook.
     const webhookEventId = `${parsed.providerMessageId}:${parsed.status}`;
     const payloadHash = createHash('sha256').update(req.rawBody).digest('hex');
     try {
-      await this.prisma.webhookEvent.create({
-        data: {
-          provider: `SMS_${req.provider}`,
-          eventId: webhookEventId,
-          eventType: parsed.status,
-          payloadHash,
-        },
-        select: { id: true },
+      return await this.cls.run(async () => {
+        this.cls.set(TENANT_CLS_KEY, {
+          organizationId: req.organizationId,
+          id: 'system',
+          role: 'system',
+          isSuperAdmin: false,
+        });
+        await this.transaction.withTransaction(async (tx) => {
+          await tx.webhookEvent.create({
+            data: {
+              provider: `SMS_${req.provider}`,
+              eventId: webhookEventId,
+              eventType: parsed.status,
+              payloadHash,
+            },
+            select: { id: true },
+          });
+          const updated = await tx.smsDelivery.updateMany({
+            where: { providerMessageId: parsed.providerMessageId },
+            data: {
+              status: parsed.status,
+              errorCode: parsed.errorCode,
+              errorMessage: parsed.errorMessage,
+              deliveredAt:
+                parsed.status === 'DELIVERED' ? new Date() : undefined,
+            },
+          });
+          if (updated.count === 0) {
+            throw new Error(
+              `SMS delivery not found for provider message ${parsed.providerMessageId}`,
+            );
+          }
+        });
+        return {};
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -101,26 +131,5 @@ export class SmsDlrHandler {
       }
       throw err;
     }
-
-    // STAGE 3 — mutate inside the single-tenant compatibility CLS context.
-    return this.cls.run(async () => {
-      this.cls.set(TENANT_CLS_KEY, {
-        organizationId: req.organizationId,
-        id: 'system',
-        role: 'system',
-        isSuperAdmin: false,
-      });
-      await this.prisma.smsDelivery.updateMany({
-        where: { providerMessageId: parsed.providerMessageId },
-        data: {
-          status: parsed.status,
-          errorCode: parsed.errorCode,
-          errorMessage: parsed.errorMessage,
-          deliveredAt:
-            parsed.status === 'DELIVERED' ? new Date() : undefined,
-        },
-      });
-      return {};
-    });
   }
 }

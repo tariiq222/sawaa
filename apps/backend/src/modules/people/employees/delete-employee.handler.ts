@@ -4,10 +4,9 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import {
-	PrismaService,
-	RlsTransactionService,
-} from "../../../infrastructure/database";
+import { RlsTransactionService } from "../../../infrastructure/database";
+import { lockPersonReferences } from "../../../common/database/person-reference-lock.helper";
+import { ACTIVE_BOOKING_STATUSES } from "../../bookings/active-booking-statuses";
 
 export interface DeleteEmployeeCommand {
 	employeeId: string;
@@ -28,15 +27,16 @@ const DELETE_EMPLOYEE_MESSAGES = {
 
 @Injectable()
 export class DeleteEmployeeHandler {
-	constructor(
-		private readonly prisma: PrismaService,
-		private readonly rlsTransaction: RlsTransactionService,
-	) {}
+	constructor(private readonly rlsTransaction: RlsTransactionService) {}
 
 	async execute(cmd: DeleteEmployeeCommand): Promise<void> {
 		await this.rlsTransaction.withTransaction(
 			async (tx) => {
-				await tx.$queryRaw`SELECT id FROM "Employee" WHERE id = ${cmd.employeeId} FOR UPDATE`;
+				await lockPersonReferences(
+					tx,
+					[{ kind: "Employee", id: cmd.employeeId }],
+					"delete",
+				);
 
 				const employee = await tx.employee.findFirst({
 					where: { id: cmd.employeeId },
@@ -44,19 +44,10 @@ export class DeleteEmployeeHandler {
 				if (!employee)
 					throw new NotFoundException(DELETE_EMPLOYEE_MESSAGES.notFound);
 
-				// ─── Cross-BC integrity guards ───────────────────────────────────────────
-				// Booking (people → bookings): block if any active appointment exists
 				const activeBookings = await tx.booking.count({
 					where: {
 						employeeId: cmd.employeeId,
-						status: {
-							in: [
-								"PENDING",
-								"AWAITING_PAYMENT",
-								"CONFIRMED",
-								"CANCEL_REQUESTED",
-							],
-						},
+						status: { in: [...ACTIVE_BOOKING_STATUSES] },
 					},
 				});
 				if (activeBookings > 0) {
@@ -65,8 +56,6 @@ export class DeleteEmployeeHandler {
 					);
 				}
 
-				// ProgramSupervisor (people → bookings): block if the employee is
-				// supervising a program that has not reached a terminal status.
 				const supervisingPrograms = await tx.programSupervisor.count({
 					where: {
 						employeeId: cmd.employeeId,
@@ -81,7 +70,6 @@ export class DeleteEmployeeHandler {
 					);
 				}
 
-				// Invoice (people → finance): block if unpaid invoices exist
 				const unpaidInvoices = await tx.invoice.count({
 					where: {
 						employeeId: cmd.employeeId,
@@ -94,7 +82,6 @@ export class DeleteEmployeeHandler {
 					);
 				}
 
-				// Rating (people → organization)
 				const ratings = await tx.rating.count({
 					where: { employeeId: cmd.employeeId },
 				});
@@ -127,7 +114,11 @@ export class DeleteEmployeeHandler {
 
 				await tx.employee.delete({ where: { id: cmd.employeeId } });
 			},
-			{ isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+			{
+				// Every relationship guard needs a new snapshot after a competing
+				// writer releases its shared person lock.
+				isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+			},
 		);
 	}
 }

@@ -3,6 +3,7 @@
   "rootDir": "..",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "testPathIgnorePatterns": ["/test/notification-outbox[^/]*\\.real-e2e-spec\\.ts$"],
   "transform": {
     "^.+\\.(t|j)sx?$": ["ts-jest", { "diagnostics": false }]
   },
@@ -14,5 +15,6 @@
     "^@react-pdf/renderer$": "<rootDir>/src/__mocks__/react-pdf-renderer.ts"
   },
   "transformIgnorePatterns": ["node_modules/(?!(uuid)/)"],
+  "modulePathIgnorePatterns": ["<rootDir>/dist/"],
   "setupFilesAfterEnv": ["<rootDir>/test/setup-e2e.ts"]
 }

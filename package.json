@@ -13,6 +13,7 @@
     "check:legacy-multitenant": "node scripts/check-legacy-multitenant.js",
     "check:api-client-drift": "node scripts/check-api-client-drift.mjs",
     "check:dashboard-api-drift": "node scripts/check-dashboard-api-drift.mjs",
+    "check:openapi-coverage": "pnpm --filter=backend run check:openapi-coverage",
     "test": "turbo run test",
     "test:cov": "turbo run test:cov",
     "typecheck": "turbo run typecheck",
@@ -45,8 +46,6 @@
       "vite": ">=8.0.16",
       "protobufjs@<7.6.1": ">=7.6.1",
       "hono@<4.12.25": ">=4.12.25",
-      "multer@<2.2.0": ">=2.2.0",
-      "nodemailer@<9.0.1": ">=9.0.1",
       "websocket-driver@<0.7.5": ">=0.7.5",
       "brace-expansion": ">=5.0.8",
       "minimatch": "^10",
@@ -57,9 +56,13 @@
       "ip-address": "10.7.0",
       "nanoid": "3.3.18",
       "deepmerge-ts": "8.0.2",
-      "sharp@<0.35.0": ">=0.35.0",
-      "next@<15.5.21": "15.5.21",
-      "postcss@<8.5.18": ">=8.5.18"
+      "postcss@<8.5.18": ">=8.5.18",
+      "multer@<2.3.0": "2.3.0",
+      "nodemailer@<9.1.0": "9.1.0",
+      "sharp@<0.35.4": "0.35.4",
+      "next@<15.5.24": "15.5.24",
+      "browserslist@<4.28.7": "4.28.7",
+      "mysql2@<3.22.0": "3.22.0"
     },
     "onlyBuiltDependencies": [
       "@prisma/client",

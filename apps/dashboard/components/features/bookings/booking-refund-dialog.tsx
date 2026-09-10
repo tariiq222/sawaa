@@ -25,6 +25,10 @@ interface BookingRefundDialogProps {
   paymentId: string
   /** Original payment amount in halalas — the refund ceiling. */
   maxAmount: number
+  invoiceId?: string
+  bookingId?: string
+  clientId?: string
+  employeeId?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -33,7 +37,16 @@ interface BookingRefundDialogProps {
  * Manual (cash/bank-transfer) refund issued from the bookings list. Lives in the
  * bookings feature to avoid a cross-feature import of the payments refund dialog.
  */
-export function BookingRefundDialog({ paymentId, maxAmount, open, onOpenChange }: BookingRefundDialogProps) {
+export function BookingRefundDialog({
+  paymentId,
+  maxAmount,
+  invoiceId,
+  bookingId,
+  clientId,
+  employeeId,
+  open,
+  onOpenChange,
+}: BookingRefundDialogProps) {
   const { t } = useLocale()
   const { manualRefundMut } = usePaymentMutations()
 
@@ -51,6 +64,10 @@ export function BookingRefundDialog({ paymentId, maxAmount, open, onOpenChange }
         id: paymentId,
         reason: reason.trim(),
         amount: amountSar ? sarToHalalas(amountNum) : undefined,
+        invoiceId,
+        bookingId,
+        clientId,
+        employeeId,
       })
       toast.success(t("refund.successToast"))
       onOpenChange(false)

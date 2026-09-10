@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import type { Booking } from "@/lib/types/booking"
+import { BookingPaymentPollingProvider } from "@/hooks/use-booking-payment-polling"
 
 export function BookingsPageContent() {
   const searchParams = useSearchParams()
@@ -46,46 +47,48 @@ export function BookingsPageContent() {
   }
 
   return (
-    <ListPageShell>
-      <div className="flex flex-col gap-2">
-        <Breadcrumbs />
-        <PageHeader
-          title={titleLabel}
-          description={creating ? t("bookings.create.pageTitle") : t("bookings.description")}
-        >
-          {!creating && (
-            <Button
-              variant="accent"
-              size="lg"
-              className="gap-2 rounded-lg px-6 shadow-sm"
-              onClick={() => setCreating(true)}
-            >
-              <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={2.5} />
-              {t("bookings.newBooking")}
-            </Button>
-          )}
-        </PageHeader>
-      </div>
+    <BookingPaymentPollingProvider>
+      <ListPageShell>
+        <div className="flex flex-col gap-2">
+          <Breadcrumbs />
+          <PageHeader
+            title={titleLabel}
+            description={creating ? t("bookings.create.pageTitle") : t("bookings.description")}
+          >
+            {!creating && (
+              <Button
+                variant="accent"
+                size="lg"
+                className="gap-2 rounded-lg px-6 shadow-sm"
+                onClick={() => setCreating(true)}
+              >
+                <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={2.5} />
+                {t("bookings.newBooking")}
+              </Button>
+            )}
+          </PageHeader>
+        </div>
 
-      {creating ? (
-        <BookingCreateView
-          onSuccess={() => { setCreating(false); refresh() }}
-          onCancel={() => setCreating(false)}
+        {creating ? (
+          <BookingCreateView
+            onSuccess={() => { setCreating(false); refresh() }}
+            onCancel={() => setCreating(false)}
+          />
+        ) : (
+          <BookingsTabContent onRowClick={handleRowClick} />
+        )}
+
+        <BookingDetailSheet
+          booking={selectedBooking}
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          onAction={() => {
+            setDetailOpen(false)
+            refresh()
+          }}
+          defaultTab={detailDefaultTab}
         />
-      ) : (
-        <BookingsTabContent onRowClick={handleRowClick} />
-      )}
-
-      <BookingDetailSheet
-        booking={selectedBooking}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        onAction={() => {
-          setDetailOpen(false)
-          refresh()
-        }}
-        defaultTab={detailDefaultTab}
-      />
-    </ListPageShell>
+      </ListPageShell>
+    </BookingPaymentPollingProvider>
   )
 }

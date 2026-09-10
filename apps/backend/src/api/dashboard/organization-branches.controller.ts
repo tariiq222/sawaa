@@ -21,6 +21,13 @@ import { ListBranchEmployeesHandler } from '../../modules/org-config/branches/li
 import { AssignEmployeeToBranchHandler } from '../../modules/org-config/branches/assign-employee-to-branch.handler';
 import { AssignEmployeeToBranchDto } from '../../modules/org-config/branches/assign-employee-to-branch.dto';
 import { UnassignEmployeeFromBranchHandler } from '../../modules/org-config/branches/unassign-employee-from-branch.handler';
+import {
+  BranchAssignmentDeletedResponseDto,
+  BranchDetailResponseDto,
+  BranchEmployeeAssignmentResponseDto,
+  BranchResponseDto,
+  PaginatedBranchesDto,
+} from './dto/organization-branch-response.dto';
 
 @ApiTags('Dashboard / Org Config')
 @ApiBearerAuth()
@@ -42,7 +49,7 @@ export class DashboardOrganizationBranchesController {
   @Post('branches')
   @CheckPermissions({ action: 'create', subject: 'Branch' })
   @ApiOperation({ summary: 'Create a branch' })
-  @ApiCreatedResponse({ description: 'Branch created' })
+  @ApiCreatedResponse({ description: 'Branch created', type: BranchResponseDto })
   createBranchEndpoint(@Body() body: CreateBranchDto) {
     return this.createBranch.execute(body);
   }
@@ -54,7 +61,7 @@ export class DashboardOrganizationBranchesController {
   @ApiQuery({ name: 'isActive', required: false, description: 'Filter by active status', example: true })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20 })
-  @ApiOkResponse({ description: 'Paginated list of branches' })
+  @ApiOkResponse({ description: 'Paginated list of branches', type: PaginatedBranchesDto })
   listBranchesEndpoint(@Query() query: ListBranchesDto) {
     return this.listBranches.execute(query);
   }
@@ -63,7 +70,7 @@ export class DashboardOrganizationBranchesController {
   @CheckPermissions({ action: 'read', subject: 'Branch' })
   @ApiOperation({ summary: 'Get a branch by ID' })
   @ApiParam({ name: 'branchId', description: 'Branch UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Branch details' })
+  @ApiOkResponse({ description: 'Branch details', type: BranchDetailResponseDto })
   @ApiResponse({ status: 404, description: 'Branch not found', type: ApiErrorDto })
   getBranchEndpoint(@Param('branchId', ParseUUIDPipe) branchId: string) {
     return this.getBranch.execute({ branchId });
@@ -73,7 +80,7 @@ export class DashboardOrganizationBranchesController {
   @CheckPermissions({ action: 'update', subject: 'Branch' })
   @ApiOperation({ summary: 'Update a branch' })
   @ApiParam({ name: 'branchId', description: 'Branch UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Branch updated' })
+  @ApiOkResponse({ description: 'Branch updated', type: BranchResponseDto })
   @ApiResponse({ status: 404, description: 'Branch not found', type: ApiErrorDto })
   updateBranchEndpoint(
     @Param('branchId', ParseUUIDPipe) branchId: string,
@@ -107,7 +114,10 @@ export class DashboardOrganizationBranchesController {
   @CheckPermissions({ action: 'update', subject: 'Branch' })
   @ApiOperation({ summary: 'Assign an employee to a branch' })
   @ApiParam({ name: 'branchId', description: 'Branch UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiCreatedResponse({ description: 'Employee assigned to branch' })
+  @ApiCreatedResponse({
+    description: 'Employee assigned to branch',
+    type: BranchEmployeeAssignmentResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Branch or employee not found', type: ApiErrorDto })
   assignEmployeeEndpoint(
     @Param('branchId', ParseUUIDPipe) branchId: string,
@@ -121,7 +131,10 @@ export class DashboardOrganizationBranchesController {
   @ApiOperation({ summary: 'Unassign an employee from a branch' })
   @ApiParam({ name: 'branchId', description: 'Branch UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiParam({ name: 'employeeId', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiNoContentResponse({ description: 'Employee unassigned from branch' })
+  @ApiOkResponse({
+    description: 'Employee unassigned from branch',
+    type: BranchAssignmentDeletedResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Branch or employee not found', type: ApiErrorDto })
   unassignEmployeeEndpoint(
     @Param('branchId', ParseUUIDPipe) branchId: string,

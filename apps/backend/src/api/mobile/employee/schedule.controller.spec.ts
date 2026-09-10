@@ -5,6 +5,7 @@ import { MobileEmployeeScheduleController } from './schedule.controller';
 import { PrismaService } from '../../../infrastructure/database';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { UpdateAvailabilityHandler } from '../../../modules/people/employees/update-availability.handler';
+import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 
@@ -16,6 +17,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
   };
   const mockListBookings = { execute: jest.fn() };
   const mockUpdateAvailability = { execute: jest.fn() };
+  const mockResolveEmployeeId = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -24,6 +26,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ListBookingsHandler, useValue: mockListBookings },
         { provide: UpdateAvailabilityHandler, useValue: mockUpdateAvailability },
+        { provide: ResolveEmployeeIdHandler, useValue: mockResolveEmployeeId },
       ],
     })
       .overrideGuard(JwtGuard)
@@ -55,9 +58,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
   });
 
   beforeEach(() => {
-    // JWT user carries sub = 'emp-1' (a User.id) and no employeeId claim, so the
-    // controller resolves the real Employee.id via prisma.employee.findFirst.
-    // Returning a DIFFERENT id ('employee-1') proves resolution actually happens.
+    mockResolveEmployeeId.execute.mockResolvedValue('employee-1');
     mockPrisma.employee.findFirst.mockResolvedValue({ id: 'employee-1' });
   });
 
@@ -66,6 +67,16 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
   });
 
   describe('GET /mobile/employee/schedule/today', () => {
+    it('uses the centralized employee profile resolution result', async () => {
+      mockPrisma.employee.findFirst.mockResolvedValue(null);
+      mockListBookings.execute.mockResolvedValue({ data: [], total: 0 });
+
+      await request(app.getHttpServer())
+        .get('/mobile/employee/schedule/today')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+    });
+
     it('returns 200 with today bookings', async () => {
       mockListBookings.execute.mockResolvedValue({ data: [{ id: 'b-1' }], total: 1 });
 

@@ -25,18 +25,13 @@ export function EnrollClientDialog({
   programId: string;
 }) {
   const { t } = useLocale();
-  const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const enroll = useEnrollClientInProgram();
 
   const clients = useClients();
-  const filtered = (clients.clients ?? []).filter((c) => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return (c.name ?? '').toLowerCase().includes(s) || (c.phone ?? '').includes(search);
-  });
+  const filtered = clients.isFetching ? [] : (clients.clients ?? []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -48,11 +43,16 @@ export function EnrollClientDialog({
           <div className="space-y-3">
             <Input
               placeholder={t('programs.dialog.enroll.search')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={clients.search}
+              onChange={(e) => {
+                setSelectedId(null);
+                clients.setSearch(e.target.value);
+              }}
             />
             <div className="max-h-64 overflow-y-auto rounded border border-(--border)">
-              {filtered.length === 0 ? (
+              {clients.isFetching ? (
+                <p className="p-4 text-sm text-(--text-muted)">{t('common.loading')}</p>
+              ) : filtered.length === 0 ? (
                 <p className="p-4 text-sm text-(--text-muted)">—</p>
               ) : (
                 filtered.map((c) => (
@@ -70,6 +70,21 @@ export function EnrollClientDialog({
                 ))
               )}
             </div>
+            {clients.meta && clients.meta.totalPages > 1 && (
+              <div className="flex items-center justify-between text-sm text-(--text-muted)">
+                <span className="tabular-nums">
+                  {t('table.page')} {clients.page} {t('table.of')} {clients.meta.totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="outline" disabled={!clients.meta.hasPreviousPage} onClick={() => { setSelectedId(null); clients.setPage(clients.page - 1); }}>
+                    {t('table.previous')}
+                  </Button>
+                  <Button variant="outline" disabled={!clients.meta.hasNextPage} onClick={() => { setSelectedId(null); clients.setPage(clients.page + 1); }}>
+                    {t('table.next')}
+                  </Button>
+                </div>
+              </div>
+            )}
             {error && <p className="text-sm text-(--text-error)">{error}</p>}
           </div>
         </DialogBody>
@@ -79,7 +94,7 @@ export function EnrollClientDialog({
           </Button>
           <Button
             variant="default"
-            disabled={!selectedId || submitting}
+            disabled={!selectedId || submitting || clients.isFetching}
             onClick={async () => {
               if (!selectedId) return;
               const parsed = enrollInProgramSchema.safeParse({ clientId: selectedId });

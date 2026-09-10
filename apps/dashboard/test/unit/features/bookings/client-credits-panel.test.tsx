@@ -116,6 +116,21 @@ test("renders only usable credits and fires onUseCredit on click", async () => {
   )
 })
 
+test("shows a retryable error instead of hiding failed credit loading", () => {
+  const refetch = vi.fn()
+  mockUseClientPackagePurchases.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    error: new Error("network failed"),
+    refetch,
+  } as unknown as ReturnType<typeof useClientPackagePurchases>)
+
+  render(<ClientCreditsPanel clientId="c-error" onUseCredit={vi.fn()} />)
+  expect(screen.getByRole("alert")).toHaveTextContent("error.server")
+  screen.getByRole("button", { name: "common.retry" }).click()
+  expect(refetch).toHaveBeenCalledOnce()
+})
+
 test("dedupes credits with identical serviceId:employeeId:durationOptionId triple", () => {
   // Two ACTIVE purchases both hold a credit for the same (s1, e1, d1) triple.
   mockUseClientPackagePurchases.mockReturnValue({

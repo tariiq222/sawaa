@@ -29,6 +29,7 @@ export class PublicIntakeFormsController {
   }
 
   @ApiBearerAuth()
+  @Public()
   @UseGuards(ClientSessionGuard)
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('bookings/:bookingId/intake-responses')

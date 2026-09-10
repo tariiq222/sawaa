@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../infrastructure/database';
@@ -6,6 +6,7 @@ import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { EventBusService } from '../../../infrastructure/events';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { NotificationOutboxConfig } from '../../comms/notification-outbox/notification-outbox.config';
 
 /** Event name consumed by comms `OnBookingReminderHandler`. */
 const REMINDER_EVENT = 'ops.booking.reminder_due';
@@ -44,9 +45,11 @@ export class AppointmentRemindersCron {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly eventBus: EventBusService,
+    @Optional() private readonly notificationOutboxConfig?: NotificationOutboxConfig,
   ) {}
 
   async execute(): Promise<void> {
+    if (this.notificationOutboxConfig?.captureEnabled) return;
     await withCronLeader(this.prisma, 'appointment-reminders', async () => {
       const leadMinutes = await this.resolveLeadMinutes();
 

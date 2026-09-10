@@ -1,4 +1,4 @@
-import { Controller, Get, NotFoundException, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { BookingType, DeliveryType } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
@@ -6,8 +6,7 @@ import { Type } from 'class-transformer';
 import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
-import { PrismaService } from '../../infrastructure/database';
-import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
+import { GetPublicAvailabilityHandler } from '../../modules/bookings/availability/public/get-public-availability.handler';
 import { ApiPublicResponses } from '../../common/swagger';
 
 export class PublicSlotsQuery {
@@ -40,10 +39,7 @@ export class PublicSlotsQuery {
 @ApiPublicResponses()
 @Controller('public/availability')
 export class PublicSlotsController {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly checkAvailability: CheckAvailabilityHandler,
-  ) {}
+  constructor(private readonly getPublicAvailability: GetPublicAvailabilityHandler) {}
 
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
@@ -51,21 +47,10 @@ export class PublicSlotsController {
   @ApiOperation({ summary: 'Get available booking slots for an employee on a given date' })
   @ApiOkResponse({ description: 'Array of available time slots' })
   async getSlots(@Query() q: PublicSlotsQuery) {
-    // Enforce the public guard before exposing availability: a hidden or
-    // inactive employee's schedule must not be enumerable through this
-    // unauthenticated endpoint. Mirrors GetPublicAvailabilityHandler.
-    const employee = await this.prisma.employee.findFirst({
-      where: { id: q.employeeId, isPublic: true, isActive: true },
-      select: { id: true },
-    });
-    if (!employee) {
-      throw new NotFoundException('Resource not found or not available');
-    }
-
-    return this.checkAvailability.execute({
+    return this.getPublicAvailability.execute({
       employeeId: q.employeeId,
       branchId: q.branchId,
-      date: new Date(q.date),
+      date: q.date,
       durationMins: q.durationMins,
       serviceId: q.serviceId,
       durationOptionId: q.durationOptionId,

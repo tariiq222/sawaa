@@ -7,23 +7,56 @@ const {
   fetchPayments,
   fetchPaymentStats,
   collectBookingPayment,
+  verifyPayment,
+  refundPayment,
+  fetchInvoices,
 } = vi.hoisted(() => ({
   fetchPayments: vi.fn(),
   fetchPaymentStats: vi.fn(),
   collectBookingPayment: vi.fn(),
+  verifyPayment: vi.fn(),
+  refundPayment: vi.fn(),
+  fetchInvoices: vi.fn(),
 }))
 
 vi.mock("@/lib/api/payments", () => ({
   fetchPayments,
   fetchPaymentStats,
   collectBookingPayment,
+  verifyPayment,
+  refundPayment,
 }))
+
+vi.mock("@/lib/api/invoices", () => ({ fetchInvoices }))
 
 import {
   usePayments,
   usePaymentMutations,
   useRecordPaymentMutations,
 } from "@/hooks/use-payments"
+import { useInvoices } from "@/hooks/use-invoices"
+
+function invoiceRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "inv-1",
+    number: 1,
+    clientId: "client-1",
+    bookingId: "booking-1",
+    clientName: "Sara Ali",
+    subtotal: 10_000,
+    vatAmt: 1_500,
+    total: 11_500,
+    refundedAmount: 0,
+    currency: "SAR",
+    status: "ISSUED",
+    issuedAt: "2026-05-17T10:00:00Z",
+    paidAt: null,
+    sentToClientAt: null,
+    hasPdf: true,
+    createdAt: "2026-05-17T09:00:00Z",
+    ...overrides,
+  }
+}
 
 function makeWrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -85,19 +118,30 @@ describe("usePayments", () => {
     await waitFor(() => expect(result.current.hasFilters).toBe(true))
   })
 
-  it("resetFilters clears status and method", async () => {
+  it("resetFilters clears search, dates, status, method, and page", async () => {
     fetchPayments.mockResolvedValue({ items: [], meta: { total: 0 } })
 
     const { result } = renderHook(() => usePayments(), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    act(() => { result.current.setStatus("COMPLETED") })
+    act(() => {
+      result.current.setSearch("ref-001")
+      result.current.setStatus("COMPLETED")
+      result.current.setMethod("CASH")
+      result.current.setDateFrom("2026-01-01")
+      result.current.setDateTo("2026-01-31")
+      result.current.setPage(4)
+    })
     await waitFor(() => expect(result.current.status).toBe("COMPLETED"))
 
     act(() => { result.current.resetFilters() })
     await waitFor(() => expect(result.current.status).toBe("all"))
     expect(result.current.method).toBe("all")
+    expect(result.current.search).toBe("")
+    expect(result.current.dateFrom).toBe("")
+    expect(result.current.dateTo).toBe("")
+    expect(result.current.page).toBe(1)
     expect(result.current.hasFilters).toBe(false)
   })
 
@@ -131,6 +175,218 @@ describe("usePaymentMutations", () => {
     const { result } = renderHook(() => usePaymentMutations(), { wrapper: makeWrapper() })
     expect(result.current.verifyMut).toBeDefined()
     expect(typeof result.current.verifyMut.mutateAsync).toBe("function")
+  })
+
+  it("refetches an active payments query so the rendered status follows server state", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    fetchPayments
+      .mockResolvedValueOnce({
+        items: [{ id: "pay-1", amount: 500, status: "PENDING" }],
+        meta: { total: 1 },
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: "pay-1", amount: 500, status: "COMPLETED" }],
+        meta: { total: 1 },
+      })
+    verifyPayment.mockResolvedValueOnce({
+      id: "pay-1",
+      invoiceId: "inv-1",
+    })
+
+    const paymentQuery = renderHook(() => usePayments(), { wrapper })
+    await waitFor(() => expect(paymentQuery.result.current.isLoading).toBe(false))
+    expect(paymentQuery.result.current.payments[0].status).toBe("PENDING")
+
+    const mutation = renderHook(() => usePaymentMutations(), { wrapper })
+    await act(async () => {
+      await mutation.result.current.verifyMut.mutateAsync({
+        id: "pay-1",
+        action: "approve",
+        invoiceId: "inv-1",
+        bookingId: "booking-1",
+        clientId: "client-1",
+      })
+    })
+
+    await waitFor(() => expect(paymentQuery.result.current.payments[0].status).toBe("COMPLETED"))
+  })
+
+  it("invalidates booking and client views from known variables with a flat refund response", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const invalidate = vi.spyOn(client, "invalidateQueries")
+    refundPayment.mockResolvedValueOnce({
+      id: "pay-1",
+      invoiceId: "inv-1",
+      amount: 12_500,
+      refundedAmount: 2_500,
+      status: "REFUNDED",
+    })
+
+    const mutation = renderHook(() => usePaymentMutations(), { wrapper })
+    await act(async () => {
+      await mutation.result.current.refundMut.mutateAsync({
+        id: "pay-1",
+        reason: "Correction",
+        invoiceId: "inv-1",
+        bookingId: "booking-1",
+        clientId: "client-1",
+      })
+    })
+
+    const keys = invalidate.mock.calls.map(([options]) => options?.queryKey)
+    expect(keys).toContainEqual(["bookings", "detail", "booking-1"])
+    expect(keys).toContainEqual(["clients", "detail", "client-1"])
+    expect(refundPayment).toHaveBeenCalledWith("pay-1", { reason: "Correction", amount: undefined })
+  })
+
+  it("updates the mounted payment row with the refunded amount after a flat response", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    fetchPaymentStats.mockResolvedValue({ historical: null })
+    fetchPayments
+      .mockResolvedValueOnce({
+        items: [{ id: "pay-2", invoiceId: "inv-2", amount: 12_500, refundedAmount: 0, status: "COMPLETED" }],
+        meta: { total: 1 },
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: "pay-2", invoiceId: "inv-2", amount: 12_500, refundedAmount: 2_500, status: "PARTIALLY_REFUNDED" }],
+        meta: { total: 1 },
+      })
+    refundPayment.mockResolvedValueOnce({
+      id: "pay-2",
+      invoiceId: "inv-2",
+      amount: 12_500,
+      refundedAmount: 2_500,
+      status: "PARTIALLY_REFUNDED",
+    })
+
+    const paymentQuery = renderHook(() => usePayments(), { wrapper })
+    await waitFor(() => expect(paymentQuery.result.current.isLoading).toBe(false))
+    expect(paymentQuery.result.current.payments[0]).toMatchObject({ refundedAmount: 0 })
+
+    const mutation = renderHook(() => usePaymentMutations(), { wrapper })
+    await act(async () => {
+      await mutation.result.current.refundMut.mutateAsync({
+        id: "pay-2",
+        reason: "Correction",
+        amount: 2_500,
+        invoiceId: "inv-2",
+        bookingId: "booking-2",
+        clientId: "client-2",
+      })
+    })
+
+    await waitFor(() => expect(paymentQuery.result.current.payments[0]).toMatchObject({
+      amount: 12_500,
+      refundedAmount: 2_500,
+      status: "PARTIALLY_REFUNDED",
+    }))
+  })
+
+  it("updates a mounted invoice to PAID with its exact amount after flat verification", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    fetchInvoices
+      .mockResolvedValueOnce({ items: [invoiceRow()], meta: { total: 1 } })
+      .mockResolvedValueOnce({ items: [invoiceRow({ status: "PAID", total: 12_500 })], meta: { total: 1 } })
+    verifyPayment.mockResolvedValueOnce({ id: "pay-1", invoiceId: "inv-1", status: "COMPLETED" })
+
+    const mounted = renderHook(() => ({ invoices: useInvoices(), mutations: usePaymentMutations() }), { wrapper })
+    await waitFor(() => expect(mounted.result.current.invoices.invoices[0]).toMatchObject({
+      status: "ISSUED",
+      totalAmount: 11_500,
+    }))
+
+    await act(async () => {
+      await mounted.result.current.mutations.verifyMut.mutateAsync({
+        id: "pay-1",
+        action: "approve",
+        invoiceId: "inv-1",
+        bookingId: "booking-1",
+        clientId: "client-1",
+      })
+    })
+
+    await waitFor(() => expect(mounted.result.current.invoices.invoices[0]).toMatchObject({
+      status: "PAID",
+      totalAmount: 12_500,
+    }))
+  })
+
+  it("updates a mounted invoice to REFUNDED while preserving its exact total", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    fetchInvoices
+      .mockResolvedValueOnce({ items: [invoiceRow({ status: "PAID", total: 12_500 })], meta: { total: 1 } })
+      .mockResolvedValueOnce({ items: [invoiceRow({ status: "REFUNDED", total: 12_500, refundedAmount: 12_500 })], meta: { total: 1 } })
+    refundPayment.mockResolvedValueOnce({
+      id: "pay-1",
+      invoiceId: "inv-1",
+      amount: 12_500,
+      refundedAmount: 12_500,
+      status: "REFUNDED",
+    })
+
+    const mounted = renderHook(() => ({ invoices: useInvoices(), mutations: usePaymentMutations() }), { wrapper })
+    await waitFor(() => expect(mounted.result.current.invoices.invoices[0]).toMatchObject({ status: "PAID" }))
+
+    await act(async () => {
+      await mounted.result.current.mutations.refundMut.mutateAsync({
+        id: "pay-1",
+        reason: "Full refund",
+        amount: 12_500,
+        invoiceId: "inv-1",
+        bookingId: "booking-1",
+        clientId: "client-1",
+      })
+    })
+
+    await waitFor(() => expect(mounted.result.current.invoices.invoices[0]).toMatchObject({
+      status: "REFUNDED",
+      totalAmount: 12_500,
+    }))
+  })
+
+  it("preserves the mounted invoice amount when the refund API fails", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    fetchInvoices.mockResolvedValueOnce({
+      items: [invoiceRow({ status: "PAID", total: 12_500 })],
+      meta: { total: 1 },
+    })
+    refundPayment.mockRejectedValueOnce(new Error("refund rejected"))
+
+    const mounted = renderHook(() => ({ invoices: useInvoices(), mutations: usePaymentMutations() }), { wrapper })
+    await waitFor(() => expect(mounted.result.current.invoices.invoices[0]).toMatchObject({ status: "PAID" }))
+
+    await act(async () => {
+      await expect(mounted.result.current.mutations.refundMut.mutateAsync({
+        id: "pay-1",
+        reason: "Rejected refund",
+        amount: 2_500,
+        invoiceId: "inv-1",
+      })).rejects.toThrow("refund rejected")
+    })
+
+    expect(mounted.result.current.invoices.invoices[0]).toMatchObject({
+      status: "PAID",
+      totalAmount: 12_500,
+    })
+    expect(fetchInvoices).toHaveBeenCalledTimes(1)
   })
 })
 

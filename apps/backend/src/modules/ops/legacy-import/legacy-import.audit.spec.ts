@@ -1,6 +1,34 @@
-import { assertLegacyImportAudit } from './legacy-import.audit';
+import { assertLegacyImportAudit, collectLegacyImportAudit } from './legacy-import.audit';
 
 describe('legacy import audit', () => {
+  it('counts current and superseded answers separately without excluding retained history', async () => {
+    const count = () => ({ count: jest.fn().mockResolvedValue(0) });
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValue([{ historyInstalled: true }]),
+      legacyImportRecord: {
+        ...count(),
+        findMany: jest.fn().mockImplementation(({ where }) => Promise.resolve(
+          where.entityType === 'INTAKE_FORM' ? [{ targetId: 'form-1' }] : [],
+        )),
+      },
+      intakeResponse: { findMany: jest.fn().mockResolvedValue([
+        { answers: { field: 'current' }, clientId: 'client-1', supersededAt: null },
+        { answers: { field: 'retained' }, clientId: 'client-1', supersededAt: new Date() },
+      ]) },
+      intakeResponseRevision: { count: jest.fn().mockResolvedValue(1) },
+      booking: count(), service: count(), employee: count(), invoice: count(),
+      payment: count(), notification: count(), outboxEvent: count(),
+    };
+    const audit = await collectLegacyImportAudit(prisma as never, []);
+    expect(audit).toMatchObject({
+      intakeResponses: 2, intakeAnswers: 2,
+      intakeCurrentResponses: 1, intakeSupersededResponses: 1, intakeRevisionSnapshots: 1,
+    });
+    expect(prisma.intakeResponse.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { formId: { in: ['form-1'] } },
+    }));
+  });
+
   const valid = {
     importedAppointments: 5_022,
     linkedAppointments: 1,

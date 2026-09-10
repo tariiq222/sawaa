@@ -10,6 +10,11 @@ async function validateDto(plain: Record<string, unknown>) {
 }
 
 describe('SetIntakeFieldsDto', () => {
+  it('rejects null fields instead of interpreting them as an empty list', async () => {
+    const errors = await validateDto({ fields: null });
+    expect(errors.some((error) => error.property === 'fields')).toBe(true);
+  });
+
   it('accepts a missing fields (omitted → clear all)', async () => {
     const errors = await validateDto({});
     expect(errors).toHaveLength(0);

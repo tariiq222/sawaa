@@ -12,9 +12,16 @@ import { AssignEmployeeToBranchHandler } from '../../modules/org-config/branches
 import { UnassignEmployeeFromBranchHandler } from '../../modules/org-config/branches/unassign-employee-from-branch.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
+import {
+  DocumentBuilder,
+  OpenAPIObject,
+  SwaggerModule,
+} from '@nestjs/swagger';
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 describe('DashboardOrganizationBranchesController (e2e)', () => {
   let app: INestApplication;
+  let openApiDocument: OpenAPIObject;
 
   const mockCreate = { execute: jest.fn() };
   const mockUpdate = { execute: jest.fn() };
@@ -50,6 +57,10 @@ describe('DashboardOrganizationBranchesController (e2e)', () => {
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
     await app.init();
+    openApiDocument = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder().setTitle('Branches contract test').build(),
+    );
   });
 
   afterAll(async () => {
@@ -58,6 +69,160 @@ describe('DashboardOrganizationBranchesController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('OpenAPI response contracts', () => {
+    it('documents the paginated branch list response', () => {
+      const response = openApiDocument.paths['/dashboard/organization/branches']
+        ?.get?.responses?.['200'];
+
+      expect(response).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/PaginatedBranchesDto' },
+          },
+        },
+      });
+
+      const branchSchema = openApiDocument.components?.schemas?.BranchResponseDto as SchemaObject;
+      expect(branchSchema.properties).toMatchObject({
+        nameEn: { type: 'string', nullable: true },
+        phone: { type: 'string', nullable: true },
+        addressAr: { type: 'string', nullable: true },
+        addressEn: { type: 'string', nullable: true },
+        city: { type: 'string', nullable: true },
+        latitude: { type: 'number', nullable: true },
+        longitude: { type: 'number', nullable: true },
+      });
+    });
+
+    it('documents create and update with the base branch response', () => {
+      const branchRef = {
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/BranchResponseDto' },
+          },
+        },
+      };
+
+      expect(openApiDocument.paths['/dashboard/organization/branches']
+        ?.post?.responses?.['201']).toMatchObject(branchRef);
+      expect(openApiDocument.paths['/dashboard/organization/branches/{branchId}']
+        ?.patch?.responses?.['200']).toMatchObject(branchRef);
+    });
+
+    it('documents branch detail with its exact business hours and holidays', () => {
+      expect(openApiDocument.paths['/dashboard/organization/branches/{branchId}']
+        ?.get?.responses?.['200']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/BranchDetailResponseDto' },
+          },
+        },
+      });
+
+      const detailSchema = openApiDocument.components?.schemas
+        ?.BranchDetailResponseDto as SchemaObject;
+      expect(detailSchema.properties).toMatchObject({
+        businessHours: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/BranchBusinessHourResponseDto' },
+        },
+        holidays: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/BranchHolidayResponseDto' },
+        },
+      });
+
+      const businessHourSchema = openApiDocument.components?.schemas
+        ?.BranchBusinessHourResponseDto as SchemaObject;
+      expect(Object.keys(businessHourSchema.properties ?? {}).sort()).toEqual([
+        'branchId',
+        'createdAt',
+        'dayOfWeek',
+        'endTime',
+        'id',
+        'isOpen',
+        'startTime',
+        'updatedAt',
+      ]);
+      expect(businessHourSchema.properties).toMatchObject({
+        id: { type: 'string' },
+        branchId: { type: 'string' },
+        dayOfWeek: { type: 'number' },
+        startTime: { type: 'string' },
+        endTime: { type: 'string' },
+        isOpen: { type: 'boolean' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      });
+      expect([...(businessHourSchema.required ?? [])].sort()).toEqual([
+        'branchId',
+        'createdAt',
+        'dayOfWeek',
+        'endTime',
+        'id',
+        'isOpen',
+        'startTime',
+        'updatedAt',
+      ]);
+
+      const holidaySchema = openApiDocument.components?.schemas
+        ?.BranchHolidayResponseDto as SchemaObject;
+      expect(Object.keys(holidaySchema.properties ?? {}).sort()).toEqual([
+        'branchId',
+        'createdAt',
+        'date',
+        'id',
+        'nameAr',
+        'nameEn',
+      ]);
+      expect(holidaySchema.properties).toMatchObject({
+        id: { type: 'string' },
+        branchId: { type: 'string' },
+        date: { type: 'string', format: 'date-time' },
+        nameAr: { type: 'string' },
+        nameEn: { type: 'string', nullable: true },
+        createdAt: { type: 'string', format: 'date-time' },
+      });
+      expect([...(holidaySchema.required ?? [])].sort()).toEqual([
+        'branchId',
+        'createdAt',
+        'date',
+        'id',
+        'nameAr',
+        'nameEn',
+      ]);
+    });
+
+    it('documents the created employee assignment response', () => {
+      const response = openApiDocument.paths[
+        '/dashboard/organization/branches/{branchId}/employees'
+      ]?.post?.responses?.['201'];
+
+      expect(response).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/BranchEmployeeAssignmentResponseDto' },
+          },
+        },
+      });
+    });
+
+    it('documents the actual 200 assignment-id response on unassign', () => {
+      const responses = openApiDocument.paths[
+        '/dashboard/organization/branches/{branchId}/employees/{employeeId}'
+      ]?.delete?.responses;
+
+      expect(responses?.['200']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/BranchAssignmentDeletedResponseDto' },
+          },
+        },
+      });
+      expect(responses?.['204']).toBeUndefined();
+    });
   });
 
   const validBranch = { nameAr: 'فرع الرياض' };
@@ -96,10 +261,15 @@ describe('DashboardOrganizationBranchesController (e2e)', () => {
   describe('GET /dashboard/organization/branches', () => {
     it('returns 200 with paginated branches', async () => {
       mockList.execute.mockResolvedValue({
-        data: [{ id: branchId, nameAr: 'فرع الرياض' }],
-        total: 1,
-        page: 1,
-        totalPages: 1,
+        items: [{ id: branchId, nameAr: 'فرع الرياض' }],
+        meta: {
+          total: 1,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
       });
 
       const res = await request(app.getHttpServer())
@@ -107,11 +277,22 @@ describe('DashboardOrganizationBranchesController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(res.body.data).toHaveLength(1);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.meta).toMatchObject({ total: 1, limit: 20 });
     });
 
     it('passes query filters', async () => {
-      mockList.execute.mockResolvedValue({ data: [], total: 0, page: 1, totalPages: 0 });
+      mockList.execute.mockResolvedValue({
+        items: [],
+        meta: {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      });
 
       await request(app.getHttpServer())
         .get('/dashboard/organization/branches?search=Riyadh&isActive=true&page=1&limit=10')
@@ -188,13 +369,24 @@ describe('DashboardOrganizationBranchesController (e2e)', () => {
 
   describe('POST /dashboard/organization/branches/:branchId/employees', () => {
     it('returns 201 on assign', async () => {
-      mockAssign.execute.mockResolvedValue({ branchId, employeeId: 'emp-1' });
+      const assignmentId = '00000000-0000-4000-a000-000000000003';
+      mockAssign.execute.mockResolvedValue({
+        id: assignmentId,
+        branchId,
+        employeeId: '00000000-0000-4000-a000-000000000002',
+      });
 
-      await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .post(`/dashboard/organization/branches/${branchId}/employees`)
         .set('Authorization', 'Bearer fake-jwt')
         .send({ employeeId: '00000000-0000-4000-a000-000000000002' })
         .expect(201);
+
+      expect(res.body).toEqual({
+        id: assignmentId,
+        branchId,
+        employeeId: '00000000-0000-4000-a000-000000000002',
+      });
 
       expect(mockAssign.execute).toHaveBeenCalledWith({
         branchId,
@@ -213,12 +405,15 @@ describe('DashboardOrganizationBranchesController (e2e)', () => {
 
   describe('DELETE /dashboard/organization/branches/:branchId/employees/:employeeId', () => {
     it('returns 200 on unassign', async () => {
-      mockUnassign.execute.mockResolvedValue(undefined);
+      const assignmentId = '00000000-0000-4000-a000-000000000003';
+      mockUnassign.execute.mockResolvedValue({ id: assignmentId });
 
-      await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .delete(`/dashboard/organization/branches/${branchId}/employees/00000000-0000-4000-a000-000000000002`)
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
+
+      expect(res.body).toEqual({ id: assignmentId });
 
       expect(mockUnassign.execute).toHaveBeenCalledWith({
         branchId,

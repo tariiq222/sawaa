@@ -1,5 +1,6 @@
 import { PrismaService } from '../../../infrastructure/database';
 import { BookingStatus, CancellationReason } from '@prisma/client';
+import { buildBookingsReportQueries } from './revenue-report-query.helper';
 
 export interface BookingsReportParams {
   from: Date;
@@ -23,85 +24,47 @@ export async function buildBookingsReport(
   prisma: PrismaService,
   params: BookingsReportParams,
 ): Promise<BookingsReportResult> {
-  const { from, to, branchId } = params;
-  const where = {
-    scheduledAt: { gte: from, lte: to },
-    ...(branchId ? { branchId } : {}),
-  };
+  const queries = buildBookingsReportQueries(params);
+  const [summaryRaw, byStatusRaw, byTypeRaw, byDayRaw, byHourDowRaw, byCancelReasonRaw] =
+    await Promise.all([
+      prisma.$queryRaw<Array<{ total: unknown; avgDurationMins: unknown }>>(queries.summary),
+      prisma.$queryRaw<Array<{ status: string; count: unknown }>>(queries.byStatus),
+      prisma.$queryRaw<Array<{ type: string; count: unknown }>>(queries.byType),
+      prisma.$queryRaw<Array<{ date: string; count: unknown }>>(queries.byDay),
+      prisma.$queryRaw<Array<{ dow: unknown; hour: unknown; count: unknown }>>(queries.byHourDow),
+      prisma.$queryRaw<Array<{ reason: string; count: unknown }>>(queries.byCancelReason),
+    ]);
 
-  const [total, byStatusRaw, byTypeRaw, bookings] = await Promise.all([
-    prisma.booking.count({ where }),
-    prisma.booking.groupBy({
-      by: ['status'],
-      where,
-      _count: { status: true },
-    }),
-    prisma.booking.groupBy({
-      by: ['bookingType'],
-      where,
-      _count: { bookingType: true },
-    }),
-    prisma.booking.findMany({
-      where,
-      select: {
-        scheduledAt: true,
-        status: true,
-        durationMins: true,
-        cancelReason: true,
-      },
-    }),
-  ]);
-
-  // By day
-  const dayMap = new Map<string, number>();
-  for (const b of bookings) {
-    const day = b.scheduledAt.toISOString().slice(0, 10);
-    dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
-  }
+  const summary = summaryRaw[0] ?? { total: 0, avgDurationMins: 0 };
+  const total = Number(summary.total ?? 0);
+  const asInt = (value: unknown) =>
+    typeof value === 'bigint' ? Number(value) : Number(value ?? 0);
 
   // No-show / cancel rates
-  const noShowCount = byStatusRaw.find((s) => s.status === BookingStatus.NO_SHOW)?._count.status ?? 0;
-  const cancelCount = byStatusRaw.find((s) => s.status === BookingStatus.CANCELLED)?._count.status ?? 0;
+  const noShowCount = asInt(byStatusRaw.find((s) => s.status === BookingStatus.NO_SHOW)?.count);
+  const cancelCount = asInt(byStatusRaw.find((s) => s.status === BookingStatus.CANCELLED)?.count);
   const noShowRate = total > 0 ? noShowCount / total : 0;
   const cancelRate = total > 0 ? cancelCount / total : 0;
 
-  // Average duration
-  const durationSum = bookings.reduce((acc, b) => acc + b.durationMins, 0);
-  const avgDurationMins = bookings.length > 0 ? Math.round(durationSum / bookings.length) : 0;
-
-  // Heatmap — dow × hour
-  const heatmap = new Map<string, number>();
-  for (const b of bookings) {
-    const dow = b.scheduledAt.getUTCDay();
-    const hour = b.scheduledAt.getUTCHours();
-    const key = `${dow}:${hour}`;
-    heatmap.set(key, (heatmap.get(key) ?? 0) + 1);
-  }
-
-  // Cancel reasons
-  const reasonMap = new Map<CancellationReason | 'UNSPECIFIED', number>();
-  for (const b of bookings) {
-    if (b.status !== BookingStatus.CANCELLED) continue;
-    const key = b.cancelReason ?? 'UNSPECIFIED';
-    reasonMap.set(key, (reasonMap.get(key) ?? 0) + 1);
-  }
-
   return {
     total,
-    byStatus: byStatusRaw.map((s) => ({ status: s.status, count: s._count.status })),
-    byType: byTypeRaw.map((t) => ({ type: t.bookingType, count: t._count.bookingType })),
-    byDay: [...dayMap.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, count]) => ({ date, count })),
+    byStatus: byStatusRaw.map((s) => ({
+      status: s.status as BookingStatus,
+      count: asInt(s.count),
+    })),
+    byType: byTypeRaw.map((t) => ({ type: t.type, count: asInt(t.count) })),
+    byDay: byDayRaw.map((row) => ({ date: row.date, count: asInt(row.count) })),
     noShowRate,
     cancelRate,
-    avgDurationMins,
-    byHourDow: [...heatmap.entries()].map(([k, count]) => {
-      const [dow, hour] = k.split(':').map(Number);
-      return { dow, hour, count };
-    }),
-    byCancelReason: [...reasonMap.entries()]
-      .sort(([, a], [, b]) => b - a)
-      .map(([reason, count]) => ({ reason, count })),
+    avgDurationMins: asInt(summary.avgDurationMins),
+    byHourDow: byHourDowRaw.map((row) => ({
+      dow: asInt(row.dow),
+      hour: asInt(row.hour),
+      count: asInt(row.count),
+    })),
+    byCancelReason: byCancelReasonRaw.map((row) => ({
+      reason: row.reason as CancellationReason | 'UNSPECIFIED',
+      count: asInt(row.count),
+    })),
   };
 }

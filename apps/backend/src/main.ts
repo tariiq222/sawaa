@@ -1,7 +1,7 @@
 import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
@@ -18,7 +18,9 @@ import { AppMetricsService } from './infrastructure/telemetry/app-metrics.servic
 import { configureCors } from './cors';
 import { setShuttingDown } from './common/shutdown.state';
 import { csrfMiddleware } from './common/middleware/csrf.middleware';
+import { shouldBypassCsrf } from './common/middleware/csrf-policy';
 import { InFlightRequestTracker } from './common/shutdown/request-tracker';
+import { configureHttpContract } from './common/bootstrap/configure-http-contract';
 
 async function bootstrap(): Promise<void> {
   // rawBody: true preserves the untouched request body buffer on req.rawBody,
@@ -36,17 +38,10 @@ async function bootstrap(): Promise<void> {
   configureCors(app);
 
   // CSRF protection: applied to cookie-based auth endpoints (mobile-client,
-  // public with session cookie). Dashboard uses Bearer tokens which are
-  // CSRF-immune, so /api/v1/dashboard and /api/v1/auth are excluded.
+  // public with session cookie). Dashboard/admin and mobile API clients use
+  // bearer auth, while provider webhooks authenticate by signature.
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (
-      req.path.startsWith('/api/v1/dashboard') ||
-      req.path.startsWith('/api/v1/auth') ||
-      req.path.startsWith('/api/v1/public/sms/webhooks') ||
-      req.path.startsWith('/api/v1/public/payment-webhook') ||
-      req.path.startsWith('/api/v1/public/health') ||
-      req.path.startsWith('/api/v1/public/metrics')
-    ) {
+    if (shouldBypassCsrf(req.path)) {
       return next();
     }
     return csrfMiddleware(req, res, next);
@@ -59,21 +54,12 @@ async function bootstrap(): Promise<void> {
     }));
   }
 
-  app.setGlobalPrefix('api');
-  // URI versioning: controllers can opt into v2 via @Version('2') when needed.
-  // defaultVersion='1' preserves the existing /api/v1/... URL shape, so existing
-  // clients and reverse-proxy rewrites are unaffected.
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: process.env.NODE_ENV !== 'production',
-      },
-    }),
+  // Preserve the existing environment selection: only NODE_ENV=production
+  // receives strict runtime-shape validation; every other environment keeps
+  // development's implicit conversion convenience.
+  configureHttpContract(
+    app,
+    process.env.NODE_ENV === 'production' ? 'production' : 'development',
   );
 
   app.useGlobalInterceptors(new RequestContextInterceptor());

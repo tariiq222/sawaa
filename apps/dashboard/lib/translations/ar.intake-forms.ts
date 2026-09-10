@@ -63,7 +63,9 @@ export const arIntakeForms: Record<string, string> = {
   // — Form Page —
   "intakeForms.page.editTitle": "تعديل النموذج",
   "intakeForms.page.newTitle": "إنشاء نموذج جديد",
-  "intakeForms.page.description": "حدد بيانات النموذج وابنِ حقوله وشروطه",
+  "intakeForms.page.description": "حدد بيانات النموذج وابنِ حقوله",
+  "intakeForms.page.fieldsLocked": "هذا النموذج لديه إجابات محفوظة. يمكنك تعديل بياناته، وتبقى الأسئلة ثابتة للحفاظ على الإجابات.",
+  "intakeForms.page.loadError": "تعذّر تحميل النموذج. أعد تحميل الصفحة للمحاولة مجددًا.",
   "intakeForms.page.cancel": "إلغاء",
   "intakeForms.page.saving": "جارٍ الحفظ...",
   "intakeForms.page.saveChanges": "حفظ التعديلات",

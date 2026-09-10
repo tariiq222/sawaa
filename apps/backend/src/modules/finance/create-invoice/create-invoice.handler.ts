@@ -1,6 +1,11 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { CreateInvoiceDto } from './create-invoice.dto';
 import { computeVat } from '../money.helper';
@@ -23,6 +28,7 @@ function validateXor(dto: CreateInvoiceCommand): void {
 export class CreateInvoiceHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 
@@ -37,37 +43,36 @@ export class CreateInvoiceHandler {
     // computeVat uses pure Decimal arithmetic — no .toNumber() on amounts
     const { vatAmtHalalas, totalHalalas } = computeVat(vatBaseDec, vatRateDec);
 
-    // Check for existing invoice by the non-null key
-    if (dto.bookingId) {
-      const existing = await this.prisma.invoice.findUnique({
-        where: { bookingId: dto.bookingId },
-        select: { id: true },
-      });
-      if (existing) {
-        throw new ConflictException({
-          code: 'INVOICE_ALREADY_EXISTS',
-          bookingId: dto.bookingId,
-          invoiceId: existing.id,
+    const create = async (db: Prisma.TransactionClient) => {
+      // Check for existing invoice by the non-null key.
+      if (dto.bookingId) {
+        const existing = await db.invoice.findUnique({
+          where: { bookingId: dto.bookingId },
+          select: { id: true },
         });
+        if (existing) {
+          throw new ConflictException({
+            code: 'INVOICE_ALREADY_EXISTS',
+            bookingId: dto.bookingId,
+            invoiceId: existing.id,
+          });
+        }
       }
-    }
-    if (dto.packagePurchaseId) {
-      const existing = await this.prisma.invoice.findUnique({
-        where: { packagePurchaseId: dto.packagePurchaseId },
-        select: { id: true },
-      });
-      if (existing) {
-        throw new ConflictException({
-          code: 'INVOICE_ALREADY_EXISTS',
-          packagePurchaseId: dto.packagePurchaseId,
-          invoiceId: existing.id,
+      if (dto.packagePurchaseId) {
+        const existing = await db.invoice.findUnique({
+          where: { packagePurchaseId: dto.packagePurchaseId },
+          select: { id: true },
         });
+        if (existing) {
+          throw new ConflictException({
+            code: 'INVOICE_ALREADY_EXISTS',
+            packagePurchaseId: dto.packagePurchaseId,
+            invoiceId: existing.id,
+          });
+        }
       }
-    }
 
-    let invoice;
-    try {
-      invoice = await this.prisma.invoice.create({
+      return db.invoice.create({
         data: {
           branchId: dto.branchId,
           clientId: dto.clientId,
@@ -87,6 +92,23 @@ export class CreateInvoiceHandler {
           status: 'DRAFT',
         },
       });
+    };
+
+    let invoice;
+    try {
+      invoice = dto.bookingId
+        ? await this.rlsTransaction.withTransaction(async (tx) => {
+            const bookingRows = await tx.$queryRaw<Array<{ id: string }>>`
+              SELECT "id" FROM "Booking"
+              WHERE "id" = ${dto.bookingId}
+              FOR SHARE
+            `;
+            if (bookingRows.length === 0) {
+              throw new NotFoundException(`Booking ${dto.bookingId} not found`);
+            }
+            return create(tx);
+          })
+        : await create(this.prisma as unknown as Prisma.TransactionClient);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException({

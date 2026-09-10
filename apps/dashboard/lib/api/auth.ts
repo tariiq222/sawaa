@@ -8,7 +8,7 @@
 
 import { authApi } from "@sawaa/api-client"
 import type { AuthResponse, LoginResponse, UserPayload } from "@sawaa/api-client"
-import { clearLegacyAccessTokenStorage, setAccessToken } from "@/lib/api"
+import { clearLegacyAccessTokenStorage, getSessionGeneration, setAccessToken } from "@/lib/api"
 
 export type AuthUser = UserPayload
 export type { AuthResponse }
@@ -37,9 +37,7 @@ export async function login(
   password: string,
   rememberMe?: boolean,
 ): Promise<PasswordLoginResponse> {
-  const data = await authApi.login({ email: identifier, password, rememberMe })
-  if (!data.requiresOtp) persistAuth(data)
-  return data
+  return authApi.login({ email: identifier, password, rememberMe })
 }
 
 export async function requestDashboardOtp(identifier: string, twoFactorChallenge?: string): Promise<{ success: boolean }> {
@@ -50,9 +48,16 @@ export async function requestDashboardOtp(identifier: string, twoFactorChallenge
 }
 
 export async function verifyDashboardOtp(identifier: string, code: string, twoFactorChallenge?: string): Promise<AuthResponse> {
-  const data = await authApi.verifyDashboardOtp({ identifier, code, twoFactorChallenge })
+  return authApi.verifyDashboardOtp({ identifier, code, twoFactorChallenge })
+}
+
+export function acceptAuthResponse(
+  data: AuthResponse,
+  expectedSessionGeneration = getSessionGeneration(),
+): boolean {
+  if (expectedSessionGeneration !== getSessionGeneration()) return false
   persistAuth(data)
-  return data
+  return true
 }
 
 export async function fetchMe(): Promise<AuthUser> {
@@ -61,14 +66,12 @@ export async function fetchMe(): Promise<AuthUser> {
   return data
 }
 
-export async function refreshToken(): Promise<AuthResponse> {
-  const tokens = await authApi.refreshToken()
-  setAccessToken(tokens.accessToken)
-  clearLegacyAccessTokenStorage()
+export async function refreshToken(signal?: AbortSignal): Promise<AuthResponse> {
+  const tokens = await authApi.refreshToken(signal)
   // Caller is responsible for invoking fetchMe() to repopulate the full user
-  // payload; we only return the token portion plus the minimal hint we kept
-  // in storage (no PII). Returning a partial UserPayload shape preserves the
-  // AuthResponse contract without re-exposing email/phone from localStorage.
+  // payload and accepting the returned access token. Keeping this wrapper
+  // side-effect free lets AuthProvider reject a refresh that resolves after
+  // logout or another terminal session invalidation.
   const hint = getStoredUserHint()
   return {
     accessToken: tokens.accessToken,

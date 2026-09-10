@@ -9,6 +9,7 @@ import type {
   TargetReference,
 } from './legacy-import.planner';
 import type { LegacyBundleV1, LegacyFormInput } from './legacy-import.types';
+import { hasIntakeHistorySchema } from './legacy-import.compatibility';
 
 const SOURCE_SYSTEM = 'booknetic';
 const SOURCE_TENANT = '6';
@@ -120,6 +121,14 @@ export async function applyLegacyImportPlan(
   bundle: LegacyBundleV1,
   plan: LegacyImportPlan,
 ): Promise<ApplyReport> {
+  // The offline importer predates current-response locks and append-only
+  // history. Keep its read-only planner available, but do not let it write
+  // around the compatible writer after the expansion has been installed.
+  if (await hasIntakeHistorySchema(prisma)) {
+    throw new Error(
+      'Legacy import apply is disabled after intake history expansion; use read-only audit until a compatible importer is reviewed.',
+    );
+  }
   // Operator-only one-shot import outside HTTP/user context. Sawaa is
   // single-tenant and RLS has been removed; a direct transaction keeps the
   // complete historical import atomic while the backend service is stopped.

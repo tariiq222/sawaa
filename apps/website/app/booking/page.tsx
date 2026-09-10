@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState, Suspense } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { reduce, INITIAL_WIZARD_STATE, WizardStep } from '@sawaa/shared';
@@ -70,6 +71,8 @@ type UiState = {
   submitError: string | null;
   redirectUrl: string | null;
   bookingId: string | null;
+  /** Existing booking/invoice to use when payment initialization is retried. */
+  paymentRecovery: { bookingId: string; invoiceId: string } | null;
   /** True once a booking completed without an online payment (no invoice). */
   confirmed: boolean;
   practitionerOptions: PractitionerBookingOptions | null;
@@ -93,6 +96,8 @@ type UiAction =
   | { type: 'SUBMIT_ERROR'; error: string }
   | { type: 'SUBMIT_DONE'; bookingId: string; redirectUrl: string }
   | { type: 'SUBMIT_CONFIRMED'; bookingId: string }
+  | { type: 'SET_PAYMENT_RECOVERY'; bookingId: string; invoiceId: string }
+  | { type: 'CLEAR_PAYMENT_RECOVERY' }
   | { type: 'CLEAR_COMPLETION' }
   | { type: 'SET_PRACTITIONER_OPTIONS'; opts: PractitionerBookingOptions | null }
   | { type: 'SET_PRACTITIONER_OPTIONS_LOADING'; loading: boolean }
@@ -113,6 +118,7 @@ const INITIAL_UI_STATE: UiState = {
   submitError: null,
   redirectUrl: null,
   bookingId: null,
+  paymentRecovery: null,
   confirmed: false,
   practitionerOptions: null,
   practitionerOptionsLoading: false,
@@ -150,6 +156,7 @@ function uiReducer(state: UiState, action: UiAction): UiState {
         isSubmitting: false,
         bookingId: action.bookingId,
         redirectUrl: action.redirectUrl,
+        paymentRecovery: null,
       };
     case 'SUBMIT_CONFIRMED':
       return {
@@ -157,6 +164,20 @@ function uiReducer(state: UiState, action: UiAction): UiState {
         isSubmitting: false,
         bookingId: action.bookingId,
         confirmed: true,
+        paymentRecovery: null,
+      };
+    case 'SET_PAYMENT_RECOVERY':
+      return {
+        ...state,
+        bookingId: action.bookingId,
+        paymentRecovery: { bookingId: action.bookingId, invoiceId: action.invoiceId },
+      };
+    case 'CLEAR_PAYMENT_RECOVERY':
+      return {
+        ...state,
+        paymentRecovery: null,
+        bookingId: null,
+        submitError: null,
       };
     case 'CLEAR_COMPLETION':
       return {
@@ -444,6 +465,7 @@ function BookingWizardInner() {
     submitError,
     redirectUrl,
     bookingId,
+    paymentRecovery,
     practitionerOptions,
     practitionerOptionsLoading,
     showingChoiceStep,
@@ -479,13 +501,13 @@ function BookingWizardInner() {
   // the real invoice; we just show gross amounts so the customer isn't surprised.
   const vatRate = catalog.vatRate ?? 0;
 
-  const { data: branches = [], isLoading: loadingBranches } = useQuery({
+  const { data: branches = [], isLoading: loadingBranches, error: branchesError } = useQuery({
     queryKey: ['public', 'branches'],
     queryFn: getPublicBranches,
   });
 
   const loadingData = loadingEmployees || loadingServices || loadingBranches;
-  const loadError = employeesError?.message ?? servicesError?.message ?? null;
+  const initialLoadError = employeesError ?? servicesError ?? branchesError;
   // Single-branch center: the branch step is never shown; the main branch is
   // auto-selected by the effects below and submitted transparently.
   const hasBranchStep = false;
@@ -672,7 +694,7 @@ function BookingWizardInner() {
   const employeeId = employee?.id;
   const serviceId = service?.id;
   const branchId = effectiveBranchId;
-  const { data: slots = [], isLoading: loadingSlots } = useQuery({
+  const { data: slots = [], isLoading: loadingSlots, error: slotsError } = useQuery({
     queryKey: [
       'public',
       'availability',
@@ -693,7 +715,7 @@ function BookingWizardInner() {
 
   // Per-day "has any slot?" probe drives the date-strip greying. Anchored to
   // today and renewed when employee/service/branch change.
-  const { data: availabilityDays = [] } = useQuery({
+  const { data: availabilityDays = [], error: availabilityDaysError } = useQuery({
     queryKey: [
       'public',
       'availability',
@@ -720,6 +742,7 @@ function BookingWizardInner() {
     () => new Set(availabilityDays.filter((d) => d.hasSlots).map((d) => d.date)),
     [availabilityDays],
   );
+  const loadError = initialLoadError ?? slotsError ?? availabilityDaysError;
 
   // === Handlers (entry-point aware) ===
 
@@ -785,6 +808,7 @@ function BookingWizardInner() {
    */
   const handleServiceSelect = async (svc: Service) => {
     dispatch({ type: 'SELECT_SERVICE', service: svc });
+    dispatchUi({ type: 'CLEAR_PAYMENT_RECOVERY' });
     // Always clear stale choices: the dedicated choice screen is the only
     // place the user commits { durationOptionId, deliveryType }.
     dispatchUi({ type: 'SET_CHOICE', choice: null });
@@ -942,6 +966,7 @@ function BookingWizardInner() {
     return set;
   }, [bookableEmployees]);
   const nothingBookable =
+    !loadError &&
     !loadingData &&
     (bookableEmployees.length === 0 ||
       globalBookableServiceIds.size === 0 ||
@@ -982,7 +1007,7 @@ function BookingWizardInner() {
   const handleStepBack = () => {
     // The confirmation screen is terminal (like the shared machine's
     // CONFIRMATION step) — the only exits are "book another" (RESET) or close.
-    if (ui.confirmed) return;
+    if (ui.confirmed || paymentRecovery) return;
     if (awaitingBranch) {
       // Branch picker was opened via the change-branch affordance or summary
       // rail edit. Pressing back cancels the change and returns to the current
@@ -1060,9 +1085,9 @@ function BookingWizardInner() {
     }
   };
 
-  // Back button is always available: on inner steps it goes to the previous
-  // wizard screen; on the first step it exits the booking flow entirely.
-  const canStepBack = true;
+  // Once a booking exists, freeze its selections and require the explicit
+  // "book another" action before reopening the wizard for a new booking.
+  const canStepBack = paymentRecovery === null;
 
   /**
    * Jump back to a completed step from the live summary. Reuses the exact
@@ -1071,7 +1096,7 @@ function BookingWizardInner() {
    * therapists vary per branch).
    */
   const jumpToScreen = (screen: SummaryScreen) => {
-    if (isSubmitting) return;
+    if (isSubmitting || paymentRecovery) return;
     switch (screen) {
       case 'branch':
         dispatch({ type: 'RESET' });
@@ -1201,7 +1226,31 @@ function BookingWizardInner() {
                     <circle cx="8" cy="8" r="6.5" />
                     <path d="M8 5v3.5M8 10.5v.5" strokeLinecap="round" />
                   </svg>
-                  <span className="font-medium">{loadError || submitError}</span>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="font-medium">
+                      {loadError ? t('account.loadError') : submitError}
+                    </span>
+                    {submitError && paymentRecovery && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <Link
+                          href={`/account/bookings/${paymentRecovery.bookingId}`}
+                          className="font-bold underline underline-offset-2"
+                        >
+                          {t('booking.viewExistingBooking')}
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            dispatch({ type: 'RESET' });
+                            dispatchUi({ type: 'CLEAR_PAYMENT_RECOVERY' });
+                          }}
+                          className="font-bold underline underline-offset-2"
+                        >
+                          {t('booking.bookAnother')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1376,21 +1425,39 @@ function BookingWizardInner() {
                           dispatchUi({ type: 'SUBMIT_ERROR', error: t('booking.errors.missingBranch') });
                           return;
                         }
-                        const booking = await createBooking({
-                          serviceId: service.id,
-                          employeeId: employee.id,
-                          branchId: effectiveBranchId,
-                          startsAt: slot.startTime,
-                          durationOptionId: selectedChoice?.durationOptionId,
-                          deliveryType: selectedChoice?.deliveryType,
-                          payAtClinic,
-                        });
+                        // Once a booking exists, every submission resumes its
+                        // invoice. A stale or manipulated payment-mode value
+                        // must never create another booking implicitly.
+                        const recovered = paymentRecovery;
+                        const booking = recovered
+                          ? {
+                              id: recovered.bookingId,
+                              status: 'AWAITING_PAYMENT',
+                              invoiceId: recovered.invoiceId,
+                            }
+                          : await createBooking({
+                              serviceId: service.id,
+                              employeeId: employee.id,
+                              branchId: effectiveBranchId,
+                              startsAt: slot.startTime,
+                              durationOptionId: selectedChoice?.durationOptionId,
+                              deliveryType: selectedChoice?.deliveryType,
+                              payAtClinic,
+                            });
                         const outcome = resolveBookingSubmitOutcome(booking);
                         if (outcome.kind === 'failure') {
                           dispatchUi({ type: 'SUBMIT_ERROR', error: t('common.bookingFailed') });
                           return;
                         }
                         if (outcome.kind === 'payment') {
+                          // Persist the booking and invoice before awaiting the
+                          // payment provider so a timeout can be retried
+                          // without creating a second booking row.
+                          dispatchUi({
+                            type: 'SET_PAYMENT_RECOVERY',
+                            bookingId: booking.id,
+                            invoiceId: outcome.invoiceId,
+                          });
                           const payment = await initPayment(outcome.invoiceId);
                           dispatchUi({
                             type: 'SUBMIT_DONE',

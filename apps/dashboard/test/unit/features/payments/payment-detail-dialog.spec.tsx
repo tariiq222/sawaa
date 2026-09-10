@@ -1,19 +1,26 @@
 import React from "react"
-import { render, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 
 import type { Payment } from "@/lib/types/payment"
 
-const { fetchPaymentMock, fetchPaymentsMock } = vi.hoisted(() => ({
+const { fetchPaymentMock, fetchPaymentsMock, manualRefundPaymentMock, refundPaymentMock, showApiErrorMock } = vi.hoisted(() => ({
   fetchPaymentMock: vi.fn(),
   fetchPaymentsMock: vi.fn(),
+  manualRefundPaymentMock: vi.fn(),
+  refundPaymentMock: vi.fn(),
+  showApiErrorMock: vi.fn(),
 }))
 
 vi.mock("@/lib/api/payments", () => ({
   fetchPayment: fetchPaymentMock,
   fetchPayments: fetchPaymentsMock,
+  manualRefundPayment: manualRefundPaymentMock,
+  refundPayment: refundPaymentMock,
 }))
+
+vi.mock("@/lib/mutation-helpers", () => ({ showApiError: showApiErrorMock }))
 
 vi.mock("@/components/locale-provider", () => ({
   useLocale: () => ({
@@ -33,11 +40,16 @@ vi.mock("@/components/features/shared/sar-symbol", () => ({
 }))
 
 vi.mock("@/components/features/payments/payment-actions", () => ({
-  PaymentActions: () => <div data-testid="payment-actions" />,
+  PaymentActions: ({ onRefund }: { onRefund: () => void }) => (
+    <div data-testid="payment-actions">
+      <button type="button" onClick={onRefund}>open-refund</button>
+    </div>
+  ),
 }))
 
 vi.mock("@sawaa/ui", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
   Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
     open ? <div data-testid="dialog">{children}</div> : null,
   DialogBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -46,8 +58,11 @@ vi.mock("@sawaa/ui", () => ({
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+  Label: ({ children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => <label {...props}>{children}</label>,
   Separator: () => <hr />,
   Skeleton: () => <div data-testid="skeleton" />,
+  Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
 }))
 
 function makePayment(overrides: Partial<Payment> = {}): Payment {
@@ -109,5 +124,36 @@ describe("PaymentDetailDialog", () => {
       expect(fetchPaymentMock).toHaveBeenCalledWith("pay-target")
     })
     expect(fetchPaymentsMock).not.toHaveBeenCalled()
+  })
+
+  it("shows a retryable error instead of leaving the dialog in loading state", async () => {
+    fetchPaymentMock.mockRejectedValueOnce(new Error("network failed"))
+    renderDialog()
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("error.server")
+    expect(screen.queryByText("common.loading")).not.toBeInTheDocument()
+  })
+
+  it("keeps the financial write error visible when an off-gateway refund fails", async () => {
+    fetchPaymentMock.mockResolvedValueOnce(makePayment({ method: "CASH", gatewayRef: null }))
+    manualRefundPaymentMock.mockRejectedValueOnce(new Error("refund rejected"))
+    renderDialog()
+
+    await screen.findByTestId("payment-actions")
+    fireEvent.click(screen.getByRole("button", { name: "open-refund" }))
+    fireEvent.change(screen.getByRole("textbox", { name: "refund.reasonLabel" }), {
+      target: { value: "Correction" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "refund.submit" }))
+
+    await waitFor(() => expect(showApiErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "refund rejected" }),
+      expect.objectContaining({ fallback: "refund.errorToast" }),
+    ))
+    expect(manualRefundPaymentMock).toHaveBeenCalledWith("pay-target", {
+      reason: "Correction",
+      amount: undefined,
+    })
+    expect(screen.getByRole("button", { name: "refund.submit" })).toBeInTheDocument()
   })
 })

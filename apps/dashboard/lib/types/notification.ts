@@ -2,32 +2,26 @@
  * Notification Types — Sawaa Dashboard
  */
 
+import type { OpenApiResponse } from "@/lib/api/openapi"
 import type { PaginatedQuery } from "./common"
+
+type NotificationsPath = "/api/v1/dashboard/comms/notifications"
+type UnreadCountPath = "/api/v1/dashboard/comms/notifications/unread-count"
 
 /* ─── Entities ─── */
 
-export type RecipientType = "CLIENT" | "EMPLOYEE"
+export type NotificationWire = OpenApiResponse<NotificationsPath, "get">["items"][number]
+export type RecipientType = NotificationWire["recipientType"]
+export type NotificationType = NotificationWire["type"]
 
-export interface Notification {
-  id: string
-  recipientId: string
-  recipientType: RecipientType
-  type: string
-  title: string
-  body: string
-  metadata: Record<string, unknown> | null
-  isRead: boolean
-  readAt: string | null
-  createdAt: string
-  updatedAt: string
-}
+export type Notification = NotificationWire
 
 /* ─── Query ─── */
 
-export type NotificationListQuery = PaginatedQuery
+export interface NotificationListQuery extends PaginatedQuery {
+  unreadOnly?: boolean
+}
 
 /* ─── Response ─── */
 
-export interface UnreadCount {
-  count: number
-}
+export type UnreadCount = OpenApiResponse<UnreadCountPath, "get">

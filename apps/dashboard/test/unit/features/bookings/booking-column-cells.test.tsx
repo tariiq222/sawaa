@@ -12,7 +12,7 @@
  */
 
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { vi, test, expect, beforeEach } from "vitest"
 
 /* ─── Locale stub — t() echoes the key so we can match on it ─── */
@@ -33,8 +33,17 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }))
 
+const { verifyMutate, startBookingPaymentPolling } = vi.hoisted(() => ({
+  verifyMutate: vi.fn(),
+  startBookingPaymentPolling: vi.fn(),
+}))
+
 vi.mock("@/hooks/use-payments", () => ({
-  usePaymentMutations: () => ({ verifyMut: { isPending: false, mutate: vi.fn() } }),
+  usePaymentMutations: () => ({ verifyMut: { isPending: false, mutate: verifyMutate } }),
+}))
+
+vi.mock("@/hooks/use-booking-payment-polling", () => ({
+  useBookingPaymentPolling: () => ({ start: startBookingPaymentPolling, cancel: vi.fn() }),
 }))
 
 vi.mock("@/components/features/status-badge", () => ({
@@ -111,6 +120,8 @@ const packageFundedBooking = {
 
 beforeEach(() => {
   mockUseAuth.mockReset()
+  verifyMutate.mockReset()
+  startBookingPaymentPolling.mockReset()
 })
 
 /* ─── PaymentStatusCell — create:Payment + create:Invoice gate (BK-COLLECT-P0) ─── */
@@ -202,4 +213,23 @@ test("ActionsCell hides manual-refund button without update:Payment", () => {
   mockUseAuth.mockReturnValue(authWith())
   render(<ActionsCell booking={refundableBooking} onView={vi.fn()} onDelete={vi.fn()} t={(k) => k} />)
   expect(screen.queryByRole("button", { name: "refund.title" })).not.toBeInTheDocument()
+})
+
+test("ActionsCell starts bounded booking polling after approving a transfer", () => {
+  mockUseAuth.mockReturnValue(authWith())
+  const booking = {
+    ...refundableBooking,
+    id: "booking-awaiting",
+    clientId: "client-1",
+    employeeId: "employee-1",
+    payment: { id: "payment-awaiting", status: "awaiting", method: "bank_transfer", amount: 50_000 },
+  } as unknown as Booking
+
+  render(<ActionsCell booking={booking} onView={vi.fn()} onDelete={vi.fn()} t={(k) => k} />)
+  fireEvent.click(screen.getByRole("button", { name: "bookings.payment.action.approveTransfer" }))
+
+  const mutationOptions = verifyMutate.mock.calls[0]?.[1] as { onSuccess?: () => void }
+  mutationOptions.onSuccess?.()
+
+  expect(startBookingPaymentPolling).toHaveBeenCalledWith("booking-awaiting")
 })

@@ -24,6 +24,10 @@ vi.mock("@/hooks/use-payments", () => ({
   }),
 }))
 
+vi.mock("@/hooks/use-booking-payment-polling", () => ({
+  useBookingPaymentPolling: () => ({ start: vi.fn(), cancel: vi.fn() }),
+}))
+
 vi.mock("@/hooks/use-discount-reasons", () => ({
   useDiscountReasons: () => ({
     data: [

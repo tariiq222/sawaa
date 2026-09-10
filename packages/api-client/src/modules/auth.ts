@@ -26,13 +26,14 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
   })
 }
 
-export async function refreshToken(): Promise<TokenPair> {
+export async function refreshToken(signal?: AbortSignal): Promise<TokenPair> {
   // CR-9: refresh token is an httpOnly cookie (ck_refresh); credentials: 'include'
   // sends it automatically. No token in body.
   return apiRequest<TokenPair>('/auth/refresh', {
     method: 'POST',
     credentials: 'include',
     body: JSON.stringify({}),
+    signal,
   })
 }
 

@@ -36,7 +36,7 @@ export function IntakeFormsSection({
   const tt = useT();
   const canFetch = enabled && !!serviceId;
 
-  const { data: forms, isLoading } = useQuery({
+  const { data: forms, isLoading, isError, refetch } = useQuery({
     queryKey: ['client', 'intake', 'applicable', serviceId, employeeId, branchId],
     queryFn: () =>
       fetchApplicableIntakeForms({
@@ -48,6 +48,20 @@ export function IntakeFormsSection({
   });
 
   if (!canFetch || isLoading) return null;
+  if (isError) {
+    return (
+      <div className="rounded-2xl p-4 border border-[color-mix(in_srgb,var(--error)_25%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] flex items-center justify-between gap-3">
+        <span className="text-sm text-[var(--error)]">{tt('account.loadError')}</span>
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          className="shrink-0 rounded-full px-4 py-2 text-sm font-bold border border-[color-mix(in_srgb,var(--error)_25%,transparent)] text-[var(--error)]"
+        >
+          {tt('account.retry')}
+        </button>
+      </div>
+    );
+  }
   if (!forms || forms.length === 0) return null;
 
   return (

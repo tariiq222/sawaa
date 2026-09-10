@@ -1,12 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
 
-const { getApiBaseMock } = vi.hoisted(() => ({
-  getApiBaseMock: vi.fn(() => 'http://api.local/api/v1'),
-}));
+const { publicFetchMock, PublicFetchErrorMock } = vi.hoisted(() => {
+  class FakePublicFetchError extends Error {
+    constructor(
+      public readonly status: number,
+      public readonly body: unknown,
+    ) {
+      super(`PublicFetchError: ${status}`);
+    }
+  }
 
-vi.mock('@/lib/api-base', () => ({
-  getApiBase: getApiBaseMock,
+  return {
+    publicFetchMock: vi.fn(),
+    PublicFetchErrorMock: FakePublicFetchError,
+  };
+});
+
+vi.mock('@/lib/public-fetch', () => ({
+  publicFetch: publicFetchMock,
+  PublicFetchError: PublicFetchErrorMock,
 }));
 
 import { requestOtp, verifyOtp } from './otp.api';
@@ -16,7 +29,6 @@ describe('otp.api', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    getApiBaseMock.mockReturnValue('http://api.local/api/v1');
     globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
@@ -25,17 +37,17 @@ describe('otp.api', () => {
   });
 
   describe('requestOtp', () => {
-    it('POSTs to /public/otp/request with the typed payload as JSON', async () => {
+    it('POSTs the typed payload through the CSRF-aware public request helper', async () => {
+      publicFetchMock.mockResolvedValue(undefined);
       fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
       await requestOtp({
         channel: OtpChannel.SMS,
         identifier: '+966500000000',
         purpose: OtpPurpose.GUEST_BOOKING,
       });
-      const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toBe('http://api.local/api/v1/public/otp/request');
+      const [url, init] = publicFetchMock.mock.calls[0];
+      expect(url).toBe('/public/otp/request');
       expect(init.method).toBe('POST');
-      expect(init.headers).toMatchObject({ 'Content-Type': 'application/json' });
       expect(init.body).toBe(
         JSON.stringify({
           channel: OtpChannel.SMS,
@@ -43,75 +55,59 @@ describe('otp.api', () => {
           purpose: OtpPurpose.GUEST_BOOKING,
         }),
       );
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('resolves void on a 2xx response', async () => {
-      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+      publicFetchMock.mockResolvedValue(undefined);
       await expect(
         requestOtp({ channel: OtpChannel.EMAIL, identifier: 'a@b.co', purpose: OtpPurpose.CLIENT_LOGIN }),
       ).resolves.toBeUndefined();
     });
 
-    it('throws the backend message on a non-ok response', async () => {
-      fetchMock.mockResolvedValue({
-        ok: false,
-        statusText: 'Bad Request',
-        json: () => Promise.resolve({ message: 'Invalid identifier' }),
-      });
+    it('throws the backend message on a public request error', async () => {
+      publicFetchMock.mockRejectedValue(new PublicFetchErrorMock(400, { message: 'Invalid identifier' }));
       await expect(
         requestOtp({ channel: OtpChannel.EMAIL, identifier: 'bad', purpose: OtpPurpose.CLIENT_LOGIN }),
       ).rejects.toThrow('Invalid identifier');
     });
 
-    it('falls back to statusText when the error body has no message', async () => {
-      fetchMock.mockResolvedValue({
-        ok: false,
-        statusText: 'Service Unavailable',
-        json: () => Promise.reject(new Error('not json')),
-      });
+    it('uses its stable fallback when the public request error has no message', async () => {
+      publicFetchMock.mockRejectedValue(new PublicFetchErrorMock(503, {}));
       await expect(
         requestOtp({ channel: OtpChannel.EMAIL, identifier: 'a@b.co', purpose: OtpPurpose.CLIENT_LOGIN }),
-      ).rejects.toThrow('Service Unavailable');
+      ).rejects.toThrow('Failed to send OTP');
     });
   });
 
   describe('verifyOtp', () => {
-    it('POSTs to /public/otp/verify with channel/identifier/code/purpose as JSON and unwraps { data }', async () => {
-      fetchMock.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: { sessionToken: 'tok_abc' } }),
-      });
+    it('POSTs through the CSRF-aware helper and unwraps { data }', async () => {
+      publicFetchMock.mockResolvedValue({ data: { sessionToken: 'tok_abc' } });
       const out = await verifyOtp('a@b.co', '1234', OtpPurpose.CLIENT_LOGIN, OtpChannel.EMAIL);
       expect(out).toEqual({ sessionToken: 'tok_abc' });
-      const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toBe('http://api.local/api/v1/public/otp/verify');
+      const [url, init] = publicFetchMock.mock.calls[0];
+      expect(url).toBe('/public/otp/verify');
       expect(init.method).toBe('POST');
-      expect(init.headers).toMatchObject({ 'Content-Type': 'application/json' });
       expect(JSON.parse(init.body)).toEqual({
         channel: OtpChannel.EMAIL,
         identifier: 'a@b.co',
         code: '1234',
         purpose: OtpPurpose.CLIENT_LOGIN,
       });
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('passes a bare (no envelope) payload through unchanged', async () => {
-      fetchMock.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ sessionToken: 'tok_xyz' }),
-      });
+      publicFetchMock.mockResolvedValue({ sessionToken: 'tok_xyz' });
       await expect(
         verifyOtp('+966500000000', '0000', OtpPurpose.GUEST_BOOKING, OtpChannel.SMS),
       ).resolves.toEqual({ sessionToken: 'tok_xyz' });
     });
 
     it('defaults purpose to GUEST_BOOKING and channel to EMAIL when called with the minimal signature', async () => {
-      fetchMock.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ sessionToken: 'tok_min' }),
-      });
+      publicFetchMock.mockResolvedValue({ sessionToken: 'tok_min' });
       await verifyOtp('a@b.co', '1234');
-      const [, init] = fetchMock.mock.calls[0];
+      const [, init] = publicFetchMock.mock.calls[0];
       expect(JSON.parse(init.body)).toEqual({
         channel: OtpChannel.EMAIL,
         identifier: 'a@b.co',
@@ -120,22 +116,14 @@ describe('otp.api', () => {
       });
     });
 
-    it('throws the backend message on a non-ok response', async () => {
-      fetchMock.mockResolvedValue({
-        ok: false,
-        statusText: 'Unauthorized',
-        json: () => Promise.resolve({ message: 'Invalid OTP code' }),
-      });
+    it('throws the backend message on a public request error', async () => {
+      publicFetchMock.mockRejectedValue(new PublicFetchErrorMock(401, { message: 'Invalid OTP code' }));
       await expect(verifyOtp('a@b.co', '0000')).rejects.toThrow('Invalid OTP code');
     });
 
-    it('falls back to statusText when the error body cannot be parsed', async () => {
-      fetchMock.mockResolvedValue({
-        ok: false,
-        statusText: 'Unauthorized',
-        json: () => Promise.reject(new Error('not json')),
-      });
-      await expect(verifyOtp('a@b.co', '0000')).rejects.toThrow('Unauthorized');
+    it('uses its stable fallback when the public request error has no message', async () => {
+      publicFetchMock.mockRejectedValue(new PublicFetchErrorMock(401, {}));
+      await expect(verifyOtp('a@b.co', '0000')).rejects.toThrow('Invalid OTP code');
     });
   });
 });

@@ -107,6 +107,13 @@ const buildGroupCapacity = () => ({
 // Extend buildPrisma with missing models used by CreateBookingHandler
 const buildExtendedPrisma = () => {
 	const prisma = buildPrisma();
+	// These scenarios use existing active people; model the new reference locks.
+	Object.assign(prisma, { $queryRaw: jest.fn(async (sql: TemplateStringsArray, id: string) => {
+		if (!/FROM "(?:Client|Employee)"/.test(sql.join(""))) {
+			throw new Error("Unexpected scenario raw query");
+		}
+		return [{ id, isActive: true, deletedAt: null }];
+	}) });
 	(prisma as any).organizationSettings = {
 		findFirst: jest
 			.fn()

@@ -66,8 +66,6 @@ export const FIELD_TYPE_LABELS: Record<FieldType, { en: string; ar: string }> = 
   checkbox: { en: "Multiple Choice", ar: "اختيار متعدد" },
   select: { en: "Dropdown", ar: "قائمة منسدلة" },
   date: { en: "Date", ar: "تاريخ" },
-  rating: { en: "Rating", ar: "تقييم" },
-  file: { en: "File Upload", ar: "رفع ملف" },
 }
 
 export const CONDITION_OPERATOR_LABELS: Record<ConditionOperator, { en: string; ar: string }> = {

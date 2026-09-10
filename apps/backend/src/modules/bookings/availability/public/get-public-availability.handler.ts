@@ -5,6 +5,7 @@ import { GetPublicAvailabilityDto } from './get-public-availability.dto';
 
 export type GetPublicAvailabilityQuery = GetPublicAvailabilityDto & {
   employeeId: string;
+  durationMins?: number;
 };
 
 @Injectable()
@@ -59,6 +60,7 @@ export class GetPublicAvailabilityHandler {
       branchId,
       serviceId,
       date,
+      durationMins: query.durationMins,
       durationOptionId: query.durationOptionId,
       bookingType: query.bookingType,
       deliveryType: query.deliveryType,

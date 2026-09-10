@@ -2,45 +2,134 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // ── Client ─────────────────────────────────────────────────────────────────
 
+export class ClientBookingSummaryDto {
+  @ApiProperty({ description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000002' })
+  id!: string;
+
+  @ApiProperty({ description: 'Booking date (ISO 8601)', type: String, format: 'date-time', example: '2026-06-01T09:00:00.000Z' })
+  date!: string;
+
+  @ApiProperty({
+    description: 'Booking status (uppercase)',
+    enum: ['PENDING', 'PENDING_GROUP_FILL', 'AWAITING_PAYMENT', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW', 'EXPIRED', 'CANCEL_REQUESTED', 'DEPOSIT_PAID'],
+    example: 'CONFIRMED',
+  })
+  status!: 'PENDING' | 'PENDING_GROUP_FILL' | 'AWAITING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW' | 'EXPIRED' | 'CANCEL_REQUESTED' | 'DEPOSIT_PAID';
+}
+
 export class ClientResponseDto {
   @ApiProperty({ description: 'Client UUID', example: '00000000-0000-0000-0000-000000000000' })
   id!: string;
 
+  @ApiProperty({ description: 'Sequential client reference', example: 1024 })
+  ref!: number;
+
+  @ApiProperty({ description: 'Linked user UUID', type: String, example: '00000000-0000-0000-0000-000000000001', nullable: true })
+  userId!: string | null;
+
   @ApiProperty({ description: 'Full display name', example: 'Sara Al-Harbi' })
   name!: string;
 
-  @ApiPropertyOptional({ description: 'First name', example: 'Sara', nullable: true })
+  @ApiProperty({ description: 'First name', type: String, example: 'Sara', nullable: true })
   firstName!: string | null;
 
-  @ApiPropertyOptional({ description: 'Last name', example: 'Al-Harbi', nullable: true })
+  @ApiProperty({ description: 'Middle name', type: String, example: 'Ali', nullable: true })
+  middleName!: string | null;
+
+  @ApiProperty({ description: 'Last name', type: String, example: 'Al-Harbi', nullable: true })
   lastName!: string | null;
 
-  @ApiPropertyOptional({ description: 'Mobile phone number', example: '+966501234567', nullable: true })
+  @ApiProperty({ description: 'Mobile phone number', type: String, example: '+966501234567', nullable: true })
   phone!: string | null;
 
-  @ApiPropertyOptional({ description: 'Email address', example: 'sara@example.com', nullable: true })
+  @ApiProperty({ description: 'Email address', type: String, example: 'sara@example.com', nullable: true })
   email!: string | null;
 
-  @ApiPropertyOptional({ description: 'Date of birth (ISO 8601)', example: '1990-06-15', nullable: true })
+  @ApiProperty({ description: 'Email verification timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
+  emailVerified!: Date | null;
+
+  @ApiProperty({ description: 'Phone verification timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
+  phoneVerified!: Date | null;
+
+  @ApiProperty({ description: 'Date of birth (ISO 8601)', type: String, format: 'date-time', example: '1990-06-15T00:00:00.000Z', nullable: true })
   dateOfBirth!: Date | null;
 
-  @ApiPropertyOptional({ description: 'Gender (lowercase)', example: 'female', enum: ['male', 'female'], nullable: true })
+  @ApiProperty({ description: 'Gender (lowercase)', example: 'female', enum: ['male', 'female'], nullable: true })
   gender!: 'male' | 'female' | null;
+
+  @ApiProperty({ description: 'Nationality', type: String, example: 'Saudi', nullable: true })
+  nationality!: string | null;
+
+  @ApiProperty({ description: 'National ID or Iqama number', type: String, example: '1234567890', nullable: true })
+  nationalId!: string | null;
+
+  @ApiProperty({ description: 'Emergency contact name', type: String, example: 'Ahmad Al-Harbi', nullable: true })
+  emergencyName!: string | null;
+
+  @ApiProperty({ description: 'Emergency contact phone number', type: String, example: '+966501234567', nullable: true })
+  emergencyPhone!: string | null;
+
+  @ApiProperty({ description: 'Blood type (uppercase)', enum: ['A_POS', 'A_NEG', 'B_POS', 'B_NEG', 'AB_POS', 'AB_NEG', 'O_POS', 'O_NEG', 'UNKNOWN'], example: 'A_POS', nullable: true })
+  bloodType!: 'A_POS' | 'A_NEG' | 'B_POS' | 'B_NEG' | 'AB_POS' | 'AB_NEG' | 'O_POS' | 'O_NEG' | 'UNKNOWN' | null;
+
+  @ApiProperty({ description: 'Known allergies', type: String, example: 'Penicillin', nullable: true })
+  allergies!: string | null;
+
+  @ApiProperty({ description: 'Chronic conditions', type: String, example: 'Type 2 Diabetes', nullable: true })
+  chronicConditions!: string | null;
+
+  @ApiProperty({ description: 'Avatar image URL', type: String, example: 'https://cdn.example.com/avatars/sara.jpg', nullable: true })
+  avatarUrl!: string | null;
+
+  @ApiProperty({ description: 'Internal notes about the client', type: String, example: 'Prefers morning appointments', nullable: true })
+  notes!: string | null;
+
+  @ApiProperty({ description: 'Acquisition source (uppercase)', enum: ['WALK_IN', 'ONLINE', 'REFERRAL', 'WHATSAPP'], example: 'WALK_IN' })
+  source!: 'WALK_IN' | 'ONLINE' | 'REFERRAL' | 'WHATSAPP';
+
+  @ApiProperty({ description: 'Account type', example: 'full', enum: ['full', 'walk_in'] })
+  accountType!: 'full' | 'walk_in';
+
+  @ApiProperty({ description: 'Account claim timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
+  claimedAt!: Date | null;
 
   @ApiProperty({ description: 'Whether the account is active', example: true })
   isActive!: boolean;
 
-  @ApiPropertyOptional({ description: 'Avatar image URL', example: 'https://cdn.example.com/avatars/sara.jpg', nullable: true })
-  avatarUrl!: string | null;
+  @ApiProperty({ description: 'Soft deletion timestamp', type: String, format: 'date-time', example: null, nullable: true })
+  deletedAt!: Date | null;
 
-  @ApiPropertyOptional({ description: 'Account type', example: 'full', enum: ['full', 'walk_in'] })
-  accountType!: 'full' | 'walk_in';
+  @ApiProperty({ description: 'Last login timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
+  lastLoginAt!: Date | null;
+
+  @ApiProperty({ description: 'Preferred locale (ISO 639-1)', type: String, example: 'ar', nullable: true })
+  preferredLocale!: string | null;
+
+  @ApiProperty({ description: 'Whether push notifications are enabled', example: true })
+  pushEnabled!: boolean;
+
+  @ApiProperty({ description: 'Privacy consent timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
+  consentedAt!: Date | null;
+
+  @ApiProperty({ description: 'Accepted privacy consent version', type: String, example: '2026-01', nullable: true })
+  consentVersion!: string | null;
+
+  @ApiProperty({ description: 'Most recent past booking (populated for list results)', type: ClientBookingSummaryDto, nullable: true })
+  lastBooking!: ClientBookingSummaryDto | null;
+
+  @ApiProperty({ description: 'Next future booking (populated for list results)', type: ClientBookingSummaryDto, nullable: true })
+  nextBooking!: ClientBookingSummaryDto | null;
 
   @ApiProperty({ description: 'Creation timestamp', example: '2026-01-01T00:00:00.000Z' })
   createdAt!: Date;
 
   @ApiProperty({ description: 'Last update timestamp', example: '2026-01-01T00:00:00.000Z' })
   updatedAt!: Date;
+}
+
+export class CreateClientResponseDto extends ClientResponseDto {
+  @ApiProperty({ description: 'Whether an existing client was returned by phone deduplication', example: false })
+  isExisting!: boolean;
 }
 
 // ── Employee ────────────────────────────────────────────────────────────────

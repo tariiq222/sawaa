@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateInvoiceHandler } from './create-invoice.handler';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 
 const buildPrisma = () => ({
+  $queryRaw: jest.fn().mockResolvedValue([{ id: 'book-1' }]),
   invoice: {
     findUnique: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockImplementation((args: any) =>
@@ -25,15 +26,20 @@ describe('CreateInvoiceHandler', () => {
   let handler: CreateInvoiceHandler;
   let prisma: ReturnType<typeof buildPrisma>;
   let eventBus: ReturnType<typeof buildEventBus>;
+  let rlsTransaction: { withTransaction: jest.Mock };
 
   beforeEach(async () => {
     prisma = buildPrisma();
     eventBus = buildEventBus();
+    rlsTransaction = {
+      withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CreateInvoiceHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: rlsTransaction },
         { provide: EventBusService, useValue: eventBus },
       ],
     }).compile();
@@ -63,6 +69,75 @@ describe('CreateInvoiceHandler', () => {
     );
     expect(result.bookingId).toBe('book-1');
     expect(result.packagePurchaseId).toBeNull();
+  });
+
+  it('locks and rechecks the booking inside the invoice transaction before creating', async () => {
+    await handler.execute({
+      bookingId: 'book-1',
+      branchId: 'branch-1',
+      clientId: 'client-1',
+      employeeId: 'emp-1',
+      subtotal: 200,
+    });
+
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
+    expect((prisma.$queryRaw.mock.calls[0][0] as string[]).join('')).toMatch(
+      /FROM "Booking".*FOR SHARE/is,
+    );
+    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.invoice.create.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('rejects a missing booking without creating or publishing an invoice', async () => {
+    prisma.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(
+      handler.execute({
+        bookingId: 'missing-booking',
+        branchId: 'branch-1',
+        clientId: 'client-1',
+        employeeId: 'emp-1',
+        subtotal: 200,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+    expect(eventBus.publishOptional).not.toHaveBeenCalled();
+  });
+
+  it('publishes the booking invoice event only after its transaction commits', async () => {
+    const order: string[] = [];
+    rlsTransaction.withTransaction.mockImplementationOnce(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const result = await fn(prisma);
+      order.push('commit');
+      return result;
+    });
+    eventBus.publishOptional.mockImplementationOnce(async () => {
+      order.push('publish');
+    });
+
+    await handler.execute({
+      bookingId: 'book-1',
+      branchId: 'branch-1',
+      clientId: 'client-1',
+      employeeId: 'emp-1',
+      subtotal: 200,
+    });
+
+    expect(order).toEqual(['commit', 'publish']);
+  });
+
+  it('keeps package-purchase invoice creation off the booking transaction path', async () => {
+    await handler.execute({
+      packagePurchaseId: 'bp-1',
+      branchId: 'branch-1',
+      clientId: 'client-1',
+      employeeId: 'emp-1',
+      subtotal: 500,
+    });
+
+    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 
   it('P1-10: creates the invoice as DRAFT (issued only on first payment)', async () => {

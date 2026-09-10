@@ -604,6 +604,411 @@
         ],
         "type": "string"
       },
+      "BranchAssignmentDeletedResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Deleted assignment UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "BranchBusinessHourResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "description": "Day of week, from Sunday (0) to Saturday (6)",
+            "example": 0,
+            "type": "number"
+          },
+          "endTime": {
+            "description": "Closing time in HH:mm format",
+            "example": "17:00",
+            "type": "string"
+          },
+          "id": {
+            "description": "Business-hour record UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "type": "string"
+          },
+          "isOpen": {
+            "description": "Whether the branch is open on this day",
+            "example": true,
+            "type": "boolean"
+          },
+          "startTime": {
+            "description": "Opening time in HH:mm format",
+            "example": "09:00",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "isOpen",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "BranchDetailResponseDto": {
+        "properties": {
+          "addressAr": {
+            "description": "Arabic address",
+            "example": "شارع الملك فهد، الرياض",
+            "nullable": true,
+            "type": "string"
+          },
+          "addressEn": {
+            "description": "English address",
+            "example": "King Fahd Road, Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "businessHours": {
+            "description": "Weekly business hours",
+            "items": {
+              "$ref": "#/components/schemas/BranchBusinessHourResponseDto"
+            },
+            "type": "array"
+          },
+          "city": {
+            "description": "City",
+            "example": "Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "country": {
+            "description": "ISO country code",
+            "example": "SA",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "holidays": {
+            "description": "Branch holidays",
+            "items": {
+              "$ref": "#/components/schemas/BranchHolidayResponseDto"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the branch is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isMain": {
+            "description": "Whether this is the main branch",
+            "example": true,
+            "type": "boolean"
+          },
+          "latitude": {
+            "description": "GPS latitude",
+            "example": 24.7136,
+            "nullable": true,
+            "type": "number"
+          },
+          "longitude": {
+            "description": "GPS longitude",
+            "example": 46.6753,
+            "nullable": true,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic branch name",
+            "example": "فرع الرياض",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English branch name",
+            "example": "Riyadh Branch",
+            "nullable": true,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Branch phone number",
+            "example": "+966112345678",
+            "nullable": true,
+            "type": "string"
+          },
+          "timezone": {
+            "description": "IANA timezone identifier",
+            "example": "Asia/Riyadh",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "phone",
+          "addressAr",
+          "addressEn",
+          "city",
+          "country",
+          "latitude",
+          "longitude",
+          "isActive",
+          "isMain",
+          "timezone",
+          "createdAt",
+          "updatedAt",
+          "businessHours",
+          "holidays"
+        ],
+        "type": "object"
+      },
+      "BranchEmployeeAssignmentResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "id": {
+            "description": "Assignment UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "branchId"
+        ],
+        "type": "object"
+      },
+      "BranchHolidayResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "date": {
+            "description": "Holiday date",
+            "example": "2026-09-23T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Holiday record UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic holiday name",
+            "example": "اليوم الوطني",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English holiday name",
+            "example": "National Day",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "date",
+          "nameAr",
+          "nameEn",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "BranchListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching records",
+            "example": 42,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "BranchResponseDto": {
+        "properties": {
+          "addressAr": {
+            "description": "Arabic address",
+            "example": "شارع الملك فهد، الرياض",
+            "nullable": true,
+            "type": "string"
+          },
+          "addressEn": {
+            "description": "English address",
+            "example": "King Fahd Road, Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "city": {
+            "description": "City",
+            "example": "Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "country": {
+            "description": "ISO country code",
+            "example": "SA",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the branch is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isMain": {
+            "description": "Whether this is the main branch",
+            "example": true,
+            "type": "boolean"
+          },
+          "latitude": {
+            "description": "GPS latitude",
+            "example": 24.7136,
+            "nullable": true,
+            "type": "number"
+          },
+          "longitude": {
+            "description": "GPS longitude",
+            "example": 46.6753,
+            "nullable": true,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic branch name",
+            "example": "فرع الرياض",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English branch name",
+            "example": "Riyadh Branch",
+            "nullable": true,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Branch phone number",
+            "example": "+966112345678",
+            "nullable": true,
+            "type": "string"
+          },
+          "timezone": {
+            "description": "IANA timezone identifier",
+            "example": "Asia/Riyadh",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "phone",
+          "addressAr",
+          "addressEn",
+          "city",
+          "country",
+          "latitude",
+          "longitude",
+          "isActive",
+          "isMain",
+          "timezone",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "BreakWindowDto": {
         "properties": {
           "dayOfWeek": {
@@ -943,6 +1348,297 @@
         ],
         "type": "object"
       },
+      "CategoryCountResponseDto": {
+        "properties": {
+          "services": {
+            "description": "Effective bookable service count",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "services"
+        ],
+        "type": "object"
+      },
+      "CategoryDepartmentResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Department UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic department name",
+            "example": "قسم الاستشارات الأسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English department name",
+            "example": "Family Counseling",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn"
+        ],
+        "type": "object"
+      },
+      "CategoryListItemResponseDto": {
+        "properties": {
+          "_count": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CategoryCountResponseDto"
+              }
+            ],
+            "description": "Bookable service counts"
+          },
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "department": {
+            "description": "Owning department, when assigned",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CategoryDepartmentResponseDto"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background color",
+            "example": "#F0F4FF",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Displayable category image URL; stored keys are signed at read/create/update response time",
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt",
+          "department",
+          "_count"
+        ],
+        "type": "object"
+      },
+      "CategoryListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching records",
+            "example": 42,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "CategoryResponseDto": {
+        "properties": {
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background color",
+            "example": "#F0F4FF",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Displayable category image URL; stored keys are signed at read/create/update response time",
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "ChangePasswordDto": {
         "properties": {
           "currentPassword": {
@@ -1102,15 +1798,17 @@
         "type": "object"
       },
       "ClientAccountType": {
-        "description": "Account type",
+        "description": "Account type (case-insensitive)",
         "enum": [
           "FULL",
-          "WALK_IN"
+          "WALK_IN",
+          "full",
+          "walk_in"
         ],
         "type": "string"
       },
       "ClientBloodType": {
-        "description": "Blood type",
+        "description": "Blood type (case-insensitive)",
         "enum": [
           "A_POS",
           "A_NEG",
@@ -1120,9 +1818,56 @@
           "AB_NEG",
           "O_POS",
           "O_NEG",
-          "UNKNOWN"
+          "UNKNOWN",
+          "a_pos",
+          "a_neg",
+          "b_pos",
+          "b_neg",
+          "ab_pos",
+          "ab_neg",
+          "o_pos",
+          "o_neg",
+          "unknown"
         ],
         "type": "string"
+      },
+      "ClientBookingSummaryDto": {
+        "properties": {
+          "date": {
+            "description": "Booking date (ISO 8601)",
+            "example": "2026-06-01T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Booking UUID",
+            "example": "00000000-0000-0000-0000-000000000002",
+            "type": "string"
+          },
+          "status": {
+            "description": "Booking status (uppercase)",
+            "enum": [
+              "PENDING",
+              "PENDING_GROUP_FILL",
+              "AWAITING_PAYMENT",
+              "CONFIRMED",
+              "CANCELLED",
+              "COMPLETED",
+              "NO_SHOW",
+              "EXPIRED",
+              "CANCEL_REQUESTED",
+              "DEPOSIT_PAID"
+            ],
+            "example": "CONFIRMED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "status"
+        ],
+        "type": "object"
       },
       "ClientCancelBookingDto": {
         "properties": {
@@ -1279,10 +2024,12 @@
         "type": "object"
       },
       "ClientGender": {
-        "description": "Client gender",
+        "description": "Client gender (case-insensitive)",
         "enum": [
           "MALE",
-          "FEMALE"
+          "FEMALE",
+          "male",
+          "female"
         ],
         "type": "string"
       },
@@ -1336,11 +2083,60 @@
             "example": "full",
             "type": "string"
           },
+          "allergies": {
+            "description": "Known allergies",
+            "example": "Penicillin",
+            "nullable": true,
+            "type": "string"
+          },
           "avatarUrl": {
             "description": "Avatar image URL",
             "example": "https://cdn.example.com/avatars/sara.jpg",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "bloodType": {
+            "description": "Blood type (uppercase)",
+            "enum": [
+              "A_POS",
+              "A_NEG",
+              "B_POS",
+              "B_NEG",
+              "AB_POS",
+              "AB_NEG",
+              "O_POS",
+              "O_NEG",
+              "UNKNOWN"
+            ],
+            "example": "A_POS",
+            "nullable": true,
+            "type": "string"
+          },
+          "chronicConditions": {
+            "description": "Chronic conditions",
+            "example": "Type 2 Diabetes",
+            "nullable": true,
+            "type": "string"
+          },
+          "claimedAt": {
+            "description": "Account claim timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentVersion": {
+            "description": "Accepted privacy consent version",
+            "example": "2026-01",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentedAt": {
+            "description": "Privacy consent timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
           },
           "createdAt": {
             "description": "Creation timestamp",
@@ -1350,21 +2146,48 @@
           },
           "dateOfBirth": {
             "description": "Date of birth (ISO 8601)",
-            "example": "1990-06-15",
+            "example": "1990-06-15T00:00:00.000Z",
+            "format": "date-time",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "deletedAt": {
+            "description": "Soft deletion timestamp",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
           },
           "email": {
             "description": "Email address",
             "example": "sara@example.com",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "emailVerified": {
+            "description": "Email verification timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "emergencyName": {
+            "description": "Emergency contact name",
+            "example": "Ahmad Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "emergencyPhone": {
+            "description": "Emergency contact phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
           },
           "firstName": {
             "description": "First name",
             "example": "Sara",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "gender": {
             "description": "Gender (lowercase)",
@@ -1386,46 +2209,172 @@
             "example": true,
             "type": "boolean"
           },
+          "lastBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Most recent past booking (populated for list results)",
+            "nullable": true,
+            "type": "object"
+          },
+          "lastLoginAt": {
+            "description": "Last login timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "lastName": {
             "description": "Last name",
             "example": "Al-Harbi",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "middleName": {
+            "description": "Middle name",
+            "example": "Ali",
+            "nullable": true,
+            "type": "string"
           },
           "name": {
             "description": "Full display name",
             "example": "Sara Al-Harbi",
             "type": "string"
           },
+          "nationalId": {
+            "description": "National ID or Iqama number",
+            "example": "1234567890",
+            "nullable": true,
+            "type": "string"
+          },
+          "nationality": {
+            "description": "Nationality",
+            "example": "Saudi",
+            "nullable": true,
+            "type": "string"
+          },
+          "nextBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Next future booking (populated for list results)",
+            "nullable": true,
+            "type": "object"
+          },
+          "notes": {
+            "description": "Internal notes about the client",
+            "example": "Prefers morning appointments",
+            "nullable": true,
+            "type": "string"
+          },
           "phone": {
             "description": "Mobile phone number",
             "example": "+966501234567",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "phoneVerified": {
+            "description": "Phone verification timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "preferredLocale": {
+            "description": "Preferred locale (ISO 639-1)",
+            "example": "ar",
+            "nullable": true,
+            "type": "string"
+          },
+          "pushEnabled": {
+            "description": "Whether push notifications are enabled",
+            "example": true,
+            "type": "boolean"
+          },
+          "ref": {
+            "description": "Sequential client reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "source": {
+            "description": "Acquisition source (uppercase)",
+            "enum": [
+              "WALK_IN",
+              "ONLINE",
+              "REFERRAL",
+              "WHATSAPP"
+            ],
+            "example": "WALK_IN",
+            "type": "string"
           },
           "updatedAt": {
             "description": "Last update timestamp",
             "example": "2026-01-01T00:00:00.000Z",
             "format": "date-time",
             "type": "string"
+          },
+          "userId": {
+            "description": "Linked user UUID",
+            "example": "00000000-0000-0000-0000-000000000001",
+            "nullable": true,
+            "type": "string"
           }
         },
         "required": [
           "id",
+          "ref",
+          "userId",
           "name",
+          "firstName",
+          "middleName",
+          "lastName",
+          "phone",
+          "email",
+          "emailVerified",
+          "phoneVerified",
+          "dateOfBirth",
+          "gender",
+          "nationality",
+          "nationalId",
+          "emergencyName",
+          "emergencyPhone",
+          "bloodType",
+          "allergies",
+          "chronicConditions",
+          "avatarUrl",
+          "notes",
+          "source",
+          "accountType",
+          "claimedAt",
           "isActive",
+          "deletedAt",
+          "lastLoginAt",
+          "preferredLocale",
+          "pushEnabled",
+          "consentedAt",
+          "consentVersion",
+          "lastBooking",
+          "nextBooking",
           "createdAt",
           "updatedAt"
         ],
         "type": "object"
       },
       "ClientSource": {
-        "description": "Acquisition source",
+        "description": "Acquisition source (case-insensitive)",
         "enum": [
           "WALK_IN",
           "ONLINE",
           "REFERRAL",
-          "WHATSAPP"
+          "WHATSAPP",
+          "walk_in",
+          "online",
+          "referral",
+          "whatsapp"
         ],
         "type": "string"
       },
@@ -1479,6 +2428,127 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "ContactMessageListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching records",
+            "example": 42,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "ContactMessageResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Archive timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "body": {
+            "description": "Message body",
+            "example": "أرغب بمعرفة المزيد عن الخدمات",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "description": "Sender email address",
+            "example": "user@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Contact message UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "name": {
+            "description": "Sender name",
+            "example": "سارة أحمد",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Sender phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "readAt": {
+            "description": "First-read timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Message workflow status",
+            "enum": [
+              "NEW",
+              "READ",
+              "REPLIED",
+              "ARCHIVED"
+            ],
+            "example": "NEW",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Message subject",
+            "example": "استفسار عن الحجز",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "phone",
+          "email",
+          "subject",
+          "body",
+          "status",
+          "createdAt",
+          "readAt",
+          "archivedAt"
+        ],
         "type": "object"
       },
       "CreateBookingDto": {
@@ -1646,21 +2716,25 @@
             "type": "string"
           },
           "departmentId": {
-            "description": "UUID of the parent department",
+            "description": "UUID of the parent department, or null to leave unassigned",
             "example": "00000000-0000-0000-0000-000000000000",
+            "nullable": true,
             "type": "string"
           },
           "iconBgColor": {
             "example": "#F0F4FF",
+            "nullable": true,
             "type": "string"
           },
           "iconName": {
             "example": "scissors-01",
+            "nullable": true,
             "type": "string"
           },
           "imageUrl": {
-            "description": "Category image URL",
+            "description": "Category image URL or stored object key",
             "example": "https://example.com/logo.png",
+            "nullable": true,
             "type": "string"
           },
           "nameAr": {
@@ -1671,6 +2745,7 @@
           "nameEn": {
             "description": "Category name in English",
             "example": "Dentistry",
+            "nullable": true,
             "type": "string"
           },
           "sortOrder": {
@@ -1692,8 +2767,8 @@
                 "$ref": "#/components/schemas/ClientAccountType"
               }
             ],
-            "description": "Account type",
-            "example": "FULL"
+            "description": "Account type (case-insensitive)",
+            "example": "full"
           },
           "allergies": {
             "description": "Known allergies",
@@ -1711,8 +2786,8 @@
                 "$ref": "#/components/schemas/ClientBloodType"
               }
             ],
-            "description": "Blood type",
-            "example": "A_POS"
+            "description": "Blood type (case-insensitive)",
+            "example": "a_pos"
           },
           "chronicConditions": {
             "description": "Chronic conditions",
@@ -1750,8 +2825,8 @@
                 "$ref": "#/components/schemas/ClientGender"
               }
             ],
-            "description": "Client gender",
-            "example": "FEMALE"
+            "description": "Client gender (case-insensitive)",
+            "example": "female"
           },
           "isActive": {
             "description": "Whether the client is active",
@@ -1794,8 +2869,8 @@
                 "$ref": "#/components/schemas/ClientSource"
               }
             ],
-            "description": "Acquisition source",
-            "example": "REFERRAL"
+            "description": "Acquisition source (case-insensitive)",
+            "example": "referral"
           },
           "userId": {
             "description": "Linked user account UUID",
@@ -1807,6 +2882,304 @@
           "firstName",
           "lastName",
           "phone"
+        ],
+        "type": "object"
+      },
+      "CreateClientResponseDto": {
+        "properties": {
+          "accountType": {
+            "description": "Account type",
+            "enum": [
+              "full",
+              "walk_in"
+            ],
+            "example": "full",
+            "type": "string"
+          },
+          "allergies": {
+            "description": "Known allergies",
+            "example": "Penicillin",
+            "nullable": true,
+            "type": "string"
+          },
+          "avatarUrl": {
+            "description": "Avatar image URL",
+            "example": "https://cdn.example.com/avatars/sara.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "bloodType": {
+            "description": "Blood type (uppercase)",
+            "enum": [
+              "A_POS",
+              "A_NEG",
+              "B_POS",
+              "B_NEG",
+              "AB_POS",
+              "AB_NEG",
+              "O_POS",
+              "O_NEG",
+              "UNKNOWN"
+            ],
+            "example": "A_POS",
+            "nullable": true,
+            "type": "string"
+          },
+          "chronicConditions": {
+            "description": "Chronic conditions",
+            "example": "Type 2 Diabetes",
+            "nullable": true,
+            "type": "string"
+          },
+          "claimedAt": {
+            "description": "Account claim timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentVersion": {
+            "description": "Accepted privacy consent version",
+            "example": "2026-01",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentedAt": {
+            "description": "Privacy consent timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "description": "Date of birth (ISO 8601)",
+            "example": "1990-06-15T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "deletedAt": {
+            "description": "Soft deletion timestamp",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address",
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "emailVerified": {
+            "description": "Email verification timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "emergencyName": {
+            "description": "Emergency contact name",
+            "example": "Ahmad Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "emergencyPhone": {
+            "description": "Emergency contact phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "First name",
+            "example": "Sara",
+            "nullable": true,
+            "type": "string"
+          },
+          "gender": {
+            "description": "Gender (lowercase)",
+            "enum": [
+              "male",
+              "female"
+            ],
+            "example": "female",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Client UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the account is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isExisting": {
+            "description": "Whether an existing client was returned by phone deduplication",
+            "example": false,
+            "type": "boolean"
+          },
+          "lastBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Most recent past booking (populated for list results)",
+            "nullable": true,
+            "type": "object"
+          },
+          "lastLoginAt": {
+            "description": "Last login timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name",
+            "example": "Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "middleName": {
+            "description": "Middle name",
+            "example": "Ali",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Full display name",
+            "example": "Sara Al-Harbi",
+            "type": "string"
+          },
+          "nationalId": {
+            "description": "National ID or Iqama number",
+            "example": "1234567890",
+            "nullable": true,
+            "type": "string"
+          },
+          "nationality": {
+            "description": "Nationality",
+            "example": "Saudi",
+            "nullable": true,
+            "type": "string"
+          },
+          "nextBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Next future booking (populated for list results)",
+            "nullable": true,
+            "type": "object"
+          },
+          "notes": {
+            "description": "Internal notes about the client",
+            "example": "Prefers morning appointments",
+            "nullable": true,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Mobile phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "phoneVerified": {
+            "description": "Phone verification timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "preferredLocale": {
+            "description": "Preferred locale (ISO 639-1)",
+            "example": "ar",
+            "nullable": true,
+            "type": "string"
+          },
+          "pushEnabled": {
+            "description": "Whether push notifications are enabled",
+            "example": true,
+            "type": "boolean"
+          },
+          "ref": {
+            "description": "Sequential client reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "source": {
+            "description": "Acquisition source (uppercase)",
+            "enum": [
+              "WALK_IN",
+              "ONLINE",
+              "REFERRAL",
+              "WHATSAPP"
+            ],
+            "example": "WALK_IN",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Linked user UUID",
+            "example": "00000000-0000-0000-0000-000000000001",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "userId",
+          "name",
+          "firstName",
+          "middleName",
+          "lastName",
+          "phone",
+          "email",
+          "emailVerified",
+          "phoneVerified",
+          "dateOfBirth",
+          "gender",
+          "nationality",
+          "nationalId",
+          "emergencyName",
+          "emergencyPhone",
+          "bloodType",
+          "allergies",
+          "chronicConditions",
+          "avatarUrl",
+          "notes",
+          "source",
+          "accountType",
+          "claimedAt",
+          "isActive",
+          "deletedAt",
+          "lastLoginAt",
+          "preferredLocale",
+          "pushEnabled",
+          "consentedAt",
+          "consentVersion",
+          "lastBooking",
+          "nextBooking",
+          "createdAt",
+          "updatedAt",
+          "isExisting"
         ],
         "type": "object"
       },
@@ -2317,6 +3690,7 @@
           "nameEn": {
             "description": "Form name in English",
             "example": "Pre-session Questionnaire",
+            "nullable": true,
             "type": "string"
           },
           "scope": {
@@ -2333,6 +3707,7 @@
           "scopeId": {
             "description": "Scope entity ID (null for global scope)",
             "example": null,
+            "nullable": true,
             "type": "string"
           },
           "type": {
@@ -3029,6 +4404,111 @@
         ],
         "type": "object"
       },
+      "DeleteCategoryResponseDto": {
+        "properties": {
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background color",
+            "example": "#F0F4FF",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Persisted image reference returned without signing; may be a storage key or legacy external URL",
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "DeleteDepartmentResponseDto": {
+        "properties": {
+          "deleted": {
+            "description": "Whether the department was deleted",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "type": "object"
+      },
       "DeliveryType": {
         "description": "Delivery channel (IN_PERSON or ONLINE)",
         "enum": [
@@ -3053,6 +4533,355 @@
         "required": [
           "refundRequestId",
           "reason"
+        ],
+        "type": "object"
+      },
+      "DepartmentCategoryResponseDto": {
+        "properties": {
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background color",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Category image URL",
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "DepartmentListItemResponseDto": {
+        "properties": {
+          "bookableCategoriesCount": {
+            "description": "Active categories with at least one bookable option",
+            "example": 2,
+            "type": "number"
+          },
+          "categories": {
+            "description": "Categories assigned to the department",
+            "items": {
+              "$ref": "#/components/schemas/DepartmentCategoryResponseDto"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic department description",
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English department description",
+            "nullable": true,
+            "type": "string"
+          },
+          "icon": {
+            "description": "Department icon identifier",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Department UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the department is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isVisible": {
+            "description": "Whether the department is shown in public navigation",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic department name",
+            "example": "قسم الاستشارات الأسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English department name",
+            "example": "Family Counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Department display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "icon",
+          "isVisible",
+          "sortOrder",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "categories",
+          "bookableCategoriesCount"
+        ],
+        "type": "object"
+      },
+      "DepartmentListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching records",
+            "example": 42,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "DepartmentResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic department description",
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English department description",
+            "nullable": true,
+            "type": "string"
+          },
+          "icon": {
+            "description": "Department icon identifier",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Department UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the department is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isVisible": {
+            "description": "Whether the department is shown in public navigation",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic department name",
+            "example": "قسم الاستشارات الأسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English department name",
+            "example": "Family Counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Department display order",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "icon",
+          "isVisible",
+          "sortOrder",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "DiscountReasonResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Discount reason UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the reason is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "labelAr": {
+            "description": "Reason label in Arabic",
+            "example": "خصم من المعالج",
+            "type": "string"
+          },
+          "labelEn": {
+            "description": "Reason label in English",
+            "example": "Therapist discount",
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Sort order (ascending)",
+            "example": 0,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "labelAr",
+          "labelEn",
+          "isActive",
+          "sortOrder",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
@@ -3670,6 +5499,70 @@
         ],
         "type": "object"
       },
+      "IntakeBookingResponseDto": {
+        "properties": {
+          "answers": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "Answers keyed by field UUID",
+            "type": "object"
+          },
+          "bookingId": {
+            "description": "Booking UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID normalized for booking-response reads",
+            "example": "",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Submission timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "form": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IntakeFormBookingResponseDto"
+              }
+            ],
+            "description": "Form summary and resolved scope identifiers"
+          },
+          "formId": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Response UUID",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "formId",
+          "bookingId",
+          "clientId",
+          "answers",
+          "createdAt",
+          "form"
+        ],
+        "type": "object"
+      },
       "IntakeFieldInputDto": {
         "properties": {
           "fieldType": {
@@ -3699,6 +5592,7 @@
           "labelEn": {
             "description": "Field label in English",
             "example": "Do you have any allergies?",
+            "nullable": true,
             "type": "string"
           },
           "options": {
@@ -3721,6 +5615,458 @@
         "required": [
           "labelAr",
           "fieldType"
+        ],
+        "type": "object"
+      },
+      "IntakeFieldResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "fieldType": {
+            "description": "Field input type",
+            "enum": [
+              "TEXT",
+              "TEXTAREA",
+              "NUMBER",
+              "DATE",
+              "SELECT",
+              "CHECKBOX",
+              "RADIO"
+            ],
+            "type": "string"
+          },
+          "formId": {
+            "description": "Parent form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Field UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isRequired": {
+            "description": "Whether an answer is required",
+            "type": "boolean"
+          },
+          "labelAr": {
+            "description": "Arabic field label",
+            "type": "string"
+          },
+          "labelEn": {
+            "description": "English field label",
+            "nullable": true,
+            "type": "string"
+          },
+          "options": {
+            "description": "Options for selectable fields",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "position": {
+            "description": "Display order, zero-based",
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "formId",
+          "labelAr",
+          "labelEn",
+          "fieldType",
+          "isRequired",
+          "options",
+          "position",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "IntakeFormBookingResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Resolved branch UUID",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Resolved employee UUID",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "fields": {
+            "description": "Ordered form fields",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldResponseDto"
+            },
+            "type": "array"
+          },
+          "fieldsCount": {
+            "description": "Number of configured fields",
+            "example": 4,
+            "minimum": 0,
+            "type": "number"
+          },
+          "id": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the form is active",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic form name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English form name",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Human-readable form reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "scope": {
+            "description": "Lowercase form scope for list clients",
+            "enum": [
+              "global",
+              "service",
+              "employee",
+              "branch"
+            ],
+            "example": "service",
+            "type": "string"
+          },
+          "scopeId": {
+            "description": "Scoped service, employee, or branch UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "scopeLabel": {
+            "description": "Resolved scope target label",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Resolved service UUID",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "submissionsCount": {
+            "description": "Number of stored submissions",
+            "example": 3,
+            "minimum": 0,
+            "type": "number"
+          },
+          "type": {
+            "description": "Lowercase form type for list clients",
+            "enum": [
+              "pre_booking",
+              "pre_session",
+              "post_session",
+              "registration"
+            ],
+            "example": "pre_session",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "type",
+          "scope",
+          "scopeId",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "fields",
+          "submissionsCount",
+          "fieldsCount",
+          "scopeLabel",
+          "serviceId",
+          "employeeId",
+          "branchId"
+        ],
+        "type": "object"
+      },
+      "IntakeFormListItemResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Ordered form fields",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldResponseDto"
+            },
+            "type": "array"
+          },
+          "fieldsCount": {
+            "description": "Number of configured fields",
+            "example": 4,
+            "minimum": 0,
+            "type": "number"
+          },
+          "id": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the form is active",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic form name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English form name",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Human-readable form reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "scope": {
+            "description": "Lowercase form scope for list clients",
+            "enum": [
+              "global",
+              "service",
+              "employee",
+              "branch"
+            ],
+            "example": "service",
+            "type": "string"
+          },
+          "scopeId": {
+            "description": "Scoped service, employee, or branch UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "scopeLabel": {
+            "description": "Resolved scope target label",
+            "nullable": true,
+            "type": "string"
+          },
+          "submissionsCount": {
+            "description": "Number of stored submissions",
+            "example": 3,
+            "minimum": 0,
+            "type": "number"
+          },
+          "type": {
+            "description": "Lowercase form type for list clients",
+            "enum": [
+              "pre_booking",
+              "pre_session",
+              "post_session",
+              "registration"
+            ],
+            "example": "pre_session",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "type",
+          "scope",
+          "scopeId",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "fields",
+          "submissionsCount",
+          "fieldsCount",
+          "scopeLabel"
+        ],
+        "type": "object"
+      },
+      "IntakeFormResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Ordered form fields",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldResponseDto"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the form is active",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic form name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English form name",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Human-readable form reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "scope": {
+            "description": "Form scope",
+            "enum": [
+              "GLOBAL",
+              "SERVICE",
+              "EMPLOYEE",
+              "BRANCH"
+            ],
+            "type": "string"
+          },
+          "scopeId": {
+            "description": "Scoped service, employee, or branch UUID",
+            "nullable": true,
+            "type": "string"
+          },
+          "submissionsCount": {
+            "description": "Number of stored submissions",
+            "example": 3,
+            "minimum": 0,
+            "type": "number"
+          },
+          "type": {
+            "description": "Form type",
+            "enum": [
+              "PRE_BOOKING",
+              "PRE_SESSION",
+              "POST_SESSION",
+              "REGISTRATION"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "type",
+          "scope",
+          "scopeId",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "fields",
+          "submissionsCount"
+        ],
+        "type": "object"
+      },
+      "IntakeSubmissionResponseDto": {
+        "properties": {
+          "answers": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "Answers keyed by field UUID",
+            "type": "object"
+          },
+          "bookingId": {
+            "description": "Booking UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Submission timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "formId": {
+            "description": "Form UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Response UUID",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "formId",
+          "bookingId",
+          "clientId",
+          "answers",
+          "createdAt"
         ],
         "type": "object"
       },
@@ -4379,6 +6725,144 @@
         },
         "type": "object"
       },
+      "NotificationListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Notifications per page",
+            "type": "number"
+          },
+          "page": {
+            "description": "1-based page number",
+            "type": "number"
+          },
+          "total": {
+            "description": "Total matching notifications",
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "NotificationResponseDto": {
+        "properties": {
+          "body": {
+            "description": "Notification body",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Notification UUID",
+            "type": "string"
+          },
+          "isRead": {
+            "description": "Whether the notification has been read",
+            "type": "boolean"
+          },
+          "metadata": {
+            "description": "Notification metadata. JSON scalars, arrays, objects, or null are allowed.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "readAt": {
+            "description": "Read timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "recipientId": {
+            "description": "Recipient user UUID",
+            "type": "string"
+          },
+          "recipientType": {
+            "description": "Recipient type",
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "description": "Notification title",
+            "type": "string"
+          },
+          "type": {
+            "description": "Notification type",
+            "enum": [
+              "BOOKING_CREATED",
+              "BOOKING_CONFIRMED",
+              "BOOKING_CANCELLED",
+              "BOOKING_REMINDER",
+              "PAYMENT_RECEIVED",
+              "PAYMENT_FAILED",
+              "PAYMENT_COMPLETED",
+              "PAYMENT_REMINDER",
+              "WELCOME",
+              "GENERAL"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recipientId",
+          "recipientType",
+          "type",
+          "title",
+          "body",
+          "metadata",
+          "isRead",
+          "readAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "OnboardEmployeeDto": {
         "properties": {
           "avatarUrl": {
@@ -4550,6 +7034,54 @@
         ],
         "type": "string"
       },
+      "PaginatedBranchesDto": {
+        "properties": {
+          "items": {
+            "description": "Branches on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/BranchResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BranchListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PaginatedCategoriesResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Categories on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/CategoryListItemResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CategoryListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
       "PaginatedClientsDto": {
         "properties": {
           "items": {
@@ -4568,6 +7100,54 @@
         ],
         "type": "object"
       },
+      "PaginatedContactMessagesResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Contact messages on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/ContactMessageResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContactMessageListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PaginatedDepartmentsResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Departments on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/DepartmentListItemResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DepartmentListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
       "PaginatedEmployeesDto": {
         "properties": {
           "items": {
@@ -4578,6 +7158,30 @@
           },
           "meta": {
             "$ref": "#/components/schemas/ListMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PaginatedNotificationsResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Notifications on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
           }
         },
         "required": [
@@ -5841,6 +8445,18 @@
         ],
         "type": "object"
       },
+      "UnreadNotificationCountResponseDto": {
+        "properties": {
+          "count": {
+            "description": "Number of unread notifications",
+            "type": "number"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "type": "object"
+      },
       "UpdateAvailabilityBody": {
         "properties": {},
         "type": "object"
@@ -5947,19 +8563,22 @@
             "description": "UUID of the parent department, or null to unlink",
             "example": "00000000-0000-0000-0000-000000000000",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "iconBgColor": {
             "example": "#F0F4FF",
+            "nullable": true,
             "type": "string"
           },
           "iconName": {
             "example": "scissors-01",
+            "nullable": true,
             "type": "string"
           },
           "imageUrl": {
-            "description": "Category image URL",
+            "description": "Category image URL or stored object key",
             "example": "https://example.com/logo.png",
+            "nullable": true,
             "type": "string"
           },
           "isActive": {
@@ -5975,6 +8594,7 @@
           "nameEn": {
             "description": "Category name in English",
             "example": "Dentistry",
+            "nullable": true,
             "type": "string"
           },
           "sortOrder": {
@@ -5993,20 +8613,20 @@
                 "$ref": "#/components/schemas/ClientAccountType"
               }
             ],
-            "description": "Account type",
-            "example": "FULL"
+            "description": "Account type (case-insensitive)",
+            "example": "full"
           },
           "allergies": {
             "description": "Known allergies",
             "example": "Penicillin",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "avatarUrl": {
             "description": "Avatar image URL",
             "example": "https://cdn.example.com/avatars/sara.jpg",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "bloodType": {
             "allOf": [
@@ -6014,39 +8634,39 @@
                 "$ref": "#/components/schemas/ClientBloodType"
               }
             ],
-            "description": "Blood type",
-            "example": "A_POS",
+            "description": "Blood type (case-insensitive)",
+            "example": "a_pos",
             "nullable": true
           },
           "chronicConditions": {
             "description": "Chronic conditions",
             "example": "Type 2 Diabetes",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "dateOfBirth": {
             "description": "Date of birth (ISO 8601)",
             "example": "1990-06-15",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "email": {
             "description": "Email address",
             "example": "user@example.com",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "emergencyName": {
             "description": "Emergency contact name",
             "example": "Ahmad Al-Harbi",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "emergencyPhone": {
             "description": "Emergency contact Saudi mobile number",
             "example": "+966501234567",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "firstName": {
             "description": "Client's first name",
@@ -6059,8 +8679,8 @@
                 "$ref": "#/components/schemas/ClientGender"
               }
             ],
-            "description": "Client gender",
-            "example": "FEMALE",
+            "description": "Client gender (case-insensitive)",
+            "example": "female",
             "nullable": true
           },
           "isActive": {
@@ -6077,37 +8697,37 @@
             "description": "Client's middle name",
             "example": "Ali",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "nationalId": {
             "description": "National ID or Iqama number",
             "example": "1234567890",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "nationality": {
             "description": "Nationality",
             "example": "Saudi",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "notes": {
             "description": "Internal notes about the client",
             "example": "Prefers morning appointments",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "phone": {
             "description": "Saudi mobile number (any common format; normalized to E.164)",
             "example": "+966501234567",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "preferredLocale": {
             "description": "Preferred locale (ISO 639-1)",
             "example": "ar",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "pushEnabled": {
             "description": "Whether the client receives push notifications",
@@ -6120,8 +8740,8 @@
                 "$ref": "#/components/schemas/ClientSource"
               }
             ],
-            "description": "Acquisition source",
-            "example": "REFERRAL"
+            "description": "Acquisition source (case-insensitive)",
+            "example": "referral"
           }
         },
         "type": "object"
@@ -6514,6 +9134,13 @@
       },
       "UpdateIntakeFormDto": {
         "properties": {
+          "fields": {
+            "description": "Optional replacement field list (max 100)",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldInputDto"
+            },
+            "type": "array"
+          },
           "isActive": {
             "description": "Whether the form is active and shown to clients",
             "example": true,
@@ -6527,6 +9154,35 @@
           "nameEn": {
             "description": "Form name in English",
             "example": "Pre-session Questionnaire",
+            "nullable": true,
+            "type": "string"
+          },
+          "scope": {
+            "description": "Form scope",
+            "enum": [
+              "GLOBAL",
+              "SERVICE",
+              "EMPLOYEE",
+              "BRANCH"
+            ],
+            "example": "GLOBAL",
+            "type": "string"
+          },
+          "scopeId": {
+            "description": "Scope entity ID; null clears the scope target",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "description": "Form type",
+            "enum": [
+              "PRE_BOOKING",
+              "PRE_SESSION",
+              "POST_SESSION",
+              "REGISTRATION"
+            ],
+            "example": "PRE_SESSION",
             "type": "string"
           }
         },
@@ -12373,10 +15029,37 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "description": "Results per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedContactMessagesResponseDto"
+                }
+              }
+            },
             "description": "Paginated contact messages"
           },
           "400": {
@@ -12457,6 +15140,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactMessageResponseDto"
+                }
+              }
+            },
             "description": "Updated message"
           },
           "400": {
@@ -12488,6 +15178,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Contact message not found"
           },
           "500": {
             "content": {
@@ -12996,10 +15696,40 @@
               "example": true,
               "type": "boolean"
             }
+          },
+          {
+            "description": "Results per page (1–200, default: 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (1-based, default: 1)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedNotificationsResponseDto"
+                }
+              }
+            },
             "description": "Paginated notification list"
           },
           "400": {
@@ -13130,6 +15860,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadNotificationCountResponseDto"
+                }
+              }
+            },
             "description": "Unread count value"
           },
           "400": {
@@ -14430,6 +17167,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DiscountReasonResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of discount reasons"
           },
           "400": {
@@ -14498,6 +17245,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountReasonResponseDto"
+                }
+              }
+            },
             "description": "Discount reason created"
           },
           "400": {
@@ -14668,6 +17422,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountReasonResponseDto"
+                }
+              }
+            },
             "description": "Discount reason updated"
           },
           "400": {
@@ -17620,6 +20381,7 @@
             "required": false,
             "schema": {
               "example": 20,
+              "maximum": 200,
               "type": "number"
             }
           }
@@ -20086,6 +22848,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedBranchesDto"
+                }
+              }
+            },
             "description": "Paginated list of branches"
           },
           "400": {
@@ -20154,6 +22923,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchResponseDto"
+                }
+              }
+            },
             "description": "Branch created"
           },
           "400": {
@@ -20304,6 +23080,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchDetailResponseDto"
+                }
+              }
+            },
             "description": "Branch details"
           },
           "400": {
@@ -20393,6 +23176,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchResponseDto"
+                }
+              }
+            },
             "description": "Branch updated"
           },
           "400": {
@@ -20563,6 +23353,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchEmployeeAssignmentResponseDto"
+                }
+              }
+            },
             "description": "Employee assigned to branch"
           },
           "400": {
@@ -20653,7 +23450,14 @@
           }
         ],
         "responses": {
-          "204": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchAssignmentDeletedResponseDto"
+                }
+              }
+            },
             "description": "Employee unassigned from branch"
           },
           "400": {
@@ -20758,7 +23562,10 @@
             "name": "limit",
             "required": false,
             "schema": {
-              "example": 20
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
             }
           },
           {
@@ -20767,12 +23574,21 @@
             "name": "page",
             "required": false,
             "schema": {
-              "example": 1
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
             }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCategoriesResponseDto"
+                }
+              }
+            },
             "description": "Paginated list of categories"
           },
           "400": {
@@ -20841,6 +23657,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            },
             "description": "Category created"
           },
           "400": {
@@ -20911,7 +23734,14 @@
           }
         ],
         "responses": {
-          "204": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteCategoryResponseDto"
+                }
+              }
+            },
             "description": "Category deleted"
           },
           "400": {
@@ -20922,7 +23752,7 @@
                 }
               }
             },
-            "description": "Validation failed"
+            "description": "Category has linked non-archived services"
           },
           "401": {
             "content": {
@@ -21001,6 +23831,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            },
             "description": "Category updated"
           },
           "400": {
@@ -21110,6 +23947,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedDepartmentsResponseDto"
+                }
+              }
+            },
             "description": "Paginated list of departments"
           },
           "400": {
@@ -21178,6 +24022,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentResponseDto"
+                }
+              }
+            },
             "description": "Department created"
           },
           "400": {
@@ -21248,7 +24099,14 @@
           }
         ],
         "responses": {
-          "204": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDepartmentResponseDto"
+                }
+              }
+            },
             "description": "Department deleted"
           },
           "400": {
@@ -21338,6 +24196,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentResponseDto"
+                }
+              }
+            },
             "description": "Department updated"
           },
           "400": {
@@ -21820,6 +24685,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IntakeFormListItemResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of intake forms"
           },
           "400": {
@@ -21888,6 +24763,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeFormResponseDto"
+                }
+              }
+            },
             "description": "Intake form created"
           },
           "400": {
@@ -21959,6 +24841,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IntakeBookingResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of intake responses for the booking, each with its form, resolved scope label and submission count"
           },
           "400": {
@@ -22038,6 +24930,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeSubmissionResponseDto"
+                }
+              }
+            },
             "description": "Persisted intake response"
           },
           "400": {
@@ -22177,6 +25076,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeFormResponseDto"
+                }
+              }
+            },
             "description": "Intake form detail"
           },
           "400": {
@@ -22259,6 +25165,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeFormResponseDto"
+                }
+              }
+            },
             "description": "Intake form updated"
           },
           "400": {
@@ -22293,6 +25206,9 @@
           },
           "404": {
             "description": "Intake form not found"
+          },
+          "409": {
+            "description": "Answered intake forms cannot change their fields"
           },
           "500": {
             "content": {
@@ -22343,6 +25259,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeFormResponseDto"
+                }
+              }
+            },
             "description": "Fields replaced, full form returned"
           },
           "400": {
@@ -22377,6 +25300,9 @@
           },
           "404": {
             "description": "Intake form not found"
+          },
+          "409": {
+            "description": "Answered intake forms cannot change their fields"
           },
           "500": {
             "content": {
@@ -24137,11 +27063,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientResponseDto"
+                  "$ref": "#/components/schemas/CreateClientResponseDto"
                 }
               }
             },
-            "description": "Client created"
+            "description": "Client created or matched by phone"
           },
           "400": {
             "content": {

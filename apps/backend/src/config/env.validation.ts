@@ -61,6 +61,16 @@ export const envValidationSchema = Joi.object({
   REDIS_PASSWORD: Joi.string().allow('').optional(),
   REDIS_DB: Joi.number().integer().min(0).max(15).default(0),
 
+  // Durable non-payment notification outbox. Capture and delivery are
+  // independently controlled; capture requires a stable rollout boundary.
+  NOTIFICATION_OUTBOX_CAPTURE_ENABLED: Joi.boolean().default(false),
+  NOTIFICATION_OUTBOX_DELIVERY_ENABLED: Joi.boolean().default(false),
+  NOTIFICATION_OUTBOX_CUTOVER_AT: Joi.when('NOTIFICATION_OUTBOX_CAPTURE_ENABLED', {
+    is: true,
+    then: Joi.date().iso().required(),
+    otherwise: Joi.alternatives().try(Joi.date().iso(), Joi.string().valid('')).optional(),
+  }),
+
   // MinIO (object storage)
   MINIO_ENDPOINT: Joi.string().hostname().required(),
   MINIO_PORT: Joi.number().port().required(),

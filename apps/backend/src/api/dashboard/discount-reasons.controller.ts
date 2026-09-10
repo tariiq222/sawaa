@@ -17,6 +17,7 @@ import {
   CreateDiscountReasonDto,
   UpdateDiscountReasonDto,
 } from '../../modules/org-experience/discount-reasons/discount-reason.dto';
+import { DiscountReasonResponseDto } from '../../modules/org-experience/discount-reasons/discount-reason-response.dto';
 
 @ApiTags('Dashboard / Org Experience')
 @ApiBearerAuth()
@@ -35,7 +36,7 @@ export class DashboardDiscountReasonsController {
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @ApiOperation({ summary: 'List discount reasons' })
   @ApiQuery({ name: 'includeInactive', required: false, description: 'Include deactivated reasons', example: false })
-  @ApiOkResponse({ description: 'List of discount reasons' })
+  @ApiOkResponse({ description: 'List of discount reasons', type: [DiscountReasonResponseDto] })
   listEndpoint(
     @Query('includeInactive', new ParseBoolPipe({ optional: true })) includeInactive?: boolean,
   ) {
@@ -45,7 +46,7 @@ export class DashboardDiscountReasonsController {
   @Post()
   @CheckPermissions({ action: 'manage', subject: 'Setting' })
   @ApiOperation({ summary: 'Create a discount reason' })
-  @ApiCreatedResponse({ description: 'Discount reason created' })
+  @ApiCreatedResponse({ description: 'Discount reason created', type: DiscountReasonResponseDto })
   createEndpoint(@Body() body: CreateDiscountReasonDto) {
     return this.createReason.execute(body);
   }
@@ -54,7 +55,7 @@ export class DashboardDiscountReasonsController {
   @CheckPermissions({ action: 'manage', subject: 'Setting' })
   @ApiOperation({ summary: 'Update a discount reason' })
   @ApiParam({ name: 'id', description: 'Discount reason UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Discount reason updated' })
+  @ApiOkResponse({ description: 'Discount reason updated', type: DiscountReasonResponseDto })
   @ApiResponse({ status: 404, description: 'Discount reason not found', type: ApiErrorDto })
   updateEndpoint(
     @Param('id', ParseUUIDPipe) id: string,

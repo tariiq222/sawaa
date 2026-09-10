@@ -1,0 +1,17 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": ".integration-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)sx?$": ["ts-jest", { "diagnostics": false }]
+  },
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "^@sawaa/shared/(.*)$": "<rootDir>/../../packages/shared/$1",
+    "^@sawaa/shared$": "<rootDir>/../../packages/shared/index"
+  },
+  "transformIgnorePatterns": ["node_modules/(?!(uuid)/)"],
+  "modulePathIgnorePatterns": ["<rootDir>/dist/"],
+  "setupFilesAfterEnv": ["<rootDir>/test/setup-outbox-integration.ts"]
+}

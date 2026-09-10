@@ -3,11 +3,20 @@ import { BookingStatus, BookingType, PackageCreditUsageStatus, ProgramStatus } f
 import { RestoreNoShowBookingHandler } from './restore-no-show-booking.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
 
-const newHandler = (prisma: ReturnType<typeof buildPrisma>) =>
-  new RestoreNoShowBookingHandler(
+const newHandler = (prisma: ReturnType<typeof buildPrisma>) => {
+  (prisma as unknown as { $queryRaw: jest.Mock }).$queryRaw = jest.fn(
+    async (strings: TemplateStringsArray, id: string) => {
+      const sql = strings.join(' ');
+      if (sql.includes('"Client"')) return [{ id, isActive: true, deletedAt: null }];
+      if (sql.includes('"Employee"')) return [{ id, isActive: true }];
+      return [];
+    },
+  );
+  return new RestoreNoShowBookingHandler(
     prisma as never,
     buildRlsTransaction(prisma) as never,
   );
+};
 
 describe('RestoreNoShowBookingHandler', () => {
   it('restores a NO_SHOW booking to CONFIRMED, sets checkedInAt and clears noShowAt', async () => {
@@ -243,9 +252,6 @@ describe('RestoreNoShowBookingHandler — program enrollment', () => {
       programCancelled?: boolean;
     } = {},
   ) {
-    (prisma as unknown as { $queryRaw: jest.Mock }).$queryRaw = jest
-      .fn()
-      .mockResolvedValue([]);
     (prisma as unknown as Record<string, unknown>).program = {
       findUnique: jest.fn().mockImplementation(() => {
         if (options.programMissing) return Promise.resolve(null);
@@ -304,7 +310,7 @@ describe('RestoreNoShowBookingHandler — program enrollment', () => {
         bookingId: 'book-1',
       }),
     });
-    expect((prisma as any).$queryRaw).toHaveBeenCalledTimes(1);
+    expect((prisma as any).$queryRaw).toHaveBeenCalledTimes(3);
   });
 
   it('skips re-enrollment when an enrollment already exists for this booking (idempotency)', async () => {

@@ -4,6 +4,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
 import { reclaimPackageCreditForBooking } from '../package-credit-return.helper';
+import { lockPersonReferences } from '../../../common/database/person-reference-lock.helper';
 
 export interface RestoreNoShowBookingCommand {
   bookingId: string;
@@ -94,6 +95,15 @@ export class RestoreNoShowBookingHandler {
           );
         }
 
+        await lockPersonReferences(
+          tx,
+          [
+            { kind: 'Client', id: booking.clientId },
+            { kind: 'Employee', id: booking.employeeId },
+          ],
+          'reference',
+        );
+
         const existingEnrollment = await tx.programEnrollment.findUnique({
           where: { bookingId: cmd.bookingId },
           select: { id: true, programId: true, clientId: true },
@@ -129,6 +139,15 @@ export class RestoreNoShowBookingHandler {
             },
           });
         }
+      } else {
+        await lockPersonReferences(
+          tx,
+          [
+            { kind: 'Client', id: booking.clientId },
+            { kind: 'Employee', id: booking.employeeId },
+          ],
+          'reference',
+        );
       }
 
       // 1) Flip the booking. Always set checkedInAt so the auto-no-show cron

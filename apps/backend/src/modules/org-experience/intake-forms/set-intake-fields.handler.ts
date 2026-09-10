@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { IntakeFieldInputDto } from './create-intake-form.dto';
+import { fieldsSemanticallyEqual, mapIntakeFormResult } from './intake-form.helpers';
 
 export interface SetIntakeFieldsCommand {
   formId: string;
@@ -21,13 +22,32 @@ export class SetIntakeFieldsHandler {
    */
   async execute({ formId, fields }: SetIntakeFieldsCommand) {
     return this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "IntakeForm" WHERE id = ${formId} FOR UPDATE`;
+
       const form = await tx.intakeForm.findFirst({
         where: { id: formId },
-        select: { id: true },
+        include: {
+          fields: { orderBy: { position: 'asc' } },
+          _count: {
+            select: {
+              responses: { where: { supersededAt: null } },
+            },
+          },
+        },
       });
 
       if (!form) {
         throw new NotFoundException('Intake form not found');
+      }
+
+      if (fieldsSemanticallyEqual(form.fields, fields)) {
+        return mapIntakeFormResult(form);
+      }
+      // Historical rows also protect field IDs after being superseded, so the
+      // mutation guard intentionally counts every response row.
+      const totalResponses = await tx.intakeResponse.count({ where: { formId } });
+      if (totalResponses > 0) {
+        throw new ConflictException('Answered intake forms cannot change their fields');
       }
 
       await tx.intakeField.deleteMany({ where: { formId } });
@@ -46,10 +66,19 @@ export class SetIntakeFieldsHandler {
         });
       }
 
-      return tx.intakeForm.findUnique({
+      const updated = await tx.intakeForm.findUnique({
         where: { id: formId },
-        include: { fields: { orderBy: { position: 'asc' } } },
+        include: {
+          fields: { orderBy: { position: 'asc' } },
+          _count: {
+            select: {
+              responses: { where: { supersededAt: null } },
+            },
+          },
+        },
       });
+      if (!updated) throw new NotFoundException('Intake form not found');
+      return mapIntakeFormResult(updated);
     });
   }
 }

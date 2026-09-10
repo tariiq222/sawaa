@@ -1,4 +1,4 @@
-import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { NotFoundException } from '@nestjs/common';
 import { ReconcilePaymentsCron } from './reconcile-payments.cron';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
@@ -20,13 +20,17 @@ type InvoiceRow = {
   bookingId: string | null;
   packagePurchaseId: string | null;
   clientId: string;
+  status: InvoiceStatus;
 };
 
 interface TxMock {
+  $queryRaw: jest.Mock;
   payment: { findUnique: jest.Mock; update: jest.Mock; aggregate: jest.Mock };
-  invoice: { update: jest.Mock };
+  invoice: { findUnique: jest.Mock; update: jest.Mock };
   activityLog: { create: jest.Mock };
   outboxEvent: { create: jest.Mock };
+  booking: { findFirst: jest.Mock };
+  service: { findFirst: jest.Mock };
 }
 
 const defaultInvoice: InvoiceRow = {
@@ -36,20 +40,39 @@ const defaultInvoice: InvoiceRow = {
   bookingId: 'bk_1',
   packagePurchaseId: null,
   clientId: 'cl_1',
+  status: InvoiceStatus.ISSUED,
 };
 
-function buildTx(opts: { currentStatus?: PaymentStatus; paidAfter?: number } = {}): TxMock {
+function buildTx(opts: {
+  currentStatus?: PaymentStatus;
+  paidAfter?: number;
+  deposit?: { depositEnabled: boolean; depositAmount: number | null };
+} = {}): TxMock {
   return {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'inv_1' }]),
     payment: {
       findUnique: jest
         .fn()
-        .mockResolvedValue({ status: opts.currentStatus ?? PaymentStatus.PENDING }),
+        .mockResolvedValue({
+          status: opts.currentStatus ?? PaymentStatus.PENDING,
+          amount: opts.paidAfter ?? 10_000,
+          currency: 'SAR',
+        }),
       update: jest.fn().mockResolvedValue({}),
       aggregate: jest.fn().mockResolvedValue({ _sum: { amount: opts.paidAfter ?? 10_000 } }),
     },
-    invoice: { update: jest.fn().mockResolvedValue({}) },
+    invoice: {
+      findUnique: jest.fn().mockResolvedValue(defaultInvoice),
+      update: jest.fn().mockResolvedValue({}),
+    },
     activityLog: { create: jest.fn().mockResolvedValue({}) },
     outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox_1' }) },
+    booking: { findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc_1' }) },
+    service: {
+      findFirst: jest.fn().mockResolvedValue(
+        opts.deposit ?? { depositEnabled: false, depositAmount: null },
+      ),
+    },
   };
 }
 
@@ -207,7 +230,10 @@ describe('ReconcilePaymentsCron', () => {
   });
 
   it('stages DepositPaidEvent in the outbox when a deposit-sized payment lands PARTIALLY_PAID', async () => {
-    const tx = buildTx({ paidAfter: 3_000 });
+    const tx = buildTx({
+      paidAfter: 3_000,
+      deposit: { depositEnabled: true, depositAmount: 3_000 },
+    });
     const prisma = buildPrisma({
       stuckRows: [row({ amount: 3_000 })],
       deposit: { depositEnabled: true, depositAmount: 3_000 },
@@ -362,6 +388,40 @@ describe('ReconcilePaymentsCron', () => {
 
     expect(tx.payment.update).not.toHaveBeenCalled();
     expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    InvoiceStatus.PAID,
+    InvoiceStatus.VOID,
+    InvoiceStatus.PARTIALLY_REFUNDED,
+    InvoiceStatus.REFUNDED,
+  ])('preserves a pending row for manual review when Moyasar reports paid on a %s invoice', async (status) => {
+    const tx = buildTx();
+    tx.invoice.findUnique.mockResolvedValue({ ...defaultInvoice, status });
+    const prisma = buildPrisma({ stuckRows: [row()] });
+    const moyasar = buildMoyasar({ m_1: { status: 'paid', amount: 10_000 } });
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(tx.payment.update).not.toHaveBeenCalled();
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('locks the invoice before re-reading payment state so webhook and reconcile serialize', async () => {
+    const tx = buildTx({ paidAfter: 10_000 });
+    const prisma = buildPrisma({ stuckRows: [row()] });
+    const moyasar = buildMoyasar({ m_1: { status: 'paid', amount: 10_000 } });
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    const sql = tx.$queryRaw.mock.calls[0][0];
+    expect(sql.strings.join('')).toContain('Invoice');
+    expect(sql.strings.join('')).toContain('FOR UPDATE');
+    expect(tx.$queryRaw.mock.invocationCallOrder[0])
+      .toBeLessThan(tx.payment.findUnique.mock.invocationCallOrder[0]);
+    expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
   });
 
   it('is a no-op when there are no stuck rows', async () => {

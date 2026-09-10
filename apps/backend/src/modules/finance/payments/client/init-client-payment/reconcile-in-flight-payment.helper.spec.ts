@@ -35,38 +35,38 @@ const rowWithRef: InFlightPaymentRow = { id: 'payment-1', gatewayRef: 'moyasar-p
 const rowWithoutRef: InFlightPaymentRow = { id: 'payment-1', gatewayRef: null };
 
 describe('reconcileOrDiscardInFlightPayment', () => {
-  it('discards a row that has no gatewayRef yet (never created a gateway session)', async () => {
+  it('retains a row with no gatewayRef because gateway creation may have succeeded', async () => {
     const prisma = buildPrisma();
     const moyasar = buildMoyasar('initiated'); // should not be consulted
 
-    await reconcileOrDiscardInFlightPayment(
+    await expect(reconcileOrDiscardInFlightPayment(
       prisma as never,
       moyasar as never,
       silentLogger(),
       rowWithoutRef,
       messages,
-    );
+    )).rejects.toBeInstanceOf(ConflictException);
 
     expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
-    expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-1' } });
+    expect(prisma.payment.delete).not.toHaveBeenCalled();
   });
 
   it.each(['failed', 'voided', 'refunded'])(
-    'discards a terminally-%s gateway session so a fresh payment can be created',
+    'returns terminally-%s evidence without deleting outside the invoice lock',
     async (status) => {
       const prisma = buildPrisma();
       const moyasar = buildMoyasar(status);
 
-      await reconcileOrDiscardInFlightPayment(
+      await expect(reconcileOrDiscardInFlightPayment(
         prisma as never,
         moyasar as never,
         silentLogger(),
         rowWithRef,
         messages,
-      );
+      )).resolves.toBe('TERMINAL_FAILED');
 
       expect(moyasar.getPaymentStatus).toHaveBeenCalledTimes(1);
-      expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-1' } });
+      expect(prisma.payment.delete).not.toHaveBeenCalled();
     },
   );
 
@@ -110,6 +110,23 @@ describe('reconcileOrDiscardInFlightPayment', () => {
   it('fails closed (ConflictException, no discard) when the gateway lookup throws', async () => {
     const prisma = buildPrisma();
     const moyasar = buildMoyasarFailing();
+
+    await expect(
+      reconcileOrDiscardInFlightPayment(
+        prisma as never,
+        moyasar as never,
+        silentLogger(),
+        rowWithRef,
+        messages,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(prisma.payment.delete).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the gateway returns an unrecognized status', async () => {
+    const prisma = buildPrisma();
+    const moyasar = buildMoyasar('unknown-provider-state');
 
     await expect(
       reconcileOrDiscardInFlightPayment(

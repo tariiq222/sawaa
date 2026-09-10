@@ -13,6 +13,7 @@ import { buildOverviewReport } from './overview-report.builder';
 import { buildClientsReport } from './clients-report.builder';
 import { buildServicesReport } from './services-report.builder';
 import { buildRatingsReport } from './ratings-report.builder';
+import { revenueReportDateRange } from './revenue-report-query.helper';
 import {
   buildRevenueExcel,
   buildActivityExcel,
@@ -29,6 +30,7 @@ export type GenerateReportCommand = GenerateReportDto;
 type BuilderArgs = {
   from: Date;
   to: Date;
+  toExclusive: Date;
   branchId?: string;
   employeeId?: string;
 };
@@ -45,9 +47,18 @@ export class GenerateReportHandler {
     data?: unknown;
     excelBuffer?: Buffer;
   }> {
-    let from = new Date(dto.from);
-    let to = new Date(dto.to);
-    if (from > to) [from, to] = [to, from];
+    let from: Date;
+    let to: Date;
+    let toExclusive: Date;
+    if (dto.type === ReportType.REVENUE) {
+      ({ from, toExclusive } = revenueReportDateRange(dto.from, dto.to));
+      to = toExclusive;
+    } else {
+      from = new Date(dto.from);
+      to = new Date(dto.to);
+      if (from > to) [from, to] = [to, from];
+      toExclusive = to;
+    }
 
     const format = dto.format ?? ReportFormat.JSON;
 
@@ -71,6 +82,7 @@ export class GenerateReportHandler {
       const args: BuilderArgs = {
         from,
         to,
+        toExclusive,
         branchId: dto.branchId,
         employeeId: dto.employeeId,
       };
@@ -83,13 +95,18 @@ export class GenerateReportHandler {
         format === ReportFormat.JSON &&
         dto.type !== ReportType.ACTIVITY
       ) {
-        const lengthMs = to.getTime() - from.getTime();
-        const prevFrom = new Date(from.getTime() - lengthMs - 1);
-        const prevTo = new Date(from.getTime() - 1);
+        const lengthMs = toExclusive.getTime() - from.getTime();
+        const prevFrom = dto.type === ReportType.REVENUE
+          ? new Date(from.getTime() - lengthMs)
+          : new Date(from.getTime() - lengthMs - 1);
+        const previousTo = dto.type === ReportType.REVENUE
+          ? from
+          : new Date(from.getTime() - 1);
         const prev = await this.runBuilder(dto.type, {
           ...args,
           from: prevFrom,
-          to: prevTo,
+          to: previousTo,
+          toExclusive: previousTo,
         });
         data = { ...(data as object), previous: prev };
       }

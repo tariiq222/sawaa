@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { InvoiceView } from '@/features/account/invoice-view';
 import { getMyBookingInvoice } from '@/features/account/invoice.api';
+import { PublicFetchError } from '@/lib/public-fetch';
 import { theme } from '@/themes/registry';
 
 export const dynamic = 'force-dynamic';
@@ -21,8 +22,11 @@ export default async function AccountBookingInvoicePage({ params }: InvoicePageP
   let invoice;
   try {
     invoice = await getMyBookingInvoice(id, cookieHeader);
-  } catch {
-    notFound();
+  } catch (error) {
+    if (error instanceof PublicFetchError && error.status === 404) {
+      notFound();
+    }
+    throw error;
   }
 
   const Layout = theme.Layout;

@@ -1,8 +1,9 @@
-import { INestApplication, ValidationPipe } from "@nestjs/common";
+import { INestApplication } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import request from "supertest";
 import { AppModule } from "../../src/app.module";
 import { PrismaService } from "../../src/infrastructure/database";
+import { configureHttpContract } from "../../src/common/bootstrap/configure-http-contract";
 
 /**
  * Real backend e2e bootstrap helper.
@@ -32,15 +33,7 @@ export async function createRealE2eApp(): Promise<{
   }).compile();
 
   const app = moduleFixture.createNestApplication();
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
-    }),
-  );
-  app.setGlobalPrefix("api/v1");
+  configureHttpContract(app, "production");
 
   try {
     await app.init();
@@ -56,7 +49,7 @@ export async function createRealE2eApp(): Promise<{
   }
 }
 
-function getRealE2eDatabaseUrl(): string {
+export function getRealE2eDatabaseUrl(): string {
   const value = process.env.REAL_E2E_DATABASE_URL?.trim();
 
   if (!value) {

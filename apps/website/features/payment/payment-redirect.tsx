@@ -25,7 +25,9 @@ export function PaymentRedirect({ redirectUrl, bookingId }: PaymentRedirectProps
     <div style={{ textAlign: 'center', padding: '3rem' }}>
       <div style={{ marginBottom: '1rem' }}>{t('payment.redirecting')}</div>
       <button
-        onClick={() => window.location.reload()}
+        onClick={() => {
+          window.location.href = redirectUrl;
+        }}
         style={{
           padding: '0.5rem 1rem',
           background: 'var(--primary)',

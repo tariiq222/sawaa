@@ -2,10 +2,16 @@ import { afterEach, describe, it, expect } from 'vitest';
 import { NextRequest } from 'next/server';
 import { middleware } from './middleware';
 
-function makeRequest(pathname: string, opts: { authed?: boolean } = {}): NextRequest {
+function makeRequest(
+  pathname: string,
+  opts: { authed?: boolean; locallySignedOut?: boolean } = {},
+): NextRequest {
   const req = new NextRequest(`http://localhost:5205${pathname}`);
   if (opts.authed) {
     req.cookies.set('client_access_token', 'fake-token');
+  }
+  if (opts.locallySignedOut) {
+    req.cookies.set('sawa_local_signed_out', '1');
   }
   return req;
 }
@@ -87,6 +93,20 @@ describe('middleware', () => {
     it('does not redirect /account when authenticated', () => {
       const res = middleware(makeRequest('/account', { authed: true }));
       expect(res.headers.get('location')).toBeNull();
+    });
+  });
+
+  describe('locally invalidated session', () => {
+    it('allows /login when an expired httpOnly access cookie is still present', () => {
+      const res = middleware(makeRequest('/login', { authed: true, locallySignedOut: true }));
+      expect(res.headers.get('location')).toBeNull();
+    });
+
+    it('redirects /account to login despite a stale access cookie', () => {
+      const res = middleware(makeRequest('/account', { authed: true, locallySignedOut: true }));
+      const location = res.headers.get('location');
+      expect(location).toBeTruthy();
+      expect(new URL(location!).pathname).toBe('/login');
     });
   });
 

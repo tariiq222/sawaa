@@ -1,4 +1,5 @@
 import { getApiBase } from '@/lib/api-base';
+import { PublicFetchError } from '@/lib/public-fetch';
 
 export interface InvoiceDetail {
   id: string;
@@ -36,7 +37,7 @@ export async function getMyBookingInvoice(
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error((err as { message?: string }).message ?? 'Failed to fetch invoice');
+    throw new PublicFetchError(res.status, err);
   }
   const json = await res.json();
   return (json.data ?? json) as InvoiceDetail;

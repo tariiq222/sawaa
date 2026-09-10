@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, BadRequestException } from '@nestjs/common';
+import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CreateBookingHandler } from './create-booking.handler';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -69,6 +69,12 @@ const buildPrisma = () => {
     organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15', paymentAtClinicEnabled: true }) },
     outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
     coupon: { update: jest.fn().mockResolvedValue({}) },
+    $queryRaw: jest.fn(async (strings: TemplateStringsArray, id: string) => {
+      const sql = strings.join(' ');
+      if (sql.includes('"Client"')) return [{ id, isActive: true, deletedAt: null }];
+      if (sql.includes('"Employee"')) return [{ id, isActive: true }];
+      return [];
+    }),
     $executeRaw: jest.fn().mockResolvedValue(undefined),
     $transaction: jest.fn(),
   };
@@ -565,6 +571,22 @@ describe('CreateBookingHandler', () => {
     rlsTransaction.withTransaction = jest.fn().mockRejectedValueOnce(otherError);
 
     await expect(handler.execute(baseDto)).rejects.toThrow('some other error');
+  });
+
+  it('retries a serialization abort so a committed Client deletion returns NotFound', async () => {
+    const serializationError = new Prisma.PrismaClientKnownRequestError(
+      'Transaction failed due to a write conflict',
+      { code: 'P2034', clientVersion: '7.0.0' },
+    );
+    prisma.$queryRaw.mockResolvedValue([]);
+    rlsTransaction.withTransaction = jest
+      .fn()
+      .mockRejectedValueOnce(serializationError)
+      .mockImplementationOnce((cb: (tx: typeof prisma) => Promise<unknown>) => cb(prisma));
+
+    const error = await handler.execute(baseDto).catch((caught) => caught);
+    expect(error).toBeInstanceOf(NotFoundException);
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(2);
   });
 
   // ──────────────────────────────────────────────────────────────────────────

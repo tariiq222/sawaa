@@ -15,10 +15,13 @@
 // Exit code 0 = candidate is at-or-after latest release (PASS)
 // Exit code 1 = candidate is behind (FAIL — do NOT merge)
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
-function sh(cmd) {
-  return execSync(cmd, { encoding: "utf8" }).trim();
+function git(...args) {
+  return execFileSync("git", args, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
 }
 
 function fail(msg) {
@@ -33,11 +36,20 @@ function ok(msg) {
 const targetBranch = process.argv[2] || "origin/main";
 const candidate = process.argv[3] || "HEAD";
 
+let targetCommit;
+let candidateCommit;
+try {
+  targetCommit = git("rev-parse", "--verify", "--end-of-options", `${targetBranch}^{commit}`);
+  candidateCommit = git("rev-parse", "--verify", "--end-of-options", `${candidate}^{commit}`);
+} catch {
+  fail("Target branch and candidate must both resolve to existing commits.");
+}
+
 let latestRelease;
 try {
   // git describe --tags picks the most recent reachable tag. If the
   // target branch has no tags yet (first release), describe fails.
-  latestRelease = sh(`git describe --tags --abbrev=0 ${targetBranch}`);
+  latestRelease = git("describe", "--tags", "--abbrev=0", targetCommit);
 } catch {
   ok(`No release tags yet on ${targetBranch} — skipping state check.`);
   process.exit(0);
@@ -56,8 +68,10 @@ console.log(`  candidate     : ${candidate}`);
 // merge-base computes the best common ancestor. If the merge-base
 // equals the latest release commit, the candidate is at-or-after.
 let mergeBase;
+let releaseCommit;
 try {
-  mergeBase = sh(`git merge-base ${latestRelease} ${candidate}`);
+  releaseCommit = git("rev-parse", "--verify", "--end-of-options", `${latestRelease}^{commit}`);
+  mergeBase = git("merge-base", releaseCommit, candidateCommit);
 } catch (e) {
   fail(
     `No common ancestor between ${latestRelease} and ${candidate}. ` +
@@ -66,7 +80,7 @@ try {
   );
 }
 
-if (mergeBase === latestRelease) {
+if (mergeBase === releaseCommit) {
   ok(
     `${candidate} is at-or-after ${latestRelease} — merge target is ` +
       `ahead of production. Safe to merge.`,
@@ -74,7 +88,7 @@ if (mergeBase === latestRelease) {
   process.exit(0);
 }
 
-if (mergeBase === candidate) {
+if (mergeBase === candidateCommit) {
   fail(
     `${candidate} is the merge-base — it is BEHIND ${latestRelease}. ` +
       `Rebase onto current main or pull the latest main into this branch ` +

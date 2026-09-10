@@ -47,6 +47,9 @@ const buildTx = (overrides: Record<string, unknown> = {}) => {
   service: {
     findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
   },
+  outboxEvent: {
+    create: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
+  },
     ...overrides,
   } as Record<string, any>;
   if (overrides.payment) {
@@ -217,11 +220,51 @@ describe('ProcessPaymentHandler', () => {
     expect(tx.invoice.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: InvoiceStatus.PAID }) }),
     );
-    expect(eventBus.publish).toHaveBeenCalledWith(
-      'finance.payment.completed',
-      expect.objectContaining({ payload: expect.objectContaining({ bookingId: 'booking-1' }) }),
-    );
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        eventType: 'finance.payment.completed',
+        payload: expect.objectContaining({
+          payload: expect.objectContaining({ bookingId: 'booking-1' }),
+        }),
+      }),
+    }));
+    expect(eventBus.publish).not.toHaveBeenCalled();
     expect(result.id).toBe('pay-1');
+  });
+
+  it('commits a manual payment with a durable outbox event even when the broker is unavailable', async () => {
+    const tx = buildTx({
+      invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue(mockPayment),
+        aggregate: jest.fn()
+          .mockResolvedValueOnce({ _sum: { amount: 0 } })
+          .mockResolvedValueOnce({ _sum: { amount: 230 } }),
+      },
+    });
+    const eventBus = { publish: jest.fn().mockRejectedValue(new Error('broker unavailable')) };
+    const handler = new ProcessPaymentHandler(
+      buildPrisma(tx) as never,
+      { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+      eventBus as never,
+    );
+
+    await expect(handler.execute({
+      invoiceId: 'inv-1',
+      amount: 230,
+      method: PaymentMethod.CASH,
+      idempotencyKey: 'durable-key-1',
+    })).resolves.toEqual(expect.objectContaining({ id: 'pay-1' }));
+
+    expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        aggregateId: 'inv-1',
+        eventType: 'finance.payment.completed',
+      }),
+    }));
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 
   it.each([PaymentStatus.PENDING, PaymentStatus.PENDING_VERIFICATION])(
@@ -384,7 +427,7 @@ describe('ProcessPaymentHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('publishes PaymentCompletedEvent with organizationId populated', async () => {
+  it('stages PaymentCompletedEvent with organizationId populated', async () => {
     const tx = buildTx({
       invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
       payment: {
@@ -406,12 +449,14 @@ describe('ProcessPaymentHandler', () => {
       idempotencyKey: 'key-1',
     });
 
-    expect(eventBus.publish).toHaveBeenCalledWith(
-      'finance.payment.completed',
-      expect.objectContaining({
-        payload: expect.objectContaining({ organizationId: DEFAULT_ORG_ID }),
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        eventType: 'finance.payment.completed',
+        payload: expect.objectContaining({
+          payload: expect.objectContaining({ organizationId: DEFAULT_ORG_ID }),
+        }),
       }),
-    );
+    }));
   });
 
   it('throws BadRequestException when amount appears to be in SAR instead of halalas', async () => {
@@ -609,14 +654,15 @@ describe('ProcessPaymentHandler', () => {
           data: expect.objectContaining({ status: InvoiceStatus.PARTIALLY_PAID }),
         }),
       );
-      expect(eventBus.publish).toHaveBeenCalledWith(
-        'finance.payment.deposit_paid',
-        expect.objectContaining({ payload: expect.objectContaining({ bookingId: 'booking-1' }) }),
-      );
-      expect(eventBus.publish).not.toHaveBeenCalledWith(
-        'finance.payment.completed',
-        expect.anything(),
-      );
+      expect(tx.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          eventType: 'finance.payment.deposit_paid',
+          payload: expect.objectContaining({
+            payload: expect.objectContaining({ bookingId: 'booking-1' }),
+          }),
+        }),
+      }));
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
     it('rejects a payment below the deposit', async () => {
@@ -666,14 +712,10 @@ describe('ProcessPaymentHandler', () => {
       expect(tx.invoice.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ status: InvoiceStatus.PAID }) }),
       );
-      expect(eventBus.publish).toHaveBeenCalledWith(
-        'finance.payment.completed',
-        expect.anything(),
-      );
-      expect(eventBus.publish).not.toHaveBeenCalledWith(
-        'finance.payment.deposit_paid',
-        expect.anything(),
-      );
+      expect(tx.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ eventType: 'finance.payment.completed' }),
+      }));
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
     it('settling the remaining balance from DEPOSIT_PAID → PAID + PaymentCompletedEvent', async () => {
@@ -701,14 +743,10 @@ describe('ProcessPaymentHandler', () => {
 
       await handler.execute({ invoiceId: 'inv-1', amount: 18000, method: PaymentMethod.CASH });
 
-      expect(eventBus.publish).toHaveBeenCalledWith(
-        'finance.payment.completed',
-        expect.anything(),
-      );
-      expect(eventBus.publish).not.toHaveBeenCalledWith(
-        'finance.payment.deposit_paid',
-        expect.anything(),
-      );
+      expect(tx.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ eventType: 'finance.payment.completed' }),
+      }));
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
   });
 
@@ -792,6 +830,7 @@ describe('ProcessPaymentHandler', () => {
 
     expect(tx.payment.create).not.toHaveBeenCalled();
     expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
     expect(eventBus.publish).not.toHaveBeenCalled();
     expect(result.id).toBe('pay-1');
     expect(result.deferredEvents).toBeUndefined();
@@ -823,7 +862,7 @@ describe('ProcessPaymentHandler', () => {
 
     expect(tx.payment.create).not.toHaveBeenCalled();
     expect(eventBus.publish).not.toHaveBeenCalled();
-    expect(result.deferredEvents).toEqual([]);
+    expect(result.deferredEvents).toBeUndefined();
   });
 
   it('uses the provided transaction client and does not open a nested transaction', async () => {
@@ -856,9 +895,10 @@ describe('ProcessPaymentHandler', () => {
     expect(rls.withTransaction).not.toHaveBeenCalled();
     expect(tx.payment.create).toHaveBeenCalled();
     expect(eventBus.publish).not.toHaveBeenCalled();
-    expect(result.deferredEvents).toEqual([
-      expect.objectContaining({ eventName: 'finance.payment.completed' }),
-    ]);
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ eventType: 'finance.payment.completed' }),
+    }));
+    expect(result.deferredEvents).toBeUndefined();
   });
 
   it('does not publish DepositPaidEvent when joining an external transaction', async () => {
@@ -893,9 +933,10 @@ describe('ProcessPaymentHandler', () => {
     });
 
     expect(eventBus.publish).not.toHaveBeenCalled();
-    expect(result.deferredEvents).toEqual([
-      expect.objectContaining({ eventName: 'finance.payment.deposit_paid' }),
-    ]);
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ eventType: 'finance.payment.deposit_paid' }),
+    }));
+    expect(result.deferredEvents).toBeUndefined();
   });
 
   describe('same-invoice idempotent replay equivalence', () => {

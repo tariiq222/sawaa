@@ -8,13 +8,12 @@
  */
 
 import {
+  apiRequest,
   setClientBaseUrl,
   clientLogin,
   clientRegister,
-  clientLogout,
   clientResetPassword,
   setMeBaseUrl,
-  getMe,
   getMyBookings,
   cancelMyBooking,
   rescheduleMyBooking,
@@ -29,6 +28,8 @@ import type {
 } from '@sawaa/shared'
 
 import { getApiBase } from '@/lib/api-base'
+
+const AUTH_REQUEST_TIMEOUT_MS = 10_000
 
 // Initialise the shared modules once with the website's API base. We pass a
 // no-op refresh-token getter because the website uses an httpOnly cookie for
@@ -57,9 +58,15 @@ export async function clientRegisterApi(
   return clientRegister(payload)
 }
 
-export async function getMeApi(): Promise<ClientProfile> {
+export async function getMeApi(callerSignal?: AbortSignal): Promise<ClientProfile> {
   ensureInitialised()
-  return getMe()
+  return withAuthDeadline(
+    (signal) => apiRequest<ClientProfile>('/public/me', {
+      credentials: 'include',
+      signal,
+    }),
+    callerSignal,
+  )
 }
 
 export async function getMyBookingsApi(
@@ -72,17 +79,9 @@ export async function getMyBookingsApi(
 
 export async function getMyBookingApi(bookingId: string): Promise<ClientBookingItem> {
   ensureInitialised()
-  const base = getApiBase()
-  const res = await fetch(`${base}/public/me/bookings/${encodeURIComponent(bookingId)}`, {
+  return apiRequest<ClientBookingItem>(`/public/me/bookings/${encodeURIComponent(bookingId)}`, {
     credentials: 'include',
   })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { message?: string }).message ?? 'Booking not found')
-  }
-  const json = await res.json()
-  if (json && typeof json === 'object' && 'data' in json) return json.data as ClientBookingItem
-  return json as ClientBookingItem
 }
 
 export async function cancelMyBookingApi(
@@ -103,9 +102,51 @@ export async function rescheduleMyBookingApi(
   return rescheduleMyBooking(bookingId, { newScheduledAt, newDurationMins })
 }
 
-export async function clientLogoutApi(): Promise<void> {
+export async function clientLogoutApi(callerSignal?: AbortSignal): Promise<void> {
   ensureInitialised()
-  await clientLogout()
+  await withAuthDeadline(
+    (signal) => apiRequest<void>('/public/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({}),
+      signal,
+    }),
+    callerSignal,
+  )
+}
+
+async function withAuthDeadline<T>(
+  request: (signal: AbortSignal) => Promise<T>,
+  callerSignal?: AbortSignal,
+): Promise<T> {
+  const controller = new AbortController()
+  let rejectDeadline!: (reason: unknown) => void
+  const deadline = new Promise<never>((_resolve, reject) => {
+    rejectDeadline = reject
+  })
+  const abort = (reason: unknown) => {
+    const error = reason ?? new DOMException('Request aborted', 'AbortError')
+    rejectDeadline(error)
+    controller.abort(error)
+  }
+  const forwardCallerAbort = () => abort(callerSignal?.reason)
+
+  if (callerSignal?.aborted) {
+    forwardCallerAbort()
+  } else {
+    callerSignal?.addEventListener('abort', forwardCallerAbort, { once: true })
+  }
+
+  const timeout = setTimeout(() => {
+    abort(new DOMException('Request timed out', 'TimeoutError'))
+  }, AUTH_REQUEST_TIMEOUT_MS)
+
+  try {
+    return await Promise.race([request(controller.signal), deadline])
+  } finally {
+    clearTimeout(timeout)
+    callerSignal?.removeEventListener('abort', forwardCallerAbort)
+  }
 }
 
 export async function clientResetPasswordApi(payload: {

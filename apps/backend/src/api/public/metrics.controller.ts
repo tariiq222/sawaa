@@ -66,6 +66,7 @@ export class PublicMetricsController {
       }
     }
 
+    await this.appMetrics.refreshFinancialMetrics();
     const [appOut, dbOut] = await Promise.all([
       this.appMetrics.registry.metrics(),
       this.dbMetrics.registry.metrics(),

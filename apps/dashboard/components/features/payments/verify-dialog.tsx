@@ -27,6 +27,8 @@ import {
 
 import { useLocale } from "@/components/locale-provider"
 import { usePaymentMutations } from "@/hooks/use-payments"
+import { useBookingPaymentPolling } from "@/hooks/use-booking-payment-polling"
+import type { Payment } from "@/lib/types/payment"
 import {
   verifyTransferSchema,
   type VerifyTransferFormData,
@@ -36,6 +38,7 @@ import {
 
 interface VerifyDialogProps {
   paymentId: string
+  payment?: Payment
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
@@ -45,12 +48,14 @@ interface VerifyDialogProps {
 
 export function VerifyDialog({
   paymentId,
+  payment,
   open,
   onOpenChange,
   onSuccess,
 }: VerifyDialogProps) {
   const { t } = useLocale()
   const { verifyMut } = usePaymentMutations()
+  const { start: startBookingPaymentPolling } = useBookingPaymentPolling()
 
   const form = useForm<VerifyTransferFormData>({
     resolver: zodResolver(verifyTransferSchema),
@@ -63,7 +68,13 @@ export function VerifyDialog({
         id: paymentId,
         action: data.action,
         transferRef: data.transferRef || undefined,
+        invoiceId: payment?.invoiceId,
+        bookingId: payment?.invoice?.bookingId,
+        clientId: payment?.invoice?.clientId,
       })
+      if (data.action === "approve" && payment?.invoice?.bookingId) {
+        startBookingPaymentPolling(payment.invoice.bookingId)
+      }
       toast.success(
         data.action === "approve"
           ? t("payments.verify.approvedToast")

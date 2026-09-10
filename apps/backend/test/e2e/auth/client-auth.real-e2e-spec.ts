@@ -35,6 +35,7 @@
 
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
+import { JwtService } from "@nestjs/jwt";
 import request from "supertest";
 import cookieParser from "cookie-parser";
 import { OtpChannel, OtpPurpose } from "@prisma/client";
@@ -52,6 +53,7 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
 
   let app: INestApplication;
   let prisma: PrismaService;
+  let jwtService: JwtService;
 
   // ── Per-run isolation ──────────────────────────────────────────────────────
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -137,6 +139,7 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
     await app.init();
 
     prisma = app.get(PrismaService);
+    jwtService = app.get(JwtService);
     await prisma.$queryRaw`SELECT 1`;
   });
 
@@ -332,7 +335,10 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
         name: "Happy Client",
       });
 
-      expect(regRes.status).toBe(200);
+      expect({ status: regRes.status, error: regRes.status === 200 ? undefined : regRes.body }).toEqual({
+        status: 200,
+        error: undefined,
+      });
       expect(regRes.body.clientId).toEqual(expect.any(String));
 
       const cookies = parseCookies(regRes.headers["set-cookie"]);
@@ -597,6 +603,204 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
       });
       expect(activeAfter.length).toBe(1);
       expect(activeAfter[0].id).not.toBe(originalRefreshRows[0].id);
+    });
+
+    it("refreshes with a valid refresh cookie when the access cookie is missing", async () => {
+      const email = uniqueEmail("refresh-missing-access");
+      ctx.createdClientEmails.add(email);
+      const seeded = await seedClientWithPassword({
+        email,
+        password: "RefreshPass1",
+      });
+
+      const loginRes = await api()
+        .post("/api/v1/public/auth/login")
+        .send({ email, password: "RefreshPass1" });
+      expect(loginRes.status).toBe(200);
+      const loginCookies = parseCookies(loginRes.headers["set-cookie"]);
+
+      const refreshRes = await api()
+        .post("/api/v1/public/auth/refresh")
+        .set("Cookie", `client_refresh_token=${loginCookies.client_refresh_token}`)
+        .send({});
+
+      expect(refreshRes.status).toBe(200);
+      expect(refreshRes.body.clientId).toBe(seeded.id);
+    });
+
+    it("refreshes with a valid refresh cookie when the access cookie is expired", async () => {
+      const email = uniqueEmail("refresh-expired-access");
+      ctx.createdClientEmails.add(email);
+      const seeded = await seedClientWithPassword({
+        email,
+        password: "RefreshPass1",
+      });
+
+      const loginRes = await api()
+        .post("/api/v1/public/auth/login")
+        .send({ email, password: "RefreshPass1" });
+      expect(loginRes.status).toBe(200);
+      const loginCookies = parseCookies(loginRes.headers["set-cookie"]);
+      const expiredAccess = jwtService.sign(
+        {
+          sub: seeded.id,
+          email,
+          namespace: "client",
+          jti: `expired-${suffix}`,
+          tokenVersion: 0,
+        },
+        {
+          secret: process.env.JWT_CLIENT_ACCESS_SECRET!,
+          expiresIn: -1,
+        },
+      );
+
+      const refreshRes = await api()
+        .post("/api/v1/public/auth/refresh")
+        .set(
+          "Cookie",
+          `client_access_token=${expiredAccess}; client_refresh_token=${loginCookies.client_refresh_token}`,
+        )
+        .send({});
+
+      expect(refreshRes.status).toBe(200);
+      expect(refreshRes.body.clientId).toBe(seeded.id);
+    });
+
+    it("allows logout with a valid refresh cookie when the access cookie is expired", async () => {
+      const email = uniqueEmail("logout-expired-access");
+      ctx.createdClientEmails.add(email);
+      const seeded = await seedClientWithPassword({
+        email,
+        password: "LogoutPass1",
+      });
+
+      const loginRes = await api()
+        .post("/api/v1/public/auth/login")
+        .send({ email, password: "LogoutPass1" });
+      expect(loginRes.status).toBe(200);
+      const loginCookies = parseCookies(loginRes.headers["set-cookie"]);
+      const expiredAccess = jwtService.sign(
+        {
+          sub: seeded.id,
+          email,
+          namespace: "client",
+          jti: `expired-logout-${suffix}`,
+          tokenVersion: 0,
+        },
+        {
+          secret: process.env.JWT_CLIENT_ACCESS_SECRET!,
+          expiresIn: -1,
+        },
+      );
+
+      const logoutRes = await api()
+        .post("/api/v1/public/auth/logout")
+        .set(
+          "Cookie",
+          `client_access_token=${expiredAccess}; client_refresh_token=${loginCookies.client_refresh_token}`,
+        )
+        .send({});
+
+      expect(logoutRes.status).toBe(204);
+      const activeRows = await prisma.clientRefreshToken.count({
+        where: { clientId: seeded.id, revokedAt: null },
+      });
+      expect(activeRows).toBe(0);
+    });
+
+    it("rejects a revoked refresh credential even when the access cookie is valid", async () => {
+      const email = uniqueEmail("refresh-revoked");
+      ctx.createdClientEmails.add(email);
+      const seeded = await seedClientWithPassword({
+        email,
+        password: "RefreshPass1",
+      });
+
+      const loginRes = await api()
+        .post("/api/v1/public/auth/login")
+        .send({ email, password: "RefreshPass1" });
+      expect(loginRes.status).toBe(200);
+      const loginCookies = parseCookies(loginRes.headers["set-cookie"]);
+
+      const firstRefresh = await api()
+        .post("/api/v1/public/auth/refresh")
+        .set("Cookie", cookieHeader(loginCookies))
+        .send({});
+      expect(firstRefresh.status).toBe(200);
+
+      const replay = await api()
+        .post("/api/v1/public/auth/refresh")
+        .set("Cookie", cookieHeader(loginCookies))
+        .send({});
+
+      expect(replay.status).toBe(401);
+      expect(replay.body.message).toMatch(/invalid|expired/i);
+      expect(seeded.id).toEqual(expect.any(String));
+    });
+
+    it("rejects an expired refresh credential even when the access cookie is valid", async () => {
+      const email = uniqueEmail("refresh-expired");
+      ctx.createdClientEmails.add(email);
+      const seeded = await seedClientWithPassword({
+        email,
+        password: "RefreshPass1",
+      });
+
+      const loginRes = await api()
+        .post("/api/v1/public/auth/login")
+        .send({ email, password: "RefreshPass1" });
+      expect(loginRes.status).toBe(200);
+      const loginCookies = parseCookies(loginRes.headers["set-cookie"]);
+      const row = await prisma.clientRefreshToken.findFirst({
+        where: { clientId: seeded.id, revokedAt: null },
+      });
+      expect(row).not.toBeNull();
+      await prisma.clientRefreshToken.update({
+        where: { id: row!.id },
+        data: { expiresAt: new Date(Date.now() - 1000) },
+      });
+
+      const expired = await api()
+        .post("/api/v1/public/auth/refresh")
+        .set("Cookie", cookieHeader(loginCookies))
+        .send({});
+
+      expect(expired.status).toBe(401);
+      expect(expired.body.message).toMatch(/invalid|expired/i);
+    });
+
+    it("rejects a refresh credential belonging to another client", async () => {
+      const first = await seedClientWithPassword({
+        email: uniqueEmail("refresh-wrong-client-a"),
+        password: "RefreshPass1",
+      });
+      const second = await seedClientWithPassword({
+        email: uniqueEmail("refresh-wrong-client-b"),
+        password: "RefreshPass1",
+      });
+
+      const firstLogin = await api()
+        .post("/api/v1/public/auth/login")
+        .send({ email: first.email, password: "RefreshPass1" });
+      const secondLogin = await api()
+        .post("/api/v1/public/auth/login")
+        .send({ email: second.email, password: "RefreshPass1" });
+      expect(firstLogin.status).toBe(200);
+      expect(secondLogin.status).toBe(200);
+
+      const firstCookies = parseCookies(firstLogin.headers["set-cookie"]);
+      const secondCookies = parseCookies(secondLogin.headers["set-cookie"]);
+      const wrongClient = await api()
+        .post("/api/v1/public/auth/refresh")
+        .set(
+          "Cookie",
+          `client_access_token=${firstCookies.client_access_token}; client_refresh_token=${secondCookies.client_refresh_token}`,
+        )
+        .send({});
+
+      expect(wrongClient.status).toBe(401);
+      expect(wrongClient.body.message).toMatch(/invalid|expired/i);
     });
   });
 

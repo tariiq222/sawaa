@@ -22,6 +22,10 @@ import {
   STAFF_TIME_BLOCKING_BOOKING_STATUSES,
 } from '../active-booking-statuses';
 import { bookingCreationRequestHash } from './creation-request-hash';
+import {
+  lockPersonReferences,
+  retrySerializableTransaction,
+} from '../../../common/database/person-reference-lock.helper';
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
 function mapDbConflict(err: unknown): never {
@@ -313,6 +317,15 @@ export class CreateBookingHandler {
           }
         }
 
+        await lockPersonReferences(
+          tx,
+          [
+            { kind: 'Client', id: dto.clientId },
+            { kind: 'Employee', id: dto.employeeId },
+          ],
+          'reference',
+        );
+
         const clientConflict = await tx.booking.findFirst({
           where: {
             clientId: dto.clientId,
@@ -536,9 +549,10 @@ export class CreateBookingHandler {
       return await (
         dto.transaction
           ? createInTransaction(dto.transaction)
-          : this.rlsTransaction.withTransaction(
-              createInTransaction,
-              { isolationLevel: 'Serializable' },
+          : retrySerializableTransaction(() =>
+              this.rlsTransaction.withTransaction(createInTransaction, {
+                isolationLevel: 'Serializable',
+              }),
             )
       );
     } catch (error) {

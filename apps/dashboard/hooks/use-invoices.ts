@@ -30,6 +30,9 @@ export function useInvoices() {
     queryFn: () =>
       fetchInvoices({ page, limit: 20, search: trimmedSearch || undefined }),
     staleTime: 5 * 60 * 1000,
+    // Payment mutations explicitly refetch inactive invoice queries because
+    // the provider intentionally disables automatic mount refetches.
+    refetchOnMount: false,
   })
 
   const invoices: InvoiceListItem[] = (data?.items ?? []).map(toInvoiceListItem)

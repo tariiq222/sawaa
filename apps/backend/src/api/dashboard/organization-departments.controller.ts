@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery,
-  ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse,
+  ApiOkResponse, ApiCreatedResponse, ApiResponse,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
@@ -16,6 +16,11 @@ import { UpdateDepartmentDto } from '../../modules/org-config/departments/update
 import { ListDepartmentsHandler } from '../../modules/org-config/departments/list-departments.handler';
 import { ListDepartmentsDto } from '../../modules/org-config/departments/list-departments.dto';
 import { DeleteDepartmentHandler } from '../../modules/org-config/departments/delete-department.handler';
+import {
+  DeleteDepartmentResponseDto,
+  DepartmentResponseDto,
+  PaginatedDepartmentsResponseDto,
+} from './dto/organization-department-response.dto';
 
 @ApiTags('Dashboard / Org Config')
 @ApiBearerAuth()
@@ -33,7 +38,7 @@ export class DashboardOrganizationDepartmentsController {
   @Post('departments')
   @CheckPermissions({ action: 'create', subject: 'Department' })
   @ApiOperation({ summary: 'Create a department' })
-  @ApiCreatedResponse({ description: 'Department created' })
+  @ApiCreatedResponse({ description: 'Department created', type: DepartmentResponseDto })
   createDepartmentEndpoint(@Body() body: CreateDepartmentDto) {
     return this.createDepartment.execute(body);
   }
@@ -45,7 +50,7 @@ export class DashboardOrganizationDepartmentsController {
   @ApiQuery({ name: 'search', required: false, description: 'Search departments by name', example: 'dental' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20 })
-  @ApiOkResponse({ description: 'Paginated list of departments' })
+  @ApiOkResponse({ description: 'Paginated list of departments', type: PaginatedDepartmentsResponseDto })
   listDepartmentsEndpoint(@Query() query: ListDepartmentsDto) {
     return this.listDepartments.execute(query);
   }
@@ -54,7 +59,7 @@ export class DashboardOrganizationDepartmentsController {
   @CheckPermissions({ action: 'update', subject: 'Department' })
   @ApiOperation({ summary: 'Update a department' })
   @ApiParam({ name: 'departmentId', description: 'Department UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Department updated' })
+  @ApiOkResponse({ description: 'Department updated', type: DepartmentResponseDto })
   @ApiResponse({ status: 404, description: 'Department not found', type: ApiErrorDto })
   updateDepartmentEndpoint(
     @Param('departmentId', ParseUUIDPipe) departmentId: string,
@@ -67,7 +72,7 @@ export class DashboardOrganizationDepartmentsController {
   @CheckPermissions({ action: 'delete', subject: 'Department' })
   @ApiOperation({ summary: 'Delete a department' })
   @ApiParam({ name: 'departmentId', description: 'Department UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiNoContentResponse({ description: 'Department deleted' })
+  @ApiOkResponse({ description: 'Department deleted', type: DeleteDepartmentResponseDto })
   @ApiResponse({ status: 404, description: 'Department not found', type: ApiErrorDto })
   deleteDepartmentEndpoint(@Param('departmentId', ParseUUIDPipe) departmentId: string) {
     return this.deleteDepartment.execute({ departmentId });

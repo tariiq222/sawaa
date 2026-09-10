@@ -1,10 +1,8 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Req, Ip, UseGuards, Res, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Req, Ip, Res, UnauthorizedException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
-import { ClientSessionGuard } from '../../common/guards/client-session.guard';
-import { ClientSession } from '../../common/auth/client-session.decorator';
 import { RegisterHandler } from '../../modules/identity/client-auth/register.handler';
 import { RegisterDto } from '../../modules/identity/client-auth/register.dto';
 import { ClientLoginHandler } from '../../modules/identity/client-auth/client-login.handler';
@@ -89,17 +87,16 @@ export class PublicAuthController {
     return { clientId: result.clientId };
   }
 
-  // @Public() exempts this route from the global staff JwtGuard (APP_GUARD);
-  // ClientSessionGuard still enforces the client cookie session.
+  // The verified refresh cookie authenticates this route independently of
+  // access-token expiry. The global CSRF protection still applies.
   @Public()
-  @UseGuards(ClientSessionGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiOkResponse({ schema: { type: 'object', description: 'New access token' } })
   async refreshEndpoint(
     @Body() dto: RefreshTokenDto,
-    @ClientSession() session: { id: string },
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -107,28 +104,27 @@ export class PublicAuthController {
     if (!rawToken) {
       throw new UnauthorizedException('Refresh token required');
     }
-    const result = await this.refresh.execute(rawToken, session.id);
+    const result = await this.refresh.execute(rawToken, undefined, req.cookies?.[ACCESS_COOKIE]);
     setAuthCookies(res, result.accessToken, result.accessMaxAgeMs, result.refreshToken, result.refreshMaxAgeMs);
-    return { clientId: session.id };
+    return { clientId: result.clientId };
   }
 
-  // @Public() exempts this route from the global staff JwtGuard (APP_GUARD);
-  // ClientSessionGuard still enforces the client cookie session.
+  // Logout remains usable after access expiry; the refresh credential selects
+  // the session to revoke, and no client identity is accepted from the body.
   @Public()
-  @UseGuards(ClientSessionGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('logout')
   @ApiOperation({ summary: 'Log out and revoke refresh token' })
   @ApiNoContentResponse()
   async logoutEndpoint(
     @Body() dto: LogoutDto,
-    @ClientSession() session: { id: string },
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const rawToken = getRefreshTokenFromRequest(req);
     if (rawToken) {
-      await this.logout.execute(rawToken, session.id);
+      await this.logout.execute(rawToken);
     }
     clearAuthCookies(res);
   }

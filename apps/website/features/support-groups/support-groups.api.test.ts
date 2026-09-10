@@ -1,4 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const { publicFetchMock, PublicFetchErrorMock } = vi.hoisted(() => {
+  class PublicFetchErrorMock extends Error {
+    constructor(
+      public readonly status: number,
+      public readonly body: unknown,
+    ) {
+      super(`PublicFetchError: ${status}`);
+    }
+  }
+
+  return {
+    publicFetchMock: vi.fn(),
+    PublicFetchErrorMock,
+  };
+});
+
+vi.mock('@/lib/public-fetch', () => ({
+  publicFetch: publicFetchMock,
+  PublicFetchError: PublicFetchErrorMock,
+}));
+
 import {
   getPublicGroupSessions,
   getPublicGroupSessionsResult,
@@ -46,6 +68,7 @@ describe('support-groups.api (programs backend)', () => {
 
   beforeEach(() => {
     fetchMock.mockReset();
+    publicFetchMock.mockReset();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
@@ -108,27 +131,24 @@ describe('support-groups.api (programs backend)', () => {
   });
 
   describe('bookGroupSession', () => {
-    it('POSTs to /public/programs/:id/enroll with credentials:include', async () => {
-      fetchMock.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ type: 'ENROLLED', bookingId: 'bk1' }),
-      });
+    it('uses the CSRF-aware public fetch helper for enrollment and preserves the response shape', async () => {
+      publicFetchMock.mockResolvedValue({ type: 'ENROLLED', bookingId: 'bk1' });
+
       const out = await bookGroupSession('prog-1');
+
       expect(out).toEqual({ type: 'ENROLLED', bookingId: 'bk1' });
-      const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toMatch(/\/public\/programs\/prog-1\/enroll$/);
-      expect(init.method).toBe('POST');
-      expect(init.credentials).toBe('include');
+      expect(publicFetchMock).toHaveBeenCalledWith('/public/programs/prog-1/enroll', {
+        method: 'POST',
+        credentials: 'include',
+      });
     });
 
     it('surfaces the backend error message on failure', async () => {
-      fetchMock.mockResolvedValue({
-        ok: false,
-        status: 409,
-        statusText: 'Conflict',
-        text: () => Promise.resolve('Already enrolled'),
-      });
-      await expect(bookGroupSession('prog-1')).rejects.toThrow(/Already enrolled|Conflict/);
+      publicFetchMock.mockRejectedValue(
+        new PublicFetchErrorMock(409, { message: 'Already enrolled' }),
+      );
+
+      await expect(bookGroupSession('prog-1')).rejects.toThrow('Failed to enroll in program: 409 Already enrolled');
     });
   });
 });

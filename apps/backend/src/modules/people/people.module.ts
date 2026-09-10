@@ -38,13 +38,18 @@ import { SetEmployeeBreaksHandler } from './employees/set-employee-breaks/set-em
 import { ListPublicEmployeesHandler } from './employees/public/list-public-employees.handler';
 import { GetPublicEmployeeHandler } from './employees/public/get-public-employee.handler';
 import { SetClientActiveHandler } from './clients/set-client-active/set-client-active.handler';
+import { ListEmployeeClientsHandler } from './clients/list-employee-clients.handler';
+import { GetEmployeeClientHistoryHandler } from './clients/get-employee-client-history.handler';
+import { ResolveEmployeeIdHandler } from './employees/resolve-employee-id.handler';
 import { LogActivityHandler } from '../ops/log-activity/log-activity.handler';
 import { DashboardPeopleController } from '../../api/dashboard/people.controller';
 import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
+import { NotificationOutboxModule } from '../comms/notification-outbox/notification-outbox.module';
 
 const handlers = [
   CreateClientHandler, UpdateClientHandler, ListClientsHandler, GetClientHandler, DeleteClientHandler,
   SetClientActiveHandler, LogActivityHandler,
+  ListEmployeeClientsHandler, GetEmployeeClientHistoryHandler, ResolveEmployeeIdHandler,
   CreateEmployeeHandler, UpdateAvailabilityHandler, EmployeeOnboardingHandler, OnboardEmployeeHandler, GetAvailabilityHandler, UpdateEmployeeHandler,
   ListEmployeesHandler, GetEmployeeHandler,
   DeleteEmployeeHandler, ListEmployeeServicesHandler, GetEmployeeServiceTypesHandler, AssignEmployeeServiceHandler,
@@ -56,7 +61,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule, OrgConfigModule],
+  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule, OrgConfigModule, NotificationOutboxModule],
   controllers: [DashboardPeopleController],
   providers: [...handlers],
   exports: [...handlers],

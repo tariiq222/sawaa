@@ -1,10 +1,13 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { NotificationType, RecipientType } from '@prisma/client';
+import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
+import { NotificationType, RecipientType, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { CreateContactMessageDto } from './create-contact-message.dto';
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
 import { GetStaffTargetsHandler } from '../notifications/get-staff-targets.handler';
+import { NotificationOutboxConfig } from '../notification-outbox/notification-outbox.config';
+import { CaptureNotificationIntentHandler } from '../notification-outbox/capture-notification-intent.handler';
+import { NOTIFICATION_OUTBOX_CONSUMERS, NOTIFICATION_OUTBOX_PAYLOAD_VERSION, notificationSourceKey } from '../notification-outbox/notification-outbox.types';
 
 const STAFF_ROLES = ['SUPER_ADMIN', 'ADMIN', 'RECEPTIONIST'] as const;
 
@@ -16,6 +19,8 @@ export class CreateContactMessageHandler {
     private readonly prisma: PrismaService,
     private readonly notify: SendNotificationHandler,
     private readonly staffTargets: GetStaffTargetsHandler,
+    @Optional() private readonly capture?: CaptureNotificationIntentHandler,
+    @Optional() private readonly outboxConfig?: NotificationOutboxConfig,
   ) {}
 
   async execute(dto: CreateContactMessageDto) {
@@ -23,18 +28,28 @@ export class CreateContactMessageHandler {
       throw new BadRequestException('Either phone or email is required');
     }
 
-    const message = await this.prisma.contactMessage.create({
-      data: {
-        name: dto.name,
-        phone: dto.phone,
-        email: dto.email,
-        subject: dto.subject,
-        body: dto.body,
-      },
-      select: { id: true, createdAt: true, status: true },
-    });
+    const occurredAt = new Date();
+    const useOutbox = Boolean(this.capture && this.outboxConfig?.shouldCapture(occurredAt));
+    const create = async (db: Prisma.TransactionClient) => {
+      const message = await db.contactMessage.create({
+        data: { name: dto.name, phone: dto.phone, email: dto.email, subject: dto.subject, body: dto.body },
+        select: { id: true, createdAt: true, status: true },
+      });
+      if (useOutbox) {
+        await this.capture!.execute({
+          sourceKey: notificationSourceKey.contactMessage(message.id),
+          consumerKey: NOTIFICATION_OUTBOX_CONSUMERS.CONTACT_MESSAGE_STAFF,
+          payloadVersion: NOTIFICATION_OUTBOX_PAYLOAD_VERSION,
+          occurredAt,
+          payload: { kind: 'contact-message-staff', contactMessageId: message.id },
+        }, db);
+      }
+      return message;
+    };
+    // eslint-disable-next-line no-restricted-syntax -- Single-tenant RLS was removed; atomically persist the contact and notification intent.
+    const message = useOutbox ? await this.prisma.$transaction(create) : await create(this.prisma);
 
-    await this.notifyStaff(message.id);
+    if (!useOutbox) await this.notifyStaff(message.id);
 
     return message;
   }

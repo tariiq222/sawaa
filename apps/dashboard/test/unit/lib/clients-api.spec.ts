@@ -35,10 +35,48 @@ describe("clients api", () => {
 
     await fetchClients({ page: 2, limit: 10, search: "محمد" })
 
-    expect(getMock).toHaveBeenCalledWith("/dashboard/people/clients", {
-      page: 2,
-      limit: 10,
-      search: "محمد",
+    expect(getMock).toHaveBeenCalledWith(
+      "/dashboard/people/clients?page=2&limit=10&search=%D9%85%D8%AD%D9%85%D8%AF",
+    )
+  })
+
+  it("normalizes nullable OpenAPI client fields to the public Client signature", async () => {
+    getMock.mockResolvedValueOnce({
+      items: [
+        {
+          id: "client-1",
+          ref: 1024,
+          email: null,
+          firstName: null,
+          lastName: null,
+          phone: null,
+          gender: null,
+          name: "",
+          isActive: true,
+          emailVerified: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          accountType: "walk_in",
+          avatarUrl: null,
+          dateOfBirth: null,
+        },
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+    })
+
+    const result = await fetchClients()
+
+    expect(result.items[0]).toMatchObject({
+      firstName: "",
+      lastName: "",
+      emailVerified: false,
     })
   })
 
@@ -68,6 +106,16 @@ describe("clients api", () => {
       emergencyPhone: "+966500000111",
       bloodType: "O_NEG",
     })
+  })
+
+  it("rejects a blood type outside the OpenAPI contract", async () => {
+    await expect(createWalkInClient({
+      firstName: "محمد",
+      lastName: "السالم",
+      phone: "+966501234567",
+      bloodType: "INVALID",
+    })).rejects.toThrow("Invalid client blood type")
+    expect(postMock).not.toHaveBeenCalled()
   })
 
   it("patches client updates to the correct endpoint", async () => {

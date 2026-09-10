@@ -3,7 +3,10 @@ import {
 	Injectable,
 	NotFoundException,
 } from "@nestjs/common";
-import { PrismaService } from "../../../infrastructure/database";
+import { Prisma } from "@prisma/client";
+import { RlsTransactionService } from "../../../infrastructure/database";
+import { lockPersonReferences } from "../../../common/database/person-reference-lock.helper";
+import { ACTIVE_BOOKING_STATUSES } from "../../bookings/active-booking-statuses";
 
 export interface DeleteClientCommand {
 	clientId: string;
@@ -24,91 +27,84 @@ const DELETE_CLIENT_MESSAGES = {
 
 @Injectable()
 export class DeleteClientHandler {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(private readonly rlsTransaction: RlsTransactionService) {}
 
-	async execute(cmd: DeleteClientCommand) {
-		const client = await this.prisma.client.findFirst({
-			where: { id: cmd.clientId, deletedAt: null },
-		});
-		if (!client) throw new NotFoundException(DELETE_CLIENT_MESSAGES.notFound);
+	async execute(cmd: DeleteClientCommand): Promise<void> {
+		await this.rlsTransaction.withTransaction(
+			async (tx) => {
+				await lockPersonReferences(
+					tx,
+					[{ kind: "Client", id: cmd.clientId }],
+					"delete",
+				);
 
-		// ─── Cross-BC integrity guards ───────────────────────────────────────────
-		// Booking (people → bookings): block if any active appointment exists
-		const activeBookings = await this.prisma.booking.count({
-			where: {
-				clientId: cmd.clientId,
-				status: {
-					in: [
-						"PENDING",
-						"AWAITING_PAYMENT",
-						"CONFIRMED",
-						"CANCEL_REQUESTED",
-					],
-				},
-			},
-		});
-		if (activeBookings > 0) {
-			throw new ConflictException(
-				DELETE_CLIENT_MESSAGES.hasActiveBookings(activeBookings),
-			);
-		}
+				const client = await tx.client.findFirst({
+					where: { id: cmd.clientId, deletedAt: null },
+				});
+				if (!client)
+					throw new NotFoundException(DELETE_CLIENT_MESSAGES.notFound);
 
-		// Invoice (people → finance): block if unpaid invoices exist
-		const unpaidInvoices = await this.prisma.invoice.count({
-			where: {
-				clientId: cmd.clientId,
-				status: { in: ["DRAFT", "ISSUED", "PARTIALLY_PAID"] },
-			},
-		});
-		if (unpaidInvoices > 0) {
-			throw new ConflictException(
-				DELETE_CLIENT_MESSAGES.hasUnpaidInvoices(unpaidInvoices),
-			);
-		}
-
-		// ProgramEnrollment (people → bookings)
-		const activeEnrollments = await this.prisma.programEnrollment.count({
-			where: {
-				clientId: cmd.clientId,
-				booking: {
-					status: {
-						in: [
-							"PENDING",
-							"AWAITING_PAYMENT",
-							"CONFIRMED",
-							"CANCEL_REQUESTED",
-						],
+				// ─── Cross-BC integrity guards ───────────────────────────────────────────
+				const activeBookings = await tx.booking.count({
+					where: {
+						clientId: cmd.clientId,
+						status: { in: [...ACTIVE_BOOKING_STATUSES] },
 					},
-				},
-			},
-		});
-		if (activeEnrollments > 0) {
-			throw new ConflictException(
-				DELETE_CLIENT_MESSAGES.hasActiveEnrollments(activeEnrollments),
-			);
-		}
+				});
+				if (activeBookings > 0) {
+					throw new ConflictException(
+						DELETE_CLIENT_MESSAGES.hasActiveBookings(activeBookings),
+					);
+				}
 
-		// Rating (people → organization)
-		const ratings = await this.prisma.rating.count({
-			where: { clientId: cmd.clientId },
-		});
-		if (ratings > 0) {
-			throw new ConflictException(DELETE_CLIENT_MESSAGES.hasRatings(ratings));
-		}
+				const unpaidInvoices = await tx.invoice.count({
+					where: {
+						clientId: cmd.clientId,
+						status: { in: ["DRAFT", "ISSUED", "PARTIALLY_PAID"] },
+					},
+				});
+				if (unpaidInvoices > 0) {
+					throw new ConflictException(
+						DELETE_CLIENT_MESSAGES.hasUnpaidInvoices(unpaidInvoices),
+					);
+				}
 
-		// Soft delete: set deletedAt, force inactive, and null the phone so the
-		// unique phone constraint no longer blocks re-creating a client with the same
-		// number. The original phone is preserved in notes for audit.
-		await this.prisma.client.update({
-			where: { id: cmd.clientId },
-			data: {
-				deletedAt: new Date(),
-				isActive: false,
-				phone: null,
-				notes: client.phone
-					? `${client.notes ?? ""}\n[deleted-phone:${client.phone}]`.trim()
-					: client.notes,
+				const activeEnrollments = await tx.programEnrollment.count({
+					where: {
+						clientId: cmd.clientId,
+						booking: { status: { in: [...ACTIVE_BOOKING_STATUSES] } },
+					},
+				});
+				if (activeEnrollments > 0) {
+					throw new ConflictException(
+						DELETE_CLIENT_MESSAGES.hasActiveEnrollments(activeEnrollments),
+					);
+				}
+
+				const ratings = await tx.rating.count({
+					where: { clientId: cmd.clientId },
+				});
+				if (ratings > 0) {
+					throw new ConflictException(DELETE_CLIENT_MESSAGES.hasRatings(ratings));
+				}
+
+				await tx.client.update({
+					where: { id: cmd.clientId },
+					data: {
+						deletedAt: new Date(),
+						isActive: false,
+						phone: null,
+						notes: client.phone
+							? `${client.notes ?? ""}\n[deleted-phone:${client.phone}]`.trim()
+							: client.notes,
+					},
+				});
 			},
-		});
+			{
+				// A fresh statement snapshot after a competing reference writer commits
+				// must include the relationship that writer created.
+				isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+			},
+		);
 	}
 }

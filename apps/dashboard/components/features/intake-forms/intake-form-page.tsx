@@ -55,11 +55,12 @@ interface IntakeFormPageProps {
   onSave: (draft: IntakeFormDraft) => void
   isSaving?: boolean
   isLoadingDraft?: boolean
+  fieldsLocked?: boolean
 }
 
 /* ─── Component ─── */
 
-export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoadingDraft }: IntakeFormPageProps) {
+export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoadingDraft, fieldsLocked = false }: IntakeFormPageProps) {
   const { locale, t } = useLocale()
   const isAr = locale === "ar"
   const router = useRouter()
@@ -174,6 +175,7 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
         {/* ─── Right: Fields Builder ─── */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           <FormSection title={`${t("intakeForms.page.fieldsCount")} (${draft.fields.length})`}>
+            {fieldsLocked && <p className="text-sm text-muted-foreground mb-3">{t("intakeForms.page.fieldsLocked")}</p>}
             <div className="flex flex-col gap-3">
               {draft.fields.map((field, i) => (
                 <FieldEditor
@@ -181,7 +183,7 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
                   field={field}
                   index={i}
                   totalFields={draft.fields.length}
-                  prevFields={draft.fields.slice(0, i)}
+                  disabled={fieldsLocked}
                   onChange={(updated) => updateField(i, updated)}
                   onRemove={() => removeField(i)}
                   onMoveUp={() => moveField(i, "up")}
@@ -193,6 +195,7 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
                 variant="outline"
                 className="gap-2 self-start mt-1"
                 onClick={addField}
+                disabled={fieldsLocked}
               >
                 <HugeiconsIcon icon={Add01Icon} size={16} />
                 {t("intakeForms.page.addField")}

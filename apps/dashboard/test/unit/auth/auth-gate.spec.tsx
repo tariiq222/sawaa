@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
 
 const mockUseAuth = vi.fn()
@@ -54,6 +54,23 @@ describe('AuthGate', () => {
     renderAuthGate(<div data-testid="protected-content">Protected</div>)
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
     expect(screen.getByTestId('login-form')).toBeInTheDocument()
+  })
+
+  it('shows a recoverable retry state instead of login after a transient restore failure', () => {
+    const retryRestore = vi.fn()
+    mockUseAuth.mockReturnValue({
+      user: null,
+      loading: false,
+      restoreError: true,
+      retryRestore,
+    })
+
+    renderAuthGate(<div data-testid="protected-content">Protected</div>)
+
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('login-form')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'authGate.retry' }))
+    expect(retryRestore).toHaveBeenCalledOnce()
   })
 
   it('should render children when user is authenticated', () => {
