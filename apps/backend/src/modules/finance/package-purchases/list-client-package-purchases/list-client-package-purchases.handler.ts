@@ -133,6 +133,7 @@ export class ListClientPackagePurchasesHandler {
             where: { id: { in: serviceIds } },
             select: {
               id: true, nameAr: true, nameEn: true, isActive: true, archivedAt: true,
+              isHidden: true,
               categoryId: true,
               category: {
                 select: {
@@ -214,13 +215,17 @@ export class ListClientPackagePurchasesHandler {
             !!employee &&
             employee.isActive &&
             activeLinkSet.has(`${credit.employeeId}:${credit.serviceId}`);
+          // A direct-booking clinic books through one hidden internal service;
+          // the clinic is the name staff and clients recognise.
+          const namedByClinic =
+            !!service?.isHidden && category?.bookingMode === 'DIRECT';
           return {
             id: credit.id,
             serviceId: credit.serviceId,
             employeeId: credit.employeeId,
             durationOptionId: credit.durationOptionId,
-            serviceNameAr: service?.nameAr ?? '',
-            serviceNameEn: service?.nameEn ?? null,
+            serviceNameAr: (namedByClinic ? category?.nameAr : service?.nameAr) ?? '',
+            serviceNameEn: (namedByClinic ? category?.nameEn : service?.nameEn) ?? null,
             employeeNameAr: employee?.nameAr ?? employee?.name ?? '',
             employeeNameEn: employee?.nameEn ?? null,
             durationLabelAr: duration?.labelAr ?? '',
