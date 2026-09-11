@@ -31,8 +31,27 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
         # Until v2 lands we don't want surprise majors.
-    # Pull-request settings
-    pull-request-body:
-      notes: |
-        Triggered by Dependabot. Review the changelog for breaking changes.
-        CI will run the standard backend + dashboard + website checks.
+
+  - package-ecosystem: "pip"
+    directory: "/scripts/security"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
