@@ -33,6 +33,7 @@ describe('PackageReportsHandler', () => {
     const result = await handler.execute({ report: PackageReportType.SALES, from: '2026-01-01', to: '2026-01-31' });
     expect(result).toHaveProperty('purchaseCount', 3);
     expect(result).toHaveProperty('byBucket');
+    expect(result).toHaveProperty('kind', 'SALES');
   });
 
   it('routes OUTSTANDING_CREDIT to the liability builder', async () => {
@@ -41,6 +42,7 @@ describe('PackageReportsHandler', () => {
     const result = await handler.execute({ report: PackageReportType.OUTSTANDING_CREDIT, from: '2026-01-01', to: '2026-01-31' });
     expect(result).toHaveProperty('outstandingLiability');
     expect(result).toHaveProperty('outstandingSessions');
+    expect(result).toHaveProperty('kind', 'OUTSTANDING_CREDIT');
   });
 
   it('routes CONSUMPTION to the consumption builder', async () => {
@@ -49,6 +51,7 @@ describe('PackageReportsHandler', () => {
     const result = await handler.execute({ report: PackageReportType.CONSUMPTION, from: '2026-01-01', to: '2026-01-31' });
     expect(result).toHaveProperty('totalConsumed');
     expect(result).toHaveProperty('byEmployee');
+    expect(result).toHaveProperty('kind', 'CONSUMPTION');
   });
 
   it('routes REFUNDED to the refunded-packages builder', async () => {
@@ -57,6 +60,7 @@ describe('PackageReportsHandler', () => {
     const result = await handler.execute({ report: PackageReportType.REFUNDED, from: '2026-01-01', to: '2026-01-31' });
     expect(result).toHaveProperty('refundedCount');
     expect(result).toHaveProperty('totalRefunded');
+    expect(result).toHaveProperty('kind', 'REFUNDED');
   });
 
   it('throws on an unknown report type', async () => {
