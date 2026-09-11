@@ -116,3 +116,18 @@ claiming that a green gate means the whole application is secure.
 The obsolete `pull-request-body` entry was removed from Dependabot configuration
 because it is not a supported update option; the added pip/Actions update
 entries use standard weekly schedules.
+
+## Private repository CI compatibility
+
+The existing CI security job keeps its current dependency-audit, Gitleaks, and
+Trivy scope and policy. It grants only `contents: read` and `pull-requests: read`
+so Gitleaks can inspect pull-request commits in a private repository. Gitleaks
+comments are disabled with `GITLEAKS_ENABLE_COMMENTS=false`, so the job does not
+request write access or post unsolicited comments.
+
+Trivy continues to scan the filesystem for HIGH and CRITICAL vulnerabilities with
+`ignore-unfixed: true` and `exit-code: '0'`; it is informational in this job.
+The job now writes `trivy-fs.sarif` using Trivy's SARIF formatter and stores it in
+a private Actions artifact for seven days. Artifact upload runs after the job's
+other steps when the report exists. GitHub Code Scanning SARIF upload is not used
+because it is unavailable for the current private-repository account.
