@@ -12,9 +12,7 @@ services:
       APP_DB_USER: ${APP_DB_USER:?APP_DB_USER is required}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}
     volumes:
-      - type: bind
-        source: ${POSTGRES_DATA_PATH:?POSTGRES_DATA_PATH is required}
-        target: /var/lib/postgresql
+      - "${POSTGRES_DATA_PATH:?POSTGRES_DATA_PATH is required}:/var/lib/postgresql"
     expose:
       - "5432"
     healthcheck:
@@ -31,9 +29,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     volumes:
-      - type: bind
-        source: ${REDIS_DATA_PATH:?REDIS_DATA_PATH is required}
-        target: /data
+      - "${REDIS_DATA_PATH:?REDIS_DATA_PATH is required}:/data"
     expose:
       - "6379"
     healthcheck:
@@ -50,9 +46,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
     volumes:
-      - type: bind
-        source: ${MINIO_DATA_PATH:?MINIO_DATA_PATH is required}
-        target: /data
+      - "${MINIO_DATA_PATH:?MINIO_DATA_PATH is required}:/data"
     command: ["server", "/data", "--console-address", ":9001"]
     expose:
       - "9000"
@@ -162,7 +156,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    command: ["node", "dist/src/main.js"]
+    command: ["sh", "-c", "node migration-guard.cjs && exec node dist/src/main.js"]
 
   dashboard:
     build:

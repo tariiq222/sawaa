@@ -148,6 +148,7 @@ COPY --from=app-build /app/apps/backend/prisma.config.ts      ./apps/backend/pri
 COPY --from=app-build /app/apps/backend/prisma                ./apps/backend/prisma
 COPY --from=app-build /app/apps/backend/dist                  ./apps/backend/dist
 COPY --from=app-build /app/apps/backend/assets                ./apps/backend/assets
+COPY docker/openship/migration-guard.cjs                     ./apps/backend/migration-guard.cjs
 
 # Ensure pnpm workspace symlinks resolve at runtime
 RUN mkdir -p /app/node_modules/@sawaa \

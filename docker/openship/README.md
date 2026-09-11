@@ -23,7 +23,9 @@ these paths at live data or old rehearsal directories. PostgreSQL is mounted at
 Native OpenShip reads each mount's `source` but does not resolve the top-level
 Compose volume `name`/`external` declaration. Keep these data mounts as direct
 absolute binds so the native deployment cannot silently select a different
-volume.
+volume. The mounts intentionally use short bind syntax because the native
+parser interpolates short-form sources; long-form `source:` values can remain
+literal `${...}` expressions.
 
 The main runtime file deliberately contains no migration service or migration
 credential. `compose.migration.yml` is a separate one-shot file so an OpenShip
@@ -31,6 +33,14 @@ deployment that ignores Compose profiles cannot launch a destructive migration
 automatically. It joins the same pre-provisioned external network and has no
 `depends_on`; PostgreSQL must already be healthy when the coordinator invokes
 it.
+
+The backend command runs `migration-guard.cjs` before starting the application.
+The guard opens a finite-timeout PostgreSQL connection as the restricted runtime
+user, performs only a read-only transaction over `_prisma_migrations`, and
+compares every active record with the SHA-256 hash of its source
+`migration.sql`. It never applies migrations, repairs checksums, reads customer
+data, or logs connection details. A failed or incomplete comparison aborts
+startup before the application can serve traffic.
 
 ## Deployment sequence
 
@@ -101,6 +111,15 @@ it.
 8. Start the application services after the migration step succeeds. Do not
    run seeds. Verify backend readiness on 5100, dashboard on 5103, and website
    on 5105 through the configured ingress/tunnel.
+
+The three approved restored-history checksum differences are exempted only
+when `NODE_ENV=staging` and only for their exact name, database checksum, and
+source hash pairs. This is a staging compatibility baseline, not a history
+repair. Any source/schema migration change, pending migration, source-only
+record, applied-only record, duplicate active name, unfinished record, or
+checksum mismatch blocks automatic startup until the coordinator explicitly
+reconciles and runs the separate migration step. Production cutover remains
+open until that evidence and the other service gates are complete.
 
 ## API URL details
 
