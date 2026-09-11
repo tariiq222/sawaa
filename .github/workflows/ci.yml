@@ -71,6 +71,9 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      - name: OpenShip startup contract
+        run: node --test docker/openship/start-backend.test.cjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
