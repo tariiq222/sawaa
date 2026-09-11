@@ -1,6 +1,5 @@
-# Run this file separately and explicitly after the coordinator accepts the
-# existing migration-history and checksum review. It intentionally contains no
-# application services, profiles, or depends_on clauses.
+# Optional manual migration recovery file. Routine native deployments use the
+# backend startup migration command and do not depend on this service.
 services:
   migrate:
     build:

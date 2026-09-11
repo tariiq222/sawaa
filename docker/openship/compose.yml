@@ -69,6 +69,8 @@ services:
       PORT: "5100"
       BACKEND_URL: ${API_PUBLIC_URL:?API_PUBLIC_URL is required}
       DATABASE_URL: ${APP_DATABASE_URL:?APP_DATABASE_URL is required}
+      # Backend-scoped owner URL; start-backend.sh passes it only to Prisma.
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?MIGRATION_DATABASE_URL is required}
       DB_STATEMENT_TIMEOUT_MS: ${DB_STATEMENT_TIMEOUT_MS:-30000}
       DB_POOL_TIMEOUT_S: ${DB_POOL_TIMEOUT_S:-20}
       DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-10}
@@ -156,7 +158,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    command: ["sh", "-c", "node migration-guard.cjs && exec node dist/src/main.js"]
+    command: ["sh", "start-backend.sh"]
 
   dashboard:
     build:

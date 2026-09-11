@@ -139,16 +139,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 #   /app/packages/api-client/src/ — api-client (no build step; consumed directly)
 #   /app/apps/backend/dist/        — compiled NestJS
 #   /app/apps/backend/prisma/      — schema + migrations
-COPY --from=app-build /app/node_modules                       ./node_modules
-COPY --from=app-build /app/package.json                       ./package.json
-COPY --from=app-build /app/pnpm-workspace.yaml                ./pnpm-workspace.yaml
-COPY --from=app-build /app/packages                           ./packages
-COPY --from=app-build /app/apps/backend/package.json          ./apps/backend/package.json
-COPY --from=app-build /app/apps/backend/prisma.config.ts      ./apps/backend/prisma.config.ts
-COPY --from=app-build /app/apps/backend/prisma                ./apps/backend/prisma
-COPY --from=app-build /app/apps/backend/dist                  ./apps/backend/dist
-COPY --from=app-build /app/apps/backend/assets                ./apps/backend/assets
-COPY docker/openship/migration-guard.cjs                     ./apps/backend/migration-guard.cjs
+COPY --chown=1001:1001 --from=app-build /app/node_modules                       ./node_modules
+COPY --chown=1001:1001 --from=app-build /app/package.json                       ./package.json
+COPY --chown=1001:1001 --from=app-build /app/pnpm-workspace.yaml                ./pnpm-workspace.yaml
+COPY --chown=1001:1001 --from=app-build /app/packages                           ./packages
+COPY --chown=1001:1001 --from=app-build /app/apps/backend/package.json          ./apps/backend/package.json
+COPY --chown=1001:1001 --from=app-build /app/apps/backend/prisma.config.ts      ./apps/backend/prisma.config.ts
+COPY --chown=1001:1001 --from=app-build /app/apps/backend/prisma                ./apps/backend/prisma
+COPY --chown=1001:1001 --from=app-build /app/apps/backend/dist                  ./apps/backend/dist
+COPY --chown=1001:1001 --from=app-build /app/apps/backend/assets                ./apps/backend/assets
+COPY --chown=1001:1001 docker/openship/start-backend.sh                         ./apps/backend/start-backend.sh
 
 # Ensure pnpm workspace symlinks resolve at runtime
 RUN mkdir -p /app/node_modules/@sawaa \
@@ -159,7 +159,7 @@ RUN mkdir -p /app/node_modules/@sawaa \
 # Non-root user — drops capability surface dramatically.
 RUN groupadd --system --gid 1001 app \
  && useradd  --system --uid 1001 --gid app --home /app --shell /usr/sbin/nologin app \
- && chown -R app:app /app
+ && chown app:app /app /app/apps /app/apps/backend
 USER app
 
 WORKDIR /app/apps/backend

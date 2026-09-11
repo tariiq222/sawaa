@@ -27,20 +27,13 @@ volume. The mounts intentionally use short bind syntax because the native
 parser interpolates short-form sources; long-form `source:` values can remain
 literal `${...}` expressions.
 
-The main runtime file deliberately contains no migration service or migration
-credential. `compose.migration.yml` is a separate one-shot file so an OpenShip
-deployment that ignores Compose profiles cannot launch a destructive migration
-automatically. It joins the same pre-provisioned external network and has no
-`depends_on`; PostgreSQL must already be healthy when the coordinator invokes
-it.
-
-The backend command runs `migration-guard.cjs` before starting the application.
-The guard opens a finite-timeout PostgreSQL connection as the restricted runtime
-user, performs only a read-only transaction over `_prisma_migrations`, and
-compares every active record with the SHA-256 hash of its source
-`migration.sql`. It never applies migrations, repairs checksums, reads customer
-data, or logs connection details. A failed or incomplete comparison aborts
-startup before the application can serve traffic.
+The main runtime file has no separate migration service. Its backend command
+runs `start-backend.sh`, which applies pending Prisma migrations before starting
+the application. The migration owner URL is backend-scoped and is passed only
+to that child migration process; the script then removes it and starts the app
+with the restricted runtime URL. A failed migration stops startup. The
+optional `compose.migration.yml` file remains available for manual recovery and
+does not participate in routine deploys.
 
 ## Deployment sequence
 
@@ -67,15 +60,16 @@ startup before the application can serve traffic.
    credentials, signing material, provider credentials, and `SUPER_ADMIN_PASSWORD`
    must never be project-wide. Keep provider API credentials empty. Use
    URL-encoded credentials in both database URLs. `MIGRATION_DATABASE_URL` is
-   scoped only to the one-shot `migrate` service when explicitly run and is
-   never stored in the runtime project or passed to backend. A static prepare
+   required in the backend service scope for automatic startup migration; it is
+   never put in project/global scope or exposed to frontends, and is unset
+   before the application process starts. A static prepare
    scan may report these required variables missing from project scope; that is
    expected because native deployment resolves service-scoped values at deploy.
    Scope the database owner and app-role values to `postgres`, the Redis
    password to `redis` and `backend`, MinIO keys to `minio` and `backend`, and
    the JWT/encryption/provider/admin secrets to `backend`. Scope
-   `MIGRATION_DATABASE_URL` only to the separate `migrate` service for its
-   explicit run.
+   `MIGRATION_DATABASE_URL` to `backend` for routine startup, or to the
+   optional `migrate` service during manual recovery.
 3. Create the three protected host directories named by
    `POSTGRES_DATA_PATH`, `REDIS_DATA_PATH`, and `MINIO_DATA_PATH`, with
    ownership matching the corresponding container image. Restore the approved
@@ -86,40 +80,25 @@ startup before the application can serve traffic.
 4. A cloned database can contain pending jobs or provider configuration;
    network policy must deny backend egress to payment, SMS, email, Authentica,
    Zoom, AI, and messaging providers.
-5. Check the existing migration history before any migration command. The
-   current main checkout records 98 migrations and the restored database
-   records the same 98 names, but existing-history checksums differ for:
-   `20260520150000_finalize_delivery_type_transition`,
-   `20260520134448_add_delivery_type_and_bundles`, and
-   `20260831120000_normalize_ai_provider_to_openrouter`. Treat this as an
-   unresolved deployment gate. Do not reset, rewrite checksums, or run an
-   automatic repair. The coordinator must reconcile the source/database
-   provenance before invoking `compose.migration.yml`.
+5. Keep the existing migration-history and checksum review as a separate
+   provenance report. Never reset or rewrite checksums, and do not represent
+   that report as a repair. Routine updates use Prisma's `migrate deploy`; its
+   own migration bookkeeping and retry behavior remain authoritative.
 6. Build the four images from the repository root context selected by
-   `compose.yml`. The application Dockerfiles are intentionally used unchanged.
-   The custom `Postgres.Dockerfile` is based on `postgres:18` and installs
+   `compose.yml`. The dashboard and website Dockerfiles are used as configured;
+   the backend Dockerfile copies the startup script into the runner. The custom
+   `Postgres.Dockerfile` is based on `postgres:18` and installs
    `postgresql-18-pgvector`.
-7. Start infrastructure and wait for PostgreSQL, Redis, and MinIO health.
-   Run the one-shot migration explicitly only after step 5 is accepted:
-
-   ```sh
-   docker compose -f docker/openship/compose.migration.yml run --rm migrate
-   ```
-
-   The normal application start uses only `compose.yml`, starts backend with
-   `node dist/src/main.js`, and never receives the migration owner URL.
-8. Start the application services after the migration step succeeds. Do not
-   run seeds. Verify backend readiness on 5100, dashboard on 5103, and website
-   on 5105 through the configured ingress/tunnel.
-
-The three approved restored-history checksum differences are exempted only
-when `NODE_ENV=staging` and only for their exact name, database checksum, and
-source hash pairs. This is a staging compatibility baseline, not a history
-repair. Any source/schema migration change, pending migration, source-only
-record, applied-only record, duplicate active name, unfinished record, or
-checksum mismatch blocks automatic startup until the coordinator explicitly
-reconciles and runs the separate migration step. Production cutover remains
-open until that evidence and the other service gates are complete.
+7. Start infrastructure and wait for PostgreSQL, Redis, and MinIO health. The
+   backend startup command automatically runs `npx --no-install prisma migrate
+   deploy --schema=prisma/schema` with `MIGRATION_DATABASE_URL`, then starts the
+   app with `DATABASE_URL`. Failed migrations halt startup; do not run seeds.
+   Use `compose.migration.yml` only for explicit manual recovery when the
+   coordinator directs it.
+8. Verify backend readiness on 5100, dashboard on 5103, and website on 5105
+   through the configured ingress/tunnel. For future SQL, prefer additive,
+   backward-compatible changes so old and new application versions can overlap
+   during deployment.
 
 ## API URL details
 
@@ -154,11 +133,18 @@ and creates a missing one as a normal bridge. The Compose parser's mount fold in
 resolve top-level volume `name`/`external` declarations. This is why the files
 use an external default network and absolute bind sources.
 
+OpenShip pre-deploy hooks are not a required migration mechanism, and native
+`depends_on` handling cannot be used as a one-shot completion barrier. The
+backend startup script is therefore the enforcement point for routine updates.
+The migration owner credential remains visible to Docker/OpenShip operators and
+container configuration; removing it from the app process is useful scoping but
+is not strong isolation from a fully compromised container.
+
 After these files merge, configure the native OpenShip source settings to use
 the repository's `docker/openship/compose.yml`, build context `../..`, and the
 four service Dockerfiles/images described here. Confirm health-gated
-dependencies, the standalone migration file, service-name DNS, and
-build-argument persistence. Repeat the configuration backup and redeploy proof
-from step 1 after any settings change. No deployment, remote validation, backup,
-or rollback claim is made by this repository configuration; it remains a
-staging contract until those checks pass.
+dependencies, the startup script, optional manual migration file, service-name
+DNS, and build-argument persistence. Repeat the configuration backup and
+redeploy proof from step 1 after any settings change. No deployment, remote
+validation, backup, or rollback claim is made by this repository configuration;
+it remains a staging contract until those checks pass.
