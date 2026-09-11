@@ -104,6 +104,7 @@ function buildPricing(finalPrice = FINAL_PRICE) {
       itemUnitPrices: [
         { durationOptionId: DURATION_OPTION_ID, unitPrice: 10_000 },
       ],
+      lines: [{ durationOptionId: DURATION_OPTION_ID, net: finalPrice }],
     }),
   };
 }
@@ -205,6 +206,8 @@ describe("InitPackagePurchaseHandler", () => {
           employeeId: EMPLOYEE_ID,
           durationOptionId: DURATION_OPTION_ID,
           unitPriceSnapshot: 10_000,
+          // Net paid for the item's sessions, frozen before payment.
+          netValue: FINAL_PRICE,
           totalQuantity: 5,
           constraints: [],
         },

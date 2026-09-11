@@ -183,6 +183,12 @@ export class CreatePackagePurchaseHandler {
             employeeId: item.employeeId,
             durationOptionId: item.durationOptionId,
             unitPriceSnapshot: new Prisma.Decimal(unitPriceByIndex[idx] ?? 0),
+            // Net paid for this item's sessions (after its discount), so reports
+            // value remaining sessions at what the client actually paid.
+            netValue:
+              price.lines?.[idx] != null
+                ? new Prisma.Decimal(price.lines[idx].net)
+                : null,
             totalQuantity: item.paidQuantity + item.freeQuantity,
             usedQuantity: 0,
             constraints: { create: buildCreditConstraintCreate(item) },

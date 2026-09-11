@@ -399,6 +399,11 @@ model PackageCredit {
   durationOptionId  String?
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   unitPriceSnapshot Decimal         @db.Decimal(12, 2)
+  /// Net amount paid for this credit's sessions, in integer halalas: the item's
+  /// payable after its discount, shared by paid and free sessions. Null for
+  /// credits issued before net values were stored (reports then allocate the
+  /// purchase amount across its credits).
+  netValue          Decimal?        @db.Decimal(12, 2)
   totalQuantity     Int
   usedQuantity      Int             @default(0)
   createdAt         DateTime        @default(now())

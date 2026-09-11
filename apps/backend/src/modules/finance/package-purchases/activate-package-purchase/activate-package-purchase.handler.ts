@@ -146,7 +146,7 @@ export class ActivatePackagePurchaseHandler {
             })),
           });
         });
-        creditSnapshot = createPackageCreditSnapshot(pkg.items, price.itemUnitPrices);
+        creditSnapshot = createPackageCreditSnapshot(pkg.items, price.itemUnitPrices, price.lines);
       }
 
       await this.cls.run(async () => {
@@ -181,6 +181,7 @@ export class ActivatePackagePurchaseHandler {
                 employeeId: item.employeeId,
                 durationOptionId: item.durationOptionId,
                 unitPriceSnapshot: new Prisma.Decimal(item.unitPriceSnapshot),
+                netValue: item.netValue != null ? new Prisma.Decimal(item.netValue) : null,
                 totalQuantity: item.totalQuantity,
                 usedQuantity: 0,
                 constraints: { create: buildCreditConstraintCreate(item) },
