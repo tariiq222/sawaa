@@ -139,7 +139,8 @@ export class AuthController {
     const systemRolePermissions = await loadSystemRolePermissions(this.prisma, user.role);
     const response = this.authResponseBuilder.build({ accessToken, refreshToken }, user, systemRolePermissions);
     this.setRefreshCookie(res, refreshToken, body.rememberMe);
-    return response;
+    const { refreshToken: _refreshToken, ...safeResponse } = response;
+    return safeResponse;
   }
 
   @Public()
