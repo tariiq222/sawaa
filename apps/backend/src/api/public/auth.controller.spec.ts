@@ -34,27 +34,6 @@ describe('AuthController (e2e)', () => {
   const mockPerformPasswordReset = { execute: jest.fn() };
   const mockRequestDashboardOtp = { execute: jest.fn() };
   const mockVerifyDashboardOtp = { execute: jest.fn() };
-  const mockAuthResponseBuilder = {
-    build: jest.fn().mockImplementation((tokens, user) => ({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresIn: 900,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name ?? '',
-        phone: user.phone ?? null,
-        gender: user.gender ?? null,
-        avatarUrl: user.avatarUrl ?? null,
-        isActive: user.isActive,
-        role: user.role,
-        isSuperAdmin: user.isSuperAdmin ?? false,
-        firstName: (user.name ?? '').trim().split(/\s+/)[0] ?? '',
-        lastName: (user.name ?? '').trim().split(/\s+/).slice(1).join(' ') ?? '',
-        permissions: [],
-      },
-    })),
-  };
   const mockLookupUser = { execute: jest.fn() };
 
   beforeAll(async () => {
@@ -72,6 +51,7 @@ describe('AuthController (e2e)', () => {
     },
     user: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     // P1-8: login/me now load DB system-role permissions (mirrors JwtStrategy).
     customRole: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -79,12 +59,15 @@ describe('AuthController (e2e)', () => {
     return { ...db, $transaction: jest.fn(async (work: (tx: typeof db) => unknown) => work(db)) };
   };
 
-  const buildApp = async (mockPrisma: any, jwtGuardValue: any) => {
+  const buildApp = async (mockPrisma: any, jwtGuardValue: any, useRealLogoutHandler = false) => {
+    const logoutProvider = useRealLogoutHandler
+      ? { provide: LogoutHandler, useClass: LogoutHandler }
+      : { provide: LogoutHandler, useValue: mockLogout };
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
         { provide: LoginHandler, useValue: mockLogin },
-        { provide: LogoutHandler, useValue: mockLogout },
+        logoutProvider,
         { provide: PrismaService, useValue: mockPrisma },
         RlsTransactionService,
         { provide: TokenService, useValue: mockTokens },
@@ -95,7 +78,9 @@ describe('AuthController (e2e)', () => {
         { provide: PerformPasswordResetHandler, useValue: mockPerformPasswordReset },
         { provide: RequestDashboardOtpHandler, useValue: mockRequestDashboardOtp },
         { provide: VerifyDashboardOtpHandler, useValue: mockVerifyDashboardOtp },
-        { provide: AuthResponseBuilder, useValue: mockAuthResponseBuilder },
+        // Use the real builder so this HTTP suite exercises the response
+        // boundary that must remove the refresh credential before serialization.
+        AuthResponseBuilder,
         { provide: LookupUserHandler, useValue: mockLookupUser },
       ],
     })
@@ -140,7 +125,7 @@ describe('AuthController (e2e)', () => {
   });
 
   describe('POST /auth/login', () => {
-    it('returns 200 with tokens and user on valid login', async () => {
+    it('returns the access token and user without exposing refreshToken', async () => {
       mockLogin.execute.mockResolvedValue({
         accessToken: 'acc-token',
         refreshToken: 'ref-token',
@@ -155,8 +140,9 @@ describe('AuthController (e2e)', () => {
         },
       });
       mockConfig.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ADMIN_HOSTS') return 'admin.example.com';
+        if (key === 'NODE_ENV') return 'production';
         if (key === 'JWT_ACCESS_TTL') return '15m';
+        if (key === 'JWT_REFRESH_TTL') return '30d';
         return defaultValue;
       });
 
@@ -167,7 +153,16 @@ describe('AuthController (e2e)', () => {
 
       expect(res.body.accessToken).toBe('acc-token');
       expect(res.body.user.email).toBe('test@example.com');
-      expect(res.headers['set-cookie']).toBeDefined();
+      expect(res.body).not.toHaveProperty('refreshToken');
+
+      const refreshCookie = (res.headers['set-cookie'] as string[]).find((cookie) =>
+        cookie.startsWith('ck_refresh='),
+      );
+      expect(refreshCookie).toBeDefined();
+      expect(refreshCookie).toContain('HttpOnly');
+      expect(refreshCookie).toContain('Secure');
+      expect(refreshCookie).toContain('SameSite=Lax');
+      expect(refreshCookie).toContain('Path=/');
     });
 
     it('returns 400 for invalid email format', async () => {
@@ -192,23 +187,80 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  describe('POST /auth/refresh', () => {
-    it('returns 200 with new access token', async () => {
-      const mockPrisma = buildMockPrisma();
-      mockPrisma.refreshToken.findMany.mockResolvedValue([
-        {
-          id: 'rt-1',
-          tokenHash,
-          tokenSelector: 'raw-toke',
-          userId: 'user-1',
-          revokedAt: null,
-          expiresAt: new Date(Date.now() + 86400000),
+  describe('POST /auth/otp/verify-dashboard', () => {
+    it('keeps the refresh token cookie-only', async () => {
+      mockVerifyDashboardOtp.execute.mockResolvedValue({
+        accessToken: 'otp-access-token',
+        refreshToken: 'otp-refresh-token',
+        expiresIn: 900,
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          name: 'Test User',
+          phone: null,
+          gender: null,
+          avatarUrl: null,
+          isActive: true,
+          role: 'ADMIN',
+          isSuperAdmin: false,
+          firstName: 'Test',
+          lastName: 'User',
+          permissions: [],
         },
-      ]);
-      mockPrisma.refreshToken.update.mockResolvedValue({});
+      });
+      mockConfig.get.mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'NODE_ENV') return 'production';
+        if (key === 'JWT_REFRESH_TTL') return '30d';
+        return defaultValue;
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/auth/otp/verify-dashboard')
+        .send({ identifier: 'test@example.com', code: '123456' })
+        .expect(200);
+
+      expect(res.body.accessToken).toBe('otp-access-token');
+      expect(res.body.user.email).toBe('test@example.com');
+      expect(res.body).not.toHaveProperty('refreshToken');
+      const refreshCookie = (res.headers['set-cookie'] as string[]).find((cookie) =>
+        cookie.startsWith('ck_refresh='),
+      );
+      expect(refreshCookie).toContain('ck_refresh=otp-refresh-token');
+      expect(refreshCookie).toContain('HttpOnly');
+      expect(refreshCookie).toContain('Secure');
+      expect(refreshCookie).toContain('SameSite=Lax');
+    });
+  });
+
+  describe('POST /auth/refresh', () => {
+    it('rotates from the cookie only and does not return either refresh token in JSON', async () => {
+      const mockPrisma = buildMockPrisma();
+      const record = {
+        id: 'rt-1',
+        tokenHash,
+        tokenSelector: 'raw-toke',
+        userId: 'user-1',
+        revokedAt: null as Date | null,
+        expiresAt: new Date(Date.now() + 86400000),
+      };
+      mockPrisma.refreshToken.findMany.mockImplementation(async () =>
+        record.revokedAt ? [] : [record],
+      );
+      mockPrisma.refreshToken.updateMany.mockImplementation(async ({ where }: any) => {
+        if (where.id === record.id && record.revokedAt === null) {
+          record.revokedAt = new Date();
+          return { count: 1 };
+        }
+        return { count: 0 };
+      });
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1', isActive: true, isSuperAdmin: false, customRole: null });
       mockTokens.issueTokenPair.mockResolvedValue({ accessToken: 'new-acc', refreshToken: 'new-ref' });
-      mockConfig.get.mockReturnValue('15m');
+      mockConfig.get.mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'NODE_ENV') return 'production';
+        if (key === 'JWT_ACCESS_TTL') return '15m';
+        if (key === 'JWT_REFRESH_TTL') return '30d';
+        return defaultValue;
+      });
 
       const refreshApp = await buildApp(mockPrisma, { canActivate: () => true });
 
@@ -219,6 +271,22 @@ describe('AuthController (e2e)', () => {
         .expect(200);
 
       expect(res.body.accessToken).toBe('new-acc');
+      expect(res.body).not.toHaveProperty('refreshToken');
+      const refreshCookie = (res.headers['set-cookie'] as string[]).find((cookie) =>
+        cookie.startsWith('ck_refresh='),
+      );
+      expect(refreshCookie).toContain('ck_refresh=new-ref');
+      expect(refreshCookie).toContain('HttpOnly');
+      expect(refreshCookie).toContain('Secure');
+      expect(refreshCookie).toContain('SameSite=Lax');
+
+      // Rotation consumes the presented cookie; replaying it must not mint a
+      // second access token even though the request body is otherwise valid.
+      await request(refreshApp.getHttpServer())
+        .post('/auth/refresh')
+        .set('Cookie', 'ck_refresh=raw-token')
+        .send({})
+        .expect(401);
       await refreshApp.close();
     });
 
@@ -309,26 +377,61 @@ describe('AuthController (e2e)', () => {
   });
 
   describe('POST /auth/logout', () => {
-    it('returns 200 on valid logout', async () => {
+    it('clears the cookie, revokes the session, and rejects reuse', async () => {
       const mockPrisma = buildMockPrisma();
-      mockPrisma.refreshToken.findMany.mockResolvedValue([
-        {
-          id: 'rt-1',
-          tokenHash,
-          tokenSelector: 'raw-toke',
-          userId: 'user-1',
-          revokedAt: null,
-          expiresAt: new Date(Date.now() + 86400000),
-        },
-      ]);
-      mockLogout.execute.mockResolvedValue(undefined);
+      const record = {
+        id: 'rt-logout',
+        tokenHash,
+        tokenSelector: 'raw-toke',
+        userId: 'user-1',
+        revokedAt: null as Date | null,
+        expiresAt: new Date(Date.now() + 86400000),
+      };
+      mockPrisma.refreshToken.findMany.mockImplementation(async () =>
+        record.revokedAt ? [] : [record],
+      );
+      let tokenVersion = 0;
+      mockPrisma.refreshToken.updateMany.mockImplementation(async ({ where }: any) => {
+        if (where.userId === 'user-1' && record.revokedAt === null) {
+          record.revokedAt = new Date();
+          return { count: 1 };
+        }
+        return { count: 0 };
+      });
+      mockPrisma.user.update.mockImplementation(async ({ data }: any) => {
+        tokenVersion += data.tokenVersion.increment;
+        return { id: 'user-1', tokenVersion };
+      });
 
-      const logoutApp = await buildApp(mockPrisma, { canActivate: () => true });
+      const logoutApp = await buildApp(mockPrisma, { canActivate: () => true }, true);
+
+      const logoutResponse = await request(logoutApp.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', 'ck_refresh=raw-token')
+        .send({ refreshToken: 'body-token-ignored' })
+        .expect(200);
+      expect(record.revokedAt).toEqual(expect.any(Date));
+      expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { tokenVersion: { increment: 1 } },
+      });
+      expect(tokenVersion).toBe(1);
+      expect(logoutResponse.headers['set-cookie']).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^ck_refresh=;/),
+          expect.stringContaining('Path=/'),
+        ]),
+      );
 
       await request(logoutApp.getHttpServer())
-        .post('/auth/logout')
-        .send({ refreshToken: 'raw-token' })
-        .expect(200);
+        .post('/auth/refresh')
+        .set('Cookie', 'ck_refresh=raw-token')
+        .send({})
+        .expect(401);
 
       await logoutApp.close();
     });
