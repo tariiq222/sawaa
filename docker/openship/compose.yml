@@ -5,7 +5,6 @@ services:
       dockerfile: docker/openship/Postgres.Dockerfile
     image: ${POSTGRES_IMAGE:-sawaa-postgres:18-pgvector}
     restart: unless-stopped
-    network_mode: "${RUNTIME_NETWORK:-sawaa-staging-internal}"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -13,8 +12,8 @@ services:
       APP_DB_USER: ${APP_DB_USER:?APP_DB_USER is required}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}
     volumes:
-      - type: volume
-        source: postgres_data
+      - type: bind
+        source: ${POSTGRES_DATA_PATH:?POSTGRES_DATA_PATH is required}
         target: /var/lib/postgresql
     expose:
       - "5432"
@@ -28,13 +27,12 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    network_mode: "${RUNTIME_NETWORK:-sawaa-staging-internal}"
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     volumes:
-      - type: volume
-        source: redis_data
+      - type: bind
+        source: ${REDIS_DATA_PATH:?REDIS_DATA_PATH is required}
         target: /data
     expose:
       - "6379"
@@ -48,7 +46,6 @@ services:
   minio:
     image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     restart: unless-stopped
-    network_mode: "${RUNTIME_NETWORK:-sawaa-staging-internal}"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
@@ -73,7 +70,6 @@ services:
       dockerfile: apps/backend/Dockerfile
     image: ${BACKEND_IMAGE:-sawaa-backend:staging}
     restart: unless-stopped
-    network_mode: "${RUNTIME_NETWORK:-sawaa-staging-internal}"
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: "5100"
@@ -176,7 +172,6 @@ services:
         NEXT_PUBLIC_API_URL: ${DASHBOARD_API_URL:?DASHBOARD_API_URL is required}
     image: ${DASHBOARD_IMAGE:-sawaa-dashboard:staging}
     restart: unless-stopped
-    network_mode: "${RUNTIME_NETWORK:-sawaa-staging-internal}"
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: "5103"
@@ -205,7 +200,6 @@ services:
         NEXT_PUBLIC_WEB_CHAT_ENABLED: ${NEXT_PUBLIC_WEB_CHAT_ENABLED:-false}
     image: ${WEBSITE_IMAGE:-sawaa-website:staging}
     restart: unless-stopped
-    network_mode: "${RUNTIME_NETWORK:-sawaa-staging-internal}"
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: "5105"
@@ -224,10 +218,7 @@ services:
       start_period: 60s
     command: ["node", "apps/website/server.js"]
 
-volumes:
-  postgres_data:
-    name: ${POSTGRES_VOLUME:?POSTGRES_VOLUME is required}
+networks:
+  default:
     external: true
-  redis_data:
-    name: ${REDIS_VOLUME:?REDIS_VOLUME is required}
-    external: true
+    name: ${RUNTIME_NETWORK:-openship-sawaa-staging}

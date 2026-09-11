@@ -5,34 +5,78 @@ checkout. It exposes backend 5100, dashboard 5103, and website 5105 through
 the pre-provisioned Docker network. It publishes no host ports; ingress or a
 tunnel is configured by the coordinator in OpenShip.
 
-The Compose file uses `network_mode: ${RUNTIME_NETWORK:-sawaa-staging-internal}`
-for every service. Provision that Docker internal network before starting the
-stack. The PostgreSQL volume is mounted at `/var/lib/postgresql`, which is the PostgreSQL
-18 volume target and is required for the restored volume layout. The
-PostgreSQL and Redis volume names are external and come from `POSTGRES_VOLUME`
-and `REDIS_VOLUME`; provision them independently. The MinIO data path comes
-from `MINIO_DATA_PATH`. Do not point any of these at live volumes or production
-Redis.
+The Compose files deliberately omit `network_mode`. They attach services to an
+external default network named by `RUNTIME_NETWORK` (default:
+`openship-sawaa-staging`), which preserves service-name DNS in local Compose and
+lets native OpenShip reuse the same project network. Provision this network as
+an internal Docker network and verify `Internal=true` before every native
+deploy; OpenShip may create a missing project network as a normal bridge.
+
+PostgreSQL and Redis use required absolute host bind paths from
+`POSTGRES_DATA_PATH` and `REDIS_DATA_PATH`. MinIO uses `MINIO_DATA_PATH`. The
+coordinator must create the separate protected directories under
+`/var/lib/webvue-apps/sawaa/openship-staging/`, set ownership for the image
+runtime users, and restore approved data before launch. Do not point any of
+these paths at live data or old rehearsal directories. PostgreSQL is mounted at
+`/var/lib/postgresql`, the PostgreSQL 18 volume target.
+
+Native OpenShip reads each mount's `source` but does not resolve the top-level
+Compose volume `name`/`external` declaration. Keep these data mounts as direct
+absolute binds so the native deployment cannot silently select a different
+volume.
 
 The main runtime file deliberately contains no migration service or migration
 credential. `compose.migration.yml` is a separate one-shot file so an OpenShip
 deployment that ignores Compose profiles cannot launch a destructive migration
-automatically. It joins the same pre-provisioned network and has no
+automatically. It joins the same pre-provisioned external network and has no
 `depends_on`; PostgreSQL must already be healthy when the coordinator invokes
 it.
 
 ## Deployment sequence
 
-1. Copy `.env.example` into the OpenShip environment store and replace every
-   blank required value with an isolated value. Keep provider API credentials
-   empty. Use URL-encoded credentials in both database URLs, and make
-   `MIGRATION_DATABASE_URL` an owner/migration URL that is never supplied to
-   the backend service.
-2. Restore the approved database and MinIO copy into the isolated volumes.
-   Do not copy production Redis data. A cloned database can contain pending
-   jobs or provider configuration; network policy must deny backend egress to
-   payment, SMS, email, Authentica, Zoom, AI, and messaging providers.
-3. Check the existing migration history before any migration command. The
+1. Before creating or redeploying the native application, pre-provision the
+   exact project network and confirm it is internal. For the default staging
+   slug, the expected name is `openship-sawaa-staging`:
+
+   ```sh
+   docker network inspect openship-sawaa-staging >/dev/null 2>&1 || \
+     docker network create --driver bridge --internal openship-sawaa-staging
+   test "$(docker network inspect --format '{{.Internal}}' openship-sawaa-staging)" = true
+   ```
+
+   If the check fails, stop. Do not let OpenShip recreate the network because
+   its fallback network is not guaranteed to be internal. Keep a host backup of
+   the OpenShip app configuration (redacted of secret values) before saving
+   changes, and after saving and after each redeploy prove that the compose
+   path, build context, environment keys, bind paths, and network name still
+   match this contract.
+2. Copy the non-secret values from `.env.example` into the OpenShip project or
+   global environment, then configure credentials and encryption values in the
+   owning service scopes. OpenShip can inject project environment into every
+   service, so `POSTGRES_PASSWORD`, `APP_DB_PASSWORD`, `REDIS_PASSWORD`, MinIO
+   keys, JWT/encryption keys, provider credentials, and `SUPER_ADMIN_PASSWORD`
+   must never be project-wide. Keep provider API credentials empty. Use
+   URL-encoded credentials in both database URLs. `MIGRATION_DATABASE_URL` is
+   scoped only to the one-shot `migrate` service when explicitly run and is
+   never stored in the runtime project or passed to backend. A static prepare
+   scan may report these required variables missing from project scope; that is
+   expected because native deployment resolves service-scoped values at deploy.
+   Scope the database owner and app-role values to `postgres`, the Redis
+   password to `redis` and `backend`, MinIO keys to `minio` and `backend`, and
+   the JWT/encryption/provider/admin secrets to `backend`. Scope
+   `MIGRATION_DATABASE_URL` only to the separate `migrate` service for its
+   explicit run.
+3. Create the three protected host directories named by
+   `POSTGRES_DATA_PATH`, `REDIS_DATA_PATH`, and `MINIO_DATA_PATH`, with
+   ownership matching the corresponding container image. Restore the approved
+   database and MinIO copy into the isolated directories. Do not copy
+   production Redis data. Provision the restricted `APP_DB_USER` role manually
+   in PostgreSQL before starting the backend; the image performs no role
+   creation during initialization.
+4. A cloned database can contain pending jobs or provider configuration;
+   network policy must deny backend egress to payment, SMS, email, Authentica,
+   Zoom, AI, and messaging providers.
+5. Check the existing migration history before any migration command. The
    current main checkout records 98 migrations and the restored database
    records the same 98 names, but existing-history checksums differ for:
    `20260520150000_finalize_delivery_type_transition`,
@@ -41,12 +85,12 @@ it.
    unresolved deployment gate. Do not reset, rewrite checksums, or run an
    automatic repair. The coordinator must reconcile the source/database
    provenance before invoking `compose.migration.yml`.
-4. Build the four images from the repository root context selected by
+6. Build the four images from the repository root context selected by
    `compose.yml`. The application Dockerfiles are intentionally used unchanged.
    The custom `Postgres.Dockerfile` is based on `postgres:18` and installs
    `postgresql-18-pgvector`.
-5. Start infrastructure and wait for PostgreSQL, Redis, and MinIO health.
-   Run the one-shot migration explicitly only after step 3 is accepted:
+7. Start infrastructure and wait for PostgreSQL, Redis, and MinIO health.
+   Run the one-shot migration explicitly only after step 5 is accepted:
 
    ```sh
    docker compose -f docker/openship/compose.migration.yml run --rm migrate
@@ -54,7 +98,7 @@ it.
 
    The normal application start uses only `compose.yml`, starts backend with
    `node dist/src/main.js`, and never receives the migration owner URL.
-6. Start the application services after the migration step succeeds. Do not
+8. Start the application services after the migration step succeeds. Do not
    run seeds. Verify backend readiness on 5100, dashboard on 5103, and website
    on 5105 through the configured ingress/tunnel.
 
@@ -82,15 +126,20 @@ Redis and deny provider egress; the cloned database may still be mutated by
 these local jobs. Retention remains bounded at 365 days in this template and
 must not be changed to an unsupported large value.
 
+The native OpenShip 0.7.1 source confirms the constraints this contract follows:
+`packages/core/src/compose-namespace.ts` rejects arbitrary named
+`network_mode` values, and `packages/adapters/src/runtime/docker.ts` computes
+the project network as `openship-${slug}`, reuses an exact existing network,
+and creates a missing one as a normal bridge. The Compose parser's mount fold in
+`packages/core/src/compose-spec.ts` consumes the mount `source`; it does not
+resolve top-level volume `name`/`external` declarations. This is why the files
+use an external default network and absolute bind sources.
+
 After these files merge, configure the native OpenShip source settings to use
 the repository's `docker/openship/compose.yml`, build context `../..`, and the
-four service Dockerfiles/images described here. Confirm OpenShip's handling of
-`network_mode`, external volumes, the standalone migration file, health-gated dependencies,
-and build-argument persistence before selecting the application for a live
-deployment. In particular, a custom `network_mode` value naming a pre-created
-network may not provide Compose service aliases (`postgres`, `redis`, `minio`,
-and `backend`) on every OpenShip runtime. The current files retain those
-service-host contracts, but native integration must prove DNS/alias behavior
-before deployment; this configuration is not deploy-ready until that check
-passes. No deployment, remote validation, backup, or rollback claim is made by
-this repository configuration.
+four service Dockerfiles/images described here. Confirm health-gated
+dependencies, the standalone migration file, service-name DNS, and
+build-argument persistence. Repeat the configuration backup and redeploy proof
+from step 1 after any settings change. No deployment, remote validation, backup,
+or rollback claim is made by this repository configuration; it remains a
+staging contract until those checks pass.
