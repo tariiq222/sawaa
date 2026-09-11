@@ -69,6 +69,17 @@ export class RescheduleBookingHandler {
       );
     }
 
+    if (
+      booking.packageCreditId &&
+      cmd.newDurationMins != null &&
+      cmd.newDurationMins !== booking.durationMins
+    ) {
+      // The credit fixes the session length. Changing it would deliver a
+      // different service unit than the one the client pre-paid for.
+      throw new BadRequestException(
+        'Package-funded bookings keep the duration of their package credit',
+      );
+    }
     const durationMins = cmd.newDurationMins ?? booking.durationMins;
     const newEndsAt = new Date(newScheduledAt.getTime() + durationMins * 60_000);
 
