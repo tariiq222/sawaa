@@ -23,3 +23,6 @@
 8e591466b1a5828b9a3563c9db63c4ce22c708ce:.github/workflows/merge-gate.yml:generic-api-key:65
 8e591466b1a5828b9a3563c9db63c4ce22c708ce:.github/workflows/merge-gate.yml:generic-api-key:66
 8e591466b1a5828b9a3563c9db63c4ce22c708ce:.github/workflows/merge-gate.yml:generic-api-key:67
+
+# Verified prose-only false positive: documentation says JWT/encryption keys.
+55b03c013708476062630da8e35d0f1a535d776e:docker/openship/README.md:generic-api-key:57

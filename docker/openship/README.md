@@ -64,7 +64,7 @@ startup before the application can serve traffic.
    global environment, then configure credentials and encryption values in the
    owning service scopes. OpenShip can inject project environment into every
    service, so `POSTGRES_PASSWORD`, `APP_DB_PASSWORD`, `REDIS_PASSWORD`, MinIO
-   keys, JWT/encryption keys, provider credentials, and `SUPER_ADMIN_PASSWORD`
+   credentials, signing material, provider credentials, and `SUPER_ADMIN_PASSWORD`
    must never be project-wide. Keep provider API credentials empty. Use
    URL-encoded credentials in both database URLs. `MIGRATION_DATABASE_URL` is
    scoped only to the one-shot `migrate` service when explicitly run and is
