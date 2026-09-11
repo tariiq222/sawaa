@@ -20,6 +20,15 @@ import { JwtGuard, IS_PUBLIC_KEY } from '../../common/guards/jwt.guard';
 import { AuthResponseBuilder } from '../../modules/identity/shared/auth-response.builder';
 import { LookupUserHandler } from '../../modules/identity/lookup-user/lookup-user.handler';
 
+function findSetCookie(
+  headers: { 'set-cookie'?: string | string[] },
+  prefix: string,
+): string | undefined {
+  const raw = headers['set-cookie'];
+  const cookies = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  return cookies.find((cookie) => cookie.startsWith(prefix));
+}
+
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let tokenHash: string;
@@ -155,9 +164,7 @@ describe('AuthController (e2e)', () => {
       expect(res.body.user.email).toBe('test@example.com');
       expect(res.body).not.toHaveProperty('refreshToken');
 
-      const refreshCookie = (res.headers['set-cookie'] as string[]).find((cookie) =>
-        cookie.startsWith('ck_refresh='),
-      );
+      const refreshCookie = findSetCookie(res.headers, 'ck_refresh=');
       expect(refreshCookie).toBeDefined();
       expect(refreshCookie).toContain('HttpOnly');
       expect(refreshCookie).toContain('Secure');
@@ -222,9 +229,7 @@ describe('AuthController (e2e)', () => {
       expect(res.body.accessToken).toBe('otp-access-token');
       expect(res.body.user.email).toBe('test@example.com');
       expect(res.body).not.toHaveProperty('refreshToken');
-      const refreshCookie = (res.headers['set-cookie'] as string[]).find((cookie) =>
-        cookie.startsWith('ck_refresh='),
-      );
+      const refreshCookie = findSetCookie(res.headers, 'ck_refresh=');
       expect(refreshCookie).toContain('ck_refresh=otp-refresh-token');
       expect(refreshCookie).toContain('HttpOnly');
       expect(refreshCookie).toContain('Secure');
@@ -272,9 +277,7 @@ describe('AuthController (e2e)', () => {
 
       expect(res.body.accessToken).toBe('new-acc');
       expect(res.body).not.toHaveProperty('refreshToken');
-      const refreshCookie = (res.headers['set-cookie'] as string[]).find((cookie) =>
-        cookie.startsWith('ck_refresh='),
-      );
+      const refreshCookie = findSetCookie(res.headers, 'ck_refresh=');
       expect(refreshCookie).toContain('ck_refresh=new-ref');
       expect(refreshCookie).toContain('HttpOnly');
       expect(refreshCookie).toContain('Secure');
