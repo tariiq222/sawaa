@@ -12,7 +12,10 @@ import { CheckAvailabilityHandler } from '../check-availability/check-availabili
 import { BookingCreatedEvent } from '../events/booking-created.event';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { hashToInt32 } from '../booking-lifecycle.helper';
-import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
+import {
+  ACTIVE_BOOKING_STATUSES,
+  STAFF_TIME_BLOCKING_BOOKING_STATUSES,
+} from '../active-booking-statuses';
 import {
   BookingTarget,
   CreditConstraint,
@@ -186,6 +189,13 @@ export class BookFromCreditHandler {
     // ── One Serializable transaction: lock the credit, recount, consume ──
     const booking = await retrySerializableTransaction(() =>
       this.rlsTransaction.withTransaction(async (tx) => {
+        // Same global lock order as create-booking: client -> employee/slot ->
+        // booking number. The client lock serializes this credit booking with
+        // any concurrent paid booking for the same client.
+        const clientLockKey1 = hashToInt32('client_booking');
+        const clientLockKey2 = hashToInt32(cmd.clientId);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${clientLockKey1}::int, ${clientLockKey2}::int)`;
+
         await lockPersonReferences(
           tx,
           [
@@ -194,6 +204,22 @@ export class BookFromCreditHandler {
           ],
           'reference',
         );
+
+        // Parity with create-booking: a client cannot hold two overlapping
+        // active appointments, whether paid or funded by package credit.
+        const clientConflict = await tx.booking.findFirst({
+          where: {
+            clientId: cmd.clientId,
+            isHistoricalImport: false,
+            status: { in: [...ACTIVE_BOOKING_STATUSES] },
+            scheduledAt: { lt: endsAt },
+            endsAt: { gt: scheduledAt },
+          },
+          select: { id: true },
+        });
+        if (clientConflict) {
+          throw new ConflictException('Client already has an overlapping appointment');
+        }
 
         // Advisory lock on employee + slot window — same pattern as
         // create-booking — so two concurrent bookings cannot both pass the

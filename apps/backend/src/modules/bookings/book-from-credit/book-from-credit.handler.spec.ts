@@ -538,11 +538,48 @@ describe('BookFromCreditHandler', () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const tx = buildTx();
-      tx.booking.findFirst.mockResolvedValue({ id: 'other-booking' }); // overlap present
+      tx.booking.findFirst
+        .mockResolvedValueOnce(null) // client overlap: none
+        .mockResolvedValueOnce({ id: 'other-booking' }); // employee overlap present
       const { handler } = buildHandler({ prisma, tx });
 
-      await expect(handler.execute(baseCmd())).rejects.toThrow(ConflictException);
+      await expect(handler.execute(baseCmd())).rejects.toThrow(
+        'Employee already has a booking in this time slot',
+      );
       expect(tx.booking.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects with 409 when the client already has an overlapping active appointment', async () => {
+      const prisma = buildPrisma();
+      mockResolvedCredit(prisma);
+      const tx = buildTx();
+      tx.booking.findFirst.mockResolvedValueOnce({ id: 'client-other-booking' });
+      const { handler } = buildHandler({ prisma, tx });
+
+      await expect(handler.execute(baseCmd())).rejects.toThrow(
+        new ConflictException('Client already has an overlapping appointment'),
+      );
+      expect(tx.booking.create).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
+    });
+
+    it('scopes the client overlap query to live, non-historical active statuses of this client', async () => {
+      const prisma = buildPrisma();
+      mockResolvedCredit(prisma);
+      const { handler, tx } = buildHandler({ prisma });
+
+      await handler.execute(baseCmd());
+
+      const clientQuery = tx.booking.findFirst.mock.calls[0][0];
+      expect(clientQuery.where).toEqual(
+        expect.objectContaining({
+          clientId: CLIENT_ID,
+          isHistoricalImport: false,
+          status: { in: expect.arrayContaining(['CONFIRMED', 'PENDING', 'AWAITING_PAYMENT']) },
+          scheduledAt: { lt: expect.any(Date) },
+          endsAt: { gt: FUTURE },
+        }),
+      );
     });
 
     it('rejects a booking scheduled in the past', async () => {
