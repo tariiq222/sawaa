@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, Tooltip, TooltipContent, TooltipTrigger } from 
 import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
+import { normalizeDeliveryType } from "@/lib/booking-delivery"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { ActionsCell, PaymentStatusCell, StatusCell } from "@/components/features/bookings/booking-column-cells"
 import type { QuickStatusActionType } from "@/components/features/bookings/booking-column-cells"
@@ -102,7 +103,7 @@ export function getBookingColumns(
       header: "#",
       cell: ({ row }) => {
         const source = sourceIconConfig[row.original.source]
-        const delivery = deliveryIconConfig[row.original.deliveryType ?? "IN_PERSON"]
+        const delivery = deliveryIconConfig[normalizeDeliveryType(row.original.deliveryType) ?? "IN_PERSON"]
         const deliveryLabel = delivery ? t(delivery.labelKey) : ""
         const bookingTypeKey = normalizeBookingType(row.original.type)
         const bookingType = bookingTypeKey
