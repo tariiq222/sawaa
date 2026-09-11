@@ -179,7 +179,7 @@ services:
     expose:
       - "5103"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5103/ >/dev/null || exit 1"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5103/',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -207,7 +207,7 @@ services:
     expose:
       - "5105"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5105/ >/dev/null || exit 1"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5105/',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 5
