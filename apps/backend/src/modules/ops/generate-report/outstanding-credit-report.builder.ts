@@ -1,5 +1,9 @@
 import { PrismaService } from '../../../infrastructure/database';
-import { PackagePurchaseStatus, Prisma } from '@prisma/client';
+import { PackagePurchaseStatus } from '@prisma/client';
+import {
+  allocatePurchaseNet,
+  remainingCreditValue,
+} from '../../finance/package-purchases/credit-value.helper';
 
 /**
  * Outstanding-credit liability is a point-in-time measure ("what does the
@@ -9,7 +13,7 @@ import { PackagePurchaseStatus, Prisma } from '@prisma/client';
 export type OutstandingCreditReportParams = Record<string, never> | { from?: Date; to?: Date };
 
 export interface OutstandingCreditReportResult {
-  /** Σ over remaining credits of (remaining × unitPriceSnapshot) — integer halalas. */
+  /** Value of remaining sessions at what clients actually paid — integer halalas. */
   outstandingLiability: number;
   /** Σ of remaining sessions across all active credits. */
   outstandingSessions: number;
@@ -18,44 +22,67 @@ export interface OutstandingCreditReportResult {
 }
 
 /**
- * Outstanding credit report (liability): across ACTIVE purchases, the
- * paid-but-unconsumed liability on the center.
+ * Outstanding credit report (liability) across ACTIVE purchases.
  *
- *   outstandingLiability = Σ (remaining × unitPriceSnapshot)
- *   outstandingSessions  = Σ remaining
- *   where remaining = totalQuantity − usedQuantity, over credits whose parent
- *   purchase is ACTIVE and which still have remaining > 0.
+ * Remaining sessions are valued at the net amount paid, not the list unit
+ * price: a credit's net value (stored at purchase) is split evenly across its
+ * sessions with the rounding remainder on the last one. Credits issued before
+ * net values were stored take a share of their purchase's amount, allocated by
+ * list value. A purchase never contributes more than it paid minus refunds.
  */
 export async function buildOutstandingCreditReport(
   prisma: PrismaService,
   _params: OutstandingCreditReportParams,
 ): Promise<OutstandingCreditReportResult> {
-  const credits = await prisma.packageCredit.findMany({
-    where: {
-      // Column-to-column: remaining > 0 ⇔ usedQuantity < totalQuantity.
-      usedQuantity: { lt: prisma.packageCredit.fields.totalQuantity },
-      purchase: { is: { status: PackagePurchaseStatus.ACTIVE } },
+  const purchases = await prisma.packagePurchase.findMany({
+    where: { status: PackagePurchaseStatus.ACTIVE },
+    select: {
+      amountPaid: true,
+      refundAmount: true,
+      credits: {
+        select: {
+          unitPriceSnapshot: true,
+          netValue: true,
+          totalQuantity: true,
+          usedQuantity: true,
+        },
+      },
     },
-    select: { totalQuantity: true, usedQuantity: true, unitPriceSnapshot: true },
   });
 
-  let liabilityDec = new Prisma.Decimal(0);
+  let outstandingLiability = 0;
   let outstandingSessions = 0;
   let creditCount = 0;
 
-  for (const c of credits) {
-    const remaining = c.totalQuantity - c.usedQuantity;
-    if (remaining <= 0) continue; // defensive — query already filters this
-    creditCount += 1;
-    outstandingSessions += remaining;
-    liabilityDec = liabilityDec.plus(
-      new Prisma.Decimal(c.unitPriceSnapshot.toString()).times(remaining),
+  for (const purchase of purchases) {
+    const purchaseNet = Math.max(
+      0,
+      Math.round(Number(purchase.amountPaid) - Number(purchase.refundAmount ?? 0)),
     );
+    const fallbackShares = allocatePurchaseNet(
+      purchaseNet,
+      purchase.credits.map((c) => ({
+        unitPriceSnapshot: Number(c.unitPriceSnapshot),
+        totalQuantity: c.totalQuantity,
+      })),
+    );
+
+    let purchaseLiability = 0;
+    purchase.credits.forEach((c, index) => {
+      const remaining = c.totalQuantity - c.usedQuantity;
+      if (remaining <= 0) return;
+      creditCount += 1;
+      outstandingSessions += remaining;
+      const netValue = c.netValue != null ? Number(c.netValue) : fallbackShares[index];
+      purchaseLiability += remainingCreditValue({
+        netValue,
+        totalQuantity: c.totalQuantity,
+        usedQuantity: c.usedQuantity,
+      });
+    });
+
+    outstandingLiability += Math.min(purchaseLiability, purchaseNet);
   }
 
-  return {
-    outstandingLiability: liabilityDec.toNumber(),
-    outstandingSessions,
-    creditCount,
-  };
+  return { outstandingLiability, outstandingSessions, creditCount };
 }
