@@ -234,6 +234,9 @@ jobs:
       - name: Run critical real-database tests
         run: pnpm --filter=backend test:e2e:critical
         env:
+          # Private-repository runners can default Node to a ~2 GiB heap.
+          # Keep the full suite enabled and leave room for Postgres/native memory.
+          NODE_OPTIONS: --max-old-space-size=4096
           REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
           DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
           REDIS_HOST: localhost
