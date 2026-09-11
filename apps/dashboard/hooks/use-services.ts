@@ -89,8 +89,10 @@ export function useServices() {
 
 export function useAllServices() {
   const { data, isLoading, error } = useQuery({
-    queryKey: queryKeys.services.all,
-    queryFn: () => fetchServices({ page: 1, limit: 100 }),
+    queryKey: [...queryKeys.services.all, "picker", { includeHidden: true }],
+    // Package items must be able to reference direct-booking clinics, which
+    // book through a hidden internal service.
+    queryFn: () => fetchServices({ page: 1, limit: 100, includeHidden: true }),
     staleTime: 5 * 60 * 1000,
   })
   return { data: data?.items ?? [], isLoading, error }
