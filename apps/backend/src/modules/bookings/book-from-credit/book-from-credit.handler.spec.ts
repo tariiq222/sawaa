@@ -11,8 +11,11 @@ import { BookFromCreditHandler } from './book-from-credit.handler';
 const CLIENT_ID = '00000000-0000-4000-a000-000000000001';
 const BRANCH_ID = '00000000-0000-4000-a000-000000000002';
 const EMPLOYEE_ID = '00000000-0000-4000-a000-000000000003';
+const MOVED_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000099';
 const SERVICE_ID = '00000000-0000-4000-a000-000000000004';
+const MOVED_SERVICE_ID = '00000000-0000-4000-a000-000000000098';
 const DURATION_OPTION_ID = '00000000-0000-4000-a000-000000000005';
+const MOVED_DURATION_OPTION_ID = '00000000-0000-4000-a000-000000000097';
 const CREDIT_ID = '00000000-0000-4000-a000-000000000006';
 const PURCHASE_ID = '00000000-0000-4000-a000-000000000007';
 const BOOKING_ID = '00000000-0000-4000-a000-000000000008';
@@ -42,6 +45,9 @@ function lockedCreditRow(
   overrides: Partial<{
     id: string;
     purchaseId: string;
+    serviceId: string | null;
+    employeeId: string | null;
+    durationOptionId: string | null;
     usedQuantity: number;
     totalQuantity: number;
     reservedQuantity: number;
@@ -342,7 +348,12 @@ describe('BookFromCreditHandler', () => {
     it('succeeds when the explicit triple satisfies the credit constraints (PRACTITIONER ANY)', async () => {
       const prisma = buildPrisma();
       prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
-      const { handler, tx } = buildHandler({ prisma });
+      const tx = buildTx(lockedCreditRow({
+        serviceId: null,
+        employeeId: null,
+        durationOptionId: null,
+      }));
+      const { handler } = buildHandler({ prisma, tx });
 
       await handler.execute({
         clientId: CLIENT_ID,
@@ -360,6 +371,56 @@ describe('BookFromCreditHandler', () => {
       expect(bookingData.serviceId).toBe(SERVICE_ID);
       expect(bookingData.durationOptionId).toBe(DURATION_OPTION_ID);
       expect(bookingData.packageCreditId).toBe(CREDIT_ID);
+    });
+
+    it('keeps flexible routing valid when the locked row still has null fixed routing fields', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
+      const tx = buildTx(lockedCreditRow({
+        serviceId: null,
+        employeeId: null,
+        durationOptionId: null,
+      }));
+      const { handler } = buildHandler({ prisma, tx });
+
+      await handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      });
+
+      expect(tx.booking.create).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['service', { serviceId: MOVED_SERVICE_ID }],
+      ['employee', { employeeId: MOVED_EMPLOYEE_ID }],
+      ['duration', { durationOptionId: MOVED_DURATION_OPTION_ID }],
+    ])('rejects when %s routing changed after preflight resolution', async (_field, changedField) => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID,
+        purchaseId: PURCHASE_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 5,
+        usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const tx = buildTx(lockedCreditRow(changedField));
+      const { handler } = buildHandler({ prisma, tx });
+
+      await expect(handler.execute(baseCmd())).rejects.toThrow(ConflictException);
+      expect(tx.booking.create).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
+      expect(tx.packageCredit.update).not.toHaveBeenCalled();
+      expect(tx.activityLog.create).not.toHaveBeenCalled();
     });
 
     it('throws 400 "The selected credit is not valid for this booking" when the triple violates an EXCLUDE constraint', async () => {

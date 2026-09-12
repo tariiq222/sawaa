@@ -46,9 +46,9 @@ export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
 interface LockedCreditRow {
   id: string;
   purchaseId: string;
-  serviceId: string;
-  employeeId: string;
-  durationOptionId: string;
+  serviceId: string | null;
+  employeeId: string | null;
+  durationOptionId: string | null;
   totalQuantity: number;
   usedQuantity: number;
   reservedQuantity: number;
@@ -302,6 +302,16 @@ export class BookFromCreditHandler {
           throw new NotFoundException('Package credit not found');
         }
         const locked = lockedRows[0];
+        if (
+          locked.purchaseId !== credit.purchaseId ||
+          locked.serviceId !== credit.serviceId ||
+          locked.employeeId !== credit.employeeId ||
+          locked.durationOptionId !== credit.durationOptionId
+        ) {
+          throw new ConflictException(
+            'Package credit routing changed; please refresh and retry',
+          );
+        }
         // A reserved session belongs to an appointment that has not happened
         // yet; it occupies a seat exactly like a delivered one.
         if (locked.usedQuantity + locked.reservedQuantity >= locked.totalQuantity) {

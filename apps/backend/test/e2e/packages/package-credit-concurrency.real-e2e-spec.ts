@@ -8,7 +8,7 @@
  * competing transaction is awaited.
  */
 
-import { INestApplication, ValidationPipe } from "@nestjs/common";
+import { ConflictException, INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { CancellationReason } from "@prisma/client";
 import { RlsTransactionService } from "../../../src/common/database/rls-transaction";
@@ -19,6 +19,7 @@ import { RefundPackagePurchaseHandler } from "../../../src/modules/finance/packa
 import { BookFromCreditHandler } from "../../../src/modules/bookings/book-from-credit/book-from-credit.handler";
 import { CheckInBookingHandler } from "../../../src/modules/bookings/check-in-booking/check-in-booking.handler";
 import { CancelBookingHandler } from "../../../src/modules/bookings/cancel-booking/cancel-booking.handler";
+import { TransferCreditHandler } from "../../../src/modules/bookings/transfer-credit/transfer-credit.handler";
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL
   ? describe
@@ -32,6 +33,7 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
   let bookHandler: BookFromCreditHandler;
   let checkInHandler: CheckInBookingHandler;
   let cancelHandler: CancelBookingHandler;
+  let transferHandler: TransferCreditHandler;
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const tag = (label: string) => `reserve-consume-${suffix}-${label}`;
@@ -41,6 +43,7 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
     serviceId: "",
     durationOptionId: "",
     employeeId: "",
+    transferEmployeeId: "",
     clientId: "",
     adminUserId: "",
   };
@@ -98,6 +101,7 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
     bookHandler = app.get(BookFromCreditHandler);
     checkInHandler = app.get(CheckInBookingHandler);
     cancelHandler = app.get(CancelBookingHandler);
+    transferHandler = app.get(TransferCreditHandler);
     await prisma.$queryRaw`SELECT 1`;
 
     await seedBaseEntities();
@@ -248,6 +252,36 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
     ids.clientId = cli.id;
   }
 
+  async function seedTransferTargetEmployee() {
+    const employee = await prisma.employee.create({
+      data: {
+        name: tag("transfer-emp"),
+        nameAr: tag("transfer-emp"),
+        nameEn: tag("transfer-emp-en"),
+        email: `reserve-consume-${suffix}-transfer-emp@sawaa.test`,
+        phone: `05${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
+        isActive: true,
+      },
+    });
+    ids.transferEmployeeId = employee.id;
+    await prisma.employeeService.create({
+      data: { employeeId: employee.id, serviceId: ids.serviceId, isActive: true },
+    });
+    await prisma.employeeBranch.create({
+      data: { employeeId: employee.id, branchId: ids.branchId },
+    });
+    await prisma.employeeAvailability.createMany({
+      data: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+        employeeId: employee.id,
+        dayOfWeek,
+        startTime: "08:00",
+        endTime: "22:00",
+        isActive: true,
+      })),
+    });
+    return employee;
+  }
+
   /** Seed a fresh SessionPackage + ACTIVE PackagePurchase + PackageCredit for
    *  the shared test client, with the given total session count. Each
    *  scenario gets its own bundle so cases cannot interfere with each
@@ -358,13 +392,22 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
       prisma.employeeAvailability.deleteMany({ where: { employeeId: ids.employeeId } }),
     );
     await safe(() =>
+      prisma.employeeAvailability.deleteMany({ where: { employeeId: ids.transferEmployeeId } }),
+    );
+    await safe(() =>
       prisma.businessHour.deleteMany({ where: { branchId: ids.branchId } }),
     );
     await safe(() =>
       prisma.employeeService.deleteMany({ where: { employeeId: ids.employeeId } }),
     );
     await safe(() =>
+      prisma.employeeService.deleteMany({ where: { employeeId: ids.transferEmployeeId } }),
+    );
+    await safe(() =>
       prisma.employeeBranch.deleteMany({ where: { employeeId: ids.employeeId } }),
+    );
+    await safe(() =>
+      prisma.employeeBranch.deleteMany({ where: { employeeId: ids.transferEmployeeId } }),
     );
     await safe(() =>
       prisma.serviceDurationOption.deleteMany({ where: { id: ids.durationOptionId } }),
@@ -386,6 +429,9 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
     );
     await safe(() =>
       prisma.employee.deleteMany({ where: { id: ids.employeeId } }),
+    );
+    await safe(() =>
+      prisma.employee.deleteMany({ where: { id: ids.transferEmployeeId } }),
     );
     await safe(() =>
       prisma.branch.deleteMany({ where: { nameEn: { startsWith: tag("") } } }),
@@ -443,6 +489,83 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
       if (timer) clearTimeout(timer);
     }
   }
+
+  it("rejects a stale booking after transfer commits between credit resolution and booking transaction", async () => {
+    const targetEmployee = await seedTransferTargetEmployee();
+    const { credit } = await seedCreditBundle(1);
+    const scheduledAt = nextSlot();
+    const beforeBookingCount = await prisma.booking.count({
+      where: { packageCreditId: credit.id },
+    });
+    const beforeUsageCount = await prisma.packageCreditUsage.count({
+      where: { creditId: credit.id },
+    });
+
+    let releasePreflight!: () => void;
+    let signalPreflight!: () => void;
+    const preflightReached = new Promise<void>((resolve) => (signalPreflight = resolve));
+    const preflightGate = new Promise<void>((resolve) => (releasePreflight = resolve));
+    const originalAssertSlotAvailable = (bookHandler as any).assertSlotAvailable.bind(bookHandler);
+    const preflightSpy = jest.spyOn(bookHandler as any, "assertSlotAvailable").mockImplementation(async (input: any) => {
+      await originalAssertSlotAvailable(input);
+      signalPreflight();
+      await preflightGate;
+    });
+
+    const stalePending = bookHandler.execute({
+      clientId: ids.clientId,
+      creditId: credit.id,
+      branchId: ids.branchId,
+      scheduledAt,
+      userId: ids.adminUserId,
+    });
+    let leakedBookingIds: string[] = [];
+
+    try {
+      await bounded(preflightReached, "booking preflight barrier");
+      await transferHandler.execute({
+        creditId: credit.id,
+        toEmployeeId: targetEmployee.id,
+        userId: ids.adminUserId,
+      });
+
+      releasePreflight();
+      const [staleOutcome] = await bounded(
+        Promise.allSettled([stalePending]),
+        "stale booking rejection",
+      );
+      expect(staleOutcome.status).toBe("rejected");
+      if (staleOutcome.status === "rejected") {
+        expect(staleOutcome.reason).toBeInstanceOf(ConflictException);
+      }
+    } finally {
+      releasePreflight();
+      await bounded(Promise.allSettled([stalePending]), "stale booking cleanup");
+      const leakedBookings = await prisma.booking.findMany({
+        where: { packageCreditId: credit.id },
+        select: { id: true },
+      });
+      leakedBookingIds = leakedBookings.map(({ id }) => id);
+      bookingIds.push(...leakedBookingIds);
+      preflightSpy.mockRestore();
+    }
+
+    expect(leakedBookingIds).toHaveLength(beforeBookingCount);
+    expect(await prisma.packageCreditUsage.count({ where: { creditId: credit.id } })).toBe(beforeUsageCount);
+    expect((await getCredit(credit.id)).reservedQuantity).toBe(0);
+
+    const fresh = await bookHandler.execute({
+      clientId: ids.clientId,
+      creditId: credit.id,
+      branchId: ids.branchId,
+      scheduledAt,
+      userId: ids.adminUserId,
+    });
+    bookingIds.push(fresh.id);
+    expect(fresh.employeeId).toBe(targetEmployee.id);
+    expect((await getUsage(fresh.id)).status).toBe("RESERVED");
+    expect((await getCredit(credit.id)).reservedQuantity).toBe(1);
+  });
 
   it("keeps a full refund terminal when check-in read RESERVED usage first", async () => {
     const { credit, purchase } = await seedCreditBundle(1);
