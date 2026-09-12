@@ -38,7 +38,9 @@ const LEGACY_CONSTRAINTS: Array<{
 }> = [];
 
 /** A locked-credit row as returned by the `SELECT ... FOR UPDATE` raw query. */
-function lockedCreditRow(overrides: Partial<{ usedQuantity: number; totalQuantity: number }> = {}) {
+function lockedCreditRow(
+  overrides: Partial<{ usedQuantity: number; totalQuantity: number; reservedQuantity: number }> = {},
+) {
   return {
     id: CREDIT_ID,
     purchaseId: PURCHASE_ID,
@@ -47,6 +49,7 @@ function lockedCreditRow(overrides: Partial<{ usedQuantity: number; totalQuantit
     durationOptionId: DURATION_OPTION_ID,
     totalQuantity: 5,
     usedQuantity: 0,
+    reservedQuantity: 0,
     ...overrides,
   };
 }
@@ -405,7 +408,7 @@ describe('BookFromCreditHandler', () => {
       expect(tx.invoice.create).not.toHaveBeenCalled();
     });
 
-    it('records a CONSUMED PackageCreditUsage linked to the booking', async () => {
+    it('records a RESERVED PackageCreditUsage linked to the booking', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const { handler, tx } = buildHandler({ prisma });
@@ -416,10 +419,10 @@ describe('BookFromCreditHandler', () => {
       const usageData = tx.packageCreditUsage.create.mock.calls[0][0].data;
       expect(usageData.creditId).toBe(CREDIT_ID);
       expect(usageData.bookingId).toBe(BOOKING_ID);
-      expect(usageData.status).toBe('CONSUMED');
+      expect(usageData.status).toBe('RESERVED');
     });
 
-    it('increments credit.usedQuantity by 1 via an id-keyed update', async () => {
+    it('reserves the session instead of consuming it: increments reservedQuantity, not usedQuantity', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const { handler, tx } = buildHandler({ prisma });
@@ -428,7 +431,7 @@ describe('BookFromCreditHandler', () => {
 
       expect(tx.packageCredit.update).toHaveBeenCalledWith({
         where: { id: CREDIT_ID },
-        data: { usedQuantity: { increment: 1 } },
+        data: { reservedQuantity: { increment: 1 } },
       });
     });
 
@@ -731,12 +734,31 @@ describe('BookFromCreditHandler', () => {
       expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
     });
 
+    it('rejects a booking when reserved plus used already fills the bucket', async () => {
+      // 3 sessions: 2 delivered (usedQuantity), 1 already booked for a future
+      // appointment (reservedQuantity) — the bucket has no seats left even
+      // though usedQuantity alone would look like there is 1 remaining.
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 3, usedQuantity: 2,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const tx = buildTx(lockedCreditRow({ totalQuantity: 3, usedQuantity: 2, reservedQuantity: 1 }));
+      const { handler } = buildHandler({ prisma, tx });
+
+      await expect(handler.execute(baseCmd())).rejects.toThrow(ConflictException);
+      expect(tx.booking.create).not.toHaveBeenCalled();
+    });
+
     it('exactly one of two concurrent bookings on the LAST credit succeeds; the second is rejected', async () => {
       // Deterministic simulation of the Serializable + FOR UPDATE recount.
       // A shared in-memory credit row models the DB row under the lock; the
       // FOR UPDATE select returns the CURRENT used/total, and the increment
       // mutates it — so the second caller's recount sees used == total.
-      const credit = { id: CREDIT_ID, purchaseId: PURCHASE_ID, totalQuantity: 1, usedQuantity: 0 };
+      const credit = { id: CREDIT_ID, purchaseId: PURCHASE_ID, totalQuantity: 1, usedQuantity: 0, reservedQuantity: 0 };
 
       const makeTx = () => {
         const tx = buildTx();
@@ -749,11 +771,16 @@ describe('BookFromCreditHandler', () => {
             if (sql.includes('"Employee"')) {
               return Promise.resolve([{ id, isActive: true }]);
             }
-            return Promise.resolve([{ ...lockedCreditRow(), totalQuantity: credit.totalQuantity, usedQuantity: credit.usedQuantity }]);
+            return Promise.resolve([{
+              ...lockedCreditRow(),
+              totalQuantity: credit.totalQuantity,
+              usedQuantity: credit.usedQuantity,
+              reservedQuantity: credit.reservedQuantity,
+            }]);
           },
         );
-        tx.packageCredit.update = jest.fn().mockImplementation((args: { data: { usedQuantity: { increment: number } } }) => {
-          credit.usedQuantity += args.data.usedQuantity.increment;
+        tx.packageCredit.update = jest.fn().mockImplementation((args: { data: { reservedQuantity: { increment: number } } }) => {
+          credit.reservedQuantity += args.data.reservedQuantity.increment;
           return Promise.resolve({ id: CREDIT_ID });
         });
         tx.packageCredit.findMany = jest.fn().mockResolvedValue([
@@ -784,7 +811,7 @@ describe('BookFromCreditHandler', () => {
       expect(first).toBeDefined();
 
       await expect(handlerB.execute(baseCmd())).rejects.toThrow(ConflictException);
-      expect(credit.usedQuantity).toBe(1); // exactly one consumed — no over-draw
+      expect(credit.reservedQuantity).toBe(1); // exactly one reserved — no over-draw
     });
   });
 
@@ -843,32 +870,14 @@ describe('BookFromCreditHandler', () => {
       });
     }
 
-    it('sets the purchase to COMPLETED when every credit of the purchase is fully used after the increment', async () => {
+    // A purchase completes when its last session is DELIVERED, not booked —
+    // the auto-complete rule moved to `consumePackageCreditForBooking`. This
+    // handler only ever reserves, so it must never flip a purchase to
+    // COMPLETED, even when the reservation fills the last remaining seat.
+    it('does NOT auto-complete the purchase — reserving is not delivering', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
-      const tx = buildTx(lockedCreditRow({ totalQuantity: 1, usedQuantity: 0 }));
-      // After increment, the recount shows all credits exhausted.
-      tx.packageCredit.findMany.mockResolvedValue([
-        { id: CREDIT_ID, totalQuantity: 1, usedQuantity: 1 },
-      ]);
-      const { handler } = buildHandler({ prisma, tx });
-
-      await handler.execute(baseCmd());
-
-      expect(tx.packagePurchase.update).toHaveBeenCalledWith({
-        where: { id: PURCHASE_ID },
-        data: { status: PackagePurchaseStatus.COMPLETED },
-      });
-    });
-
-    it('does NOT complete the purchase while other credits still have remaining', async () => {
-      const prisma = buildPrisma();
-      mockResolvedCredit(prisma);
-      const tx = buildTx(lockedCreditRow({ totalQuantity: 5, usedQuantity: 0 }));
-      tx.packageCredit.findMany.mockResolvedValue([
-        { id: CREDIT_ID, totalQuantity: 5, usedQuantity: 1 },
-        { id: 'credit-2', totalQuantity: 3, usedQuantity: 0 },
-      ]);
+      const tx = buildTx(lockedCreditRow({ totalQuantity: 1, usedQuantity: 0, reservedQuantity: 0 }));
       const { handler } = buildHandler({ prisma, tx });
 
       await handler.execute(baseCmd());

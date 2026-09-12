@@ -4,34 +4,43 @@ import {
 import { Prisma, PackageCreditUsageStatus, PackagePurchaseStatus } from '@prisma/client';
 
 /**
- * Return a session-package credit consumed by a booking back to its bucket.
+ * Return a session-package credit held by a booking back to its bucket.
  *
  * Called from inside the cancel / no-show / expire transactions whenever a
  * booking carries `packageCreditId != null`. The plan ("الإلغاء/عدم الحضور:
  * الرصيد يرجع في كل الحالات — لا حرق") returns the credit in EVERY terminal
  * non-completed case, with no burn window and no refund/invoice (the booking
- * had zero monetary value).
+ * had zero monetary value). A booking can hold its credit in either of two
+ * states — RESERVED (booked but not yet delivered) or CONSUMED (attended) —
+ * and both must release back to the bucket.
  *
  * Steps (all keyed by id — never a nested save, per .tariq/memory/notes/lessons.md):
- *  1. Find the booking's CONSUMED usage row. Scoping the lookup to CONSUMED
- *     makes the operation idempotent: a booking whose credit was already
- *     returned yields no row, so a double cancel/expire cannot double-credit.
+ *  1. Find the booking's RESERVED-or-CONSUMED usage row. Scoping the lookup
+ *     to those two statuses makes the operation idempotent: a booking whose
+ *     credit was already returned yields no row, so a double cancel/expire
+ *     cannot double-credit.
  *  2. Flip that usage to RETURNED with `returnedAt = now`.
- *  3. Decrement the credit's `usedQuantity` by 1 via an id-keyed update.
+ *  3. Decrement whichever counter actually held the seat: `reservedQuantity`
+ *     for a RESERVED row, `usedQuantity` for a CONSUMED one.
  *  4. If the parent purchase had auto-completed (`COMPLETED`), reopen it to
  *     `ACTIVE` — there is now free remaining capacity again. A `REFUNDED`
  *     purchase is terminal and is left untouched.
  *
  * @returns `true` when a credit was returned, `false` when there was nothing
- *          to return (no consumed usage for this booking).
+ *          to return (no reserved or consumed usage for this booking).
  */
 export async function returnPackageCreditForBooking(
   tx: Prisma.TransactionClient,
   bookingId: string,
 ): Promise<boolean> {
   const usage = await tx.packageCreditUsage.findFirst({
-    where: { bookingId, status: PackageCreditUsageStatus.CONSUMED },
-    select: { id: true, creditId: true },
+    where: {
+      bookingId,
+      status: {
+        in: [PackageCreditUsageStatus.RESERVED, PackageCreditUsageStatus.CONSUMED],
+      },
+    },
+    select: { id: true, creditId: true, status: true },
   });
   if (!usage) return false;
 
@@ -42,7 +51,10 @@ export async function returnPackageCreditForBooking(
 
   await tx.packageCredit.update({
     where: { id: usage.creditId },
-    data: { usedQuantity: { decrement: 1 } },
+    data:
+      usage.status === PackageCreditUsageStatus.RESERVED
+        ? { reservedQuantity: { decrement: 1 } }
+        : { usedQuantity: { decrement: 1 } },
   });
 
   const credit = await tx.packageCredit.findUnique({
@@ -66,27 +78,34 @@ export async function returnPackageCreditForBooking(
 }
 
 /**
- * Inverse of `returnPackageCreditForBooking` — re-consume a credit that was
+ * Inverse of `returnPackageCreditForBooking` — re-claim a credit that was
  * previously returned to the bucket.
  *
  * Called from the restore-no-show handler: when an auto-no-show is reverted,
- * the booking must own a CONSUMED credit again (matching the pre-no-show state)
- * so the client's plan balance is back to "one session consumed, one seat
- * taken". The booking's financial state (no-show = forfeited) is NOT reversed —
- * payments are not touched, this only re-claims the seat credit that was
- * returned at no-show time.
+ * the booking must own a seat credit again (matching the pre-no-show state)
+ * so the client's plan balance is back to "one seat taken". The booking's
+ * financial state (no-show = forfeited) is NOT reversed — payments are not
+ * touched, this only re-claims the seat credit that was returned at no-show
+ * time. The restored status mirrors whether the session was actually
+ * attended: CONSUMED if it was, RESERVED if it was not.
  *
  * Steps (mirrors `book-from-credit` consumption patterns — id-keyed update,
  * no nested save):
  *  1. Find the booking's RETURNED usage row. Scoping to RETURNED makes the
- *     call idempotent: a usage already CONSUMED yields no row and the helper
- *     returns `false`. A booking that never consumed a credit (e.g. paid
- *     bookings, or no-shows that did not touch a credit) also yields nothing.
- *  2. Load the credit's `totalQuantity` / `usedQuantity`. If the credit is
- *     already fully consumed, the bucket cannot accept another seat — refuse
- *     with `BadRequestException` so the transaction rolls back.
- *  3. Flip the usage back to CONSUMED with `returnedAt = null`.
- *  4. Increment `usedQuantity` by 1 via an id-keyed update.
+ *     call idempotent: a usage already CONSUMED/RESERVED yields no row and
+ *     the helper returns `false`. A booking that never held a credit (e.g.
+ *     paid bookings, or no-shows that did not touch a credit) also yields
+ *     nothing.
+ *  2. Load the credit's `totalQuantity` / `usedQuantity` / `reservedQuantity`.
+ *     If `usedQuantity + reservedQuantity` already fills the bucket, there is
+ *     no remaining capacity to absorb the reclaim — refuse with
+ *     `BadRequestException` so the transaction rolls back.
+ *  3. Read the booking's `checkedInAt` to determine whether the session was
+ *     actually attended.
+ *  4. Flip the usage back to CONSUMED (if attended) or RESERVED (if not),
+ *     with `returnedAt = null`.
+ *  5. Increment the matching counter by 1 via an id-keyed update:
+ *     `usedQuantity` when attended, `reservedQuantity` when not.
  *
  * The purchase auto-complete rule from `book-from-credit` is intentionally NOT
  * mirrored here — auto-complete fires only on the consume path, and toggling
@@ -112,12 +131,12 @@ export async function reclaimPackageCreditForBooking(
 
   const credit = await tx.packageCredit.findUnique({
     where: { id: usage.creditId },
-    select: { totalQuantity: true, usedQuantity: true },
+    select: { totalQuantity: true, usedQuantity: true, reservedQuantity: true },
   });
   if (!credit) {
     throw new BadRequestException('Package credit not found for this booking');
   }
-  if (credit.usedQuantity >= credit.totalQuantity) {
+  if (credit.usedQuantity + credit.reservedQuantity >= credit.totalQuantity) {
     // Bucket is full — refusing is the safe path. The transaction must roll
     // back so the booking stays in NO_SHOW and staff can investigate.
     throw new BadRequestException(
@@ -125,14 +144,30 @@ export async function reclaimPackageCreditForBooking(
     );
   }
 
+  // A no-show that is restored goes back to the state it held before: a
+  // session it actually attended is CONSUMED, one it never attended is only
+  // RESERVED.
+  const booking = await tx.booking.findUnique({
+    where: { id: bookingId },
+    select: { checkedInAt: true },
+  });
+  const attended = !!booking?.checkedInAt;
+
   await tx.packageCreditUsage.update({
     where: { id: usage.id },
-    data: { status: PackageCreditUsageStatus.CONSUMED, returnedAt: null },
+    data: {
+      status: attended
+        ? PackageCreditUsageStatus.CONSUMED
+        : PackageCreditUsageStatus.RESERVED,
+      returnedAt: null,
+    },
   });
 
   await tx.packageCredit.update({
     where: { id: usage.creditId },
-    data: { usedQuantity: { increment: 1 } },
+    data: attended
+      ? { usedQuantity: { increment: 1 } }
+      : { reservedQuantity: { increment: 1 } },
   });
 
   return true;

@@ -23,6 +23,9 @@ function buildTx() {
       update: jest.fn().mockResolvedValue({ id: 'purchase-1' }),
       findUnique: jest.fn(),
     },
+    booking: {
+      findUnique: jest.fn(),
+    },
   };
 }
 
@@ -34,7 +37,7 @@ const BOOKING_ID = 'book-1';
 describe('returnPackageCreditForBooking', () => {
   afterEach(() => jest.clearAllMocks());
 
-  it('returns false (no-op) when the booking has no CONSUMED usage', async () => {
+  it('returns false (no-op) when the booking has no RESERVED or CONSUMED usage', async () => {
     const tx = buildTx();
     tx.packageCreditUsage.findFirst.mockResolvedValue(null);
 
@@ -118,14 +121,88 @@ describe('returnPackageCreditForBooking', () => {
 
     it('is idempotent: a usage already RETURNED is ignored (no double-decrement)', async () => {
       const tx = buildTx();
-      // findFirst is scoped to CONSUMED usages only, so an already-returned
-      // booking yields null — proving the same booking cannot be returned twice.
+      // findFirst is scoped to RESERVED/CONSUMED usages only, so an
+      // already-returned booking yields null — proving the same booking
+      // cannot be returned twice.
       tx.packageCreditUsage.findFirst.mockResolvedValue(null);
 
       const result = await returnPackageCreditForBooking(tx as never, BOOKING_ID);
 
       expect(result).toBe(false);
       expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when the booking reserved a credit (not yet attended)', () => {
+    function mockReserved(tx: ReturnType<typeof buildTx>) {
+      tx.packageCreditUsage.findFirst.mockResolvedValue({
+        id: USAGE_ID,
+        creditId: CREDIT_ID,
+        bookingId: BOOKING_ID,
+        status: PackageCreditUsageStatus.RESERVED,
+      });
+      tx.packageCredit.findUnique.mockResolvedValue({ id: CREDIT_ID, purchaseId: PURCHASE_ID });
+      tx.packagePurchase.findUnique.mockResolvedValue({ id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE });
+    }
+
+    it('releases a reserved session back to the bucket on cancel', async () => {
+      const tx = buildTx();
+      mockReserved(tx);
+
+      const result = await returnPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(result).toBe(true);
+      expect(tx.packageCredit.update).toHaveBeenCalledWith({
+        where: { id: CREDIT_ID },
+        data: { reservedQuantity: { decrement: 1 } },
+      });
+    });
+
+    it('flips the reserved usage row to RETURNED with a returnedAt timestamp', async () => {
+      const tx = buildTx();
+      mockReserved(tx);
+
+      await returnPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(tx.packageCreditUsage.update).toHaveBeenCalledTimes(1);
+      const call = tx.packageCreditUsage.update.mock.calls[0][0];
+      expect(call.where).toEqual({ id: USAGE_ID });
+      expect(call.data.status).toBe(PackageCreditUsageStatus.RETURNED);
+      expect(call.data.returnedAt).toBeInstanceOf(Date);
+    });
+
+    it('does NOT decrement usedQuantity for a reserved (never-consumed) session', async () => {
+      const tx = buildTx();
+      mockReserved(tx);
+
+      await returnPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(tx.packageCredit.update).toHaveBeenCalledTimes(1);
+      expect(tx.packageCredit.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: { usedQuantity: { decrement: 1 } } }),
+      );
+    });
+  });
+});
+
+describe('returnPackageCreditForBooking — consumed vs reserved decrement target', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('returns a consumed session to used, not reserved', async () => {
+    const tx = buildTx();
+    tx.packageCreditUsage.findFirst.mockResolvedValue({
+      id: USAGE_ID,
+      creditId: CREDIT_ID,
+      bookingId: BOOKING_ID,
+      status: PackageCreditUsageStatus.CONSUMED,
+    });
+    tx.packageCredit.findUnique.mockResolvedValue({ id: CREDIT_ID, purchaseId: null });
+
+    await returnPackageCreditForBooking(tx as never, BOOKING_ID);
+
+    expect(tx.packageCredit.update).toHaveBeenCalledWith({
+      where: { id: CREDIT_ID },
+      data: { usedQuantity: { decrement: 1 } },
     });
   });
 });
@@ -145,7 +222,11 @@ describe('reclaimPackageCreditForBooking', () => {
   });
 
   describe('when the booking has a RETURNED usage to reclaim', () => {
-    function mockReturned(tx: ReturnType<typeof buildTx>, credit: { totalQuantity: number; usedQuantity: number }) {
+    function mockReturned(
+      tx: ReturnType<typeof buildTx>,
+      credit: { totalQuantity: number; usedQuantity: number; reservedQuantity?: number },
+      booking: { checkedInAt: Date | null } = { checkedInAt: new Date() },
+    ) {
       tx.packageCreditUsage.findFirst.mockResolvedValue({
         id: USAGE_ID,
         creditId: CREDIT_ID,
@@ -156,12 +237,14 @@ describe('reclaimPackageCreditForBooking', () => {
         id: CREDIT_ID,
         totalQuantity: credit.totalQuantity,
         usedQuantity: credit.usedQuantity,
+        reservedQuantity: credit.reservedQuantity ?? 0,
       });
+      tx.booking.findUnique.mockResolvedValue(booking);
     }
 
-    it('flips the usage row back to CONSUMED and clears returnedAt', async () => {
+    it('flips the usage row back to CONSUMED and clears returnedAt when the session was attended', async () => {
       const tx = buildTx();
-      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 }, { checkedInAt: new Date() });
 
       const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
 
@@ -173,9 +256,9 @@ describe('reclaimPackageCreditForBooking', () => {
       expect(call.data.returnedAt).toBeNull();
     });
 
-    it('increments credit.usedQuantity by exactly 1 via an id-keyed update', async () => {
+    it('increments credit.usedQuantity by exactly 1 via an id-keyed update when attended', async () => {
       const tx = buildTx();
-      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 }, { checkedInAt: new Date() });
 
       await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
 
@@ -186,25 +269,54 @@ describe('reclaimPackageCreditForBooking', () => {
       });
     });
 
+    it('reclaims a restored no-show back to reserved when it was never attended', async () => {
+      const tx = buildTx();
+      mockReturned(tx, { totalQuantity: 2, usedQuantity: 0, reservedQuantity: 0 }, { checkedInAt: null });
+
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(tx.packageCreditUsage.update).toHaveBeenCalledWith({
+        where: { id: USAGE_ID },
+        data: { status: PackageCreditUsageStatus.RESERVED, returnedAt: null },
+      });
+      expect(tx.packageCredit.update).toHaveBeenCalledWith({
+        where: { id: CREDIT_ID },
+        data: { reservedQuantity: { increment: 1 } },
+      });
+    });
+
     it('does NOT touch the parent purchase (reclaim is seat-only; auto-complete does not re-fire)', async () => {
       const tx = buildTx();
-      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 }, { checkedInAt: new Date() });
 
       await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
 
       expect(tx.packagePurchase.update).not.toHaveBeenCalled();
     });
 
-    it('throws BadRequestException when the credit bucket has no remaining capacity (usedQuantity >= totalQuantity)', async () => {
+    it('throws BadRequestException when the credit bucket has no remaining capacity (usedQuantity + reservedQuantity >= totalQuantity)', async () => {
       const tx = buildTx();
       // Bucket is full — flipping the usage back would push the bucket past
       // totalQuantity. The transaction MUST roll back so staff can investigate.
-      mockReturned(tx, { totalQuantity: 10, usedQuantity: 10 });
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 10, reservedQuantity: 0 });
 
       await expect(
         reclaimPackageCreditForBooking(tx as never, BOOKING_ID),
       ).rejects.toThrow(BadRequestException);
       // No mutation must have happened — the throw must precede any write.
+      expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
+      expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when reserved sessions alone fill the bucket (usedQuantity + reservedQuantity >= totalQuantity)', async () => {
+      const tx = buildTx();
+      // usedQuantity is 0 but reservedQuantity already fills the bucket —
+      // the guard must count both counters, not usedQuantity alone.
+      mockReturned(tx, { totalQuantity: 5, usedQuantity: 0, reservedQuantity: 5 });
+
+      await expect(
+        reclaimPackageCreditForBooking(tx as never, BOOKING_ID),
+      ).rejects.toThrow(BadRequestException);
       expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
       expect(tx.packageCredit.update).not.toHaveBeenCalled();
     });

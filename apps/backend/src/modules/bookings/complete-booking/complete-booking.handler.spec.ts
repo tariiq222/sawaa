@@ -30,6 +30,35 @@ describe('CompleteBookingHandler', () => {
   });
 });
 
+describe('CompleteBookingHandler — package credit consumption', () => {
+  it('consumes the session when a booking is completed without a check-in', async () => {
+    const prisma = buildPrisma();
+    const packageBooking = { ...mockBooking, status: BookingStatus.CONFIRMED, packageCreditId: 'credit-1' };
+    prisma.booking.findUnique.mockResolvedValue(packageBooking);
+
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    expect(prisma.packageCreditUsage.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { bookingId: 'book-1', status: 'RESERVED' } }),
+    );
+    expect(prisma.packageCredit.update).toHaveBeenCalledWith({
+      where: { id: 'credit-1' },
+      data: { reservedQuantity: { decrement: 1 }, usedQuantity: { increment: 1 } },
+    });
+  });
+
+  it('does not touch the package credit when the booking was not package-funded', async () => {
+    const prisma = buildPrisma();
+    const paidBooking = { ...mockBooking, status: BookingStatus.CONFIRMED, packageCreditId: null };
+    prisma.booking.findUnique.mockResolvedValue(paidBooking);
+
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    expect(prisma.packageCreditUsage.findFirst).not.toHaveBeenCalled();
+    expect(prisma.packageCredit.update).not.toHaveBeenCalled();
+  });
+});
+
 describe('CompleteBookingHandler — status log', () => {
   it('writes a BookingStatusLog entry on complete', async () => {
     const prisma = buildPrisma();
