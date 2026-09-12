@@ -271,3 +271,43 @@ model OrganizationPaymentConfig {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 }
+
+// مصدر حدث الاسترداد: مباشر من المعالج، أو مُعاد بناؤه من طلب استرداد قديم،
+// أو قيمة قديمة متبقّية لا يمكن ردّها إلى تاريخ بعينه.
+enum PackageRefundEventSource {
+  LIVE
+  LEGACY_REQUEST
+  LEGACY_AGGREGATE
+}
+
+enum PackageRefundType {
+  FULL
+  PARTIAL
+  UNKNOWN
+}
+
+// سجلّ الاستردادات — يُلحَق ولا يُعدَّل. PackagePurchase.refundAmount يبقى
+// كما هو (تراكمي)، وهذا السجلّ يضيف ما كان غائباً: أثر لكل عملية على حدة،
+// فالاسترداد الجزئي لم يكن يظهر في أي تقرير.
+// purchaseId مرجع نصّي عابر للنطاق (الشراء يعيش في مخطط الحجوزات) بلا علاقة Prisma.
+model PackageRefundEvent {
+  id                     String                   @id @default(uuid())
+  purchaseId             String
+  amount                 Decimal                  @db.Decimal(12, 2)
+  // يبقى فارغاً في الصفوف القديمة: المصدر غالباً لا يُثبت الرصيد التراكمي
+  // لحظة الحدث، واختلاقه أسوأ من تركه فارغاً.
+  cumulativeRefundAmount Decimal?                 @db.Decimal(12, 2)
+  source                 PackageRefundEventSource
+  refundType             PackageRefundType
+  // فارغ في التجميع القديم: «تاريخ غير معروف» حقيقة تُعرض، لا تُخمَّن.
+  occurredAt             DateTime?                @db.Timestamptz(3)
+  notes                  String?
+  processedBy            String?
+  // مفتاحا التكرار: إعادة تشغيل إعادة البناء لا تُضاعف ولا تطمس صفاً حياً.
+  sourceRefundRequestId  String?                  @unique
+  legacyAggregateKey     String?                  @unique
+  createdAt              DateTime                 @default(now())
+
+  @@index([purchaseId, occurredAt])
+  @@index([occurredAt])
+}
