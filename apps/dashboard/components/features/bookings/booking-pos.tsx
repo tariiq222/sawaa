@@ -114,7 +114,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectCategory, selectService, selectEmployee, selectDeliveryType,
     selectDurationOption, selectDate, selectTime, selectProgram,
     setPayAtClinic, setCollectionMethod, setCouponCode,
-    applyCreditTarget, applyPackageCreditTarget,
+    applyPackageCreditTarget,
     applyCreditFilter, clearCreditFilter,
   } = useBookingFormState()
 
@@ -134,7 +134,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     handleProgramEnrolled,
   } = useBookingPosTrackHandlers({
     setOpenSection, setUseCredit, setCreditDismissed, reset, onSuccess,
-    applyCreditTarget, selectTrack, applyPackageCreditTarget,
+    selectTrack, applyPackageCreditTarget,
     applyCreditFilter, clearCreditFilter, selectProgram,
   })
 

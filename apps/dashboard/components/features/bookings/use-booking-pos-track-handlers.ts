@@ -2,7 +2,14 @@
 // wizard's track / credit / program handlers (Phase 3 "احجز من
 // الرصيد" toggle, Phase 6 three-track selection, W2B-T8 FLEXIBLE
 // vs. PINNED package routing, GROUP-track program enrollment).
-// Pure move — handler bodies, comments, and shapes are unchanged.
+//
+// W6 fix — 2026-09-12 — `handleUseCredit` (the client-credits panel's
+// jump button) converged onto the same PACKAGES-track path as
+// `handlePackageCreditSelected`: it now selects the track and calls
+// `applyPackageCreditTarget` instead of the trackless `applyCreditTarget`,
+// which used to leave the wizard on no track with nothing rendered below
+// النوع/الموعد. See client-credits-panel.tsx for the matching
+// `packagePurchaseId` plumbing.
 
 "use client"
 
@@ -19,7 +26,6 @@ interface UseBookingPosTrackHandlersParams {
   setCreditDismissed: (v: boolean) => void
   reset: () => void
   onSuccess: () => void
-  applyCreditTarget: (target: CreditTarget) => void
   selectTrack: (track: BookingTrack) => void
   applyPackageCreditTarget: (
     target: CreditTarget,
@@ -35,15 +41,21 @@ export function useBookingPosTrackHandlers(
 ) {
   const {
     setOpenSection, setUseCredit, setCreditDismissed, reset, onSuccess,
-    applyCreditTarget, selectTrack, applyPackageCreditTarget,
+    selectTrack, applyPackageCreditTarget,
     applyCreditFilter, clearCreditFilter, selectProgram,
   } = params
 
-  const handleUseCredit = (target: CreditTarget) => {
-    applyCreditTarget(target)
-    // The client-credits panel offers to spend a credit, so the booking must
-    // take the from-credit path. Without this the wizard filled the target but
-    // still created a paid booking for a session the client already covered.
+  // The client-credits panel button must land the operator in exactly the
+  // same state as the designed path (pick PACKAGES track → pick this same
+  // credit → handlePackageCreditSelected below). Previously this jump-filled
+  // the target but never selected a track, so the wizard stayed on no track
+  // and rendered no النوع/الموعد sections at all — a dead end. Converged onto
+  // applyPackageCreditTarget (rather than the trackless applyCreditTarget) so
+  // packagePurchaseId is recorded and submit hits /from-credit instead of
+  // creating a paid booking for a session the client already covered.
+  const handleUseCredit = (target: CreditTarget, packagePurchaseId: string) => {
+    selectTrack("PACKAGES")
+    applyPackageCreditTarget(target, packagePurchaseId)
     setUseCredit(true)
     setCreditDismissed(false)
     setOpenSection("typeDuration")

@@ -32,13 +32,20 @@ function buildParams() {
 }
 
 describe("useBookingPosTrackHandlers — spending a credit from the client panel", () => {
-  test("fills the target and switches the booking to the package credit", () => {
+  // Regression: the client-credits panel used to jump-fill the target
+  // without ever selecting a track, so the wizard stayed on no track and
+  // rendered no النوع/الموعد sections at all — a dead end. The panel button
+  // must converge on the exact same state as the designed PACKAGES-track
+  // path (handlePackageCreditSelected), packagePurchaseId included, so
+  // submit hits /from-credit instead of creating a paid booking.
+  test("selects the PACKAGES track and fills the target via the package-credit path", () => {
     const params = buildParams()
     const handlers = useBookingPosTrackHandlers(params)
 
-    handlers.handleUseCredit(target)
+    handlers.handleUseCredit(target, "purchase1")
 
-    expect(params.applyCreditTarget).toHaveBeenCalledWith(target)
+    expect(params.selectTrack).toHaveBeenCalledWith("PACKAGES")
+    expect(params.applyPackageCreditTarget).toHaveBeenCalledWith(target, "purchase1")
     // Without this the wizard would create a paid booking the client already
     // covered with their package.
     expect(params.setUseCredit).toHaveBeenCalledWith(true)

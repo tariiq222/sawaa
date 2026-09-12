@@ -46,7 +46,7 @@ interface BookingPosFormColumnProps {
   clientLabel: string
   onClientSelect: (id: string, name: string) => void
   onTrackSelect: (track: BookingTrack) => void
-  onUseCredit: (target: CreditTarget) => void
+  onUseCredit: (target: CreditTarget, packagePurchaseId: string) => void
   onPackageCreditSelected: (target: CreditTarget, packagePurchaseId: string) => void
   /**
    * W2B-T8 — the fixed prop name + signature the sibling task's
