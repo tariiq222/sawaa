@@ -9,6 +9,13 @@ const newHandler = (prisma: ReturnType<typeof buildPrisma>) => {
       const sql = strings.join(' ');
       if (sql.includes('"Client"')) return [{ id, isActive: true, deletedAt: null }];
       if (sql.includes('"Employee"')) return [{ id, isActive: true }];
+      if (sql.includes('"PackageCredit"')) {
+        // reclaimPackageCreditForBooking's SELECT ... FOR UPDATE row lock —
+        // tests script the locked row via packageCredit.findUnique, so
+        // delegate to that same mock to keep those tests unchanged.
+        const credit = await prisma.packageCredit.findUnique({ where: { id } });
+        return credit ? [credit] : [];
+      }
       return [];
     },
   );

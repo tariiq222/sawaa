@@ -8,7 +8,9 @@ describe('CheckInBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
     await new CheckInBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    // Fixed as part of the double check-in defect: the write is now an
+    // atomic compare-and-swap (updateMany), not a plain update.
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ checkedInAt: expect.any(Date) }) }),
     );
   });
@@ -35,6 +37,42 @@ describe('CheckInBookingHandler', () => {
     await expect(
       new CheckInBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('routes the checkedInAt write through an atomic compare-and-swap gated on status + checkedInAt null', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED, checkedInAt: null });
+    await new CheckInBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    // The double check-in guard must be a DB-level compare-and-swap
+    // (updateMany with a WHERE on status + checkedInAt), not a plain
+    // `update` — a plain update has no protection against a second
+    // concurrent check-in that read the booking before the first one wrote.
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'book-1',
+          status: BookingStatus.CONFIRMED,
+          checkedInAt: null,
+        }),
+        data: expect.objectContaining({ checkedInAt: expect.any(Date) }),
+      }),
+    );
+  });
+
+  it('throws BadRequestException when a concurrent check-in already claimed the row (0 rows affected)', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED, checkedInAt: null });
+    // Simulate a second, concurrent check-in winning the race: the
+    // compare-and-swap affects zero rows because checkedInAt is no longer null.
+    prisma.booking.updateMany = jest.fn().mockResolvedValue({ count: 0 });
+
+    await expect(
+      new CheckInBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
+    ).rejects.toThrow(BadRequestException);
+
+    // And critically: the credit must NOT have been consumed by the loser.
+    expect(prisma.packageCreditUsage.findFirst).not.toHaveBeenCalled();
   });
 });
 

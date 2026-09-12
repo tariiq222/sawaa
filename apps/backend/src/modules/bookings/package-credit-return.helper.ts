@@ -2,6 +2,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Prisma, PackageCreditUsageStatus, PackagePurchaseStatus } from '@prisma/client';
+import { warnIfPackageCreditUsageRowMissing } from './booking-lifecycle.helper';
 
 /**
  * Return a session-package credit held by a booking back to its bucket.
@@ -42,7 +43,12 @@ export async function returnPackageCreditForBooking(
     },
     select: { id: true, creditId: true, status: true },
   });
-  if (!usage) return false;
+  if (!usage) {
+    // Idempotent no-op UNLESS no usage row exists for this booking at all —
+    // see warnIfPackageCreditUsageRowMissing for why that case is logged.
+    await warnIfPackageCreditUsageRowMissing(tx, bookingId, 'returnPackageCreditForBooking');
+    return false;
+  }
 
   await tx.packageCreditUsage.update({
     where: { id: usage.id },
@@ -96,10 +102,13 @@ export async function returnPackageCreditForBooking(
  *     the helper returns `false`. A booking that never held a credit (e.g.
  *     paid bookings, or no-shows that did not touch a credit) also yields
  *     nothing.
- *  2. Load the credit's `totalQuantity` / `usedQuantity` / `reservedQuantity`.
- *     If `usedQuantity + reservedQuantity` already fills the bucket, there is
- *     no remaining capacity to absorb the reclaim — refuse with
- *     `BadRequestException` so the transaction rolls back.
+ *  2. Lock the credit row with `SELECT ... FOR UPDATE` (same locking style as
+ *     `book-from-credit.handler.ts`'s OVERDRAW GUARD) and recount
+ *     `usedQuantity + reservedQuantity` INSIDE the lock. Without the lock, a
+ *     concurrent booking could take the last seat between a plain read and
+ *     this write (TOCTOU) — the row lock forces the two to serialize. If the
+ *     bucket is already full, refuse with `BadRequestException` so the
+ *     transaction rolls back.
  *  3. Read the booking's `checkedInAt` to determine whether the session was
  *     actually attended.
  *  4. Flip the usage back to CONSUMED (if attended) or RESERVED (if not),
@@ -127,12 +136,25 @@ export async function reclaimPackageCreditForBooking(
     where: { bookingId, status: PackageCreditUsageStatus.RETURNED },
     select: { id: true, creditId: true },
   });
-  if (!usage) return false;
+  if (!usage) {
+    // Idempotent no-op UNLESS no usage row exists for this booking at all —
+    // see warnIfPackageCreditUsageRowMissing for why that case is logged.
+    await warnIfPackageCreditUsageRowMissing(tx, bookingId, 'reclaimPackageCreditForBooking');
+    return false;
+  }
 
-  const credit = await tx.packageCredit.findUnique({
-    where: { id: usage.creditId },
-    select: { totalQuantity: true, usedQuantity: true, reservedQuantity: true },
-  });
+  // Row lock, matching book-from-credit.handler.ts's OVERDRAW GUARD — a plain
+  // findUnique here would be a TOCTOU: a concurrent booking could take the
+  // last seat between this read and the increment below.
+  const lockedRows = await tx.$queryRaw<
+    Array<{ totalQuantity: number; usedQuantity: number; reservedQuantity: number }>
+  >`
+    SELECT "totalQuantity", "usedQuantity", "reservedQuantity"
+    FROM "PackageCredit"
+    WHERE id = ${usage.creditId}
+    FOR UPDATE
+  `;
+  const credit = lockedRows[0];
   if (!credit) {
     throw new BadRequestException('Package credit not found for this booking');
   }

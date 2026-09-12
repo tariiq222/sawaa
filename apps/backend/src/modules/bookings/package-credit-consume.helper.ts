@@ -1,4 +1,5 @@
 import { Prisma, PackageCreditUsageStatus, PackagePurchaseStatus } from '@prisma/client';
+import { warnIfPackageCreditUsageRowMissing } from './booking-lifecycle.helper';
 
 /**
  * Consume a session that was reserved for a booking, once the session has
@@ -30,7 +31,12 @@ export async function consumePackageCreditForBooking(
     where: { bookingId, status: PackageCreditUsageStatus.RESERVED },
     select: { id: true, creditId: true },
   });
-  if (!usage) return false;
+  if (!usage) {
+    // Idempotent no-op UNLESS no usage row exists for this booking at all —
+    // see warnIfPackageCreditUsageRowMissing for why that case is logged.
+    await warnIfPackageCreditUsageRowMissing(tx, bookingId, 'consumePackageCreditForBooking');
+    return false;
+  }
 
   await tx.packageCreditUsage.update({
     where: { id: usage.id },

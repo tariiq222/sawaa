@@ -68,6 +68,25 @@ function mapConcurrentCreditConflict(error: unknown): never {
 }
 
 /**
+ * Real availability = totalQuantity − usedQuantity − reservedQuantity > 0.
+ * Prisma cannot express this as a field-reference `where` comparison (it can
+ * only compare a column against another COLUMN, not a computed sum), so both
+ * credit-selection paths in `resolveCreditAndTarget` fetch with a coarse
+ * `usedQuantity < totalQuantity` DB filter and apply this JS predicate
+ * afterwards as the authoritative check — otherwise a credit fully booked out
+ * for future appointments (usedQuantity 0, reservedQuantity == totalQuantity)
+ * would look available and get selected, only for the in-transaction overdraw
+ * guard to reject the whole booking with a false "no credit left".
+ */
+function hasAvailableCapacity(credit: {
+  totalQuantity: number;
+  usedQuantity: number;
+  reservedQuantity?: number | null;
+}): boolean {
+  return credit.usedQuantity + (credit.reservedQuantity ?? 0) < credit.totalQuantity;
+}
+
+/**
  * Reserve one session-package credit to create a zero-value booking.
  *
  * The credit pack model: the client pre-paid in full at purchase time, so a
@@ -430,6 +449,7 @@ export class BookFromCreditHandler {
       durationOptionId: string | null;
       totalQuantity: number;
       usedQuantity: number;
+      reservedQuantity: number;
       constraints: CreditConstraint[];
     };
     target: BookingTarget;
@@ -442,6 +462,7 @@ export class BookFromCreditHandler {
       durationOptionId: true,
       totalQuantity: true,
       usedQuantity: true,
+      reservedQuantity: true,
       constraints: {
         select: {
           dimension: true,
@@ -457,12 +478,18 @@ export class BookFromCreditHandler {
       const credit = await this.prisma.packageCredit.findFirst({
         where: {
           id: cmd.creditId,
+          // Prisma cannot express `usedQuantity + reservedQuantity <
+          // totalQuantity` as a field-reference comparison, so this coarse
+          // filter only rules out credits that are already fully DELIVERED.
+          // A credit that is fully booked out by RESERVED sessions still
+          // passes here and is caught by the JS predicate below, which is
+          // the authoritative availability check.
           usedQuantity: { lt: this.prisma.packageCredit.fields.totalQuantity },
           purchase: { clientId: cmd.clientId, status: PackagePurchaseStatus.ACTIVE },
         },
         select,
       });
-      if (!credit) {
+      if (!credit || !hasAvailableCapacity(credit)) {
         throw new NotFoundException('No usable package credit found for this id');
       }
 
@@ -513,6 +540,9 @@ export class BookFromCreditHandler {
     // matching engine, then narrowest-first (specificity) then FIFO.
     const candidates = await this.prisma.packageCredit.findMany({
       where: {
+        // Same coarse DB filter as the explicit-creditId path — it still
+        // helps cut down the candidate set, but real availability (including
+        // reservedQuantity) is checked in JS below.
         usedQuantity: { lt: this.prisma.packageCredit.fields.totalQuantity },
         purchase: { clientId: cmd.clientId, status: PackagePurchaseStatus.ACTIVE },
       },
@@ -520,7 +550,7 @@ export class BookFromCreditHandler {
       select,
     });
     const credit = candidates
-      .filter((c) => creditMatchesTarget(c, target))
+      .filter((c) => hasAvailableCapacity(c) && creditMatchesTarget(c, target))
       .sort((a, b) => specificityScore(b) - specificityScore(a))[0];
     if (!credit) {
       throw new NotFoundException(

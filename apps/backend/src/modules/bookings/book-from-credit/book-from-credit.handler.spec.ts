@@ -39,7 +39,13 @@ const LEGACY_CONSTRAINTS: Array<{
 
 /** A locked-credit row as returned by the `SELECT ... FOR UPDATE` raw query. */
 function lockedCreditRow(
-  overrides: Partial<{ usedQuantity: number; totalQuantity: number; reservedQuantity: number }> = {},
+  overrides: Partial<{
+    id: string;
+    purchaseId: string;
+    usedQuantity: number;
+    totalQuantity: number;
+    reservedQuantity: number;
+  }> = {},
 ) {
   return {
     id: CREDIT_ID,
@@ -250,6 +256,63 @@ describe('BookFromCreditHandler', () => {
       await expect(
         handler.execute({ clientId: CLIENT_ID, branchId: BRANCH_ID, scheduledAt: FUTURE } as never),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects an explicit creditId whose bucket is fully booked out by RESERVED sessions (usedQuantity 0 but reservedQuantity == totalQuantity)', async () => {
+      const prisma = buildPrisma();
+      // The coarse DB `usedQuantity < totalQuantity` filter still passes this
+      // credit (usedQuantity is 0) — but real availability, which also
+      // counts reservedQuantity, is zero. The JS predicate must catch this.
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 3, usedQuantity: 0, reservedQuantity: 3,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const { handler } = buildHandler({ prisma });
+
+      await expect(handler.execute(baseCmd())).rejects.toThrow(NotFoundException);
+    });
+
+    it('auto-select skips a fully-reserved credit and picks an available sibling instead', async () => {
+      const prisma = buildPrisma();
+      const OTHER_CREDIT_ID = '00000000-0000-4000-a000-000000000099';
+      const OTHER_PURCHASE_ID = '00000000-0000-4000-a000-000000000098';
+      // First candidate (older purchase, so FIFO would pick it first) is
+      // fully booked out for the future even though usedQuantity is 0.
+      // Second candidate is genuinely available. Auto-select must skip the
+      // first and pick the second rather than bailing with "no credit".
+      prisma.packageCredit.findMany.mockResolvedValue([
+        {
+          id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+          employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+          totalQuantity: 2, usedQuantity: 0, reservedQuantity: 2,
+          constraints: LEGACY_CONSTRAINTS,
+        },
+        {
+          id: OTHER_CREDIT_ID, purchaseId: OTHER_PURCHASE_ID, serviceId: SERVICE_ID,
+          employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+          totalQuantity: 5, usedQuantity: 1, reservedQuantity: 0,
+          constraints: LEGACY_CONSTRAINTS,
+        },
+      ]);
+      const tx = buildTx(lockedCreditRow({ id: OTHER_CREDIT_ID, purchaseId: OTHER_PURCHASE_ID, totalQuantity: 5, usedQuantity: 1, reservedQuantity: 0 }));
+      const { handler } = buildHandler({ prisma, tx });
+
+      await handler.execute({
+        clientId: CLIENT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      });
+
+      // The booking must have been reserved against the available sibling
+      // credit, not the fully-reserved one.
+      const usageArgs = (tx.packageCreditUsage.create as jest.Mock).mock.calls[0][0];
+      expect(usageArgs.data.creditId).toBe(OTHER_CREDIT_ID);
     });
   });
 

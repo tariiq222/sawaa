@@ -1,5 +1,5 @@
 import { PackageCreditUsageStatus, PackagePurchaseStatus } from '@prisma/client';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 import {
   reclaimPackageCreditForBooking,
   returnPackageCreditForBooking,
@@ -26,6 +26,11 @@ function buildTx() {
     booking: {
       findUnique: jest.fn(),
     },
+    // `SELECT ... FOR UPDATE` raw row-lock used by reclaimPackageCreditForBooking
+    // — mirrors book-from-credit.handler.ts's locking style. Tests script the
+    // locked row via mockResolvedValueOnce; default falls back to whatever
+    // packageCredit.findUnique would have returned, kept empty by default.
+    $queryRaw: jest.fn(),
   };
 }
 
@@ -121,15 +126,30 @@ describe('returnPackageCreditForBooking', () => {
 
     it('is idempotent: a usage already RETURNED is ignored (no double-decrement)', async () => {
       const tx = buildTx();
-      // findFirst is scoped to RESERVED/CONSUMED usages only, so an
-      // already-returned booking yields null — proving the same booking
-      // cannot be returned twice.
-      tx.packageCreditUsage.findFirst.mockResolvedValue(null);
+      // First call (RESERVED/CONSUMED scoped) → null. Second call (any
+      // status, the missing-row check) → the already-RETURNED row, so this
+      // is recognized as ordinary idempotency, not a data problem.
+      tx.packageCreditUsage.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'usage-1' });
 
       const result = await returnPackageCreditForBooking(tx as never, BOOKING_ID);
 
       expect(result).toBe(false);
       expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    });
+
+    it('logs (does not throw) when the booking has NO PackageCreditUsage row at all', async () => {
+      const errorSpy = jest.spyOn(Logger, 'error').mockImplementation(() => undefined);
+      const tx = buildTx();
+      tx.packageCreditUsage.findFirst.mockResolvedValue(null);
+
+      const result = await returnPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(result).toBe(false);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0][0]).toContain(BOOKING_ID);
+      errorSpy.mockRestore();
     });
   });
 
@@ -233,12 +253,17 @@ describe('reclaimPackageCreditForBooking', () => {
         bookingId: BOOKING_ID,
         status: PackageCreditUsageStatus.RETURNED,
       });
-      tx.packageCredit.findUnique.mockResolvedValue({
-        id: CREDIT_ID,
-        totalQuantity: credit.totalQuantity,
-        usedQuantity: credit.usedQuantity,
-        reservedQuantity: credit.reservedQuantity ?? 0,
-      });
+      // The capacity check must read the row under `SELECT ... FOR UPDATE`,
+      // not a plain findUnique — otherwise a concurrent booking can take the
+      // last seat between the read and the write (TOCTOU).
+      tx.$queryRaw.mockResolvedValue([
+        {
+          id: CREDIT_ID,
+          totalQuantity: credit.totalQuantity,
+          usedQuantity: credit.usedQuantity,
+          reservedQuantity: credit.reservedQuantity ?? 0,
+        },
+      ]);
       tx.booking.findUnique.mockResolvedValue(booking);
     }
 
@@ -323,14 +348,59 @@ describe('reclaimPackageCreditForBooking', () => {
 
     it('is idempotent: a usage already CONSUMED is ignored (no double-increment)', async () => {
       const tx = buildTx();
-      // findFirst is scoped to RETURNED only — a CONSUMED usage yields null,
-      // proving a booking whose credit is already consumed cannot be re-claimed.
-      tx.packageCreditUsage.findFirst.mockResolvedValue(null);
+      // First call (RETURNED-scoped) → null. Second call (any status, the
+      // missing-row check) → the already-CONSUMED row, so this is ordinary
+      // idempotency, not a data problem.
+      tx.packageCreditUsage.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'usage-1' });
 
       const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
 
       expect(result).toBe(false);
       expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    });
+
+    it('logs (does not throw) when the booking has NO PackageCreditUsage row at all', async () => {
+      const errorSpy = jest.spyOn(Logger, 'error').mockImplementation(() => undefined);
+      const tx = buildTx();
+      tx.packageCreditUsage.findFirst.mockResolvedValue(null);
+
+      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(result).toBe(false);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0][0]).toContain(BOOKING_ID);
+      errorSpy.mockRestore();
+    });
+
+    it('takes a SELECT ... FOR UPDATE row lock on the credit before the capacity check (not a plain findUnique)', async () => {
+      const tx = buildTx();
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 }, { checkedInAt: new Date() });
+
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+
+      expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+      const [strings] = tx.$queryRaw.mock.calls[0];
+      expect(strings.join(' ')).toContain('FOR UPDATE');
+      // A plain unlocked read would let a concurrent booking take the last
+      // seat between the read and the write — this call must not use it.
+      expect(tx.packageCredit.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when the credit row is not found under lock', async () => {
+      const tx = buildTx();
+      tx.packageCreditUsage.findFirst.mockResolvedValue({
+        id: USAGE_ID,
+        creditId: CREDIT_ID,
+        bookingId: BOOKING_ID,
+        status: PackageCreditUsageStatus.RETURNED,
+      });
+      tx.$queryRaw.mockResolvedValue([]);
+
+      await expect(
+        reclaimPackageCreditForBooking(tx as never, BOOKING_ID),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });
