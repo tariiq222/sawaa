@@ -17,7 +17,7 @@ const cacheProvider = { provide: CacheService, useValue: { invalidatePrefix: jes
  */
 function buildPrisma() {
   const service = { findMany: jest.fn() };
-  const employee = { findMany: jest.fn() };
+  const employee = { findMany: jest.fn(), findFirst: jest.fn() };
   const employeeService = { findMany: jest.fn() };
   const employeeServiceOption = { findMany: jest.fn().mockResolvedValue([]) };
   const serviceDurationOption = { findMany: jest.fn() };
@@ -321,6 +321,293 @@ describe('CreateSessionPackageHandler', () => {
       ]);
 
       await expect(handler.execute(validDto() as any)).rejects.toThrow(/Duration option not found/i);
+      expect(tx.sessionPackage.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('package practitioner owner', () => {
+    const ownerId = EMPLOYEE_ID;
+    const foreignEmployeeId = '00000000-0000-4000-a000-000000000099';
+
+    function mockOwnerHappyPath() {
+      prisma.employee.findFirst.mockResolvedValue({ id: ownerId, isActive: true });
+      prisma.employee.findMany.mockResolvedValue([{ id: ownerId }]);
+      prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+      prisma.serviceDurationOption.findMany.mockResolvedValue([]);
+      prisma.employeeService.findMany.mockResolvedValue([
+        { id: 'es-owner', employeeId: ownerId, serviceId: SERVICE_ID, isActive: true },
+      ]);
+      prisma.employeeServiceOption.findMany.mockResolvedValue([]);
+      tx.sessionPackage.create.mockResolvedValue({ id: 'pkg-owner', ownerEmployeeId: ownerId, items: [] });
+    }
+
+    it('persists the owner and inherits it as a practitioner INCLUDE constraint when the item leaves practitioner unconstrained', async () => {
+      mockOwnerHappyPath();
+
+      await handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.PRACTITIONER, mode: PackageConstraintMode.ANY },
+            { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.ANY },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 2,
+        }],
+      } as any);
+
+      const call = tx.sessionPackage.create.mock.calls[0][0];
+      expect(call.data.ownerEmployeeId).toBe(ownerId);
+      expect(call.data.items.create[0].constraints.create).toContainEqual({
+        dimension: PackageConstraintDimension.PRACTITIONER,
+        mode: PackageConstraintMode.INCLUDE,
+        targets: { create: [{ targetId: ownerId }] },
+      });
+    });
+
+    it('allows an owner item with a concrete duration to derive its legacy price after practitioner inheritance', async () => {
+      mockOwnerHappyPath();
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, price: { toString: () => '10000' } },
+      ]);
+
+      await handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.INCLUDE, targetIds: [DURATION_OPTION_ID] },
+          ],
+          paidQuantity: 1,
+        }],
+      } as any);
+
+      const itemData = tx.sessionPackage.create.mock.calls[0][0].data.items.create[0];
+      expect(itemData.unitPrice).toBeNull();
+      expect(itemData.employeeId).toBe(ownerId);
+      expect(itemData.durationOptionId).toBe(DURATION_OPTION_ID);
+    });
+
+    it('rejects an item whose practitioner constraint contradicts the package owner', async () => {
+      mockOwnerHappyPath();
+      prisma.employee.findMany.mockResolvedValue([{ id: foreignEmployeeId }]);
+
+      await expect(handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.PRACTITIONER, mode: PackageConstraintMode.INCLUDE, targetIds: [foreignEmployeeId] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/owner|practitioner/i);
+
+      expect(tx.sessionPackage.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects malformed practitioner scopes before owner narrowing', async () => {
+      mockOwnerHappyPath();
+
+      await expect(handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.PRACTITIONER, mode: PackageConstraintMode.ANY, targetIds: [foreignEmployeeId] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/ANY.*practitioner.*no targets/i);
+
+      await expect(handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.PRACTITIONER, mode: PackageConstraintMode.INCLUDE, targetIds: [] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/INCLUDE.*practitioner.*at least one target/i);
+
+      expect(tx.sessionPackage.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a fixed owner item using a duration owned by another employee service when owner pricing is custom', async () => {
+      mockOwnerHappyPath();
+      prisma.employeeService.findMany.mockResolvedValue([
+        { id: 'es-owner', employeeId: ownerId, serviceId: SERVICE_ID, isActive: true, useCustomPricing: true },
+      ]);
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, employeeServiceId: 'es-foreign', price: { toString: () => '10000' } },
+      ]);
+
+      await expect(handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.INCLUDE, targetIds: [DURATION_OPTION_ID] },
+          ],
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/duration.*owned|custom service/i);
+
+      expect(tx.sessionPackage.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a legacy fixed owner item using a default duration when owner pricing is custom', async () => {
+      mockOwnerHappyPath();
+      prisma.employeeService.findMany.mockResolvedValue([
+        { id: 'es-owner', employeeId: ownerId, serviceId: SERVICE_ID, isActive: true, useCustomPricing: true },
+      ]);
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, employeeServiceId: null, price: { toString: () => '10000' } },
+      ]);
+
+      await expect(handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{ ...validItem(), employeeId: ownerId, paidQuantity: 1 }],
+      } as any)).rejects.toThrow(/duration.*owned|custom service/i);
+
+      expect(tx.sessionPackage.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a flexible owner item using another practitioner custom duration with default owner pricing', async () => {
+      mockOwnerHappyPath();
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, employeeServiceId: 'es-foreign' },
+      ]);
+
+      await expect(handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.INCLUDE, targetIds: [DURATION_OPTION_ID] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/service-default|duration.*owner/i);
+
+      expect(tx.sessionPackage.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects every scoped duration target that belongs to another service', async () => {
+      mockOwnerHappyPath();
+      const foreignDurationId = '00000000-0000-4000-a000-000000000004';
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, employeeServiceId: null },
+        { id: foreignDurationId, serviceId: 'foreign-service', employeeServiceId: null },
+      ]);
+
+      await expect(handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.INCLUDE, targetIds: [DURATION_OPTION_ID, foreignDurationId] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/duration.*selected service/i);
+
+      expect(tx.sessionPackage.create).not.toHaveBeenCalled();
+    });
+
+    it('allows multiple compatible custom duration targets with a fixed unit price', async () => {
+      mockOwnerHappyPath();
+      prisma.employeeService.findMany.mockResolvedValue([
+        { id: 'es-owner', employeeId: ownerId, serviceId: SERVICE_ID, isActive: true, useCustomPricing: true },
+      ]);
+      const secondDurationId = '00000000-0000-4000-a000-000000000004';
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, employeeServiceId: 'es-owner' },
+        { id: secondDurationId, serviceId: SERVICE_ID, employeeServiceId: 'es-owner' },
+      ]);
+
+      await handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.INCLUDE, targetIds: [DURATION_OPTION_ID, secondDurationId] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any);
+
+      expect(tx.sessionPackage.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('narrows an exclusion that still permits the owner to an owner INCLUDE constraint', async () => {
+      mockOwnerHappyPath();
+      prisma.employee.findMany.mockResolvedValue([{ id: ownerId }, { id: foreignEmployeeId }]);
+
+      await handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.PRACTITIONER, mode: PackageConstraintMode.EXCLUDE, targetIds: [foreignEmployeeId] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any);
+
+      expect(tx.sessionPackage.create.mock.calls[0][0].data.items.create[0].constraints.create).toContainEqual({
+        dimension: PackageConstraintDimension.PRACTITIONER,
+        mode: PackageConstraintMode.INCLUDE,
+        targets: { create: [{ targetId: ownerId }] },
+      });
+    });
+
+    it('rejects an unknown or inactive owner before creating the package', async () => {
+      prisma.employee.findFirst.mockResolvedValue(null);
+      prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+      prisma.employee.findMany.mockResolvedValue([{ id: EMPLOYEE_ID }]);
+      prisma.serviceDurationOption.findMany.mockResolvedValue([{ id: DURATION_OPTION_ID, serviceId: SERVICE_ID, price: { toString: () => '10000' } }]);
+      prisma.employeeService.findMany.mockResolvedValue([{ employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID }]);
+
+      await expect(handler.execute({ ...validDto(), ownerEmployeeId: ownerId } as any)).rejects.toThrow(/active|owner|not found/i);
+      expect(tx.sessionPackage.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects an owner package when its included service is not an active offering of that owner', async () => {
+      prisma.employee.findFirst.mockResolvedValue({ id: ownerId, isActive: true });
+      prisma.employee.findMany.mockResolvedValue([]);
+      prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+      prisma.employeeService.findMany.mockResolvedValue([]);
+
+      await expect(handler.execute({
+        ...validDto(),
+        ownerEmployeeId: ownerId,
+        items: [{
+          constraints: [{ dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] }],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/owner|service|offer/i);
       expect(tx.sessionPackage.create).not.toHaveBeenCalled();
     });
   });

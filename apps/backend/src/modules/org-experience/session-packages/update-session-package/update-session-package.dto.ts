@@ -22,6 +22,10 @@ import { CreateSessionPackageItemDto } from '../create-session-package/create-se
  * handler so sortOrder / quantity changes stay atomic).
  */
 export class UpdateSessionPackageDto {
+  @ApiPropertyOptional({ description: 'Package-level practitioner owner. Omit to preserve; null makes the package general.', type: String, format: 'uuid', example: '00000000-0000-4000-a000-000000000002', nullable: true })
+  @IsOptional() @IsUUID()
+  ownerEmployeeId?: string | null;
+
   @ApiPropertyOptional({ description: 'Arabic name', maxLength: 200, example: 'باقة محدّثة' })
   @IsOptional() @IsString() @MaxLength(200)
   nameAr?: string;

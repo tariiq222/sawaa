@@ -19,7 +19,7 @@ const cacheProvider = { provide: CacheService, useValue: { invalidatePrefix: jes
 function buildPrisma() {
   const sessionPackageFindFirst = jest.fn();
   const service = { findMany: jest.fn() };
-  const employee = { findMany: jest.fn() };
+  const employee = { findMany: jest.fn(), findFirst: jest.fn() };
   const employeeService = { findMany: jest.fn(), findFirst: jest.fn() };
   const serviceDurationOption = { findMany: jest.fn(), findFirst: jest.fn() };
   const sessionPackageItemDeleteMany = jest.fn();
@@ -57,6 +57,7 @@ const existingPackage = () => ({
   imageUrl: null,
   iconName: null,
   iconBgColor: null,
+  ownerEmployeeId: null,
   discountType: DiscountType.PERCENTAGE,
   discountValue: { toString: () => '0' },
   isActive: true,
@@ -296,6 +297,161 @@ describe('UpdateSessionPackageHandler', () => {
           items: [{ serviceId: SERVICE_ID, employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID, paidQuantity: 1, freeQuantity: 0 }],
         } as any),
       ).rejects.toThrow(/Duration option not found/i);
+    });
+  });
+
+  describe('package practitioner owner', () => {
+    const ownerId = EMPLOYEE_ID;
+    const nextOwnerId = '00000000-0000-4000-a000-000000000099';
+
+    it('preserves an omitted owner during a metadata-only update', async () => {
+      prisma.sessionPackage.findFirst.mockResolvedValue({ ...existingPackage(), ownerEmployeeId: ownerId });
+
+      await handler.execute({ packageId: PACKAGE_ID, nameAr: 'اسم جديد' } as any);
+
+      const data = tx.sessionPackage.update.mock.calls[0][0].data;
+      expect(data.ownerEmployeeId).toBeUndefined();
+    });
+
+    it('inherits the persisted owner when items are replaced without an owner field', async () => {
+      prisma.sessionPackage.findFirst.mockResolvedValue({ ...existingPackage(), ownerEmployeeId: ownerId });
+      prisma.employee.findFirst.mockResolvedValue({ id: ownerId, isActive: true });
+      prisma.employee.findMany.mockResolvedValue([{ id: ownerId }]);
+      prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+      prisma.serviceDurationOption.findMany.mockResolvedValue([]);
+      prisma.employeeService.findMany.mockResolvedValue([
+        { id: 'es-owner', employeeId: ownerId, serviceId: SERVICE_ID, isActive: true },
+      ]);
+      prisma.employeeServiceOption.findMany.mockResolvedValue([]);
+
+      await handler.execute({
+        packageId: PACKAGE_ID,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.PRACTITIONER, mode: PackageConstraintMode.ANY },
+          ],
+          unitPrice: 15_000,
+          paidQuantity: 1,
+        }],
+      } as any);
+
+      expect(tx.sessionPackage.update.mock.calls[0][0].data.ownerEmployeeId).toBeUndefined();
+      expect(tx.sessionPackageItem.create.mock.calls[0][0].data.constraints.create).toContainEqual({
+        dimension: PackageConstraintDimension.PRACTITIONER,
+        mode: PackageConstraintMode.INCLUDE,
+        targets: { create: [{ targetId: ownerId }] },
+      });
+    });
+
+    it('writes explicit null to make a general package remain general', async () => {
+      prisma.sessionPackage.findFirst.mockResolvedValue({ ...existingPackage(), ownerEmployeeId: null });
+
+      await handler.execute({ packageId: PACKAGE_ID, ownerEmployeeId: null } as any);
+
+      const data = tx.sessionPackage.update.mock.calls[0][0].data;
+      expect(data.ownerEmployeeId).toBeNull();
+    });
+
+    it('rejects changing owner without replacing items', async () => {
+      prisma.sessionPackage.findFirst.mockResolvedValue({ ...existingPackage(), ownerEmployeeId: ownerId });
+
+      await expect(handler.execute({ packageId: PACKAGE_ID, ownerEmployeeId: nextOwnerId } as any)).rejects.toThrow(/items|replace|owner/i);
+      expect(tx.sessionPackage.update).not.toHaveBeenCalled();
+      expect(tx.sessionPackageItem.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('replaces items and changes owner in one transaction', async () => {
+      prisma.sessionPackage.findFirst.mockResolvedValue({ ...existingPackage(), ownerEmployeeId: ownerId });
+      prisma.employee.findFirst.mockResolvedValue({ id: nextOwnerId, isActive: true });
+      prisma.employee.findMany.mockResolvedValue([{ id: nextOwnerId }]);
+      prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+      prisma.serviceDurationOption.findMany.mockResolvedValue([]);
+      prisma.employeeService.findMany.mockResolvedValue([
+        { id: 'es-next', employeeId: nextOwnerId, serviceId: SERVICE_ID, isActive: true },
+      ]);
+      prisma.employeeServiceOption.findMany.mockResolvedValue([]);
+
+      await handler.execute({
+        packageId: PACKAGE_ID,
+        ownerEmployeeId: nextOwnerId,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.PRACTITIONER, mode: PackageConstraintMode.ANY },
+          ],
+          unitPrice: 15_000,
+          paidQuantity: 1,
+        }],
+      } as any);
+
+      expect(tx.sessionPackageItem.deleteMany).toHaveBeenCalledWith({ where: { packageId: PACKAGE_ID } });
+      expect(tx.sessionPackage.update.mock.calls[0][0].data.ownerEmployeeId).toBe(nextOwnerId);
+      expect(tx.sessionPackageItem.create.mock.calls[0][0].data.constraints.create).toContainEqual({
+        dimension: PackageConstraintDimension.PRACTITIONER,
+        mode: PackageConstraintMode.INCLUDE,
+        targets: { create: [{ targetId: nextOwnerId }] },
+      });
+    });
+
+    it('rejects a replacement using another practitioner custom duration with default owner pricing', async () => {
+      prisma.sessionPackage.findFirst.mockResolvedValue({ ...existingPackage(), ownerEmployeeId: ownerId });
+      prisma.employee.findFirst.mockResolvedValue({ id: ownerId, isActive: true });
+      prisma.employee.findMany.mockResolvedValue([{ id: ownerId }]);
+      prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+      prisma.employeeService.findMany.mockResolvedValue([
+        { id: 'es-owner', employeeId: ownerId, serviceId: SERVICE_ID, isActive: true, useCustomPricing: false },
+      ]);
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, employeeServiceId: 'es-foreign' },
+      ]);
+
+      await expect(handler.execute({
+        packageId: PACKAGE_ID,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.INCLUDE, targetIds: [DURATION_OPTION_ID] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/service-default|duration.*owner/i);
+
+      expect(tx.sessionPackageItem.deleteMany).not.toHaveBeenCalled();
+      expect(tx.sessionPackageItem.create).not.toHaveBeenCalled();
+      expect(tx.sessionPackage.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a replacement when any scoped duration belongs to another service', async () => {
+      prisma.sessionPackage.findFirst.mockResolvedValue({ ...existingPackage(), ownerEmployeeId: ownerId });
+      prisma.employee.findFirst.mockResolvedValue({ id: ownerId, isActive: true });
+      prisma.employee.findMany.mockResolvedValue([{ id: ownerId }]);
+      prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+      prisma.employeeService.findMany.mockResolvedValue([
+        { id: 'es-owner', employeeId: ownerId, serviceId: SERVICE_ID, isActive: true, useCustomPricing: false },
+      ]);
+      const foreignDurationId = '00000000-0000-4000-a000-000000000004';
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, employeeServiceId: null },
+        { id: foreignDurationId, serviceId: 'foreign-service', employeeServiceId: null },
+      ]);
+
+      await expect(handler.execute({
+        packageId: PACKAGE_ID,
+        items: [{
+          constraints: [
+            { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+            { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.EXCLUDE, targetIds: [DURATION_OPTION_ID, foreignDurationId] },
+          ],
+          unitPrice: 20_000,
+          paidQuantity: 1,
+        }],
+      } as any)).rejects.toThrow(/duration.*selected service/i);
+
+      expect(tx.sessionPackageItem.deleteMany).not.toHaveBeenCalled();
+      expect(tx.sessionPackageItem.create).not.toHaveBeenCalled();
+      expect(tx.sessionPackage.update).not.toHaveBeenCalled();
     });
   });
 

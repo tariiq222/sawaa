@@ -30,6 +30,10 @@ describe("package API validation errors", () => {
       "Each item must have at least one session (paidQuantity + freeQuantity >= 1)",
       "packages.errors.minQuantity",
     ],
+    ["Package owner was not found or is inactive", "packages.errors.ownerInvalid"],
+    ["Package item practitioner must match the package owner", "packages.errors.ownerPractitionerMismatch"],
+    ["Package owner has no active service offering", "packages.errors.ownerServiceUnavailable"],
+    ["Owner package item must leave at least one active owner service eligible", "packages.errors.ownerServiceUnavailable"],
   ])("maps %s to a localized key", (message, key) => {
     expect(packageErrorTranslationKey(message)).toBe(key)
   })

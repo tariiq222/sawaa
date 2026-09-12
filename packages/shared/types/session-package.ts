@@ -55,6 +55,8 @@ export interface SessionPackageItem {
 
 export interface SessionPackage {
   id: string
+  /** Catalog owner; purchased credit eligibility is stored in its own snapshot. */
+  ownerEmployeeId?: string | null
   nameAr: string
   nameEn: string | null
   descriptionAr: string | null

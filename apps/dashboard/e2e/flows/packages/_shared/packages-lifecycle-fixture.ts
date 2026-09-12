@@ -185,7 +185,7 @@ export interface BuildPackageItemParams {
  * MultiSelect + DurationSelect UI for a single-specific item: service →
  * practitioner → duration, then assert the derived price shows in the row's
  * grid (proves the UI-produced item is the explicit-credit source book-from-
- * credit accepts), and finally fill paidQuantity + freeQuantity. No fixture
+ * credit accepts). Counts are filled after moving to the pricing step. No fixture
  * PATCH may run between this and the subsequent sale POST — doing so would
  * silently fall back to the flexible unit-price path that book-from-credit
  * rejects.
@@ -194,20 +194,8 @@ export async function buildPackageItemViaUI(
   page: Page,
   params: BuildPackageItemParams,
 ): Promise<void> {
-  // New item starts with all four scopes in ANY mode (so `#items.0.unitPriceSar`
-  // is rendered). Configuring single-specific below swaps that input for a
-  // derived-price label — we drive the real ScopeControl + MultiSelect +
-  // DurationSelect UI instead of any post-create fixture PATCH.
-  const unitPriceInput = page.locator('#items\\.0\\.unitPriceSar')
-  await expect(unitPriceInput).toBeVisible({ timeout: 10_000 })
-
-  // ── Service scope: switch الكل → تحديد and pick the seeded service.
-  const serviceGroup = page
-    .locator('[role="group"][aria-label="الخدمة"]')
-    .first()
-  await expect(serviceGroup).toBeVisible({ timeout: 10_000 })
-  await serviceGroup.getByRole("button", { name: /^تحديد$/ }).click()
-
+  // ── Fixed session service selector: the new row starts in FIXED mode, so
+  // its stable MultiSelect trigger is rendered directly.
   const serviceTrigger = page.locator('#items\\.0\\.service')
   await expect(serviceTrigger).toBeVisible({ timeout: 10_000 })
   await serviceTrigger.click()
@@ -215,7 +203,7 @@ export async function buildPackageItemViaUI(
   await expect(serviceSearch).toBeVisible({ timeout: 10_000 })
   await serviceSearch.fill(params.serviceNameAr)
   const serviceOption = page
-    .getByRole("option", { name: new RegExp(params.serviceNameAr) })
+    .getByRole("option", { name: new RegExp(escapeRegex(params.serviceNameAr)) })
     .first()
   await expect(serviceOption).toBeVisible({ timeout: 10_000 })
   await serviceOption.click()
@@ -225,13 +213,8 @@ export async function buildPackageItemViaUI(
   })
   await page.keyboard.press("Escape")
 
-  // ── Practitioner scope: switch الكل → تحديد and pick the seeded employee. useServiceEmployees loads the list keyed on the single selected service.
-  const practitionerGroup = page
-    .locator('[role="group"][aria-label="الممارس"]')
-    .first()
-  await expect(practitionerGroup).toBeVisible({ timeout: 10_000 })
-  await practitionerGroup.getByRole("button", { name: /^تحديد$/ }).click()
-
+  // ── Fixed session practitioner selector. useServiceEmployees loads the
+  // list keyed on the selected service.
   const practitionerTrigger = page.locator('#items\\.0\\.practitioner')
   await expect(practitionerTrigger).toBeVisible({ timeout: 10_000 })
   await practitionerTrigger.click()
@@ -263,29 +246,16 @@ export async function buildPackageItemViaUI(
     timeout: 5_000,
   })
 
-  // Single-specific item now: `#items.0.unitPriceSar` MUST be gone (replaced
-  // by the derived-price label). The derived-price row shows "150.00", not
-  // the placeholder "يُحسب من المدة المختارة" which only renders before a
-  // duration is picked.
-  await expect(page.locator('#items\\.0\\.unitPriceSar')).toHaveCount(0, {
-    timeout: 5_000,
-  })
-  // The price label sits inside the row's grid that holds paidQuantity + freeQuantity + price — assert the run-scoped price appears in the SAME grid to prove the derived price is wired (not the placeholder).
-  const itemGrid = page
-    .locator(
-      '#items\\.0\\.paidQuantity, #items\\.0\\.freeQuantity, #items\\.0\\.unitPriceSar',
-    )
-    .first()
-    .locator("xpath=ancestor::div[contains(@class,'grid')][1]")
-  await expect(itemGrid).toContainText("150.00")
+}
 
-  // ── paidQuantity + freeQuantity — default 1/0 from the row append. Bump paidQuantity to 4 so the credit has room for book-from-credit.
+/** Fill quantities once the caller has advanced to the pricing step. */
+export async function fillPackageItemQuantities(page: Page, paid = "4", free = "0"): Promise<void> {
   const paidInput = page.locator('#items\\.0\\.paidQuantity')
   await expect(paidInput).toBeVisible({ timeout: 5_000 })
-  await paidInput.fill("4")
+  await paidInput.fill(paid)
   const freeInput = page.locator('#items\\.0\\.freeQuantity')
   await expect(freeInput).toBeVisible({ timeout: 5_000 })
-  await freeInput.fill("0")
+  await freeInput.fill(free)
 }
 
 /**

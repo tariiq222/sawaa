@@ -35,6 +35,10 @@ import {
   retrySerializableTransaction,
 } from '../../../common/database/person-reference-lock.helper';
 import { lockPackagePurchase } from '../package-purchase-lock.helper';
+import {
+  BookingTargetEligibility,
+  validateBookingTargetEligibility,
+} from '../booking-target-eligibility.helper';
 
 export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
   scheduledAt: Date;
@@ -131,11 +135,18 @@ export class BookFromCreditHandler {
         'Provide either creditId or the full (serviceId, employeeId, durationOptionId) triple',
       );
     }
+    const suppliedTargetFields = [cmd.serviceId, cmd.employeeId, cmd.durationOptionId]
+      .filter((value) => value !== undefined && value !== null).length;
+    if (cmd.creditId && suppliedTargetFields > 0 && suppliedTargetFields < 3) {
+      throw new BadRequestException(
+        'Provide all of serviceId, employeeId and durationOptionId when selecting a credit target',
+      );
+    }
 
     // ── Resolve the credit bucket + the concrete booking target ──
     // Flexible credits: the caller supplies the target and it is validated against
     // the credit's constraints. Legacy credits: the target is the credit's triple.
-    const { credit, target } = await this.resolveCreditAndTarget(cmd);
+    const { credit, target, eligibility } = await this.resolveCreditAndTarget(cmd);
     const creditServiceId = target.serviceId;
     const creditEmployeeId = target.employeeId;
     const creditDurationOptionId = target.durationOptionId;
@@ -176,15 +187,12 @@ export class BookFromCreditHandler {
     if (service.isActive === false) throw new BadRequestException('Service is not active');
     if (service.archivedAt != null) throw new BadRequestException('Service is archived');
 
-    // Duration is FIXED by the credit's durationOptionId — never the caller's.
-    const durationOption = await this.prisma.serviceDurationOption.findFirst({
-      where: { id: creditDurationOptionId },
-      select: { id: true, durationMins: true, deliveryType: true },
-    });
+    // The selected concrete target determines duration: legacy credits use
+    // their frozen duration, while flexible credits use the caller's target.
+    const durationOption = eligibility.durationOption;
     if (!durationOption) throw new NotFoundException('Credit duration option not found');
     const durationMins = durationOption.durationMins;
-    const deliveryType: DeliveryType =
-      cmd.deliveryType ?? (durationOption.deliveryType as DeliveryType);
+    const deliveryType: DeliveryType = eligibility.deliveryType;
 
     const endsAt = new Date(scheduledAt.getTime() + durationMins * 60_000);
 
@@ -456,6 +464,7 @@ export class BookFromCreditHandler {
       constraints: CreditConstraint[];
     };
     target: BookingTarget;
+    eligibility: BookingTargetEligibility;
   }> {
     const select = {
       id: true,
@@ -496,34 +505,41 @@ export class BookFromCreditHandler {
         throw new NotFoundException('No usable package credit found for this id');
       }
 
-      if (hasTriple) {
-        const target: BookingTarget = {
-          serviceId: cmd.serviceId!,
-          employeeId: cmd.employeeId!,
-          durationOptionId: cmd.durationOptionId!,
-          deliveryType: cmd.deliveryType ?? null,
-        };
-        if (!creditMatchesTarget(credit, target)) {
-          throw new BadRequestException('The selected credit is not valid for this booking');
-        }
-        return { credit, target };
-      }
-
-      // Legacy path: derive the target from the credit's own triple.
-      if (!credit.serviceId || !credit.employeeId || !credit.durationOptionId) {
+      // A flexible credit uses the caller's concrete triple. A legacy credit
+      // without one derives it from the immutable credit routing fields.
+      const targetIds = hasTriple
+        ? {
+            serviceId: cmd.serviceId!,
+            employeeId: cmd.employeeId!,
+            durationOptionId: cmd.durationOptionId!,
+          }
+        : {
+            serviceId: credit.serviceId,
+            employeeId: credit.employeeId,
+            durationOptionId: credit.durationOptionId,
+          };
+      if (!targetIds.serviceId || !targetIds.employeeId || !targetIds.durationOptionId) {
         throw new BadRequestException(
           'This credit needs an explicit service, practitioner and duration',
         );
       }
-      return {
-        credit,
-        target: {
-          serviceId: credit.serviceId,
-          employeeId: credit.employeeId,
-          durationOptionId: credit.durationOptionId,
-          deliveryType: cmd.deliveryType ?? null,
-        },
+      const eligibility = await validateBookingTargetEligibility(this.prisma, {
+        serviceId: targetIds.serviceId,
+        employeeId: targetIds.employeeId,
+        durationOptionId: targetIds.durationOptionId,
+        deliveryType: cmd.deliveryType ?? null,
+        bookingType: 'INDIVIDUAL',
+      });
+      const target: BookingTarget = {
+        serviceId: targetIds.serviceId,
+        employeeId: targetIds.employeeId,
+        durationOptionId: targetIds.durationOptionId,
+        deliveryType: eligibility.deliveryType,
       };
+      if (!creditMatchesTarget(credit, target)) {
+        throw new BadRequestException('The selected credit is not valid for this booking');
+      }
+      return { credit, target, eligibility };
     }
 
     if (!hasTriple) {
@@ -532,11 +548,22 @@ export class BookFromCreditHandler {
       );
     }
 
-    const target: BookingTarget = {
+    const requestedTarget: BookingTarget = {
       serviceId: cmd.serviceId!,
       employeeId: cmd.employeeId!,
       durationOptionId: cmd.durationOptionId!,
       deliveryType: cmd.deliveryType ?? null,
+    };
+
+    // Validate the concrete target before matching any credit. In particular,
+    // the selected duration supplies deliveryType when the caller omitted it.
+    const eligibility = await validateBookingTargetEligibility(this.prisma, {
+      ...requestedTarget,
+      bookingType: 'INDIVIDUAL',
+    });
+    const target: BookingTarget = {
+      ...requestedTarget,
+      deliveryType: eligibility.deliveryType,
     };
 
     // Auto-select: all client's ACTIVE credits with remaining, filter by the
@@ -560,7 +587,7 @@ export class BookFromCreditHandler {
         'No matching package credit with remaining capacity for this client',
       );
     }
-    return { credit, target };
+    return { credit, target, eligibility };
   }
 
   private async assertSlotAvailable(input: {

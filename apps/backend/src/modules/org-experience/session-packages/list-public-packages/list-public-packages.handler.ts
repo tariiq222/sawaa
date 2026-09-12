@@ -86,6 +86,7 @@ export class ListPublicPackagesHandler {
     );
     return Promise.all(packages.map(async (pkg, idx) => ({
       ...pkg,
+      ownerEmployeeId: pkg.ownerEmployeeId ?? null,
       imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
       price: prices[idx],
     })));

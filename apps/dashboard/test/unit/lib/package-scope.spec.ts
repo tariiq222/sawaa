@@ -62,12 +62,12 @@ describe("scopesToConstraints", () => {
     ])
   })
 
-  it("forces DURATION to ANY when the item is not single-specific", () => {
+  it("preserves DURATION when SERVICE is a single selected service", () => {
     const c = scopesToConstraints(
       item({ service: single(SVC), practitioner: any, duration: single(DUR) }),
     )
     const dur = c.find((x) => x.dimension === "DURATION")
-    expect(dur).toEqual({ dimension: "DURATION", mode: "ANY" })
+    expect(dur).toEqual({ dimension: "DURATION", mode: "INCLUDE", targetIds: [DUR] })
   })
 
   it("emits DELIVERY_TYPE only when constrained", () => {

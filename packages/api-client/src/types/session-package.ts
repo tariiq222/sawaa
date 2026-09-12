@@ -50,6 +50,8 @@ export interface SessionPackageItemInput {
 
 export interface CreateSessionPackagePayload {
   nameAr: string
+  /** Null denotes a general package. Owner changes require replacement items. */
+  ownerEmployeeId?: string | null
   nameEn?: string
   descriptionAr?: string
   descriptionEn?: string

@@ -17,6 +17,8 @@ async function openCreateForm(page: Page) {
 
 async function addFlexibleItem(page: Page, unitPriceSar = "100") {
   await page.getByRole("button", { name: "إضافة بند" }).click()
+  await page.getByRole("button", { name: "اختيار عند الحجز" }).click()
+  await page.getByRole("button", { name: "التالي" }).click()
   const unitPrice = page.locator("#items\\.0\\.unitPriceSar")
   await expect(unitPrice).toBeVisible()
   await unitPrice.fill(unitPriceSar)
@@ -51,18 +53,24 @@ test.describe("Session Packages — form validation and save feedback", () => {
       }
     })
 
-    await page.getByRole("button", { name: "إنشاء الباقة" }).click()
+    await page.getByRole("button", { name: "التالي" }).click()
 
     const nameAr = page.locator('input[name="nameAr"]')
-    await expect(page.getByText("راجع الحقول المحددة قبل الحفظ")).toBeVisible()
+    await expect(page.getByText("أكمل الحقول المطلوبة للانتقال للخطوة التالية")).toBeVisible()
     await expect(nameAr).toHaveAttribute("aria-invalid", "true")
     await expect(nameAr).toBeFocused()
     await expect(page.getByText("هذا الحقل مطلوب")).toBeVisible()
+    await nameAr.fill(`باقة تحقق ${runId}`)
+    await page.getByRole("button", { name: "التالي" }).click()
+    await expect(page.getByText("بنود الباقة", { exact: true })).toBeVisible()
+    await page.getByRole("button", { name: "التالي" }).click()
     await expect(page.getByText("يجب إضافة بند واحد على الأقل")).toBeVisible()
 
-    await nameAr.fill(`باقة تحقق ${runId}`)
     await page.getByRole("button", { name: "إضافة بند" }).click()
-    await page.getByRole("button", { name: "إنشاء الباقة" }).click()
+    await page.getByRole("button", { name: "اختيار عند الحجز" }).click()
+    await page.getByRole("button", { name: "التالي" }).click()
+    await expect(page.locator("#items\\.0\\.unitPriceSar")).toBeVisible()
+    await page.getByRole("button", { name: "التالي" }).click()
     await expect(
       page.getByText("يلزم تحديد سعر ثابت للجلسة في البنود المرنة")
     ).toBeVisible()
@@ -70,7 +78,7 @@ test.describe("Session Packages — form validation and save feedback", () => {
     await page.locator("#items\\.0\\.unitPriceSar").fill("100")
     await page.locator("#items\\.0\\.paidQuantity").fill("0")
     await page.locator("#items\\.0\\.freeQuantity").fill("0")
-    await page.getByRole("button", { name: "إنشاء الباقة" }).click()
+    await page.getByRole("button", { name: "التالي" }).click()
     await expect(
       page.getByText(
         "يجب أن يحتوي كل بند على جلسة واحدة على الأقل (مدفوعة أو مجانية)"
@@ -81,7 +89,7 @@ test.describe("Session Packages — form validation and save feedback", () => {
     await page.locator("#items\\.0\\.discountType").click()
     await page.getByRole("option", { name: "نسبة مئوية (%)" }).click()
     await page.locator("#items\\.0\\.discountValue").fill("101")
-    await page.getByRole("button", { name: "إنشاء الباقة" }).click()
+    await page.getByRole("button", { name: "التالي" }).click()
     await expect(
       page.getByText("يجب أن تكون نسبة الخصم بين 0 و100")
     ).toBeVisible()
@@ -104,7 +112,6 @@ test.describe("Session Packages — form validation and save feedback", () => {
 
     const packageName = `باقة حفظ وصورة ${runId}`
     await page.locator('input[name="nameAr"]').fill(packageName)
-    await addFlexibleItem(page, "125")
 
     await page
       .locator("form")
@@ -122,6 +129,10 @@ test.describe("Session Packages — form validation and save feedback", () => {
         "base64"
       ),
     })
+
+    await page.getByRole("button", { name: "التالي" }).click()
+    await addFlexibleItem(page, "125")
+    await page.getByRole("button", { name: "التالي" }).click()
 
     const createResponsePromise = page.waitForResponse(
       (response) =>
@@ -156,6 +167,9 @@ test.describe("Session Packages — form validation and save feedback", () => {
           .includes(`/dashboard/organization/packages/${created.id}`) &&
         response.ok()
     )
+    await page.getByRole("button", { name: "التالي" }).click()
+    await page.getByRole("button", { name: "التالي" }).click()
+    await page.getByRole("button", { name: "التالي" }).click()
     await page.getByRole("button", { name: "حفظ التغييرات" }).click()
     await updateResponsePromise
 

@@ -1,292 +1,177 @@
 "use client"
 
-/**
- * Session Package Form Page — Sawaa Dashboard
- *
- * Single-page form (no stepper) for create / edit. The RHF form is wrapped
- * in a `FormProvider` so the nested `<PackageItemBuilder>` + the live
- * `<PackagePriceSummary>` can both read `watch` / `setValue` against the
- * same instance.
- *
- * Live pricing:
- *   - Each item row resolves its own unit price (employee override wins
- *     when present, matching `ComputePackagePriceService.resolveUnitPrice`).
- *   - The row reports its `lineTotal` upward via `onLineTotalChange`; the
- *     parent sums the array and feeds the subtotal into
- *     `<PackagePriceSummary>`.
- *
- * Money conversion at submit:
- *   - The form renders `discountValue` in SAR for FIXED; the submit handler
- *     converts SAR → halalas via `sarToHalalas` (PERCENTAGE stays 0-100).
- *   - `Number(price)` coercions defeat the Prisma Decimal string wire format.
- */
-
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { FormProvider, useForm } from "react-hook-form"
+import { FormProvider } from "react-hook-form"
 import type { FieldErrors } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { showPackageApiError } from "@/lib/package-errors"
+import {
+  packageErrorTranslationKey,
+  showPackageApiError,
+} from "@/lib/package-errors"
 import {
   collectPackageErrorPaths,
   focusPackageError,
   packageIssuePaths,
 } from "@/lib/package-validation"
-
-import { Button } from "@sawaa/ui"
-import { Skeleton } from "@sawaa/ui"
-
+import {
+  firstPackageStep,
+  packageStepForPath,
+} from "@/lib/package-editor-navigation"
+import {
+  validatePackageStep,
+  type PackageStep,
+  type PackageStepIssue,
+} from "@/lib/package-editor-step-validation"
+import {
+  createPackageSchema,
+  type PackageFormData,
+} from "@/lib/schemas/package.schema"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { usePackage, usePackageMutations } from "@/hooks/use-packages"
+import { usePackageMutations } from "@/hooks/use-packages"
 import { uploadPackageImage } from "@/lib/api/packages"
-import { useLocale } from "@/components/locale-provider"
-import { computePackagePrice } from "@/lib/package-price"
-import { isSingleSpecificItem, itemToScopes } from "@/lib/package-scope"
 import { queryKeys } from "@/lib/query-keys"
-import {
-  createPackageSchema,
-  editPackageSchema,
-  type PackageFormData,
-} from "@/lib/schemas/package.schema"
+import { buildItemPayload } from "./package-form-helpers"
 import { PackageFormFields } from "./package-form-fields"
-import { DEFAULT_VALUES, buildItemPayload } from "./package-form-helpers"
-import type { PackageLineDetail } from "./package-item-builder"
+import {
+  PackageEditorNavigation,
+  PackageStepProgress,
+} from "./package-editor-navigation"
+import { PackageFormState } from "./package-form-state"
+import { usePackageEditorState } from "@/hooks/use-package-editor-state"
 import type {
   CreateSessionPackagePayload,
-  SessionPackage,
   UpdateSessionPackagePayload,
 } from "@/lib/types/package"
 
-/* ─── Types ─── */
-
 type Props = { mode: "create" } | { mode: "edit"; packageId: string }
-
-/* ─── Component ─── */
 
 export function PackageFormPage(props: Props) {
   const isEdit = props.mode === "edit"
   const packageId = isEdit ? props.packageId : null
-
   const router = useRouter()
-  const { t } = useLocale()
   const qc = useQueryClient()
   const { createMut, updateMut } = usePackageMutations()
+  const state = usePackageEditorState(packageId)
+  const { form, t } = state
+  const [step, setStep] = useState<PackageStep>(1)
   const isPending = isEdit ? updateMut.isPending : createMut.isPending
 
-  const { data: pkg, isLoading } = usePackage(packageId)
-
-  // Image file picked but not yet uploaded; flushed after create/update.
-  const pendingAvatarFile = useRef<File | null>(null)
-
-  // Use the edit (base) schema for the form so the input shape stays
-  // identical between modes. The create mutation re-validates the strict
-  // create schema server-side and the submit handler fills in defaults.
-  const form = useForm<PackageFormData>({
-    resolver: zodResolver(editPackageSchema),
-    defaultValues: DEFAULT_VALUES,
-    mode: "onBlur",
-  })
-
-  // Live pricing aggregation. The item builder calls onLineChange when each
-  // row's resolved detail changes; the parent keeps the per-row detail so the
-  // `<PackagePriceSummary>` can render a per-service breakdown + subtotal.
-  const [lineDetails, setLineDetails] = useState<
-    Record<number, PackageLineDetail>
-  >({})
-  const onLineChange = useCallback(
-    (index: number, detail: PackageLineDetail) => {
-      setLineDetails((prev) => {
-        const cur = prev[index]
-        if (
-          cur &&
-          cur.serviceName === detail.serviceName &&
-          cur.paidQuantity === detail.paidQuantity &&
-          cur.freeQuantity === detail.freeQuantity &&
-          cur.unitPrice === detail.unitPrice &&
-          cur.discountType === detail.discountType &&
-          cur.discountValue === detail.discountValue
-        ) {
-          return prev
-        }
-        return { ...prev, [index]: detail }
-      })
-    },
-    []
-  )
-  const lineItems = Object.keys(lineDetails)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .map((i) => lineDetails[i])
-  // Live per-item + total price breakdown (storage scale; discount already in halalas/pct).
-  const breakdown = computePackagePrice(
-    lineItems.map((d) => ({
-      unitPrice: d.unitPrice,
-      paidQuantity: d.paidQuantity,
-      freeQuantity: d.freeQuantity,
-      discountType: d.discountType,
-      discountValue: d.discountValue,
-    }))
-  )
-
-  // ── Hydrate form on edit load ───────────────────────────────────────────
-  useEffect(() => {
-    if (pkg) {
-      form.reset({
-        nameAr: pkg.nameAr,
-        nameEn: pkg.nameEn ?? "",
-        descriptionAr: pkg.descriptionAr ?? "",
-        descriptionEn: pkg.descriptionEn ?? "",
-        imageUrl: pkg.imageUrl ?? null,
-        iconName: pkg.iconName ?? null,
-        iconBgColor: pkg.iconBgColor ?? null,
-        sortOrder: pkg.sortOrder,
-        isActive: pkg.isActive,
-        isPublic: pkg.isPublic,
-        items: pkg.items.map((it) => {
-          const scopes = itemToScopes(it)
-          const singleSpecific = isSingleSpecificItem(scopes)
-          return {
-            ...scopes,
-            // Flexible items carry a fixed unit price (halalas) → display in SAR.
-            unitPriceSar:
-              !singleSpecific && it.unitPrice != null
-                ? Number(it.unitPrice) / 100
-                : undefined,
-            label: it.label ?? "",
-            paidQuantity: it.paidQuantity,
-            freeQuantity: it.freeQuantity,
-            discountType: it.discountType ?? null,
-            // FIXED stored as halalas → display in SAR; PERCENTAGE stays as-is.
-            discountValue:
-              it.discountType === "FIXED"
-                ? Number(it.discountValue) / 100
-                : Number(it.discountValue ?? 0),
-            sortOrder: it.sortOrder,
-          }
-        }),
-      })
-    }
-  }, [pkg, form])
-
-  // Clear stale line details if rows are removed.
-  const watchedItems = form.watch("items") ?? []
-  useEffect(() => {
-    setLineDetails((prev) => {
-      const next: Record<number, PackageLineDetail> = {}
-      for (let i = 0; i < watchedItems.length; i++)
-        if (prev[i]) next[i] = prev[i]
-      return next
-    })
-  }, [watchedItems.length])
-
-  const translateError = (msg?: string) => (msg ? t(msg) : undefined)
-
-  const reportValidationFailure = (paths: string[]) => {
-    toast.error(t("packages.errors.submitSummary"))
-    if (paths[0]) focusPackageError(paths[0])
+  const focusLater = (path: string) => {
+    if (typeof window !== "undefined")
+      window.setTimeout(() => focusPackageError(path), 0)
   }
-
-  const onInvalid = (errors: FieldErrors<PackageFormData>) => {
+  const reportValidationFailure = (paths: string[]) => {
+    if (paths.length > 0) setStep(firstPackageStep(paths))
+    toast.error(t("packages.errors.submitSummary"))
+    if (paths[0]) focusLater(paths[0])
+  }
+  const onInvalid = (errors: FieldErrors<PackageFormData>) =>
     reportValidationFailure(collectPackageErrorPaths(errors))
+  const applyStepIssues = (issues: PackageStepIssue[]) => {
+    form.clearErrors()
+    for (const issue of issues)
+      form.setError(issue.path.join(".") as never, {
+        type: "validate",
+        message: issue.message,
+      })
+    if (issues[0]) {
+      const path = issues[0].path.join(".")
+      setStep(packageStepForPath(path))
+      focusLater(path)
+    }
+    toast.error(t("packages.errors.stepSummary"))
+  }
+  const nextStep = () => {
+    const data = form.getValues()
+    for (
+      let candidate = 1 as PackageStep;
+      candidate <= step;
+      candidate = (candidate + 1) as PackageStep
+    ) {
+      const result = validatePackageStep(data, candidate)
+      if (!result.success) return applyStepIssues(result.issues)
+    }
+    if (step < 4) setStep((step + 1) as PackageStep)
   }
 
   const onSubmit = form.handleSubmit(async (data) => {
-    try {
-      // Defensive strict-mode parse so a missing nameAr / invalid scope / missing
-      // flexible unitPrice surfaces as a real Zod error before we hit the network
-      // (the form's base schema permits some fields to be optional).
-      const strict = isEdit ? editPackageSchema : createPackageSchema
-      const strictResult = strict.safeParse(data)
-      if (!strictResult.success) {
-        // Push errors into RHF so the existing <p>error</p> blocks render.
-        for (const issue of strictResult.error.issues) {
-          const key = issue.path.join(".") as Parameters<
-            typeof form.setError
-          >[0]
-          form.setError(key, { type: "validate", message: issue.message })
-        }
-        reportValidationFailure(packageIssuePaths(strictResult.error.issues))
-        return
-      }
-      const strictData = strictResult.data
-
-      // Build the payload from the validated data (scopes → constraints + price).
-      const items = (strictData.items ?? []).map((it, i) =>
-        buildItemPayload(it, i)
+    const strictResult = createPackageSchema.safeParse(data)
+    if (!strictResult.success) {
+      for (const issue of strictResult.error.issues)
+        form.setError(issue.path.join(".") as never, {
+          type: "validate",
+          message: issue.message,
+        })
+      return reportValidationFailure(
+        packageIssuePaths(strictResult.error.issues)
       )
-
+    }
+    try {
+      const strictData = strictResult.data
+      const items = (strictData.items ?? []).map((item, index) =>
+        buildItemPayload(item, index)
+      )
+      const common = {
+        nameAr: strictData.nameAr ?? "",
+        nameEn: strictData.nameEn || undefined,
+        descriptionAr: strictData.descriptionAr || undefined,
+        descriptionEn: strictData.descriptionEn || undefined,
+        imageUrl: strictData.imageUrl?.startsWith("blob:")
+          ? undefined
+          : (strictData.imageUrl ?? null),
+        iconName: strictData.iconName ?? null,
+        iconBgColor: strictData.iconBgColor ?? null,
+        sortOrder: Number(strictData.sortOrder ?? 0),
+        isActive: strictData.isActive,
+        isPublic: strictData.isPublic,
+        ownerEmployeeId: strictData.ownerEmployeeId ?? null,
+        items,
+      }
+      let id: string
       if (isEdit) {
-        let imageUploadFailed = false
-        await updateMut.mutateAsync({
-          id: pkg!.id,
-          nameAr: strictData.nameAr,
-          nameEn: strictData.nameEn || undefined,
-          descriptionAr: strictData.descriptionAr || undefined,
-          descriptionEn: strictData.descriptionEn || undefined,
-          imageUrl: strictData.imageUrl?.startsWith("blob:")
-            ? undefined
-            : (strictData.imageUrl ?? null),
-          iconName: strictData.iconName ?? null,
-          iconBgColor: strictData.iconBgColor ?? null,
-          sortOrder: Number(strictData.sortOrder ?? 0),
-          isActive: strictData.isActive,
-          isPublic: strictData.isPublic,
-          items,
-        } satisfies { id: string } & UpdateSessionPackagePayload)
-        if (pendingAvatarFile.current) {
-          try {
-            await uploadPackageImage(pkg!.id, pendingAvatarFile.current)
-          } catch {
-            imageUploadFailed = true
-          } finally {
-            pendingAvatarFile.current = null
-          }
-        }
-        if (imageUploadFailed) {
-          toast.warning(t("packages.errors.uploadWarning"))
-        } else {
-          toast.success(t("packages.edit.success"))
-        }
+        await updateMut.mutateAsync({ id: state.pkg!.id, ...common } satisfies {
+          id: string
+        } & UpdateSessionPackagePayload)
+        id = state.pkg!.id
+        toast.success(t("packages.edit.success"))
       } else {
-        let imageUploadFailed = false
-        const created = await createMut.mutateAsync({
-          nameAr: strictData.nameAr ?? "",
-          nameEn: strictData.nameEn || undefined,
-          descriptionAr: strictData.descriptionAr || undefined,
-          descriptionEn: strictData.descriptionEn || undefined,
-          imageUrl: strictData.imageUrl?.startsWith("blob:")
-            ? undefined
-            : (strictData.imageUrl ?? null),
-          iconName: strictData.iconName ?? null,
-          iconBgColor: strictData.iconBgColor ?? null,
-          sortOrder: Number(strictData.sortOrder ?? 0),
-          isActive: strictData.isActive,
-          isPublic: strictData.isPublic,
-          items,
-        } satisfies CreateSessionPackagePayload)
-        if (pendingAvatarFile.current) {
-          try {
-            await uploadPackageImage(created.id, pendingAvatarFile.current)
-          } catch {
-            imageUploadFailed = true
-          } finally {
-            pendingAvatarFile.current = null
-          }
-        }
-        if (imageUploadFailed) {
+        const created = await createMut.mutateAsync(
+          common satisfies CreateSessionPackagePayload
+        )
+        id = created.id
+        toast.success(t("packages.create.success"))
+      }
+      if (state.pendingAvatarFile.current) {
+        try {
+          await uploadPackageImage(id, state.pendingAvatarFile.current)
+        } catch {
           toast.warning(t("packages.errors.uploadWarning"))
-        } else {
-          toast.success(t("packages.create.success"))
+        } finally {
+          state.pendingAvatarFile.current = null
         }
       }
-      // Best-effort cache revalidation before navigating.
       qc.invalidateQueries({ queryKey: queryKeys.packages.all })
       router.push("/packages")
     } catch (err) {
+      const key =
+        err instanceof Error
+          ? packageErrorTranslationKey(err.message)
+          : undefined
+      if (key) {
+        const apiStep =
+          key === "packages.errors.ownerInvalid"
+            ? 1
+            : key.includes("unitPrice") ||
+                key.includes("discount") ||
+                key.includes("Quantity")
+              ? 3
+              : 2
+        setStep(apiStep)
+      }
       showPackageApiError(err, {
         fallback: t(isEdit ? "packages.edit.error" : "packages.create.error"),
         t,
@@ -294,40 +179,17 @@ export function PackageFormPage(props: Props) {
     }
   }, onInvalid)
 
-  if (isEdit && isLoading) {
+  if (isEdit && (state.isLoading || !state.pkg))
     return (
-      <ListPageShell>
-        <Skeleton className="h-8 w-48" />
-        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton
-              key={`skeleton-${i}`}
-              className="h-48 w-full rounded-xl"
-            />
-          ))}
-        </div>
-      </ListPageShell>
+      <PackageFormState
+        loading={state.isLoading}
+        t={t}
+        onBack={() => router.push("/packages")}
+      />
     )
-  }
-
-  if (isEdit && !isLoading && !pkg) {
-    return (
-      <ListPageShell>
-        <Breadcrumbs />
-        <PageHeader
-          title={t("packages.notFound.title")}
-          description={t("packages.notFound.desc")}
-        />
-        <Button variant="ghost" onClick={() => router.push("/packages")}>
-          {t("packages.notFound.back")}
-        </Button>
-      </ListPageShell>
-    )
-  }
-
   const title = isEdit ? t("packages.edit.title") : t("packages.create.title")
   const description = isEdit
-    ? (pkg?.nameAr ?? "")
+    ? (state.pkg?.nameAr ?? "")
     : t("packages.create.description")
   const submitLabel = isPending
     ? t(isEdit ? "packages.edit.submitting" : "packages.create.submitting")
@@ -338,42 +200,40 @@ export function PackageFormPage(props: Props) {
       <ListPageShell>
         <Breadcrumbs />
         <PageHeader title={title} description={description} />
-        <form onSubmit={onSubmit} className="flex flex-col gap-6 pb-24">
+        <PackageStepProgress step={step} />
+        <form
+          onSubmit={(event) => {
+            if (step < 4) {
+              event.preventDefault()
+              return
+            }
+            void onSubmit(event)
+          }}
+          className="flex flex-col gap-6 pb-24"
+        >
           <PackageFormFields
             form={form}
-            onLineChange={onLineChange}
-            onImageSelect={(file) => {
-              pendingAvatarFile.current = file
-            }}
-            lineItems={lineItems}
-            breakdown={breakdown}
-            translateError={translateError}
+            onLineChange={state.onLineChange}
+            onImageSelect={state.onImageSelect}
+            lineItems={state.lineItems}
+            breakdown={state.breakdown}
+            translateError={state.translateError}
+            step={step}
           />
-
-          <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-3 border-t border-border bg-background px-4 py-3 sm:-mx-6 sm:flex-row sm:justify-end sm:px-6">
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="rounded-lg"
-              onClick={() => router.push("/packages")}
-            >
-              {t(isEdit ? "packages.edit.cancel" : "packages.create.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              size="lg"
-              className="rounded-lg"
-              disabled={isPending}
-            >
-              {submitLabel}
-            </Button>
-          </div>
+          <PackageEditorNavigation
+            step={step}
+            isPending={isPending}
+            submitLabel={submitLabel}
+            onBack={() =>
+              setStep((current) =>
+                current > 1 ? ((current - 1) as PackageStep) : current
+              )
+            }
+            onNext={nextStep}
+            onCancel={() => router.push("/packages")}
+          />
         </form>
       </ListPageShell>
     </FormProvider>
   )
 }
-
-// Re-export the type to keep this file grouped with the form.
-export type { SessionPackage }

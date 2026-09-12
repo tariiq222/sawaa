@@ -32,6 +32,7 @@ import { loginAs } from "../../fixtures/auth"
 import { dashboardApiRequest } from "../../fixtures/seed"
 import {
   buildPackageItemViaUI,
+  fillPackageItemQuantities,
   pickCreditBookDateCell,
   seedPackagesLifecycleFixtures,
   teardownPackagesLifecycleFixtures,
@@ -96,6 +97,7 @@ test.describe("Session Packages — dashboard lifecycle", () => {
     const nameArInput = page.locator('input[dir="rtl"]').first();
     await expect(nameArInput).toBeVisible({ timeout: 15_000 });
     await nameArInput.fill(harness.packageNameAr)
+    await page.getByRole("button", { name: "التالي" }).click()
 
     const addItemBtn = page.getByRole("button", { name: /إضافة بند/ });
     await expect(addItemBtn).toBeVisible({ timeout: 10_000 });
@@ -113,7 +115,11 @@ test.describe("Session Packages — dashboard lifecycle", () => {
 
     // Discount: leave at the 0 default (finalPrice = 4 × 150 SAR = 600 SAR).
 
-    // Submit the create form. The "إنشاء الباقة" button is type="submit".
+    await page.getByRole("button", { name: "التالي" }).click()
+    await fillPackageItemQuantities(page)
+    await page.getByRole("button", { name: "التالي" }).click()
+
+    // Submit the create form from the review step.
     const submitBtn = page.getByRole("button", { name: /إنشاء الباقة/ })
     await expect(submitBtn).toBeEnabled({ timeout: 10_000 })
 
