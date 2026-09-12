@@ -95,6 +95,18 @@ export async function returnPackageCreditForBooking(
  * time. The restored status mirrors whether the session was actually
  * attended: CONSUMED if it was, RESERVED if it was not.
  *
+ * `wasAttended` MUST be read by the caller from the booking's `checkedInAt`
+ * BEFORE the restore transaction stamps it. The restore handler always sets
+ * `checkedInAt = now()` on the same booking row (so the auto-no-show cron
+ * does not immediately re-mark it) in the same transaction that calls this
+ * helper — by the time this function runs, `checkedInAt` is unconditionally
+ * non-null and no longer tells you whether the client actually attended.
+ * This helper used to re-read `checkedInAt` off the booking itself and was
+ * silently always getting `true` because of that same-transaction stamp,
+ * which meant every restored no-show came back as CONSUMED. Taking the flag
+ * as a parameter forces the caller to capture the fact before it is
+ * destroyed, instead of the helper reading already-corrupted state.
+ *
  * Steps (mirrors `book-from-credit` consumption patterns — id-keyed update,
  * no nested save):
  *  1. Find the booking's RETURNED usage row. Scoping to RETURNED makes the
@@ -109,11 +121,9 @@ export async function returnPackageCreditForBooking(
  *     this write (TOCTOU) — the row lock forces the two to serialize. If the
  *     bucket is already full, refuse with `BadRequestException` so the
  *     transaction rolls back.
- *  3. Read the booking's `checkedInAt` to determine whether the session was
- *     actually attended.
- *  4. Flip the usage back to CONSUMED (if attended) or RESERVED (if not),
- *     with `returnedAt = null`.
- *  5. Increment the matching counter by 1 via an id-keyed update:
+ *  3. Flip the usage back to CONSUMED (if `wasAttended`) or RESERVED (if
+ *     not), with `returnedAt = null`.
+ *  4. Increment the matching counter by 1 via an id-keyed update:
  *     `usedQuantity` when attended, `reservedQuantity` when not.
  *
  * The purchase auto-complete rule from `book-from-credit` is intentionally NOT
@@ -131,6 +141,7 @@ export async function returnPackageCreditForBooking(
 export async function reclaimPackageCreditForBooking(
   tx: Prisma.TransactionClient,
   bookingId: string,
+  wasAttended: boolean,
 ): Promise<boolean> {
   const usage = await tx.packageCreditUsage.findFirst({
     where: { bookingId, status: PackageCreditUsageStatus.RETURNED },
@@ -168,17 +179,13 @@ export async function reclaimPackageCreditForBooking(
 
   // A no-show that is restored goes back to the state it held before: a
   // session it actually attended is CONSUMED, one it never attended is only
-  // RESERVED.
-  const booking = await tx.booking.findUnique({
-    where: { id: bookingId },
-    select: { checkedInAt: true },
-  });
-  const attended = !!booking?.checkedInAt;
-
+  // RESERVED. `wasAttended` is the caller's pre-transaction snapshot — see
+  // the JSDoc above for why this function cannot read it off the booking
+  // itself any more.
   await tx.packageCreditUsage.update({
     where: { id: usage.id },
     data: {
-      status: attended
+      status: wasAttended
         ? PackageCreditUsageStatus.CONSUMED
         : PackageCreditUsageStatus.RESERVED,
       returnedAt: null,
@@ -187,7 +194,7 @@ export async function reclaimPackageCreditForBooking(
 
   await tx.packageCredit.update({
     where: { id: usage.creditId },
-    data: attended
+    data: wasAttended
       ? { usedQuantity: { increment: 1 } }
       : { reservedQuantity: { increment: 1 } },
   });

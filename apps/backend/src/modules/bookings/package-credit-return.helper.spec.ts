@@ -234,7 +234,7 @@ describe('reclaimPackageCreditForBooking', () => {
     const tx = buildTx();
     tx.packageCreditUsage.findFirst.mockResolvedValue(null);
 
-    const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+    const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true);
 
     expect(result).toBe(false);
     expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
@@ -242,10 +242,13 @@ describe('reclaimPackageCreditForBooking', () => {
   });
 
   describe('when the booking has a RETURNED usage to reclaim', () => {
+    // `wasAttended` is the caller's pre-transaction snapshot — the helper no
+    // longer reads `booking.checkedInAt` itself (see the helper's JSDoc for
+    // why: the restore handler stamps checkedInAt in the same transaction,
+    // so a self-read would always see "attended").
     function mockReturned(
       tx: ReturnType<typeof buildTx>,
       credit: { totalQuantity: number; usedQuantity: number; reservedQuantity?: number },
-      booking: { checkedInAt: Date | null } = { checkedInAt: new Date() },
     ) {
       tx.packageCreditUsage.findFirst.mockResolvedValue({
         id: USAGE_ID,
@@ -264,14 +267,13 @@ describe('reclaimPackageCreditForBooking', () => {
           reservedQuantity: credit.reservedQuantity ?? 0,
         },
       ]);
-      tx.booking.findUnique.mockResolvedValue(booking);
     }
 
     it('flips the usage row back to CONSUMED and clears returnedAt when the session was attended', async () => {
       const tx = buildTx();
-      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 }, { checkedInAt: new Date() });
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
 
-      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true);
 
       expect(result).toBe(true);
       expect(tx.packageCreditUsage.update).toHaveBeenCalledTimes(1);
@@ -283,9 +285,9 @@ describe('reclaimPackageCreditForBooking', () => {
 
     it('increments credit.usedQuantity by exactly 1 via an id-keyed update when attended', async () => {
       const tx = buildTx();
-      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 }, { checkedInAt: new Date() });
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
 
-      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true);
 
       expect(tx.packageCredit.update).toHaveBeenCalledTimes(1);
       expect(tx.packageCredit.update).toHaveBeenCalledWith({
@@ -296,9 +298,9 @@ describe('reclaimPackageCreditForBooking', () => {
 
     it('reclaims a restored no-show back to reserved when it was never attended', async () => {
       const tx = buildTx();
-      mockReturned(tx, { totalQuantity: 2, usedQuantity: 0, reservedQuantity: 0 }, { checkedInAt: null });
+      mockReturned(tx, { totalQuantity: 2, usedQuantity: 0, reservedQuantity: 0 });
 
-      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, false);
 
       expect(tx.packageCreditUsage.update).toHaveBeenCalledWith({
         where: { id: USAGE_ID },
@@ -312,9 +314,9 @@ describe('reclaimPackageCreditForBooking', () => {
 
     it('does NOT touch the parent purchase (reclaim is seat-only; auto-complete does not re-fire)', async () => {
       const tx = buildTx();
-      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 }, { checkedInAt: new Date() });
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
 
-      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true);
 
       expect(tx.packagePurchase.update).not.toHaveBeenCalled();
     });
@@ -326,7 +328,7 @@ describe('reclaimPackageCreditForBooking', () => {
       mockReturned(tx, { totalQuantity: 10, usedQuantity: 10, reservedQuantity: 0 });
 
       await expect(
-        reclaimPackageCreditForBooking(tx as never, BOOKING_ID),
+        reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true),
       ).rejects.toThrow(BadRequestException);
       // No mutation must have happened — the throw must precede any write.
       expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
@@ -340,7 +342,7 @@ describe('reclaimPackageCreditForBooking', () => {
       mockReturned(tx, { totalQuantity: 5, usedQuantity: 0, reservedQuantity: 5 });
 
       await expect(
-        reclaimPackageCreditForBooking(tx as never, BOOKING_ID),
+        reclaimPackageCreditForBooking(tx as never, BOOKING_ID, false),
       ).rejects.toThrow(BadRequestException);
       expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
       expect(tx.packageCredit.update).not.toHaveBeenCalled();
@@ -355,7 +357,7 @@ describe('reclaimPackageCreditForBooking', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({ id: 'usage-1' });
 
-      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true);
 
       expect(result).toBe(false);
       expect(tx.packageCredit.update).not.toHaveBeenCalled();
@@ -366,7 +368,7 @@ describe('reclaimPackageCreditForBooking', () => {
       const tx = buildTx();
       tx.packageCreditUsage.findFirst.mockResolvedValue(null);
 
-      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+      const result = await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true);
 
       expect(result).toBe(false);
       expect(errorSpy).toHaveBeenCalledTimes(1);
@@ -376,9 +378,9 @@ describe('reclaimPackageCreditForBooking', () => {
 
     it('takes a SELECT ... FOR UPDATE row lock on the credit before the capacity check (not a plain findUnique)', async () => {
       const tx = buildTx();
-      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 }, { checkedInAt: new Date() });
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 3 });
 
-      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID);
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true);
 
       expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
       const [strings] = tx.$queryRaw.mock.calls[0];
@@ -399,8 +401,33 @@ describe('reclaimPackageCreditForBooking', () => {
       tx.$queryRaw.mockResolvedValue([]);
 
       await expect(
-        reclaimPackageCreditForBooking(tx as never, BOOKING_ID),
+        reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('reads wasAttended from the caller argument, not from tx.booking, even when the booking row would say otherwise', async () => {
+      // Regression test for the defect this fix addresses: the restore
+      // handler stamps checkedInAt on the same booking row inside the same
+      // transaction, so if this helper ever reads tx.booking again it would
+      // always see "attended". Script tx.booking.findUnique to return an
+      // attended booking while passing wasAttended=false, and assert the
+      // RESERVED branch is still taken — proving the parameter, not the row,
+      // controls the outcome.
+      const tx = buildTx();
+      mockReturned(tx, { totalQuantity: 10, usedQuantity: 0, reservedQuantity: 0 });
+      tx.booking.findUnique.mockResolvedValue({ checkedInAt: new Date() });
+
+      await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, false);
+
+      expect(tx.booking.findUnique).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.update).toHaveBeenCalledWith({
+        where: { id: USAGE_ID },
+        data: { status: PackageCreditUsageStatus.RESERVED, returnedAt: null },
+      });
+      expect(tx.packageCredit.update).toHaveBeenCalledWith({
+        where: { id: CREDIT_ID },
+        data: { reservedQuantity: { increment: 1 } },
+      });
     });
   });
 });

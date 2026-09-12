@@ -64,6 +64,13 @@ export class RestoreNoShowBookingHandler {
     );
     const nextStatus = assertTransition(booking.status, 'RESTORE_NO_SHOW'); // CONFIRMED
 
+    // Snapshot attendance BEFORE the transaction below unconditionally stamps
+    // checkedInAt. Step 1 sets checkedInAt to `now` purely as a cron-suppression
+    // marker (see its comment) — it is not a statement that the client attended.
+    // reclaimPackageCreditForBooking needs the real, pre-stamp fact to decide
+    // CONSUMED vs RESERVED, so it must be captured here, not re-read after.
+    const wasAttended = !!booking.checkedInAt;
+
     const updated = await this.rlsTransaction.withTransaction(async (tx) => {
       const isGroupBooking =
         booking.bookingType === BookingType.GROUP || Boolean(booking.programId);
@@ -181,7 +188,7 @@ export class RestoreNoShowBookingHandler {
       //    triggers the surrounding transaction's rollback, so neither the
       //    booking flip nor the log row survives.
       if (booking.packageCreditId) {
-        await reclaimPackageCreditForBooking(tx, cmd.bookingId);
+        await reclaimPackageCreditForBooking(tx, cmd.bookingId, wasAttended);
       }
 
       return restored;
