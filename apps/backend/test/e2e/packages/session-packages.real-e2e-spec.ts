@@ -801,15 +801,17 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       const bookingInvoice = await prisma.invoice.findFirst({ where: { bookingId } });
       expect(bookingInvoice).toBeNull();
 
-      // PackageCreditUsage CONSUMED + usedQuantity incremented.
+      // Booking RESERVES the seat; it is only consumed once the session is
+      // actually delivered (check-in, or completion without one).
       const usage = await prisma.packageCreditUsage.findFirst({
         where: { bookingId },
       });
-      expect(usage!.status).toBe("CONSUMED");
+      expect(usage!.status).toBe("RESERVED");
       const creditAfter = await prisma.packageCredit.findUnique({
         where: { id: credit!.id },
       });
-      expect(creditAfter!.usedQuantity).toBe(1);
+      expect(creditAfter!.usedQuantity).toBe(0);
+      expect(creditAfter!.reservedQuantity).toBe(1);
     });
   });
 
@@ -876,18 +878,21 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       const loserStatus = failures[0];
       expect(loserStatus).toBe(409);
 
-      // No over-draw: usedQuantity is exactly 1 (== totalQuantity), enforced by
-      // the Serializable + FOR UPDATE guard AND the DB CHECK
-      // (PackageCredit_quantities_chk: usedQuantity <= totalQuantity).
+      // No over-draw: the winner reserved the last seat, so the bucket is full
+      // at used + reserved == total. Enforced by the Serializable + FOR UPDATE
+      // guard, which now counts both counters.
       const creditAfter = await prisma.packageCredit.findUnique({
         where: { id: credit!.id },
       });
-      expect(creditAfter!.usedQuantity).toBe(1);
-      expect(creditAfter!.usedQuantity).toBe(creditAfter!.totalQuantity);
+      expect(creditAfter!.usedQuantity).toBe(0);
+      expect(creditAfter!.reservedQuantity).toBe(1);
+      expect(
+        creditAfter!.usedQuantity + creditAfter!.reservedQuantity,
+      ).toBe(creditAfter!.totalQuantity);
 
-      // Exactly one CONSUMED usage row for this credit.
+      // Exactly one RESERVED usage row for this credit.
       const consumed = await prisma.packageCreditUsage.count({
-        where: { creditId: credit!.id, status: "CONSUMED" },
+        where: { creditId: credit!.id, status: "RESERVED" },
       });
       expect(consumed).toBe(1);
     });
@@ -919,11 +924,12 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       expect(res.status).toBe(201);
       const bookingId = res.body.id as string;
 
-      // The purchase auto-completed (its only credit is fully consumed).
+      // Booking the last session does NOT complete the purchase — a purchase
+      // completes when its last session is DELIVERED, not when it is booked.
       const purchaseAfterBook = await prisma.packagePurchase.findUnique({
         where: { id: purchaseId },
       });
-      expect(purchaseAfterBook!.status).toBe("COMPLETED");
+      expect(purchaseAfterBook!.status).toBe("ACTIVE");
 
       // Cancel the credit booking.
       const cancel = await withAuth(ctx.adminToken)(
