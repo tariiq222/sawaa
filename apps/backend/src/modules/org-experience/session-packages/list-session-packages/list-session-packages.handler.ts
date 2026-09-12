@@ -90,6 +90,7 @@ export class ListSessionPackagesHandler {
     );
     const priced = await Promise.all(items.map(async (pkg, idx) => ({
       ...pkg,
+      ownerEmployeeId: pkg.ownerEmployeeId ?? null,
       imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
       subtotal: prices[idx].subtotal,
       discountAmount: prices[idx].discountAmount,

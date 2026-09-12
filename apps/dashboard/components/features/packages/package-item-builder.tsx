@@ -18,7 +18,8 @@ import { useFieldArray, useFormContext } from "react-hook-form"
 import { Button } from "@sawaa/ui"
 
 import { useLocale } from "@/components/locale-provider"
-import type { PackageDiscountType } from "@/lib/types/package"
+import type { PackageEditorLineDetail } from "@/lib/package-editor-lines"
+import type { PackageItemFormData } from "@/lib/schemas/package.schema"
 import { PackageItemRow } from "./package-item-row"
 
 /* ─── Public shape ─── */
@@ -28,28 +29,25 @@ import { PackageItemRow } from "./package-item-row"
  * `discountValue` is in storage scale (PERCENTAGE 0-100 | FIXED halalas).
  * `serviceName` carries the human-readable scope summary for the row.
  */
-export interface PackageLineDetail {
-  serviceName: string
-  paidQuantity: number
-  freeQuantity: number
-  unitPrice: number
-  discountType: PackageDiscountType | null
-  discountValue: number
-}
+export type PackageLineDetail = PackageEditorLineDetail
 
 export interface PackageItemBuilderProps {
   /** RHF field-array name, e.g. `"items"`. */
   fieldArrayName: string
   /** Called when a row's resolved pricing detail changes. Index = row position. */
   onLineChange?: (index: number, detail: PackageLineDetail) => void
+  /** Render the eligibility or pricing half of the row for the active step. */
+  step?: 2 | 3
+  ownerEmployeeId?: string | null
 }
 
-/** A fresh row: everything ANY, one paid session, no discount. */
-function emptyItem(sortOrder: number) {
+/** A fresh row starts fixed; the user can opt into flexible booking explicitly. */
+function emptyItem(sortOrder: number): PackageItemFormData {
   return {
-    service: { mode: "ANY", ids: [] },
-    practitioner: { mode: "ANY", ids: [] },
-    duration: { mode: "ANY", ids: [] },
+    selectionMode: "FIXED" as const,
+    service: { mode: "INCLUDE", ids: [] },
+    practitioner: { mode: "INCLUDE", ids: [] },
+    duration: { mode: "INCLUDE", ids: [] },
     delivery: { mode: "ANY", ids: [] },
     unitPriceSar: undefined,
     paidQuantity: 1,
@@ -61,7 +59,7 @@ function emptyItem(sortOrder: number) {
   }
 }
 
-export function PackageItemBuilder({ fieldArrayName, onLineChange }: PackageItemBuilderProps) {
+export function PackageItemBuilder({ fieldArrayName, onLineChange, step = 2, ownerEmployeeId }: PackageItemBuilderProps) {
   const { t } = useLocale()
   const { control } = useFormContext()
   const { fields, append, remove } = useFieldArray({ control, name: fieldArrayName })
@@ -73,7 +71,11 @@ export function PackageItemBuilder({ fieldArrayName, onLineChange }: PackageItem
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => append(emptyItem(fields.length))}
+          onClick={() => {
+            const item = emptyItem(fields.length)
+            if (ownerEmployeeId) item.practitioner = { mode: "INCLUDE", ids: [ownerEmployeeId] }
+            append(item)
+          }}
         >
           {t("packages.items.addItem")}
         </Button>
@@ -92,6 +94,8 @@ export function PackageItemBuilder({ fieldArrayName, onLineChange }: PackageItem
               fieldArrayName={fieldArrayName}
               onRemove={() => remove(index)}
               onLineChange={onLineChange}
+              step={step}
+              ownerEmployeeId={ownerEmployeeId}
             />
           ))}
         </div>

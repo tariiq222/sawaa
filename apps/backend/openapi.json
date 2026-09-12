@@ -427,13 +427,13 @@
             "type": "string"
           },
           "durationOptionId": {
-            "description": "Duration option to match a credit on (required when creditId is omitted)",
+            "description": "Concrete duration target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit",
             "example": "00000000-0000-4000-a000-000000000005",
             "format": "uuid",
             "type": "string"
           },
           "employeeId": {
-            "description": "Employee to match a credit on (required when creditId is omitted)",
+            "description": "Concrete practitioner target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit",
             "example": "00000000-0000-4000-a000-000000000003",
             "format": "uuid",
             "type": "string"
@@ -450,7 +450,7 @@
             "type": "string"
           },
           "serviceId": {
-            "description": "Service to match a credit on (required when creditId is omitted)",
+            "description": "Concrete service target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit",
             "example": "00000000-0000-4000-a000-000000000004",
             "format": "uuid",
             "type": "string"
@@ -4228,6 +4228,13 @@
             "description": "English name",
             "example": "Family Counseling Pack",
             "maxLength": 200,
+            "type": "string"
+          },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner owner. Omit or null for a general package.",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "nullable": true,
             "type": "string"
           },
           "sortOrder": {
@@ -9469,6 +9476,13 @@
             "description": "English name",
             "example": "Updated Pack",
             "maxLength": 200,
+            "type": "string"
+          },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner owner. Omit to preserve; null makes the package general.",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "nullable": true,
             "type": "string"
           },
           "sortOrder": {

@@ -243,7 +243,7 @@ describe('AccountFeature', () => {
     render(withLocale('en', <AccountFeature locale="en" />));
     fireEvent.click(screen.getByRole('button', { name: /sign out/i }));
 
-    await waitFor(() => expect(screen.getByRole('status')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Sign-out confirmation is still pending. Your local session was cleared; try again.')).toBeTruthy());
     expect(confirmLogoutMock).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();

@@ -46,6 +46,9 @@ export interface ItemFieldsMoney {
   net: number
   payable: number
   discountType: PackageDiscountType | null
+  hasHistoricalOverride?: boolean
+  priceUnavailable?: boolean
+  pricePending?: boolean
 }
 
 interface Props {
@@ -110,7 +113,11 @@ export function PackageItemFields({
           <div className="flex flex-col gap-1.5">
             <Label>{t("packages.items.unitPrice")}</Label>
             <div className="flex h-9 items-center rounded-md border border-border bg-surface-muted px-3 text-sm text-muted-foreground tabular-nums">
-              {money.hasDerivedPrice
+              {money.pricePending
+                ? t("common.loading")
+                : money.priceUnavailable
+                ? t("packages.items.priceUnavailable")
+                : money.hasHistoricalOverride || money.hasDerivedPrice
                 ? formatPrice(money.unitPrice)
                 : t("packages.items.derivedPrice")}
             </div>

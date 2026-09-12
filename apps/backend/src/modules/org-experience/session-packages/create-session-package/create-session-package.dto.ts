@@ -90,6 +90,10 @@ export class CreateSessionPackageItemDto {
  * covered by the create / update handler specs.
  */
 export class CreateSessionPackageDto {
+  @ApiPropertyOptional({ description: 'Package-level practitioner owner. Omit or null for a general package.', type: String, format: 'uuid', example: '00000000-0000-4000-a000-000000000002', nullable: true })
+  @IsOptional() @IsUUID()
+  ownerEmployeeId?: string | null;
+
   @ApiProperty({ description: 'Arabic name', maxLength: 200, example: 'باقة الاستشارة العائلية' })
   @IsString() @MaxLength(200)
   nameAr!: string;

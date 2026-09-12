@@ -123,7 +123,14 @@ function buildPrisma() {
     service: {
       findFirst: jest.fn().mockResolvedValue({ id: SERVICE_ID, nameAr: 'خدمة', categoryId: null, isActive: true, archivedAt: null, bufferMinutes: 0 }),
     },
+    employeeService: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID,
+        isActive: true, disabledDeliveryTypes: [], useCustomPricing: false,
+      }),
+    },
     serviceDurationOption: { findFirst: jest.fn().mockResolvedValue(DURATION_OPTION) },
+    serviceBookingConfig: { findMany: jest.fn().mockResolvedValue([]) },
     // `fields` mirrors Prisma's field-reference API used for the column-to-column
     // `usedQuantity < totalQuantity` filter in resolveCreditAndTarget.
     // `findFirst` backs the creditId path; `findMany` backs the no-creditId
@@ -187,6 +194,19 @@ describe('BookFromCreditHandler', () => {
   it('is defined', () => {
     const { handler } = buildHandler();
     expect(handler).toBeDefined();
+  });
+
+  it('rejects a partial explicit target with creditId instead of falling back to legacy routing', async () => {
+    const { handler, tx } = buildHandler();
+
+    await expect(handler.execute({
+      ...baseCmd(),
+      serviceId: SERVICE_ID,
+      employeeId: EMPLOYEE_ID,
+    } as never)).rejects.toThrow(
+      'Provide all of serviceId, employeeId and durationOptionId when selecting a credit target',
+    );
+    expect(tx.booking.create).not.toHaveBeenCalled();
   });
 
   describe('credit resolution', () => {
@@ -344,6 +364,104 @@ describe('BookFromCreditHandler', () => {
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       };
     }
+
+    it.each([
+      ['inactive duration', { durationOptionId: DURATION_OPTION_ID }],
+      ['unrelated service', { serviceId: MOVED_SERVICE_ID }],
+      ['unrelated practitioner', { employeeId: MOVED_EMPLOYEE_ID }],
+    ])('rejects a flexible credit target with %s before reservation', async (_name, targetChange) => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
+      if (_name === 'inactive duration') {
+        prisma.serviceDurationOption.findFirst.mockResolvedValue({
+          ...DURATION_OPTION,
+          isActive: false,
+        });
+      } else {
+        prisma.employeeService.findUnique.mockResolvedValue(null);
+      }
+      const { handler, tx } = buildHandler({ prisma });
+
+      await expect(handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+        ...targetChange,
+      })).rejects.toThrow();
+      expect(tx.booking.create).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
+      expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a flexible credit target when the practitioner disables its delivery', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
+      prisma.employeeService.findUnique.mockResolvedValue({
+        id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID,
+        isActive: true, disabledDeliveryTypes: ['ONLINE'], useCustomPricing: false,
+      });
+      prisma.serviceDurationOption.findFirst.mockResolvedValue({
+        ...DURATION_OPTION,
+        deliveryType: 'ONLINE',
+      });
+      const { handler, tx } = buildHandler({
+        prisma,
+        tx: buildTx(lockedCreditRow({ serviceId: null, employeeId: null, durationOptionId: null })),
+      });
+
+      await expect(handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        deliveryType: 'ONLINE',
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      })).rejects.toThrow('Practitioner does not offer this delivery type');
+      expect(tx.booking.create).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
+    });
+
+    it('uses the selected duration delivery when a constrained flexible credit omits deliveryType', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        ...flexibleCreditAnyPractitioner(),
+        constraints: [{
+          dimension: PackageConstraintDimension.DELIVERY_TYPE,
+          mode: PackageConstraintMode.INCLUDE,
+          targets: [{ targetId: 'ONLINE' }],
+        }],
+      });
+      prisma.serviceDurationOption.findFirst.mockResolvedValue({
+        ...DURATION_OPTION,
+        deliveryType: 'ONLINE',
+      });
+      const { handler, tx } = buildHandler({
+        prisma,
+        tx: buildTx(lockedCreditRow({ serviceId: null, employeeId: null, durationOptionId: null })),
+      });
+
+      await handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      });
+
+      expect(tx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ deliveryType: 'ONLINE', price: expect.anything() }),
+      }));
+      expect(tx.packageCreditUsage.create).toHaveBeenCalledTimes(1);
+      expect(tx.packageCredit.update).toHaveBeenCalledTimes(1);
+    });
 
     it('succeeds when the explicit triple satisfies the credit constraints (PRACTITIONER ANY)', async () => {
       const prisma = buildPrisma();

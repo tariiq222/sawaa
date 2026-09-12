@@ -6,23 +6,11 @@
  */
 
 import { sarToHalalas } from "@/lib/money"
-import { isSingleSpecificItem, scopesToConstraints } from "@/lib/package-scope"
-import type { PackageFormData, PackageItemFormData } from "@/lib/schemas/package.schema"
+import { isFlexibleItem, scopesToConstraints } from "@/lib/package-scope"
+import type { PackageItemFormData } from "@/lib/schemas/package.schema"
 import type { CreateSessionPackagePayload, PackageDiscountType } from "@/lib/types/package"
 
-export const DEFAULT_VALUES: PackageFormData = {
-  nameAr: "",
-  nameEn: "",
-  descriptionAr: "",
-  descriptionEn: "",
-  imageUrl: null,
-  iconName: null,
-  iconBgColor: null,
-  sortOrder: 0,
-  isActive: true,
-  isPublic: false,
-  items: [],
-}
+export { DEFAULT_PACKAGE_EDITOR_VALUES as DEFAULT_VALUES } from "@/lib/package-editor-defaults"
 
 /** Per-item FIXED discount is entered in SAR; convert to halalas for storage. */
 export function itemStorageDiscount(
@@ -35,21 +23,24 @@ export function itemStorageDiscount(
 
 /**
  * Translate a form item (scopes + SAR price) into the backend item payload.
- * Always sends `constraints`; sends `unitPrice` (halalas) only for flexible
- * (non single-specific) items — single-specific items keep the derived price.
+ * Always sends `constraints`; flexible items require a prepaid unit price,
+ * while historical explicit prices on fixed legacy items are retained.
  */
 export function buildItemPayload(
   it: PackageItemFormData,
   fallbackSort: number,
 ): CreateSessionPackagePayload["items"][number] {
-  const singleSpecific = isSingleSpecificItem(it)
+  const singleSpecific = !isFlexibleItem(it)
+  const hasHistoricalUnitPrice = it.hasUnitPriceOverride === true || (it.unitPriceSar != null && it.unitPriceSar > 0)
   return {
     // Legacy triple only when single-specific (backend derives price from it).
     serviceId: singleSpecific ? it.service.ids[0] : undefined,
     employeeId: singleSpecific ? it.practitioner.ids[0] : undefined,
     durationOptionId: singleSpecific ? it.duration.ids[0] : undefined,
     constraints: scopesToConstraints(it),
-    unitPrice: singleSpecific ? undefined : sarToHalalas(it.unitPriceSar ?? 0),
+    unitPrice: hasHistoricalUnitPrice || !singleSpecific
+      ? sarToHalalas(it.unitPriceSar ?? 0)
+      : undefined,
     label: it.label?.trim() || undefined,
     paidQuantity: Number(it.paidQuantity ?? 0),
     freeQuantity: Number(it.freeQuantity ?? 0),

@@ -140,6 +140,7 @@ model Employee {
 
   branches     EmployeeBranch[]
   services     EmployeeService[]
+  ownedSessionPackages SessionPackage[]
   availability EmployeeAvailability[]
   exceptions   EmployeeAvailabilityException[]
   breaks       EmployeeBreak[]

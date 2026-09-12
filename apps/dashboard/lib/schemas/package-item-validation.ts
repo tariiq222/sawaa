@@ -3,6 +3,7 @@ import { z } from "zod"
 type ScopeLike = { mode: "ANY" | "INCLUDE" | "EXCLUDE"; ids: string[] }
 
 interface PackageItemLike {
+  selectionMode?: "FIXED" | "FLEXIBLE"
   service: ScopeLike
   practitioner: ScopeLike
   duration: ScopeLike
@@ -25,6 +26,14 @@ export function validatePackageItem(
   item: PackageItemLike,
   ctx: z.RefinementCtx
 ) {
+  if (item.paidQuantity + (item.freeQuantity ?? 0) < 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["paidQuantity"],
+      message: "packages.errors.minQuantity",
+    })
+  }
+
   for (const dim of constrainedDimensions) {
     const scope = item[dim]
     if (scope.mode === "ANY" && scope.ids.length > 0) {
@@ -64,7 +73,14 @@ export function validatePackageItem(
     })
   }
 
-  if (!singleSpecific && !(item.unitPriceSar && item.unitPriceSar > 0)) {
+  const flexible =
+    item.selectionMode === "FLEXIBLE" ||
+    (item.selectionMode == null && !singleSpecific)
+  const hasPrepaidPrice =
+    item.unitPriceSar != null &&
+    Number.isFinite(item.unitPriceSar) &&
+    item.unitPriceSar >= 0
+  if (flexible && !hasPrepaidPrice) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["unitPriceSar"],

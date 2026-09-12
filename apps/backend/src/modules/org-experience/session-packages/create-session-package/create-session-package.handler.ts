@@ -7,8 +7,8 @@ import { ComputePackagePriceService } from '../../compute-package-price.service'
 import {
   buildItemCreateData,
   buildPriceInput,
-  validatePackageItems,
 } from '../package-constraints.helper';
+import { validatePackageItemsForOwner } from '../package-owner.helper';
 import { CacheService } from '../../../../infrastructure/cache';
 import { PUBLIC_PACKAGES_CACHE_KEY } from '../list-public-packages/public-packages.cache';
 
@@ -37,7 +37,7 @@ export class CreateSessionPackageHandler {
 
   async execute(dto: CreateSessionPackageCommand) {
     // Normalise + validate items (constraints or legacy triple, existence, links).
-    const normalized = await validatePackageItems(this.prisma, dto.items);
+    const normalized = await validatePackageItemsForOwner(this.prisma, dto.items, dto.ownerEmployeeId);
 
     // Compute per-item prices (discount lives on each item now) and validate
     // every item's discount against its own payable amount.
@@ -49,6 +49,7 @@ export class CreateSessionPackageHandler {
     const created = await this.rlsTransaction.withTransaction((tx) =>
       tx.sessionPackage.create({
         data: {
+          ownerEmployeeId: dto.ownerEmployeeId ?? null,
           nameAr: dto.nameAr,
           nameEn: dto.nameEn ?? null,
           descriptionAr: dto.descriptionAr ?? null,

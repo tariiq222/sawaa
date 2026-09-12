@@ -8,8 +8,9 @@ import { ComputePackagePriceService } from '../../compute-package-price.service'
 import {
   buildItemCreateData,
   buildPriceInput,
-  validatePackageItems,
 } from '../package-constraints.helper';
+import type { NormalizedItem } from '../package-constraints.helper';
+import { validatePackageItemsForOwner } from '../package-owner.helper';
 import { CacheService } from '../../../../infrastructure/cache';
 import { PUBLIC_PACKAGES_CACHE_KEY } from '../list-public-packages/public-packages.cache';
 
@@ -46,11 +47,18 @@ export class UpdateSessionPackageHandler {
     }
 
     const itemsProvided = dto.items !== undefined;
+    const ownerChanged = dto.ownerEmployeeId !== undefined && dto.ownerEmployeeId !== existing.ownerEmployeeId;
+    if (ownerChanged && !itemsProvided) {
+      throw new BadRequestException('Changing the package owner requires replacing items in the same update');
+    }
+    const effectiveOwner = dto.ownerEmployeeId !== undefined
+      ? dto.ownerEmployeeId
+      : existing.ownerEmployeeId;
 
     // 1. Validate items + their per-item discounts when a new set is provided.
-    let normalized: Awaited<ReturnType<typeof validatePackageItems>> = [];
+    let normalized: NormalizedItem[] = [];
     if (itemsProvided) {
-      normalized = await validatePackageItems(this.prisma, dto.items!);
+      normalized = await validatePackageItemsForOwner(this.prisma, dto.items!, effectiveOwner);
       const price = await this.pricing.compute({
         items: dto.items!.map((item, i) => buildPriceInput(item, normalized[i])),
       });
@@ -76,6 +84,7 @@ export class UpdateSessionPackageHandler {
       return tx.sessionPackage.update({
         where: { id: dto.packageId },
         data: {
+          ...(dto.ownerEmployeeId !== undefined && { ownerEmployeeId: dto.ownerEmployeeId }),
           ...(dto.nameAr !== undefined && { nameAr: dto.nameAr }),
           ...(dto.nameEn !== undefined && { nameEn: dto.nameEn }),
           ...(dto.descriptionAr !== undefined && { descriptionAr: dto.descriptionAr }),

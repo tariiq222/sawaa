@@ -67,6 +67,7 @@ export class GetPublicPackageHandler {
 
     return {
       ...pkg,
+      ownerEmployeeId: pkg.ownerEmployeeId ?? null,
       imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
       price,
     };

@@ -23,6 +23,9 @@ const PACKAGE_ERROR_KEYS: Array<[RegExp, string]> = [
     /Employee does not provide this service/i,
     "packages.errors.employeeDoesNotProvideService",
   ],
+  [/Package owner was not found or is inactive/i, "packages.errors.ownerInvalid"],
+  [/Package item practitioner must match the package owner|package owner is excluded|practitioner constraint contradicts the package owner/i, "packages.errors.ownerPractitionerMismatch"],
+  [/not an active offering of the package owner|owner has no active service offering|owner package item must leave at least one active owner service/i, "packages.errors.ownerServiceUnavailable"],
   [/Invalid delivery type target/i, "packages.errors.invalidDeliveryTarget"],
   [
     /flexible package item requires a fixed unitPrice/i,

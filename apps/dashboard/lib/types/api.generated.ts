@@ -4991,13 +4991,13 @@ export interface components {
             deliveryType?: "IN_PERSON" | "ONLINE";
             /**
              * Format: uuid
-             * @description Duration option to match a credit on (required when creditId is omitted)
+             * @description Concrete duration target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit
              * @example 00000000-0000-4000-a000-000000000005
              */
             durationOptionId?: string;
             /**
              * Format: uuid
-             * @description Employee to match a credit on (required when creditId is omitted)
+             * @description Concrete practitioner target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit
              * @example 00000000-0000-4000-a000-000000000003
              */
             employeeId?: string;
@@ -5014,7 +5014,7 @@ export interface components {
             scheduledAt: string;
             /**
              * Format: uuid
-             * @description Service to match a credit on (required when creditId is omitted)
+             * @description Concrete service target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit
              * @example 00000000-0000-4000-a000-000000000004
              */
             serviceId?: string;
@@ -7423,6 +7423,12 @@ export interface components {
              * @example Family Counseling Pack
              */
             nameEn?: string;
+            /**
+             * Format: uuid
+             * @description Package-level practitioner owner. Omit or null for a general package.
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            ownerEmployeeId?: string | null;
             /**
              * @description Display order (ascending)
              * @default 0
@@ -10598,6 +10604,12 @@ export interface components {
              * @example Updated Pack
              */
             nameEn?: string;
+            /**
+             * Format: uuid
+             * @description Package-level practitioner owner. Omit to preserve; null makes the package general.
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            ownerEmployeeId?: string | null;
             /** @description Display order (ascending) */
             sortOrder?: number;
         };

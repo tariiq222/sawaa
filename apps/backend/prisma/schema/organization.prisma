@@ -436,6 +436,8 @@ model OrganizationSettings {
 // discountValue >= 0 — enforced via CHECK constraint in migration SQL.
 model SessionPackage {
   id            String       @id @default(uuid())
+  ownerEmployeeId String?
+  owner         Employee?    @relation(fields: [ownerEmployeeId], references: [id], onDelete: Restrict)
   nameAr        String
   nameEn        String?
   descriptionAr String?
@@ -455,6 +457,7 @@ model SessionPackage {
 
   items SessionPackageItem[]
 
+  @@index([ownerEmployeeId])
   @@index([isActive])
   @@index([isPublic])
 }

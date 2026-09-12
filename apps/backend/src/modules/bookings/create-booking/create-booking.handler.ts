@@ -22,6 +22,7 @@ import {
   STAFF_TIME_BLOCKING_BOOKING_STATUSES,
 } from '../active-booking-statuses';
 import { bookingCreationRequestHash } from './creation-request-hash';
+import { validateBookingTargetEligibility } from '../booking-target-eligibility.helper';
 import {
   lockPersonReferences,
   retrySerializableTransaction,
@@ -155,51 +156,14 @@ export class CreateBookingHandler {
       throw new BadRequestException('Service is hidden');
     }
 
-    const employeeService = await db.employeeService.findUnique({
-      where: { employeeId_serviceId: { employeeId: dto.employeeId, serviceId: dto.serviceId } },
+    const eligibility = await validateBookingTargetEligibility(db, {
+      serviceId: dto.serviceId,
+      employeeId: dto.employeeId,
+      durationOptionId: dto.durationOptionId,
+      deliveryType,
+      bookingType,
     });
-    if (!employeeService || employeeService.isActive === false) {
-      // Track B — practitioner integrity: the EmployeeService row IS the
-      // specialty-match table. A soft-disabled link (isActive=false) must
-      // behave as if the employee no longer offers the service.
-      throw new BadRequestException('Employee does not provide this service');
-    }
-
-    // Per-practitioner delivery-type enforcement (independent of the optional
-    // availability handler): the practitioner may opt out of a delivery type the
-    // service supports, or be in custom-pricing mode where a type with no owned
-    // duration rows is not offered. Enforce both at the create layer so a direct
-    // POST cannot book a surface the practitioner does not actually offer.
-    if (deliveryType) {
-      const empDisabled = (employeeService.disabledDeliveryTypes ?? []) as DeliveryType[];
-      if (empDisabled.includes(deliveryType)) {
-        throw new BadRequestException('Practitioner does not offer this delivery type');
-      }
-      if (employeeService.useCustomPricing === true) {
-        // In custom-pricing mode the practitioner is charged exclusively from
-        // their own ServiceDurationOption rows. Require any explicitly-selected
-        // durationOptionId to be one of those owned rows — otherwise a client
-        // could pass a service-default option id and be charged the inherited
-        // base price instead of the practitioner's custom price.
-        const owned = await db.serviceDurationOption.findFirst({
-          where: {
-            serviceId: dto.serviceId,
-            deliveryType,
-            employeeServiceId: employeeService.id,
-            isActive: true,
-            ...(dto.durationOptionId ? { id: dto.durationOptionId } : {}),
-          },
-          select: { id: true },
-        });
-        if (!owned) {
-          throw new BadRequestException(
-            dto.durationOptionId
-              ? 'Selected duration option is not offered by this practitioner'
-              : 'Practitioner does not offer this delivery type',
-          );
-        }
-      }
-    }
+    const employeeService = eligibility.employeeService;
 
     // Resolve category and department names for snapshots
     let categoryName: string | null = null;
@@ -218,18 +182,6 @@ export class CreateBookingHandler {
           });
           if (department) departmentName = department.nameAr;
         }
-      }
-    }
-
-    if (bookingType && bookingType !== 'WALK_IN') {
-      const allowedConfigs = await db.serviceBookingConfig.findMany({
-        where: { serviceId: dto.serviceId, isActive: true },
-        select: { deliveryType: true },
-      });
-      const allowedDeliveryTypes = allowedConfigs.map(c => c.deliveryType);
-
-      if (allowedDeliveryTypes.length > 0 && !allowedDeliveryTypes.includes(deliveryType)) {
-        throw new BadRequestException(`Service does not support ${deliveryType} delivery type`);
       }
     }
 
