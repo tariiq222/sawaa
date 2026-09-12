@@ -10,6 +10,8 @@ import {
   UserIcon,
   WalkingIcon,
   UserGroupIcon,
+  WhatsappIcon,
+  AiChat01Icon,
 } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback, Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
@@ -81,6 +83,16 @@ const sourceIconConfig: Record<string, { icon: typeof Store01Icon; labelKey: str
     icon: Globe02Icon,
     labelKey: "bookings.col.source.online",
     tone: "bg-info-soft text-info border border-info/30",
+  },
+  WHATSAPP: {
+    icon: WhatsappIcon,
+    labelKey: "bookings.col.source.whatsapp",
+    tone: "bg-success-soft text-success border border-success/30",
+  },
+  AI_CHAT: {
+    icon: AiChat01Icon,
+    labelKey: "bookings.col.source.aiChat",
+    tone: "bg-accent-ultra-light text-accent-foreground border border-border",
   },
 }
 

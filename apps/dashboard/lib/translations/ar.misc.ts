@@ -323,6 +323,8 @@ export const arMisc: Record<string, string> = {
   "detail.bookingChannel": "طريقة الحجز",
   "detail.bookingChannel.online": "حجز ذاتي (العميل)",
   "detail.bookingChannel.reception": "الاستقبال",
+  "detail.bookingChannel.whatsapp": "واتساب",
+  "detail.bookingChannel.aiChat": "المساعد الذكي",
   "detail.amount": "المبلغ",
   "detail.status": "الحالة",
   "detail.method": "الطريقة",

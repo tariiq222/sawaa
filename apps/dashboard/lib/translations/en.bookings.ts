@@ -443,6 +443,8 @@ export const enBookings: Record<string, string> = {
   "bookings.col.type.group": "Group",
   "bookings.col.source.reception": "Front desk",
   "bookings.col.source.online": "Online booking",
+  "bookings.col.source.whatsapp": "From WhatsApp",
+  "bookings.col.source.aiChat": "From assistant chat",
   "bookings.col.quickAction.confirm": "Confirm Appointment",
   "bookings.col.quickAction.cancel": "Cancel Appointment",
 

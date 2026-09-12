@@ -443,6 +443,8 @@ export const arBookings: Record<string, string> = {
   "bookings.col.type.group": "جماعي",
   "bookings.col.source.reception": "من الاستقبال",
   "bookings.col.source.online": "من الموقع",
+  "bookings.col.source.whatsapp": "من واتساب",
+  "bookings.col.source.aiChat": "من المساعد الذكي",
   "bookings.col.quickAction.confirm": "تأكيد الموعد",
   "bookings.col.quickAction.cancel": "إلغاء الموعد",
 

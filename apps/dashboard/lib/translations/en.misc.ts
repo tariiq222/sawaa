@@ -323,6 +323,8 @@ export const enMisc: Record<string, string> = {
   "detail.bookingChannel": "Booking Channel",
   "detail.bookingChannel.online": "Self-booked (client)",
   "detail.bookingChannel.reception": "Reception",
+  "detail.bookingChannel.whatsapp": "WhatsApp",
+  "detail.bookingChannel.aiChat": "Assistant chat",
   "detail.amount": "Amount",
   "detail.status": "Status",
   "detail.method": "Method",

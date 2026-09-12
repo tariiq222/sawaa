@@ -19,6 +19,7 @@ import { Badge, Button } from "@sawaa/ui"
 import { PaymentStatusBadge } from "@/components/features/status-badge"
 import { DetailRow } from "@/components/features/detail-sheet-parts"
 import { cn } from "@/lib/utils"
+import { bookingChannelKey } from "@/lib/booking-source"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { useRetryBookingZoom } from "@/hooks/use-zoom-config"
 import type { Booking, CancelledBy } from "@/lib/types/booking"
@@ -165,7 +166,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
             <DetailRow label={t("detail.bookedAt")} value={bookedAt} numeric />
             <DetailRow
               label={t("detail.bookingChannel")}
-              value={t(`detail.bookingChannel.${booking.source === "ONLINE" ? "online" : "reception"}`)}
+              value={t(bookingChannelKey(booking.source))}
             />
           </div>
         </div>
