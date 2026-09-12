@@ -605,6 +605,7 @@ export const enMisc: Record<string, string> = {
   "reports.packages.outstanding.liability": "Outstanding liability (SAR)",
   "reports.packages.outstanding.sessions": "Remaining sessions",
   "reports.packages.outstanding.creditCount": "Active credit buckets",
+  "reports.packages.outstanding.reservedSessions": "Booked sessions",
   "reports.packages.consumption.totalConsumed": "Total sessions delivered",
   "reports.packages.consumption.byEmployee": "Consumption by practitioner",
   "reports.packages.consumption.count": "Sessions",

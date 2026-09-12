@@ -19,6 +19,14 @@ export interface OutstandingCreditReportResult {
   outstandingSessions: number;
   /** Number of credit buckets with remaining capacity. */
   creditCount: number;
+  /**
+   * Σ reservedQuantity across all active credits — outstanding sessions that
+   * already have an appointment booked (reserved but not yet delivered).
+   * Informational: it does not change outstandingLiability, which already
+   * counts a reserved session as owed via usedQuantity staying untouched
+   * until check-in.
+   */
+  reservedSessions: number;
 }
 
 /**
@@ -45,6 +53,7 @@ export async function buildOutstandingCreditReport(
           netValue: true,
           totalQuantity: true,
           usedQuantity: true,
+          reservedQuantity: true,
         },
       },
     },
@@ -53,6 +62,7 @@ export async function buildOutstandingCreditReport(
   let outstandingLiability = 0;
   let outstandingSessions = 0;
   let creditCount = 0;
+  let reservedSessions = 0;
 
   for (const purchase of purchases) {
     const purchaseNet = Math.max(
@@ -69,6 +79,9 @@ export async function buildOutstandingCreditReport(
 
     let purchaseLiability = 0;
     purchase.credits.forEach((c, index) => {
+      // Reserved sessions are counted even off a fully-consumed credit's early
+      // return below — they are still owed and still booked either way.
+      reservedSessions += c.reservedQuantity;
       const remaining = c.totalQuantity - c.usedQuantity;
       if (remaining <= 0) return;
       creditCount += 1;
@@ -84,5 +97,5 @@ export async function buildOutstandingCreditReport(
     outstandingLiability += Math.min(purchaseLiability, purchaseNet);
   }
 
-  return { outstandingLiability, outstandingSessions, creditCount };
+  return { outstandingLiability, outstandingSessions, creditCount, reservedSessions };
 }

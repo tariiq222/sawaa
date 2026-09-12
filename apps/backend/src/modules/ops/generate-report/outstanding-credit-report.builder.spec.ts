@@ -11,11 +11,13 @@ const credit = (overrides: Partial<{
   netValue: number | null;
   totalQuantity: number;
   usedQuantity: number;
+  reservedQuantity: number;
 }> = {}) => ({
   unitPriceSnapshot: 40_000,
   netValue: null,
   totalQuantity: 6,
   usedQuantity: 0,
+  reservedQuantity: 0,
   ...overrides,
 });
 
@@ -28,7 +30,12 @@ describe('buildOutstandingCreditReport', () => {
 
   it('returns a zero state when there are no active purchases', async () => {
     const result = await buildOutstandingCreditReport(prisma, {});
-    expect(result).toEqual({ outstandingLiability: 0, outstandingSessions: 0, creditCount: 0 });
+    expect(result).toEqual({
+      outstandingLiability: 0,
+      outstandingSessions: 0,
+      creditCount: 0,
+      reservedSessions: 0,
+    });
   });
 
   it('only reads ACTIVE purchases with their credits', async () => {
@@ -36,8 +43,28 @@ describe('buildOutstandingCreditReport', () => {
     const args = prisma.packagePurchase.findMany.mock.calls[0][0];
     expect(args.where).toEqual({ status: 'ACTIVE' });
     expect(args.select.credits.select).toEqual(
-      expect.objectContaining({ netValue: true, unitPriceSnapshot: true, totalQuantity: true, usedQuantity: true }),
+      expect.objectContaining({
+        netValue: true,
+        unitPriceSnapshot: true,
+        totalQuantity: true,
+        usedQuantity: true,
+        reservedQuantity: true,
+      }),
     );
+  });
+
+  it('keeps a booked-but-undelivered session inside the liability and reports it as reserved', async () => {
+    // 5 of 6 sessions are still owed; 2 of those already have appointments booked.
+    prisma.packagePurchase.findMany.mockResolvedValue([
+      {
+        amountPaid: 175_000,
+        refundAmount: 0,
+        credits: [credit({ netValue: 175_000, usedQuantity: 1, reservedQuantity: 2 })],
+      },
+    ]);
+    const result = await buildOutstandingCreditReport(prisma, {});
+    expect(result.outstandingLiability).toBe(145_834); // 175,000 − 29,166 — reserved sessions still counted
+    expect(result.reservedSessions).toBe(2);
   });
 
   it('values remaining sessions from the stored net value, not the list unit price', async () => {

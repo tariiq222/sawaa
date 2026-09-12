@@ -177,6 +177,14 @@ function OutstandingReport({
           <span className="tabular-nums">{report.creditCount}</span>
         }
       />
+      <KpiCard
+        label={t("reports.packages.outstanding.reservedSessions")}
+        value={
+          <span className="tabular-nums">
+            {report.reservedSessions}
+          </span>
+        }
+      />
     </KpiRow>
   )
 }

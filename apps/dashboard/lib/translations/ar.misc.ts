@@ -605,6 +605,7 @@ export const arMisc: Record<string, string> = {
   "reports.packages.outstanding.liability": "الالتزام المالي (ر.س)",
   "reports.packages.outstanding.sessions": "الجلسات المتبقية",
   "reports.packages.outstanding.creditCount": "عدد الدلاء النشطة",
+  "reports.packages.outstanding.reservedSessions": "جلسات محجوزة",
   "reports.packages.consumption.totalConsumed": "إجمالي الجلسات المؤدّاة",
   "reports.packages.consumption.byEmployee": "الاستهلاك حسب المعالج",
   "reports.packages.consumption.count": "الجلسات",
