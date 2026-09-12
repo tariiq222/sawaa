@@ -127,6 +127,36 @@ describe('planPurchase (pure residual/idempotency core)', () => {
     expect(plan).toEqual({ kind: 'finding', purchaseId: 'purchase-1', reason: 'aggregate-mismatch' });
   });
 
+  it('flags duplicate legacy aggregates before considering any writes', () => {
+    const plan = planPurchase(
+      purchase({ refundAmount: d(300) }),
+      [
+        { id: 'agg-1', source: PackageRefundEventSource.LEGACY_AGGREGATE, amount: d(300), sourceRefundRequestId: null },
+        { id: 'agg-2', source: PackageRefundEventSource.LEGACY_AGGREGATE, amount: d(300), sourceRefundRequestId: null },
+      ],
+      [],
+    );
+    expect(plan).toEqual({ kind: 'finding', purchaseId: 'purchase-1', reason: 'aggregate-mismatch' });
+  });
+
+  it('flags a linked completed request amount mismatch without requiring source request presence', () => {
+    const plan = planPurchase(
+      purchase({ refundAmount: d(500) }),
+      [{ id: 'event-req', source: PackageRefundEventSource.LEGACY_REQUEST, amount: d(400), sourceRefundRequestId: 'request-1' }],
+      [request({ id: 'request-1', amount: d(500), processedAt: new Date('2025-01-01') })],
+    );
+    expect(plan).toEqual({ kind: 'finding', purchaseId: 'purchase-1', reason: 'request-mismatch' });
+  });
+
+  it('allows immutable orphan history when the linked source request was deleted', () => {
+    const plan = planPurchase(
+      purchase({ refundAmount: d(500) }),
+      [{ id: 'event-orphan', source: PackageRefundEventSource.LEGACY_REQUEST, amount: d(500), sourceRefundRequestId: 'deleted-request' }],
+      [],
+    );
+    expect(plan).toMatchObject({ kind: 'ready', createAggregate: false, residual: d(0) });
+  });
+
   it('imports exactly one dated request with no aggregate when it fully accounts for the cumulative amount', () => {
     const plan = planPurchase(
       purchase({ refundAmount: d(500) }),
@@ -209,6 +239,7 @@ describe('runBackfill orchestration', () => {
     const summary = await runBackfill(prisma, { dryRun: true });
 
     expect(tx.createEvent).not.toHaveBeenCalled();
+    expect(String(tx.queryRawMock.mock.calls[0][0].join(''))).not.toContain('FOR UPDATE');
     expect(summary).toMatchObject({
       purchasesConsidered: 1,
       importedRequestCount: 0,
@@ -264,6 +295,7 @@ describe('runBackfill orchestration', () => {
         legacyAggregateKey: 'purchase:p1:legacy-residual',
       }),
     });
+    expect(String(tx.queryRawMock.mock.calls[0][0].join(''))).toContain('FOR UPDATE');
   });
 
   it('rerun against an already-represented request creates no duplicate and never overwrites a LIVE row', async () => {
@@ -321,6 +353,39 @@ describe('runBackfill orchestration', () => {
     expect(summary.findings).toEqual([{ purchaseId: 'p1', reason: 'aggregate-mismatch' }]);
   });
 
+  it('a duplicate aggregate performs no writes and is reported as a finding', async () => {
+    const tx = makeTx();
+    tx.queryRawMock.mockResolvedValueOnce([purchase({ id: 'p1', refundAmount: d(300) })]);
+    tx.findManyEvents.mockResolvedValueOnce([
+      { id: 'agg-1', source: PackageRefundEventSource.LEGACY_AGGREGATE, amount: d(300), sourceRefundRequestId: null },
+      { id: 'agg-2', source: PackageRefundEventSource.LEGACY_AGGREGATE, amount: d(300), sourceRefundRequestId: null },
+    ]);
+    tx.findManyRequests.mockResolvedValueOnce([]);
+    const prisma = makePrisma(['p1'], tx);
+
+    const summary = await runBackfill(prisma, { dryRun: false });
+
+    expect(tx.createEvent).not.toHaveBeenCalled();
+    expect(summary.findings).toEqual([{ purchaseId: 'p1', reason: 'aggregate-mismatch' }]);
+  });
+
+  it('a linked request amount mismatch performs no writes and is reported as a finding', async () => {
+    const tx = makeTx();
+    tx.queryRawMock.mockResolvedValueOnce([purchase({ id: 'p1', refundAmount: d(500) })]);
+    tx.findManyEvents.mockResolvedValueOnce([
+      { id: 'event-req', source: PackageRefundEventSource.LEGACY_REQUEST, amount: d(400), sourceRefundRequestId: 'r1' },
+    ]);
+    tx.findManyRequests.mockResolvedValueOnce([
+      request({ id: 'r1', amount: d(500), processedAt: new Date('2025-01-01') }),
+    ]);
+    const prisma = makePrisma(['p1'], tx);
+
+    const summary = await runBackfill(prisma, { dryRun: false });
+
+    expect(tx.createEvent).not.toHaveBeenCalled();
+    expect(summary.findings).toEqual([{ purchaseId: 'p1', reason: 'request-mismatch' }]);
+  });
+
   it('candidate selection excludes a zero-refund, non-REFUNDED purchase entirely', async () => {
     const tx = makeTx();
     const prisma = makePrisma([], tx); // the candidate query itself returns nothing for such a purchase
@@ -344,7 +409,41 @@ describe('parseBackfillCliArgs', () => {
     expect(parseBackfillCliArgs(['--database-url-env=HISTORICAL_AUDIT_DATABASE_URL', '--dry-run'])).toEqual({
       dryRun: true,
       databaseUrlEnv: 'HISTORICAL_AUDIT_DATABASE_URL',
+      confirmDatabase: undefined,
     });
+  });
+
+  it('defaults to dry-run and requires an explicit apply confirmation for writes', () => {
+    expect(parseBackfillCliArgs(['--database-url-env=HISTORICAL_AUDIT_DATABASE_URL'])).toEqual({
+      dryRun: true,
+      databaseUrlEnv: 'HISTORICAL_AUDIT_DATABASE_URL',
+      confirmDatabase: undefined,
+    });
+    expect(parseBackfillCliArgs([
+      '--database-url-env=HISTORICAL_AUDIT_DATABASE_URL',
+      '--apply',
+      '--confirm-database=sawaa_transition',
+    ])).toEqual({
+      dryRun: false,
+      databaseUrlEnv: 'HISTORICAL_AUDIT_DATABASE_URL',
+      confirmDatabase: 'sawaa_transition',
+    });
+    expect(() => parseBackfillCliArgs([
+      '--database-url-env=HISTORICAL_AUDIT_DATABASE_URL',
+      '--apply',
+    ])).toThrow('--confirm-database');
+    expect(() => parseBackfillCliArgs([
+      '--database-url-env=HISTORICAL_AUDIT_DATABASE_URL',
+      '--dry-run',
+      '--apply',
+      '--confirm-database=sawaa_transition',
+    ])).toThrow('--apply cannot be specified with --dry-run');
+    expect(() => parseBackfillCliArgs([
+      '--database-url-env=HISTORICAL_AUDIT_DATABASE_URL',
+      '--apply',
+      '--confirm-database=sawaa_transition',
+      '--dry-run',
+    ])).toThrow('--dry-run cannot be specified with --apply');
   });
 
   it('shows usage on --help without requiring a database', () => {
@@ -381,13 +480,27 @@ describe('resolveDatabaseUrl', () => {
 
   it('refuses write mode against a shared/production-shaped database name', () => {
     expect(() =>
-      resolveDatabaseUrl({ dryRun: false, databaseUrlEnv: 'X' }, { X: 'postgresql://sawaa:pw@localhost:3453/sawaa_dev' }),
+      resolveDatabaseUrl(
+        { dryRun: false, databaseUrlEnv: 'X', confirmDatabase: 'sawaa_dev' },
+        { X: 'postgresql://sawaa:pw@localhost:3453/sawaa_dev' },
+      ),
     ).toThrow('Refusing to write');
+  });
+
+  it('refuses production-shaped database aliases, not only exact fixture names', () => {
+    expect(() => resolveDatabaseUrl(
+      { dryRun: false, databaseUrlEnv: 'X', confirmDatabase: 'sawaa_production' },
+      { X: 'postgresql://sawaa:pw@localhost:3453/sawaa_production' },
+    )).toThrow('Refusing to write');
+    expect(() => resolveDatabaseUrl(
+      { dryRun: false, databaseUrlEnv: 'X', confirmDatabase: 'sawaa_staging' },
+      { X: 'postgresql://sawaa:pw@localhost:3453/sawaa_staging' },
+    )).toThrow('Refusing to write');
   });
 
   it('permits write mode against the dedicated transition database', () => {
     const url = resolveDatabaseUrl(
-      { dryRun: false, databaseUrlEnv: 'X' },
+      { dryRun: false, databaseUrlEnv: 'X', confirmDatabase: 'sawaa_e2e' },
       { X: 'postgresql://sawaa:pw@localhost:3453/sawaa_e2e' },
     );
     expect(url).toContain('sawaa_e2e');

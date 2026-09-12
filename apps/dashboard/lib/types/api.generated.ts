@@ -20089,7 +20089,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description JSON report object (shape depends on the report type) */
+            /** @description JSON report object by report type. REFUNDED uses historyMode EVENTS with individual refund events and separate undatedHistorical records after reconciliation; otherwise historyMode LEGACY preserves the previous report with an incomplete historyReconciliation indicator. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -28,9 +28,9 @@
  *
  * The database connection is NEVER hardcoded and NEVER the app's default
  * `DATABASE_URL` — the caller must name an explicitly protected environment
- * variable that holds the connection string. Write mode (omitting
- * `--dry-run`) additionally refuses to run against a database whose name
- * looks shared or production-shaped (see `PROTECTED_DATABASE_NAMES` below).
+ * variable that holds the connection string. Write mode requires both
+ * `--apply` and an exact `--confirm-database=<name>` acknowledgement, and
+ * refuses shared or production-shaped database names.
  * This script does not claim to have migrated real data — running it in
  * write mode against real history is a separate, explicitly authorized step
  * outside this task.
@@ -47,49 +47,23 @@ import {
   RefundStatus,
 } from '@prisma/client';
 import { decimalToHalalas } from '../src/modules/finance/money.helper';
+import {
+  type BackfillFinding,
+  type CompletedRequestRow,
+  type ExistingEventRow,
+  type LockedPurchaseRow,
+  type PurchasePlan,
+  planPurchase,
+} from '../src/modules/finance/package-refund-reconciliation';
 
-// ─── Core data shapes ──────────────────────────────────────────────────
-
-/** A candidate purchase, re-read fresh (fields that matter here) under `FOR UPDATE`. */
-export interface LockedPurchaseRow {
-  id: string;
-  status: PackagePurchaseStatus;
-  refundAmount: Prisma.Decimal;
-  refundedAt: Date | null;
-}
-
-export interface ExistingEventRow {
-  id: string;
-  source: PackageRefundEventSource;
-  amount: Prisma.Decimal;
-  sourceRefundRequestId: string | null;
-}
-
-export interface CompletedRequestRow {
-  id: string;
-  amount: Prisma.Decimal;
-  processedAt: Date | null;
-}
-
-export type PurchasePlan =
-  | { kind: 'finding'; purchaseId: string; reason: 'over-cumulative' | 'aggregate-mismatch' }
-  | {
-      kind: 'ready';
-      purchaseId: string;
-      /** Completed requests with a provable date, not already represented by an event. */
-      exactRequests: CompletedRequestRow[];
-      /** Cumulative refund amount left unexplained after existing + exact events. */
-      residual: Prisma.Decimal;
-      /** Whether a new `LEGACY_AGGREGATE` row must be inserted. */
-      createAggregate: boolean;
-      aggregateOccurredAt: Date | null;
-      aggregateNotes: string;
-    };
-
-export interface BackfillFinding {
-  purchaseId: string;
-  reason: 'over-cumulative' | 'aggregate-mismatch';
-}
+export type {
+  BackfillFinding,
+  CompletedRequestRow,
+  ExistingEventRow,
+  LockedPurchaseRow,
+  PurchasePlan,
+} from '../src/modules/finance/package-refund-reconciliation';
+export { planPurchase } from '../src/modules/finance/package-refund-reconciliation';
 
 export interface BackfillSummary {
   purchasesConsidered: number;
@@ -98,95 +72,6 @@ export interface BackfillSummary {
   residualHalalas: number;
   undatedPurchaseCount: number;
   findings: BackfillFinding[];
-}
-
-const AGGREGATE_RESIDUAL_NOTES =
-  'Historical aggregate — legacy refunded value with no reconstructable per-event date.';
-const AGGREGATE_TERMINAL_DATED_NOTES =
-  "Historical aggregate — zero-money terminal cancellation; date reflects the purchase's terminal refundedAt as cancellation evidence only, no individual refund amount is known.";
-const AGGREGATE_TERMINAL_UNDATED_NOTES =
-  'Historical aggregate — zero-money terminal cancellation; no date is known.';
-
-const sumAmounts = (rows: Array<{ amount: Prisma.Decimal }>): Prisma.Decimal =>
-  rows.reduce((sum, row) => sum.plus(row.amount), new Prisma.Decimal(0));
-
-/**
- * Pure decision core (the plan's worked shape). Given one purchase's locked
- * row plus what has already been read under that same lock — existing event
- * rows and completed `RefundRequest` rows linked to this purchase's invoice
- * — decide what (if anything) needs writing. This function never touches
- * the database, so every rule in the plan can be pinned with a fixture.
- */
-export function planPurchase(
-  purchase: LockedPurchaseRow,
-  existing: ExistingEventRow[],
-  completedRequests: CompletedRequestRow[],
-): PurchasePlan {
-  // Idempotency: a request already represented by a prior run (live or
-  // historical) is never turned into a second event.
-  const representedRequestIds = new Set(
-    existing
-      .map((event) => event.sourceRefundRequestId)
-      .filter((id): id is string => Boolean(id)),
-  );
-  const exactRequests = completedRequests.filter(
-    (request) => request.processedAt && !representedRequestIds.has(request.id),
-  );
-
-  // Every non-aggregate existing event (LIVE included, even one with no
-  // linked request id) plus every newly-reconstructed exact request counts
-  // against the cumulative balance before anything is written.
-  const representedAmount = sumAmounts(
-    existing.filter((event) => event.source !== PackageRefundEventSource.LEGACY_AGGREGATE),
-  ).plus(sumAmounts(exactRequests));
-
-  if (representedAmount.gt(purchase.refundAmount)) {
-    return { kind: 'finding', purchaseId: purchase.id, reason: 'over-cumulative' };
-  }
-
-  const residual = purchase.refundAmount.minus(representedAmount);
-  const aggregate = existing.find(
-    (event) => event.source === PackageRefundEventSource.LEGACY_AGGREGATE,
-  );
-  if (aggregate && !aggregate.amount.eq(residual)) {
-    // An existing aggregate must exactly match the freshly computed
-    // residual. A mismatch is a data-quality signal, never something to
-    // silently overwrite.
-    return { kind: 'finding', purchaseId: purchase.id, reason: 'aggregate-mismatch' };
-  }
-
-  // Preserve previously visible zero-money REFUNDED history: a terminal
-  // cancellation with nothing else representing it must not vanish just
-  // because residual computes to zero.
-  const terminalZeroNotRepresented =
-    purchase.status === PackagePurchaseStatus.REFUNDED &&
-    purchase.refundAmount.eq(0) &&
-    existing.length === 0 &&
-    exactRequests.length === 0;
-
-  const createAggregate = !aggregate && (residual.gt(0) || terminalZeroNotRepresented);
-
-  let aggregateOccurredAt: Date | null = null;
-  let aggregateNotes = AGGREGATE_RESIDUAL_NOTES;
-  if (createAggregate && residual.eq(0) && terminalZeroNotRepresented) {
-    // Rule 4 carve-out: a zero-money terminal purchase MAY use its own
-    // refundedAt as cancellation evidence. This is not an individual refund
-    // date — it only proves the purchase reached its terminal state.
-    aggregateOccurredAt = purchase.refundedAt;
-    aggregateNotes = purchase.refundedAt
-      ? AGGREGATE_TERMINAL_DATED_NOTES
-      : AGGREGATE_TERMINAL_UNDATED_NOTES;
-  }
-
-  return {
-    kind: 'ready',
-    purchaseId: purchase.id,
-    exactRequests,
-    residual,
-    createAggregate,
-    aggregateOccurredAt,
-    aggregateNotes,
-  };
 }
 
 // ─── Database access (thin — all decision logic lives in planPurchase) ──
@@ -208,7 +93,10 @@ export interface TransitionPrismaClient {
   packagePurchase: {
     findMany(args: unknown): Promise<Array<{ id: string }>>;
   };
-  $transaction<T>(fn: (tx: TransitionTxClient) => Promise<T>): Promise<T>;
+  $transaction<T>(
+    fn: (tx: TransitionTxClient) => Promise<T>,
+    options?: { isolationLevel?: Prisma.TransactionIsolationLevel },
+  ): Promise<T>;
 }
 
 /**
@@ -237,6 +125,17 @@ async function lockPurchaseRow(
     FROM "PackagePurchase"
     WHERE id = ${purchaseId}
     FOR UPDATE`;
+  return rows[0] ?? null;
+}
+
+async function readPurchaseRow(
+  tx: TransitionTxClient,
+  purchaseId: string,
+): Promise<LockedPurchaseRow | null> {
+  const rows = await tx.$queryRaw<LockedPurchaseRow[]>`
+    SELECT id, status, "refundAmount", "refundedAt"
+    FROM "PackagePurchase"
+    WHERE id = ${purchaseId}`;
   return rows[0] ?? null;
 }
 
@@ -323,7 +222,12 @@ export async function runBackfill(
 
   for (const purchaseId of candidateIds) {
     await prisma.$transaction(async (tx) => {
-      const purchase = await lockPurchaseRow(tx, purchaseId);
+      // A dry run must remain compatible with a read-only database
+      // transaction: FOR UPDATE is a write-intent lock and is rejected by
+      // PostgreSQL in READ ONLY mode. The apply path takes the lock.
+      const purchase = options.dryRun
+        ? await readPurchaseRow(tx, purchaseId)
+        : await lockPurchaseRow(tx, purchaseId);
       if (!purchase) return; // vanished between selection and lock — nothing to represent
 
       const [existing, completedRequests] = await Promise.all([
@@ -345,7 +249,7 @@ export async function runBackfill(
       }
 
       await applyPlan(tx, plan, options.dryRun);
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   }
 
   return summary;
@@ -356,10 +260,12 @@ export async function runBackfill(
 export interface BackfillCliOptions {
   dryRun: boolean;
   databaseUrlEnv: string;
+  confirmDatabase?: string;
 }
 
 const USAGE = `Usage:
   backfill-package-refund-events --database-url-env=<ENV_VAR_NAME> [--dry-run]
+  backfill-package-refund-events --database-url-env=<ENV_VAR_NAME> --apply --confirm-database=<DB_NAME>
 
 The database connection is never hardcoded and never the app's default
 DATABASE_URL — name an explicitly protected environment variable that holds
@@ -367,8 +273,9 @@ the connection string, e.g.:
 
   --database-url-env=HISTORICAL_AUDIT_DATABASE_URL
 
-Write mode (omitting --dry-run) refuses to run against a database whose name
-looks shared or production (sawaa_dev, sawaa_prod, sawaa, postgres).`;
+Dry-run is the default and never writes. Apply mode requires both --apply and
+an exact --confirm-database=<DB_NAME>; shared or production-shaped names are
+always refused.`;
 
 export class BackfillCliHelpRequested extends Error {
   constructor() {
@@ -384,19 +291,36 @@ function fail(message: string): never {
 const DATABASE_URL_ENV_FLAG = '--database-url-env=';
 
 export function parseBackfillCliArgs(args: readonly string[]): BackfillCliOptions {
-  let dryRun = false;
+  let dryRun = true;
+  let apply = false;
+  let dryRunExplicit = false;
   let databaseUrlEnv: string | undefined;
+  let confirmDatabase: string | undefined;
 
   for (const arg of args) {
     if (arg === '--help' || arg === '-h') throw new BackfillCliHelpRequested();
     if (arg === '--dry-run') {
+      if (apply || dryRunExplicit) fail('--dry-run cannot be specified with --apply or more than once');
+      dryRunExplicit = true;
       dryRun = true;
+      continue;
+    }
+    if (arg === '--apply') {
+      if (apply || dryRunExplicit) fail('--apply cannot be specified with --dry-run or more than once');
+      apply = true;
+      dryRun = false;
       continue;
     }
     if (arg.startsWith(DATABASE_URL_ENV_FLAG)) {
       if (databaseUrlEnv) fail('--database-url-env may be specified only once');
       databaseUrlEnv = arg.slice(DATABASE_URL_ENV_FLAG.length).trim();
       if (!databaseUrlEnv) fail('--database-url-env requires a value, e.g. --database-url-env=HISTORICAL_AUDIT_DATABASE_URL');
+      continue;
+    }
+    if (arg.startsWith('--confirm-database=')) {
+      if (confirmDatabase) fail('--confirm-database may be specified only once');
+      confirmDatabase = arg.slice('--confirm-database='.length).trim();
+      if (!confirmDatabase) fail('--confirm-database requires a database name');
       continue;
     }
     fail(`Unknown argument: ${arg}`);
@@ -406,14 +330,32 @@ export function parseBackfillCliArgs(args: readonly string[]): BackfillCliOption
   if (databaseUrlEnv === 'DATABASE_URL') {
     fail("--database-url-env must not be DATABASE_URL — the transition never runs against the app's default connection");
   }
+  if (apply && !confirmDatabase) {
+    fail('--apply requires --confirm-database=<DB_NAME>');
+  }
+  if (!apply && confirmDatabase) {
+    fail('--confirm-database requires --apply');
+  }
 
-  return { dryRun, databaseUrlEnv };
+  return { dryRun, databaseUrlEnv, confirmDatabase };
 }
 
 // Names that must never be written to by this script, even if an operator
-// points --database-url-env at them by mistake. sawaa_dev in particular
-// holds fixtures actively used by other work — never a scratch target.
+// points --database-url-env at them by mistake. Keep dedicated transition
+// names (for example sawaa_e2e) available, but refuse common environment
+// suffixes and production aliases.
 const PROTECTED_DATABASE_NAMES = new Set(['sawaa_dev', 'sawaa_prod', 'sawaa', 'postgres']);
+const PROTECTED_DATABASE_NAME_PATTERNS = [
+  /^(?:sawaa|sawa)(?:[-_]?)(?:dev|prod(?:uction)?|stage|staging|live|primary)(?:[-_].*)?$/i,
+  /^postgres(?:[-_].*)?$/i,
+];
+
+function isProtectedDatabaseName(databaseName: string): boolean {
+  return (
+    PROTECTED_DATABASE_NAMES.has(databaseName.toLowerCase()) ||
+    PROTECTED_DATABASE_NAME_PATTERNS.some((pattern) => pattern.test(databaseName))
+  );
+}
 
 function databaseNameFromUrl(databaseUrl: string): string {
   let parsed: URL;
@@ -437,7 +379,15 @@ export function resolveDatabaseUrl(
   const raw = environment[options.databaseUrlEnv]?.trim();
   if (!raw) fail(`${options.databaseUrlEnv} is not set`);
   const databaseName = databaseNameFromUrl(raw);
-  if (!options.dryRun && PROTECTED_DATABASE_NAMES.has(databaseName.toLowerCase())) {
+  if (!options.dryRun) {
+    if (!options.confirmDatabase) {
+      fail('write mode requires --confirm-database=<DB_NAME>');
+    }
+    if (databaseName !== options.confirmDatabase) {
+      fail(`--confirm-database must exactly match the database name "${databaseName}"`);
+    }
+  }
+  if (!options.dryRun && isProtectedDatabaseName(databaseName)) {
     fail(
       `Refusing to write against database "${databaseName}" — it looks like a shared or production database. Point --database-url-env at a dedicated transition database instead.`,
     );

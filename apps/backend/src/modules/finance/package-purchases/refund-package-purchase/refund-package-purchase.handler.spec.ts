@@ -392,7 +392,7 @@ describe('RefundPackagePurchaseHandler', () => {
   // written inside the existing transaction for every committed manual
   // refund — full or partial — regardless of whether a RefundRequest exists.
   describe('PackageRefundEvent history write', () => {
-    it('a full refund writes exactly one LIVE FULL event with the cumulative total and null idempotency keys', async () => {
+    it('a full refund writes exactly one LIVE FULL event linked to its RefundRequest', async () => {
       const { handler, tx } = buildHandler();
       await handler.execute(cmd());
 
@@ -406,8 +406,7 @@ describe('RefundPackagePurchaseHandler', () => {
       expect(data.occurredAt).toBeInstanceOf(Date);
       expect(data.notes).toBe('client moved abroad');
       expect(data.processedBy).toBe('manager-1');
-      // Idempotency keys only ever get populated by the historical backfill.
-      expect(data.sourceRefundRequestId).toBeNull();
+      expect(data.sourceRefundRequestId).toBe('rr-1');
       expect(data.legacyAggregateKey).toBeNull();
     });
 
@@ -420,7 +419,7 @@ describe('RefundPackagePurchaseHandler', () => {
       expect(data.refundType).toBe('PARTIAL');
       expect(Number(data.amount)).toBe(20_000);
       expect(Number(data.cumulativeRefundAmount)).toBe(20_000);
-      expect(data.sourceRefundRequestId).toBeNull();
+      expect(data.sourceRefundRequestId).toBe('rr-1');
       expect(data.legacyAggregateKey).toBeNull();
     });
 

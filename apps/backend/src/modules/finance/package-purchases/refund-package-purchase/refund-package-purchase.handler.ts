@@ -238,6 +238,7 @@ export class RefundPackagePurchaseHandler {
       let recordedInvoiceId: string | null = null;
       let recordedPaymentId: string | null = null;
       let recordedCurrency = 'SAR';
+      let recordedRefundRequestId: string | null = null;
 
       if (refundAmount > 0) {
         const invoice = await tx.invoice.findFirst({
@@ -275,7 +276,7 @@ export class RefundPackagePurchaseHandler {
 
             // Persist a COMPLETED RefundRequest — the existing finance refund
             // record. gatewayRef stays null (no Moyasar call; manual refund).
-            await tx.refundRequest.create({
+            const refundRequest = await tx.refundRequest.create({
               data: {
                 id: randomUUID(),
                 invoiceId: invoice.id,
@@ -287,7 +288,9 @@ export class RefundPackagePurchaseHandler {
                 processedAt: refundedAt,
                 processedBy: cmd.userId ?? 'system',
               },
+              select: { id: true },
             });
+            recordedRefundRequestId = refundRequest.id;
 
             const paymentStatus =
               accounting.newInvoiceStatus === 'REFUNDED'
@@ -328,8 +331,8 @@ export class RefundPackagePurchaseHandler {
       // reverse) is the exact failure this ledger exists to prevent. `amount`
       // is the local `refundAmount` — rounded and already validated against
       // the outstanding-balance guard above — never the raw request value.
-      // This is a LIVE row: both idempotency keys (used only by the
-      // historical backfill) stay null.
+      // Link the financial request when one was created so historical
+      // reconstruction cannot import it again; LIVE rows have no aggregate key.
       await tx.packageRefundEvent.create({
         data: {
           purchaseId: cmd.purchaseId,
@@ -342,7 +345,7 @@ export class RefundPackagePurchaseHandler {
           occurredAt: refundedAt,
           notes: cmd.notes ?? null,
           processedBy: cmd.userId ?? null,
-          sourceRefundRequestId: null,
+          sourceRefundRequestId: recordedRefundRequestId,
           legacyAggregateKey: null,
         },
       });

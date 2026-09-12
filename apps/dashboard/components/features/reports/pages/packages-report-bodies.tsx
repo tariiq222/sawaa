@@ -1,12 +1,8 @@
 "use client"
 
-// EXCEPTION: feature-component size limit (300) exceeded — 310 lines
-// — 2026-06-24 — Phase 5 packages reports. The four report bodies
-// (SALES / OUTSTANDING_CREDIT / CONSUMPTION / REFUNDED) are
-// independent renderers with no shared business logic; splitting
-// each into a separate file would create more cross-file plumbing
-// than savings. The page shell (`packages-report-page.tsx`) is the
-// thin orchestrator (139 lines, under the 150-line page limit).
+// The refund renderer lives in `refunded-package-report.tsx` because its
+// EVENTS/LEGACY branches have distinct table contracts. The remaining report
+// bodies stay together to share the existing report-part plumbing.
 
 /**
  * Package Report Bodies — Sawaa Dashboard
@@ -29,6 +25,7 @@ import { KpiCard } from "@/components/features/reports/kpi-card"
 import { Section } from "@/components/features/reports/section"
 import { ReportTable } from "@/components/features/reports/report-table"
 import { ReportsEmptyState } from "@/components/features/reports/empty-state"
+import { RefundedPackageReport } from "./refunded-package-report"
 import type { PackageReport } from "@/lib/types/package-report"
 
 /* ─── Body dispatcher ─── */
@@ -43,7 +40,7 @@ export function PackageReportBody({ report }: { report: PackageReport }) {
     case "CONSUMPTION":
       return <ConsumptionReport report={report} t={t} />
     case "REFUNDED":
-      return <RefundedReport report={report} locale={locale} t={t} />
+      return <RefundedPackageReport report={report} locale={locale} t={t} />
   }
 }
 
@@ -229,96 +226,6 @@ function ConsumptionReport({
           ]}
           rows={report.byEmployee}
           getRowKey={(row) => row.employeeId}
-        />
-      </Section>
-    </>
-  )
-}
-
-/* ─── REFUNDED ─── */
-
-function RefundedReport({
-  report,
-  locale,
-  t,
-}: {
-  report: Extract<PackageReport, { kind: "REFUNDED" }>
-  locale: "ar" | "en"
-  t: (key: string) => string
-}) {
-  if (report.items.length === 0) {
-    return <ReportsEmptyState />
-  }
-  return (
-    <>
-      <KpiRow>
-        <KpiCard
-          label={t("reports.packages.refunded.count")}
-          value={
-            <span className="tabular-nums">{report.refundedCount}</span>
-          }
-        />
-        <KpiCard
-          label={t("reports.packages.refunded.totalRefunded")}
-          value={
-            <FormattedCurrency amount={report.totalRefunded} locale={locale} />
-          }
-        />
-      </KpiRow>
-      <Section title={t("reports.packages.refunded.items")}>
-        <ReportTable
-          columns={[
-            {
-              key: "date",
-              header: t("reports.date"),
-              render: (row) => (
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {new Date(row.refundedAt).toLocaleDateString(locale)}
-                </span>
-              ),
-            },
-            {
-              key: "purchaseId",
-              header: t("reports.packages.refunded.purchaseId"),
-              render: (row) => (
-                <span className="font-mono text-xs" dir="ltr">
-                  {row.purchaseId.slice(0, 8)}
-                </span>
-              ),
-            },
-            {
-              key: "amountPaid",
-              header: t("reports.packages.refunded.amountPaid"),
-              render: (row) => (
-                <span className="tabular-nums">
-                  <FormattedCurrency amount={row.amountPaid} locale={locale} />
-                </span>
-              ),
-            },
-            {
-              key: "refundAmount",
-              header: t("reports.packages.refunded.refundAmount"),
-              render: (row) => (
-                <span className="tabular-nums text-error">
-                  <FormattedCurrency
-                    amount={row.refundAmount}
-                    locale={locale}
-                  />
-                </span>
-              ),
-            },
-            {
-              key: "notes",
-              header: t("reports.packages.refunded.notes"),
-              render: (row) => (
-                <span className="text-xs text-muted-foreground">
-                  {row.notes || "—"}
-                </span>
-              ),
-            },
-          ]}
-          rows={report.items}
-          getRowKey={(row) => row.purchaseId}
         />
       </Section>
     </>

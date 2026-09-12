@@ -85,22 +85,71 @@ export interface PackageConsumptionReport {
 
 /* ─── REFUNDED ─── */
 
-export interface RefundedPackageRow {
+export type PackageRefundHistoryMode = "EVENTS" | "LEGACY"
+
+export type PackageRefundEventSource =
+  | "LIVE"
+  | "LEGACY_REQUEST"
+  | "LEGACY_AGGREGATE"
+
+export type PackageRefundType = "FULL" | "PARTIAL" | "UNKNOWN"
+
+export interface RefundedPackageEventRow {
+  eventId: string
   purchaseId: string
-  packageId: string
-  clientId: string
-  amountPaid: number
+  packageId: string | null
+  clientId: string | null
+  amountPaid: number | null
   refundAmount: number
-  refundedAt: string
+  refundType: PackageRefundType
+  source: PackageRefundEventSource
+  occurredAt: string | null
   notes: string | null
 }
 
-export interface RefundedPackagesReport {
+export interface RefundedPackageLegacyRow {
+  purchaseId: string
+  packageId: string | null
+  clientId: string | null
+  amountPaid: number | null
+  refundAmount: number
+  refundedAt: string | null
+  notes: string | null
+}
+
+export interface PackageRefundHistoryReconciliation {
+  complete: boolean
+  unresolvedPurchaseCount: number
+}
+
+export interface RefundedPackagesEventsReport {
   kind: "REFUNDED"
+  historyMode: "EVENTS"
+  historyReconciliation: PackageRefundHistoryReconciliation & { complete: true }
+  eventCount: number
+  purchaseCount: number
+  totalRefunded: number
+  items: RefundedPackageEventRow[]
+  undatedHistorical: {
+    recordCount: number
+    purchaseCount: number
+    totalRefunded: number
+    items: RefundedPackageEventRow[]
+  }
+}
+
+export interface RefundedPackagesLegacyReport {
+  kind: "REFUNDED"
+  historyMode: "LEGACY"
+  historyReconciliation: PackageRefundHistoryReconciliation & { complete: false }
   refundedCount: number
   totalRefunded: number
-  items: RefundedPackageRow[]
+  items: RefundedPackageLegacyRow[]
 }
+
+export type RefundedPackagesReport =
+  | RefundedPackagesEventsReport
+  | RefundedPackagesLegacyReport
 
 /* ─── Discriminated union ─── */
 
