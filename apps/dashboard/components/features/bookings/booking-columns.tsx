@@ -18,7 +18,7 @@ import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
 import { normalizeDeliveryType } from "@/lib/booking-delivery"
-import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
+import { AmountCell } from "@/components/features/bookings/booking-amount-cell"
 import { ActionsCell, PaymentStatusCell, StatusCell } from "@/components/features/bookings/booking-column-cells"
 import type { QuickStatusActionType } from "@/components/features/bookings/booking-column-cells"
 
@@ -106,7 +106,6 @@ export function getBookingColumns(
   config?: { dateFormat?: DateFormat; locale?: "ar" | "en" },
 ): ColumnDef<Booking>[] {
   const dateFormat = config?.dateFormat ?? "Y-m-d"
-  const locale = config?.locale ?? "ar"
   return [
     {
       id: "bookingNumber",
@@ -251,16 +250,7 @@ export function getBookingColumns(
     {
       id: "amount",
       header: t("bookings.col.header.amount"),
-      cell: ({ row }) => {
-        const payment = row.original.payment
-        const amount = (row.original.isHistoricalImport ? row.original.historicalPayment?.amount : undefined)
-          ?? payment?.totalAmount
-          ?? row.original.priceSnapshot
-          ?? row.original.service?.price
-          ?? null
-        if (amount == null) return <span className="text-muted-foreground">—</span>
-        return <FormattedCurrency amount={amount} locale={locale} decimals={2} className="font-numeric text-sm font-medium text-foreground" />
-      },
+      cell: ({ row }) => <AmountCell booking={row.original} />,
     },
     {
       id: "paymentStatus",

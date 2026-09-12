@@ -194,6 +194,27 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
             </div>
           </div>
         )}
+        {/* A package booking has no payment row — collect happens against the
+            package purchase, not this appointment — so show the session
+            value it drew from the package instead of leaving the amount blank. */}
+        {!booking.payment && booking.packageFunding?.sessionValue != null && (
+          <div className={card}>
+            <div className={cardHeader}><p className={cardTitle}>{t("detail.payment")}</p></div>
+            <div className={cardBody}>
+              <DetailRow
+                label={t("detail.amount")}
+                value={
+                  <div className="flex flex-col items-start gap-0.5">
+                    <FormattedCurrency amount={booking.packageFunding.sessionValue} locale={locale} decimals={2} />
+                    <span className="text-xs text-muted-foreground">{t("bookings.amount.fromPackage")}</span>
+                  </div>
+                }
+                numeric
+                icon={Money02Icon}
+              />
+            </div>
+          </div>
+        )}
         {booking.isHistoricalImport && booking.historicalPayment && (
           <div className={card}>
             <div className={cardHeader}>

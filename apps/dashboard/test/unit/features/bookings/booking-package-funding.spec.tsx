@@ -60,3 +60,28 @@ test("shows package name and consumed funding status in booking details", () => 
   expect(screen.getByRole("link", { name: "باقة الأسرة" })).toHaveAttribute("href", "/packages/package-1")
   expect(screen.getByText("bookings.packageFunding.status.consumed")).toBeInTheDocument()
 })
+
+// A package-funded appointment has no payment row — collection happens
+// against the package purchase, not the appointment — so the payment card
+// must show the session value drawn from the package plus a marker making
+// clear nothing is collected at the desk.
+test("shows the session value with the package marker when there is no payment", () => {
+  render(
+    <DetailsBody
+      booking={{
+        ...booking,
+        payment: null,
+        packageFunding: { ...booking.packageFunding, sessionValue: 29100 },
+      } as unknown as Booking}
+      clientName="عميل"
+      employeeName="أخصائي"
+      specialty="أسري"
+      appointmentDate="2026-08-31"
+      bookedAt="2026-08-30"
+      locale="ar"
+      t={(key) => key}
+    />,
+  )
+
+  expect(screen.getByText("bookings.amount.fromPackage")).toBeInTheDocument()
+})

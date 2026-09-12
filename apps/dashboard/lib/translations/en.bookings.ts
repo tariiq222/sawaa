@@ -410,6 +410,7 @@ export const enBookings: Record<string, string> = {
   "bookings.col.header.type": "Type",
   "bookings.col.header.datetime": "Appointment Date",
   "bookings.col.header.amount": "Amount",
+  "bookings.amount.fromPackage": "Paid from package",
   "bookings.col.header.paymentStatus": "Payment Status",
   "bookings.col.paymentStatus.unpaid": "Unpaid",
   "bookings.col.paymentStatus.pending": "Pending",
