@@ -47,8 +47,8 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange, 
   const summary = buildItemSummary(summaryInput, t)
 
   useEffect(() => {
-    onLineChange?.(index, { serviceName: serviceNames.join("، ") || summary, practitionerName: practitionerNames.join("، ") || t("packages.review.unavailable"), durationName, deliveryName, paidQuantity: paid, freeQuantity: free, unitPrice, discountType, discountValue: storageDiscountValue, discountAmount: lineDiscount, net, priceAvailable: !priceUnavailable && (!singleSpecific || hasHistoricalOverride || !!selectedDuration), pricePending })
-  }, [deliveryName, discountType, durationName, free, hasHistoricalOverride, index, lineDiscount, net, onLineChange, paid, practitionerNames, pricePending, priceUnavailable, selectedDuration, serviceNames, singleSpecific, storageDiscountValue, summary, t, unitPrice])
+    onLineChange?.(index, { serviceName: serviceNames.join("، ") || summary, practitionerName: practitionerNames.join("، ") || t("packages.review.unavailable"), durationName, durations: durationChoices, deliveryName, paidQuantity: paid, freeQuantity: free, unitPrice, discountType, discountValue: storageDiscountValue, discountAmount: lineDiscount, net, priceAvailable: !priceUnavailable && (!singleSpecific || hasHistoricalOverride || !!selectedDuration), pricePending })
+  }, [deliveryName, discountType, durationChoices, durationName, free, hasHistoricalOverride, index, lineDiscount, net, onLineChange, paid, practitionerNames, pricePending, priceUnavailable, selectedDuration, serviceNames, singleSpecific, storageDiscountValue, summary, t, unitPrice])
 
   const errors = itemErr as (PackageItemError & { unitPriceSar?: { message?: string }; paidQuantity?: { message?: string }; freeQuantity?: { message?: string }; discountValue?: { message?: string } }) | undefined
   const changeSelectionMode = (mode: "FIXED" | "FLEXIBLE") => {

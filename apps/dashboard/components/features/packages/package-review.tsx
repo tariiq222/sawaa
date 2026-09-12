@@ -89,16 +89,18 @@ export function PackageReview({ form, breakdown, lineItems }: Props) {
                   : unavailable
               })
               .join("، ")
-            const durationFallback =
-              item.duration.mode === "ANY"
-                ? t("packages.scope.any")
+            const durationNames = item.duration.ids.map((id) => {
+              const choice = detail?.durations?.find((entry) => entry.id === id)
+              return choice
+                ? `${t(`packages.items.deliveryType.${choice.deliveryType}`)} · ${choice.durationMins} ${t("common.min")}`
                 : unavailable
+            }).join("، ")
             const deliveryNames = item.delivery.ids
               .map((id) => t(`packages.items.deliveryType.${id}`))
               .join("، ")
             const service = formatScope(
               item.service,
-              detail?.serviceName || serviceNames,
+              serviceNames,
               t("packages.summary.anyService"),
               t("packages.review.only"),
               t("packages.review.except"),
@@ -106,20 +108,23 @@ export function PackageReview({ form, breakdown, lineItems }: Props) {
             )
             const practitioner = formatScope(
               item.practitioner,
-              detail?.practitionerName || practitionerNames,
+              practitionerNames,
               t("packages.summary.anyPractitioner"),
               t("packages.review.only"),
               t("packages.review.except"),
               unavailable
             )
-            const duration =
-              detail?.durationName ||
-              (item.duration.mode !== "ANY"
-                ? durationFallback
-                : t("packages.scope.any"))
+            const duration = formatScope(
+              item.duration,
+              durationNames,
+              t("packages.scope.any"),
+              t("packages.review.only"),
+              t("packages.review.except"),
+              unavailable
+            )
             const delivery = formatScope(
               item.delivery,
-              detail?.deliveryName || deliveryNames,
+              deliveryNames,
               t("packages.scope.any"),
               t("packages.review.only"),
               t("packages.review.except"),

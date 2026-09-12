@@ -3,6 +3,8 @@ export interface PackageEditorLineDetail {
   serviceName: string
   practitionerName: string
   durationName: string
+  /** Raw duration data lets the unmounted item row's review change language. */
+  durations?: { id: string; deliveryType: string; durationMins: number }[]
   deliveryName: string
   paidQuantity: number
   freeQuantity: number
