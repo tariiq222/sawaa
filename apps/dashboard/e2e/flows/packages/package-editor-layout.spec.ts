@@ -63,6 +63,9 @@ test("package editor general draft stays usable at 390px in Arabic and English",
   await next.click()
   await expect(price).toHaveValue("100")
 
+  await next.click()
+  await expect(page.getByRole("heading", { name: "مراجعة الباقة", exact: true })).toBeVisible()
+
   await page.getByRole("button", { name: "Settings", exact: true }).click()
   await page.getByRole("button", { name: /اللغة.*English/ }).click()
   await expect(page.locator("html")).toHaveAttribute("lang", "en")
@@ -70,8 +73,10 @@ test("package editor general draft stays usable at 390px in Arabic and English",
   await page.keyboard.press("Escape")
   await expect(page.getByRole("heading", { name: "New Session Package", exact: true })).toBeVisible()
   await expect(page.getByText("Package items", { exact: true })).toBeVisible()
-  await expect(page.getByPlaceholder("Price per session (SAR)")).toHaveValue("100")
-  await expect(page.getByRole("button", { name: "Next", exact: true })).toBeEnabled()
+  await expect(page.getByRole("heading", { name: "Review package", exact: true })).toBeVisible()
+  await expect(page.getByText(/Duration: All · Attendance: All/)).toBeVisible()
+  await expect(page.getByText(/Session price: 100.00 .*Final price: 100.00/)).toBeVisible()
+  await expect(page.getByRole("button", { name: "Create Package", exact: true })).toBeEnabled()
   await expect(page.getByRole("button", { name: "Back", exact: true })).toBeEnabled()
   await assertNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath("package-editor-en-390x844.png"), fullPage: true })
