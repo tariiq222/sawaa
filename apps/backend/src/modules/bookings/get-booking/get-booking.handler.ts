@@ -89,7 +89,7 @@ export class GetBookingHandler {
       booking.packageCreditId
         ? this.prisma.packageCredit.findUnique({
             where: { id: booking.packageCreditId },
-            select: { id: true, purchaseId: true },
+            select: { id: true, purchaseId: true, netValue: true, totalQuantity: true },
           })
         : Promise.resolve(null),
       booking.packageCreditId
@@ -114,13 +114,20 @@ export class GetBookingHandler {
       : null;
     const packageFundingByBookingId = new Map<string, BookingPackageFundingRelation>();
     if (credit && usage && purchase && pkg) {
+      // Reporting-only figure: one session's share of the credit's net value.
+      // The amount DUE on a package booking stays zero regardless of this.
+      const sessionValue =
+        credit.netValue != null && credit.totalQuantity > 0
+          ? Math.floor(Number(credit.netValue) / credit.totalQuantity)
+          : null;
       packageFundingByBookingId.set(booking.id, {
         creditId: credit.id,
         purchaseId: purchase.id,
         packageId: pkg.id,
         packageNameAr: pkg.nameAr,
         packageNameEn: pkg.nameEn ?? null,
-        usageStatus: usage.status as 'CONSUMED' | 'RETURNED',
+        usageStatus: usage.status as 'RESERVED' | 'CONSUMED' | 'RETURNED',
+        sessionValue,
       });
     }
 

@@ -22,7 +22,7 @@ describe('ListBookingsHandler', () => {
       { bookingId: 'book-1', creditId: 'credit-1', status: 'CONSUMED' },
     ]);
     prisma.packageCredit.findMany = jest.fn().mockResolvedValue([
-      { id: 'credit-1', purchaseId: 'purchase-1' },
+      { id: 'credit-1', purchaseId: 'purchase-1', netValue: 2910_00, totalQuantity: 10 },
     ]);
     prisma.packagePurchase.findMany = jest.fn().mockResolvedValue([
       { id: 'purchase-1', packageId: 'package-1' },
@@ -40,11 +40,35 @@ describe('ListBookingsHandler', () => {
       packageNameAr: 'باقة الجلسات',
       packageNameEn: 'Session package',
       usageStatus: 'CONSUMED',
+      sessionValue: 291_00,
     });
     expect(prisma.packageCreditUsage.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.packageCredit.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.packagePurchase.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.sessionPackage.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps a null sessionValue when the credit has no netValue', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { ...mockBooking, packageCreditId: 'credit-1' },
+    ]);
+    prisma.packageCreditUsage.findMany = jest.fn().mockResolvedValue([
+      { bookingId: 'book-1', creditId: 'credit-1', status: 'RESERVED' },
+    ]);
+    prisma.packageCredit.findMany = jest.fn().mockResolvedValue([
+      { id: 'credit-1', purchaseId: 'purchase-1', netValue: null, totalQuantity: 10 },
+    ]);
+    prisma.packagePurchase.findMany = jest.fn().mockResolvedValue([
+      { id: 'purchase-1', packageId: 'package-1' },
+    ]);
+    prisma.sessionPackage.findMany = jest.fn().mockResolvedValue([
+      { id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package' },
+    ]);
+
+    const result = await new ListBookingsHandler(prisma as never).execute({ page: 1, limit: 10 });
+
+    expect(result.items[0]?.packageFunding?.sessionValue).toBeNull();
   });
 
   it('loads Booknetic payment metadata for imported booking rows', async () => {

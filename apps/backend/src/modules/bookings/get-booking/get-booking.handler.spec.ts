@@ -165,7 +165,9 @@ describe('GetBookingHandler', () => {
     prisma.employee.findFirst.mockResolvedValue(null);
     prisma.service.findFirst.mockResolvedValue(null);
     prisma.packageCreditUsage.findFirst.mockResolvedValue({ status: 'CONSUMED' });
-    prisma.packageCredit.findUnique.mockResolvedValue({ id: 'credit-1', purchaseId: 'purchase-1' });
+    prisma.packageCredit.findUnique.mockResolvedValue({
+      id: 'credit-1', purchaseId: 'purchase-1', netValue: 2910_00, totalQuantity: 10,
+    });
     prisma.packagePurchase.findUnique.mockResolvedValue({ id: 'purchase-1', packageId: 'package-1' });
     prisma.sessionPackage.findFirst.mockResolvedValue({
       id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package',
@@ -182,6 +184,30 @@ describe('GetBookingHandler', () => {
       packageNameAr: 'باقة الجلسات',
       packageNameEn: 'Session package',
       usageStatus: 'CONSUMED',
+      sessionValue: 291_00,
     });
+  });
+
+  it('maps a null sessionValue when the credit has no netValue', async () => {
+    prisma.booking.findFirst.mockResolvedValue({
+      id: 'b1', clientId: 'c1', employeeId: 'e1', serviceId: 's1', packageCreditId: 'credit-1',
+    });
+    prisma.client.findFirst.mockResolvedValue(null);
+    prisma.employee.findFirst.mockResolvedValue(null);
+    prisma.service.findFirst.mockResolvedValue(null);
+    prisma.packageCreditUsage.findFirst.mockResolvedValue({ status: 'RESERVED' });
+    prisma.packageCredit.findUnique.mockResolvedValue({
+      id: 'credit-1', purchaseId: 'purchase-1', netValue: null, totalQuantity: 10,
+    });
+    prisma.packagePurchase.findUnique.mockResolvedValue({ id: 'purchase-1', packageId: 'package-1' });
+    prisma.sessionPackage.findFirst.mockResolvedValue({
+      id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package',
+    });
+
+    (mapBookingRow as jest.Mock).mockClear();
+    await handler.execute({ bookingId: 'b1' });
+
+    const relations = (mapBookingRow as jest.Mock).mock.calls[0][1];
+    expect(relations.packageFundingByBookingId.get('b1')?.sessionValue).toBeNull();
   });
 });
