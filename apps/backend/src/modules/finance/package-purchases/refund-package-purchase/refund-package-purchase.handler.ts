@@ -10,6 +10,8 @@ import {
   InvoiceStatus,
   PackageCreditUsageStatus,
   PackagePurchaseStatus,
+  PackageRefundEventSource,
+  PackageRefundType,
   PaymentStatus,
   Prisma,
   RefundStatus,
@@ -236,6 +238,7 @@ export class RefundPackagePurchaseHandler {
       let recordedInvoiceId: string | null = null;
       let recordedPaymentId: string | null = null;
       let recordedCurrency = 'SAR';
+      let recordedRefundRequestId: string | null = null;
 
       if (refundAmount > 0) {
         const invoice = await tx.invoice.findFirst({
@@ -273,7 +276,7 @@ export class RefundPackagePurchaseHandler {
 
             // Persist a COMPLETED RefundRequest — the existing finance refund
             // record. gatewayRef stays null (no Moyasar call; manual refund).
-            await tx.refundRequest.create({
+            const refundRequest = await tx.refundRequest.create({
               data: {
                 id: randomUUID(),
                 invoiceId: invoice.id,
@@ -285,7 +288,9 @@ export class RefundPackagePurchaseHandler {
                 processedAt: refundedAt,
                 processedBy: cmd.userId ?? 'system',
               },
+              select: { id: true },
             });
+            recordedRefundRequestId = refundRequest.id;
 
             const paymentStatus =
               accounting.newInvoiceStatus === 'REFUNDED'
@@ -319,6 +324,31 @@ export class RefundPackagePurchaseHandler {
           );
         }
       }
+
+      // History ledger (append-only): exactly one row per committed manual
+      // refund call, full or partial, written as the final mutation of this
+      // same transaction — a refund recorded without its event (or the
+      // reverse) is the exact failure this ledger exists to prevent. `amount`
+      // is the local `refundAmount` — rounded and already validated against
+      // the outstanding-balance guard above — never the raw request value.
+      // Link the financial request when one was created so historical
+      // reconstruction cannot import it again; LIVE rows have no aggregate key.
+      await tx.packageRefundEvent.create({
+        data: {
+          purchaseId: cmd.purchaseId,
+          amount: new Prisma.Decimal(refundAmount),
+          cumulativeRefundAmount: new Prisma.Decimal(newCumulativeRefund),
+          source: PackageRefundEventSource.LIVE,
+          refundType: isFullRefund
+            ? PackageRefundType.FULL
+            : PackageRefundType.PARTIAL,
+          occurredAt: refundedAt,
+          notes: cmd.notes ?? null,
+          processedBy: cmd.userId ?? null,
+          sourceRefundRequestId: recordedRefundRequestId,
+          legacyAggregateKey: null,
+        },
+      });
 
       return {
         refundedAt,

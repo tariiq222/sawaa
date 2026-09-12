@@ -92,7 +92,10 @@ export class DashboardOpsController {
   })
   @ApiQuery({ name: 'from', required: true, description: 'Start of period (ISO 8601 date)' })
   @ApiQuery({ name: 'to', required: true, description: 'End of period (ISO 8601 date)' })
-  @ApiOkResponse({ description: 'JSON report object (shape depends on the report type)' })
+  @ApiOkResponse({
+    description:
+      'JSON report object by report type. REFUNDED uses historyMode EVENTS with individual refund events and separate undatedHistorical records after reconciliation; otherwise historyMode LEGACY preserves the previous report with an incomplete historyReconciliation indicator.',
+  })
   packageReportEndpoint(@Query() query: PackageReportQueryDto) {
     return this.packageReports.execute({
       report: query.report,

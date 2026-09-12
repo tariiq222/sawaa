@@ -106,6 +106,8 @@ describe("usePackageReport — happy path", () => {
   it("returns the discriminated union (REFUNDED kind tag)", async () => {
     const payload = {
       kind: "REFUNDED" as const,
+      historyMode: "LEGACY" as const,
+      historyReconciliation: { complete: false, unresolvedPurchaseCount: 1 },
       refundedCount: 1,
       totalRefunded: 50000,
       items: [
