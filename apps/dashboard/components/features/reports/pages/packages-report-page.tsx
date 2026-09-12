@@ -30,7 +30,6 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { ReportsEmptyState } from "@/components/features/reports/empty-state"
 import { PackageReportBody } from "./packages-report-bodies"
 import type { PackageReportType } from "@/lib/types/package-report"
-import type { ExportableReportType } from "@/lib/api/reports"
 import { cn } from "@/lib/utils"
 
 /* ─── Type selector ─── */
@@ -48,12 +47,6 @@ export function PackagesReportPage() {
   const { t } = useLocale()
   const period = useReportsPeriodCtx()
   const [type, setType] = useState<PackageReportType>("SALES")
-
-  // Package reports are JSON-only — `ExportableReportType` does not
-  // include them, so we pass OVERVIEW as a benign placeholder that
-  // the Excel exporter ignores (the toolbar's export button is not
-  // wired for this page — see ReportPageShell's exportType prop).
-  const exportType: ExportableReportType = "OVERVIEW"
 
   const params = {
     report: type,
@@ -73,7 +66,6 @@ export function PackagesReportPage() {
     <ReportPageShell
       title={t("reports.packages.title")}
       description={t("reports.packages.description")}
-      exportType={exportType}
     >
       <div className="flex flex-col gap-5">
         <PackageTypeSelector value={type} onChange={setType} t={t} />

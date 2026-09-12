@@ -24,7 +24,7 @@ interface ReportsToolbarProps {
   branchId: string | undefined
   onBranchIdChange: (v: string | undefined) => void
   /** Active report type — used for the export button */
-  exportType: ExportableReportType
+  exportType?: ExportableReportType
   filenameDateTo: string
 }
 
@@ -55,6 +55,7 @@ export function ReportsToolbar({
   const [exporting, setExporting] = useState(false)
 
   const handleExport = async () => {
+    if (!exportType) return
     setExporting(true)
     try {
       await exportReportExcel({
@@ -109,17 +110,19 @@ export function ReportsToolbar({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          disabled={exporting}
-          data-testid="reports-export-btn"
-        >
-          {exporting ? t("reports.exporting") : t("reports.exportCsv")}
-        </Button>
-      </div>
+      {exportType && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={exporting}
+            data-testid="reports-export-btn"
+          >
+            {exporting ? t("reports.exporting") : t("reports.exportCsv")}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

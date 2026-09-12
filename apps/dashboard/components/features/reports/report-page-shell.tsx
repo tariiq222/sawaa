@@ -9,7 +9,7 @@ import type { ExportableReportType } from "@/lib/api/reports"
 interface ReportPageShellProps {
   title: string
   description?: string
-  exportType: ExportableReportType
+  exportType?: ExportableReportType
   children: ReactNode
 }
 
