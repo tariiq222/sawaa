@@ -10,6 +10,8 @@ import {
   InvoiceStatus,
   PackageCreditUsageStatus,
   PackagePurchaseStatus,
+  PackageRefundEventSource,
+  PackageRefundType,
   PaymentStatus,
   Prisma,
   RefundStatus,
@@ -319,6 +321,31 @@ export class RefundPackagePurchaseHandler {
           );
         }
       }
+
+      // History ledger (append-only): exactly one row per committed manual
+      // refund call, full or partial, written as the final mutation of this
+      // same transaction — a refund recorded without its event (or the
+      // reverse) is the exact failure this ledger exists to prevent. `amount`
+      // is the local `refundAmount` — rounded and already validated against
+      // the outstanding-balance guard above — never the raw request value.
+      // This is a LIVE row: both idempotency keys (used only by the
+      // historical backfill) stay null.
+      await tx.packageRefundEvent.create({
+        data: {
+          purchaseId: cmd.purchaseId,
+          amount: new Prisma.Decimal(refundAmount),
+          cumulativeRefundAmount: new Prisma.Decimal(newCumulativeRefund),
+          source: PackageRefundEventSource.LIVE,
+          refundType: isFullRefund
+            ? PackageRefundType.FULL
+            : PackageRefundType.PARTIAL,
+          occurredAt: refundedAt,
+          notes: cmd.notes ?? null,
+          processedBy: cmd.userId ?? null,
+          sourceRefundRequestId: null,
+          legacyAggregateKey: null,
+        },
+      });
 
       return {
         refundedAt,
