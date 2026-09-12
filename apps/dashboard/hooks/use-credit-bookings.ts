@@ -71,8 +71,9 @@ export function useMatchingCredits(
  * Consume a credit to create a zero-value booking. On success
  * invalidates:
  *   - all bookings (the new row appears in lists + detail sheets),
- *   - all package-purchases (the credit bucket's `usedQuantity` and
- *     possibly the purchase's `status` change).
+ *   - all package-purchases (the credit bucket's `reservedQuantity` — the
+ *     session is reserved, not yet delivered — and possibly the purchase's
+ *     `status` change).
  */
 export function useBookFromCredit() {
   const queryClient = useQueryClient()

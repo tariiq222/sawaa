@@ -63,7 +63,7 @@ describe('packagePurchaseStatusSchema', () => {
 })
 
 describe('packageCreditUsageStatusSchema', () => {
-  it.each(['CONSUMED', 'RETURNED'] as const)('accepts "%s"', (value) => {
+  it.each(['RESERVED', 'CONSUMED', 'RETURNED'] as const)('accepts "%s"', (value) => {
     expect(packageCreditUsageStatusSchema.safeParse(value).success).toBe(true)
   })
 

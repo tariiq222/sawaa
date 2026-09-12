@@ -205,6 +205,8 @@ export interface CreatePackagePurchaseResult {
     unitPriceSnapshot: number
     totalQuantity: number
     usedQuantity: number
+    /** Always 0 at creation — no booking exists yet to reserve a slot. */
+    reservedQuantity: number
   }>
 }
 

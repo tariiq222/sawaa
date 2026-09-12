@@ -24,7 +24,7 @@ export type DiscountType = 'PERCENTAGE' | 'FIXED'
 export type PackagePurchaseStatus = 'ACTIVE' | 'COMPLETED' | 'REFUNDED'
 
 /** Per-credit-bucket usage status (Prisma enum `PackageCreditUsageStatus`). */
-export type PackageCreditUsageStatus = 'CONSUMED' | 'RETURNED'
+export type PackageCreditUsageStatus = 'RESERVED' | 'CONSUMED' | 'RETURNED'
 
 /**
  * Canonical price breakdown the backend's ComputePackagePriceService returns
@@ -116,11 +116,16 @@ export interface PackageCredit {
   unitPriceSnapshot: number
   totalQuantity: number
   usedQuantity: number
+  /** Sessions with a booked appointment that has not happened yet. */
+  reservedQuantity: number
   createdAt: string
   /**
-   * Derived: `totalQuantity − usedQuantity`. Always present when the credit
-   * is hydrated client-side. The backend does not store this — callers
-   * compute it from the two integer fields above.
+   * Derived: `totalQuantity − usedQuantity − reservedQuantity`. Always
+   * present when the credit is hydrated client-side. The backend does not
+   * store this — callers compute it from the three integer fields above.
+   * A reserved session is not available capacity even though it hasn't
+   * been delivered yet — omitting it here would let a booked session look
+   * available and get double-booked.
    */
   remaining?: number
 }

@@ -290,6 +290,8 @@ export class CreatePackagePurchaseHandler {
         unitPriceSnapshot: unitPriceByIndex[idx] ?? 0,
         totalQuantity: item.paidQuantity + item.freeQuantity,
         usedQuantity: 0,
+        // No booking exists yet at purchase time, so nothing is reserved.
+        reservedQuantity: 0,
       })),
     };
   }
