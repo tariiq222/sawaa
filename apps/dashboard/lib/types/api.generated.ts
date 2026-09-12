@@ -13915,7 +13915,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Booking restored to CONFIRMED with check-in timestamp set */
+            /** @description Booking restored to CONFIRMED while preserving attendance and suppressing automatic no-show */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -26,11 +26,10 @@ function buildTx() {
     booking: {
       findUnique: jest.fn(),
     },
-    // `SELECT ... FOR UPDATE` raw row-lock used by reclaimPackageCreditForBooking
-    // — mirrors book-from-credit.handler.ts's locking style. Tests script the
-    // locked row via mockResolvedValueOnce; default falls back to whatever
-    // packageCredit.findUnique would have returned, kept empty by default.
-    $queryRaw: jest.fn(),
+    // `SELECT ... FOR UPDATE` raw row-lock used by the package helpers. The
+    // parent-purchase lock is active by default; tests script later lock rows
+    // with mockResolvedValueOnce when they need a different result.
+    $queryRaw: jest.fn().mockResolvedValue([{ id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE }]),
   };
 }
 
@@ -63,7 +62,7 @@ describe('returnPackageCreditForBooking', () => {
         status: PackageCreditUsageStatus.CONSUMED,
       });
       tx.packageCredit.findUnique.mockResolvedValue({ id: CREDIT_ID, purchaseId: PURCHASE_ID });
-      tx.packagePurchase.findUnique.mockResolvedValue({ id: PURCHASE_ID, status: purchaseStatus });
+      tx.$queryRaw.mockResolvedValue([{ id: PURCHASE_ID, status: purchaseStatus }]);
     }
 
     it('flips the usage row to RETURNED with a returnedAt timestamp', async () => {
@@ -216,7 +215,7 @@ describe('returnPackageCreditForBooking — consumed vs reserved decrement targe
       bookingId: BOOKING_ID,
       status: PackageCreditUsageStatus.CONSUMED,
     });
-    tx.packageCredit.findUnique.mockResolvedValue({ id: CREDIT_ID, purchaseId: null });
+    tx.packageCredit.findUnique.mockResolvedValue({ id: CREDIT_ID, purchaseId: PURCHASE_ID });
 
     await returnPackageCreditForBooking(tx as never, BOOKING_ID);
 
@@ -256,6 +255,7 @@ describe('reclaimPackageCreditForBooking', () => {
         bookingId: BOOKING_ID,
         status: PackageCreditUsageStatus.RETURNED,
       });
+      tx.packageCredit.findUnique.mockResolvedValue({ id: CREDIT_ID, purchaseId: PURCHASE_ID });
       // The capacity check must read the row under `SELECT ... FOR UPDATE`,
       // not a plain findUnique — otherwise a concurrent booking can take the
       // last seat between the read and the write (TOCTOU).
@@ -382,12 +382,17 @@ describe('reclaimPackageCreditForBooking', () => {
 
       await reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true);
 
-      expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
-      const [strings] = tx.$queryRaw.mock.calls[0];
-      expect(strings.join(' ')).toContain('FOR UPDATE');
-      // A plain unlocked read would let a concurrent booking take the last
-      // seat between the read and the write — this call must not use it.
-      expect(tx.packageCredit.findUnique).not.toHaveBeenCalled();
+      expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
+      const [purchaseStrings] = tx.$queryRaw.mock.calls[0];
+      const [creditStrings] = tx.$queryRaw.mock.calls[1];
+      expect(purchaseStrings.join(' ')).toContain('"PackagePurchase"');
+      expect(creditStrings.join(' ')).toContain('FOR UPDATE');
+      // The immutable purchase reference is looked up before locking; the
+      // mutable quantity read must still come from the locked raw row.
+      expect(tx.packageCredit.findUnique).toHaveBeenCalledWith({
+        where: { id: CREDIT_ID },
+        select: { purchaseId: true },
+      });
     });
 
     it('throws BadRequestException when the credit row is not found under lock', async () => {
@@ -398,7 +403,10 @@ describe('reclaimPackageCreditForBooking', () => {
         bookingId: BOOKING_ID,
         status: PackageCreditUsageStatus.RETURNED,
       });
-      tx.$queryRaw.mockResolvedValue([]);
+      tx.packageCredit.findUnique.mockResolvedValue({ id: CREDIT_ID, purchaseId: PURCHASE_ID });
+      tx.$queryRaw
+        .mockResolvedValueOnce([{ id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE }])
+        .mockResolvedValueOnce([]);
 
       await expect(
         reclaimPackageCreditForBooking(tx as never, BOOKING_ID, true),

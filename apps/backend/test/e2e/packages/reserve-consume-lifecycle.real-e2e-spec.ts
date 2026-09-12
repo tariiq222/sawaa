@@ -43,6 +43,8 @@ import { CompleteBookingHandler } from "../../../src/modules/bookings/complete-b
 import { CancelBookingHandler } from "../../../src/modules/bookings/cancel-booking/cancel-booking.handler";
 import { NoShowBookingHandler } from "../../../src/modules/bookings/no-show-booking/no-show-booking.handler";
 import { RestoreNoShowBookingHandler } from "../../../src/modules/bookings/restore-no-show-booking/restore-no-show-booking.handler";
+import { RescheduleBookingHandler } from "../../../src/modules/bookings/reschedule-booking/reschedule-booking.handler";
+import { BookingAutocompleteCron } from "../../../src/modules/ops/cron-tasks/booking-autocomplete.cron";
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL
   ? describe
@@ -59,6 +61,8 @@ describeRealE2e("Reserve → consume lifecycle (phase-1 state machine)", () => {
   let cancelHandler: CancelBookingHandler;
   let noShowHandler: NoShowBookingHandler;
   let restoreHandler: RestoreNoShowBookingHandler;
+  let rescheduleHandler: RescheduleBookingHandler;
+  let autocompleteCron: BookingAutocompleteCron;
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const tag = (label: string) => `reserve-consume-${suffix}-${label}`;
@@ -128,6 +132,8 @@ describeRealE2e("Reserve → consume lifecycle (phase-1 state machine)", () => {
     cancelHandler = app.get(CancelBookingHandler);
     noShowHandler = app.get(NoShowBookingHandler);
     restoreHandler = app.get(RestoreNoShowBookingHandler);
+    rescheduleHandler = app.get(RescheduleBookingHandler);
+    autocompleteCron = app.get(BookingAutocompleteCron);
     await prisma.$queryRaw`SELECT 1`;
 
     await seedBaseEntities();
@@ -599,8 +605,108 @@ describeRealE2e("Reserve → consume lifecycle (phase-1 state machine)", () => {
     expect(creditAfterRestore.usedQuantity).toBe(0);
 
     const usageAfterRestore = await getUsage(booking.id);
+    const bookingAfterRestore = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+    expect(bookingAfterRestore.checkedInAt).toBeNull();
+    expect(bookingAfterRestore.autoNoShowSuppressedAt).not.toBeNull();
     expect(usageAfterRestore.status).toBe("RESERVED");
     expect(usageAfterRestore.returnedAt).toBeNull();
+
+    // The restored booking can still be attended normally; restore itself
+    // must never consume the reserved session or fabricate attendance.
+    await checkInHandler.execute({ bookingId: booking.id, changedBy: ids.adminUserId });
+    expect((await getCredit(credit.id)).usedQuantity).toBe(1);
+    expect((await getUsage(booking.id)).status).toBe("CONSUMED");
+  });
+
+  it("keeps a never-attended credit RESERVED across repeated no-show/restore cycles", async () => {
+    const { credit } = await seedCreditBundle(1);
+    const booking = await bookFromCredit(credit.id, nextSlot());
+
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      await noShowHandler.execute({ bookingId: booking.id, changedBy: ids.adminUserId });
+      await restoreHandler.execute({
+        bookingId: booking.id,
+        changedBy: ids.adminUserId,
+        reason: `Repeated restore cycle ${cycle + 1}`,
+      });
+    }
+
+    const finalCredit = await getCredit(credit.id);
+    expect({ used: finalCredit.usedQuantity, reserved: finalCredit.reservedQuantity }).toEqual({
+      used: 0,
+      reserved: 1,
+    });
+    expect((await getUsage(booking.id)).status).toBe("RESERVED");
+  });
+
+  it("clears restore suppression when the booking is explicitly rescheduled", async () => {
+    const { credit } = await seedCreditBundle(1);
+    const booking = await bookFromCredit(credit.id, nextSlot());
+    await noShowHandler.execute({ bookingId: booking.id, changedBy: ids.adminUserId });
+    await restoreHandler.execute({
+      bookingId: booking.id,
+      changedBy: ids.adminUserId,
+      reason: "Restore before reschedule",
+    });
+
+    await rescheduleHandler.execute({
+      bookingId: booking.id,
+      newScheduledAt: nextSlot(),
+      changedBy: ids.adminUserId,
+    });
+
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).autoNoShowSuppressedAt).toBeNull();
+  });
+
+  it("does not autocomplete a restored booking that never had attendance", async () => {
+    const { credit } = await seedCreditBundle(1);
+    const booking = await bookFromCredit(credit.id, nextSlot());
+    await prisma.bookingSettings.updateMany({ where: { branchId: null }, data: { autoCompleteAfterHours: 1 } });
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { scheduledAt: new Date(Date.now() - 5 * 3_600_000), endsAt: new Date(Date.now() - 4 * 3_600_000) },
+    });
+
+    await noShowHandler.execute({ bookingId: booking.id, changedBy: ids.adminUserId });
+    await restoreHandler.execute({
+      bookingId: booking.id,
+      changedBy: ids.adminUserId,
+      reason: "Restore without attendance",
+    });
+    await autocompleteCron.execute();
+
+    expect({ used: (await getCredit(credit.id)).usedQuantity, usage: (await getUsage(booking.id)).status }).toEqual({
+      used: 0,
+      usage: "RESERVED",
+    });
+  });
+
+  it("autocompletes a restored booking that retains real attendance", async () => {
+    const { credit } = await seedCreditBundle(1);
+    const booking = await bookFromCredit(credit.id, nextSlot());
+    await checkInHandler.execute({ bookingId: booking.id, changedBy: ids.adminUserId });
+    const checkedInAt = (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).checkedInAt;
+
+    await noShowHandler.execute({ bookingId: booking.id, changedBy: ids.adminUserId });
+    await restoreHandler.execute({
+      bookingId: booking.id,
+      changedBy: ids.adminUserId,
+      reason: "Restore attended booking",
+    });
+
+    await prisma.bookingSettings.updateMany({ where: { branchId: null }, data: { autoCompleteAfterHours: 1 } });
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { scheduledAt: new Date(Date.now() - 7 * 3_600_000), endsAt: new Date(Date.now() - 6 * 3_600_000) },
+    });
+    await autocompleteCron.execute();
+
+    const restored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+    expect(restored.status).toBe("COMPLETED");
+    expect(restored.checkedInAt).toEqual(checkedInAt);
+    expect(restored.autoNoShowSuppressedAt).not.toBeNull();
+    expect((await getCredit(credit.id)).usedQuantity).toBe(1);
+    expect((await getUsage(booking.id)).status).toBe("CONSUMED");
   });
 
   // ═══════════════════════════════════════════════════════════════════════

@@ -45,6 +45,7 @@ export class BookingNoShowCron {
             ? { endsAt: { lte: cutoff } }
             : { scheduledAt: { lte: cutoff } }),
           checkedInAt: null,
+          autoNoShowSuppressedAt: null,
         },
         select: { id: true },
         orderBy: afterEnd

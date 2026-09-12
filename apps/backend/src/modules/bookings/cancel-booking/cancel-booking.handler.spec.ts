@@ -637,9 +637,17 @@ describe('CancelBookingHandler', () => {
         findUnique: jest.fn().mockResolvedValue({ purchaseId: 'purchase-1' }),
       };
       (p as any).packagePurchase = {
-        findUnique: jest.fn().mockResolvedValue({ status: opts.purchaseStatus ?? 'ACTIVE' }),
         update: jest.fn().mockResolvedValue({ id: 'purchase-1' }),
       };
+      (p as any).$queryRaw = jest.fn().mockImplementation(
+        async (strings: TemplateStringsArray, id: string) => {
+          const sql = strings.join(' ');
+          if (sql.includes('"PackagePurchase"')) {
+            return [{ id, status: opts.purchaseStatus ?? 'ACTIVE' }];
+          }
+          return [];
+        },
+      );
       return p;
     }
 

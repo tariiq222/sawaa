@@ -92,7 +92,7 @@ export function BookingPosFormColumn(p: BookingPosFormColumnProps) {
         <ClientStep onSelect={onClientSelect} />
       </CollapsibleSection>
 
-      {state.clientId && (
+      {state.clientId && state.track !== "PACKAGES" && (
         <ClientCreditsPanel clientId={state.clientId} onUseCredit={onUseCredit} />
       )}
 

@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, PackageCreditUsageStatus, PackagePurchaseStatus } from '@prisma/client';
 import { warnIfPackageCreditUsageRowMissing } from './booking-lifecycle.helper';
+import { lockPackagePurchase } from './package-purchase-lock.helper';
 
 /**
  * Return a session-package credit held by a booking back to its bucket.
@@ -15,17 +16,14 @@ import { warnIfPackageCreditUsageRowMissing } from './booking-lifecycle.helper';
  * states — RESERVED (booked but not yet delivered) or CONSUMED (attended) —
  * and both must release back to the bucket.
  *
- * Steps (all keyed by id — never a nested save, per .tariq/memory/notes/lessons.md):
- *  1. Find the booking's RESERVED-or-CONSUMED usage row. Scoping the lookup
- *     to those two statuses makes the operation idempotent: a booking whose
- *     credit was already returned yields no row, so a double cancel/expire
- *     cannot double-credit.
- *  2. Flip that usage to RETURNED with `returnedAt = now`.
- *  3. Decrement whichever counter actually held the seat: `reservedQuantity`
- *     for a RESERVED row, `usedQuantity` for a CONSUMED one.
- *  4. If the parent purchase had auto-completed (`COMPLETED`), reopen it to
- *     `ACTIVE` — there is now free remaining capacity again. A `REFUNDED`
- *     purchase is terminal and is left untouched.
+ * Steps (all keyed by id — never a nested save):
+ *  1. Find the booking's RESERVED-or-CONSUMED usage row and identify its
+ *     parent purchase.
+ *  2. Lock the parent purchase, then re-read the mutable usage status.
+ *  3. Flip that usage to RETURNED and decrement the counter that held the
+ *     seat.
+ *  4. If the locked purchase had auto-completed (`COMPLETED`), reopen it to
+ *     `ACTIVE`. A `REFUNDED` purchase is terminal and stays untouched.
  *
  * @returns `true` when a credit was returned, `false` when there was nothing
  *          to return (no reserved or consumed usage for this booking).
@@ -34,6 +32,31 @@ export async function returnPackageCreditForBooking(
   tx: Prisma.TransactionClient,
   bookingId: string,
 ): Promise<boolean> {
+  const referencedUsage = await tx.packageCreditUsage.findFirst({
+    where: {
+      bookingId,
+      status: {
+        in: [PackageCreditUsageStatus.RESERVED, PackageCreditUsageStatus.CONSUMED],
+      },
+    },
+    select: { id: true, creditId: true, status: true },
+  });
+  if (!referencedUsage) {
+    // Idempotent no-op UNLESS no usage row exists for this booking at all —
+    // see warnIfPackageCreditUsageRowMissing for why that case is logged.
+    await warnIfPackageCreditUsageRowMissing(tx, bookingId, 'returnPackageCreditForBooking');
+    return false;
+  }
+
+  const creditReference = await tx.packageCredit.findUnique({
+    where: { id: referencedUsage.creditId },
+    select: { purchaseId: true },
+  });
+  if (!creditReference) return false;
+
+  const purchase = await lockPackagePurchase(tx, creditReference.purchaseId);
+  if (!purchase) return false;
+
   const usage = await tx.packageCreditUsage.findFirst({
     where: {
       bookingId,
@@ -43,12 +66,7 @@ export async function returnPackageCreditForBooking(
     },
     select: { id: true, creditId: true, status: true },
   });
-  if (!usage) {
-    // Idempotent no-op UNLESS no usage row exists for this booking at all —
-    // see warnIfPackageCreditUsageRowMissing for why that case is logged.
-    await warnIfPackageCreditUsageRowMissing(tx, bookingId, 'returnPackageCreditForBooking');
-    return false;
-  }
+  if (!usage) return false;
 
   await tx.packageCreditUsage.update({
     where: { id: usage.id },
@@ -63,21 +81,11 @@ export async function returnPackageCreditForBooking(
         : { usedQuantity: { decrement: 1 } },
   });
 
-  const credit = await tx.packageCredit.findUnique({
-    where: { id: usage.creditId },
-    select: { purchaseId: true },
-  });
-  if (credit?.purchaseId) {
-    const purchase = await tx.packagePurchase.findUnique({
-      where: { id: credit.purchaseId },
-      select: { status: true },
+  if (purchase.status === PackagePurchaseStatus.COMPLETED) {
+    await tx.packagePurchase.update({
+      where: { id: purchase.id },
+      data: { status: PackagePurchaseStatus.ACTIVE },
     });
-    if (purchase?.status === PackagePurchaseStatus.COMPLETED) {
-      await tx.packagePurchase.update({
-        where: { id: credit.purchaseId },
-        data: { status: PackagePurchaseStatus.ACTIVE },
-      });
-    }
   }
 
   return true;
@@ -96,11 +104,9 @@ export async function returnPackageCreditForBooking(
  * attended: CONSUMED if it was, RESERVED if it was not.
  *
  * `wasAttended` MUST be read by the caller from the booking's `checkedInAt`
- * BEFORE the restore transaction stamps it. The restore handler always sets
- * `checkedInAt = now()` on the same booking row (so the auto-no-show cron
- * does not immediately re-mark it) in the same transaction that calls this
- * helper — by the time this function runs, `checkedInAt` is unconditionally
- * non-null and no longer tells you whether the client actually attended.
+ * before the restore transaction. The restore handler preserves that field
+ * and stores automation suppression separately, so this helper receives the
+ * attendance fact explicitly and never infers it from lifecycle metadata.
  * This helper used to re-read `checkedInAt` off the booking itself and was
  * silently always getting `true` because of that same-transaction stamp,
  * which meant every restored no-show came back as CONSUMED. Taking the flag
@@ -143,16 +149,31 @@ export async function reclaimPackageCreditForBooking(
   bookingId: string,
   wasAttended: boolean,
 ): Promise<boolean> {
-  const usage = await tx.packageCreditUsage.findFirst({
+  const referencedUsage = await tx.packageCreditUsage.findFirst({
     where: { bookingId, status: PackageCreditUsageStatus.RETURNED },
     select: { id: true, creditId: true },
   });
-  if (!usage) {
+  if (!referencedUsage) {
     // Idempotent no-op UNLESS no usage row exists for this booking at all —
     // see warnIfPackageCreditUsageRowMissing for why that case is logged.
     await warnIfPackageCreditUsageRowMissing(tx, bookingId, 'reclaimPackageCreditForBooking');
     return false;
   }
+
+  const creditReference = await tx.packageCredit.findUnique({
+    where: { id: referencedUsage.creditId },
+    select: { purchaseId: true },
+  });
+  if (!creditReference) return false;
+
+  const purchase = await lockPackagePurchase(tx, creditReference.purchaseId);
+  if (!purchase) return false;
+
+  const usage = await tx.packageCreditUsage.findFirst({
+    where: { bookingId, status: PackageCreditUsageStatus.RETURNED },
+    select: { id: true, creditId: true },
+  });
+  if (!usage) return false;
 
   // Row lock, matching book-from-credit.handler.ts's OVERDRAW GUARD — a plain
   // findUnique here would be a TOCTOU: a concurrent booking could take the

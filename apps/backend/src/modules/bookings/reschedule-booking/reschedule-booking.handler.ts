@@ -137,6 +137,7 @@ export class RescheduleBookingHandler {
               scheduledAt: newScheduledAt,
               endsAt: newEndsAt,
               durationMins,
+              autoNoShowSuppressedAt: null,
               ...(revision === null ? {} : { zoomSyncRevision: revision }),
             },
             ...(booking.deliveryType === 'ONLINE' || booking.zoomMeetingId

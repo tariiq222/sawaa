@@ -34,6 +34,7 @@ import {
   lockPersonReferences,
   retrySerializableTransaction,
 } from '../../../common/database/person-reference-lock.helper';
+import { lockPackagePurchase } from '../package-purchase-lock.helper';
 
 export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
   scheduledAt: Date;
@@ -279,6 +280,16 @@ export class BookFromCreditHandler {
           throw new ConflictException('Employee already has a booking in this time slot');
         }
 
+        // Lock the parent purchase before the credit row. Every package
+        // mutation uses this parent-first order, so booking cannot deadlock
+        // with consume/return/reclaim/refund while sibling state changes.
+        const lockedPurchase = await lockPackagePurchase(tx, credit.purchaseId);
+        if (!lockedPurchase || lockedPurchase.status !== PackagePurchaseStatus.ACTIVE) {
+          throw new BadRequestException(
+            'Package purchase is not active; its credits cannot be booked',
+          );
+        }
+
         // OVERDRAW GUARD: lock the credit row and recount inside the lock.
         const lockedRows = await tx.$queryRaw<LockedCreditRow[]>`
           SELECT id, "purchaseId", "serviceId", "employeeId", "durationOptionId",
@@ -298,24 +309,6 @@ export class BookFromCreditHandler {
           // winner between the pre-lock read and acquiring the row lock —
           // reject the over-draw.
           throw new ConflictException('No remaining credit in this package');
-        }
-
-        // REFUNDED-purchase guard (finance-safety): re-read the parent purchase
-        // status INSIDE the lock. resolveCredit already filters for an ACTIVE
-        // purchase, but a manual refund could complete between that read and
-        // acquiring this row lock (TOCTOU). A REFUNDED purchase's credits are
-        // voided money — they must never be bookable even if remaining > 0.
-        const parentPurchase = await tx.packagePurchase.findUnique({
-          where: { id: locked.purchaseId },
-          select: { status: true },
-        });
-        if (
-          !parentPurchase ||
-          parentPurchase.status !== PackagePurchaseStatus.ACTIVE
-        ) {
-          throw new BadRequestException(
-            'Package purchase is not active; its credits cannot be booked',
-          );
         }
 
         // Serialize bookingNumber generation (same advisory-lock pattern as create-booking).

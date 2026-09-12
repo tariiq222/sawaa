@@ -29,6 +29,7 @@ function buildPrisma(opts: {
   targetEmployee?: unknown;
 } = {}) {
   const tx = {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'p1', status: PackagePurchaseStatus.ACTIVE }]),
     packageCredit: { update: jest.fn().mockResolvedValue({ id: CREDIT_ID, employeeId: TO_EMPLOYEE_ID }) },
     activityLog: { create: jest.fn().mockResolvedValue({ id: 'log-1' }) },
   };

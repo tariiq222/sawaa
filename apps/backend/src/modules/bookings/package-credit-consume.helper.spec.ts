@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { PackagePurchaseStatus } from '@prisma/client';
 import { consumePackageCreditForBooking } from './package-credit-consume.helper';
 
 /**
@@ -21,6 +22,7 @@ function buildTx(usage: unknown, credit?: unknown, siblings?: unknown[], anyUsag
       findMany: jest.fn().mockResolvedValue(siblings ?? []),
     },
     packagePurchase: { update: jest.fn().mockResolvedValue({}) },
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'p1', status: PackagePurchaseStatus.ACTIVE }]),
   };
 }
 
@@ -119,5 +121,19 @@ describe('consumePackageCreditForBooking', () => {
 
     expect(tx.packagePurchase.update)
       .not.toHaveBeenCalled();
+  });
+
+  it('does not consume or overwrite a refunded purchase', async () => {
+    const tx = buildTx(
+      { id: 'u1', creditId: 'c1' },
+      { purchaseId: 'p1', totalQuantity: 1, usedQuantity: 0, reservedQuantity: 1 },
+    );
+    tx.$queryRaw.mockResolvedValue([{ id: 'p1', status: PackagePurchaseStatus.REFUNDED }]);
+
+    await expect(consumePackageCreditForBooking(tx as never, 'b1')).resolves.toBe(false);
+
+    expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
+    expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    expect(tx.packagePurchase.update).not.toHaveBeenCalled();
   });
 });

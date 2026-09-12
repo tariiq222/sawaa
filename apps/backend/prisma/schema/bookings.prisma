@@ -88,6 +88,8 @@ model Booking {
   cancelledAt              DateTime?
   confirmedAt              DateTime?
   checkedInAt              DateTime?
+  /// Restore/no-show automation suppression; never a substitute for attendance.
+  autoNoShowSuppressedAt    DateTime?
   completedAt              DateTime?
   noShowAt                 DateTime?
   expiresAt                DateTime?

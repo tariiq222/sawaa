@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, 'feature/packages-phase-*']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -60,14 +60,19 @@ function lockedCreditRow(
   };
 }
 
-function buildTx(lockedCredit = lockedCreditRow()) {
+function buildTx(
+  lockedCredit = lockedCreditRow(),
+  purchaseStatus: PackagePurchaseStatus = PackagePurchaseStatus.ACTIVE,
+) {
   const tx = {
     // FOR UPDATE raw select returns an array of rows.
     $queryRaw: jest.fn(async (strings: TemplateStringsArray, id: string) => {
       const sql = strings.join(' ');
       if (sql.includes('"Client"')) return [{ id, isActive: true, deletedAt: null }];
       if (sql.includes('"Employee"')) return [{ id, isActive: true }];
-      return [lockedCredit];
+      if (sql.includes('"PackagePurchase"')) return [{ id: PURCHASE_ID, status: purchaseStatus }];
+      if (sql.includes('"PackageCredit"')) return [lockedCredit];
+      return [];
     }),
     $executeRaw: jest.fn().mockResolvedValue(undefined),
     booking: {
@@ -834,12 +839,18 @@ describe('BookFromCreditHandler', () => {
             if (sql.includes('"Employee"')) {
               return Promise.resolve([{ id, isActive: true }]);
             }
-            return Promise.resolve([{
-              ...lockedCreditRow(),
-              totalQuantity: credit.totalQuantity,
-              usedQuantity: credit.usedQuantity,
-              reservedQuantity: credit.reservedQuantity,
-            }]);
+            if (sql.includes('"PackagePurchase"')) {
+              return Promise.resolve([{ id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE }]);
+            }
+            if (sql.includes('"PackageCredit"')) {
+              return Promise.resolve([{
+                ...lockedCreditRow(),
+                totalQuantity: credit.totalQuantity,
+                usedQuantity: credit.usedQuantity,
+                reservedQuantity: credit.reservedQuantity,
+              }]);
+            }
+            return Promise.resolve([]);
           },
         );
         tx.packageCredit.update = jest.fn().mockImplementation((args: { data: { reservedQuantity: { increment: number } } }) => {
@@ -895,11 +906,10 @@ describe('BookFromCreditHandler', () => {
       // status guard must reject so a refunded purchase's credit is never bookable.
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
-      const tx = buildTx(lockedCreditRow({ totalQuantity: 5, usedQuantity: 0 }));
-      tx.packagePurchase.findUnique.mockResolvedValue({
-        id: PURCHASE_ID,
-        status: PackagePurchaseStatus.REFUNDED,
-      });
+      const tx = buildTx(
+        lockedCreditRow({ totalQuantity: 5, usedQuantity: 0 }),
+        PackagePurchaseStatus.REFUNDED,
+      );
       const { handler } = buildHandler({ prisma, tx });
 
       await expect(handler.execute(baseCmd())).rejects.toThrow(BadRequestException);
@@ -909,16 +919,19 @@ describe('BookFromCreditHandler', () => {
       expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
     });
 
-    it('queries the parent purchase status under the credit row lock', async () => {
+    it('locks the parent purchase before the credit row', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const { handler, tx } = buildHandler({ prisma });
 
       await handler.execute(baseCmd());
 
-      expect(tx.packagePurchase.findUnique).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: PURCHASE_ID } }),
-      );
+      const queries = tx.$queryRaw.mock.calls.map(([parts]) => parts.join(' '));
+      const purchaseLock = queries.findIndex((sql) => sql.includes('"PackagePurchase"'));
+      const creditLock = queries.findIndex((sql) => sql.includes('"PackageCredit"'));
+      expect(purchaseLock).toBeGreaterThanOrEqual(0);
+      expect(creditLock).toBeGreaterThan(purchaseLock);
+      expect(queries[purchaseLock]).toContain('FOR UPDATE');
     });
   });
 

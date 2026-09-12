@@ -3,9 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ActivityAction, Prisma } from '@prisma/client';
+import { ActivityAction, PackagePurchaseStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { TransferCreditDto } from './transfer-credit.dto';
+import { lockPackagePurchase } from '../package-purchase-lock.helper';
 
 export type TransferCreditCommand = TransferCreditDto & {
   creditId: string;
@@ -109,6 +110,16 @@ export class TransferCreditHandler {
     //    which practitioner) — without it a credit transfer leaves no trail.
     const fromEmployeeId = credit.employeeId;
     return this.rlsTransaction.withTransaction(async (tx) => {
+      const purchase = credit.purchase?.id
+        ? await lockPackagePurchase(tx, credit.purchase.id)
+        : null;
+      if (!purchase) {
+        throw new NotFoundException('Package purchase not found');
+      }
+      if (purchase.status === PackagePurchaseStatus.REFUNDED) {
+        throw new BadRequestException('Package purchase is already refunded');
+      }
+
       const updated = await tx.packageCredit.update({
         where: { id: credit.id },
         data: { employeeId: cmd.toEmployeeId },

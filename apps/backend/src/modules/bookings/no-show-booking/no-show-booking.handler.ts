@@ -40,7 +40,11 @@ export class NoShowBookingHandler {
           bookingId: cmd.bookingId,
           currentStatus: booking.status,
           actionLabel: 'marked as no-show',
-          data: { status: nextStatus, noShowAt: new Date() },
+          data: {
+            status: nextStatus,
+            noShowAt: new Date(),
+            autoNoShowSuppressedAt: null,
+          },
         }),
         tx.bookingStatusLog.create({
           data: {

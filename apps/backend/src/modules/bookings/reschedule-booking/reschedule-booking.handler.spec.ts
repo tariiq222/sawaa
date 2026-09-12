@@ -224,7 +224,12 @@ describe('RescheduleBookingHandler', () => {
     });
 
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ durationMins: 60 }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({
+          durationMins: 60,
+          autoNoShowSuppressedAt: null,
+        }),
+      }),
     );
   });
 
