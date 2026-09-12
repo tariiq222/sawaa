@@ -6,6 +6,7 @@ import {
   type BookingRelations,
 } from '../booking-row.mapper';
 import type { HistoricalPaymentMetadata } from '../historical-payment.helper';
+import { resolveSessionValue } from '../session-value.helper';
 
 export interface GetBookingQuery {
   bookingId: string;
@@ -103,7 +104,7 @@ export class GetBookingHandler {
     const purchase = credit
       ? await this.prisma.packagePurchase.findUnique({
           where: { id: credit.purchaseId },
-          select: { id: true, packageId: true },
+          select: { id: true, packageId: true, amountPaid: true, refundAmount: true },
         })
       : null;
     const pkg = purchase
@@ -112,14 +113,23 @@ export class GetBookingHandler {
           select: { id: true, nameAr: true, nameEn: true },
         })
       : null;
+    // Fallback for a credit with no stored netValue (issued before phase 0
+    // added the column): load every sibling credit of its purchase so
+    // resolveSessionValue can split the purchase's net amount via
+    // allocatePurchaseNet, same as the outstanding-credit report. A single
+    // booking only ever has one package-funded credit, so this is one query.
+    const siblingCredits =
+      credit && credit.netValue == null
+        ? await this.prisma.packageCredit.findMany({
+            where: { purchaseId: credit.purchaseId },
+            select: { id: true, unitPriceSnapshot: true, totalQuantity: true },
+          })
+        : [];
     const packageFundingByBookingId = new Map<string, BookingPackageFundingRelation>();
     if (credit && usage && purchase && pkg) {
       // Reporting-only figure: one session's share of the credit's net value.
       // The amount DUE on a package booking stays zero regardless of this.
-      const sessionValue =
-        credit.netValue != null && credit.totalQuantity > 0
-          ? Math.floor(Number(credit.netValue) / credit.totalQuantity)
-          : null;
+      const sessionValue = resolveSessionValue(credit, purchase, siblingCredits);
       packageFundingByBookingId.set(booking.id, {
         creditId: credit.id,
         purchaseId: purchase.id,

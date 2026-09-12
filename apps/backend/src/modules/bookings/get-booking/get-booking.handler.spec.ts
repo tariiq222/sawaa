@@ -21,7 +21,10 @@ describe('GetBookingHandler', () => {
       invoice: { findFirst: jest.fn().mockResolvedValue(null) },
       legacyImportRecord: { findFirst: jest.fn().mockResolvedValue(null) },
       packageCreditUsage: { findFirst: jest.fn().mockResolvedValue(null) },
-      packageCredit: { findUnique: jest.fn().mockResolvedValue(null) },
+      packageCredit: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       packagePurchase: { findUnique: jest.fn().mockResolvedValue(null) },
       sessionPackage: { findFirst: jest.fn().mockResolvedValue(null) },
     };
@@ -188,7 +191,7 @@ describe('GetBookingHandler', () => {
     });
   });
 
-  it('maps a null sessionValue when the credit has no netValue', async () => {
+  it('maps a null sessionValue when the credit has no netValue and no sibling credits resolve', async () => {
     prisma.booking.findFirst.mockResolvedValue({
       id: 'b1', clientId: 'c1', employeeId: 'e1', serviceId: 's1', packageCreditId: 'credit-1',
     });
@@ -199,7 +202,10 @@ describe('GetBookingHandler', () => {
     prisma.packageCredit.findUnique.mockResolvedValue({
       id: 'credit-1', purchaseId: 'purchase-1', netValue: null, totalQuantity: 10,
     });
-    prisma.packagePurchase.findUnique.mockResolvedValue({ id: 'purchase-1', packageId: 'package-1' });
+    prisma.packageCredit.findMany.mockResolvedValue([]);
+    prisma.packagePurchase.findUnique.mockResolvedValue({
+      id: 'purchase-1', packageId: 'package-1', amountPaid: 0, refundAmount: 0,
+    });
     prisma.sessionPackage.findFirst.mockResolvedValue({
       id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package',
     });
@@ -209,5 +215,39 @@ describe('GetBookingHandler', () => {
 
     const relations = (mapBookingRow as jest.Mock).mock.calls[0][1];
     expect(relations.packageFundingByBookingId.get('b1')?.sessionValue).toBeNull();
+  });
+
+  // Phase 0 added `netValue` to PackageCredit; every credit issued before that
+  // migration has netValue: null. sessionValue must fall back to allocating
+  // the parent purchase's net amount (amountPaid − refundAmount) across ALL
+  // sibling credits by list value, same as the outstanding-credit report.
+  it('falls back to allocatePurchaseNet when netValue is null, using the purchase amountPaid', async () => {
+    prisma.booking.findFirst.mockResolvedValue({
+      id: 'b1', clientId: 'c1', employeeId: 'e1', serviceId: 's1', packageCreditId: 'credit-1',
+    });
+    prisma.client.findFirst.mockResolvedValue(null);
+    prisma.employee.findFirst.mockResolvedValue(null);
+    prisma.service.findFirst.mockResolvedValue(null);
+    prisma.packageCreditUsage.findFirst.mockResolvedValue({ status: 'CONSUMED' });
+    prisma.packageCredit.findUnique.mockResolvedValue({
+      id: 'credit-1', purchaseId: 'purchase-1', netValue: null, totalQuantity: 6,
+    });
+    // Sibling-credit lookup for the fallback: this purchase has a single
+    // credit, so it gets the full purchase net amount.
+    prisma.packageCredit.findMany.mockResolvedValue([
+      { id: 'credit-1', unitPriceSnapshot: 29166, totalQuantity: 6 },
+    ]);
+    prisma.packagePurchase.findUnique.mockResolvedValue({
+      id: 'purchase-1', packageId: 'package-1', amountPaid: 175000, refundAmount: 0,
+    });
+    prisma.sessionPackage.findFirst.mockResolvedValue({
+      id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package',
+    });
+
+    (mapBookingRow as jest.Mock).mockClear();
+    await handler.execute({ bookingId: 'b1' });
+
+    const relations = (mapBookingRow as jest.Mock).mock.calls[0][1];
+    expect(relations.packageFundingByBookingId.get('b1')?.sessionValue).toBe(29166);
   });
 });

@@ -9,6 +9,7 @@ import {
   type BookingRelations,
 } from '../booking-row.mapper';
 import type { HistoricalPaymentMetadata } from '../historical-payment.helper';
+import { resolveSessionValue } from '../session-value.helper';
 
 export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDate' | 'toDate'> & {
   page: number;
@@ -272,7 +273,7 @@ async function loadRelations(
   const purchases = purchaseIds.length
     ? await prisma.packagePurchase.findMany({
         where: { id: { in: purchaseIds } },
-        select: { id: true, packageId: true },
+        select: { id: true, packageId: true, amountPaid: true, refundAmount: true },
       })
     : [];
   const packageIds = [...new Set(purchases.map((purchase) => purchase.packageId))];
@@ -282,6 +283,26 @@ async function loadRelations(
         select: { id: true, nameAr: true, nameEn: true },
       })
     : [];
+
+  // Fallback for credits with no stored netValue (issued before phase 0 added
+  // the column): batch-load every sibling credit of their purchases so
+  // resolveSessionValue can split the purchase's net amount via
+  // allocatePurchaseNet — one query for the whole page, never per-booking.
+  const fallbackPurchaseIds = [
+    ...new Set(credits.filter((c) => c.netValue == null).map((c) => c.purchaseId)),
+  ];
+  const siblingCredits = fallbackPurchaseIds.length
+    ? await prisma.packageCredit.findMany({
+        where: { purchaseId: { in: fallbackPurchaseIds } },
+        select: { id: true, purchaseId: true, unitPriceSnapshot: true, totalQuantity: true },
+      })
+    : [];
+  const siblingCreditsByPurchaseId = new Map<string, typeof siblingCredits>();
+  for (const sibling of siblingCredits) {
+    const list = siblingCreditsByPurchaseId.get(sibling.purchaseId) ?? [];
+    list.push(sibling);
+    siblingCreditsByPurchaseId.set(sibling.purchaseId, list);
+  }
 
   // Build paymentsByBookingId: bookingId → latest payment (amounts in halalat)
   // Payment.amount is stored as Decimal(12,2) SAR in Prisma.
@@ -350,10 +371,11 @@ async function loadRelations(
     if (!usage || !credit || !purchase || !pkg) continue;
     // Reporting-only figure: one session's share of the credit's net value.
     // The amount DUE on a package booking stays zero regardless of this.
-    const sessionValue =
-      credit.netValue != null && credit.totalQuantity > 0
-        ? Math.floor(Number(credit.netValue) / credit.totalQuantity)
-        : null;
+    const sessionValue = resolveSessionValue(
+      credit,
+      purchase,
+      siblingCreditsByPurchaseId.get(credit.purchaseId) ?? [],
+    );
     packageFundingByBookingId.set(row.id, {
       creditId: credit.id,
       purchaseId: purchase.id,
