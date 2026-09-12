@@ -353,6 +353,7 @@ export const enBookings: Record<string, string> = {
   "bookings.pos.disabled.employee": "No times available",
   "bookings.pos.summary.title": "Booking Summary",
   "bookings.pos.summary.servicePrice": "Price",
+  "bookings.pos.summary.fromPackage": "Covered by package",
   "bookings.pos.confirm": "Confirm Booking",
   "bookings.pos.missingPrefix": "Complete first",
 

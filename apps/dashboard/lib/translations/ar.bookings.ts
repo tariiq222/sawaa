@@ -353,6 +353,7 @@ export const arBookings: Record<string, string> = {
   "bookings.pos.disabled.employee": "لا يوجد وقت متاح",
   "bookings.pos.summary.title": "ملخص الحجز",
   "bookings.pos.summary.servicePrice": "السعر",
+  "bookings.pos.summary.fromPackage": "مخصوم من الباقة",
   "bookings.pos.confirm": "تأكيد الحجز",
   "bookings.pos.missingPrefix": "أكمل أولاً",
 
