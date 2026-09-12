@@ -221,6 +221,7 @@ export class DashboardBookingsController {
           purchaseId: { type: 'string', format: 'uuid' },
           totalQuantity: { type: 'number' },
           usedQuantity: { type: 'number' },
+          reservedQuantity: { type: 'number' },
           remaining: { type: 'number' },
         },
       },

@@ -209,6 +209,20 @@ describe('RefundPackagePurchaseHandler', () => {
     expect(joined).toContain('usedQuantity');
   });
 
+  // A credit voided by a full refund must also drop any reservations it still
+  // holds — otherwise a booked-but-undelivered session on a refunded/void
+  // credit would leave the bucket over-subscribed (usedQuantity = totalQuantity
+  // but reservedQuantity still counting extra seats against it).
+  it('full refund also zeroes reservedQuantity so a voided credit cannot be over-subscribed', async () => {
+    const { handler, tx } = buildHandler();
+    await handler.execute(cmd());
+
+    expect(tx.$executeRaw).toHaveBeenCalled();
+    const sql = tx.$executeRaw.mock.calls[0][0];
+    const joined = Array.isArray(sql) ? sql.join('?') : String(sql);
+    expect(joined).toContain('reservedQuantity');
+  });
+
   // P1-2 regression: a PARTIAL money refund must NOT wipe the credits and must
   // keep the purchase ACTIVE so the still-paid sessions survive.
   it('partial refund (20k of 50k) keeps the purchase ACTIVE and does NOT void credits', async () => {

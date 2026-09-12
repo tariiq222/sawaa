@@ -13028,6 +13028,7 @@ export interface operations {
                         /** Format: uuid */
                         purchaseId?: string;
                         remaining?: number;
+                        reservedQuantity?: number;
                         totalQuantity?: number;
                         usedQuantity?: number;
                     }[];

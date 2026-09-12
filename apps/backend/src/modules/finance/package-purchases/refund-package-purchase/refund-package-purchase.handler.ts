@@ -58,8 +58,9 @@ export type RefundPackagePurchaseCommand = RefundPackagePurchaseDto & {
  * Partial vs. full refund (P1):
  *  - A FULL refund (the new cumulative refunded amount reaches amountPaid)
  *    marks the purchase REFUNDED and VOIDS its remaining credits
- *    (`usedQuantity = totalQuantity` → remaining 0). This is belt-and-suspenders
- *    with the explicit REFUNDED-purchase guard in BookFromCreditHandler.
+ *    (`usedQuantity = totalQuantity`, `reservedQuantity = 0` → remaining 0,
+ *    nothing left reserved either). This is belt-and-suspenders with the
+ *    explicit REFUNDED-purchase guard in BookFromCreditHandler.
  *  - A PARTIAL refund (refundAmount < outstanding) returns only part of the
  *    money and KEEPS the purchase ACTIVE with its credits untouched. We never
  *    void credits on a partial refund: doing so would silently destroy the
@@ -192,9 +193,12 @@ export class RefundPackagePurchaseHandler {
       // credit of this purchase. A partial refund leaves credits untouched so
       // the client's remaining paid sessions stay bookable (P1-2).
       if (isFullRefund) {
+        // Also zero reservedQuantity: a credit voided here may still hold
+        // reservations from booked-but-undelivered appointments, and leaving
+        // them would over-subscribe a bucket that is already fully "used".
         await tx.$executeRaw`
           UPDATE "PackageCredit"
-          SET "usedQuantity" = "totalQuantity"
+          SET "usedQuantity" = "totalQuantity", "reservedQuantity" = 0
           WHERE "purchaseId" = ${cmd.purchaseId}
         `;
       }

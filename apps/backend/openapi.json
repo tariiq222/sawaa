@@ -12937,6 +12937,9 @@
                       "remaining": {
                         "type": "number"
                       },
+                      "reservedQuantity": {
+                        "type": "number"
+                      },
                       "totalQuantity": {
                         "type": "number"
                       },

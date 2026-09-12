@@ -27,6 +27,8 @@ export interface MatchingCredit {
   durationOptionId: string
   totalQuantity: number
   usedQuantity: number
+  // Booked but not-yet-delivered sessions; they occupy a seat like a used one.
+  reservedQuantity: number
   remaining: number
   /** ISO timestamp. */
   createdAt: string

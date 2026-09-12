@@ -12,7 +12,7 @@ function buildTx(usage: unknown, credit?: unknown, siblings?: unknown[]) {
       findMany: jest.fn().mockResolvedValue(siblings ?? []),
     },
     packagePurchase: { update: jest.fn().mockResolvedValue({}) },
-  } as never;
+  };
 }
 
 describe('consumePackageCreditForBooking', () => {
@@ -21,15 +21,15 @@ describe('consumePackageCreditForBooking', () => {
       purchaseId: 'p1', totalQuantity: 2, usedQuantity: 1, reservedQuantity: 0,
     });
 
-    await expect(consumePackageCreditForBooking(tx, 'b1')).resolves.toBe(true);
+    await expect(consumePackageCreditForBooking(tx as never, 'b1')).resolves.toBe(true);
 
-    expect((tx as never as ReturnType<typeof buildTx>).packageCreditUsage.update)
+    expect(tx.packageCreditUsage.update)
       .toHaveBeenCalledWith({
         where: { id: 'u1' },
         data: { status: 'CONSUMED' },
       });
 
-    expect((tx as never as ReturnType<typeof buildTx>).packageCredit.update)
+    expect(tx.packageCredit.update)
       .toHaveBeenCalledWith({
         where: { id: 'c1' },
         data: { reservedQuantity: { decrement: 1 }, usedQuantity: { increment: 1 } },
@@ -38,11 +38,11 @@ describe('consumePackageCreditForBooking', () => {
 
   it('does nothing when the booking has no reserved session', async () => {
     const tx = buildTx(null);
-    await expect(consumePackageCreditForBooking(tx, 'b1')).resolves.toBe(false);
+    await expect(consumePackageCreditForBooking(tx as never, 'b1')).resolves.toBe(false);
 
-    expect((tx as never as ReturnType<typeof buildTx>).packageCreditUsage.update)
+    expect(tx.packageCreditUsage.update)
       .not.toHaveBeenCalled();
-    expect((tx as never as ReturnType<typeof buildTx>).packageCredit.update)
+    expect(tx.packageCredit.update)
       .not.toHaveBeenCalled();
   });
 
@@ -56,9 +56,9 @@ describe('consumePackageCreditForBooking', () => {
       ],
     );
 
-    await expect(consumePackageCreditForBooking(tx, 'b1')).resolves.toBe(true);
+    await expect(consumePackageCreditForBooking(tx as never, 'b1')).resolves.toBe(true);
 
-    expect((tx as never as ReturnType<typeof buildTx>).packagePurchase.update)
+    expect(tx.packagePurchase.update)
       .toHaveBeenCalledWith({
         where: { id: 'p1' },
         data: { status: 'COMPLETED' },
@@ -75,9 +75,9 @@ describe('consumePackageCreditForBooking', () => {
       ],
     );
 
-    await expect(consumePackageCreditForBooking(tx, 'b1')).resolves.toBe(true);
+    await expect(consumePackageCreditForBooking(tx as never, 'b1')).resolves.toBe(true);
 
-    expect((tx as never as ReturnType<typeof buildTx>).packagePurchase.update)
+    expect(tx.packagePurchase.update)
       .not.toHaveBeenCalled();
   });
 });
