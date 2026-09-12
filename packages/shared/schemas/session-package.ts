@@ -21,7 +21,11 @@ export const packagePurchaseStatusSchema = z.enum([
 ])
 
 /** Mirrors the Prisma enum `PackageCreditUsageStatus` in `bookings.prisma`. */
-export const packageCreditUsageStatusSchema = z.enum(['CONSUMED', 'RETURNED'])
+export const packageCreditUsageStatusSchema = z.enum([
+  'RESERVED',
+  'CONSUMED',
+  'RETURNED',
+])
 
 /** Canonical price breakdown returned by the GET endpoint. All in halalas. */
 export const packagePriceBreakdownSchema = z.object({

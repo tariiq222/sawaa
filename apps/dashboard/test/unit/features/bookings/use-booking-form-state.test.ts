@@ -251,26 +251,6 @@ describe('useBookingFormState', () => {
     expect(result.current.isComplete).toBe(true)
   })
 
-  it('applyCreditTarget fills the path and clears delivery/date/time', () => {
-    const { result } = renderHook(() => useBookingFormState())
-    act(() => result.current.selectClient('c1', 'محمد'))
-    act(() =>
-      result.current.applyCreditTarget({
-        departmentId: 'dep1', departmentName: 'قسم',
-        categoryId: 'cat1', categoryName: 'عيادة', categoryBookingMode: 'SERVICES',
-        serviceId: 's1', serviceName: 'خدمة',
-        employeeId: 'e1', employeeName: 'موظف',
-        durationOptionId: 'd1',
-      }),
-    )
-    const s = result.current.state
-    expect(s).toEqual(expect.objectContaining({
-      clientId: 'c1', departmentId: 'dep1', categoryId: 'cat1',
-      categoryBookingMode: 'SERVICES', serviceId: 's1', employeeId: 'e1',
-      durationOptionId: 'd1', deliveryType: null, date: null, startTime: null,
-    }))
-  })
-
   // Phase 6 — three-track booking wizard state machine.
 
   it('selectTrack clears every downstream selection but preserves client', () => {
@@ -565,8 +545,10 @@ describe('useBookingFormState', () => {
   // spends a FLEXIBLE credit (creditFilter set) and then backs up to
   // pick a PINNED credit, the jump-fill must clear creditFilter so the
   // wizard never applies a restriction that came from an abandoned
-  // pick. Both `applyPackageCreditTarget` and `applyCreditTarget`
-  // previously spread `prev` without nulling creditFilter; both now do.
+  // pick. `applyPackageCreditTarget` previously spread `prev` without
+  // nulling creditFilter; it now does. (Its trackless CLINICS-variant
+  // sibling `applyCreditTarget` was removed in the W6 fix — the
+  // client-credits panel now converges onto this same function.)
 
   it('applyPackageCreditTarget after applyCreditFilter nulls creditFilter and fills the pinned target', () => {
     const { result } = renderHook(() => useBookingFormState())
@@ -607,42 +589,6 @@ describe('useBookingFormState', () => {
     expect(s.employeeId).toBe('e-pinned')
     expect(s.employeeName).toBe('موظف مثبت')
     expect(s.durationOptionId).toBe('d-pinned')
-    expect(s.deliveryType).toBeNull()
-    expect(s.date).toBeNull()
-    expect(s.startTime).toBeNull()
-  })
-
-  it('applyCreditTarget after applyCreditFilter nulls creditFilter', () => {
-    // Same leak-fix proof for the CLINICS-track sibling (`applyCreditTarget`,
-    // which does not record `packagePurchaseId`).
-    const { result } = renderHook(() => useBookingFormState())
-    act(() => result.current.selectClient('c1', 'Sara'))
-    const staleFilter = buildFlexibleFilter('pkg-stale-2', [
-      { dimension: 'SERVICE', mode: 'EXCLUDE', targetIds: ['svc-1'] },
-    ])
-    act(() => result.current.applyCreditFilter(staleFilter))
-    expect(result.current.state.creditFilter).toBe(staleFilter)
-
-    act(() =>
-      result.current.applyCreditTarget({
-        departmentId: 'dep-clinics', departmentName: 'قسم عيادات',
-        categoryId: 'cat-clinics', categoryName: 'عيادة', categoryBookingMode: 'DIRECT',
-        serviceId: 's-clinics', serviceName: 'استشارة',
-        employeeId: 'e-clinics', employeeName: 'موظف',
-        durationOptionId: 'd-clinics',
-      }),
-    )
-
-    const s = result.current.state
-    expect(s.creditFilter).toBeNull()
-    // packagePurchaseId is intentionally left as whatever the previous
-    // pick left it — `applyCreditTarget` (CLINICS variant) never touches
-    // it. The state-leak fix only concerns creditFilter.
-    expect(s.packagePurchaseId).toBe('pkg-stale-2')
-    expect(s.departmentId).toBe('dep-clinics')
-    expect(s.serviceId).toBe('s-clinics')
-    expect(s.employeeId).toBe('e-clinics')
-    expect(s.durationOptionId).toBe('d-clinics')
     expect(s.deliveryType).toBeNull()
     expect(s.date).toBeNull()
     expect(s.startTime).toBeNull()

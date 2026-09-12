@@ -91,6 +91,7 @@ describe('mapBookingRow', () => {
       packageNameAr: 'باقة الجلسات',
       packageNameEn: 'Session package',
       usageStatus: 'CONSUMED' as const,
+      sessionValue: 291_00,
     };
     const result = mapBookingRow(mockBooking, {
       ...relations,
@@ -102,6 +103,32 @@ describe('mapBookingRow', () => {
 
   it('maps packageFunding to null when the booking has no package credit funding', () => {
     expect(mapBookingRow(mockBooking, relations).packageFunding).toBeNull();
+  });
+
+  it('carries the session value on package-funded bookings', () => {
+    const funding = {
+      creditId: 'c1', purchaseId: 'p1', packageId: 'pk1',
+      packageNameAr: 'باقة', packageNameEn: null,
+      usageStatus: 'RESERVED' as const, sessionValue: 291_00,
+    };
+    const result = mapBookingRow(mockBooking, {
+      ...relations,
+      packageFundingByBookingId: new Map([[mockBooking.id, funding]]),
+    });
+    expect(result.packageFunding?.sessionValue).toBe(291_00);
+  });
+
+  it('maps a null sessionValue for credits purchased before netValue existed', () => {
+    const funding = {
+      creditId: 'c1', purchaseId: 'p1', packageId: 'pk1',
+      packageNameAr: 'باقة', packageNameEn: null,
+      usageStatus: 'CONSUMED' as const, sessionValue: null,
+    };
+    const result = mapBookingRow(mockBooking, {
+      ...relations,
+      packageFundingByBookingId: new Map([[mockBooking.id, funding]]),
+    });
+    expect(result.packageFunding?.sessionValue).toBeNull();
   });
 
   it('derives date from scheduledAt', () => {

@@ -11,13 +11,13 @@ import {
 } from "@sawaa/ui"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 
-import { StatusBadge, BookingTypeBadge } from "@/components/features/status-badge"
 import { DetailSection } from "@/components/features/detail-sheet-parts"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { isoToClinicParts } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
 import { BookingActions } from "./booking-actions"
+import { BookingHeaderBadges } from "./booking-header-badges"
 import { DetailsBody } from "./booking-details-body"
 import { BookingIntakeResponses } from "./booking-intake-responses"
 import { BookingRescheduleTab } from "./booking-reschedule-tab"
@@ -105,10 +105,7 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
           </div>
           <DialogDescription asChild>
             <div className="flex items-center justify-between gap-3 mt-1">
-              <div className="flex items-center gap-2">
-                <BookingTypeBadge type={booking.type} />
-                <StatusBadge status={booking.status} />
-              </div>
+              <BookingHeaderBadges booking={booking} />
             </div>
           </DialogDescription>
         </DialogHeader>

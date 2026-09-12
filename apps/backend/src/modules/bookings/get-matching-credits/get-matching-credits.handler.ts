@@ -18,6 +18,8 @@ export interface MatchingCredit {
   durationOptionId: string | null;
   totalQuantity: number;
   usedQuantity: number;
+  // Booked but not-yet-delivered sessions; they occupy a seat like a used one.
+  reservedQuantity: number;
   remaining: number;
   createdAt: Date;
 }
@@ -51,6 +53,7 @@ export class GetMatchingCreditsHandler {
         durationOptionId: true,
         totalQuantity: true,
         usedQuantity: true,
+        reservedQuantity: true,
         createdAt: true,
         constraints: {
           select: {
@@ -70,7 +73,9 @@ export class GetMatchingCreditsHandler {
     };
 
     return credits
-      .filter((c) => c.totalQuantity - c.usedQuantity > 0)
+      // A reserved session belongs to an appointment that hasn't happened yet —
+      // it occupies a seat exactly like a delivered one, so it can't be offered again.
+      .filter((c) => c.totalQuantity - c.usedQuantity - c.reservedQuantity > 0)
       .filter((c) => creditMatchesTarget(c, target))
       // Narrowest first, then keep the DB's FIFO order (stable sort).
       .sort((a, b) => specificityScore(b) - specificityScore(a))
@@ -82,7 +87,8 @@ export class GetMatchingCreditsHandler {
         durationOptionId: c.durationOptionId,
         totalQuantity: c.totalQuantity,
         usedQuantity: c.usedQuantity,
-        remaining: c.totalQuantity - c.usedQuantity,
+        reservedQuantity: c.reservedQuantity,
+        remaining: c.totalQuantity - c.usedQuantity - c.reservedQuantity,
         createdAt: c.createdAt,
       }));
   }

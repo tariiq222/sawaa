@@ -181,6 +181,28 @@ describe('ActivatePackagePurchaseHandler', () => {
       ]);
     });
 
+    it('stores the snapshot net value on the issued credit', async () => {
+      const prisma = buildPrisma({
+        ...pendingPurchase,
+        creditSnapshot: [{ ...pendingPurchase.creditSnapshot[0], netValue: 36_000 }],
+      });
+      const { tx, getSubscriber } = buildHandler(prisma);
+
+      await getSubscriber()(envelope());
+
+      const data = tx.packageCredit.create.mock.calls[0][0].data;
+      expect(Number(data.netValue)).toBe(36_000);
+    });
+
+    it('leaves netValue null for a snapshot created before net values were stored', async () => {
+      const { tx, getSubscriber } = buildHandler();
+
+      await getSubscriber()(envelope());
+
+      const data = tx.packageCredit.create.mock.calls[0][0].data;
+      expect(data.netValue).toBeNull();
+    });
+
     it('issues credits only from the immutable purchase snapshot, not the live package definition', async () => {
       const prisma = buildPrisma(pendingPurchase, {
         ...pkgRow,

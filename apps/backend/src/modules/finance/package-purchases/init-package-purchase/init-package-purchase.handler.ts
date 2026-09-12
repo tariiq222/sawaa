@@ -143,6 +143,7 @@ export class InitPackagePurchaseHandler {
       discountAmount: number;
       finalPrice: number;
       itemUnitPrices: { unitPrice: number }[];
+      lines?: { net: number }[];
     };
     let creditSnapshot: PackageCreditSnapshotItem[];
 
@@ -218,6 +219,7 @@ export class InitPackagePurchaseHandler {
       creditSnapshot = createPackageCreditSnapshot(
         pkg.items,
         price.itemUnitPrices,
+        price.lines,
       );
     }
 

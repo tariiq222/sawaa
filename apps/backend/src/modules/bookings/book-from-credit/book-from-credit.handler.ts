@@ -5,14 +5,23 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { ActivityAction, DeliveryType, PackagePurchaseStatus, Prisma } from '@prisma/client';
+import {
+  ActivityAction,
+  DeliveryType,
+  PackageCreditUsageStatus,
+  PackagePurchaseStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { BookingCreatedEvent } from '../events/booking-created.event';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { hashToInt32 } from '../booking-lifecycle.helper';
-import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
+import {
+  ACTIVE_BOOKING_STATUSES,
+  STAFF_TIME_BLOCKING_BOOKING_STATUSES,
+} from '../active-booking-statuses';
 import {
   BookingTarget,
   CreditConstraint,
@@ -25,6 +34,7 @@ import {
   lockPersonReferences,
   retrySerializableTransaction,
 } from '../../../common/database/person-reference-lock.helper';
+import { lockPackagePurchase } from '../package-purchase-lock.helper';
 
 export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
   scheduledAt: Date;
@@ -36,11 +46,12 @@ export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
 interface LockedCreditRow {
   id: string;
   purchaseId: string;
-  serviceId: string;
-  employeeId: string;
-  durationOptionId: string;
+  serviceId: string | null;
+  employeeId: string | null;
+  durationOptionId: string | null;
   totalQuantity: number;
   usedQuantity: number;
+  reservedQuantity: number;
 }
 
 /**
@@ -58,22 +69,47 @@ function mapConcurrentCreditConflict(error: unknown): never {
 }
 
 /**
- * Consume one session-package credit to create a zero-value booking.
+ * Real availability = totalQuantity − usedQuantity − reservedQuantity > 0.
+ * Prisma cannot express this as a field-reference `where` comparison (it can
+ * only compare a column against another COLUMN, not a computed sum), so both
+ * credit-selection paths in `resolveCreditAndTarget` fetch with a coarse
+ * `usedQuantity < totalQuantity` DB filter and apply this JS predicate
+ * afterwards as the authoritative check — otherwise a credit fully booked out
+ * for future appointments (usedQuantity 0, reservedQuantity == totalQuantity)
+ * would look available and get selected, only for the in-transaction overdraw
+ * guard to reject the whole booking with a false "no credit left".
+ */
+function hasAvailableCapacity(credit: {
+  totalQuantity: number;
+  usedQuantity: number;
+  reservedQuantity?: number | null;
+}): boolean {
+  return credit.usedQuantity + (credit.reservedQuantity ?? 0) < credit.totalQuantity;
+}
+
+/**
+ * Reserve one session-package credit to create a zero-value booking.
  *
  * The credit pack model: the client pre-paid in full at purchase time, so a
  * credit booking carries NO invoice and NO payment — price = 0. The duration
  * is FIXED by the credit's durationOptionId (the caller may not change it).
  *
+ * Reserve vs consume: booking only RESERVES a seat (`reservedQuantity`); the
+ * session is actually consumed (`usedQuantity`) once it is delivered, via
+ * `consumePackageCreditForBooking` at check-in/complete. That is what lets a
+ * cancelled or no-showed booking give the seat back without ever having
+ * touched the delivered count.
+ *
  * Concurrency safety (the high-risk part):
  *  - Availability + overlap are checked exactly like a normal booking
  *    (CheckAvailabilityHandler + a pg advisory lock on employee+slot + an
  *    overlap query).
- *  - The credit bucket is consumed inside ONE Serializable transaction. The
+ *  - The credit bucket is reserved inside ONE Serializable transaction. The
  *    `SELECT ... FOR UPDATE` row lock + an in-lock recount of
- *    `usedQuantity < totalQuantity` is the OVERDRAW GUARD: two concurrent
- *    bookings on the last remaining credit serialize on the row lock, so the
- *    second one observes `usedQuantity == totalQuantity` and is rejected with
- *    a 409 instead of over-drawing the bucket.
+ *    `usedQuantity + reservedQuantity < totalQuantity` is the OVERDRAW GUARD:
+ *    two concurrent bookings on the last remaining seat serialize on the row
+ *    lock, so the second one observes the bucket full (delivered + booked)
+ *    and is rejected with a 409 instead of over-drawing it.
  */
 @Injectable()
 export class BookFromCreditHandler {
@@ -186,6 +222,13 @@ export class BookFromCreditHandler {
     // ── One Serializable transaction: lock the credit, recount, consume ──
     const booking = await retrySerializableTransaction(() =>
       this.rlsTransaction.withTransaction(async (tx) => {
+        // Same global lock order as create-booking: client -> employee/slot ->
+        // booking number. The client lock serializes this credit booking with
+        // any concurrent paid booking for the same client.
+        const clientLockKey1 = hashToInt32('client_booking');
+        const clientLockKey2 = hashToInt32(cmd.clientId);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${clientLockKey1}::int, ${clientLockKey2}::int)`;
+
         await lockPersonReferences(
           tx,
           [
@@ -194,6 +237,22 @@ export class BookFromCreditHandler {
           ],
           'reference',
         );
+
+        // Parity with create-booking: a client cannot hold two overlapping
+        // active appointments, whether paid or funded by package credit.
+        const clientConflict = await tx.booking.findFirst({
+          where: {
+            clientId: cmd.clientId,
+            isHistoricalImport: false,
+            status: { in: [...ACTIVE_BOOKING_STATUSES] },
+            scheduledAt: { lt: endsAt },
+            endsAt: { gt: scheduledAt },
+          },
+          select: { id: true },
+        });
+        if (clientConflict) {
+          throw new ConflictException('Client already has an overlapping appointment');
+        }
 
         // Advisory lock on employee + slot window — same pattern as
         // create-booking — so two concurrent bookings cannot both pass the
@@ -221,10 +280,20 @@ export class BookFromCreditHandler {
           throw new ConflictException('Employee already has a booking in this time slot');
         }
 
+        // Lock the parent purchase before the credit row. Every package
+        // mutation uses this parent-first order, so booking cannot deadlock
+        // with consume/return/reclaim/refund while sibling state changes.
+        const lockedPurchase = await lockPackagePurchase(tx, credit.purchaseId);
+        if (!lockedPurchase || lockedPurchase.status !== PackagePurchaseStatus.ACTIVE) {
+          throw new BadRequestException(
+            'Package purchase is not active; its credits cannot be booked',
+          );
+        }
+
         // OVERDRAW GUARD: lock the credit row and recount inside the lock.
         const lockedRows = await tx.$queryRaw<LockedCreditRow[]>`
           SELECT id, "purchaseId", "serviceId", "employeeId", "durationOptionId",
-                 "totalQuantity", "usedQuantity"
+                 "totalQuantity", "usedQuantity", "reservedQuantity"
           FROM "PackageCredit"
           WHERE id = ${credit.id}
           FOR UPDATE
@@ -233,28 +302,23 @@ export class BookFromCreditHandler {
           throw new NotFoundException('Package credit not found');
         }
         const locked = lockedRows[0];
-        if (locked.usedQuantity >= locked.totalQuantity) {
-          // The bucket was exhausted by a concurrent winner between the
-          // pre-lock read and acquiring the row lock — reject the over-draw.
-          throw new ConflictException('No remaining credit in this package');
-        }
-
-        // REFUNDED-purchase guard (finance-safety): re-read the parent purchase
-        // status INSIDE the lock. resolveCredit already filters for an ACTIVE
-        // purchase, but a manual refund could complete between that read and
-        // acquiring this row lock (TOCTOU). A REFUNDED purchase's credits are
-        // voided money — they must never be bookable even if remaining > 0.
-        const parentPurchase = await tx.packagePurchase.findUnique({
-          where: { id: locked.purchaseId },
-          select: { status: true },
-        });
         if (
-          !parentPurchase ||
-          parentPurchase.status !== PackagePurchaseStatus.ACTIVE
+          locked.purchaseId !== credit.purchaseId ||
+          locked.serviceId !== credit.serviceId ||
+          locked.employeeId !== credit.employeeId ||
+          locked.durationOptionId !== credit.durationOptionId
         ) {
-          throw new BadRequestException(
-            'Package purchase is not active; its credits cannot be booked',
+          throw new ConflictException(
+            'Package credit routing changed; please refresh and retry',
           );
+        }
+        // A reserved session belongs to an appointment that has not happened
+        // yet; it occupies a seat exactly like a delivered one.
+        if (locked.usedQuantity + locked.reservedQuantity >= locked.totalQuantity) {
+          // The bucket was exhausted (delivered + booked) by a concurrent
+          // winner between the pre-lock read and acquiring the row lock —
+          // reject the over-draw.
+          throw new ConflictException('No remaining credit in this package');
         }
 
         // Serialize bookingNumber generation (same advisory-lock pattern as create-booking).
@@ -299,18 +363,20 @@ export class BookFromCreditHandler {
           },
         });
 
-        // Record the consumption + increment the bucket (id-keyed update — no
-        // nested save, per .tariq/memory/notes/lessons.md).
+        // Reserve the session (not consume it) + increment the reserved
+        // counter (id-keyed update — no nested save, per
+        // .tariq/memory/notes/lessons.md). The session is only actually
+        // consumed once it is delivered — see `consumePackageCreditForBooking`.
         await tx.packageCreditUsage.create({
           data: {
             creditId: credit.id,
             bookingId: created.id,
-            status: 'CONSUMED',
+            status: PackageCreditUsageStatus.RESERVED,
           },
         });
         await tx.packageCredit.update({
           where: { id: credit.id },
-          data: { usedQuantity: { increment: 1 } },
+          data: { reservedQuantity: { increment: 1 } },
         });
 
         // P1-2 audit trail: every cross-client credit consumption is recorded
@@ -337,20 +403,8 @@ export class BookFromCreditHandler {
           },
         });
 
-        // Auto-complete the purchase when every credit is fully consumed.
-        const purchaseCredits = await tx.packageCredit.findMany({
-          where: { purchaseId: credit.purchaseId },
-          select: { totalQuantity: true, usedQuantity: true },
-        });
-        const allConsumed = purchaseCredits.every(
-          (c) => c.usedQuantity >= c.totalQuantity,
-        );
-        if (allConsumed) {
-          await tx.packagePurchase.update({
-            where: { id: credit.purchaseId },
-            data: { status: PackagePurchaseStatus.COMPLETED },
-          });
-        }
+        // A purchase completes when its last session is DELIVERED, not when it is
+        // booked — the auto-complete moved to `consumePackageCreditForBooking`.
 
         // Outbox the BookingCreatedEvent inside the transaction so a crash
         // before publish is recovered by the OutboxPublisherCron.
@@ -398,6 +452,7 @@ export class BookFromCreditHandler {
       durationOptionId: string | null;
       totalQuantity: number;
       usedQuantity: number;
+      reservedQuantity: number;
       constraints: CreditConstraint[];
     };
     target: BookingTarget;
@@ -410,6 +465,7 @@ export class BookFromCreditHandler {
       durationOptionId: true,
       totalQuantity: true,
       usedQuantity: true,
+      reservedQuantity: true,
       constraints: {
         select: {
           dimension: true,
@@ -425,12 +481,18 @@ export class BookFromCreditHandler {
       const credit = await this.prisma.packageCredit.findFirst({
         where: {
           id: cmd.creditId,
+          // Prisma cannot express `usedQuantity + reservedQuantity <
+          // totalQuantity` as a field-reference comparison, so this coarse
+          // filter only rules out credits that are already fully DELIVERED.
+          // A credit that is fully booked out by RESERVED sessions still
+          // passes here and is caught by the JS predicate below, which is
+          // the authoritative availability check.
           usedQuantity: { lt: this.prisma.packageCredit.fields.totalQuantity },
           purchase: { clientId: cmd.clientId, status: PackagePurchaseStatus.ACTIVE },
         },
         select,
       });
-      if (!credit) {
+      if (!credit || !hasAvailableCapacity(credit)) {
         throw new NotFoundException('No usable package credit found for this id');
       }
 
@@ -481,6 +543,9 @@ export class BookFromCreditHandler {
     // matching engine, then narrowest-first (specificity) then FIFO.
     const candidates = await this.prisma.packageCredit.findMany({
       where: {
+        // Same coarse DB filter as the explicit-creditId path — it still
+        // helps cut down the candidate set, but real availability (including
+        // reservedQuantity) is checked in JS below.
         usedQuantity: { lt: this.prisma.packageCredit.fields.totalQuantity },
         purchase: { clientId: cmd.clientId, status: PackagePurchaseStatus.ACTIVE },
       },
@@ -488,7 +553,7 @@ export class BookFromCreditHandler {
       select,
     });
     const credit = candidates
-      .filter((c) => creditMatchesTarget(c, target))
+      .filter((c) => hasAvailableCapacity(c) && creditMatchesTarget(c, target))
       .sort((a, b) => specificityScore(b) - specificityScore(a))[0];
     if (!credit) {
       throw new NotFoundException(

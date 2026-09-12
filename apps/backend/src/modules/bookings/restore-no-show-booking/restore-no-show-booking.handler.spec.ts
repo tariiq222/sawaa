@@ -9,6 +9,14 @@ const newHandler = (prisma: ReturnType<typeof buildPrisma>) => {
       const sql = strings.join(' ');
       if (sql.includes('"Client"')) return [{ id, isActive: true, deletedAt: null }];
       if (sql.includes('"Employee"')) return [{ id, isActive: true }];
+      if (sql.includes('"PackagePurchase"')) return [{ id: 'purchase-1', status: 'ACTIVE' }];
+      if (sql.includes('"PackageCredit"')) {
+        // reclaimPackageCreditForBooking's SELECT ... FOR UPDATE row lock —
+        // tests script the locked row via packageCredit.findUnique, so
+        // delegate to that same mock to keep those tests unchanged.
+        const credit = await prisma.packageCredit.findUnique({ where: { id } });
+        return credit ? [credit] : [];
+      }
       return [];
     },
   );
@@ -19,7 +27,7 @@ const newHandler = (prisma: ReturnType<typeof buildPrisma>) => {
 };
 
 describe('RestoreNoShowBookingHandler', () => {
-  it('restores a NO_SHOW booking to CONFIRMED, sets checkedInAt and clears noShowAt', async () => {
+  it('restores a NO_SHOW booking to CONFIRMED, preserves attendance, and sets automation suppression', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({
       ...mockBooking,
@@ -37,10 +45,32 @@ describe('RestoreNoShowBookingHandler', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           status: BookingStatus.CONFIRMED,
-          checkedInAt: expect.any(Date),
+          checkedInAt: null,
+          autoNoShowSuppressedAt: expect.any(Date),
           noShowAt: null,
         }),
       }),
+    );
+  });
+
+  it('preserves an existing checkedInAt timestamp when restoring an attended no-show', async () => {
+    const prisma = buildPrisma();
+    const checkedInAt = new Date('2026-09-12T08:00:00.000Z');
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.NO_SHOW,
+      checkedInAt,
+      noShowAt: new Date(),
+    });
+
+    await newHandler(prisma).execute({
+      bookingId: 'book-1',
+      changedBy: 'user-42',
+      reason: 'Restore attended no-show',
+    });
+
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ checkedInAt }) }),
     );
   });
 
@@ -162,21 +192,64 @@ describe('RestoreNoShowBookingHandler — package credit reclaim', () => {
     };
   }
 
-  it('re-claims a RETURNED credit (usage → CONSUMED + bucket usedQuantity incremented)', async () => {
+  it('re-claims a RETURNED credit for a never-attended no-show (usage → RESERVED + bucket reservedQuantity incremented)', async () => {
     const prisma = buildPrisma();
     withProgramStubs(prisma);
+    // A NO_SHOW booking that was never checked in (checkedInAt is unset) was
+    // never attended, so the reclaim restores it to RESERVED, not CONSUMED —
+    // it only ever held a reserved seat, never a consumed one.
     prisma.booking.findUnique = jest.fn().mockResolvedValue({
       ...mockBooking,
       status: BookingStatus.NO_SHOW,
       packageCreditId: 'credit-1',
+      checkedInAt: null,
     });
     // Reclaim helper expects: a RETURNED usage row + credit with capacity left.
     (prisma as unknown as { packageCreditUsage: { findFirst: jest.Mock } })
       .packageCreditUsage.findFirst
-      .mockResolvedValueOnce({ id: 'usage-1', creditId: 'credit-1' });
+      .mockResolvedValue({ id: 'usage-1', creditId: 'credit-1' });
     (prisma as unknown as { packageCredit: { findUnique: jest.Mock } })
       .packageCredit.findUnique
-      .mockResolvedValueOnce({ id: 'credit-1', totalQuantity: 10, usedQuantity: 3 });
+      .mockResolvedValue({ id: 'credit-1', totalQuantity: 10, usedQuantity: 3, reservedQuantity: 0 });
+
+    await newHandler(prisma).execute({
+      bookingId: 'book-1',
+      changedBy: 'user-42',
+      reason: 're-credit restore',
+    });
+
+    expect((prisma as any).packageCreditUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: PackageCreditUsageStatus.RESERVED,
+          returnedAt: null,
+        }),
+      }),
+    );
+    expect((prisma as any).packageCredit.update).toHaveBeenCalledWith({
+      where: { id: 'credit-1' },
+      data: { reservedQuantity: { increment: 1 } },
+    });
+  });
+
+  it('re-claims a RETURNED credit for an attended no-show (usage → CONSUMED + bucket usedQuantity incremented)', async () => {
+    const prisma = buildPrisma();
+    withProgramStubs(prisma);
+    // The client checked in before being marked no-show (e.g. left before the
+    // session started) — the session was actually attended, so the reclaim
+    // must restore it to CONSUMED.
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.NO_SHOW,
+      packageCreditId: 'credit-1',
+      checkedInAt: new Date(),
+    });
+    (prisma as unknown as { packageCreditUsage: { findFirst: jest.Mock } })
+      .packageCreditUsage.findFirst
+      .mockResolvedValue({ id: 'usage-1', creditId: 'credit-1' });
+    (prisma as unknown as { packageCredit: { findUnique: jest.Mock } })
+      .packageCredit.findUnique
+      .mockResolvedValue({ id: 'credit-1', totalQuantity: 10, usedQuantity: 3, reservedQuantity: 0 });
 
     await newHandler(prisma).execute({
       bookingId: 'book-1',
@@ -205,13 +278,21 @@ describe('RestoreNoShowBookingHandler — package credit reclaim', () => {
       ...mockBooking,
       status: BookingStatus.NO_SHOW,
       packageCreditId: 'credit-1',
+      checkedInAt: null,
     });
     (prisma as unknown as { packageCreditUsage: { findFirst: jest.Mock } })
       .packageCreditUsage.findFirst
-      .mockResolvedValueOnce({ id: 'usage-1', creditId: 'credit-1' });
+      .mockResolvedValue({ id: 'usage-1', creditId: 'credit-1' });
     (prisma as unknown as { packageCredit: { findUnique: jest.Mock } })
       .packageCredit.findUnique
-      .mockResolvedValueOnce({ id: 'credit-1', totalQuantity: 10, usedQuantity: 10 });
+      .mockResolvedValueOnce({ id: 'credit-1', purchaseId: 'purchase-1' })
+      .mockResolvedValueOnce({
+        id: 'credit-1',
+        purchaseId: 'purchase-1',
+        totalQuantity: 10,
+        usedQuantity: 10,
+        reservedQuantity: 0,
+      });
 
     await expect(
       newHandler(prisma).execute({

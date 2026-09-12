@@ -90,7 +90,11 @@ export interface BookingPackageFunding {
   packageId: string
   packageNameAr: string | null
   packageNameEn: string | null
-  usageStatus: "CONSUMED" | "RETURNED"
+  usageStatus: "RESERVED" | "CONSUMED" | "RETURNED"
+  // Net halalas the client actually paid for this one session — a reporting
+  // figure only. Null for credits purchased before net value was tracked.
+  // The amount DUE on a package booking stays zero regardless of this.
+  sessionValue: number | null
 }
 
 export interface RescheduledFrom {

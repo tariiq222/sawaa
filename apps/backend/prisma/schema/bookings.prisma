@@ -88,6 +88,8 @@ model Booking {
   cancelledAt              DateTime?
   confirmedAt              DateTime?
   checkedInAt              DateTime?
+  /// Restore/no-show automation suppression; never a substitute for attendance.
+  autoNoShowSuppressedAt    DateTime?
   completedAt              DateTime?
   noShowAt                 DateTime?
   expiresAt                DateTime?
@@ -346,8 +348,10 @@ enum PackagePurchaseStatus {
   REFUNDED
 }
 
-// استهلاك الرصيد لكل دلو: محجوز (CONSUMED) أو مُرجَع (RETURNED) عند الإلغاء/عدم الحضور.
+// استهلاك الرصيد لكل دلو: محجوز لموعد قائم (RESERVED)، مستهلك بعد الحضور
+// (CONSUMED)، أو مُرجَع للرصيد (RETURNED) عند الإلغاء/عدم الحضور.
 enum PackageCreditUsageStatus {
+  RESERVED
   CONSUMED
   RETURNED
 }
@@ -386,7 +390,8 @@ model PackagePurchase {
   @@index([status])
 }
 
-// الدلو = رصيد بند مشترى محكوم بقيود متعددة الأبعاد. remaining = totalQuantity − usedQuantity.
+// الدلو = رصيد بند مشترى محكوم بقيود متعددة الأبعاد.
+// المتاح = totalQuantity − usedQuantity − reservedQuantity.
 // serviceId / employeeId / durationOptionId are LEGACY single-specific refs kept nullable
 // for backward compatibility; eligibility is a snapshot of the item's `constraints` taken
 // at purchase time so later package edits never affect existing purchases.
@@ -399,8 +404,15 @@ model PackageCredit {
   durationOptionId  String?
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   unitPriceSnapshot Decimal         @db.Decimal(12, 2)
+  /// Net amount paid for this credit's sessions, in integer halalas: the item's
+  /// payable after its discount, shared by paid and free sessions. Null for
+  /// credits issued before net values were stored (reports then allocate the
+  /// purchase amount across its credits).
+  netValue          Decimal?        @db.Decimal(12, 2)
   totalQuantity     Int
   usedQuantity      Int             @default(0)
+  // الجلسات المحجوزة لمواعيد قائمة ولم تُقدَّم بعد. تشغل مقعداً تماماً كالمستهلكة.
+  reservedQuantity  Int             @default(0)
   createdAt         DateTime        @default(now())
 
   usages      PackageCreditUsage[]

@@ -263,6 +263,23 @@ describe('CreatePackagePurchaseHandler', () => {
       // purchaseId on every credit must match the created purchase — verified via return value below.
     });
 
+    it("stores the item's net paid value (after its discount) on the credit", async () => {
+      mockHappyPath(prisma);
+      const { handler, tx, pricing } = buildHandler(prisma);
+      pricing.compute.mockResolvedValue({
+        subtotal: SUBTOTAL_HALALAS,
+        discountAmount: DISCOUNT_HALALAS,
+        finalPrice: FINAL_PRICE_HALALAS,
+        itemUnitPrices: [{ durationOptionId: DURATION_OPTION_ID, unitPrice: SUBTOTAL_HALALAS / ITEM.paidQuantity }],
+        lines: [{ net: FINAL_PRICE_HALALAS }],
+      });
+
+      await handler.execute(validDto());
+
+      const creditData = tx.packageCredit.create.mock.calls[0][0].data;
+      expect(Number(creditData.netValue)).toBe(FINAL_PRICE_HALALAS);
+    });
+
     it('synthesizes INCLUDE constraints from the item triple when the item has no explicit constraints', async () => {
       mockHappyPath(prisma);
       const { handler, tx } = buildHandler(prisma);

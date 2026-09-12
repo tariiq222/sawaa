@@ -336,33 +336,17 @@ export function useBookingFormState() {
     setState((prev) => ({ ...prev, couponCode }))
   }, [])
 
-  /** Jump the wizard straight to a package credit's target: fills
-   *  department → category (+mode) → service → employee → durationOption in
-   *  one atomic update, leaving deliveryType/date/time for the user. */
-  const applyCreditTarget = useCallback((t: CreditTarget) => {
-    setState((prev) => ({
-      ...prev,
-      departmentId: t.departmentId,
-      departmentName: t.departmentName,
-      categoryId: t.categoryId,
-      categoryName: t.categoryName,
-      categoryBookingMode: t.categoryBookingMode,
-      serviceId: t.serviceId,
-      serviceName: t.serviceName,
-      employeeId: t.employeeId,
-      employeeName: t.employeeName,
-      durationOptionId: t.durationOptionId,
-      creditFilter: null,
-      deliveryType: null,
-      type: null,
-      date: null,
-      startTime: null,
-    }))
-  }, [])
-
-  /** Phase 6 — PACKAGES track variant of `applyCreditTarget`. Identical
-   *  jump-fill PLUS records `packagePurchaseId` so the submit path can
-   *  prove which package purchase the first session consumed. */
+  // W6 fix — 2026-09-12 — the standalone `applyCreditTarget` (jump-fill
+  // without a packagePurchaseId) was deleted. It backed only the
+  // client-credits panel's button, which never selected a track and
+  // therefore rendered no النوع/الموعد sections — a dead end. The panel now
+  // threads a purchase id through and uses `applyPackageCreditTarget` below,
+  // same as the designed PACKAGES-track credit pick.
+  /** Phase 6 — PACKAGES track jump-fill: fills department → category
+   *  (+mode) → service → employee → durationOption in one atomic update,
+   *  leaving deliveryType/date/time for the user, PLUS records
+   *  `packagePurchaseId` so the submit path can prove which package
+   *  purchase the first session consumed. */
   const applyPackageCreditTarget = useCallback(
     (t: CreditTarget, packagePurchaseId: string) => {
       setState((prev) => ({
@@ -457,7 +441,6 @@ export function useBookingFormState() {
     setPayAtClinic,
     setCollectionMethod,
     setCouponCode,
-    applyCreditTarget,
     applyPackageCreditTarget,
     applyCreditFilter,
     clearCreditFilter,

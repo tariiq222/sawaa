@@ -10,6 +10,8 @@ export interface PackageCreditSnapshotItem {
   employeeId: string | null;
   durationOptionId: string | null;
   unitPriceSnapshot: number;
+  /** Net paid for this item's sessions (integer halalas). Absent on older snapshots. */
+  netValue?: number | null;
   totalQuantity: number;
   constraints: ItemConstraintInput[];
 }
@@ -26,12 +28,14 @@ interface SnapshotSourceItem {
 export function createPackageCreditSnapshot(
   items: SnapshotSourceItem[],
   itemUnitPrices: { unitPrice: number }[],
+  itemLines?: { net: number }[],
 ): PackageCreditSnapshotItem[] {
   return items.map((item, index) => ({
     serviceId: item.serviceId,
     employeeId: item.employeeId,
     durationOptionId: item.durationOptionId,
     unitPriceSnapshot: itemUnitPrices[index]?.unitPrice ?? 0,
+    netValue: itemLines?.[index]?.net ?? null,
     totalQuantity: item.paidQuantity + item.freeQuantity,
     constraints: item.constraints ?? [],
   }));
@@ -61,6 +65,8 @@ export function parsePackageCreditSnapshot(
       !nullableString(item.durationOptionId) ||
       typeof item.unitPriceSnapshot !== 'number' ||
       !Number.isFinite(item.unitPriceSnapshot) ||
+      (item.netValue != null &&
+        (typeof item.netValue !== 'number' || !Number.isFinite(item.netValue))) ||
       typeof item.totalQuantity !== 'number' ||
       !Number.isInteger(item.totalQuantity) ||
       item.totalQuantity <= 0 ||
@@ -109,6 +115,7 @@ export function parsePackageCreditSnapshot(
       employeeId: item.employeeId,
       durationOptionId: item.durationOptionId,
       unitPriceSnapshot: item.unitPriceSnapshot,
+      netValue: typeof item.netValue === 'number' ? item.netValue : null,
       totalQuantity: item.totalQuantity,
       constraints,
     });

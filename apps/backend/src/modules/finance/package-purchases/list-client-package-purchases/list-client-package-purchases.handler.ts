@@ -31,7 +31,9 @@ export interface ClientPackageCreditRow {
   unitPriceSnapshot: number;
   totalQuantity: number;
   usedQuantity: number;
-  /** Computed: totalQuantity − usedQuantity. */
+  // Booked but not-yet-delivered sessions; they occupy a seat like a used one.
+  reservedQuantity: number;
+  /** Computed: totalQuantity − usedQuantity − reservedQuantity. */
   remaining: number;
   categoryId: string | null;
   categoryNameAr: string;
@@ -76,9 +78,11 @@ export interface ClientPackagePurchaseRow {
 /**
  * List every package purchase a given client has made (newest paid first),
  * with each purchase's credits enriched with resolved service / employee /
- * duration display names. `remaining = totalQuantity − usedQuantity` is
- * pre-computed so the dashboard's "credit balance" widget does not have to
- * do arithmetic on the client.
+ * duration display names. `remaining = totalQuantity − usedQuantity −
+ * reservedQuantity` is pre-computed so the dashboard's "credit balance"
+ * widget does not have to do arithmetic on the client — a reserved session
+ * belongs to a booked-but-not-yet-delivered appointment and is not available
+ * to offer again.
  */
 @Injectable()
 export class ListClientPackagePurchasesHandler {
@@ -133,6 +137,7 @@ export class ListClientPackagePurchasesHandler {
             where: { id: { in: serviceIds } },
             select: {
               id: true, nameAr: true, nameEn: true, isActive: true, archivedAt: true,
+              isHidden: true,
               categoryId: true,
               category: {
                 select: {
@@ -214,13 +219,17 @@ export class ListClientPackagePurchasesHandler {
             !!employee &&
             employee.isActive &&
             activeLinkSet.has(`${credit.employeeId}:${credit.serviceId}`);
+          // A direct-booking clinic books through one hidden internal service;
+          // the clinic is the name staff and clients recognise.
+          const namedByClinic =
+            !!service?.isHidden && category?.bookingMode === 'DIRECT';
           return {
             id: credit.id,
             serviceId: credit.serviceId,
             employeeId: credit.employeeId,
             durationOptionId: credit.durationOptionId,
-            serviceNameAr: service?.nameAr ?? '',
-            serviceNameEn: service?.nameEn ?? null,
+            serviceNameAr: (namedByClinic ? category?.nameAr : service?.nameAr) ?? '',
+            serviceNameEn: (namedByClinic ? category?.nameEn : service?.nameEn) ?? null,
             employeeNameAr: employee?.nameAr ?? employee?.name ?? '',
             employeeNameEn: employee?.nameEn ?? null,
             durationLabelAr: duration?.labelAr ?? '',
@@ -230,7 +239,8 @@ export class ListClientPackagePurchasesHandler {
             unitPriceSnapshot: Number(credit.unitPriceSnapshot),
             totalQuantity: credit.totalQuantity,
             usedQuantity: credit.usedQuantity,
-            remaining: credit.totalQuantity - credit.usedQuantity,
+            reservedQuantity: credit.reservedQuantity,
+            remaining: credit.totalQuantity - credit.usedQuantity - credit.reservedQuantity,
             categoryId: service?.categoryId ?? null,
             categoryNameAr: category?.nameAr ?? '',
             categoryNameEn: category?.nameEn ?? null,

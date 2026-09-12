@@ -39,6 +39,7 @@ const PURCHASE_1 = {
       unitPriceSnapshot: PRISMA_DECIMAL(10_000),
       totalQuantity: 5,
       usedQuantity: 2,
+      reservedQuantity: 0,
       createdAt: new Date('2026-01-15T10:00:00Z'),
       constraints: [],
     },
@@ -51,6 +52,7 @@ const PURCHASE_1 = {
       unitPriceSnapshot: PRISMA_DECIMAL(5_000),
       totalQuantity: 3,
       usedQuantity: 3, // fully consumed → remaining 0
+      reservedQuantity: 0,
       createdAt: new Date('2026-01-15T10:00:00Z'),
       constraints: [],
     },
@@ -74,6 +76,7 @@ const PURCHASE_2 = {
       unitPriceSnapshot: PRISMA_DECIMAL(10_000),
       totalQuantity: 4,
       usedQuantity: 0,
+      reservedQuantity: 0,
       createdAt: new Date('2026-02-01T10:00:00Z'),
       constraints: [],
     },
@@ -180,6 +183,37 @@ describe('ListClientPackagePurchasesHandler', () => {
     expect(c2!.usedQuantity).toBe(3);
   });
 
+  it('reports a reserved session as unavailable (remaining = total − used − reserved)', async () => {
+    prisma.packagePurchase.findMany.mockResolvedValue([
+      {
+        id: 'p-res', packageId: 'pkg-res', clientId: 'c-res', status: 'ACTIVE',
+        subtotalSnapshot: 0, discountSnapshot: 0, amountPaid: 0, refundAmount: 0,
+        paidAt: new Date('2026-09-01'), refundedAt: null, notes: null, createdAt: new Date('2026-09-01'),
+        credits: [
+          {
+            id: 'cr-res', serviceId: null, employeeId: null, durationOptionId: null,
+            unitPriceSnapshot: 5000, totalQuantity: 5, usedQuantity: 1, reservedQuantity: 2,
+            constraints: [],
+          },
+        ],
+      },
+    ]);
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'pkg-res', nameAr: 'باقة', nameEn: null }]);
+    prisma.service.findMany.mockResolvedValue([]);
+    prisma.employee.findMany.mockResolvedValue([]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([]);
+    prisma.employeeService.findMany.mockResolvedValue([]);
+
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const result = await handler.execute({ clientId: 'c-res' });
+
+    expect(result[0].credits[0]).toMatchObject({
+      usedQuantity: 1,
+      reservedQuantity: 2,
+      remaining: 2,
+    });
+  });
+
   it('resolves service / employee / duration display names for each credit', async () => {
     mockHappyPath();
     const handler = new ListClientPackagePurchasesHandler(prisma as never);
@@ -282,9 +316,9 @@ describe('ListClientPackagePurchasesHandler', () => {
         paidAt: new Date('2026-06-01'), refundedAt: null, notes: null, createdAt: new Date('2026-06-01'),
         credits: [
           { id: 'cr1', serviceId: 's1', employeeId: 'e1', durationOptionId: 'd1',
-            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1, constraints: [] },
+            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1, reservedQuantity: 0, constraints: [] },
           { id: 'cr2', serviceId: 's2', employeeId: 'e1', durationOptionId: 'd1',
-            unitPriceSnapshot: 10000, totalQuantity: 2, usedQuantity: 0, constraints: [] },
+            unitPriceSnapshot: 10000, totalQuantity: 2, usedQuantity: 0, reservedQuantity: 0, constraints: [] },
         ],
       },
     ]);
@@ -314,6 +348,41 @@ describe('ListClientPackagePurchasesHandler', () => {
     expect(archived.serviceIsBookable).toBe(false);
   });
 
+  it('names a direct-booking clinic credit by the clinic, not its hidden internal service', async () => {
+    prisma.packagePurchase.findMany.mockResolvedValue([
+      {
+        id: 'p1', packageId: 'pkg1', clientId: 'c1', status: 'ACTIVE',
+        subtotalSnapshot: 0, discountSnapshot: 0, amountPaid: 0, refundAmount: 0,
+        paidAt: new Date('2026-06-01'), refundedAt: null, notes: null, createdAt: new Date('2026-06-01'),
+        credits: [
+          { id: 'cr1', serviceId: 's1', employeeId: 'e1', durationOptionId: 'd1',
+            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 0, reservedQuantity: 0, constraints: [] },
+        ],
+      },
+    ]);
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'pkg1', nameAr: 'باقة', nameEn: null }]);
+    prisma.service.findMany.mockResolvedValue([
+      { id: 's1', nameAr: 'خدمة داخلية', nameEn: 'internal', isActive: true, archivedAt: null, isHidden: true,
+        categoryId: 'cat1',
+        category: { id: 'cat1', nameAr: 'عيادة السعادة', nameEn: 'Happiness Clinic', bookingMode: 'DIRECT',
+          departmentId: null, department: null } },
+    ]);
+    prisma.employee.findMany.mockResolvedValue([{ id: 'e1', name: 'Emp', nameAr: 'موظف', nameEn: null, isActive: true }]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([{ id: 'd1', labelAr: '٦٠ د', label: '60m', durationMins: 60 }]);
+    prisma.employeeService.findMany.mockResolvedValue([{ employeeId: 'e1', serviceId: 's1' }]);
+
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const rows = await handler.execute({ clientId: 'c1' });
+
+    expect(rows[0].credits[0]).toEqual(expect.objectContaining({
+      serviceNameAr: 'عيادة السعادة',
+      serviceNameEn: 'Happiness Clinic',
+      categoryBookingMode: 'DIRECT',
+    }));
+    const serviceSelect = prisma.service.findMany.mock.calls[0][0].select;
+    expect(serviceSelect.isHidden).toBe(true);
+  });
+
   it('P1-8: marks a credit NOT bookable when the EmployeeService link is inactive even though service + employee are active', async () => {
     prisma.packagePurchase.findMany.mockResolvedValue([
       {
@@ -322,7 +391,7 @@ describe('ListClientPackagePurchasesHandler', () => {
         paidAt: new Date('2026-06-01'), refundedAt: null, notes: null, createdAt: new Date('2026-06-01'),
         credits: [
           { id: 'cr1', serviceId: 's1', employeeId: 'e1', durationOptionId: 'd1',
-            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1, constraints: [] },
+            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1, reservedQuantity: 0, constraints: [] },
         ],
       },
     ]);
@@ -411,6 +480,7 @@ describe('ListClientPackagePurchasesHandler', () => {
             unitPriceSnapshot: 8000,
             totalQuantity: 6,
             usedQuantity: 1,
+            reservedQuantity: 0,
             constraints: [
               {
                 dimension: 'SERVICE',
@@ -467,6 +537,7 @@ describe('ListClientPackagePurchasesHandler', () => {
             unitPriceSnapshot: 12000,
             totalQuantity: 2,
             usedQuantity: 0,
+            reservedQuantity: 0,
             constraints: [
               {
                 dimension: 'DURATION',

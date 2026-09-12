@@ -3,9 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ActivityAction, Prisma } from '@prisma/client';
+import { ActivityAction, PackagePurchaseStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { TransferCreditDto } from './transfer-credit.dto';
+import { lockPackagePurchase } from '../package-purchase-lock.helper';
 
 export type TransferCreditCommand = TransferCreditDto & {
   creditId: string;
@@ -65,12 +66,6 @@ export class TransferCreditHandler {
       throw new BadRequestException('This credit is not transferable');
     }
 
-    // No-op guard: transferring to the current owner is meaningless and would
-    // mask a UI bug. Reject explicitly.
-    if (credit.employeeId === cmd.toEmployeeId) {
-      throw new BadRequestException('Credit already belongs to this employee');
-    }
-
     // 2. Target practitioner must exist and be active.
     const targetEmployee = await this.prisma.employee.findFirst({
       where: { id: cmd.toEmployeeId },
@@ -107,8 +102,31 @@ export class TransferCreditHandler {
     //    snapshot stays frozen — only employeeId moves. The audit row makes
     //    the credit-routing change traceable (who moved whose credit, from/to
     //    which practitioner) — without it a credit transfer leaves no trail.
-    const fromEmployeeId = credit.employeeId;
     return this.rlsTransaction.withTransaction(async (tx) => {
+      const purchase = credit.purchase?.id
+        ? await lockPackagePurchase(tx, credit.purchase.id)
+        : null;
+      if (!purchase) {
+        throw new NotFoundException('Package purchase not found');
+      }
+      if (purchase.status === PackagePurchaseStatus.REFUNDED) {
+        throw new BadRequestException('Package purchase is already refunded');
+      }
+
+      const currentCredit = await tx.packageCredit.findUnique({
+        where: { id: credit.id },
+        select: { employeeId: true },
+      });
+      if (!currentCredit) {
+        throw new NotFoundException('Package credit not found');
+      }
+      // No-op guard runs after the parent lock and current ownership read so a
+      // concurrent transfer cannot make the preflight owner stale.
+      if (currentCredit.employeeId === cmd.toEmployeeId) {
+        throw new BadRequestException('Credit already belongs to this employee');
+      }
+      const fromEmployeeId = currentCredit.employeeId;
+
       const updated = await tx.packageCredit.update({
         where: { id: credit.id },
         data: { employeeId: cmd.toEmployeeId },

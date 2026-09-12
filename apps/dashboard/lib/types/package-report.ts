@@ -65,6 +65,8 @@ export interface OutstandingCreditReport {
   outstandingLiability: number
   outstandingSessions: number
   creditCount: number
+  /** Σ reservedQuantity — outstanding sessions that already have an appointment booked. */
+  reservedSessions: number
 }
 
 /* ─── CONSUMPTION ─── */

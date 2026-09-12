@@ -438,6 +438,7 @@ export const arServices: Record<string, string> = {
   "packages.col.items": "البنود",
   "packages.col.subtotal": "المجموع",
   "packages.col.discount": "الخصم",
+  "packages.col.freeValue": "جلسات مجانية",
   "packages.col.finalPrice": "السعر النهائي",
   "packages.col.status": "الحالة",
   "packages.col.visibility": "الظهور",

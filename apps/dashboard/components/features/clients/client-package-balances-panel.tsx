@@ -21,7 +21,9 @@
  *     + amount paid + date) and an inner credits list
  *
  * Money comes pre-coerced as integer halalas; the backend also does the
- * `remaining = totalQuantity - usedQuantity` math for us, so this panel
+ * `remaining = totalQuantity - usedQuantity - reservedQuantity` math for
+ * us — a reserved session has a booked appointment that hasn't happened
+ * yet, so it isn't available capacity either. This panel
  * is read-only presentation EXCEPT for the per-credit "احجز موعد" button
  * (Phase 3) and the Phase 5 transfer/refund operator actions:
  *   - "نقل الرصيد" per credit  → TransferCreditDialog (gated on

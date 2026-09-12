@@ -438,6 +438,7 @@ export const enServices: Record<string, string> = {
   "packages.col.items": "Items",
   "packages.col.subtotal": "Subtotal",
   "packages.col.discount": "Discount",
+  "packages.col.freeValue": "Free sessions",
   "packages.col.finalPrice": "Final Price",
   "packages.col.status": "Status",
   "packages.col.visibility": "Visibility",

@@ -57,6 +57,7 @@ const CREDIT_CR1 = {
   durationLabelAr: "٤٥ د",
   totalQuantity: 5,
   usedQuantity: 1,
+  reservedQuantity: 0,
   remaining: 4,
   serviceIsBookable: true,
   categoryId: "cat1",
@@ -76,6 +77,7 @@ const CREDIT_CR2_EXHAUSTED = {
   durationLabelAr: "د",
   totalQuantity: 2,
   usedQuantity: 2,
+  reservedQuantity: 0,
   remaining: 0,
   serviceIsBookable: true,
   categoryId: "cat1",
@@ -111,8 +113,12 @@ test("renders only usable credits and fires onUseCredit on click", async () => {
   expect(screen.queryByText("منتهية")).not.toBeInTheDocument() // remaining 0 hidden
   // t() stub returns the key verbatim, so the regex matches the key string, not the Arabic copy.
   screen.getByRole("button", { name: /packages\.credits\.use/ }).click()
+  // The purchase id must ride along so the wizard can record
+  // packagePurchaseId and submit through /from-credit instead of creating a
+  // paid booking for a session the client already covered.
   expect(onUseCredit).toHaveBeenCalledWith(
     expect.objectContaining({ serviceId: "s1", durationOptionId: "d1" }),
+    "p1",
   )
 })
 

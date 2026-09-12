@@ -30,7 +30,14 @@ export interface BookingPackageFundingRelation {
   packageId: string;
   packageNameAr: string;
   packageNameEn: string | null;
-  usageStatus: 'CONSUMED' | 'RETURNED';
+  usageStatus: 'RESERVED' | 'CONSUMED' | 'RETURNED';
+  /**
+   * Net halalas the client actually paid for this single session — the
+   * credit's own net value divided by its session count. Null for credits
+   * purchased before `netValue` existed. This is a reporting figure: the
+   * amount DUE on a package booking is always zero.
+   */
+  sessionValue: number | null;
 }
 
 export interface BookingRelations {

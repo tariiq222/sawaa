@@ -22,9 +22,10 @@ export interface RestoreNoShowBookingCommand {
  * booking to COMPLETED. The only things it touches are:
  *
  *   - Booking.status          NO_SHOW → CONFIRMED
- *   - Booking.checkedInAt     set to `now` (the cron checks this; this is
- *                              the durability guarantee that prevents
- *                              immediate re-mark).
+ *   - Booking.checkedInAt     preserved exactly (restore never fabricates
+ *                              attendance).
+ *   - Booking.autoNoShowSuppressedAt set to `now` so automation does not
+ *                              immediately re-mark the restored booking.
  *   - Booking.noShowAt        cleared.
  *   - BookingStatusLog        one row with from=NO_SHOW, to=CONFIRMED,
  *                              changedBy, reason.
@@ -63,6 +64,11 @@ export class RestoreNoShowBookingHandler {
       'restored from no-show',
     );
     const nextStatus = assertTransition(booking.status, 'RESTORE_NO_SHOW'); // CONFIRMED
+
+    // Snapshot attendance before the transaction. Reclaim needs the real fact
+    // to decide CONSUMED vs RESERVED and must never infer attendance from the
+    // restore operation itself.
+    const wasAttended = !!booking.checkedInAt;
 
     const updated = await this.rlsTransaction.withTransaction(async (tx) => {
       const isGroupBooking =
@@ -150,8 +156,8 @@ export class RestoreNoShowBookingHandler {
         );
       }
 
-      // 1) Flip the booking. Always set checkedInAt so the auto-no-show cron
-      //    does not immediately re-mark the booking on its next pass.
+      // 1) Flip the booking while preserving the attendance fact. Suppression
+      //    is stored separately so automation never fabricates check-in data.
       const [restored] = await Promise.all([
         updateBookingAtomically(tx, {
           bookingId: cmd.bookingId,
@@ -159,7 +165,8 @@ export class RestoreNoShowBookingHandler {
           actionLabel: 'restored from no-show',
           data: {
             status: nextStatus,
-            checkedInAt: new Date(),
+            checkedInAt: booking.checkedInAt,
+            autoNoShowSuppressedAt: new Date(),
             noShowAt: null,
           },
         }),
@@ -181,7 +188,7 @@ export class RestoreNoShowBookingHandler {
       //    triggers the surrounding transaction's rollback, so neither the
       //    booking flip nor the log row survives.
       if (booking.packageCreditId) {
-        await reclaimPackageCreditForBooking(tx, cmd.bookingId);
+        await reclaimPackageCreditForBooking(tx, cmd.bookingId, wasAttended);
       }
 
       return restored;

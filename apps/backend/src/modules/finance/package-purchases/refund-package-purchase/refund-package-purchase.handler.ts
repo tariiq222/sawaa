@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import {
   BookingStatus,
   InvoiceStatus,
+  PackageCreditUsageStatus,
   PackagePurchaseStatus,
   PaymentStatus,
   Prisma,
@@ -58,8 +59,9 @@ export type RefundPackagePurchaseCommand = RefundPackagePurchaseDto & {
  * Partial vs. full refund (P1):
  *  - A FULL refund (the new cumulative refunded amount reaches amountPaid)
  *    marks the purchase REFUNDED and VOIDS its remaining credits
- *    (`usedQuantity = totalQuantity` → remaining 0). This is belt-and-suspenders
- *    with the explicit REFUNDED-purchase guard in BookFromCreditHandler.
+ *    (`usedQuantity = totalQuantity`, `reservedQuantity = 0` → remaining 0,
+ *    nothing left reserved either). This is belt-and-suspenders with the
+ *    explicit REFUNDED-purchase guard in BookFromCreditHandler.
  *  - A PARTIAL refund (refundAmount < outstanding) returns only part of the
  *    money and KEEPS the purchase ACTIVE with its credits untouched. We never
  *    void credits on a partial refund: doing so would silently destroy the
@@ -192,11 +194,38 @@ export class RefundPackagePurchaseHandler {
       // credit of this purchase. A partial refund leaves credits untouched so
       // the client's remaining paid sessions stay bookable (P1-2).
       if (isFullRefund) {
+        // Also zero reservedQuantity: a credit voided here may still hold
+        // reservations from booked-but-undelivered appointments, and leaving
+        // them would over-subscribe a bucket that is already fully "used".
         await tx.$executeRaw`
           UPDATE "PackageCredit"
-          SET "usedQuantity" = "totalQuantity"
+          SET "usedQuantity" = "totalQuantity", "reservedQuantity" = 0
           WHERE "purchaseId" = ${cmd.purchaseId}
         `;
+
+        // The future-booking guard above only blocks a refund when a credit
+        // funds a booking that is still SCHEDULED IN THE FUTURE. A booking
+        // that is past its scheduled time but still CONFIRMED (staff never
+        // checked it in, completed it, or marked it no-show) slips past that
+        // guard, so its PackageCreditUsage row is still RESERVED here. Left
+        // alone, a later check-in would find that RESERVED row, flip it to
+        // CONSUMED and increment usedQuantity past the totalQuantity this
+        // void just pinned it to (Prisma's decrement/increment has no floor
+        // or ceiling, so that corruption would land silently). Terminate
+        // every RESERVED usage under this purchase's credits so no later
+        // consume can find one — CONSUMED rows are left untouched, since
+        // those sessions were already delivered and a refund does not undo
+        // service already given.
+        await tx.packageCreditUsage.updateMany({
+          where: {
+            credit: { purchaseId: cmd.purchaseId },
+            status: PackageCreditUsageStatus.RESERVED,
+          },
+          data: {
+            status: PackageCreditUsageStatus.RETURNED,
+            returnedAt: refundedAt,
+          },
+        });
       }
 
       // Record the financial refund against the purchase's invoice + its

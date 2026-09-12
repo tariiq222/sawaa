@@ -12937,6 +12937,9 @@
                       "remaining": {
                         "type": "number"
                       },
+                      "reservedQuantity": {
+                        "type": "number"
+                      },
                       "totalQuantity": {
                         "type": "number"
                       },
@@ -14202,7 +14205,7 @@
                 }
               }
             },
-            "description": "Booking restored to CONFIRMED with check-in timestamp set"
+            "description": "Booking restored to CONFIRMED while preserving attendance and suppressing automatic no-show"
           },
           "400": {
             "content": {

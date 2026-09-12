@@ -40,6 +40,7 @@ import { DeliveryControl } from "./delivery-control"
 import { DurationSelect } from "./duration-select"
 import { PackageItemFields } from "./package-item-fields"
 import { buildItemSummary, type SummaryInput } from "./package-item-summary"
+import { serviceOptionLabel } from "./service-option-label"
 import type { PackageLineDetail } from "./package-item-builder"
 
 const emptyScope: ScopeFormData = { mode: "ANY", ids: [] }
@@ -90,7 +91,7 @@ export function PackageItemRow({
   // Compiler memoizes them automatically, so no manual useMemo is needed.
   const serviceOptions: MultiSelectOption[] = services.map((s) => ({
     value: s.id,
-    label: locale === "ar" ? s.nameAr : (s.nameEn ?? s.nameAr),
+    label: serviceOptionLabel(s, locale),
   }))
 
   const practitionerOptions: MultiSelectOption[] = singleServiceId

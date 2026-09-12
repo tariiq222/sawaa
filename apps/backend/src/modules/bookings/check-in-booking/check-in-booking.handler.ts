@@ -1,8 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
+import { consumePackageCreditForBooking } from '../package-credit-consume.helper';
 
 export interface CheckInBookingCommand {
   bookingId: string;
@@ -24,12 +25,21 @@ export class CheckInBookingHandler {
     }
     const nextStatus = assertTransition(booking.status, 'CHECK_IN'); // CONFIRMED → CONFIRMED self-loop
 
-    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-      tx.booking.update({
-        where: { id: cmd.bookingId },
+    const updated = await this.rlsTransaction.withTransaction(async (tx) => {
+      // A plain `update` has no protection against a second concurrent
+      // check-in (double-click, retry, two staff) that read the booking
+      // before this one wrote — both would then consume the reserved
+      // package credit. Gate the write on status + checkedInAt still being
+      // null so a second racer's compare-and-swap affects zero rows and
+      // fails deterministically instead of double-consuming.
+      const updatedBooking = await updateBookingAtomically(tx, {
+        bookingId: cmd.bookingId,
+        currentStatus: booking.status,
+        actionLabel: 'checked in',
         data: { checkedInAt: new Date() },
-      }),
-      tx.bookingStatusLog.create({
+        extraWhere: { checkedInAt: null },
+      });
+      await tx.bookingStatusLog.create({
         data: {
           bookingId: cmd.bookingId,
           fromStatus: booking.status,
@@ -37,8 +47,16 @@ export class CheckInBookingHandler {
           changedBy: cmd.changedBy,
           reason: 'checked-in',
         },
-      }),
-    ]));
+      });
+
+      // Attendance is what actually delivers a package session — consume the
+      // reserved credit now rather than at booking time.
+      if (booking.packageCreditId) {
+        await consumePackageCreditForBooking(tx, cmd.bookingId);
+      }
+
+      return updatedBooking;
+    });
     return updated;
   }
 }

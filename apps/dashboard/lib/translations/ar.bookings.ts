@@ -192,7 +192,7 @@ export const arBookings: Record<string, string> = {
   "bookings.actions.action.cancel": "إلغاء الحجز",
   "bookings.actions.action.approveCancel": "قبول طلب الإلغاء",
   "bookings.actions.action.rejectCancel": "رفض طلب الإلغاء",
-  "bookings.actions.action.restoreNoShow": "إرجاع الحضور",
+  "bookings.actions.action.restoreNoShow": "استعادة الحجز",
   "bookings.actions.status.pending": "بانتظار التأكيد",
   "bookings.actions.status.pending_group_fill": "بانتظار اكتمال المجموعة",
   "bookings.actions.status.awaiting_payment": "بانتظار الدفع",
@@ -218,10 +218,10 @@ export const arBookings: Record<string, string> = {
 
   // restore-no-show dialog
   "bookings.restoreNoShow.title": "إرجاع الحجز من «لم يحضر»",
-  "bookings.restoreNoShow.desc": "سيُعاد الحجز إلى حالة مؤكد مع تسجيل وقت الحضور، ويمكن بعدها إتمامه كالعادة.",
+  "bookings.restoreNoShow.desc": "سيُعاد الحجز إلى حالة مؤكد. يُسجَّل الحضور عند وصول المستفيد إذا لم يكن مسجّلًا مسبقًا.",
   "bookings.restoreNoShow.reasonLabel": "سبب الإرجاع *",
   "bookings.restoreNoShow.reasonPlaceholder": "اكتب سبب إرجاع الحجز...",
-  "bookings.restoreNoShow.confirm": "إرجاع الحضور",
+  "bookings.restoreNoShow.confirm": "استعادة الحجز",
 
   // pagination
   "bookings.pagination.page": "الصفحة",
@@ -353,6 +353,7 @@ export const arBookings: Record<string, string> = {
   "bookings.pos.disabled.employee": "لا يوجد وقت متاح",
   "bookings.pos.summary.title": "ملخص الحجز",
   "bookings.pos.summary.servicePrice": "السعر",
+  "bookings.pos.summary.fromPackage": "مخصوم من الباقة",
   "bookings.pos.confirm": "تأكيد الحجز",
   "bookings.pos.missingPrefix": "أكمل أولاً",
 
@@ -371,7 +372,7 @@ export const arBookings: Record<string, string> = {
   "bookings.pos.package.existing.title": "باقات المستفيد النشطة",
   "bookings.pos.package.existing.empty": "لا توجد باقات نشطة لهذا المستفيد",
   "bookings.pos.package.remaining": "المتبقي {remaining} من {total}",
-  "bookings.pos.package.use": "احجز من هذا البند",
+  "bookings.pos.package.use": "احجز باستخدام الرصيد",
   "bookings.pos.package.buyNew": "شراء باقة جديدة",
   "bookings.pos.package.catalog.title": "الباقات المتاحة",
   "bookings.pos.package.catalog.empty": "لا توجد باقات متاحة للبيع",
@@ -409,6 +410,7 @@ export const arBookings: Record<string, string> = {
   "bookings.col.header.type": "النوع",
   "bookings.col.header.datetime": "تاريخ الموعد",
   "bookings.col.header.amount": "المبلغ",
+  "bookings.amount.fromPackage": "مدفوع من الباقة",
   "bookings.col.header.paymentStatus": "حالة الدفع",
   "bookings.col.paymentStatus.unpaid": "غير مدفوع",
   "bookings.col.paymentStatus.pending": "بانتظار الدفع",
@@ -442,6 +444,8 @@ export const arBookings: Record<string, string> = {
   "bookings.col.type.group": "جماعي",
   "bookings.col.source.reception": "من الاستقبال",
   "bookings.col.source.online": "من الموقع",
+  "bookings.col.source.whatsapp": "من واتساب",
+  "bookings.col.source.aiChat": "من المساعد الذكي",
   "bookings.col.quickAction.confirm": "تأكيد الموعد",
   "bookings.col.quickAction.cancel": "إلغاء الموعد",
 

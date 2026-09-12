@@ -47,9 +47,11 @@ export type PackagePurchasePaymentMethod =
  * One credit bucket attached to a PackagePurchase — represents
  * `(service + employee + duration)` with a frozen unit price.
  *
- * `remaining = totalQuantity - usedQuantity` is pre-computed by the backend
- * so the dashboard's "balance" widget never has to do arithmetic on the
- * client. `serviceNameAr` / `employeeNameAr` / `durationLabelAr` are the
+ * `remaining = totalQuantity - usedQuantity - reservedQuantity` is
+ * pre-computed by the backend so the dashboard's "balance" widget never has
+ * to do arithmetic on the client — a reserved session belongs to a
+ * booked-but-not-yet-delivered appointment and is not available to book
+ * again. `serviceNameAr` / `employeeNameAr` / `durationLabelAr` are the
  * resolved display strings — the model stores cross-BC IDs as plain
  * strings, so the dashboard never has to chase FKs itself.
  */
@@ -80,6 +82,8 @@ export interface PackageCredit {
   unitPriceSnapshot: number
   totalQuantity: number
   usedQuantity: number
+  // Booked but not-yet-delivered sessions; they occupy a seat like a used one.
+  reservedQuantity: number
   remaining: number
   /**
    * Wizard-jump fields (booking wizard credits panel). Resolved backend-side
@@ -201,6 +205,8 @@ export interface CreatePackagePurchaseResult {
     unitPriceSnapshot: number
     totalQuantity: number
     usedQuantity: number
+    /** Always 0 at creation — no booking exists yet to reserve a slot. */
+    reservedQuantity: number
   }>
 }
 

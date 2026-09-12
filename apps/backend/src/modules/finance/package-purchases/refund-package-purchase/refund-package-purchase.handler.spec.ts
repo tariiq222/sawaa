@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PackagePurchaseStatus, RefundStatus } from '@prisma/client';
+import { PackageCreditUsageStatus, PackagePurchaseStatus, RefundStatus } from '@prisma/client';
 import { RefundPackagePurchaseHandler } from './refund-package-purchase.handler';
+import { consumePackageCreditForBooking } from '../../../bookings/package-credit-consume.helper';
 
 const PURCHASE_ID = '00000000-0000-4000-a000-000000000007';
 const INVOICE_ID = '00000000-0000-4000-a000-000000000010';
@@ -34,6 +35,7 @@ function buildTx(opts: { purchaseRow?: unknown; updateManyCount?: number } = {})
     packageCredit: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
     packageCreditUsage: {
       findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     booking: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -207,6 +209,70 @@ describe('RefundPackagePurchaseHandler', () => {
     const joined = Array.isArray(sql) ? sql.join('?') : String(sql);
     expect(joined).toContain('PackageCredit');
     expect(joined).toContain('usedQuantity');
+  });
+
+  // A credit voided by a full refund must also drop any reservations it still
+  // holds — otherwise a booked-but-undelivered session on a refunded/void
+  // credit would leave the bucket over-subscribed (usedQuantity = totalQuantity
+  // but reservedQuantity still counting extra seats against it).
+  it('full refund also zeroes reservedQuantity so a voided credit cannot be over-subscribed', async () => {
+    const { handler, tx } = buildHandler();
+    await handler.execute(cmd());
+
+    expect(tx.$executeRaw).toHaveBeenCalled();
+    const sql = tx.$executeRaw.mock.calls[0][0];
+    const joined = Array.isArray(sql) ? sql.join('?') : String(sql);
+    expect(joined).toContain('reservedQuantity');
+  });
+
+  // Finding 4: a booking past its scheduled time but still CONFIRMED (staff
+  // never checked it in / completed it / marked it no-show) does not match
+  // the future-booking guard's `scheduledAt: { gt: now }` filter, so the
+  // refund proceeds while the booking's PackageCreditUsage row is still
+  // RESERVED. Without termination, a later check-in would consume a credit
+  // whose usedQuantity is already pinned at totalQuantity by the void above.
+  it('terminates every RESERVED usage row for the purchase on a full refund, so a later check-in cannot double-consume the voided credit', async () => {
+    const tx = buildTx();
+    const PAST_DUE_BOOKING_ID = '00000000-0000-4000-a000-000000000077';
+    tx.packageCreditUsage.findMany.mockResolvedValue([{ bookingId: PAST_DUE_BOOKING_ID }]);
+    // Past-due: the guard's own query (scoped to scheduledAt > now) finds
+    // nothing, so the refund is allowed to proceed.
+    tx.booking.findFirst.mockResolvedValue(null);
+    const { handler } = buildHandler({ tx });
+
+    await handler.execute(cmd());
+
+    expect(tx.packageCreditUsage.updateMany).toHaveBeenCalledWith({
+      where: {
+        credit: { purchaseId: PURCHASE_ID },
+        status: PackageCreditUsageStatus.RESERVED,
+      },
+      data: {
+        status: PackageCreditUsageStatus.RETURNED,
+        returnedAt: expect.any(Date),
+      },
+    });
+
+    // Prove the corruption this prevents: with the usage row terminated, a
+    // subsequent check-in's consume call must find nothing and touch no
+    // counters — instead of flipping a phantom RESERVED row to CONSUMED and
+    // incrementing usedQuantity past a totalQuantity the refund already
+    // pinned it to.
+    const consumeTx = {
+      packageCreditUsage: { findFirst: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      packageCredit: { update: jest.fn(), findUnique: jest.fn() },
+      packagePurchase: { update: jest.fn() },
+    };
+    const consumed = await consumePackageCreditForBooking(consumeTx as never, PAST_DUE_BOOKING_ID);
+    expect(consumed).toBe(false);
+    expect(consumeTx.packageCredit.update).not.toHaveBeenCalled();
+  });
+
+  it('does NOT touch PackageCreditUsage rows on a partial refund (credits stay intact)', async () => {
+    const { handler, tx } = buildHandler();
+    await handler.execute(cmd({ refundAmount: 20_000 }));
+
+    expect(tx.packageCreditUsage.updateMany).not.toHaveBeenCalled();
   });
 
   // P1-2 regression: a PARTIAL money refund must NOT wipe the credits and must

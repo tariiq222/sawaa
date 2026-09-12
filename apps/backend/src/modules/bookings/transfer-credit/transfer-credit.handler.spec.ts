@@ -7,6 +7,7 @@ const SERVICE_ID = '00000000-0000-4000-a000-000000000004';
 const DURATION_OPTION_ID = '00000000-0000-4000-a000-000000000005';
 const FROM_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000003';
 const TO_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000099';
+const CURRENT_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000098';
 
 function activeCredit(overrides: Record<string, unknown> = {}) {
   return {
@@ -24,12 +25,32 @@ function activeCredit(overrides: Record<string, unknown> = {}) {
 
 function buildPrisma(opts: {
   credit?: unknown;
+  currentCreditEmployeeId?: string;
   employeeService?: unknown;
   durationOption?: unknown;
   targetEmployee?: unknown;
 } = {}) {
+  const configuredCredit = opts.credit === undefined ? activeCredit() : opts.credit;
+  const preflightEmployeeId =
+    configuredCredit && typeof configuredCredit === 'object' && 'employeeId' in configuredCredit
+      ? (configuredCredit as { employeeId?: string }).employeeId ?? FROM_EMPLOYEE_ID
+      : FROM_EMPLOYEE_ID;
+  const currentEmployeeId = opts.currentCreditEmployeeId ?? preflightEmployeeId;
   const tx = {
-    packageCredit: { update: jest.fn().mockResolvedValue({ id: CREDIT_ID, employeeId: TO_EMPLOYEE_ID }) },
+    $queryRaw: jest.fn(async (strings: TemplateStringsArray) => {
+      const sql = strings.join(' ');
+      if (sql.includes('"PackageCredit"')) {
+        return [{ id: CREDIT_ID, employeeId: currentEmployeeId }];
+      }
+      return [{ id: 'p1', status: PackagePurchaseStatus.ACTIVE }];
+    }),
+    packageCredit: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: CREDIT_ID,
+        employeeId: currentEmployeeId,
+      }),
+      update: jest.fn().mockResolvedValue({ id: CREDIT_ID, employeeId: TO_EMPLOYEE_ID }),
+    },
     activityLog: { create: jest.fn().mockResolvedValue({ id: 'log-1' }) },
   };
   return {
@@ -110,6 +131,28 @@ describe('TransferCreditHandler', () => {
         }),
       }),
     );
+  });
+
+  it('uses the current locked owner in the transfer audit after a concurrent move', async () => {
+    const parts = buildPrisma({ currentCreditEmployeeId: CURRENT_EMPLOYEE_ID });
+    const handler = buildHandler(parts);
+
+    await handler.execute(cmd());
+
+    const call = parts.tx.activityLog.create.mock.calls[0][0];
+    expect(call.data.metadata).toEqual(expect.objectContaining({
+      fromEmployeeId: CURRENT_EMPLOYEE_ID,
+      toEmployeeId: TO_EMPLOYEE_ID,
+    }));
+  });
+
+  it('rejects as a no-op when the current locked owner already equals the target', async () => {
+    const parts = buildPrisma({ currentCreditEmployeeId: TO_EMPLOYEE_ID });
+    const handler = buildHandler(parts);
+
+    await expect(handler.execute(cmd())).rejects.toThrow(BadRequestException);
+    expect(parts.tx.packageCredit.update).not.toHaveBeenCalled();
+    expect(parts.tx.activityLog.create).not.toHaveBeenCalled();
   });
 
   it('does NOT re-price — unitPriceSnapshot is never written', async () => {

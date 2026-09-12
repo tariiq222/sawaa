@@ -41,9 +41,9 @@
  *
  *   Sole audited exception out of a terminal state:
  *     NO_SHOW → RESTORE_NO_SHOW → CONFIRMED
- *     Restores a mistakenly auto-no-show'd booking to CONFIRMED with the
- *     check-in timestamp set, so the auto-no-show cron does not immediately
- *     re-mark it. Still audited in `BookingStatusLog`. NO_SHOW remains
+ *     Restores a mistakenly auto-no-show'd booking to CONFIRMED while
+ *     preserving attendance and setting a separate automation-suppression
+ *     marker. Still audited in `BookingStatusLog`. NO_SHOW remains
  *     terminal for every other transition (cancel / complete / delete / etc.).
  *
  *   Self-loops:
@@ -239,8 +239,9 @@ export const VALID_TRANSITIONS: Record<
    *
    * Restores a NO_SHOW booking to CONFIRMED so a mistakenly auto-no-show'd
    * slot can be corrected without the auto-no-show cron immediately
-   * re-marking it. The handler always sets `checkedInAt` to `now`, which the
-   * cron checks before re-marking, so the restore is durable.
+   * re-marking it. The handler preserves `checkedInAt` and sets a separate
+   * automation-suppression marker, so the restore is durable without
+   * fabricating attendance.
    *
    * The transition is the only entry in this table that lists a terminal
    * status in `from[]`. NO_SHOW remains terminal for every other transition
