@@ -41,6 +41,11 @@ export function useBookingPosTrackHandlers(
 
   const handleUseCredit = (target: CreditTarget) => {
     applyCreditTarget(target)
+    // The client-credits panel offers to spend a credit, so the booking must
+    // take the from-credit path. Without this the wizard filled the target but
+    // still created a paid booking for a session the client already covered.
+    setUseCredit(true)
+    setCreditDismissed(false)
     setOpenSection("typeDuration")
   }
 
