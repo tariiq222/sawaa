@@ -258,6 +258,8 @@ export class DashboardBookingsController {
     return this.transferCreditHandler.execute({
       creditId,
       toEmployeeId: body.toEmployeeId,
+      reason: body.reason,
+      targetDurationOptionId: body.targetDurationOptionId,
       userId,
     });
   }

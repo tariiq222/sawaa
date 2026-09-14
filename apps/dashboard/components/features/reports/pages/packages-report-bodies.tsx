@@ -65,10 +65,16 @@ function SalesReport({
           }
         />
         <KpiCard
-          label={t("reports.packages.sales.totalRevenue")}
-          value={
-            <FormattedCurrency amount={report.totalRevenue} locale={locale} />
-          }
+          label={t("reports.packages.sales.grossRevenue")}
+          value={<FormattedCurrency amount={report.grossRevenue} locale={locale} />}
+        />
+        <KpiCard
+          label={t("reports.packages.sales.refundedAmount")}
+          value={<FormattedCurrency amount={report.refundedAmount} locale={locale} />}
+        />
+        <KpiCard
+          label={t("reports.packages.sales.netRevenue")}
+          value={<FormattedCurrency amount={report.netRevenue} locale={locale} />}
         />
         <KpiCard
           label={t("reports.packages.sales.byBucket.cash")}
@@ -98,6 +104,10 @@ function SalesReport({
           }
         />
       </KpiRow>
+
+      <p className="text-xs text-muted-foreground">
+        {t("reports.packages.sales.refundCohortNote")}
+      </p>
 
       {report.byMethod.length > 0 && (
         <Section title={t("reports.packages.sales.byMethod")}>
@@ -214,7 +224,14 @@ function ConsumptionReport({
             {
               key: "name",
               header: t("reports.practitioners.name"),
-              render: (row) => <span className="font-medium">{row.name}</span>,
+              render: (row) => (
+                <span className="flex flex-col gap-1">
+                  <span className="font-medium">{row.employeeId === "unknown" ? t("reports.packages.consumption.unknownPractitioner") : row.name}</span>
+                  {row.attribution && row.attribution !== "BOOKING" && (
+                    <span className="text-xs text-muted-foreground">{t(`reports.packages.consumption.attribution.${row.attribution}`)}</span>
+                  )}
+                </span>
+              ),
             },
             {
               key: "count",

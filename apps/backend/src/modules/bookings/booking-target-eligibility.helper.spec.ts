@@ -5,6 +5,7 @@ const SERVICE_ID = 'service-1';
 const EMPLOYEE_ID = 'employee-1';
 const LINK_ID = 'employee-service-1';
 const DURATION_ID = 'duration-1';
+type EmployeeServiceOptionRow = { durationOverride: number | null };
 
 function buildDb(overrides: Record<string, unknown> = {}) {
   const db = {
@@ -30,6 +31,9 @@ function buildDb(overrides: Record<string, unknown> = {}) {
     },
     serviceBookingConfig: {
       findMany: jest.fn().mockResolvedValue([{ deliveryType: 'IN_PERSON' }]),
+    },
+    employeeServiceOption: {
+      findFirst: jest.fn<Promise<EmployeeServiceOptionRow | null>, []>().mockResolvedValue(null),
     },
     ...overrides,
   };
@@ -63,6 +67,24 @@ describe('validateBookingTargetEligibility', () => {
 
     expect(result.deliveryType).toBe('ONLINE');
     expect(result.durationOption?.durationMins).toBe(45);
+  });
+
+  it('applies an active inherited employee duration override to the effective offering', async () => {
+    const db = buildDb({
+      employeeServiceOption: {
+        findFirst: jest.fn().mockResolvedValue({ durationOverride: 50 }),
+      },
+    });
+
+    const result = await validateBookingTargetEligibility(db as never, {
+      serviceId: SERVICE_ID,
+      employeeId: EMPLOYEE_ID,
+      durationOptionId: DURATION_ID,
+      deliveryType: 'IN_PERSON',
+      bookingType: 'INDIVIDUAL',
+    });
+
+    expect(result.durationOption?.durationMins).toBe(50);
   });
 
   it.each([

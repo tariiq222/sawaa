@@ -102,6 +102,27 @@ export async function validateBookingTargetEligibility(
     if (durationOption.isActive === false) {
       throw new BadRequestException('Selected duration option is not offered by this practitioner');
     }
+
+    // In inherited mode, EmployeeServiceOption can override the effective
+    // minutes of a service-default duration. The booking target must carry
+    // that effective value so grouped frozen snapshots cannot silently use
+    // the base catalog duration after an employee override changes.
+    if (!employeeService.useCustomPricing) {
+      const override = await db.employeeServiceOption.findFirst({
+        where: {
+          employeeServiceId: employeeService.id,
+          durationOptionId: durationOption.id,
+          isActive: true,
+        },
+        select: { durationOverride: true },
+      });
+      if (override?.durationOverride != null) {
+        durationOption = {
+          ...durationOption,
+          durationMins: Number(override.durationOverride),
+        };
+      }
+    }
   } else if (employeeService.useCustomPricing && requestedDelivery) {
     // Custom practitioners may only book delivery types for which they have an
     // active owned duration. PriceResolverService applies the same scope later.

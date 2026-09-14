@@ -114,6 +114,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectCategory, selectService, selectEmployee, selectDeliveryType,
     selectDurationOption, selectDate, selectTime, selectProgram,
     setPayAtClinic, setCollectionMethod, setCouponCode,
+    setPackageCreditId,
     applyPackageCreditTarget,
     applyCreditFilter, clearCreditFilter,
   } = useBookingFormState()
@@ -125,7 +126,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const {
     isServiceAutoSelected, summaries, canShowTypeDuration, canShowDatetime,
     serviceTypes, servicePriceHalalas, selectedDurationMins,
-    durationSummaryLabel, creditBadgeReady,
+    durationSummaryLabel, creditBadgeReady, selectedPackageSummary,
   } = useBookingPosDerived({ state, t, locale })
 
   const {
@@ -199,7 +200,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
           onSelectDuration={handleSelectDuration}
           onSelectDate={selectDate}
           onSelectTime={selectTime}
-          onAcceptCredit={() => { setUseCredit(true); setCreditDismissed(false) }}
+          onAcceptCredit={(creditId) => { setPackageCreditId(creditId); setUseCredit(true); setCreditDismissed(false) }}
           onDismissCredit={() => { setUseCredit(false); setCreditDismissed(true) }}
         />
 
@@ -221,6 +222,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             // misleading; hide the timing group + method picker.
             hideCollectionTiming={fundedByPackage}
             fundedByPackage={fundedByPackage}
+            packageSummary={selectedPackageSummary}
             paymentSettings={paymentSettings}
             couponCode={state.couponCode}
             submitting={isSubmitting}

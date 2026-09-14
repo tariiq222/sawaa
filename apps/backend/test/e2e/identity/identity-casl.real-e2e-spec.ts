@@ -466,6 +466,25 @@ describeRealE2e("Identity — real-DB e2e (CASL allow/deny matrix)", () => {
         ),
       );
 
+      if (removeRes.status !== 403) {
+        const diagnostics = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: removeTarget.id },
+            select: { id: true, role: true, customRoleId: true, isActive: true },
+          }),
+          prisma.user.findUnique({
+            where: { id: actor.id },
+            select: { id: true, role: true, customRoleId: true, isActive: true },
+          }),
+          prisma.customRole.findUnique({
+            where: { id: customRole.id },
+            select: { id: true, name: true },
+          }),
+        ]).then(([targetState, actorState, roleState]) => ({ targetState, actorState, roleState })).catch((error: unknown) => ({
+          readError: error instanceof Error ? error.message : String(error),
+        }));
+        throw new Error(`Unexpected custom-role removal response: status=${removeRes.status} body=${JSON.stringify(removeRes.body)} userId=${removeTarget.id} roleId=${customRole.id} diagnostics=${JSON.stringify(diagnostics)}`);
+      }
       expect(removeRes.status).toBe(403);
       expect(removeRes.body.message).toMatch(/insufficient|forbidden/i);
       const removeAfter = await prisma.user.findUnique({

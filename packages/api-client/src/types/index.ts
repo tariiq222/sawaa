@@ -158,6 +158,12 @@ export type {
   PackageCredit,
   PackageCreditUsage,
   ArchivedSessionPackage,
+  GroupedPackageInput,
+  PackageGroupInput,
+  PackageSessionInput,
+  PackageModelVersion,
+  GroupSequenceMode,
+  GlobalDiscount,
 } from './session-package'
 export type {
   ChatConversationStatus,

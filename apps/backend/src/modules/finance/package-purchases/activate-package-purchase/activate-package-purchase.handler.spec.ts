@@ -320,6 +320,20 @@ describe('ActivatePackagePurchaseHandler', () => {
   });
 
   describe('failure handling', () => {
+    it('quarantines a present malformed legacy array instead of recomputing from the live template', async () => {
+      const prisma = buildPrisma(
+        { ...pendingPurchase, creditSnapshot: [{ broken: true }] },
+        { ...pkgRow, items: [{ ...pkgItem, paidQuantity: 99, freeQuantity: 99 }] },
+      );
+      const { tx, getSubscriber } = buildHandler(prisma);
+
+      await getSubscriber()(envelope());
+
+      expect(prisma.sessionPackage.findFirst).not.toHaveBeenCalled();
+      expect(tx.packagePurchase.updateMany).not.toHaveBeenCalled();
+      expect(tx.packageCredit.create).not.toHaveBeenCalled();
+    });
+
     it('rethrows on a DB error so the event is retried (no silent credit loss)', async () => {
       const tx = buildTx();
       tx.packagePurchase.updateMany.mockRejectedValue(new Error('db down'));
@@ -328,12 +342,14 @@ describe('ActivatePackagePurchaseHandler', () => {
       await expect(getSubscriber()(envelope())).rejects.toThrow('db down');
     });
 
-    it('does not throw (skips) when the package definition is gone', async () => {
+    it('quarantines a missing legacy snapshot for manual review without reading the package template', async () => {
       const prisma = buildPrisma({ ...pendingPurchase, creditSnapshot: null }, null);
       const { tx, getSubscriber } = buildHandler(prisma);
 
       await getSubscriber()(envelope());
 
+      expect(prisma.sessionPackage.findFirst).not.toHaveBeenCalled();
+      expect(tx.packagePurchase.updateMany).not.toHaveBeenCalled();
       expect(tx.packageCredit.create).not.toHaveBeenCalled();
     });
   });

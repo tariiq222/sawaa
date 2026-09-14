@@ -93,10 +93,24 @@ describe('GetPublicPackageHandler', () => {
     const arg = prisma.sessionPackage.findFirst.mock.calls[0][0];
     expect(arg.where).toEqual({
       id: PACKAGE_ID,
+      familyId: null,
       isPublic: true,
       isActive: true,
       archivedAt: null,
     });
+  });
+
+  it('does not resolve an attached family option through the legacy public detail endpoint', async () => {
+    const { handler, prisma } = buildHandler();
+    const attachedFamilyOption = { ...publicPackage, familyId: 'family-1' };
+    prisma.sessionPackage.findFirst.mockImplementation(async ({ where }: { where: { familyId?: string | null } }) =>
+      where.familyId === null ? null : attachedFamilyOption,
+    );
+
+    await expect(handler.execute({ packageId: PACKAGE_ID })).rejects.toThrow(NotFoundException);
+    expect(prisma.sessionPackage.findFirst.mock.calls[0][0].where).toEqual(expect.objectContaining({
+      familyId: null,
+    }));
   });
 
   it('throws NotFoundException when the package is not found / not public', async () => {

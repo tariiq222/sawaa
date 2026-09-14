@@ -40,11 +40,12 @@ interface MatchingCreditBadgeProps {
   serviceId: string | null
   employeeId: string | null
   durationOptionId: string | null
+  deliveryType?: "IN_PERSON" | "ONLINE" | null
   /** True when the wizard's submit should call `bookFromCredit`. */
   useCredit: boolean
   /** Sticky dismissal flag for the current selection. */
   dismissed: boolean
-  onAccept: () => void
+  onAccept: (creditId: string) => void
   onDismiss: () => void
 }
 
@@ -55,6 +56,7 @@ export function MatchingCreditBadge({
   serviceId,
   employeeId,
   durationOptionId,
+  deliveryType,
   useCredit,
   dismissed,
   onAccept,
@@ -70,8 +72,9 @@ export function MatchingCreditBadge({
       serviceId: serviceId ?? "",
       employeeId: employeeId ?? "",
       durationOptionId: durationOptionId ?? "",
+      ...(deliveryType ? { deliveryType } : {}),
     }),
-    [clientId, serviceId, employeeId, durationOptionId],
+    [clientId, serviceId, employeeId, durationOptionId, deliveryType],
   )
 
   const allPresent =
@@ -82,7 +85,7 @@ export function MatchingCreditBadge({
   // No params yet, still loading, no match, or dismissed → render nothing.
   if (!allPresent) return null
   if (dismissed) return null
-  if (!isLoading && matches.length === 0) return null
+  if (isLoading || matches.length === 0) return null
 
   // When the wizard is in credit mode, show a confirmed "using credit" state.
   if (useCredit && matches.length > 0) {
@@ -148,7 +151,7 @@ export function MatchingCreditBadge({
           <Button
             type="button"
             size="sm"
-            onClick={onAccept}
+            onClick={() => onAccept(first.creditId)}
             data-testid="matching-credit-accept"
             className={cn("h-8")}
           >

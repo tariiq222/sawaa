@@ -2191,6 +2191,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/organization/package-families": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List package families */
+        get: operations["DashboardPackageFamiliesController_list_v1"];
+        put?: never;
+        /** Create a package family */
+        post: operations["DashboardPackageFamiliesController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/package-families/{familyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a package family */
+        get: operations["DashboardPackageFamiliesController_get_v1"];
+        put?: never;
+        post?: never;
+        /** Archive a package family */
+        delete: operations["DashboardPackageFamiliesController_archive_v1"];
+        options?: never;
+        head?: never;
+        /** Update a package family */
+        patch: operations["DashboardPackageFamiliesController_update_v1"];
+        trace?: never;
+    };
     "/api/v1/dashboard/organization/packages": {
         parameters: {
             query?: never;
@@ -3397,6 +3434,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/client/packages/book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Book an appointment using an owned package credit */
+        post: operations["MobileClientPackagesController_bookCredit[0]_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/packages/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the authenticated client package purchases and credit balance */
+        get: operations["MobileClientPackagesController_listMyPurchases[0]_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/packages/purchases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an authenticated client package purchase status */
+        get: operations["MobileClientPackagesController_getMyPurchase[0]_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/client/payments": {
         parameters: {
             query?: never;
@@ -4473,6 +4561,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/me/packages/book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Book an appointment using an owned package credit */
+        post: operations["MobileClientPackagesController_bookCredit[1]_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/me/packages/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the authenticated client package purchases and credit balance */
+        get: operations["MobileClientPackagesController_listMyPurchases[1]_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/me/packages/purchases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an authenticated client package purchase status */
+        get: operations["MobileClientPackagesController_getMyPurchase[1]_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/otp/request": {
         parameters: {
             query?: never;
@@ -4501,6 +4640,40 @@ export interface paths {
         put?: never;
         /** Verify OTP and obtain session tokens */
         post: operations["PublicOtpController_verify_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/package-families": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get public package families */
+        get: operations["PublicPackageFamiliesController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/package-families/{familyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one public package family */
+        get: operations["PublicPackageFamiliesController_get_v1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5897,6 +6070,45 @@ export interface components {
              */
             phone?: string;
         };
+        ClientPackageBookDto: {
+            /**
+             * Format: uuid
+             * @description Branch where the appointment takes place
+             */
+            branchId: string;
+            /**
+             * Format: uuid
+             * @description Exact package credit bucket to book
+             */
+            creditId: string;
+            /**
+             * @description Delivery channel for legacy flexible credits
+             * @enum {string}
+             */
+            deliveryType?: "IN_PERSON" | "ONLINE";
+            /**
+             * Format: uuid
+             * @description Duration target for legacy flexible credits
+             */
+            durationOptionId?: string;
+            /**
+             * Format: uuid
+             * @description Practitioner target for legacy flexible credits
+             */
+            employeeId?: string;
+            /** @description Optional note attached to the booking */
+            notes?: string;
+            /**
+             * Format: date-time
+             * @description Appointment start time
+             */
+            scheduledAt: string;
+            /**
+             * Format: uuid
+             * @description Service target for legacy flexible credits
+             */
+            serviceId?: string;
+        };
         ClientRequestHandoffDto: Record<string, never>;
         ClientRescheduleBookingDto: {
             /** @description New appointment time (ISO 8601) */
@@ -7130,6 +7342,41 @@ export interface components {
              */
             vatRate?: number;
         };
+        CreatePackageFamilyDto: {
+            /** @description Arabic family description */
+            descriptionAr?: string;
+            /** @description English family description */
+            descriptionEn?: string;
+            /** @description Catalog image URL */
+            imageUrl?: string;
+            /**
+             * @description Whether the family is active
+             * @default true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the family is public
+             * @default false
+             */
+            isPublic: boolean;
+            /**
+             * @description Arabic family name
+             * @example باقة الاستشارة
+             */
+            nameAr: string;
+            /**
+             * @description English family name
+             * @example Consultation pack
+             */
+            nameEn?: string;
+            /** @description Complete option list */
+            options: components["schemas"]["PackageFamilyOptionDto"][];
+            /**
+             * @description Catalog ordering
+             * @default 0
+             */
+            sortOrder: number;
+        };
         CreatePackagePurchaseDto: {
             /**
              * @description Branch where the sale happens
@@ -7158,6 +7405,11 @@ export interface components {
              * @example Walk-in sale, paid in cash
              */
             notes?: string;
+            /**
+             * Format: uuid
+             * @description Package family containing the selected option; required for attached options
+             */
+            packageFamilyId?: string;
             /**
              * @description Session package being sold
              * @example 00000000-0000-0000-0000-000000000000
@@ -7384,6 +7636,10 @@ export interface components {
             discountType?: "PERCENTAGE" | "FIXED";
             /** @description DEPRECATED — use per-item discount. Ignored. */
             discountValue?: number;
+            /** @description V2 global package discount. Required when modelVersion is GROUPED_V2. */
+            globalDiscount?: components["schemas"]["GlobalDiscountDto"];
+            /** @description V2 package groups. Required when modelVersion is GROUPED_V2. */
+            groups?: components["schemas"]["GroupedPackageGroupDto"][];
             /**
              * @description Icon background color (hex)
              * @example #FFD8A8
@@ -7411,8 +7667,14 @@ export interface components {
              * @example true
              */
             isPublic: boolean;
-            /** @description Package items (min 1) */
-            items: components["schemas"]["CreateSessionPackageItemDto"][];
+            /** @description Legacy package items (min 1). Required unless modelVersion is GROUPED_V2. */
+            items?: components["schemas"]["CreateSessionPackageItemDto"][];
+            /**
+             * @description Package model version. Omit for the legacy item-based contract.
+             * @example GROUPED_V2
+             * @enum {string}
+             */
+            modelVersion?: "LEGACY" | "GROUPED_V2";
             /**
              * @description Arabic name
              * @example باقة الاستشارة العائلية
@@ -8252,6 +8514,85 @@ export interface components {
              */
             type: "REVENUE" | "ACTIVITY" | "BOOKINGS" | "EMPLOYEES" | "OVERVIEW" | "CLIENTS" | "SERVICES" | "RATINGS";
         };
+        GlobalDiscountDto: {
+            /**
+             * @description Package-wide discount type
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            type: "NONE" | "PERCENTAGE" | "FIXED";
+            /**
+             * @description Percentage from 0 to 100, or fixed amount in integer halalas
+             * @example 10
+             */
+            value: number;
+        };
+        GroupedPackageGroupDto: {
+            /**
+             * @description Stable key of the group that must complete first
+             * @example null
+             */
+            dependsOnGroupKey?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description Practitioner UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            employeeId: string;
+            /**
+             * @description Stable editor key for this group
+             * @example group-1
+             */
+            key: string;
+            /**
+             * @description Optional group label
+             * @example المرحلة الأولى
+             */
+            label?: string;
+            /**
+             * @description Session sequence behavior
+             * @example ORDERED
+             * @enum {string}
+             */
+            sequenceMode: "ORDERED" | "UNORDERED";
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            serviceId: string;
+            /** @description Explicit sessions in this group */
+            sessions: components["schemas"]["GroupedPackageSessionDto"][];
+        };
+        GroupedPackageSessionDto: {
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * Format: uuid
+             * @description Active service duration option UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            durationOptionId: string;
+            /**
+             * @description Stable editor key for this session
+             * @example session-1
+             */
+            key: string;
+            /**
+             * @description Zero-based position within the group
+             * @example 0
+             */
+            position: number;
+            /**
+             * @description Package override price in integer halalas
+             * @example 25000
+             */
+            unitPrice: number;
+        };
         GuestRequestHandoffDto: {
             /**
              * @description Guest display name for reception contact
@@ -8288,6 +8629,11 @@ export interface components {
              * @example 00000000-0000-4000-a000-000000000099
              */
             idempotencyKey: string;
+            /**
+             * Format: uuid
+             * @description Package family containing the selected option; required for attached options
+             */
+            packageFamilyId?: string;
             /**
              * @description SessionPackage UUID to purchase (must be a public, active package)
              * @example 00000000-0000-0000-0000-000000000000
@@ -9114,6 +9460,37 @@ export interface components {
             /** @description Target IDs for INCLUDE/EXCLUDE. Empty/omitted for ANY. */
             targetIds?: string[];
         };
+        PackageFamilyOptionDto: {
+            /** @description Option-wide discount */
+            globalDiscount: components["schemas"]["GlobalDiscountDto"];
+            /** @description Complete grouped session graph */
+            groups: components["schemas"]["GroupedPackageGroupDto"][];
+            /**
+             * Format: uuid
+             * @description Existing grouped option UUID; omit to create a new option
+             */
+            id?: string;
+            /**
+             * @description Whether the option can be purchased
+             * @default true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the option is shown publicly
+             * @default false
+             */
+            isPublic: boolean;
+            /**
+             * @description Arabic option name
+             * @example 5 جلسات
+             */
+            nameAr: string;
+            /**
+             * @description English option name
+             * @example 5 sessions
+             */
+            nameEn?: string;
+        };
         /** @enum {string} */
         PackagePurchaseStatus: "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED";
         PaginatedBranchesDto: {
@@ -9845,6 +10222,16 @@ export interface components {
         };
         TransferCreditDto: {
             /**
+             * @description Reason recorded in the package-credit assignment history
+             * @example Practitioner left the clinic
+             */
+            reason?: string;
+            /**
+             * Format: uuid
+             * @description Optional active duration option on the target practitioner with the same frozen duration and delivery type
+             */
+            targetDurationOptionId?: string;
+            /**
              * @description Target employee (practitioner) to move the credit to
              * @example 00000000-0000-4000-a000-000000000099
              */
@@ -10416,6 +10803,41 @@ export interface components {
              */
             type?: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
         };
+        UpdatePackageFamilyDto: {
+            /** @description Arabic family description */
+            descriptionAr?: string;
+            /** @description English family description */
+            descriptionEn?: string;
+            /** @description Catalog image URL */
+            imageUrl?: string;
+            /**
+             * @description Whether the family is active
+             * @default true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the family is public
+             * @default false
+             */
+            isPublic: boolean;
+            /**
+             * @description Arabic family name
+             * @example باقة الاستشارة
+             */
+            nameAr: string;
+            /**
+             * @description English family name
+             * @example Consultation pack
+             */
+            nameEn?: string;
+            /** @description Complete option list */
+            options: components["schemas"]["PackageFamilyOptionDto"][];
+            /**
+             * @description Catalog ordering
+             * @default 0
+             */
+            sortOrder: number;
+        };
         UpdateProblemReportStatusDto: {
             /**
              * @description Optional resolution note explaining how the problem was addressed
@@ -10576,6 +10998,10 @@ export interface components {
             discountType?: "PERCENTAGE" | "FIXED";
             /** @description Discount value (see CreateSessionPackageDto for semantics) */
             discountValue?: number;
+            /** @description Replacement V2 global package discount. Omit to preserve the existing discount. */
+            globalDiscount?: components["schemas"]["GlobalDiscountDto"];
+            /** @description Replacement V2 package groups. Omit to preserve the existing template. */
+            groups?: components["schemas"]["GroupedPackageGroupDto"][];
             /** @description Icon background color (hex) */
             iconBgColor?: string;
             /** @description Lucide icon name */
@@ -10594,6 +11020,12 @@ export interface components {
             isPublic?: boolean;
             /** @description Replacement items (full set; delete-and-create semantics in the handler) */
             items?: components["schemas"]["CreateSessionPackageItemDto"][];
+            /**
+             * @description Package model version. Existing packages cannot change version in place.
+             * @example GROUPED_V2
+             * @enum {string}
+             */
+            modelVersion?: "LEGACY" | "GROUPED_V2";
             /**
              * @description Arabic name
              * @example باقة محدّثة
@@ -22184,6 +22616,307 @@ export interface operations {
             };
         };
     };
+    DashboardPackageFamiliesController_list_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Package families and their grouped options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPackageFamiliesController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePackageFamilyDto"];
+            };
+        };
+        responses: {
+            /** @description Package family created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPackageFamiliesController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Package family UUID */
+                familyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Package family details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Package family not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPackageFamiliesController_archive_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Package family UUID */
+                familyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Package family archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Package family not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPackageFamiliesController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Package family UUID */
+                familyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePackageFamilyDto"];
+            };
+        };
+        responses: {
+            /** @description Package family updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardOrganizationSettingsController_listSessionPackagesEndpoint_v1: {
         parameters: {
             query?: {
@@ -28542,6 +29275,177 @@ export interface operations {
             };
         };
     };
+    "MobileClientPackagesController_bookCredit[0]_v1": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientPackageBookDto"];
+            };
+        };
+        responses: {
+            /** @description Package credit booking created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    "MobileClientPackagesController_listMyPurchases[0]_v1": {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["PackagePurchaseStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decorated package purchases owned by the authenticated client */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    "MobileClientPackagesController_getMyPurchase[0]_v1": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Package purchase UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decorated package purchase status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientPaymentsController_listMyPayments_v1: {
         parameters: {
             query?: {
@@ -32354,6 +33258,177 @@ export interface operations {
             };
         };
     };
+    "MobileClientPackagesController_bookCredit[1]_v1": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientPackageBookDto"];
+            };
+        };
+        responses: {
+            /** @description Package credit booking created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    "MobileClientPackagesController_listMyPurchases[1]_v1": {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["PackagePurchaseStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decorated package purchases owned by the authenticated client */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    "MobileClientPackagesController_getMyPurchase[1]_v1": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Package purchase UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decorated package purchase status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PublicOtpController_request_v1: {
         parameters: {
             query?: never;
@@ -32426,6 +33501,88 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicPackageFamiliesController_list_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public package families with sellable options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicPackageFamiliesController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Package family UUID */
+                familyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public package family details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Family not found or not sellable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {

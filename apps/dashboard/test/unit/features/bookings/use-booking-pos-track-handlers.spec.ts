@@ -52,4 +52,19 @@ describe("useBookingPosTrackHandlers — spending a credit from the client panel
     expect(params.setCreditDismissed).toHaveBeenCalledWith(false)
     expect(params.setOpenSection).toHaveBeenCalledWith("typeDuration")
   })
+
+  test("opens the datetime step immediately when a grouped credit freezes delivery type", () => {
+    const params = buildParams()
+
+    useBookingPosTrackHandlers(params).handlePackageCreditSelected(
+      { ...target, deliveryType: "IN_PERSON" },
+      "purchase-v2",
+    )
+
+    expect(params.applyPackageCreditTarget).toHaveBeenCalledWith(
+      { ...target, deliveryType: "IN_PERSON" },
+      "purchase-v2",
+    )
+    expect(params.setOpenSection).toHaveBeenCalledWith("datetime")
+  })
 })

@@ -46,6 +46,7 @@ import type {
   CreateSessionPackagePayload,
   UpdateSessionPackagePayload,
 } from "@/lib/types/package"
+import { GroupedPackageFormPage } from "./grouped-package-form-page"
 
 type Props = { mode: "create" } | { mode: "edit"; packageId: string }
 
@@ -187,6 +188,10 @@ export function PackageFormPage(props: Props) {
         onBack={() => router.push("/packages")}
       />
     )
+
+  if (props.mode === "create") return <GroupedPackageFormPage mode="create" />
+  if (state.pkg?.modelVersion === "GROUPED_V2")
+    return <GroupedPackageFormPage mode="edit" packageId={props.packageId} initialPackage={state.pkg} />
   const title = isEdit ? t("packages.edit.title") : t("packages.create.title")
   const description = isEdit
     ? (state.pkg?.nameAr ?? "")

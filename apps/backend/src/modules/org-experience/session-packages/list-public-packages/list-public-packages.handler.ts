@@ -9,6 +9,7 @@ import {
   PUBLIC_PACKAGES_CACHE_KEY,
   PUBLIC_PACKAGES_CACHE_TTL_SECONDS,
 } from './public-packages.cache';
+import { applyGroupedPackagePrice, decorateGroupedPackage } from '../package-group-catalog.helper';
 
 /**
  * Public, unauthenticated catalog of sellable session packages.
@@ -56,12 +57,16 @@ export class ListPublicPackagesHandler {
 
   private async load() {
     const packages = await this.prisma.sessionPackage.findMany({
-      where: { isPublic: true, isActive: true, archivedAt: null },
+      where: { familyId: null, isPublic: true, isActive: true, archivedAt: null },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
       include: {
         items: {
           orderBy: { sortOrder: 'asc' },
           include: { constraints: { include: { targets: true } } },
+        },
+        groups: {
+          orderBy: { sortOrder: 'asc' },
+          include: { items: { orderBy: { sessionPosition: 'asc' }, include: { constraints: { include: { targets: true } } } } },
         },
       },
     });
@@ -84,11 +89,14 @@ export class ListPublicPackagesHandler {
       ),
       { strict: false },
     );
-    return Promise.all(packages.map(async (pkg, idx) => ({
-      ...pkg,
+    return Promise.all(packages.map(async (pkg, idx) => {
+      const price = applyGroupedPackagePrice(pkg, prices[idx]);
+      return {
+      ...decorateGroupedPackage(pkg),
       ownerEmployeeId: pkg.ownerEmployeeId ?? null,
       imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
-      price: prices[idx],
-    })));
+      price,
+      };
+    }));
   }
 }

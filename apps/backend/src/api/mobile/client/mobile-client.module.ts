@@ -14,6 +14,9 @@ import { MobileClientHomeController } from './portal/home.controller';
 import { MobileClientUpcomingController } from './portal/upcoming.controller';
 import { MobileClientSummaryController } from './portal/summary.controller';
 import { MobileClientAuthController } from './auth.controller';
+import { MobileClientPackagesController } from './packages.controller';
+import { ClientPackageBookHandler } from '../../../modules/bookings/client/client-package-book.handler';
+import { ClientPackagePurchaseStatusHandler } from '../../../modules/bookings/client/client-package-purchase-status.handler';
 
 @Module({
   imports: [DatabaseModule, BookingsModule, PeopleModule, FinanceModule, CommsModule, OrgExperienceModule, IdentityModule],
@@ -26,6 +29,8 @@ import { MobileClientAuthController } from './auth.controller';
     MobileClientUpcomingController,
     MobileClientSummaryController,
     MobileClientAuthController,
+    MobileClientPackagesController,
   ],
+  providers: [ClientPackageBookHandler, ClientPackagePurchaseStatusHandler],
 })
 export class MobileClientModule {}

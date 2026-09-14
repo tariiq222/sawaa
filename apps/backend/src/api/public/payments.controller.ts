@@ -81,6 +81,7 @@ export class PublicPaymentsController {
       clientId: client.id,
       idempotencyKey: dto.idempotencyKey,
       packageId: dto.packageId,
+      packageFamilyId: dto.packageFamilyId,
       branchId: dto.branchId,
     });
   }

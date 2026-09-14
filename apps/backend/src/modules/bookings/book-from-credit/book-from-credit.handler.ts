@@ -39,6 +39,7 @@ import {
   BookingTargetEligibility,
   validateBookingTargetEligibility,
 } from '../booking-target-eligibility.helper';
+import { assertPackageSessionBookable } from '../package-credit-availability.helper';
 
 export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
   scheduledAt: Date;
@@ -56,6 +57,10 @@ interface LockedCreditRow {
   totalQuantity: number;
   usedQuantity: number;
   reservedQuantity: number;
+  purchaseGroupId: string | null;
+  sessionPosition: number | null;
+  durationMinsSnapshot: number | null;
+  deliveryTypeSnapshot: DeliveryType | null;
 }
 
 /**
@@ -191,8 +196,28 @@ export class BookFromCreditHandler {
     // their frozen duration, while flexible credits use the caller's target.
     const durationOption = eligibility.durationOption;
     if (!durationOption) throw new NotFoundException('Credit duration option not found');
-    const durationMins = durationOption.durationMins;
-    const deliveryType: DeliveryType = eligibility.deliveryType;
+    const isGroupedV2 = credit.purchase?.modelVersion === 'GROUPED_V2';
+    if (isGroupedV2 && (credit.durationMinsSnapshot == null || credit.deliveryTypeSnapshot == null)) {
+      throw new BadRequestException('Grouped package credit snapshot is incomplete');
+    }
+    const durationMins = isGroupedV2
+      ? credit.durationMinsSnapshot!
+      : durationOption.durationMins;
+    const deliveryType: DeliveryType = isGroupedV2
+      ? credit.deliveryTypeSnapshot!
+      : eligibility.deliveryType;
+    if (
+      isGroupedV2 &&
+      (durationOption.durationMins !== credit.durationMinsSnapshot ||
+        eligibility.deliveryType !== credit.deliveryTypeSnapshot)
+    ) {
+      throw new BadRequestException(
+        'Current practitioner offering no longer matches the package credit snapshot',
+      );
+    }
+    if (cmd.deliveryType && cmd.deliveryType !== deliveryType) {
+      throw new BadRequestException('Delivery type does not match the package credit snapshot');
+    }
 
     const endsAt = new Date(scheduledAt.getTime() + durationMins * 60_000);
 
@@ -301,6 +326,7 @@ export class BookFromCreditHandler {
         // OVERDRAW GUARD: lock the credit row and recount inside the lock.
         const lockedRows = await tx.$queryRaw<LockedCreditRow[]>`
           SELECT id, "purchaseId", "serviceId", "employeeId", "durationOptionId",
+                 "purchaseGroupId", "sessionPosition", "durationMinsSnapshot", "deliveryTypeSnapshot",
                  "totalQuantity", "usedQuantity", "reservedQuantity"
           FROM "PackageCredit"
           WHERE id = ${credit.id}
@@ -320,6 +346,13 @@ export class BookFromCreditHandler {
             'Package credit routing changed; please refresh and retry',
           );
         }
+        await assertPackageSessionBookable(tx, credit.id, target, {
+          serviceId: credit.serviceId,
+          employeeId: credit.employeeId,
+          durationOptionId: credit.durationOptionId,
+          durationMinsSnapshot: credit.durationMinsSnapshot,
+          deliveryTypeSnapshot: credit.deliveryTypeSnapshot,
+        }, { skipCapacity: true });
         // A reserved session belongs to an appointment that has not happened
         // yet; it occupies a seat exactly like a delivered one.
         if (locked.usedQuantity + locked.reservedQuantity >= locked.totalQuantity) {
@@ -364,7 +397,7 @@ export class BookFromCreditHandler {
             durationMinutesSnapshot: durationMins,
             branchNameSnapshot: branch.nameAr,
             employeeNameSnapshot: employee.name,
-            serviceNameSnapshot: service.nameAr,
+            serviceNameSnapshot: credit.serviceNameSnapshot ?? service.nameAr,
             categoryNameSnapshot: categoryName,
             departmentNameSnapshot: departmentName,
             bookingNumber: nextBookingNumber,
@@ -461,6 +494,11 @@ export class BookFromCreditHandler {
       totalQuantity: number;
       usedQuantity: number;
       reservedQuantity: number;
+      durationMinsSnapshot: number | null;
+      deliveryTypeSnapshot: DeliveryType | null;
+      serviceNameSnapshot: string | null;
+      employeeNameSnapshot: string | null;
+      purchase: { modelVersion: string };
       constraints: CreditConstraint[];
     };
     target: BookingTarget;
@@ -475,6 +513,11 @@ export class BookFromCreditHandler {
       totalQuantity: true,
       usedQuantity: true,
       reservedQuantity: true,
+      durationMinsSnapshot: true,
+      deliveryTypeSnapshot: true,
+      serviceNameSnapshot: true,
+      employeeNameSnapshot: true,
+      purchase: { select: { modelVersion: true } },
       constraints: {
         select: {
           dimension: true,

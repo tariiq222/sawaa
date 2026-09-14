@@ -58,13 +58,14 @@ interface ClinicsSectionsProps extends OpenSectionController {
   onSelectDuration: (durationOptionId: string) => void
   onSelectDate: (date: string) => void
   onSelectTime: (startTime: string) => void
-  onAcceptCredit: () => void
+  onAcceptCredit: (creditId: string) => void
+  deliveryType: "IN_PERSON" | "ONLINE" | null
   onDismissCredit: () => void
 }
 
 export function ClinicsSections(p: ClinicsSectionsProps) {
   const { t } = useLocale()
-  const { state, openSection, setOpenSection, summaries, isServiceAutoSelected, canShowTypeDuration, canShowDatetime, selectedDurationMins, maxAdvanceDays, creditBadgeReady, useCredit, creditDismissed, onDepartmentSelect, onCategorySelect, onServiceSelect, onEmployeeSelect, onSelectDeliveryType, onSelectDuration, onSelectDate, onSelectTime, onAcceptCredit, onDismissCredit } = p
+  const { state, openSection, setOpenSection, summaries, isServiceAutoSelected, canShowTypeDuration, canShowDatetime, selectedDurationMins, maxAdvanceDays, creditBadgeReady, useCredit, creditDismissed, onDepartmentSelect, onCategorySelect, onServiceSelect, onEmployeeSelect, onSelectDeliveryType, onSelectDuration, onSelectDate, onSelectTime, onAcceptCredit, onDismissCredit, deliveryType } = p
   return (
     <>
       <CollapsibleSection
@@ -174,6 +175,7 @@ export function ClinicsSections(p: ClinicsSectionsProps) {
                   serviceId={state.serviceId}
                   employeeId={state.employeeId}
                   durationOptionId={state.durationOptionId}
+                  deliveryType={deliveryType}
                   useCredit={useCredit}
                   dismissed={creditDismissed}
                   onAccept={onAcceptCredit}

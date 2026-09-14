@@ -6,10 +6,13 @@ import { EventBusService, type DomainEventEnvelope } from '../../../../infrastru
 import { DEFAULT_ORG_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../../common/constants';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
 import { buildCreditConstraintCreate } from '../build-credit-constraints.helper';
+import { parsePackageCreditSnapshot } from '../package-credit-snapshot';
 import {
-  createPackageCreditSnapshot,
-  parsePackageCreditSnapshot,
-} from '../package-credit-snapshot';
+  GROUPED_PURCHASE_MODEL_VERSION,
+  issueGroupedPackageCredits,
+  parseGroupedPackagePurchaseSnapshot,
+  type GroupedPackagePurchaseSnapshot,
+} from '../package-group-purchase-snapshot';
 import type { PaymentCompletedPayload } from '../../events/payment-completed.event';
 
 /**
@@ -21,9 +24,9 @@ import type { PaymentCompletedPayload } from '../../events/payment-completed.eve
  *   - flips the PENDING purchase to ACTIVE (the only status BookFromCredit /
  *     GetMatchingCredits accept — so the credit becomes bookable here and not a
  *     moment earlier);
- *   - creates one PackageCredit bucket per SessionPackageItem with
- *     `totalQuantity = paidQuantity + freeQuantity` and the per-item unit price
- *     re-frozen from the SAME ComputePackagePriceService.
+ *   - issues credits only from the immutable purchase snapshot: legacy
+ *     buckets retain their saved quantities, grouped purchases issue one
+ *     credit per saved session. Missing snapshots require manual review.
  *
  * Idempotency (the webhook is at-least-once and Moyasar retries):
  *   - We only act on a purchase whose status is PENDING. The flip
@@ -77,6 +80,8 @@ export class ActivatePackagePurchaseHandler {
             status: true,
             subtotalSnapshot: true,
             discountSnapshot: true,
+            amountPaid: true,
+            modelVersion: true,
             creditSnapshot: true,
           },
         });
@@ -98,55 +103,43 @@ export class ActivatePackagePurchaseHandler {
         return;
       }
 
-      let creditSnapshot = parsePackageCreditSnapshot(purchase.creditSnapshot);
-      if (!creditSnapshot) {
-        // Compatibility path for a PENDING row created before the snapshot
-        // migration. New purchases always carry an immutable snapshot.
-        const pkg = await this.cls.run(async () => {
-          this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-          return this.prisma.sessionPackage.findFirst({
-            where: { id: purchase.packageId },
-            select: {
-              items: {
-                orderBy: { sortOrder: 'asc' },
-                select: {
-                  serviceId: true,
-                  employeeId: true,
-                  durationOptionId: true,
-                  unitPrice: true,
-                  paidQuantity: true,
-                  freeQuantity: true,
-                  discountType: true,
-                  discountValue: true,
-                  constraints: {
-                    select: {
-                      dimension: true,
-                      mode: true,
-                      targets: { select: { targetId: true } },
-                    },
-                  },
-                },
-              },
-            },
-          });
-        });
-        if (!pkg) {
-          this.logger.error(
-            `Package ${purchase.packageId} for purchase ${packagePurchaseId} not found — cannot issue credits`,
-          );
-          return;
+      let groupedSnapshot: GroupedPackagePurchaseSnapshot | null = null;
+      let creditSnapshot = purchase.modelVersion === GROUPED_PURCHASE_MODEL_VERSION
+        ? null
+        : parsePackageCreditSnapshot(purchase.creditSnapshot);
+      if (
+        purchase.modelVersion !== GROUPED_PURCHASE_MODEL_VERSION &&
+        purchase.creditSnapshot !== null &&
+        !Array.isArray(purchase.creditSnapshot)
+      ) {
+        this.logger.error(
+          `Legacy PENDING package purchase ${packagePurchaseId} has an unknown snapshot source — quarantined`,
+        );
+        return;
+      }
+      if (
+        purchase.modelVersion !== GROUPED_PURCHASE_MODEL_VERSION &&
+        Array.isArray(purchase.creditSnapshot) &&
+        !creditSnapshot
+      ) {
+        this.logger.error(
+          `Legacy PENDING package purchase ${packagePurchaseId} has a malformed credit snapshot — quarantined`,
+        );
+        return;
+      }
+      if (purchase.modelVersion === GROUPED_PURCHASE_MODEL_VERSION) {
+        groupedSnapshot = parseGroupedPackagePurchaseSnapshot(purchase.creditSnapshot);
+        const amountPaid = Number(purchase.amountPaid);
+        const snapshotTotal = groupedSnapshot.credits.reduce((sum, credit) => sum + credit.netValue, 0);
+        if (!Number.isSafeInteger(amountPaid) || snapshotTotal !== amountPaid) {
+          throw new Error(`GROUPED_V2 purchase ${packagePurchaseId} amount does not match its immutable credit snapshot`);
         }
-        const price = await this.cls.run(async () => {
-          this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-          return this.pricing.compute({
-            items: pkg.items.map((item) => ({
-              ...item,
-              unitPrice: item.unitPrice != null ? Number(item.unitPrice) : null,
-              discountValue: Number(item.discountValue),
-            })),
-          });
-        });
-        creditSnapshot = createPackageCreditSnapshot(pkg.items, price.itemUnitPrices, price.lines);
+      }
+      if (!creditSnapshot && !groupedSnapshot) {
+        this.logger.error(
+          `PENDING package purchase ${packagePurchaseId} has no valid immutable credit snapshot — quarantined for manual review`,
+        );
+        return;
       }
 
       await this.cls.run(async () => {
@@ -173,7 +166,10 @@ export class ActivatePackagePurchaseHandler {
 
           // Per-credit create (not createMany) so each credit snapshots its
           // item's eligibility constraints for the matching engine.
-          for (const item of creditSnapshot) {
+          if (groupedSnapshot) {
+            await issueGroupedPackageCredits(tx, packagePurchaseId, groupedSnapshot);
+          }
+          for (const item of creditSnapshot ?? []) {
             await tx.packageCredit.create({
               data: {
                 purchaseId: packagePurchaseId,
@@ -192,7 +188,7 @@ export class ActivatePackagePurchaseHandler {
       });
 
       this.logger.log(
-        `Activated package purchase ${packagePurchaseId} and issued ${creditSnapshot.length} credit bucket(s) after payment ${paymentId}`,
+        `Activated package purchase ${packagePurchaseId} and issued ${groupedSnapshot?.credits.length ?? creditSnapshot?.length ?? 0} credit bucket(s) after payment ${paymentId}`,
       );
     } catch (err) {
       this.logger.error(

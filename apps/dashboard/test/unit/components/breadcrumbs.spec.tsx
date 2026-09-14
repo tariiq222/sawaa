@@ -14,6 +14,8 @@ vi.mock("@/components/locale-provider", () => ({
         "nav.bookings": "الحجوزات",
         "nav.create": "إنشاء",
         "nav.edit": "تعديل",
+        "nav.packages": "باقات الجلسات",
+        "packages.family.title": "باقات بخيارات جلسات",
       }
       return map[k] ?? k
     },
@@ -60,6 +62,18 @@ describe("Breadcrumbs", () => {
     route.pathname = "/conversations"
     render(<Breadcrumbs />)
     expect(screen.getByText("nav.conversations")).toBeInTheDocument()
+  })
+
+  it("labels family breadcrumbs and points the grouping segment to packages", () => {
+    route.pathname = "/packages/families/create"
+    render(<Breadcrumbs />)
+    expect(screen.getByText("باقات بخيارات جلسات")).toHaveAttribute("href", "/packages")
+  })
+
+  it("points a family id breadcrumb to its edit route", () => {
+    route.pathname = "/packages/families/00000000-0000-4000-8000-000000000001/edit"
+    render(<Breadcrumbs />)
+    expect(screen.getByText("00000000…")).toHaveAttribute("href", "/packages/families/00000000-0000-4000-8000-000000000001/edit")
   })
 
   it("renders nav element with aria-label", () => {

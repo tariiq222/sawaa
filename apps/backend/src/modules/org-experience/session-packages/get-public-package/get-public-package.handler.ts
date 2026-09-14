@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../infrastructure/database';
 import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { signMediaImageUrl } from '../../../media/media-image-url.helper';
+import { applyGroupedPackagePrice, decorateGroupedPackage } from '../package-group-catalog.helper';
 
 export type GetPublicPackageCommand = { packageId: string };
 
@@ -35,6 +36,7 @@ export class GetPublicPackageHandler {
     const pkg = await this.prisma.sessionPackage.findFirst({
       where: {
         id: dto.packageId,
+        familyId: null,
         isPublic: true,
         isActive: true,
         archivedAt: null,
@@ -44,6 +46,10 @@ export class GetPublicPackageHandler {
           orderBy: { sortOrder: 'asc' },
           include: { constraints: { include: { targets: true } } },
         },
+        groups: {
+          orderBy: { sortOrder: 'asc' },
+          include: { items: { orderBy: { sessionPosition: 'asc' }, include: { constraints: { include: { targets: true } } } } },
+        },
       },
     });
     if (!pkg) {
@@ -52,7 +58,7 @@ export class GetPublicPackageHandler {
       throw new NotFoundException('Session package not found');
     }
 
-    const price = await this.pricing.compute({
+    const legacyPrice = await this.pricing.compute({
       items: pkg.items.map((i) => ({
         serviceId: i.serviceId,
         employeeId: i.employeeId,
@@ -65,8 +71,9 @@ export class GetPublicPackageHandler {
       })),
     }, { strict: false });
 
+    const price = applyGroupedPackagePrice(pkg, legacyPrice);
     return {
-      ...pkg,
+      ...decorateGroupedPackage(pkg),
       ownerEmployeeId: pkg.ownerEmployeeId ?? null,
       imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
       price,

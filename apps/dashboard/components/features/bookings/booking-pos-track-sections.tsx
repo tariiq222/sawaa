@@ -168,6 +168,7 @@ export function PackagesCreditSections(p: PackagesCreditSectionsProps) {
         id="typeDuration"
         label={t("bookings.pos.section.typeDuration")}
         summary={summaries.typeDuration}
+        stepNumber={4}
         isOpen={openSection === "typeDuration"}
         isFilled={summaries.typeDuration !== null}
         onToggle={() => setOpenSection("typeDuration")}
@@ -190,6 +191,7 @@ export function PackagesCreditSections(p: PackagesCreditSectionsProps) {
         id="datetime"
         label={t("bookings.pos.section.datetime")}
         summary={summaries.datetime}
+        stepNumber={5}
         isOpen={openSection === "datetime"}
         isFilled={summaries.datetime !== null}
         onToggle={() => setOpenSection("datetime")}

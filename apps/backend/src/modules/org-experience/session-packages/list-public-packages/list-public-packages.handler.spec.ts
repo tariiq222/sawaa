@@ -105,7 +105,7 @@ describe('ListPublicPackagesHandler', () => {
 
     expect(prisma.sessionPackage.findMany).toHaveBeenCalledTimes(1);
     const arg = prisma.sessionPackage.findMany.mock.calls[0][0];
-    expect(arg.where).toEqual({ isPublic: true, isActive: true, archivedAt: null });
+    expect(arg.where).toEqual({ familyId: null, isPublic: true, isActive: true, archivedAt: null });
     // Ordering mirrors the dashboard list.
     expect(arg.orderBy).toEqual([{ sortOrder: 'asc' }, { createdAt: 'desc' }]);
   });

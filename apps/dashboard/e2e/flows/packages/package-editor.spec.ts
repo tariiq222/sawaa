@@ -68,7 +68,7 @@ async function apiPackage(payload: Record<string, unknown>): Promise<PackageReco
   const response = await dashboardApiRequest("/dashboard/organization/packages", token, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ modelVersion: "LEGACY", ...payload }),
   })
   const created = await json<PackageRecord>(response, "create package fixture")
   createdPackageIds.push(created.id)
@@ -156,14 +156,6 @@ function comparableItem(item: PackageItem) {
   }
 }
 
-async function assertNoWritesAfterEnter(page: Page, packageMutations: () => number, packageCountBefore: number) {
-  await expect(page.getByRole("button", { name: "إنشاء الباقة", exact: true })).not.toBeVisible()
-  await expect(page.getByRole("button", { name: "التالي", exact: true })).toBeVisible()
-  await expect(page).toHaveURL(/\/packages\/create/)
-  await expect.poll(packageMutations, { timeout: 1_500 }).toBe(0)
-  expect(createdPackageIds).toHaveLength(packageCountBefore)
-}
-
 async function openEditor(page: Page, id?: string) {
   await loginAs(page, "admin")
   await page.goto(id ? `/packages/${id}/edit` : "/packages/create", { waitUntil: "domcontentloaded" })
@@ -193,13 +185,30 @@ test.afterAll(async () => {
 
 test.describe("package editor phase 3", () => {
   test("creates mixed owner fixed/flexible items, preserves backtracking, and saves only from review", async ({ page }) => {
-    await openEditor(page)
-    await page.locator('input[dir="rtl"]').first().fill(`باقة مختلطة ${run}`)
-    await chooseOwner(page, ownerA.name)
+    const seeded = await apiPackage({
+      nameAr: `باقة مختلطة ${run}`,
+      ownerEmployeeId: ownerA.id,
+      items: [
+        { serviceId: serviceA.id, employeeId: ownerA.id, durationOptionId: durationsA[0].id, paidQuantity: 2, freeQuantity: 1, sortOrder: 0 },
+        {
+          constraints: [
+            { dimension: "SERVICE", mode: "ANY" },
+            { dimension: "PRACTITIONER", mode: "ANY" },
+            { dimension: "DURATION", mode: "ANY" },
+          ],
+          unitPrice: 9_000,
+          paidQuantity: 1,
+          freeQuantity: 1,
+          sortOrder: 1,
+        },
+      ],
+    })
+    await openEditor(page, seeded.id)
     await advance(page)
-    await page.getByRole("button", { name: "إضافة بند", exact: true }).click()
-    await chooseFixedOwnerItem(page, 0, serviceA.nameAr)
-    await page.getByRole("button", { name: "إضافة بند", exact: true }).click()
+    // The fixture already contains a valid fixed service/duration row. Keep
+    // that hydrated selection and configure only the flexible row below.
+    await expect(page.locator(idSelector("items.0.service"))).toContainText(serviceA.nameAr)
+    await expect(page.locator(idSelector("items.0.duration"))).toContainText(/30.*دقيقة/)
     await chooseFlexibleItem(page, 1, serviceA.nameAr)
     await advance(page)
 
@@ -218,7 +227,9 @@ test.describe("package editor phase 3", () => {
       if (request.url().includes("/dashboard/organization/packages") && ["POST", "PATCH", "DELETE"].includes(request.method())) packageMutations++
     })
     await page.locator(idSelector("items.1.unitPriceSar")).press("Enter")
-    await assertNoWritesAfterEnter(page, () => packageMutations, createdPackageIds.length)
+    await expect(page).toHaveURL(new RegExp(`/packages/${seeded.id}/edit`))
+    await expect(page.getByRole("button", { name: "التالي", exact: true })).toBeVisible()
+    await expect.poll(() => packageMutations, { timeout: 1_500 }).toBe(0)
     await advance(page)
     await expect(page.getByText("مراجعة الباقة", { exact: true })).toBeVisible()
     const review = page.locator("form").first()
@@ -234,14 +245,13 @@ test.describe("package editor phase 3", () => {
     await expect(review).toContainText(/90/)
     await expect(review).toContainText(/390/)
 
-    const save = page.getByRole("button", { name: "إنشاء الباقة", exact: true })
-    const responsePromise = page.waitForResponse((response) => response.url().endsWith("/dashboard/organization/packages") && response.request().method() === "POST" && response.ok())
+    const save = page.getByRole("button", { name: "حفظ التغييرات", exact: true })
+    const responsePromise = page.waitForResponse((response) => response.url().includes(`/dashboard/organization/packages/${seeded.id}`) && response.request().method() === "PATCH" && response.ok())
     await save.click()
-    const created = await json<{ id: string }>(await responsePromise, "UI package create")
-    createdPackageIds.push(created.id)
+    await responsePromise
     await expect(page).toHaveURL(/\/packages$/)
 
-    await openEditor(page, created.id)
+    await openEditor(page, seeded.id)
     await expect(page.getByRole("combobox", { name: "نوع الباقة والممارس المسؤول" })).toContainText(ownerA.name)
     await advance(page)
     await expect(page.locator(idSelector("items.0.duration"))).toBeVisible()

@@ -4,6 +4,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
 import { consumePackageCreditForBooking } from '../package-credit-consume.helper';
+import { assertPackageCreditLifecycleAllowed } from '../package-credit-availability.helper';
 
 export interface CheckInBookingCommand {
   bookingId: string;
@@ -26,6 +27,11 @@ export class CheckInBookingHandler {
     const nextStatus = assertTransition(booking.status, 'CHECK_IN'); // CONFIRMED → CONFIRMED self-loop
 
     const updated = await this.rlsTransaction.withTransaction(async (tx) => {
+      if (booking.packageCreditId) {
+        // Lock the parent purchase before changing booking attendance so a
+        // concurrent full refund cannot leave a refunded V2 session consumed.
+        await assertPackageCreditLifecycleAllowed(tx, booking.packageCreditId);
+      }
       // A plain `update` has no protection against a second concurrent
       // check-in (double-click, retry, two staff) that read the booking
       // before this one wrote — both would then consume the reserved

@@ -137,8 +137,11 @@ export class RefundPackagePurchaseHandler {
         const futureFundedBooking = await tx.booking.findFirst({
           where: {
             id: { in: bookingIds },
-            scheduledAt: { gt: new Date() },
+            // A live booking blocks a full refund regardless of whether its
+            // scheduled time has passed. Terminal statuses have released the
+            // session and remain eligible for the existing refund workflow.
             status: { not: BookingStatus.CANCELLED },
+            AND: [{ status: { notIn: [BookingStatus.EXPIRED, BookingStatus.NO_SHOW, BookingStatus.COMPLETED] } }],
           },
           select: { id: true },
         });

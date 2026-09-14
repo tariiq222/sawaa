@@ -58,7 +58,7 @@ export function useBookingPosTrackHandlers(
     applyPackageCreditTarget(target, packagePurchaseId)
     setUseCredit(true)
     setCreditDismissed(false)
-    setOpenSection("typeDuration")
+    setOpenSection(target.deliveryType ? "datetime" : "typeDuration")
   }
 
   // Phase 6 — selecting a track resets every downstream pick and re-arms
@@ -80,7 +80,7 @@ export function useBookingPosTrackHandlers(
   ) => {
     applyPackageCreditTarget(target, packagePurchaseId)
     setUseCredit(true)
-    setOpenSection("typeDuration")
+    setOpenSection(target.deliveryType ? "datetime" : "typeDuration")
   }
 
   // W2B-T8 — PACKAGES track: the operator spent a FLEXIBLE credit.

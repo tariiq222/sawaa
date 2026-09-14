@@ -12,6 +12,7 @@ export const PACKAGE_STEP_LABELS = [
 
 interface Props {
   step: 1 | 2 | 3 | 4
+  stepLabels?: readonly string[]
   isPending: boolean
   submitLabel: string
   onBack: () => void
@@ -21,6 +22,7 @@ interface Props {
 
 export function PackageEditorNavigation({
   step,
+  stepLabels = PACKAGE_STEP_LABELS,
   isPending,
   submitLabel,
   onBack,
@@ -30,7 +32,7 @@ export function PackageEditorNavigation({
   const { t } = useLocale()
   return (
     <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-3 border-t border-border bg-background px-4 py-3 sm:-mx-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <PackageStepProgress step={step} />
+      <PackageStepProgress step={step} labels={stepLabels} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row">
         <Button
           type="button"
@@ -83,14 +85,14 @@ export function PackageEditorNavigation({
   )
 }
 
-export function PackageStepProgress({ step }: { step: 1 | 2 | 3 | 4 }) {
+export function PackageStepProgress({ step, labels = PACKAGE_STEP_LABELS }: { step: 1 | 2 | 3 | 4; labels?: readonly string[] }) {
   const { t } = useLocale()
   return (
     <div
       className="flex flex-wrap gap-2"
       aria-label={t("packages.steps.label")}
     >
-      {PACKAGE_STEP_LABELS.map((label, index) => (
+      {labels.map((label, index) => (
         <span
           key={label}
           aria-current={index + 1 === step ? "step" : undefined}

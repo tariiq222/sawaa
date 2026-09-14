@@ -48,6 +48,7 @@ function lockedCreditRow(
     serviceId: string | null;
     employeeId: string | null;
     durationOptionId: string | null;
+    constraints?: unknown[];
     usedQuantity: number;
     totalQuantity: number;
     reservedQuantity: number;
@@ -96,6 +97,22 @@ function buildTx(
     packageCreditUsage: { create: jest.fn().mockResolvedValue({ id: 'usage-1' }) },
     packageCredit: {
       update: jest.fn().mockResolvedValue({ id: CREDIT_ID }),
+      findUnique: jest.fn().mockResolvedValue({
+        id: CREDIT_ID,
+        purchaseId: PURCHASE_ID,
+        serviceId: lockedCredit.serviceId,
+        employeeId: lockedCredit.employeeId,
+        durationOptionId: lockedCredit.durationOptionId,
+        durationMinsSnapshot: (lockedCredit as { durationMinsSnapshot?: number | null }).durationMinsSnapshot ?? null,
+        deliveryTypeSnapshot: (lockedCredit as { deliveryTypeSnapshot?: string | null }).deliveryTypeSnapshot ?? null,
+        totalQuantity: lockedCredit.totalQuantity,
+        usedQuantity: lockedCredit.usedQuantity,
+        reservedQuantity: lockedCredit.reservedQuantity,
+        sessionPosition: null,
+        constraints: (lockedCredit as { constraints?: unknown[] }).constraints ?? [],
+        purchase: { status: PackagePurchaseStatus.ACTIVE, modelVersion: 'LEGACY' },
+        purchaseGroup: null,
+      }),
       // After increment, used==total → triggers auto-complete check. Default: still remaining.
       findMany: jest.fn().mockResolvedValue([
         { id: CREDIT_ID, totalQuantity: 5, usedQuantity: 1 },
@@ -130,6 +147,7 @@ function buildPrisma() {
       }),
     },
     serviceDurationOption: { findFirst: jest.fn().mockResolvedValue(DURATION_OPTION) },
+    employeeServiceOption: { findFirst: jest.fn().mockResolvedValue(null) },
     serviceBookingConfig: { findMany: jest.fn().mockResolvedValue([]) },
     // `fields` mirrors Prisma's field-reference API used for the column-to-column
     // `usedQuantity < totalQuantity` filter in resolveCreditAndTarget.
@@ -410,7 +428,14 @@ describe('BookFromCreditHandler', () => {
       });
       const { handler, tx } = buildHandler({
         prisma,
-        tx: buildTx(lockedCreditRow({ serviceId: null, employeeId: null, durationOptionId: null })),
+        tx: buildTx({
+          ...lockedCreditRow({ serviceId: null, employeeId: null, durationOptionId: null }),
+          constraints: [{
+            dimension: PackageConstraintDimension.DELIVERY_TYPE,
+            mode: PackageConstraintMode.INCLUDE,
+            targets: [{ targetId: 'ONLINE' }],
+          }],
+        }),
       });
 
       await expect(handler.execute({
@@ -470,6 +495,11 @@ describe('BookFromCreditHandler', () => {
         serviceId: null,
         employeeId: null,
         durationOptionId: null,
+        constraints: [{
+          dimension: PackageConstraintDimension.PRACTITIONER,
+          mode: PackageConstraintMode.ANY,
+          targets: [],
+        }],
       }));
       const { handler } = buildHandler({ prisma, tx });
 
@@ -498,6 +528,11 @@ describe('BookFromCreditHandler', () => {
         serviceId: null,
         employeeId: null,
         durationOptionId: null,
+        constraints: [{
+          dimension: PackageConstraintDimension.PRACTITIONER,
+          mode: PackageConstraintMode.ANY,
+          targets: [],
+        }],
       }));
       const { handler } = buildHandler({ prisma, tx });
 

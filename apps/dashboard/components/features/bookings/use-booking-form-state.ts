@@ -63,6 +63,9 @@ export interface CreditTarget {
   employeeId: string
   employeeName: string
   durationOptionId: string
+  /** Exact purchased session selected by the operator. */
+  creditId?: string
+  deliveryType?: 'IN_PERSON' | 'ONLINE'
 }
 
 export interface BookingFormState {
@@ -92,6 +95,8 @@ export interface BookingFormState {
   programName: string | null
   /** Phase 6 — PACKAGES track purchase the first session consumes. */
   packagePurchaseId: string | null
+  /** Exact PackageCredit selected for this booking, when known. */
+  packageCreditId: string | null
   /** Wave 2 — set when the operator spends a FLEXIBLE package credit. Non-null
    *  means the wizard's service/practitioner/duration lists are restricted to
    *  what this credit's constraints permit. Null = unrestricted. */
@@ -128,6 +133,7 @@ const INITIAL_STATE: BookingFormState = {
   programId: null,
   programName: null,
   packagePurchaseId: null,
+  packageCreditId: null,
   creditFilter: null,
   payAtClinic: true,
   collectionMethod: "CASH",
@@ -159,6 +165,7 @@ function downstreamReset(overrides: DownstreamReset = {}): DownstreamReset {
     programId: null,
     programName: null,
     packagePurchaseId: null,
+    packageCreditId: null,
     creditFilter: null,
     ...overrides,
   }
@@ -336,6 +343,10 @@ export function useBookingFormState() {
     setState((prev) => ({ ...prev, couponCode }))
   }, [])
 
+  const setPackageCreditId = useCallback((creditId: string | null) => {
+    setState((prev) => ({ ...prev, packageCreditId: creditId }))
+  }, [])
+
   // W6 fix — 2026-09-12 — the standalone `applyCreditTarget` (jump-fill
   // without a packagePurchaseId) was deleted. It backed only the
   // client-credits panel's button, which never selected a track and
@@ -362,9 +373,10 @@ export function useBookingFormState() {
         employeeName: t.employeeName,
         durationOptionId: t.durationOptionId,
         packagePurchaseId,
+        packageCreditId: t.creditId ?? null,
         creditFilter: null,
-        deliveryType: null,
-        type: null,
+        deliveryType: t.deliveryType ?? null,
+        type: t.deliveryType ?? null,
         date: null,
         startTime: null,
       }))
@@ -380,6 +392,7 @@ export function useBookingFormState() {
       ...prev,
       creditFilter: filter,
       packagePurchaseId: filter.packagePurchaseId,
+      packageCreditId: filter.creditId,
       departmentId: null,
       departmentName: null,
       categoryId: null,
@@ -404,6 +417,7 @@ export function useBookingFormState() {
       ...prev,
       creditFilter: null,
       packagePurchaseId: null,
+      packageCreditId: null,
       departmentId: null,
       departmentName: null,
       categoryId: null,
@@ -441,6 +455,7 @@ export function useBookingFormState() {
     setPayAtClinic,
     setCollectionMethod,
     setCouponCode,
+    setPackageCreditId,
     applyPackageCreditTarget,
     applyCreditFilter,
     clearCreditFilter,

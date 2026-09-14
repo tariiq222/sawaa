@@ -61,4 +61,44 @@ describe("BookingSummary — package-funded booking", () => {
     expect(screen.getByPlaceholderText("bookings.wizard.step.confirm.couponPlaceholder")).toBeInTheDocument()
     expect(screen.queryByText("bookings.pos.summary.fromPackage")).not.toBeInTheDocument()
   })
+
+  test("shows the selected package, session, service, and unreserved balance", () => {
+    render(
+      <BookingSummary
+        {...baseProps}
+        hideCollectionTiming
+        fundedByPackage
+        packageSummary={{
+          packageName: "Family package",
+          sessionPosition: 2,
+          serviceName: "Consultation",
+          remaining: 3,
+        }}
+      />,
+    )
+
+    expect(screen.getByTestId("booking-package-summary")).toHaveTextContent("Family package")
+    expect(screen.getByTestId("booking-package-summary")).toHaveTextContent("3")
+    expect(screen.getByTestId("booking-package-summary")).toHaveTextContent("Consultation")
+    expect(screen.getByText("bookings.pos.summary.packageSession")).toBeInTheDocument()
+    expect(screen.getByText("bookings.pos.summary.packageUnreservedBalance")).toBeInTheDocument()
+  })
+
+  test("does not render package details when the paid path is active", () => {
+    render(
+      <BookingSummary
+        {...baseProps}
+        hideCollectionTiming={false}
+        packageSummary={{
+          packageName: "Stale package",
+          sessionPosition: 0,
+          serviceName: "Stale service",
+          remaining: 9,
+        }}
+      />,
+    )
+
+    expect(screen.queryByTestId("booking-package-summary")).not.toBeInTheDocument()
+    expect(screen.queryByText("Stale package")).not.toBeInTheDocument()
+  })
 })
