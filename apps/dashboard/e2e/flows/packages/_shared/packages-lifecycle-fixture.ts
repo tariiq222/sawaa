@@ -40,6 +40,7 @@ export interface PackagesLifecycleHarness {
   seededBranchId: string
   seededEmployeeId: string
   seededServiceId: string
+  seededDurationId: string
   seededServiceNameAr: string
   seededClientId: string
   seededClientName: string
@@ -64,10 +65,8 @@ function bestEffortDelete(path: string, token: string): Promise<void> {
  * Before-all seed: branch (main), client, service + duration option, employee,
  * employee↔service + employee↔branch + business hours + availability +
  * bookable schedule chain. Populates the harness with the seeded ids + names
- * the spec reads across phases. No fixture PATCH against
- * `/dashboard/organization/packages/:id` is performed here — the package
- * creation must go through the UI in the spec to prove the derived-price
- * item builder path (Phase 1).
+ * the spec reads across phases. The lifecycle package itself is created by
+ * the spec through the legacy API contract.
  */
 export async function seedPackagesLifecycleFixtures(
   harness: PackagesLifecycleHarness,
@@ -121,6 +120,7 @@ export async function seedPackagesLifecycleFixtures(
   if (!durs.length) {
     throw new Error("[packages-lifecycle] seed duration options returned empty list")
   }
+  harness.seededDurationId = durs[0].id
 
   const employee = await seedEmployee(harness.token, {
     name: harness.employeeName,

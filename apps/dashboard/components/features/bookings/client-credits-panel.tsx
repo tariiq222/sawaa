@@ -3,7 +3,13 @@
 import { Button } from "@sawaa/ui"
 import { useClientPackagePurchases } from "@/hooks/use-package-purchases"
 import { useLocale } from "@/components/locale-provider"
-import { creditDedupeKey, isJumpableCredit } from "@/lib/package-credit-usability"
+import {
+  creditAvailabilityReason,
+  creditDedupeKey,
+  isCreditBookable,
+  isGroupedV2Credit,
+  isJumpableCredit,
+} from "@/lib/package-credit-usability"
 import type { PackageCredit } from "@/lib/types/package-purchase"
 import type { CreditTarget } from "./use-booking-form-state"
 
@@ -57,16 +63,27 @@ export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
   // Two ACTIVE purchases can hold credits for the same slot; keep the
   // first. The `purchaseName` is captured per-row so the card can fall
   // back to it for flexible credits whose `serviceNameAr` is blank.
-  type UsableRow = { purchaseId: string; purchaseName: string; credit: PackageCredit }
+  type UsableRow = {
+    purchaseId: string
+    purchaseName: string
+    modelVersion?: string | null
+    credit: PackageCredit
+  }
   const rows: UsableRow[] = []
   const seen = new Set<string>()
   for (const purchase of purchases ?? []) {
     for (const credit of purchase.credits) {
-      if (credit.remaining <= 0) continue
-      const key = creditDedupeKey(credit)
+      const grouped = isGroupedV2Credit(credit, purchase.modelVersion)
+      if (credit.remaining <= 0 && !grouped) continue
+      const key = creditDedupeKey(credit, purchase.modelVersion)
       if (seen.has(key)) continue
       seen.add(key)
-      rows.push({ purchaseId: purchase.id, purchaseName: purchase.packageNameAr, credit })
+      rows.push({
+        purchaseId: purchase.id,
+        purchaseName: purchase.packageNameAr,
+        modelVersion: purchase.modelVersion,
+        credit,
+      })
     }
   }
 
@@ -77,8 +94,9 @@ export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
       <p className="text-xs font-medium text-muted-foreground">
         {t("packages.credits.availableForClient")}
       </p>
-      {rows.map(({ purchaseId, purchaseName, credit }) => {
+      {rows.map(({ purchaseId, purchaseName, modelVersion, credit }) => {
         const jumpable = isJumpableCredit(credit)
+        const grouped = isGroupedV2Credit(credit, modelVersion)
         // Flexible credits carry no resolved service label — fall back to
         // the owning purchase's name so the title is never blank.
         const titleText = credit.serviceNameAr || purchaseName
@@ -94,11 +112,14 @@ export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
         // Label precedence: flexible → point operator to the PACKAGES
         // track (this panel cannot spend a flexible credit); inactive
         // service/employee → "not bookable"; jumpable → "use".
+        const reason = creditAvailabilityReason(credit)
         const buttonLabel = jumpable
           ? t("packages.credits.use")
           : credit.categoryId == null
             ? t("packages.credits.flexibleUsePackagesTrack")
-            : t("packages.credits.notBookable")
+            : reason
+              ? t(`packages.credits.availability.${reason}`)
+              : t("packages.credits.notBookable")
         return (
           <div
             key={credit.id}
@@ -112,10 +133,26 @@ export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
               <p className="text-xs tabular-nums text-muted-foreground">
                 {t("packages.credits.remaining")}: {credit.remaining} / {credit.totalQuantity}
               </p>
+              {grouped && credit.sessionPosition != null && (
+                <p className="text-xs text-muted-foreground">
+                  {t("packages.credits.session")} {credit.sessionPosition + 1}
+                  {credit.groupLabel ? ` · ${credit.groupLabel}` : ""}
+                </p>
+              )}
+              {credit.deliveryTypeSnapshot && (
+                <p className="text-xs text-muted-foreground">
+                  {t(`packages.credits.delivery.${credit.deliveryTypeSnapshot}`)}
+                </p>
+              )}
+              {reason && (
+                <p className="text-xs font-medium text-warning" role="status">
+                  {t(`packages.credits.availability.${reason}`)}
+                </p>
+              )}
             </div>
             <Button
               size="sm"
-              disabled={!jumpable}
+              disabled={!jumpable || !isCreditBookable(credit)}
               onClick={() => {
                 // Belt-and-suspenders: a disabled button should not fire
                 // onClick, but this guard makes it impossible to build a
@@ -135,6 +172,8 @@ export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
                       employeeId: credit.employeeId,
                       employeeName: credit.employeeNameAr,
                       durationOptionId: credit.durationOptionId,
+                      creditId: credit.id,
+                      deliveryType: credit.deliveryTypeSnapshot ?? undefined,
                     },
                     purchaseId,
                   )

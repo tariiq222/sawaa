@@ -130,7 +130,9 @@ export function useBookingPosSubmit({
           // the backend can validate the target against the credit's
           // constraints (`creditMatchesTarget` in the handler). The PINNED
           // path keeps the payload byte-identical by omitting the key.
-          ...(state.creditFilter ? { creditId: state.creditFilter.creditId } : {}),
+          ...(state.packageCreditId ?? state.creditFilter?.creditId
+            ? { creditId: state.packageCreditId ?? state.creditFilter?.creditId }
+            : {}),
         })
         toast.success(t("bookings.credit.toast.success"))
         reset()

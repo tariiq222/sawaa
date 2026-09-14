@@ -2056,6 +2056,58 @@
         ],
         "type": "object"
       },
+      "ClientPackageBookDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where the appointment takes place",
+            "format": "uuid",
+            "type": "string"
+          },
+          "creditId": {
+            "description": "Exact package credit bucket to book",
+            "format": "uuid",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery channel for legacy flexible credits",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "type": "string"
+          },
+          "durationOptionId": {
+            "description": "Duration target for legacy flexible credits",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Practitioner target for legacy flexible credits",
+            "format": "uuid",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Optional note attached to the booking",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Appointment start time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service target for legacy flexible credits",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "creditId",
+          "branchId",
+          "scheduledAt"
+        ],
+        "type": "object"
+      },
       "ClientRequestHandoffDto": {
         "properties": {},
         "type": "object"
@@ -3790,6 +3842,59 @@
         ],
         "type": "object"
       },
+      "CreatePackageFamilyDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Arabic family description",
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English family description",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Catalog image URL",
+            "type": "string"
+          },
+          "isActive": {
+            "default": true,
+            "description": "Whether the family is active",
+            "type": "boolean"
+          },
+          "isPublic": {
+            "default": false,
+            "description": "Whether the family is public",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic family name",
+            "example": "باقة الاستشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English family name",
+            "example": "Consultation pack",
+            "type": "string"
+          },
+          "options": {
+            "description": "Complete option list",
+            "items": {
+              "$ref": "#/components/schemas/PackageFamilyOptionDto"
+            },
+            "type": "array"
+          },
+          "sortOrder": {
+            "default": 0,
+            "description": "Catalog ordering",
+            "type": "number"
+          }
+        },
+        "required": [
+          "nameAr",
+          "options"
+        ],
+        "type": "object"
+      },
       "CreatePackagePurchaseDto": {
         "properties": {
           "branchId": {
@@ -3823,6 +3928,11 @@
           "notes": {
             "description": "Free-form notes attached to the purchase",
             "example": "Walk-in sale, paid in cash",
+            "type": "string"
+          },
+          "packageFamilyId": {
+            "description": "Package family containing the selected option; required for attached options",
+            "format": "uuid",
             "type": "string"
           },
           "packageId": {
@@ -4184,6 +4294,21 @@
             "minimum": 0,
             "type": "number"
           },
+          "globalDiscount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GlobalDiscountDto"
+              }
+            ],
+            "description": "V2 global package discount. Required when modelVersion is GROUPED_V2."
+          },
+          "groups": {
+            "description": "V2 package groups. Required when modelVersion is GROUPED_V2.",
+            "items": {
+              "$ref": "#/components/schemas/GroupedPackageGroupDto"
+            },
+            "type": "array"
+          },
           "iconBgColor": {
             "description": "Icon background color (hex)",
             "example": "#FFD8A8",
@@ -4212,11 +4337,20 @@
             "type": "boolean"
           },
           "items": {
-            "description": "Package items (min 1)",
+            "description": "Legacy package items (min 1). Required unless modelVersion is GROUPED_V2.",
             "items": {
               "$ref": "#/components/schemas/CreateSessionPackageItemDto"
             },
             "type": "array"
+          },
+          "modelVersion": {
+            "description": "Package model version. Omit for the legacy item-based contract.",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "GROUPED_V2",
+            "type": "string"
           },
           "nameAr": {
             "description": "Arabic name",
@@ -4246,8 +4380,7 @@
           }
         },
         "required": [
-          "nameAr",
-          "items"
+          "nameAr"
         ],
         "type": "object"
       },
@@ -5440,6 +5573,131 @@
         ],
         "type": "object"
       },
+      "GlobalDiscountDto": {
+        "properties": {
+          "type": {
+            "description": "Package-wide discount type",
+            "enum": [
+              "NONE",
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "value": {
+            "description": "Percentage from 0 to 100, or fixed amount in integer halalas",
+            "example": 10,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "type": "object"
+      },
+      "GroupedPackageGroupDto": {
+        "properties": {
+          "dependsOnGroupKey": {
+            "description": "Stable key of the group that must complete first",
+            "example": null,
+            "nullable": true,
+            "type": "object"
+          },
+          "employeeId": {
+            "description": "Practitioner UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "key": {
+            "description": "Stable editor key for this group",
+            "example": "group-1",
+            "type": "string"
+          },
+          "label": {
+            "description": "Optional group label",
+            "example": "المرحلة الأولى",
+            "type": "string"
+          },
+          "sequenceMode": {
+            "description": "Session sequence behavior",
+            "enum": [
+              "ORDERED",
+              "UNORDERED"
+            ],
+            "example": "ORDERED",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sessions": {
+            "description": "Explicit sessions in this group",
+            "items": {
+              "$ref": "#/components/schemas/GroupedPackageSessionDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "serviceId",
+          "employeeId",
+          "sequenceMode",
+          "sessions"
+        ],
+        "type": "object"
+      },
+      "GroupedPackageSessionDto": {
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery channel",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationOptionId": {
+            "description": "Active service duration option UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "key": {
+            "description": "Stable editor key for this session",
+            "example": "session-1",
+            "type": "string"
+          },
+          "position": {
+            "description": "Zero-based position within the group",
+            "example": 0,
+            "minimum": 0,
+            "type": "number"
+          },
+          "unitPrice": {
+            "description": "Package override price in integer halalas",
+            "example": 25000,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "position",
+          "durationOptionId",
+          "deliveryType",
+          "unitPrice"
+        ],
+        "type": "object"
+      },
       "GuestRequestHandoffDto": {
         "properties": {
           "guestName": {
@@ -5491,6 +5749,11 @@
           "idempotencyKey": {
             "description": "Stable UUID for this checkout attempt; reuse it when retrying the same request",
             "example": "00000000-0000-4000-a000-000000000099",
+            "type": "string"
+          },
+          "packageFamilyId": {
+            "description": "Package family containing the selected option; required for attached options",
+            "format": "uuid",
             "type": "string"
           },
           "packageId": {
@@ -7032,6 +7295,56 @@
         ],
         "type": "object"
       },
+      "PackageFamilyOptionDto": {
+        "properties": {
+          "globalDiscount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GlobalDiscountDto"
+              }
+            ],
+            "description": "Option-wide discount"
+          },
+          "groups": {
+            "description": "Complete grouped session graph",
+            "items": {
+              "$ref": "#/components/schemas/GroupedPackageGroupDto"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Existing grouped option UUID; omit to create a new option",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "default": true,
+            "description": "Whether the option can be purchased",
+            "type": "boolean"
+          },
+          "isPublic": {
+            "default": false,
+            "description": "Whether the option is shown publicly",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic option name",
+            "example": "5 جلسات",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English option name",
+            "example": "5 sessions",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nameAr",
+          "groups",
+          "globalDiscount"
+        ],
+        "type": "object"
+      },
       "PackagePurchaseStatus": {
         "enum": [
           "PENDING",
@@ -8424,6 +8737,16 @@
       },
       "TransferCreditDto": {
         "properties": {
+          "reason": {
+            "description": "Reason recorded in the package-credit assignment history",
+            "example": "Practitioner left the clinic",
+            "type": "string"
+          },
+          "targetDurationOptionId": {
+            "description": "Optional active duration option on the target practitioner with the same frozen duration and delivery type",
+            "format": "uuid",
+            "type": "string"
+          },
           "toEmployeeId": {
             "description": "Target employee (practitioner) to move the credit to",
             "example": "00000000-0000-4000-a000-000000000099",
@@ -9195,6 +9518,59 @@
         },
         "type": "object"
       },
+      "UpdatePackageFamilyDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Arabic family description",
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English family description",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Catalog image URL",
+            "type": "string"
+          },
+          "isActive": {
+            "default": true,
+            "description": "Whether the family is active",
+            "type": "boolean"
+          },
+          "isPublic": {
+            "default": false,
+            "description": "Whether the family is public",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic family name",
+            "example": "باقة الاستشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English family name",
+            "example": "Consultation pack",
+            "type": "string"
+          },
+          "options": {
+            "description": "Complete option list",
+            "items": {
+              "$ref": "#/components/schemas/PackageFamilyOptionDto"
+            },
+            "type": "array"
+          },
+          "sortOrder": {
+            "default": 0,
+            "description": "Catalog ordering",
+            "type": "number"
+          }
+        },
+        "required": [
+          "nameAr",
+          "options"
+        ],
+        "type": "object"
+      },
       "UpdateProblemReportStatusDto": {
         "properties": {
           "resolution": {
@@ -9437,6 +9813,21 @@
             "minimum": 0,
             "type": "number"
           },
+          "globalDiscount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GlobalDiscountDto"
+              }
+            ],
+            "description": "Replacement V2 global package discount. Omit to preserve the existing discount."
+          },
+          "groups": {
+            "description": "Replacement V2 package groups. Omit to preserve the existing template.",
+            "items": {
+              "$ref": "#/components/schemas/GroupedPackageGroupDto"
+            },
+            "type": "array"
+          },
           "iconBgColor": {
             "description": "Icon background color (hex)",
             "type": "string"
@@ -9465,6 +9856,15 @@
               "$ref": "#/components/schemas/CreateSessionPackageItemDto"
             },
             "type": "array"
+          },
+          "modelVersion": {
+            "description": "Package model version. Existing packages cannot change version in place.",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "GROUPED_V2",
+            "type": "string"
           },
           "nameAr": {
             "description": "Arabic name",
@@ -25343,6 +25743,356 @@
         ]
       }
     },
+    "/api/v1/dashboard/organization/package-families": {
+      "get": {
+        "operationId": "DashboardPackageFamiliesController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Package families and their grouped options"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List package families",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardPackageFamiliesController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePackageFamilyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Package family created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a package family",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/package-families/{familyId}": {
+      "delete": {
+        "operationId": "DashboardPackageFamiliesController_archive_v1",
+        "parameters": [
+          {
+            "description": "Package family UUID",
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Package family archived"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Package family not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archive a package family",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      },
+      "get": {
+        "operationId": "DashboardPackageFamiliesController_get_v1",
+        "parameters": [
+          {
+            "description": "Package family UUID",
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package family details"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Package family not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a package family",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      },
+      "patch": {
+        "operationId": "DashboardPackageFamiliesController_update_v1",
+        "parameters": [
+          {
+            "description": "Package family UUID",
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePackageFamilyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Package family updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a package family",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      }
+    },
     "/api/v1/dashboard/organization/packages": {
       "get": {
         "operationId": "DashboardOrganizationSettingsController_listSessionPackagesEndpoint_v1",
@@ -33867,6 +34617,216 @@
         ]
       }
     },
+    "/api/v1/mobile/client/packages/book": {
+      "post": {
+        "operationId": "MobileClientPackagesController_bookCredit[0]_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientPackageBookDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Package credit booking created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book an appointment using an owned package credit",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/packages/purchases": {
+      "get": {
+        "operationId": "MobileClientPackagesController_listMyPurchases[0]_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PackagePurchaseStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchases owned by the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated client package purchases and credit balance",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/packages/purchases/{id}": {
+      "get": {
+        "operationId": "MobileClientPackagesController_getMyPurchase[0]_v1",
+        "parameters": [
+          {
+            "description": "Package purchase UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchase status"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read an authenticated client package purchase status",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
     "/api/v1/mobile/client/payments": {
       "get": {
         "operationId": "MobileClientPaymentsController_listMyPayments_v1",
@@ -39265,6 +40225,216 @@
         ]
       }
     },
+    "/api/v1/public/me/packages/book": {
+      "post": {
+        "operationId": "MobileClientPackagesController_bookCredit[1]_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientPackageBookDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Package credit booking created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book an appointment using an owned package credit",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/public/me/packages/purchases": {
+      "get": {
+        "operationId": "MobileClientPackagesController_listMyPurchases[1]_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PackagePurchaseStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchases owned by the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated client package purchases and credit balance",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/public/me/packages/purchases/{id}": {
+      "get": {
+        "operationId": "MobileClientPackagesController_getMyPurchase[1]_v1",
+        "parameters": [
+          {
+            "description": "Package purchase UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchase status"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read an authenticated client package purchase status",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
     "/api/v1/public/otp/request": {
       "post": {
         "operationId": "PublicOtpController_request_v1",
@@ -39372,6 +40542,89 @@
         "summary": "Verify OTP and obtain session tokens",
         "tags": [
           "Public / OTP"
+        ]
+      }
+    },
+    "/api/v1/public/package-families": {
+      "get": {
+        "operationId": "PublicPackageFamiliesController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Public package families with sellable options"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get public package families",
+        "tags": [
+          "Public / Package Families"
+        ]
+      }
+    },
+    "/api/v1/public/package-families/{familyId}": {
+      "get": {
+        "operationId": "PublicPackageFamiliesController_get_v1",
+        "parameters": [
+          {
+            "description": "Package family UUID",
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public package family details"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Family not found or not sellable"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get one public package family",
+        "tags": [
+          "Public / Package Families"
         ]
       }
     },

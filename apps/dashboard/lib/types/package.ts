@@ -13,6 +13,11 @@
  */
 
 import type { PaginatedQuery } from "./common"
+import type {
+  GlobalDiscount,
+  PackageGroupInput,
+  PackageModelVersion,
+} from "@sawaa/shared/types"
 
 /* ─── Discount type ─── */
 
@@ -96,6 +101,9 @@ export interface SessionPackageItem {
  */
 export interface SessionPackage {
   id: string
+  modelVersion?: PackageModelVersion
+  groups?: PackageGroupInput[]
+  globalDiscount?: GlobalDiscount
   nameAr: string
   nameEn: string | null
   descriptionAr: string | null
@@ -166,10 +174,14 @@ export interface CreateSessionPackagePayload {
   sortOrder?: number
   /** Null creates a general package; omission is accepted for old callers. */
   ownerEmployeeId?: string | null
-  items: CreatePackageItemPayload[]
+  items?: CreatePackageItemPayload[]
+  /** Grouped V2 payload fields. Omit these for the legacy editor. */
+  modelVersion?: PackageModelVersion
+  groups?: PackageGroupInput[]
+  globalDiscount?: GlobalDiscount
 }
 
-export type UpdateSessionPackagePayload = Partial<Omit<CreateSessionPackagePayload, "items">> & {
+export type UpdateSessionPackagePayload = Partial<CreateSessionPackagePayload> & {
   items?: CreatePackageItemPayload[]
 }
 

@@ -122,7 +122,7 @@ function buildHookReturn(state: BookingFormState, selectCategory: ReturnType<typ
     selectDeliveryType: vi.fn(), selectType: vi.fn(),
     selectDurationOption: vi.fn(), selectDate: vi.fn(), selectTime: vi.fn(),
     selectProgram: vi.fn(),
-    setPayAtClinic: vi.fn(), setCollectionMethod: vi.fn(), setCouponCode: vi.fn(),
+    setPayAtClinic: vi.fn(), setCollectionMethod: vi.fn(), setCouponCode: vi.fn(), setPackageCreditId: vi.fn(),
     applyCreditTarget: vi.fn(), applyPackageCreditTarget: vi.fn(),
     applyCreditFilter: vi.fn(), clearCreditFilter: vi.fn(),
   }
@@ -138,7 +138,7 @@ vi.mock("@/components/features/bookings/use-booking-form-state", () => ({
     durationOptionId: null, deliveryType: null, type: null,
     date: null, startTime: null,
     programId: null, programName: null,
-    packagePurchaseId: null, creditFilter: null,
+    packagePurchaseId: null, packageCreditId: null, creditFilter: null,
     payAtClinic: true, collectionMethod: "CASH", couponCode: null,
   } as BookingFormState, vi.fn()) as ReturnType<typeof useBookingFormState>),
 }))
@@ -177,7 +177,7 @@ function buildShellState(overrides: Partial<BookingFormState> = {}): BookingForm
     durationOptionId: null, deliveryType: null, type: null,
     date: null, startTime: null,
     programId: null, programName: null,
-    packagePurchaseId: "pkg-1", creditFilter: null,
+    packagePurchaseId: "pkg-1", packageCreditId: null, creditFilter: null,
     payAtClinic: true, collectionMethod: "CASH", couponCode: null,
     ...overrides,
   }

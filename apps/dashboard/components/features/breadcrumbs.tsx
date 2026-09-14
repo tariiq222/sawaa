@@ -29,7 +29,7 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
       {breadcrumbs.map((item, i) => {
         const isLast = i === breadcrumbs.length - 1
         return (
-          <div key={item.href ?? `${item.label}-${i}`} className="flex items-center gap-2">
+          <div key={`${item.href ?? item.label}-${i}`} className="flex items-center gap-2">
             {i > 0 && (
               <HugeiconsIcon
                 icon={ArrowRight01Icon}
@@ -77,6 +77,7 @@ function generateBreadcrumbs(pathname: string, t: (key: string) => string): Brea
     users: t("nav.users"),
     settings: t("nav.settings"),
     packages: t("nav.packages"),
+    families: t("packages.family.title"),
     "intake-forms": t("nav.intakeForms"),
     "contact-messages": t("nav.contactMessages"),
     profile: t("nav.profile"),
@@ -92,12 +93,20 @@ function generateBreadcrumbs(pathname: string, t: (key: string) => string): Brea
   ]
 
   let currentPath = ""
-  for (const segment of segments) {
+  for (const [index, segment] of segments.entries()) {
     currentPath += `/${segment}`
     const label = isUuid(segment)
       ? `${segment.slice(0, 8)}…`
       : (routeLabels[segment] ?? segment)
-    items.push({ label, href: currentPath })
+    // There is no standalone /packages/families index route; return to the
+    // package list when this grouping segment is clicked. Family IDs point to
+    // the existing edit route instead of a dead /families/:id page.
+    const href = segment === "families"
+      ? "/packages"
+      : (isUuid(segment) && segments[index - 1] === "families"
+        ? `/packages/families/${segment}/edit`
+        : currentPath)
+    items.push({ label, href })
   }
 
   return items

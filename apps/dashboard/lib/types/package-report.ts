@@ -48,7 +48,11 @@ export interface PackageSalesBuckets {
 export interface PackageSalesReport {
   kind: "SALES"
   purchaseCount: number
+  /** Legacy alias retained for older consumers; equals netRevenue. */
   totalRevenue: number
+  grossRevenue: number
+  refundedAmount: number
+  netRevenue: number
   byBucket: PackageSalesBuckets
   byMethod: PackageSalesMethodRow[]
 }
@@ -75,6 +79,7 @@ export interface PackageConsumptionRow {
   employeeId: string
   name: string
   count: number
+  attribution?: "BOOKING" | "LEGACY_CREDIT" | "UNKNOWN" | "MIXED"
 }
 
 export interface PackageConsumptionReport {

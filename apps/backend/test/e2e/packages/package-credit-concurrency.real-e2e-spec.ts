@@ -567,7 +567,7 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
     expect((await getCredit(credit.id)).reservedQuantity).toBe(1);
   });
 
-  it("keeps a full refund terminal when check-in read RESERVED usage first", async () => {
+  it("rejects a full refund while checked-in usage is live, then refunds after cancellation", async () => {
     const { credit, purchase } = await seedCreditBundle(1);
     const booking = await bookFromCredit(credit.id, nextSlot());
     await prisma.booking.update({
@@ -585,25 +585,30 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
     let refundPending: Promise<unknown> | undefined;
     try {
       await bounded(paused.hit, "check-in read barrier");
-      // Start the competing purchase lock while check-in is paused, then
-      // let the refund complete while the stale check-in read is paused.
-      // Refund only reads Booking rows, so it does not invert the booking /
-      // purchase lock order. The check-in transaction is released only after
-      // the purchase is terminal.
+      // Start the competing refund while check-in is paused, then release
+      // check-in before awaiting either promise. The purchase lock therefore
+      // serializes the handlers, and the refund observes the live booking
+      // after check-in consumes its reserved usage.
       refundPending = app.get(RefundPackagePurchaseHandler).execute({
         purchaseId: purchase.id,
         refundAmount: 30_000,
         userId: ids.adminUserId,
       });
-      await bounded(refundPending, "refund before stale consume resumes");
       paused.resume();
       const [checkInOutcome, refundOutcome] = await bounded(
         Promise.allSettled([checkInPending, refundPending]),
         "refund/check-in race",
       );
       expect(checkInOutcome.status).toBe("fulfilled");
-      expect(refundOutcome.status).toBe("fulfilled");
-      expect((await getPurchase(purchase.id)).status).toBe("REFUNDED");
+      expect(refundOutcome.status).toBe("rejected");
+      if (refundOutcome.status === "rejected") {
+        expect(refundOutcome.reason).toMatchObject({
+          message: expect.stringContaining("cannot be refunded while it funds"),
+        });
+      }
+      // Check-in consumed the bundle's last credit, so the normal lifecycle
+      // auto-completes the purchase even though the live booking blocks refund.
+      expect((await getPurchase(purchase.id)).status).toBe("COMPLETED");
     } finally {
       paused.resume();
       await bounded(
@@ -620,9 +625,24 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
     }).toEqual({
       used: 1,
       reserved: 0,
-      purchase: "REFUNDED",
-      usage: "RETURNED",
+      purchase: "COMPLETED",
+      usage: "CONSUMED",
     });
+
+    await cancelHandler.execute({
+      bookingId: booking.id,
+      changedBy: ids.adminUserId,
+      reason: CancellationReason.CLIENT_REQUESTED,
+      source: "admin",
+    });
+    expect((await getUsage(booking.id)).status).toBe("RETURNED");
+
+    await app.get(RefundPackagePurchaseHandler).execute({
+      purchaseId: purchase.id,
+      refundAmount: 30_000,
+      userId: ids.adminUserId,
+    });
+    expect((await getPurchase(purchase.id)).status).toBe("REFUNDED");
   });
 
   it("keeps a sibling cancellation and final consumption consistent", async () => {

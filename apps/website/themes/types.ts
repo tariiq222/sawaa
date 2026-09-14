@@ -21,5 +21,9 @@ export interface Theme {
     accountBookings: ComponentType<{ searchParams: Promise<Record<string, string | undefined>> }>;
     accountBookingDetail: ComponentType<{ bookingId: string }>;
     supportGroups: ComponentType;
+    packages: ComponentType;
+    packageDetail: ComponentType<{ familyId: string }>;
+    packagePurchase: ComponentType<{ packageId: string; packageFamilyId?: string }>;
+    accountPackages: ComponentType<{ creditId?: string }>;
   };
 }

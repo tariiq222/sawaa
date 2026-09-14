@@ -136,6 +136,7 @@ function buildBaseState(
     programId: null,
     programName: null,
     packagePurchaseId: "pkg-1",
+    packageCreditId: null,
     creditFilter: null,
     payAtClinic: true,
     collectionMethod: "CASH",

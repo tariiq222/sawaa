@@ -30,6 +30,7 @@ import {
   DialogBody,
   DialogFooter,
   Label,
+  Textarea,
   Select,
   SelectContent,
   SelectItem,
@@ -47,6 +48,7 @@ import {
   type ServiceEmployeeOption,
 } from "@/lib/types/credit-ops"
 import type { PackageCredit } from "@/lib/types/package-purchase"
+import { isGroupedV2Credit } from "@/lib/package-credit-usability"
 
 /* ─── Props ─── */
 
@@ -85,6 +87,7 @@ export function TransferCreditForm({
           displayName,
           isActive: row.employee.isActive,
           raw: row,
+          effectiveDurations: row.effectiveDurations,
         }
       })
   }, [serviceEmployees])
@@ -96,11 +99,29 @@ export function TransferCreditForm({
   )
 
   const [targetEmployeeId, setTargetEmployeeId] = useState<string>("")
+  const [targetDurationOptionId, setTargetDurationOptionId] = useState<string>("")
+  const [reason, setReason] = useState<string>("")
+
+  const grouped = isGroupedV2Credit(credit)
+  const selectedTarget = targetOptions.find((option) => option.id === targetEmployeeId)
+  const matchingDurations = (selectedTarget?.effectiveDurations ?? [])
+    .flatMap((group) => group.durations.map((option) => ({ ...option, deliveryType: group.deliveryType })))
+    .filter((option) =>
+      option.deliveryType === credit.deliveryTypeSnapshot &&
+      option.durationMins === credit.durationMinsSnapshot,
+    )
+  const transferBlocked = grouped
+    ? credit.usedQuantity > 0 || credit.reservedQuantity > 0
+    : credit.reservedQuantity > 0
 
   const canSubmit =
     !!credit.id &&
     !!targetEmployeeId &&
     targetEmployeeId !== credit.employeeId &&
+    !transferBlocked &&
+    (!grouped || matchingDurations.length > 0) &&
+    (!targetDurationOptionId || matchingDurations.some((option) => option.id === targetDurationOptionId)) &&
+    (!grouped || reason.trim().length >= 3) &&
     !transferMut.isPending &&
     !employeesLoading
 
@@ -109,7 +130,11 @@ export function TransferCreditForm({
     try {
       await transferMut.mutateAsync({
         creditId: credit.id,
-        payload: { toEmployeeId: targetEmployeeId },
+        payload: {
+          toEmployeeId: targetEmployeeId,
+          ...(reason.trim() ? { reason: reason.trim() } : {}),
+          ...(targetDurationOptionId ? { targetDurationOptionId } : {}),
+        },
       })
       toast.success(t("packages.balances.transfer.success"))
       onTransferred?.()
@@ -194,6 +219,44 @@ export function TransferCreditForm({
               {t("packages.balances.transfer.helper")}
             </p>
           </div>
+          {matchingDurations.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="transfer-credit-duration">
+                {t("packages.transfer.targetDuration")}
+              </Label>
+              <Select value={targetDurationOptionId} onValueChange={setTargetDurationOptionId}>
+                <SelectTrigger id="transfer-credit-duration" className="w-full">
+                  <SelectValue placeholder={t("packages.transfer.targetDurationPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {matchingDurations.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {locale === "ar" ? option.labelAr : option.label} ({option.durationMins} {t("packages.transfer.minutes")})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {grouped && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="transfer-credit-reason">{t("packages.transfer.reason")}</Label>
+              <Textarea
+                id="transfer-credit-reason"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder={t("packages.transfer.reasonPlaceholder")}
+                maxLength={500}
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">{t("packages.transfer.reasonRequired")}</p>
+            </div>
+          )}
+          {transferBlocked && (
+            <p role="alert" className="text-sm text-warning">
+              {t("packages.transfer.blockedReserved")}
+            </p>
+          )}
         </div>
       </DialogBody>
       <DialogFooter>

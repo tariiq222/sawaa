@@ -7,17 +7,40 @@ const runId = String(Date.now()).slice(-6)
 const createdPackageIds = new Set<string>()
 let token = ""
 
-async function openCreateForm(page: Page) {
+async function openCreateForm(page: Page): Promise<string> {
+  const response = await dashboardApiRequest("/dashboard/organization/packages", token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      modelVersion: "LEGACY",
+      nameAr: `باقة تحقق ${runId}`,
+      items: [
+        {
+          constraints: [
+            { dimension: "SERVICE", mode: "ANY" },
+            { dimension: "PRACTITIONER", mode: "ANY" },
+            { dimension: "DURATION", mode: "ANY" },
+          ],
+          unitPrice: 10_000,
+          paidQuantity: 1,
+          freeQuantity: 0,
+        },
+      ],
+    }),
+  })
+  if (!response.ok) throw new Error(`legacy package fixture failed: ${response.status}`)
+  const created = (await response.json()) as { id: string }
+  createdPackageIds.add(created.id)
   await loginAs(page, "admin")
-  await page.goto("/packages/create", { waitUntil: "domcontentloaded" })
+  await page.goto(`/packages/${created.id}/edit`, { waitUntil: "domcontentloaded" })
   await expect(page.locator('input[name="nameAr"]')).toBeVisible({
     timeout: 20_000,
   })
+  return created.id
 }
 
 async function addFlexibleItem(page: Page, unitPriceSar = "100") {
-  await page.getByRole("button", { name: "إضافة بند" }).click()
-  await page.getByRole("button", { name: "اختيار عند الحجز" }).click()
+  await expect(page.getByRole("button", { name: "اختيار عند الحجز" })).toBeVisible()
   await page.getByRole("button", { name: "التالي" }).click()
   const unitPrice = page.locator("#items\\.0\\.unitPriceSar")
   await expect(unitPrice).toBeVisible()
@@ -42,14 +65,15 @@ test.describe("Session Packages — form validation and save feedback", () => {
     page,
   }) => {
     await openCreateForm(page)
+    await page.locator('input[name="nameAr"]').fill("")
 
-    let createRequests = 0
+    let packageMutations = 0
     page.on("request", (request) => {
       if (
-        request.method() === "POST" &&
+        ["POST", "PATCH"].includes(request.method()) &&
         request.url().includes("/dashboard/organization/packages")
       ) {
-        createRequests += 1
+        packageMutations += 1
       }
     })
 
@@ -64,12 +88,8 @@ test.describe("Session Packages — form validation and save feedback", () => {
     await page.getByRole("button", { name: "التالي" }).click()
     await expect(page.getByText("بنود الباقة", { exact: true })).toBeVisible()
     await page.getByRole("button", { name: "التالي" }).click()
-    await expect(page.getByText("يجب إضافة بند واحد على الأقل")).toBeVisible()
-
-    await page.getByRole("button", { name: "إضافة بند" }).click()
-    await page.getByRole("button", { name: "اختيار عند الحجز" }).click()
-    await page.getByRole("button", { name: "التالي" }).click()
     await expect(page.locator("#items\\.0\\.unitPriceSar")).toBeVisible()
+    await page.locator("#items\\.0\\.unitPriceSar").fill("")
     await page.getByRole("button", { name: "التالي" }).click()
     await expect(
       page.getByText("يلزم تحديد سعر ثابت للجلسة في البنود المرنة")
@@ -94,7 +114,7 @@ test.describe("Session Packages — form validation and save feedback", () => {
       page.getByText("يجب أن تكون نسبة الخصم بين 0 و100")
     ).toBeVisible()
 
-    expect(createRequests).toBe(0)
+    expect(packageMutations).toBe(0)
   })
 
   test("keeps save successful when image upload fails, then updates the package", async ({
@@ -108,7 +128,7 @@ test.describe("Session Packages — form validation and save feedback", () => {
         body: JSON.stringify({ message: "simulated image failure" }),
       })
     })
-    await openCreateForm(page)
+    const packageId = await openCreateForm(page)
 
     const packageName = `باقة حفظ وصورة ${runId}`
     await page.locator('input[name="nameAr"]').fill(packageName)
@@ -134,25 +154,22 @@ test.describe("Session Packages — form validation and save feedback", () => {
     await addFlexibleItem(page, "125")
     await page.getByRole("button", { name: "التالي" }).click()
 
-    const createResponsePromise = page.waitForResponse(
+    const secondUpdateResponsePromise = page.waitForResponse(
       (response) =>
-        response.request().method() === "POST" &&
-        response.url().includes("/dashboard/organization/packages") &&
+        response.request().method() === "PATCH" &&
+        response.url().includes(`/dashboard/organization/packages/${packageId}`) &&
         response.ok()
     )
-    await page.getByRole("button", { name: "إنشاء الباقة" }).click()
-    const created = (await (await createResponsePromise).json()) as {
-      id: string
-    }
-    createdPackageIds.add(created.id)
+    await page.getByRole("button", { name: "حفظ التغييرات" }).click()
+    await secondUpdateResponsePromise
 
     await expect(
       page.getByText("تم حفظ الباقة، لكن تعذّر رفع الصورة")
     ).toBeVisible()
-    await expect(page.getByText("فشل إنشاء الباقة")).toHaveCount(0)
+    await expect(page.getByText("فشل تحديث الباقة")).toHaveCount(0)
     await expect(page).toHaveURL(/\/packages$/)
 
-    await page.goto(`/packages/${created.id}/edit`, {
+    await page.goto(`/packages/${packageId}/edit`, {
       waitUntil: "domcontentloaded",
     })
     const editName = page.locator('input[name="nameAr"]')
@@ -164,7 +181,7 @@ test.describe("Session Packages — form validation and save feedback", () => {
         response.request().method() === "PATCH" &&
         response
           .url()
-          .includes(`/dashboard/organization/packages/${created.id}`) &&
+        .includes(`/dashboard/organization/packages/${packageId}`) &&
         response.ok()
     )
     await page.getByRole("button", { name: "التالي" }).click()

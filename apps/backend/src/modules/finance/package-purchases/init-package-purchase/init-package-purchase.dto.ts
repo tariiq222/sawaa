@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsUUID } from 'class-validator';
 
 export class InitPackagePurchaseDto {
   @ApiProperty({
@@ -15,6 +15,11 @@ export class InitPackagePurchaseDto {
   })
   @IsUUID()
   packageId!: string;
+
+  @ApiPropertyOptional({ description: 'Package family containing the selected option; required for attached options', format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  packageFamilyId?: string;
 
   @ApiProperty({
     description: 'Branch UUID the purchase is attributed to',

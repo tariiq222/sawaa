@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { Locale } from '@/features/locale/locale';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient, clientLogoutApi } from '@/features/auth/public';
@@ -168,6 +169,13 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
         loggingOut={loggingOut}
         onLogout={handleLogout}
       />
+
+      <Link
+        href="/account/packages"
+        className="self-start rounded-full border border-[var(--sw-primary-500)] px-5 py-2.5 text-sm font-bold text-[var(--sw-primary-700)]"
+      >
+        {tt('account.packagesLink')}
+      </Link>
 
       <div
         className="flex gap-1 p-1 rounded-full self-start max-w-full overflow-x-auto"

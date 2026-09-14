@@ -6,6 +6,7 @@ import { toListResponse } from '../../../../common/dto';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { ListSessionPackagesDto } from './list-session-packages.dto';
 import { signMediaImageUrl } from '../../../media/media-image-url.helper';
+import { applyGroupedPackagePrice, decorateGroupedPackage } from '../package-group-catalog.helper';
 
 export type ListSessionPackagesCommand = ListSessionPackagesDto;
 
@@ -45,6 +46,7 @@ export class ListSessionPackagesHandler {
 
     const where = {
       archivedAt: null,
+      familyId: null,
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       ...(dto.isPublic !== undefined && { isPublic: dto.isPublic }),
       ...(dto.search && {
@@ -65,6 +67,10 @@ export class ListSessionPackagesHandler {
           items: {
             orderBy: { sortOrder: 'asc' },
             include: { constraints: { include: { targets: true } } },
+          },
+          groups: {
+            orderBy: { sortOrder: 'asc' },
+            include: { items: { orderBy: { sessionPosition: 'asc' }, include: { constraints: { include: { targets: true } } } } },
           },
         },
       }),
@@ -88,16 +94,19 @@ export class ListSessionPackagesHandler {
       ),
       { strict: false },
     );
-    const priced = await Promise.all(items.map(async (pkg, idx) => ({
-      ...pkg,
+    const priced = await Promise.all(items.map(async (pkg, idx) => {
+      const price = applyGroupedPackagePrice(pkg, prices[idx]);
+      return {
+      ...decorateGroupedPackage(pkg),
       ownerEmployeeId: pkg.ownerEmployeeId ?? null,
       imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
-      subtotal: prices[idx].subtotal,
-      discountAmount: prices[idx].discountAmount,
-      finalPrice: prices[idx].finalPrice,
-      fullValue: prices[idx].fullValue,
-      freeValue: prices[idx].freeValue,
-    })));
+      subtotal: price.subtotal,
+      discountAmount: price.discountAmount,
+      finalPrice: price.finalPrice,
+      fullValue: price.fullValue,
+      freeValue: price.freeValue,
+      };
+    }));
 
     return toListResponse(priced, total, page, limit);
   }

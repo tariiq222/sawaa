@@ -84,4 +84,25 @@ describe('LoginForm chat resume', () => {
     await waitFor(() => expect(mocks.routerPush).toHaveBeenCalledWith('/?chat=resume'));
     expect(readPendingChatResume()).toBe('conversation-retry');
   });
+
+  it('preserves the selected package option through the login return URL', async () => {
+    mocks.searchParams = new URLSearchParams(
+      'redirect=%2Fpackages%2Fpurchase%3FpackageId%3Doffer-9%26packageFamilyId%3Dfamily-1',
+    );
+    render(
+      <LocaleProvider locale="en">
+        <LoginForm />
+      </LocaleProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '0501234567' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+
+    await waitFor(() =>
+      expect(mocks.routerPush).toHaveBeenCalledWith(
+        '/packages/purchase?packageId=offer-9&packageFamilyId=family-1',
+      ),
+    );
+  });
 });

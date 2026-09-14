@@ -65,6 +65,9 @@ describe("usePackageReport — happy path", () => {
       kind: "SALES",
       purchaseCount: 1,
       totalRevenue: 0,
+      grossRevenue: 0,
+      refundedAmount: 0,
+      netRevenue: 0,
       byBucket: { cash: 0, network: 0, electronic: 0 },
       byMethod: [],
     })
@@ -88,6 +91,9 @@ describe("usePackageReport — happy path", () => {
       kind: "SALES" as const,
       purchaseCount: 3,
       totalRevenue: 500000,
+      grossRevenue: 500000,
+      refundedAmount: 0,
+      netRevenue: 500000,
       byBucket: { cash: 100000, network: 0, electronic: 400000 },
       byMethod: [{ method: "CASH", amount: 100000, count: 1 }],
     }

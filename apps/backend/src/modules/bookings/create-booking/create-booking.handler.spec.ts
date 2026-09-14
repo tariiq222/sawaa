@@ -51,6 +51,7 @@ const buildPrisma = () => {
     employee: { findFirst: jest.fn().mockResolvedValue({ id: 'emp-1', name: 'Dr. Sara' }) },
     service: { findFirst: jest.fn().mockResolvedValue(mockService) },
     employeeService: { findUnique: jest.fn().mockResolvedValue({ id: 'es-1', employeeId: 'emp-1', serviceId: 'svc-1' }) },
+    employeeServiceOption: { findFirst: jest.fn().mockResolvedValue(null) },
     serviceDurationOption: { findFirst: jest.fn().mockResolvedValue({ id: 'opt-inperson', serviceId: 'svc-1', employeeServiceId: null, deliveryType: 'IN_PERSON', durationMins: 60, isActive: true }) },
     integration: { findFirst: jest.fn().mockResolvedValue(null) },
     serviceBookingConfig: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },

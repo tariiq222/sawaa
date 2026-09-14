@@ -89,8 +89,10 @@ function buildPrisma() {
     sessionPackage: { findMany: jest.fn() },
     service: { findMany: jest.fn() },
     employee: { findMany: jest.fn() },
-    serviceDurationOption: { findMany: jest.fn() },
-    employeeService: { findMany: jest.fn().mockResolvedValue([]) },
+    serviceDurationOption: { findMany: jest.fn(), findFirst: jest.fn() },
+    employeeService: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn() },
+    employeeServiceOption: { findFirst: jest.fn() },
+    serviceBookingConfig: { findMany: jest.fn() },
   };
 }
 
@@ -146,6 +148,40 @@ describe('ListClientPackagePurchasesHandler', () => {
     expect(result[0].packageNameAr).toBe('باقة الفرد');
     expect(result[0].packageNameEn).toBe('Solo Pack');
     expect(result[1].packageNameAr).toBe('باقة العائلة');
+  });
+
+  it('returns the frozen family offer snapshot and normalized model version', async () => {
+    mockHappyPath();
+    prisma.packagePurchase.findMany.mockResolvedValue([{
+      ...PURCHASE_2,
+      modelVersion: 'GROUPED_V2',
+      offerSnapshot: {
+        familyId: 'family-1',
+        familyNameAr: 'باقة العائلة',
+        familyNameEn: 'Family pack',
+        optionNameAr: 'خمس جلسات',
+        optionNameEn: 'Five sessions',
+        sessionCount: 5,
+      },
+    }]);
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+
+    const [purchase] = await handler.execute({ clientId: CLIENT_ID });
+
+    expect(purchase).toEqual(expect.objectContaining({
+      offerSnapshot: {
+        familyId: 'family-1',
+        familyNameAr: 'باقة العائلة',
+        familyNameEn: 'Family pack',
+        optionNameAr: 'خمس جلسات',
+        optionNameEn: 'Five sessions',
+        sessionCount: 5,
+      },
+      familyId: 'family-1',
+      optionNameAr: 'خمس جلسات',
+      sessionCount: 5,
+      modelVersion: 'GROUPED_V2',
+    }));
   });
 
   it('returns the purchases most-recently paid first', async () => {
@@ -381,6 +417,52 @@ describe('ListClientPackagePurchasesHandler', () => {
     }));
     const serviceSelect = prisma.service.findMany.mock.calls[0][0].select;
     expect(serviceSelect.isHidden).toBe(true);
+  });
+
+  it('marks a V2 credit unavailable when the current effective duration no longer matches its frozen snapshot', async () => {
+    prisma.packagePurchase.findMany.mockResolvedValue([{
+      id: 'v2-purchase', packageId: 'v2-package', clientId: 'v2-client', status: 'ACTIVE',
+      modelVersion: 'GROUPED_V2', subtotalSnapshot: 10_000, discountSnapshot: 0,
+      amountPaid: 10_000, refundAmount: 0, paidAt: new Date('2026-09-01'),
+      refundedAt: null, notes: null, createdAt: new Date('2026-09-01'),
+      credits: [{
+        id: 'v2-credit', serviceId: 'v2-service', employeeId: 'v2-employee',
+        durationOptionId: 'v2-duration', durationMinsSnapshot: 60,
+        deliveryTypeSnapshot: 'IN_PERSON', unitPriceSnapshot: 10_000,
+        totalQuantity: 1, usedQuantity: 0, reservedQuantity: 0, constraints: [],
+        purchaseGroup: {
+          id: 'v2-group', label: 'V2', sequenceMode: 'UNORDERED', dependsOnGroupId: null,
+          credits: [{ id: 'v2-credit', sessionPosition: 0, totalQuantity: 1, usedQuantity: 0, reservedQuantity: 0, usages: [] }],
+          dependsOnGroup: null,
+        },
+      }],
+    }]);
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'v2-package', nameAr: 'باقة', nameEn: null }]);
+    prisma.service.findMany.mockResolvedValue([{
+      id: 'v2-service', nameAr: 'خدمة', nameEn: null, isActive: true, archivedAt: null,
+      isHidden: false, categoryId: null, category: null,
+    }]);
+    prisma.employee.findMany.mockResolvedValue([{ id: 'v2-employee', name: 'Emp', nameAr: 'موظف', nameEn: null, isActive: true }]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([{ id: 'v2-duration', labelAr: '٦٠ د', label: '60m', durationMins: 60 }]);
+    prisma.employeeService.findMany.mockResolvedValue([{ employeeId: 'v2-employee', serviceId: 'v2-service' }]);
+    prisma.employeeService.findUnique.mockResolvedValue({
+      id: 'v2-link', employeeId: 'v2-employee', serviceId: 'v2-service', isActive: true,
+      disabledDeliveryTypes: [], useCustomPricing: false,
+    });
+    prisma.serviceDurationOption.findFirst.mockResolvedValue({
+      id: 'v2-duration', serviceId: 'v2-service', employeeServiceId: null,
+      deliveryType: 'IN_PERSON', durationMins: 60, isActive: true,
+    });
+    prisma.employeeServiceOption.findFirst.mockResolvedValue({ durationOverride: 45 });
+    prisma.serviceBookingConfig.findMany.mockResolvedValue([]);
+
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const result = await handler.execute({ clientId: 'v2-client' });
+
+    expect(result[0].credits[0]).toEqual(expect.objectContaining({
+      serviceIsBookable: true,
+      availability: { bookable: false, reason: 'OFFERING_UNAVAILABLE' },
+    }));
   });
 
   it('P1-8: marks a credit NOT bookable when the EmployeeService link is inactive even though service + employee are active', async () => {

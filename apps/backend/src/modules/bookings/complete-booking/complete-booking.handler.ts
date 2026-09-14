@@ -5,7 +5,11 @@ import { CompleteBookingDto } from './complete-booking.dto';
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
 import { computeVat } from '../../finance/money.helper';
-import { consumePackageCreditForBooking } from '../package-credit-consume.helper';
+import {
+  consumePackageCreditForBooking,
+  markPackageCreditDeliveredForBooking,
+} from '../package-credit-consume.helper';
+import { assertPackageCreditLifecycleAllowed } from '../package-credit-availability.helper';
 
 export type CompleteBookingCommand = CompleteBookingDto & {
   bookingId: string;
@@ -24,6 +28,9 @@ export class CompleteBookingHandler {
     const nextStatus = assertTransition(booking.status, 'COMPLETE');
 
     return this.rlsTransaction.withTransaction(async (tx) => {
+      if (booking.packageCreditId) {
+        await assertPackageCreditLifecycleAllowed(tx, booking.packageCreditId);
+      }
       const updated = await updateBookingAtomically(tx, {
         bookingId: cmd.bookingId,
         currentStatus: booking.status,
@@ -49,6 +56,9 @@ export class CompleteBookingHandler {
       // booking that already consumed at check-in is a no-op here.
       if (booking.packageCreditId) {
         await consumePackageCreditForBooking(tx, cmd.bookingId);
+        // Check-in consumes the seat but does not prove delivery. Completion
+        // stamps the active V2 usage, idempotently, for sequence gating.
+        await markPackageCreditDeliveredForBooking(tx, cmd.bookingId);
       }
 
       // payAtClinic bookings have no invoice yet (create-booking.handler.ts skips it

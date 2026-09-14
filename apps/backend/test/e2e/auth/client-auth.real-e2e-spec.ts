@@ -663,6 +663,22 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
         )
         .send({});
 
+      // Keep an intermittent 401 actionable: this route is @Public(), so a
+      // JWT-guard rejection and a refresh-token lookup failure have different
+      // response messages. Do not retry or weaken the expected 200 assertion.
+      if (refreshRes.status !== 200) {
+        const responseBody =
+          Object.keys(refreshRes.body ?? {}).length > 0
+            ? JSON.stringify(refreshRes.body)
+            : refreshRes.text || "<empty>";
+        throw new Error(
+          `Refresh with expired access failed: status=${refreshRes.status}; `
+            + `body=${responseBody}; `
+            + `requestCookies={accessPresent:${Boolean(expiredAccess)}, `
+            + `refreshPresent:${Boolean(loginCookies.client_refresh_token)}, `
+            + `refreshLength:${loginCookies.client_refresh_token?.length ?? 0}}`,
+        );
+      }
       expect(refreshRes.status).toBe(200);
       expect(refreshRes.body.clientId).toBe(seeded.id);
     });

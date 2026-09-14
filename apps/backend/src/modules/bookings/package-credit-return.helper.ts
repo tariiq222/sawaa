@@ -4,6 +4,7 @@ import {
 import { Prisma, PackageCreditUsageStatus, PackagePurchaseStatus } from '@prisma/client';
 import { warnIfPackageCreditUsageRowMissing } from './booking-lifecycle.helper';
 import { lockPackagePurchase } from './package-purchase-lock.helper';
+import { assertPackageSessionBookable } from './package-credit-availability.helper';
 
 /**
  * Return a session-package credit held by a booking back to its bucket.
@@ -67,6 +68,80 @@ export async function returnPackageCreditForBooking(
     select: { id: true, creditId: true, status: true },
   });
   if (!usage) return false;
+
+  if (usage.status === PackageCreditUsageStatus.CONSUMED) {
+    const creditMeta = await tx.packageCredit.findUnique({
+      where: { id: usage.creditId },
+      select: {
+        purchaseGroupId: true,
+        sessionPosition: true,
+        purchaseGroup: { select: { id: true, sequenceMode: true } },
+      },
+    });
+    if (creditMeta?.purchaseGroupId && creditMeta.sessionPosition != null && creditMeta.purchaseGroup) {
+      const sessionPosition = creditMeta.sessionPosition;
+      const groups = await tx.packagePurchaseGroup.findMany({
+        where: { purchaseId: creditReference.purchaseId },
+        select: { id: true, sequenceMode: true, dependsOnGroupId: true },
+      });
+      const dependencyDescendants = new Set<string>();
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const group of groups) {
+          if (
+            group.dependsOnGroupId &&
+            (group.dependsOnGroupId === creditMeta.purchaseGroupId ||
+              dependencyDescendants.has(group.dependsOnGroupId)) &&
+            !dependencyDescendants.has(group.id)
+          ) {
+            dependencyDescendants.add(group.id);
+            changed = true;
+          }
+        }
+      }
+
+      const relevantGroupIds = [...dependencyDescendants];
+      if (creditMeta.purchaseGroup.sequenceMode === 'ORDERED') {
+        relevantGroupIds.push(creditMeta.purchaseGroupId);
+      }
+      const downstream = await tx.packageCredit.findMany({
+        where: {
+          purchaseId: creditReference.purchaseId,
+          ...(relevantGroupIds.length > 0
+            ? { purchaseGroupId: { in: relevantGroupIds } }
+            : { id: '__no_group_descendant__' }),
+        },
+        select: {
+          purchaseGroupId: true,
+          sessionPosition: true,
+          usages: {
+            where: {
+              status: {
+                in: [PackageCreditUsageStatus.RESERVED, PackageCreditUsageStatus.CONSUMED],
+              },
+            },
+            select: { status: true },
+          },
+        },
+      });
+      const downstreamEvidence = downstream.some((credit) => {
+        const sameOrderedGroup =
+          credit.purchaseGroupId === creditMeta.purchaseGroupId &&
+          credit.sessionPosition != null &&
+          credit.sessionPosition > sessionPosition;
+        const dependentGroup =
+          credit.purchaseGroupId != null &&
+          dependencyDescendants.has(credit.purchaseGroupId);
+        return (sameOrderedGroup || dependentGroup) && credit.usages.length > 0;
+      });
+      if (downstreamEvidence) {
+        throw new BadRequestException(
+          'A grouped predecessor cannot be returned while a downstream session is active',
+        );
+      }
+    }
+  }
 
   await tx.packageCreditUsage.update({
     where: { id: usage.id },
@@ -179,9 +254,9 @@ export async function reclaimPackageCreditForBooking(
   // findUnique here would be a TOCTOU: a concurrent booking could take the
   // last seat between this read and the increment below.
   const lockedRows = await tx.$queryRaw<
-    Array<{ totalQuantity: number; usedQuantity: number; reservedQuantity: number }>
+    Array<{ totalQuantity: number; usedQuantity: number; reservedQuantity: number; purchaseGroupId?: string | null }>
   >`
-    SELECT "totalQuantity", "usedQuantity", "reservedQuantity"
+    SELECT "totalQuantity", "usedQuantity", "reservedQuantity", "purchaseGroupId"
     FROM "PackageCredit"
     WHERE id = ${usage.creditId}
     FOR UPDATE
@@ -196,6 +271,13 @@ export async function reclaimPackageCreditForBooking(
     throw new BadRequestException(
       'Package credit has no remaining sessions to reclaim',
     );
+  }
+
+  // The returned row may have become eligible for another booking while the
+  // original no-show was being reviewed. Re-check group ordering/dependencies
+  // under the same purchase lock before reclaiming it.
+  if (credit.purchaseGroupId) {
+    await assertPackageSessionBookable(tx, usage.creditId);
   }
 
   // A no-show that is restored goes back to the state it held before: a

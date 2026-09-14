@@ -29,7 +29,7 @@ export function itemStorageDiscount(
 export function buildItemPayload(
   it: PackageItemFormData,
   fallbackSort: number,
-): CreateSessionPackagePayload["items"][number] {
+): NonNullable<CreateSessionPackagePayload["items"]>[number] {
   const singleSpecific = !isFlexibleItem(it)
   const hasHistoricalUnitPrice = it.hasUnitPriceOverride === true || (it.unitPriceSar != null && it.unitPriceSar > 0)
   return {

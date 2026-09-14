@@ -434,10 +434,41 @@ model OrganizationSettings {
 // الباقة = رصيد جلسات يُدفع كاملاً مقدماً ويُستهلك لاحقاً بحجوزات منفصلة.
 // الباقة تعريف فقط؛ سعرها يُحسب لحظياً للعرض، ويُجمَّد (snapshot) وقت الشراء في PackagePurchase.
 // discountValue >= 0 — enforced via CHECK constraint in migration SQL.
+enum PackageModelVersion {
+  LEGACY
+  GROUPED_V2
+}
+
+enum GroupSequenceMode {
+  ORDERED
+  UNORDERED
+}
+
+model PackageFamily {
+  id            String   @id @default(uuid())
+  nameAr        String
+  nameEn        String?
+  descriptionAr String?
+  descriptionEn String?
+  imageUrl      String?
+  isActive      Boolean  @default(true)
+  isPublic      Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  archivedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  options       SessionPackage[]
+
+  @@index([isActive, isPublic])
+}
+
 model SessionPackage {
+  familyId      String?
+  family        PackageFamily? @relation(fields: [familyId], references: [id], onDelete: Restrict)
   id            String       @id @default(uuid())
   ownerEmployeeId String?
   owner         Employee?    @relation(fields: [ownerEmployeeId], references: [id], onDelete: Restrict)
+  modelVersion  PackageModelVersion @default(LEGACY)
   nameAr        String
   nameEn        String?
   descriptionAr String?
@@ -455,11 +486,50 @@ model SessionPackage {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
+  groups SessionPackageGroup[]
   items SessionPackageItem[]
 
+  @@index([familyId])
   @@index([ownerEmployeeId])
   @@index([isActive])
   @@index([isPublic])
+}
+
+// Immutable provenance for an explicitly reviewed legacy-template conversion.
+// The source and draft IDs are plain historical references: neither side is
+// cascaded or updated when a catalog row changes.
+model PackageTemplateConversion {
+  id              String   @id @default(uuid())
+  sourcePackageId String
+  sourceRevision  String
+  draftPackageId  String   @unique
+  createdAt       DateTime @default(now())
+
+  @@unique([sourcePackageId, sourceRevision])
+}
+
+// V2 package topology. Service and employee IDs remain plain cross-BC strings;
+// the group is the unit that owns a practitioner and its session sequence.
+model SessionPackageGroup {
+  id                String               @id @default(uuid())
+  packageId         String
+  package           SessionPackage       @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  key               String
+  label             String?
+  serviceId         String
+  employeeId        String
+  sequenceMode      GroupSequenceMode    @default(ORDERED)
+  dependsOnGroupId  String?
+  dependsOnGroup    SessionPackageGroup? @relation("SessionPackageGroupDependency", fields: [dependsOnGroupId], references: [id], onDelete: Restrict)
+  dependentGroups   SessionPackageGroup[] @relation("SessionPackageGroupDependency")
+  sortOrder         Int                  @default(0)
+  createdAt         DateTime             @default(now())
+
+  items SessionPackageItem[]
+
+  @@unique([packageId, key])
+  @@index([packageId])
+  @@index([dependsOnGroupId])
 }
 
 // Dimensions along which a package item / credit can be scoped, and the matching mode.
@@ -488,6 +558,9 @@ model SessionPackageItem {
   id               String         @id @default(uuid())
   packageId        String
   package          SessionPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  groupId          String?
+  group            SessionPackageGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sessionPosition  Int?
   serviceId        String?
   employeeId       String?
   durationOptionId String?
@@ -507,6 +580,8 @@ model SessionPackageItem {
   constraints SessionPackageItemConstraint[]
 
   @@index([packageId])
+  @@index([groupId])
+  @@unique([groupId, sessionPosition])
 }
 
 // One row per constrained dimension on a package item. `mode` = ANY has no targets.

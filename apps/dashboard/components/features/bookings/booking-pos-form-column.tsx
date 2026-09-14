@@ -64,7 +64,7 @@ interface BookingPosFormColumnProps {
   onSelectDuration: (durationOptionId: string) => void
   onSelectDate: (date: string) => void
   onSelectTime: (startTime: string) => void
-  onAcceptCredit: () => void
+  onAcceptCredit: (creditId: string) => void
   onDismissCredit: () => void
 }
 
@@ -128,6 +128,7 @@ export function BookingPosFormColumn(p: BookingPosFormColumnProps) {
           onSelectTime={onSelectTime}
           onAcceptCredit={onAcceptCredit}
           onDismissCredit={onDismissCredit}
+          deliveryType={state.deliveryType}
         />
       )}
 

@@ -32,6 +32,13 @@ export interface MatchingCredit {
   remaining: number
   /** ISO timestamp. */
   createdAt: string
+  modelVersion?: "LEGACY" | "GROUPED_V2"
+  purchaseGroupId?: string | null
+  sessionPosition?: number | null
+  groupLabel?: string | null
+  sequenceMode?: "ORDERED" | "UNORDERED" | null
+  dependsOnGroupId?: string | null
+  availability?: { bookable: boolean; reason: string | null }
 }
 
 /* ─── Queries ─── */
@@ -41,6 +48,7 @@ export interface MatchingCreditsQuery {
   serviceId: string
   employeeId: string
   durationOptionId: string
+  deliveryType?: DeliveryType
 }
 
 /* ─── Write side ─── */

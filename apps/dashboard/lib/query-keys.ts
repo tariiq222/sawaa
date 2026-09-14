@@ -265,6 +265,12 @@ export const queryKeys = {
     detail: (id: string) => ["packages", "detail", id] as const,
   },
 
+  packageFamilies: {
+    all: ["package-families"] as const,
+    list: () => ["package-families", "list"] as const,
+    detail: (id: string) => ["package-families", "detail", id] as const,
+  },
+
   /* ─── Package Purchases (Phase 2 — reception manual sale + balances) ─── */
   packagePurchases: {
     all: ["package-purchases"] as const,
