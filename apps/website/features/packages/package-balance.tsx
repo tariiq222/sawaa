@@ -399,7 +399,7 @@ export function PackageBalanceFeature({
                           <legend className="text-sm font-semibold">{t('packages.chooseTime')}</legend>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {state.slots.map((slot) => (
-                              <button key={slot.startTime} type="button" role="radio" aria-checked={selectedSlots[credit.id]?.startTime === slot.startTime} onClick={() => setSelectedSlots((current) => ({ ...current, [credit.id]: slot }))} className="rounded-xl border px-3 py-2 text-sm">{new Date(slot.startTime).toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</button>
+                              <button key={slot.startTime} type="button" role="radio" aria-checked={selectedSlots[credit.id]?.startTime === slot.startTime} onClick={() => setSelectedSlots((current) => ({ ...current, [credit.id]: slot }))} className="rounded-xl border px-3 py-2 text-sm">{new Date(slot.startTime).toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Riyadh' })}</button>
                             ))}
                           </div>
                         </fieldset>
