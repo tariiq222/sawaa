@@ -8242,25 +8242,76 @@ export interface components {
             sortOrder?: number;
         };
         EmployeeAvailabilityExceptionResponseDto: {
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Inclusive last date of the time-off range
+             * @example 2026-09-21T00:00:00.000Z
+             */
             endDate: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Availability exception UUID
+             * @example 00000000-0000-4000-a000-000000000011
+             */
             id: string;
+            /**
+             * @description Reason for the time-off exception
+             * @example Annual leave
+             */
             reason: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Inclusive first date of the time-off range
+             * @example 2026-09-20T00:00:00.000Z
+             */
             startDate: string;
         };
         EmployeeAvailabilityResponseDto: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Employee whose availability is returned
+             * @example 00000000-0000-4000-a000-000000000001
+             */
             employeeId: string;
+            /**
+             * @description Date ranges when the employee is unavailable
+             * @example [
+             *       {
+             *         "endDate": "2026-09-21T00:00:00.000Z",
+             *         "id": "00000000-0000-4000-a000-000000000011",
+             *         "reason": "Annual leave",
+             *         "startDate": "2026-09-20T00:00:00.000Z"
+             *       }
+             *     ]
+             */
             exceptions: components["schemas"]["EmployeeAvailabilityExceptionResponseDto"][];
+            /**
+             * @description Recurring weekly availability windows
+             * @example [
+             *       {
+             *         "dayOfWeek": 1,
+             *         "endTime": "17:00",
+             *         "id": "00000000-0000-4000-a000-000000000010",
+             *         "isActive": true,
+             *         "startTime": "09:00"
+             *       }
+             *     ]
+             */
             windows: components["schemas"]["EmployeeAvailabilityWindowResponseDto"][];
         };
         EmployeeAvailabilityWindowResponseDto: {
+            /**
+             * @description Day of week (0=Sunday through 6=Saturday)
+             * @example 1
+             */
             dayOfWeek: number;
             /** @example 17:00 */
             endTime: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Availability window UUID
+             * @example 00000000-0000-4000-a000-000000000010
+             */
             id: string;
             /** @example true */
             isActive: boolean;
@@ -8292,10 +8343,22 @@ export interface components {
             reason?: components["schemas"]["CancellationReason"];
         };
         EmployeeClientResponseDto: {
+            /**
+             * @description Client avatar URL
+             * @example https://cdn.example.com/avatars/client-1.jpg
+             */
             avatarUrl: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Timestamp when the client record was created
+             * @example 2026-01-01T00:00:00.000Z
+             */
             createdAt: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Client date of birth in ISO 8601 format
+             * @example 1990-06-15T00:00:00.000Z
+             */
             dateOfBirth: string | null;
             /** @example sara@example.com */
             email: string | null;
@@ -8313,7 +8376,11 @@ export interface components {
             name: string;
             /** @example +966501234567 */
             phone: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Timestamp when the client record was last updated
+             * @example 2026-01-02T00:00:00.000Z
+             */
             updatedAt: string;
         };
         EmployeeDurationItemDto: {

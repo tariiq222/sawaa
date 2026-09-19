@@ -23,18 +23,18 @@ export class EmployeeClientResponseDto {
   @ApiProperty({ type: String, example: 'FEMALE', nullable: true })
   gender!: string | null;
 
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  @ApiProperty({ description: 'Client date of birth in ISO 8601 format', type: String, format: 'date-time', example: '1990-06-15T00:00:00.000Z', nullable: true })
   dateOfBirth!: Date | null;
 
-  @ApiProperty({ type: String, nullable: true })
+  @ApiProperty({ description: 'Client avatar URL', type: String, example: 'https://cdn.example.com/avatars/client-1.jpg', nullable: true })
   avatarUrl!: string | null;
 
   @ApiProperty({ example: true })
   isActive!: boolean;
 
-  @ApiProperty({ type: String, format: 'date-time' })
+  @ApiProperty({ description: 'Timestamp when the client record was created', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z' })
   createdAt!: Date;
 
-  @ApiProperty({ type: String, format: 'date-time' })
+  @ApiProperty({ description: 'Timestamp when the client record was last updated', type: String, format: 'date-time', example: '2026-01-02T00:00:00.000Z' })
   updatedAt!: Date;
 }

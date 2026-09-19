@@ -42,24 +42,24 @@ export class UpdateAvailabilityBody {
 }
 
 class EmployeeAvailabilityWindowResponseDto {
-  @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ minimum: 0, maximum: 6 }) dayOfWeek!: number;
+  @ApiProperty({ description: 'Availability window UUID', format: 'uuid', example: '00000000-0000-4000-a000-000000000010' }) id!: string;
+  @ApiProperty({ description: 'Day of week (0=Sunday through 6=Saturday)', minimum: 0, maximum: 6, example: 1 }) dayOfWeek!: number;
   @ApiProperty({ example: '09:00' }) startTime!: string;
   @ApiProperty({ example: '17:00' }) endTime!: string;
   @ApiProperty({ example: true }) isActive!: boolean;
 }
 
 class EmployeeAvailabilityExceptionResponseDto {
-  @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ type: String, format: 'date-time' }) startDate!: Date;
-  @ApiProperty({ type: String, format: 'date-time' }) endDate!: Date;
-  @ApiProperty({ type: String, nullable: true }) reason!: string | null;
+  @ApiProperty({ description: 'Availability exception UUID', format: 'uuid', example: '00000000-0000-4000-a000-000000000011' }) id!: string;
+  @ApiProperty({ description: 'Inclusive first date of the time-off range', type: String, format: 'date-time', example: '2026-09-20T00:00:00.000Z' }) startDate!: Date;
+  @ApiProperty({ description: 'Inclusive last date of the time-off range', type: String, format: 'date-time', example: '2026-09-21T00:00:00.000Z' }) endDate!: Date;
+  @ApiProperty({ description: 'Reason for the time-off exception', type: String, example: 'Annual leave', nullable: true }) reason!: string | null;
 }
 
 class EmployeeAvailabilityResponseDto {
-  @ApiProperty({ format: 'uuid' }) employeeId!: string;
-  @ApiProperty({ type: [EmployeeAvailabilityWindowResponseDto] }) windows!: EmployeeAvailabilityWindowResponseDto[];
-  @ApiProperty({ type: [EmployeeAvailabilityExceptionResponseDto] }) exceptions!: EmployeeAvailabilityExceptionResponseDto[];
+  @ApiProperty({ description: 'Employee whose availability is returned', format: 'uuid', example: '00000000-0000-4000-a000-000000000001' }) employeeId!: string;
+  @ApiProperty({ description: 'Recurring weekly availability windows', type: [EmployeeAvailabilityWindowResponseDto], example: [{ id: '00000000-0000-4000-a000-000000000010', dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isActive: true }] }) windows!: EmployeeAvailabilityWindowResponseDto[];
+  @ApiProperty({ description: 'Date ranges when the employee is unavailable', type: [EmployeeAvailabilityExceptionResponseDto], example: [{ id: '00000000-0000-4000-a000-000000000011', startDate: '2026-09-20T00:00:00.000Z', endDate: '2026-09-21T00:00:00.000Z', reason: 'Annual leave' }] }) exceptions!: EmployeeAvailabilityExceptionResponseDto[];
 }
 
 @ApiTags('Mobile Employee / Schedule')

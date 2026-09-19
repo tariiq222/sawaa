@@ -5095,18 +5095,26 @@
       "EmployeeAvailabilityExceptionResponseDto": {
         "properties": {
           "endDate": {
+            "description": "Inclusive last date of the time-off range",
+            "example": "2026-09-21T00:00:00.000Z",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "Availability exception UUID",
+            "example": "00000000-0000-4000-a000-000000000011",
             "format": "uuid",
             "type": "string"
           },
           "reason": {
+            "description": "Reason for the time-off exception",
+            "example": "Annual leave",
             "nullable": true,
             "type": "string"
           },
           "startDate": {
+            "description": "Inclusive first date of the time-off range",
+            "example": "2026-09-20T00:00:00.000Z",
             "format": "date-time",
             "type": "string"
           }
@@ -5122,16 +5130,37 @@
       "EmployeeAvailabilityResponseDto": {
         "properties": {
           "employeeId": {
+            "description": "Employee whose availability is returned",
+            "example": "00000000-0000-4000-a000-000000000001",
             "format": "uuid",
             "type": "string"
           },
           "exceptions": {
+            "description": "Date ranges when the employee is unavailable",
+            "example": [
+              {
+                "endDate": "2026-09-21T00:00:00.000Z",
+                "id": "00000000-0000-4000-a000-000000000011",
+                "reason": "Annual leave",
+                "startDate": "2026-09-20T00:00:00.000Z"
+              }
+            ],
             "items": {
               "$ref": "#/components/schemas/EmployeeAvailabilityExceptionResponseDto"
             },
             "type": "array"
           },
           "windows": {
+            "description": "Recurring weekly availability windows",
+            "example": [
+              {
+                "dayOfWeek": 1,
+                "endTime": "17:00",
+                "id": "00000000-0000-4000-a000-000000000010",
+                "isActive": true,
+                "startTime": "09:00"
+              }
+            ],
             "items": {
               "$ref": "#/components/schemas/EmployeeAvailabilityWindowResponseDto"
             },
@@ -5148,6 +5177,8 @@
       "EmployeeAvailabilityWindowResponseDto": {
         "properties": {
           "dayOfWeek": {
+            "description": "Day of week (0=Sunday through 6=Saturday)",
+            "example": 1,
             "maximum": 6,
             "minimum": 0,
             "type": "number"
@@ -5157,6 +5188,8 @@
             "type": "string"
           },
           "id": {
+            "description": "Availability window UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
             "format": "uuid",
             "type": "string"
           },
@@ -5219,14 +5252,20 @@
       "EmployeeClientResponseDto": {
         "properties": {
           "avatarUrl": {
+            "description": "Client avatar URL",
+            "example": "https://cdn.example.com/avatars/client-1.jpg",
             "nullable": true,
             "type": "string"
           },
           "createdAt": {
+            "description": "Timestamp when the client record was created",
+            "example": "2026-01-01T00:00:00.000Z",
             "format": "date-time",
             "type": "string"
           },
           "dateOfBirth": {
+            "description": "Client date of birth in ISO 8601 format",
+            "example": "1990-06-15T00:00:00.000Z",
             "format": "date-time",
             "nullable": true,
             "type": "string"
@@ -5269,6 +5308,8 @@
             "type": "string"
           },
           "updatedAt": {
+            "description": "Timestamp when the client record was last updated",
+            "example": "2026-01-02T00:00:00.000Z",
             "format": "date-time",
             "type": "string"
           }
