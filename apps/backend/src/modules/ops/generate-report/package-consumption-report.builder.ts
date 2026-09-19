@@ -6,21 +6,32 @@ export interface PackageConsumptionReportParams {
   to: Date;
 }
 
+export type PackageConsumptionAttribution = 'BOOKING' | 'LEGACY_CREDIT' | 'UNKNOWN' | 'MIXED';
+
+export interface PackageConsumptionReportRow {
+  employeeId: string;
+  name: string;
+  count: number;
+  /** Present when the row uses a legacy or otherwise mixed attribution source. */
+  attribution?: PackageConsumptionAttribution;
+}
+
 export interface PackageConsumptionReportResult {
-  /** Total CONSUMED package sessions delivered in the range. */
+  /** Total CONSUMED package sessions debited in the range. */
   totalConsumed: number;
-  byEmployee: Array<{ employeeId: string; name: string; count: number }>;
+  byEmployee: PackageConsumptionReportRow[];
 }
 
 /**
  * Consumption-per-employee report: count of CONSUMED PackageCreditUsage rows
- * (package sessions actually delivered) grouped by the practitioner the credit
- * is bound to, within the date range (by `usedAt`).
+ * (package sessions debited) grouped by the practitioner recorded on the
+ * historical booking, within the date range (by `consumedAt`). Legacy rows
+ * without `consumedAt` use `usedAt` as a read-only fallback.
  *
- * The employee is carried on the parent PackageCredit (a credit is locked to a
- * specific practitioner), so we join usage → credit.employeeId. RETURNED usages
- * (cancelled / no-show give the credit back) are excluded — only delivered
- * sessions count.
+ * Booking is a plain cross-bounded-context ID, so it is loaded in one batch.
+ * The credit's employee is only a labelled legacy fallback when the booking
+ * is absent or does not carry an employee. RETURNED usages (cancelled / no-show
+ * give the credit back) are excluded by the CONSUMED status filter.
  */
 export async function buildPackageConsumptionReport(
   prisma: PrismaService,
@@ -31,35 +42,91 @@ export async function buildPackageConsumptionReport(
   const usages = await prisma.packageCreditUsage.findMany({
     where: {
       status: PackageCreditUsageStatus.CONSUMED,
-      usedAt: { gte: from, lte: to },
+      OR: [
+        { consumedAt: { gte: from, lte: to } },
+        { consumedAt: null, usedAt: { gte: from, lte: to } },
+      ],
     },
-    select: { credit: { select: { employeeId: true } } },
+    select: {
+      bookingId: true,
+      consumedAt: true,
+      usedAt: true,
+      credit: { select: { employeeId: true } },
+    },
   });
 
-  const countByEmployee = new Map<string, number>();
+  const bookingIds = [
+    ...new Set(
+      usages
+        .map((usage) => usage.bookingId)
+        .filter((bookingId): bookingId is string => Boolean(bookingId)),
+    ),
+  ];
+  const bookings = bookingIds.length
+    ? await prisma.booking.findMany({
+        where: { id: { in: bookingIds } },
+        select: { id: true, employeeId: true, employeeNameSnapshot: true },
+      })
+    : [];
+  const bookingById = new Map(bookings.map((booking) => [booking.id, booking]));
+
+  type Source = Exclude<PackageConsumptionAttribution, 'MIXED'>;
+  type CountRow = {
+    count: number;
+    sources: Set<Source>;
+    historicalName?: string;
+  };
+  const countByEmployee = new Map<string, CountRow>();
+  const employeeIds = new Set<string>();
+
   for (const u of usages) {
-    const employeeId = u.credit?.employeeId;
-    if (!employeeId) continue;
-    countByEmployee.set(employeeId, (countByEmployee.get(employeeId) ?? 0) + 1);
+    const booking = u.bookingId ? bookingById.get(u.bookingId) : undefined;
+    const bookingEmployeeId = booking?.employeeId ?? null;
+    const legacyEmployeeId = u.credit?.employeeId ?? null;
+    const employeeId = bookingEmployeeId ?? legacyEmployeeId ?? 'unknown';
+    let source: Source = 'UNKNOWN';
+    if (bookingEmployeeId) source = 'BOOKING';
+    else if (legacyEmployeeId) source = 'LEGACY_CREDIT';
+
+    if (employeeId !== 'unknown') employeeIds.add(employeeId);
+    const row = countByEmployee.get(employeeId) ?? { count: 0, sources: new Set<Source>() };
+    row.count += 1;
+    row.sources.add(source);
+    if (bookingEmployeeId && booking?.employeeNameSnapshot && !row.historicalName) {
+      row.historicalName = booking.employeeNameSnapshot;
+    }
+    countByEmployee.set(employeeId, row);
   }
 
-  const employeeIds = [...countByEmployee.keys()];
-  const employees = employeeIds.length
+  const employeeIdList = [...employeeIds];
+  const employees = employeeIdList.length
     ? await prisma.employee.findMany({
-        where: { id: { in: employeeIds } },
+        where: { id: { in: employeeIdList } },
         select: { id: true, name: true, nameAr: true, nameEn: true },
       })
     : [];
   const employeeById = new Map(employees.map((e) => [e.id, e]));
 
   const byEmployee = [...countByEmployee.entries()]
-    .map(([employeeId, count]) => {
+    .map(([employeeId, row]) => {
       const e = employeeById.get(employeeId);
-      return {
+      const sources = [...row.sources];
+      let attribution: PackageConsumptionAttribution = 'UNKNOWN';
+      if (sources.length === 1) attribution = sources[0];
+      else if (sources.length > 1) attribution = 'MIXED';
+      const name = employeeId === 'unknown'
+        ? 'Unknown practitioner'
+        : row.historicalName ?? e?.nameAr ?? e?.name ?? 'Unknown practitioner';
+      const result: PackageConsumptionReportRow = {
         employeeId,
-        name: e?.nameAr ?? e?.name ?? '',
-        count,
+        name,
+        count: row.count,
       };
+      // Keep the established shape for booking-backed rows. Legacy and unknown
+      // records need an explicit marker so their source is not mistaken for
+      // confirmed historical appointment attribution.
+      if (attribution !== 'BOOKING') result.attribution = attribution;
+      return result;
     })
     // Descending by count; stable tiebreak on employeeId for determinism.
     .sort((a, b) => b.count - a.count || a.employeeId.localeCompare(b.employeeId));

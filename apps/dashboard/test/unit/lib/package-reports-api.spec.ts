@@ -24,6 +24,9 @@ describe("package-reports api", () => {
       kind: "SALES",
       purchaseCount: 0,
       totalRevenue: 0,
+      grossRevenue: 0,
+      refundedAmount: 0,
+      netRevenue: 0,
       byBucket: { cash: 0, network: 0, electronic: 0 },
       byMethod: [],
     })
@@ -56,6 +59,9 @@ describe("package-reports api", () => {
       kind: "SALES",
       purchaseCount: 7,
       totalRevenue: 1234500,
+      grossRevenue: 1234500,
+      refundedAmount: 0,
+      netRevenue: 1234500,
       byBucket: { cash: 100000, network: 200000, electronic: 934500 },
       byMethod: [
         { method: "CASH", amount: 100000, count: 2 },

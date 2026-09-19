@@ -11,3 +11,7 @@ export * from "./branding";
 export * from "./public-branding";
 export type * from "./guest";
 export type * from "./session-package";
+export type * from "./session-package-v2";
+
+export type * from "./package-family";
+export type * from "./client-package";

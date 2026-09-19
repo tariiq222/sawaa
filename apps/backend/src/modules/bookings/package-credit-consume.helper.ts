@@ -51,9 +51,16 @@ export async function consumePackageCreditForBooking(
   });
   if (!usage) return false;
 
+  const creditWithVersion = await tx.packageCredit.findUnique({
+    where: { id: usage.creditId },
+    select: { purchaseGroupId: true },
+  });
   await tx.packageCreditUsage.update({
     where: { id: usage.id },
-    data: { status: PackageCreditUsageStatus.CONSUMED },
+    data: {
+      status: PackageCreditUsageStatus.CONSUMED,
+      ...(creditWithVersion?.purchaseGroupId ? { consumedAt: new Date() } : {}),
+    },
   });
 
   await tx.packageCredit.update({
@@ -84,5 +91,40 @@ export async function consumePackageCreditForBooking(
     }
   }
 
+  return true;
+}
+
+/** Mark the active consumed usage as delivered when a booking is completed. */
+export async function markPackageCreditDeliveredForBooking(
+  tx: Prisma.TransactionClient,
+  bookingId: string,
+): Promise<boolean> {
+  const referencedUsage = await tx.packageCreditUsage.findFirst({
+    where: { bookingId, status: PackageCreditUsageStatus.CONSUMED },
+    select: { id: true, creditId: true, deliveredAt: true },
+  });
+  if (!referencedUsage) return false;
+
+  const reference = await tx.packageCredit.findUnique({
+    where: { id: referencedUsage.creditId },
+    select: { purchaseId: true, purchaseGroupId: true },
+  });
+  if (!reference?.purchaseGroupId) return false;
+
+  const purchase = await lockPackagePurchase(tx, reference.purchaseId);
+  if (!purchase || purchase.status === PackagePurchaseStatus.REFUNDED) {
+    throw new Error('Package purchase is refunded');
+  }
+
+  const usage = await tx.packageCreditUsage.findFirst({
+    where: { bookingId, status: PackageCreditUsageStatus.CONSUMED },
+    select: { id: true, deliveredAt: true },
+  });
+  if (!usage || usage.deliveredAt) return false;
+
+  await tx.packageCreditUsage.update({
+    where: { id: usage.id },
+    data: { deliveredAt: new Date() },
+  });
   return true;
 }

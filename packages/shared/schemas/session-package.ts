@@ -59,6 +59,7 @@ export const sessionPackageItemInputSchema = z.object({
  */
 export const createSessionPackageSchema = z
   .object({
+    ownerEmployeeId: z.string().uuid().nullable().optional(),
     nameAr: z.string().min(1).max(200),
     nameEn: z.string().max(200).optional(),
     descriptionAr: z.string().optional(),
@@ -100,6 +101,7 @@ export const createSessionPackageSchema = z
  */
 export const updateSessionPackageSchema = z
   .object({
+    ownerEmployeeId: z.string().uuid().nullable().optional(),
     nameAr: z.string().min(1).max(200).optional(),
     nameEn: z.string().max(200).optional(),
     descriptionAr: z.string().optional(),

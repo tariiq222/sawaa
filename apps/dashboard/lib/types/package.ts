@@ -13,10 +13,17 @@
  */
 
 import type { PaginatedQuery } from "./common"
+import type {
+  GlobalDiscount,
+  PackageGroupInput,
+  PackageModelVersion,
+} from "@sawaa/shared/types"
 
 /* ─── Discount type ─── */
 
 export type PackageDiscountType = "PERCENTAGE" | "FIXED"
+/** Form-only choice; the API continues to use constraints, not this enum. */
+export type PackageSelectionMode = "FIXED" | "FLEXIBLE"
 
 /* ─── Constraint dimensions / modes ─── */
 
@@ -78,6 +85,8 @@ export interface SessionPackageItem {
   sortOrder: number
   /** Multi-dimensional eligibility. Absent on older data → use the legacy triple. */
   constraints?: PackageConstraintResponse[]
+  /** UI hint only; omitted by the API and inferred from the saved scopes. */
+  selectionMode?: PackageSelectionMode
 }
 
 /**
@@ -92,6 +101,9 @@ export interface SessionPackageItem {
  */
 export interface SessionPackage {
   id: string
+  modelVersion?: PackageModelVersion
+  groups?: PackageGroupInput[]
+  globalDiscount?: GlobalDiscount
   nameAr: string
   nameEn: string | null
   descriptionAr: string | null
@@ -109,6 +121,8 @@ export interface SessionPackage {
   createdAt: string
   updatedAt: string
   items: SessionPackageItem[]
+  /** Package-level practitioner; null/undefined means a general package. */
+  ownerEmployeeId?: string | null
   subtotal: number | string
   discountAmount: number | string
   finalPrice: number | string
@@ -158,10 +172,16 @@ export interface CreateSessionPackagePayload {
   isActive?: boolean
   isPublic?: boolean
   sortOrder?: number
-  items: CreatePackageItemPayload[]
+  /** Null creates a general package; omission is accepted for old callers. */
+  ownerEmployeeId?: string | null
+  items?: CreatePackageItemPayload[]
+  /** Grouped V2 payload fields. Omit these for the legacy editor. */
+  modelVersion?: PackageModelVersion
+  groups?: PackageGroupInput[]
+  globalDiscount?: GlobalDiscount
 }
 
-export type UpdateSessionPackagePayload = Partial<Omit<CreateSessionPackagePayload, "items">> & {
+export type UpdateSessionPackagePayload = Partial<CreateSessionPackagePayload> & {
   items?: CreatePackageItemPayload[]
 }
 

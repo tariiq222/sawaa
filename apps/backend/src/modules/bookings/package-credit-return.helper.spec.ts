@@ -18,6 +18,10 @@ function buildTx() {
     packageCredit: {
       update: jest.fn().mockResolvedValue({ id: 'credit-1' }),
       findUnique: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    packagePurchaseGroup: {
+      findMany: jest.fn().mockResolvedValue([]),
     },
     packagePurchase: {
       update: jest.fn().mockResolvedValue({ id: 'purchase-1' }),
@@ -121,6 +125,67 @@ describe('returnPackageCreditForBooking', () => {
       await returnPackageCreditForBooking(tx as never, BOOKING_ID);
 
       expect(tx.packagePurchase.update).not.toHaveBeenCalled();
+    });
+
+    it('blocks an ordered predecessor return for an active consumed downstream credit even without deliveredAt', async () => {
+      const tx = buildTx();
+      mockConsumed(tx);
+      tx.packageCredit.findUnique
+        .mockResolvedValueOnce({ id: CREDIT_ID, purchaseId: PURCHASE_ID })
+        .mockResolvedValueOnce({
+          purchaseGroupId: 'ordered-group',
+          sessionPosition: 0,
+          purchaseGroup: { id: 'ordered-group', sequenceMode: 'ORDERED' },
+        });
+      tx.packagePurchaseGroup.findMany.mockResolvedValue([
+        { id: 'ordered-group', sequenceMode: 'ORDERED', dependsOnGroupId: null },
+      ]);
+      tx.packageCredit.findMany.mockResolvedValue([
+        {
+          purchaseGroupId: 'ordered-group',
+          sessionPosition: 1,
+          usages: [{ status: PackageCreditUsageStatus.CONSUMED }],
+        },
+      ]);
+
+      await expect(returnPackageCreditForBooking(tx as never, BOOKING_ID)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
+    });
+
+    it('does not block an unordered sibling, but blocks a transitive dependent group', async () => {
+      const tx = buildTx();
+      mockConsumed(tx);
+      tx.packageCredit.findUnique
+        .mockResolvedValueOnce({ id: CREDIT_ID, purchaseId: PURCHASE_ID })
+        .mockResolvedValueOnce({
+          purchaseGroupId: 'source-group',
+          sessionPosition: 0,
+          purchaseGroup: { id: 'source-group', sequenceMode: 'UNORDERED' },
+        });
+      tx.packagePurchaseGroup.findMany.mockResolvedValue([
+        { id: 'source-group', sequenceMode: 'UNORDERED', dependsOnGroupId: null },
+        { id: 'child-group', sequenceMode: 'UNORDERED', dependsOnGroupId: 'source-group' },
+        { id: 'grandchild-group', sequenceMode: 'UNORDERED', dependsOnGroupId: 'child-group' },
+      ]);
+      tx.packageCredit.findMany.mockResolvedValue([
+        {
+          purchaseGroupId: 'source-group',
+          sessionPosition: 1,
+          usages: [{ status: PackageCreditUsageStatus.RESERVED }],
+        },
+        {
+          purchaseGroupId: 'grandchild-group',
+          sessionPosition: 0,
+          usages: [{ status: PackageCreditUsageStatus.CONSUMED }],
+        },
+      ]);
+
+      await expect(returnPackageCreditForBooking(tx as never, BOOKING_ID)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(tx.packageCreditUsage.update).not.toHaveBeenCalled();
     });
 
     it('is idempotent: a usage already RETURNED is ignored (no double-decrement)', async () => {

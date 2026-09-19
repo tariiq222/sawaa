@@ -34,6 +34,16 @@ const validCreate = () => ({
 });
 
 describe('CreateSessionPackageDto', () => {
+  it('accepts a nullable package owner UUID for general and practitioner packages', async () => {
+    await expect(validateCreate({
+      ...validCreate(),
+      ownerEmployeeId: '00000000-0000-4000-a000-000000000002',
+    })).resolves.toHaveLength(0);
+    await expect(validateCreate({
+      ...validCreate(),
+      ownerEmployeeId: null,
+    })).resolves.toHaveLength(0);
+  });
   it('accepts a minimal valid payload', async () => {
     const errors = await validateCreate(validCreate());
     expect(errors).toHaveLength(0);
@@ -115,6 +125,11 @@ describe('CreateSessionPackageDto', () => {
 });
 
 describe('UpdateSessionPackageDto', () => {
+  it('accepts an owner UUID or explicit null', async () => {
+    expect((await validateUpdate({ ownerEmployeeId: '00000000-0000-4000-a000-000000000002' }))).toHaveLength(0);
+    expect((await validateUpdate({ ownerEmployeeId: null }))).toHaveLength(0);
+  });
+
   it('accepts an empty payload (all fields optional)', async () => {
     const errors = await validateUpdate({});
     expect(errors).toHaveLength(0);

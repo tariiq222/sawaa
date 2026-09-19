@@ -2,7 +2,7 @@ import { PackageReportsHandler, PackageReportType } from './package-reports.hand
 
 describe('PackageReportsHandler', () => {
   function buildPrisma() {
-    return {
+    const prisma: any = {
       packagePurchase: { count: jest.fn().mockResolvedValue(0), findMany: jest.fn().mockResolvedValue([]) },
       payment: { findMany: jest.fn().mockResolvedValue([]) },
       packageCredit: {
@@ -11,7 +11,11 @@ describe('PackageReportsHandler', () => {
       },
       packageCreditUsage: { findMany: jest.fn().mockResolvedValue([]) },
       employee: { findMany: jest.fn().mockResolvedValue([]) },
-    } as any;
+      packageRefundEvent: { findMany: jest.fn().mockResolvedValue([]) },
+      refundRequest: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    prisma.$transaction = jest.fn(async (callback: (tx: any) => Promise<unknown>) => callback(prisma));
+    return prisma;
   }
 
   it('normalises a reversed date range (from > to swaps)', async () => {
@@ -58,8 +62,11 @@ describe('PackageReportsHandler', () => {
     const prisma = buildPrisma();
     const handler = new PackageReportsHandler(prisma);
     const result = await handler.execute({ report: PackageReportType.REFUNDED, from: '2026-01-01', to: '2026-01-31' });
-    expect(result).toHaveProperty('refundedCount');
+    expect(result).toHaveProperty('eventCount');
     expect(result).toHaveProperty('totalRefunded');
+    expect(result).toHaveProperty('undatedHistorical');
+    expect(result).toHaveProperty('historyMode', 'EVENTS');
+    expect(result).toHaveProperty('historyReconciliation');
     expect(result).toHaveProperty('kind', 'REFUNDED');
   });
 

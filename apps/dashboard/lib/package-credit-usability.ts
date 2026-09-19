@@ -25,6 +25,58 @@
 
 import type { PackageCredit } from "./types/package-purchase"
 
+export type PackageCreditAvailabilityReason =
+  | "PREDECESSOR_INCOMPLETE"
+  | "GROUP_INCOMPLETE"
+  | "DEPENDENCY_INCOMPLETE"
+  | "RESERVED"
+  | "CONSUMED"
+  | "DELIVERED"
+  | "REFUNDED"
+  | "PURCHASE_INACTIVE"
+  | "OFFERING_UNAVAILABLE"
+
+/** A grouped purchase may contain sessions with capacity that are currently
+ * locked by sequencing, dependency, or an unavailable offering. Keep those
+ * rows visible so staff can understand why the session cannot be selected. */
+export function isGroupedV2Credit(
+  credit: PackageCredit,
+  modelVersion?: string | null,
+): boolean {
+  return (
+    credit.modelVersion === "GROUPED_V2" ||
+    modelVersion === "GROUPED_V2" ||
+    credit.purchaseGroupId != null ||
+    credit.sessionPosition != null
+  )
+}
+
+export function isCreditBookable(credit: PackageCredit): boolean {
+  if (isGroupedV2Credit(credit)) return credit.availability?.bookable === true
+  return credit.availability?.bookable !== false
+}
+
+export function creditAvailabilityReason(
+  credit: PackageCredit,
+): PackageCreditAvailabilityReason | null {
+  const reason = credit.availability?.reason
+  return reason && isAvailabilityReason(reason) ? reason : null
+}
+
+function isAvailabilityReason(value: string): value is PackageCreditAvailabilityReason {
+  return [
+    "PREDECESSOR_INCOMPLETE",
+    "GROUP_INCOMPLETE",
+    "DEPENDENCY_INCOMPLETE",
+    "RESERVED",
+    "CONSUMED",
+    "DELIVERED",
+    "REFUNDED",
+    "PURCHASE_INACTIVE",
+    "OFFERING_UNAVAILABLE",
+  ].includes(value)
+}
+
 /**
  * True only when the backend resolved a concrete `categoryId` AND the
  * triple `(serviceId, employeeId, durationOptionId)` is fully populated
@@ -44,7 +96,8 @@ export function isJumpableCredit(
     credit.serviceId != null &&
     credit.employeeId != null &&
     credit.durationOptionId != null &&
-    credit.serviceIsBookable
+    credit.serviceIsBookable &&
+    isCreditBookable(credit)
   )
 }
 
@@ -76,7 +129,11 @@ export function isFlexiblePackageCredit(credit: PackageCredit): boolean {
  * packages would only ever see one. Falling back to `credit.id` for
  * flexible rows keeps each one's card visible.
  */
-export function creditDedupeKey(credit: PackageCredit): string {
+export function creditDedupeKey(
+  credit: PackageCredit,
+  modelVersion?: string | null,
+): string {
+  if (isGroupedV2Credit(credit, modelVersion)) return `credit:${credit.id}`
   if (credit.serviceId && credit.employeeId && credit.durationOptionId) {
     return `${credit.serviceId}:${credit.employeeId}:${credit.durationOptionId}`
   }
@@ -89,12 +146,15 @@ export function creditDedupeKey(credit: PackageCredit): string {
  * applies this once per `PackagePurchase`; the panel applies it once
  * across the flattened purchase × credit list.
  */
-export function filterUsableCredits(credits: PackageCredit[]): PackageCredit[] {
+export function filterUsableCredits(
+  credits: PackageCredit[],
+  modelVersion?: string | null,
+): PackageCredit[] {
   const seen = new Set<string>()
   const out: PackageCredit[] = []
   for (const credit of credits) {
-    if (credit.remaining <= 0) continue
-    const key = creditDedupeKey(credit)
+    if (credit.remaining <= 0 && !isGroupedV2Credit(credit, modelVersion)) continue
+    const key = creditDedupeKey(credit, modelVersion)
     if (seen.has(key)) continue
     seen.add(key)
     out.push(credit)

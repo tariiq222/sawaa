@@ -73,6 +73,43 @@ describe('GetMatchingCreditsHandler', () => {
         targets: { select: { targetId: true } },
       },
     });
+    expect(args.select.purchaseGroupId).toBe(true);
+  });
+
+  it('preserves the grouped credit scalar purchaseGroupId in the matching response', async () => {
+    const prisma = buildPrisma();
+    prisma.packageCredit.findMany.mockResolvedValue([
+      {
+        id: 'credit-grouped', purchaseId: 'purchase-1',
+        purchaseGroupId: 'group-1', serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        sessionPosition: 0, totalQuantity: 1, usedQuantity: 0,
+        reservedQuantity: 0, createdAt: new Date(),
+        purchase: { modelVersion: 'GROUPED_V2' },
+        purchaseGroup: {
+          id: 'group-1', label: 'Ordered', sequenceMode: 'ORDERED',
+          dependsOnGroupId: null,
+          credits: [{
+            id: 'credit-grouped', sessionPosition: 0, totalQuantity: 1,
+            usedQuantity: 0, reservedQuantity: 0, usages: [],
+          }],
+          dependsOnGroup: null,
+        },
+        constraints: [],
+      },
+    ]);
+    const { handler } = buildHandler(prisma);
+
+    const result = await handler.execute(query());
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        creditId: 'credit-grouped',
+        modelVersion: 'GROUPED_V2',
+        purchaseGroupId: 'group-1',
+        sessionPosition: 0,
+      }),
+    ]);
   });
 
   it('orders results FIFO (oldest purchase first)', async () => {

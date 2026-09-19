@@ -17,7 +17,10 @@ export function PackagePriceSummary({ items, breakdown }: Props) {
   // that carry a price (a duration is selected → payable or free value > 0).
   const priced = items
     .map((it, i) => ({ it, line: breakdown.lines[i] }))
-    .filter((x) => x.line && (x.line.payable > 0 || x.line.freeValue > 0))
+    .filter((x) => x.line && x.it.priceAvailable !== false && (x.line.payable > 0 || x.line.freeValue > 0))
+  const pendingPrice = items.some((item) => item.pricePending)
+  const unavailablePrice = items.some((item) => item.priceAvailable === false && !item.pricePending)
+  const totalPriceLabel = pendingPrice ? t("common.loading") : unavailablePrice ? t("packages.items.priceUnavailable") : formatPrice(breakdown.finalPrice)
 
   return (
     <div className="flex flex-col gap-3 rounded-xl bg-muted/40 p-4">
@@ -64,7 +67,7 @@ export function PackagePriceSummary({ items, breakdown }: Props) {
 
       <div className="flex items-center justify-between border-t border-border pt-2">
         <span className="font-medium">{t("packages.summary.finalPrice")}</span>
-        <span className="tabular-nums font-semibold text-foreground">{formatPrice(breakdown.finalPrice)}</span>
+          <span className="tabular-nums font-semibold text-foreground">{totalPriceLabel}</span>
       </div>
 
       {breakdown.totalSavings > 0 && (

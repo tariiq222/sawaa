@@ -59,6 +59,29 @@ export function isSingleInclude(scope: ScopeFormData | undefined): boolean {
 
 export const packageItemSchema = z
   .object({
+    /** UI-only; omitted from API payloads. Old records infer this from scopes. */
+    selectionMode: z.enum(["FIXED", "FLEXIBLE"]).optional(),
+    /** UI-only snapshot used to preserve untouched legacy constraint shapes. */
+    originalConstraints: z
+      .array(
+        z.object({
+          dimension: z.enum([
+            "SERVICE",
+            "PRACTITIONER",
+            "DURATION",
+            "DELIVERY_TYPE",
+          ]),
+          mode: z.enum(["ANY", "INCLUDE", "EXCLUDE"]),
+          targetIds: z.array(z.string()).optional(),
+        })
+      )
+      .optional(),
+    /** UI-only marker so a saved explicit zero override is not lost. */
+    hasUnitPriceOverride: z.boolean().optional(),
+    /** UI-only marker set when a derived duration price could not be resolved. */
+    priceUnavailable: z.boolean().optional(),
+    /** UI-only notice that a dependency change cleared an old price. */
+    priceResetNotice: z.boolean().optional(),
     service: scopeSchema,
     practitioner: scopeSchema,
     /** Only meaningful when single-specific; otherwise implicitly ANY. */
@@ -81,20 +104,7 @@ export type PackageItemFormData = z.infer<typeof packageItemSchema>
 
 /* ─── Items array (min 1 + per-item quantity rule) ─── */
 
-const itemsArray = z
-  .array(packageItemSchema)
-  .min(1, "packages.errors.minItems")
-  .superRefine((items, ctx) => {
-    items.forEach((it, i) => {
-      if (it.paidQuantity + (it.freeQuantity ?? 0) < 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [i, "paidQuantity"],
-          message: "packages.errors.minQuantity",
-        })
-      }
-    })
-  })
+const itemsArray = z.array(packageItemSchema).min(1, "packages.errors.minItems")
 
 /**
  * Shared base schema — every top-level field is optional here so create/edit
@@ -111,6 +121,9 @@ const basePackageSchema = z.object({
   sortOrder: numberField().int(WHOLE_NUMBER).min(0, NON_NEGATIVE).optional(),
   isActive: z.boolean().optional(),
   isPublic: z.boolean().optional(),
+  ownerEmployeeId: z.string().trim().min(1).nullable().optional(),
+  /** UI-only revision so item dependency effects can observe owner changes after backtracking. */
+  ownerChangeRevision: numberField().int().min(0, NON_NEGATIVE).optional(),
   items: itemsArray.optional(),
 })
 

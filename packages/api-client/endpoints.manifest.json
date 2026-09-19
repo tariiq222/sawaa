@@ -214,5 +214,49 @@
   {
     "method": "POST",
     "path": "/api/v1/public/refunds/request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/organization/package-families"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/dashboard/organization/package-families"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/organization/package-families/{id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/dashboard/organization/package-families/{id}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/dashboard/organization/package-families/{id}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/public/package-families"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/public/package-families/{id}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/public/payments/package-purchases/init"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/public/me/packages/purchases"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/public/me/packages/purchases/{id}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/public/me/packages/book"
   }
 ]

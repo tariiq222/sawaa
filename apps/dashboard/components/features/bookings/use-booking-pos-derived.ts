@@ -15,11 +15,13 @@ import { useQuery } from "@tanstack/react-query"
 
 import { queryKeys } from "@/lib/query-keys"
 import { fetchEmployeeServiceTypes } from "@/lib/api/employees-schedule"
+import { useClientPackagePurchases } from "@/hooks/use-package-purchases"
 
 import type { Locale } from "@/lib/translations"
 import type { SectionId } from "./pos-collapsible-section"
 import type { BookingFormState } from "./use-booking-form-state"
 import type { EmployeeServiceType } from "@/lib/types/employee"
+import { resolveSelectedPackageSummary } from "./selected-package-summary"
 
 interface UseBookingPosDerivedParams {
   state: BookingFormState
@@ -29,6 +31,29 @@ interface UseBookingPosDerivedParams {
 
 export function useBookingPosDerived(params: UseBookingPosDerivedParams) {
   const { state, t, locale } = params
+
+  const { data: packagePurchases } = useClientPackagePurchases(state.clientId, {
+    status: "ACTIVE",
+  })
+  const selectedPackageSummary = useMemo(
+    () =>
+      resolveSelectedPackageSummary({
+        clientId: state.clientId,
+        packagePurchaseId: state.packagePurchaseId,
+        packageCreditId: state.packageCreditId,
+        creditFilter: state.creditFilter,
+        purchases: packagePurchases,
+        locale,
+      }),
+    [
+      locale,
+      packagePurchases,
+      state.clientId,
+      state.creditFilter,
+      state.packageCreditId,
+      state.packagePurchaseId,
+    ],
+  )
 
   const isServiceAutoSelected = useMemo(
     () => state.categoryBookingMode === "DIRECT" && !!state.serviceId,
@@ -43,10 +68,7 @@ export function useBookingPosDerived(params: UseBookingPosDerivedParams) {
     client: state.clientName,
     track: state.track ? t(`bookings.pos.track.${state.track.toLowerCase()}`) : null,
     department: state.departmentName,
-    // PACKAGES-track summary stays null — the section name lives inside
-    // StepPackage; form state only carries `packagePurchaseId`. The
-    // section's own isFilled gate (serviceId+employeeId) marks it filled.
-    package: null,
+    package: selectedPackageSummary?.packageName ?? null,
     program: state.programName,
     category: state.categoryName,
     service: state.serviceName,
@@ -125,5 +147,6 @@ export function useBookingPosDerived(params: UseBookingPosDerivedParams) {
     selectedDurationMins,
     durationSummaryLabel,
     creditBadgeReady,
+    selectedPackageSummary,
   }
 }

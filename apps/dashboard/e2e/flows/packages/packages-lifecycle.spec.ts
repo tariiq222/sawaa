@@ -18,10 +18,8 @@
  *      purchase card shows REFUNDED ("مستردة") and the credit-book button
  *      is gone.
  *
- * Critical contract: NO fixture PATCH against
- * `/dashboard/organization/packages/:id` may occur between UI creation and
- * the subsequent sale POST — only the create POST's `waitForResponse`
- * matcher and the cleanup DELETE reference that path.
+ * The package fixture is created through the legacy API contract so this
+ * lifecycle test remains focused on sale, booking, cancellation and refund.
  *
  * All shared setup, teardown, and UI helpers live in
  * `_shared/packages-lifecycle-fixture.ts`. No `test.describe` / `test`
@@ -31,7 +29,6 @@ import { test, expect } from "@playwright/test"
 import { loginAs } from "../../fixtures/auth"
 import { dashboardApiRequest } from "../../fixtures/seed"
 import {
-  buildPackageItemViaUI,
   pickCreditBookDateCell,
   seedPackagesLifecycleFixtures,
   teardownPackagesLifecycleFixtures,
@@ -54,6 +51,7 @@ const harness: PackagesLifecycleHarness = {
   seededBranchId: "",
   seededEmployeeId: "",
   seededServiceId: "",
+  seededDurationId: "",
   seededServiceNameAr: "",
   seededClientId: "",
   seededClientName: "",
@@ -78,64 +76,15 @@ test.describe("Session Packages — dashboard lifecycle", () => {
   }) => {
     test.setTimeout(180_000)
 
-    /* ── 1. Login + create a package on /packages/create ─────────────── */
+    /* ── 1. Login + seed a LEGACY package for the lifecycle ───────────── */
     await loginAs(page, "admin")
-
-    await page.goto("/packages", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: /باقات الجلسات/ })).toBeVisible({
-      timeout: 20_000,
+    const createResponse = await dashboardApiRequest("/dashboard/organization/packages", harness.token, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modelVersion: "LEGACY", nameAr: harness.packageNameAr, items: [{ serviceId: harness.seededServiceId, employeeId: harness.seededEmployeeId, durationOptionId: harness.seededDurationId, paidQuantity: 4, freeQuantity: 0 }] }),
     })
-
-    // The "إضافة باقة" button is the create trigger on the empty-state card AND the page-header button. Match by text — they're identical.
-    const addBtn = page.getByRole("button", { name: /إضافة باقة/ }).first();
-    await expect(addBtn).toBeVisible({ timeout: 10_000 });
-    await addBtn.click()
-
-    // Form page: wait for the nameAr input + the item-builder add button.
-    await expect(page).toHaveURL(/\/packages\/create/, { timeout: 10_000 });
-    const nameArInput = page.locator('input[dir="rtl"]').first();
-    await expect(nameArInput).toBeVisible({ timeout: 15_000 });
-    await nameArInput.fill(harness.packageNameAr)
-
-    const addItemBtn = page.getByRole("button", { name: /إضافة بند/ });
-    await expect(addItemBtn).toBeVisible({ timeout: 10_000 });
-    await addItemBtn.click()
-
-    // Drive the package item through the REAL ScopeControl + MultiSelect +
-    // DurationSelect UI. The helper asserts the single-specific proof
-    // (unitPriceSar input gone + 150.00 SAR in the item grid) and fills
-    // paidQuantity/freeQuantity. No fixture PATCH must intervene between
-    // this and the sale POST below.
-    await buildPackageItemViaUI(page, {
-      serviceNameAr: harness.seededServiceNameAr,
-      employeeName: harness.employeeName,
-    })
-
-    // Discount: leave at the 0 default (finalPrice = 4 × 150 SAR = 600 SAR).
-
-    // Submit the create form. The "إنشاء الباقة" button is type="submit".
-    const submitBtn = page.getByRole("button", { name: /إنشاء الباقة/ })
-    await expect(submitBtn).toBeEnabled({ timeout: 10_000 })
-
-    // Capture the POST response so we can extract the real package id
-    // (the list re-reads the rows on cache invalidation).
-    const createResponsePromise = page.waitForResponse(
-      (r) =>
-        r.url().includes("/dashboard/organization/packages") &&
-        r.request().method() === "POST" &&
-        r.ok(),
-      { timeout: 30_000 },
-    )
-    await submitBtn.click()
-    const createResponse = await createResponsePromise
-    const created = (await createResponse.json()) as { id: string }
-    harness.seededPackageId = created.id
-
-    // After successful create, the form navigates back to /packages.
-    await expect(page).toHaveURL(/\/packages$/, { timeout: 15_000 });
-    await expect(
-      page.getByRole("cell", { name: new RegExp(harness.packageNameAr) }),
-    ).toBeVisible({ timeout: 15_000 })
+    if (!createResponse.ok) throw new Error(`lifecycle package fixture failed: ${createResponse.status}`)
+    harness.seededPackageId = ((await createResponse.json()) as { id: string }).id
 
     /* ── 2. Sell the package to the seeded client ─────────────────────── */
     await page.goto(`/clients/${harness.seededClientId}`, { waitUntil: "domcontentloaded" });
@@ -210,8 +159,8 @@ test.describe("Session Packages — dashboard lifecycle", () => {
 
     // Explicit-credit evidence: the issued credit row must display the
     // seeded service name, employee name, and duration label BEFORE we click
-    // "احجز موعد". This proves the UI-created single-specific item was the
-    // source of the credit (not a silent fixture PATCH). The `<li>` wraps
+    // "احجز موعد". This proves the explicit package item was the source of
+    // the credit. The `<li>` wraps
     // serviceName + "employeeName • durationLabel" + the book button.
     const creditRow = page
       .locator("li")

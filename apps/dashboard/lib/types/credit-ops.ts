@@ -28,6 +28,10 @@ import type { PackageCredit } from "./package-purchase"
  */
 export interface TransferCreditPayload {
   toEmployeeId: string
+  /** Required for grouped V2 credits; optional for legacy credits. */
+  reason?: string
+  /** Needed when the target uses a different duration-option id for the same frozen offering. */
+  targetDurationOptionId?: string
 }
 
 /**
@@ -77,6 +81,10 @@ export interface ServiceEmployeeOption {
   isActive: boolean
   /** Raw row re-exposed so callers can read any extra fields they want. */
   raw: unknown
+  effectiveDurations?: Array<{
+    deliveryType: "IN_PERSON" | "ONLINE"
+    durations: Array<{ id: string; durationMins: number; labelAr: string; label: string }>
+  }>
 }
 
 /* ─── Helper: select the right employees for a credit ─── */

@@ -78,6 +78,30 @@ describe('buildOutstandingCreditReport', () => {
     expect(result.creditCount).toBe(1);
   });
 
+  it('keeps differently priced V2 session rights while capping liability after a partial refund', async () => {
+    // A 10% global discount produced 27,000 + 13,500 + 18,000 halalas for
+    // the three priced sessions. One priced session is consumed; the zero-net
+    // session still counts as a right but contributes no liability.
+    prisma.packagePurchase.findMany.mockResolvedValue([
+      {
+        amountPaid: 81_000,
+        refundAmount: 40_000,
+        credits: [
+          credit({ unitPriceSnapshot: 30_000, netValue: 27_000, totalQuantity: 1 }),
+          credit({ unitPriceSnapshot: 15_000, netValue: 13_500, totalQuantity: 1, usedQuantity: 1 }),
+          credit({ unitPriceSnapshot: 20_000, netValue: 18_000, totalQuantity: 1 }),
+          credit({ unitPriceSnapshot: 0, netValue: 0, totalQuantity: 1 }),
+        ],
+      },
+    ]);
+
+    const result = await buildOutstandingCreditReport(prisma, {});
+
+    expect(result.outstandingSessions).toBe(3);
+    expect(result.creditCount).toBe(3);
+    expect(result.outstandingLiability).toBe(41_000); // 27,000 + 18,000 capped by 81,000 − 40,000
+  });
+
   it('falls back to the purchase amount for credits issued before net values were stored', async () => {
     prisma.packagePurchase.findMany.mockResolvedValue([
       { amountPaid: 175_000, refundAmount: 0, credits: [credit({ usedQuantity: 1 })] },

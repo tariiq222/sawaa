@@ -15,8 +15,9 @@ import { IsEnum } from 'class-validator';
  *
  * The caller either targets an explicit `creditId`, OR supplies the full
  * (serviceId, employeeId, durationOptionId) triple so the handler can
- * FIFO-select the matching credit. The duration is FIXED by the credit — the
- * caller cannot pass a duration.
+ * FIFO-select the matching credit. With an explicit creditId, a complete
+ * target triple may select a flexible credit; omitted delivery defaults from
+ * the selected duration option.
  */
 export class BookFromCreditDto {
   @ApiProperty({ description: 'Client booking the appointment', example: '00000000-0000-4000-a000-000000000001', format: 'uuid' })
@@ -32,18 +33,18 @@ export class BookFromCreditDto {
   @IsUUID()
   creditId?: string;
 
-  @ApiPropertyOptional({ description: 'Service to match a credit on (required when creditId is omitted)', example: '00000000-0000-4000-a000-000000000004', format: 'uuid' })
-  @ValidateIf((o: BookFromCreditDto) => !o.creditId)
+  @ApiPropertyOptional({ description: 'Concrete service target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit', example: '00000000-0000-4000-a000-000000000004', format: 'uuid' })
+  @ValidateIf((o: BookFromCreditDto) => !o.creditId || o.serviceId !== undefined || o.employeeId !== undefined || o.durationOptionId !== undefined)
   @IsUUID()
   serviceId?: string;
 
-  @ApiPropertyOptional({ description: 'Employee to match a credit on (required when creditId is omitted)', example: '00000000-0000-4000-a000-000000000003', format: 'uuid' })
-  @ValidateIf((o: BookFromCreditDto) => !o.creditId)
+  @ApiPropertyOptional({ description: 'Concrete practitioner target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit', example: '00000000-0000-4000-a000-000000000003', format: 'uuid' })
+  @ValidateIf((o: BookFromCreditDto) => !o.creditId || o.serviceId !== undefined || o.employeeId !== undefined || o.durationOptionId !== undefined)
   @IsUUID()
   employeeId?: string;
 
-  @ApiPropertyOptional({ description: 'Duration option to match a credit on (required when creditId is omitted)', example: '00000000-0000-4000-a000-000000000005', format: 'uuid' })
-  @ValidateIf((o: BookFromCreditDto) => !o.creditId)
+  @ApiPropertyOptional({ description: 'Concrete duration target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit', example: '00000000-0000-4000-a000-000000000005', format: 'uuid' })
+  @ValidateIf((o: BookFromCreditDto) => !o.creditId || o.serviceId !== undefined || o.employeeId !== undefined || o.durationOptionId !== undefined)
   @IsUUID()
   durationOptionId?: string;
 

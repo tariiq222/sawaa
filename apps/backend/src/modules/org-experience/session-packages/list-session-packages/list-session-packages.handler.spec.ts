@@ -140,6 +140,7 @@ describe('ListSessionPackagesHandler', () => {
     expect(res.items[0]).toEqual(
       expect.objectContaining({
         id: 'a',
+        ownerEmployeeId: null,
         subtotal: 81000,
         discountAmount: 9000,
         finalPrice: 72000,

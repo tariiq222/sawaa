@@ -44,6 +44,7 @@ import { useLocale } from "@/components/locale-provider"
 import { DatePicker } from "@/components/ui/date-picker"
 import { showApiError } from "@/lib/mutation-helpers"
 import { combineDateTimeToISO } from "@/lib/utils"
+import { creditAvailabilityReason, isCreditBookable } from "@/lib/package-credit-usability"
 import type { PackageCredit } from "@/lib/types/package-purchase"
 
 /* ─── Props ─── */
@@ -95,7 +96,8 @@ export function CreditBookForm({
     !!date &&
     isTimeValid &&
     !bookMut.isPending &&
-    !branchesLoading
+    !branchesLoading &&
+    isCreditBookable(credit)
 
   async function onSubmit() {
     if (!canSubmit) return
@@ -136,6 +138,7 @@ export function CreditBookForm({
     locale === "ar"
       ? credit.durationLabelAr
       : (credit.durationLabelEn ?? credit.durationLabelAr)
+  const availabilityReason = creditAvailabilityReason(credit)
 
   return (
     <>
@@ -159,6 +162,11 @@ export function CreditBookForm({
               label={t("packages.balances.book.summary.remaining")}
               value={String(credit.remaining)}
             />
+            {availabilityReason && (
+              <p role="alert" className="text-xs font-medium text-warning">
+                {t(`packages.balances.availability.${availabilityReason}`)}
+              </p>
+            )}
           </div>
 
           {/* ── Branch selector ── */}
