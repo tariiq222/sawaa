@@ -130,8 +130,10 @@ request write access or post unsolicited comments.
 Trivy scans the repository filesystem for HIGH and CRITICAL OS/library
 vulnerabilities with `ignore-unfixed: false` and `exit-code: '1'`. The scan skips
 generated dependency/build output (`coverage`, `dist`, `node_modules`, and `.next`)
-but does not exclude `apps/mobile`; both the root `pnpm-lock.yaml` and the
-standalone `apps/mobile/pnpm-lock.yaml` are included. The
+at the scan root and at nested paths using Trivy doublestar glob patterns. It
+does not exclude `apps/mobile`; both the root `pnpm-lock.yaml` and the standalone
+`apps/mobile/pnpm-lock.yaml` are included. The explicit directory/file patterns
+target generated trees only, so they do not exclude either tracked lockfile. The
 job writes `trivy-fs.sarif` using Trivy's SARIF formatter and stores it in a
 private Actions artifact for seven days. Artifact upload runs after the job's
 other steps when the report exists. GitHub Code Scanning SARIF upload is not
