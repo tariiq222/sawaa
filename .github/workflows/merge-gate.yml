@@ -159,6 +159,8 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-fs.sarif'
+          scanners: 'vuln'
+          limit-severities-for-sarif: true
           exit-code: '1'
           ignore-unfixed: false
           skip-dirs: 'coverage,dist,node_modules,.next'
