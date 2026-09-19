@@ -5092,6 +5092,125 @@
         ],
         "type": "object"
       },
+      "EmployeeAvailabilityExceptionResponseDto": {
+        "properties": {
+          "endDate": {
+            "description": "Inclusive last date of the time-off range",
+            "example": "2026-09-21T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Availability exception UUID",
+            "example": "00000000-0000-4000-a000-000000000011",
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Reason for the time-off exception",
+            "example": "Annual leave",
+            "nullable": true,
+            "type": "string"
+          },
+          "startDate": {
+            "description": "Inclusive first date of the time-off range",
+            "example": "2026-09-20T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "startDate",
+          "endDate",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "EmployeeAvailabilityResponseDto": {
+        "properties": {
+          "employeeId": {
+            "description": "Employee whose availability is returned",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "exceptions": {
+            "description": "Date ranges when the employee is unavailable",
+            "example": [
+              {
+                "endDate": "2026-09-21T00:00:00.000Z",
+                "id": "00000000-0000-4000-a000-000000000011",
+                "reason": "Annual leave",
+                "startDate": "2026-09-20T00:00:00.000Z"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityExceptionResponseDto"
+            },
+            "type": "array"
+          },
+          "windows": {
+            "description": "Recurring weekly availability windows",
+            "example": [
+              {
+                "dayOfWeek": 1,
+                "endTime": "17:00",
+                "id": "00000000-0000-4000-a000-000000000010",
+                "isActive": true,
+                "startTime": "09:00"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityWindowResponseDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "employeeId",
+          "windows",
+          "exceptions"
+        ],
+        "type": "object"
+      },
+      "EmployeeAvailabilityWindowResponseDto": {
+        "properties": {
+          "dayOfWeek": {
+            "description": "Day of week (0=Sunday through 6=Saturday)",
+            "example": 1,
+            "maximum": 6,
+            "minimum": 0,
+            "type": "number"
+          },
+          "endTime": {
+            "example": "17:00",
+            "type": "string"
+          },
+          "id": {
+            "description": "Availability window UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "example": true,
+            "type": "boolean"
+          },
+          "startTime": {
+            "example": "09:00",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "isActive"
+        ],
+        "type": "object"
+      },
       "EmployeeCancelBookingDto": {
         "properties": {
           "cancelNotes": {
@@ -5128,6 +5247,87 @@
             "example": "EMPLOYEE_UNAVAILABLE"
           }
         },
+        "type": "object"
+      },
+      "EmployeeClientResponseDto": {
+        "properties": {
+          "avatarUrl": {
+            "description": "Client avatar URL",
+            "example": "https://cdn.example.com/avatars/client-1.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Timestamp when the client record was created",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "description": "Client date of birth in ISO 8601 format",
+            "example": "1990-06-15T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "example": "Sara",
+            "nullable": true,
+            "type": "string"
+          },
+          "gender": {
+            "example": "FEMALE",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "example": true,
+            "type": "boolean"
+          },
+          "lastName": {
+            "example": "Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "example": "Sara Al-Harbi",
+            "type": "string"
+          },
+          "phone": {
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Timestamp when the client record was last updated",
+            "example": "2026-01-02T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "firstName",
+          "lastName",
+          "phone",
+          "email",
+          "gender",
+          "dateOfBirth",
+          "avatarUrl",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
         "type": "object"
       },
       "EmployeeDurationItemDto": {
@@ -6858,19 +7058,69 @@
             "example": 10000,
             "type": "number"
           },
+          "amount_format": {
+            "description": "Formatted payment amount with currency",
+            "example": "100.00 SAR",
+            "type": "string"
+          },
+          "callback_url": {
+            "description": "Payment callback URL",
+            "example": "https://sawaa.test/payment/callback",
+            "type": "string"
+          },
+          "captured": {
+            "description": "Amount captured in the smallest currency unit",
+            "example": 10000,
+            "type": "number"
+          },
+          "captured_at": {
+            "description": "Timestamp when the payment was captured",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "captured_format": {
+            "description": "Formatted captured amount with currency",
+            "example": "100.00 SAR",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "Timestamp when the payment was created",
+            "example": "2026-09-19T18:43:30.000Z",
+            "type": "string"
+          },
           "currency": {
             "description": "ISO 4217 currency code",
             "example": "SAR",
             "type": "string"
           },
+          "description": {
+            "description": "Human-readable payment description",
+            "example": "Counseling booking",
+            "type": "string"
+          },
+          "fee": {
+            "description": "Estimated payment fee in the smallest currency unit",
+            "example": 250,
+            "type": "number"
+          },
+          "fee_format": {
+            "description": "Formatted payment fee with currency",
+            "example": "2.50 SAR",
+            "type": "string"
+          },
           "id": {
-            "description": "Moyasar payment ID",
+            "description": "Moyasar payment ID (or event ID in the nested envelope)",
             "example": "pay_abc123",
             "type": "string"
           },
           "invoice_id": {
             "description": "Moyasar hosted-checkout invoice ID",
             "example": "inv_abc123",
+            "type": "string"
+          },
+          "ip": {
+            "description": "Payer IP address reported by Moyasar",
+            "example": "127.0.0.1",
             "type": "string"
           },
           "message": {
@@ -6886,6 +7136,32 @@
             ],
             "description": "Metadata attached when the payment was initiated"
           },
+          "refunded": {
+            "description": "Amount refunded in the smallest currency unit",
+            "example": 0,
+            "type": "number"
+          },
+          "refunded_at": {
+            "description": "Timestamp when the payment was refunded",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "refunded_format": {
+            "description": "Formatted refunded amount with currency",
+            "example": "0.00 SAR",
+            "type": "string"
+          },
+          "source": {
+            "description": "Payment source details returned by Moyasar",
+            "type": "object"
+          },
+          "splits": {
+            "description": "Payment split details returned by Moyasar",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
           "status": {
             "description": "Payment status reported by Moyasar",
             "enum": [
@@ -6897,6 +7173,16 @@
               "voided"
             ],
             "example": "paid",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "Timestamp when the payment was last updated",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "voided_at": {
+            "description": "Timestamp when the payment was voided",
+            "example": "2026-09-19T18:43:34.000Z",
             "type": "string"
           }
         },
@@ -6910,17 +7196,42 @@
             "type": "string"
           },
           "amount": {
-            "description": "Amount in the smallest currency unit (halalas) — flat shape only",
+            "description": "Amount in the smallest currency unit (halalas)",
             "example": 10000,
             "type": "number"
           },
+          "amount_format": {
+            "description": "Formatted payment amount with currency",
+            "example": "100.00 SAR",
+            "type": "string"
+          },
+          "callback_url": {
+            "description": "Payment callback URL",
+            "example": "https://sawaa.test/payment/callback",
+            "type": "string"
+          },
+          "captured": {
+            "description": "Amount captured in the smallest currency unit",
+            "example": 10000,
+            "type": "number"
+          },
+          "captured_at": {
+            "description": "Timestamp when the payment was captured",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "captured_format": {
+            "description": "Formatted captured amount with currency",
+            "example": "100.00 SAR",
+            "type": "string"
+          },
           "created_at": {
-            "description": "ISO 8601 timestamp when the event was created",
-            "example": "2024-01-15T10:30:00Z",
+            "description": "Timestamp when the payment was created",
+            "example": "2026-09-19T18:43:30.000Z",
             "type": "string"
           },
           "currency": {
-            "description": "ISO 4217 currency code (flat shape only)",
+            "description": "ISO 4217 currency code",
             "example": "SAR",
             "type": "string"
           },
@@ -6932,14 +7243,34 @@
             ],
             "description": "Nested payment object — the documented Moyasar webhook delivery shape"
           },
+          "description": {
+            "description": "Human-readable payment description",
+            "example": "Counseling booking",
+            "type": "string"
+          },
+          "fee": {
+            "description": "Estimated payment fee in the smallest currency unit",
+            "example": 250,
+            "type": "number"
+          },
+          "fee_format": {
+            "description": "Formatted payment fee with currency",
+            "example": "2.50 SAR",
+            "type": "string"
+          },
           "id": {
-            "description": "Payment ID (flat shape) OR event ID (nested shape)",
+            "description": "Moyasar payment ID (or event ID in the nested envelope)",
             "example": "pay_abc123",
             "type": "string"
           },
           "invoice_id": {
-            "description": "Moyasar hosted-checkout invoice ID (flat shape)",
+            "description": "Moyasar hosted-checkout invoice ID",
             "example": "inv_abc123",
+            "type": "string"
+          },
+          "ip": {
+            "description": "Payer IP address reported by Moyasar",
+            "example": "127.0.0.1",
             "type": "string"
           },
           "live": {
@@ -6948,7 +7279,7 @@
             "type": "object"
           },
           "message": {
-            "description": "Human-readable message from Moyasar (flat shape only)",
+            "description": "Human-readable message from Moyasar (e.g. failure reason)",
             "example": "Insufficient funds",
             "type": "string"
           },
@@ -6958,14 +7289,40 @@
                 "$ref": "#/components/schemas/MoyasarWebhookMetadataDto"
               }
             ],
-            "description": "Metadata attached when the payment was initiated (flat shape only)"
+            "description": "Metadata attached when the payment was initiated"
+          },
+          "refunded": {
+            "description": "Amount refunded in the smallest currency unit",
+            "example": 0,
+            "type": "number"
+          },
+          "refunded_at": {
+            "description": "Timestamp when the payment was refunded",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "refunded_format": {
+            "description": "Formatted refunded amount with currency",
+            "example": "0.00 SAR",
+            "type": "string"
           },
           "secret_token": {
             "description": "Shared secret token — present when the merchant configures body-token verification instead of an HMAC header",
             "type": "string"
           },
+          "source": {
+            "description": "Payment source details returned by Moyasar",
+            "type": "object"
+          },
+          "splits": {
+            "description": "Payment split details returned by Moyasar",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
           "status": {
-            "description": "Payment status reported by Moyasar (flat shape only)",
+            "description": "Payment status reported by Moyasar",
             "enum": [
               "paid",
               "failed",
@@ -6981,18 +7338,61 @@
             "description": "Webhook event type (nested shape)",
             "example": "payment_paid",
             "type": "string"
+          },
+          "updated_at": {
+            "description": "Timestamp when the payment was last updated",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "voided_at": {
+            "description": "Timestamp when the payment was voided",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
           }
         },
         "type": "object"
       },
       "MoyasarWebhookMetadataDto": {
         "properties": {
+          "bookingId": {
+            "description": "Booking identity embedded in the payment metadata",
+            "example": "booking_abc123",
+            "type": "string"
+          },
+          "internalPaymentId": {
+            "description": "Internal payment identity embedded in the payment metadata",
+            "example": "payment_abc123",
+            "type": "string"
+          },
           "invoiceId": {
             "description": "Invoice UUID embedded in the payment metadata",
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
+          },
+          "packagePurchaseId": {
+            "description": "Package purchase identity embedded in the payment metadata",
+            "example": "purchase_abc123",
+            "type": "string"
+          },
+          "source": {
+            "description": "Internal source label embedded in the payment metadata",
+            "example": "public-booking",
+            "type": "string"
           }
         },
+        "type": "object"
+      },
+      "NativeSessionDto": {
+        "properties": {
+          "refreshToken": {
+            "description": "Native refresh token. It is sent in the JSON body, never as a cookie.",
+            "example": "a1b2c3d4-0000-1111-2222-333344445555",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
         "type": "object"
       },
       "NotificationListMetaDto": {
@@ -8788,7 +9188,25 @@
         "type": "object"
       },
       "UpdateAvailabilityBody": {
-        "properties": {},
+        "properties": {
+          "exceptions": {
+            "description": "Date-range exceptions (holidays, leave)",
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityException"
+            },
+            "type": "array"
+          },
+          "windows": {
+            "description": "Weekly availability windows",
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityWindow"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "windows"
+        ],
         "type": "object"
       },
       "UpdateAvailabilityDto": {
@@ -33367,6 +33785,136 @@
         ]
       }
     },
+    "/api/v1/mobile/auth/logout": {
+      "post": {
+        "operationId": "MobileClientAuthController_logout_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Native sessions revoked"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Revoke native mobile sessions",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/refresh": {
+      "post": {
+        "operationId": "MobileClientAuthController_refresh_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Native access and refresh tokens issued"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Rotate a native mobile refresh token",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
     "/api/v1/mobile/auth/register": {
       "post": {
         "operationId": "MobileClientAuthController_registerUser_v1",
@@ -33568,6 +34116,34 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "sessionKind": {
+                      "description": "Mobile routing hint; JWT guards remain authoritative",
+                      "enum": [
+                        "client",
+                        "staff"
+                      ],
+                      "type": "string"
+                    },
+                    "tokens": {
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
             "description": "OTP verified, tokens issued"
           },
           "400": {
@@ -36339,7 +36915,7 @@
                   "properties": {
                     "data": {
                       "items": {
-                        "$ref": "#/components/schemas/ClientResponseDto"
+                        "$ref": "#/components/schemas/EmployeeClientResponseDto"
                       },
                       "type": "array"
                     },
@@ -36414,6 +36990,87 @@
           }
         ],
         "summary": "List the authenticated employee's clients",
+        "tags": [
+          "Mobile Employee / Clients"
+        ]
+      }
+    },
+    "/api/v1/mobile/employee/clients/{clientId}": {
+      "get": {
+        "operationId": "MobileEmployeeClientsController_getMyClient_v1",
+        "parameters": [
+          {
+            "description": "Client UUID",
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeClientResponseDto"
+                }
+              }
+            },
+            "description": "Employee-safe client record"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Client not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a client who has a booking with the authenticated employee",
         "tags": [
           "Mobile Employee / Clients"
         ]
@@ -36658,6 +37315,71 @@
       }
     },
     "/api/v1/mobile/employee/schedule/availability": {
+      "get": {
+        "operationId": "MobileEmployeeScheduleController_getAvailabilityEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeAvailabilityResponseDto"
+                }
+              }
+            },
+            "description": "Availability windows and exceptions"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get availability windows and exceptions for the authenticated employee",
+        "tags": [
+          "Mobile Employee / Schedule"
+        ]
+      },
       "patch": {
         "operationId": "MobileEmployeeScheduleController_updateAvailabilityEndpoint_v1",
         "parameters": [],
@@ -36676,25 +37398,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "employeeId": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "exceptions": {
-                      "items": {
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "windows": {
-                      "items": {
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeAvailabilityResponseDto"
                 }
               }
             },

@@ -184,14 +184,15 @@ describe('MobileClientBookingsController (e2e)', () => {
   });
 
   describe('GET /mobile/client/bookings/:id/join', () => {
-    it('returns 200 with existing zoom url', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({
-        id: bookingId,
-        clientId: 'client-1',
-        deliveryType: 'ONLINE',
-        zoomJoinUrl: 'https://zoom.us/j/123',
-        scheduledAt: '2026-12-31T09:00:00Z',
-      });
+      it('returns 200 with existing zoom url', async () => {
+        mockPrisma.booking.findFirst.mockResolvedValue({
+          id: bookingId,
+          clientId: 'client-1',
+          deliveryType: 'ONLINE',
+          status: 'CONFIRMED',
+          zoomJoinUrl: 'https://zoom.us/j/123',
+          scheduledAt: '2026-12-31T09:00:00Z',
+        });
 
       const res = await request(app.getHttpServer())
         .get(`/mobile/client/bookings/${bookingId}/join`)
@@ -199,6 +200,25 @@ describe('MobileClientBookingsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.joinUrl).toBe('https://zoom.us/j/123');
+    });
+
+    it('rejects a stored zoom url for a cancelled booking', async () => {
+      mockPrisma.booking.findFirst.mockResolvedValue({
+        id: bookingId,
+        clientId: 'client-1',
+        deliveryType: 'ONLINE',
+        status: 'CANCELLED',
+        zoomJoinUrl: 'https://zoom.us/j/123',
+        scheduledAt: '2026-12-31T09:00:00Z',
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/mobile/client/bookings/${bookingId}/join`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(403);
+
+      expect(res.body.message).toBe('Join is not available for this booking');
+      expect(mockZoom.execute).not.toHaveBeenCalled();
     });
 
     it('returns 403 for non-online booking', async () => {

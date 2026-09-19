@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
@@ -25,12 +25,39 @@ export class RequestMobileLoginOtpHandler {
     const where = channel === 'EMAIL' ? { email: identifier } : { phone: identifier };
     const user = await this.prisma.user.findFirst({
       where,
-      select: { id: true, phoneVerifiedAt: true, emailVerifiedAt: true },
+      select: { id: true, role: true, isActive: true, phoneVerifiedAt: true, emailVerifiedAt: true },
     });
 
+    const linkedEmailClients = channel === 'EMAIL' && user?.role === 'CLIENT'
+      ? ((await this.prisma.client.findMany({ where: { userId: user.id } })) ?? [])
+      : [];
+    const emailConflicts = channel === 'EMAIL' && user?.role === 'CLIENT'
+      ? ((await this.prisma.client.findMany({ where: { email: identifier } })) ?? [])
+          .filter((candidate) => candidate.userId !== user.id)
+      : [];
+    if (emailConflicts.length > 0) {
+      throw new ConflictException('Client identity conflict: email belongs to another customer');
+    }
+    if (channel === 'EMAIL' && user?.role === 'CLIENT' && linkedEmailClients.length > 0 &&
+        (linkedEmailClients.length !== 1 || !linkedEmailClients[0].isActive || linkedEmailClients[0].deletedAt !== null)) {
+      throw new ConflictException('Client identity conflict: email customer link is ambiguous or inactive');
+    }
+
+    const clientCandidates = channel === 'SMS'
+      ? ((await this.prisma.client.findMany({ where: { phone: identifier } })) ?? [])
+      : [];
+    if (clientCandidates.length > 1) {
+      throw new ConflictException('Client identity conflict: phone matches multiple customers');
+    }
+    const client = clientCandidates[0];
+
     const shouldIssue =
-      user !== null &&
-      (channel === 'SMS' ? user.phoneVerifiedAt !== null : user.emailVerifiedAt !== null);
+      (user !== null && user.isActive &&
+        (channel === 'SMS'
+          ? user.phoneVerifiedAt !== null
+          : user.emailVerifiedAt !== null && (user.role !== 'CLIENT' || linkedEmailClients.length === 1))) ||
+      (client !== undefined && client.isActive && client.deletedAt === null &&
+        channel === 'SMS');
 
     if (shouldIssue) {
       await this.requestOtp.execute({

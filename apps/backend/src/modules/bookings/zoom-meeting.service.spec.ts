@@ -26,6 +26,7 @@ describe('ZoomMeetingService', () => {
           useValue: {
             getAccessToken: jest.fn().mockResolvedValue('token-123'),
             deleteMeeting: jest.fn().mockResolvedValue(undefined),
+            deleteMeetingStrict: jest.fn().mockResolvedValue(undefined),
             updateMeeting: jest.fn().mockResolvedValue(undefined),
             getMeeting: jest.fn().mockResolvedValue({
               id: 123,
@@ -91,6 +92,18 @@ describe('ZoomMeetingService', () => {
     (prisma.integration.findFirst as jest.Mock).mockResolvedValue(null);
     await service.deleteMeeting('org-1', '123');
     expect(zoomApi.deleteMeeting).not.toHaveBeenCalled();
+  });
+
+  it('should reject strict delete when Zoom integration is unavailable', async () => {
+    (prisma.integration.findFirst as jest.Mock).mockResolvedValue(null);
+    await expect(service.deleteMeetingStrict('org-1', '123'))
+      .rejects.toThrow('Zoom integration is unavailable');
+  });
+
+  it('should delegate strict delete to the provider adapter', async () => {
+    (prisma.integration.findFirst as jest.Mock).mockResolvedValue({ provider: 'zoom', isActive: true, config: { ciphertext: 'enc' } });
+    await service.deleteMeetingStrict('org-1', '123');
+    expect(zoomApi.deleteMeetingStrict).toHaveBeenCalledWith('token-123', '123');
   });
 
   it('should update meeting', async () => {

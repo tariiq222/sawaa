@@ -25,7 +25,11 @@ export type {
   BookingType as ClientBookingType,
   DeliveryType as ClientDeliveryType,
 } from './bookings';
-export type { PaymentsListResponse } from './payments';
+export type {
+  PaymentsListResponse,
+  ReceiptUploadAsset,
+  ReceiptUploadMetadata,
+} from './payments';
 export type { GroupSession, BookGroupSessionResponse } from './group-sessions';
 export type {
   PublicBranchSummary,

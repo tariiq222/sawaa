@@ -186,12 +186,15 @@ export class MobileClientBookingsController {
   ) {
     const booking = await this.prisma.booking.findFirst({
       where: { id },
-      select: { id: true, clientId: true, deliveryType: true, zoomJoinUrl: true, scheduledAt: true },
+      select: { id: true, clientId: true, deliveryType: true, status: true, zoomJoinUrl: true, scheduledAt: true },
     });
     if (!booking) throw new NotFoundException('Booking not found');
     if (booking.clientId !== user.id) throw new ForbiddenException('Not your booking');
     if (booking.deliveryType !== DeliveryType.ONLINE && !booking.zoomJoinUrl) {
       throw new ForbiddenException('Join is only available for online bookings');
+    }
+    if (!([BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] as BookingStatus[]).includes(booking.status)) {
+      throw new ForbiddenException('Join is not available for this booking');
     }
     if (booking.zoomJoinUrl) {
       return { joinUrl: booking.zoomJoinUrl, scheduledAt: booking.scheduledAt };

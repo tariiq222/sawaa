@@ -13,6 +13,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { Blob as NodeBlob } from 'node:buffer'
+
+const jsdomBlob = globalThis.Blob
 
 function readBlobText(blob: Blob): Promise<string> {
   if (typeof blob.text === 'function') return blob.text()
@@ -37,6 +40,14 @@ describe('API Client (lib/api.ts)', () => {
   let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(async () => {
+    // jsdom's Blob has no body readers, while Node's Response.blob() uses
+    // those readers to expose downloaded content. Scope the Node Blob to this
+    // download/auth suite so upload tests in other suites retain jsdom Blob.
+    Object.defineProperty(globalThis, 'Blob', {
+      configurable: true,
+      writable: true,
+      value: NodeBlob,
+    })
     // Reset module so accessToken state is clean
     vi.resetModules()
     fetchMock = vi.fn()
@@ -46,6 +57,11 @@ describe('API Client (lib/api.ts)', () => {
   })
 
   afterEach(() => {
+    Object.defineProperty(globalThis, 'Blob', {
+      configurable: true,
+      writable: true,
+      value: jsdomBlob,
+    })
     vi.unstubAllGlobals()
   })
 

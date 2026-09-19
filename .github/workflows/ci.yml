@@ -68,7 +68,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: OpenShip startup contract
@@ -217,7 +217,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -297,7 +297,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -351,7 +351,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -451,7 +451,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -562,7 +562,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -581,6 +581,43 @@ jobs:
         run: pnpm --filter=@sawaa/website build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:5200
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Mobile — standalone nested workspace
+  # ───────────────────────────────────────────────────────────────────────────
+  # apps/mobile intentionally has its own pnpm-workspace.yaml and lockfile;
+  # root workspace commands do not cover it. Keep this job isolated so mobile
+  # dependencies cannot be resolved from or mutate the root workspace.
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: apps/mobile/pnpm-lock.yaml
+
+      - name: Install mobile workspace dependencies
+        working-directory: apps/mobile
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        working-directory: apps/mobile
+        run: pnpm --filter=@sawaa/shared build
+
+      - name: Typecheck
+        working-directory: apps/mobile
+        run: pnpm typecheck
+
+      - name: Unit tests
+        working-directory: apps/mobile
+        run: pnpm test --runInBand
 
   # ───────────────────────────────────────────────────────────────────────────
   # Security — dependency audit + secret scanning
@@ -602,7 +639,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -625,8 +662,10 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-fs.sarif'
-          exit-code: '0'
-          ignore-unfixed: true
+          scanners: 'vuln'
+          limit-severities-for-sarif: true
+          exit-code: '1'
+          ignore-unfixed: false
           skip-dirs: 'coverage,dist,node_modules,.next'
           skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**'
           vuln-type: 'os,library'

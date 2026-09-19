@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException, Optional, ServiceUnavailableExce
 import { createHmac, createHash, randomUUID, timingSafeEqual } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
-import { InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { BookingStatus, InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 import { DEFAULT_ORG_ID, PAYMENT_CONFIG_SINGLETON_KEY, SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
@@ -22,6 +22,12 @@ import {
 } from '../invoice-payment-state.helper';
 
 const WEBHOOK_CLAIM_LEASE_MS = 5 * 60 * 1_000;
+
+const TERMINAL_BOOKING_STATUSES = new Set<BookingStatus>([
+  BookingStatus.CANCELLED,
+  BookingStatus.NO_SHOW,
+  BookingStatus.EXPIRED,
+]);
 
 export interface MoyasarWebhookRequest {
   payload: MoyasarWebhookDto;
@@ -423,6 +429,23 @@ export class MoyasarWebhookHandler {
         // internal Payment ROW id; `paymentId` (above) is the Moyasar gateway
         // payment id — they are distinct values.
         const mutationSkip = await this.rlsTransaction.withTransaction<MoyasarWebhookResult | null>(async (tx) => {
+          // All monetary transactions acquire booking (when present) → invoice
+          // → payment. Keep this order aligned with reconciliation and refund
+          // creation so a late callback cannot deadlock another balance writer.
+          let lockedBookingStatus: BookingStatus | null = null;
+          if (resolvedInvoice.bookingId) {
+            await tx.$queryRaw(
+              Prisma.sql`SELECT "id" FROM "Booking" WHERE "id" = ${resolvedInvoice.bookingId} FOR UPDATE`,
+            );
+            const lockedBooking = await tx.booking.findUnique({
+              where: { id: resolvedInvoice.bookingId },
+              select: { status: true },
+            });
+            if (lockedBooking) {
+              lockedBookingStatus = lockedBooking.status;
+            }
+          }
+
           await tx.$queryRaw(
             Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${resolvedInvoice.id} FOR UPDATE`,
           );
@@ -442,15 +465,31 @@ export class MoyasarWebhookHandler {
           if (!lockedInvoice) {
             return { skipped: true, reason: 'invoice_not_found' };
           }
-          const payment = await tx.payment.findFirst({
+          let payment = await tx.payment.findFirst({
             where: paymentMatchWhere,
             orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
             select: { id: true, status: true, amount: true, currency: true },
           });
-
+          if (payment) {
+            await tx.$queryRaw(
+              Prisma.sql`SELECT "id" FROM "Payment" WHERE "id" = ${payment.id} FOR UPDATE`,
+            );
+            // Re-read after the row lock. The pre-lock lookup is only a route
+            // candidate and must not decide a transition from stale status.
+            const lockedPayment = await tx.payment.findFirst({
+              where: { id: payment.id },
+              select: { id: true, status: true, amount: true, currency: true },
+            });
+            if (lockedPayment) payment = lockedPayment;
+          }
           const invoiceStatus = lockedInvoice.status as InvoiceStatus;
+          const latePaidBooking =
+            status === PaymentStatus.COMPLETED &&
+            lockedBookingStatus !== null &&
+            TERMINAL_BOOKING_STATUSES.has(lockedBookingStatus);
           const latePaidAgainstClosedInvoice =
             status === PaymentStatus.COMPLETED &&
+            !latePaidBooking &&
             (isClosedInvoiceStatus(invoiceStatus) ||
               (isNonPayableInvoiceStatus(invoiceStatus) &&
                 payment?.status !== PaymentStatus.COMPLETED));
@@ -529,6 +568,36 @@ export class MoyasarWebhookHandler {
                 },
               });
 
+          if (latePaidBooking) {
+            // The gateway callback remains a real captured payment even when
+            // cancellation/expiry committed first. Keep the money visible and
+            // queue one explicit review request: the cancellation policy does
+            // not define a fee for this race, so approval must remain manual.
+            const sourceEventId = stableEventId(
+              `finance:late-payment:${resolvedInvoice.id}:${paymentId}`,
+            );
+            const idempotencyKey = `refund:late-payment:${paymentId}`;
+            const existingReview = await tx.refundRequest.findUnique({
+              where: { sourceEventId },
+              select: { id: true },
+            });
+            if (!existingReview) {
+              await tx.refundRequest.create({
+                data: {
+                  invoiceId: lockedInvoice.id,
+                  paymentId: savedPayment.id,
+                  clientId: lockedInvoice.clientId,
+                  amount: amountHalalas,
+                  reason: `Payment completed after booking ${lockedBookingStatus?.toLowerCase() ?? 'terminal'} — manual refund review required`,
+                  status: 'PENDING_REVIEW',
+                  idempotencyKey,
+                  sourceEventId,
+                  providerState: 'NOT_CALLED',
+                },
+              });
+            }
+          }
+
           let fullyPaid = false;
           if (status === PaymentStatus.COMPLETED) {
             // P0: re-aggregate COMPLETED payments AFTER the write and derive the
@@ -547,16 +616,22 @@ export class MoyasarWebhookHandler {
             const total = Math.round(Number(lockedInvoice.total));
             fullyPaid = paid >= total;
             paidAfterWrite = paid;
-            await tx.invoice.update({
-              where: { id: lockedInvoice.id },
-              data: {
-                status: fullyPaid ? 'PAID' : 'PARTIALLY_PAID',
-                // Stamp issuance time on the first payment that lifts the invoice
-                // out of DRAFT; keep an existing issuedAt untouched.
-                issuedAt: lockedInvoice.issuedAt ?? new Date(),
-                paidAt: fullyPaid ? new Date() : undefined,
-              },
-            });
+            // A terminal booking can receive a callback after cancellation has
+            // already closed/refunded its invoice. Keep that accounting state
+            // intact while the Payment row and explicit review request preserve
+            // the captured money for reconciliation.
+            if (!latePaidBooking || !isNonPayableInvoiceStatus(invoiceStatus)) {
+              await tx.invoice.update({
+                where: { id: lockedInvoice.id },
+                data: {
+                  status: fullyPaid ? 'PAID' : 'PARTIALLY_PAID',
+                  // Stamp issuance time on the first payment that lifts the invoice
+                  // out of DRAFT; keep an existing issuedAt untouched.
+                  issuedAt: lockedInvoice.issuedAt ?? new Date(),
+                  paidAt: fullyPaid ? new Date() : undefined,
+                },
+              });
+            }
           }
 
           // P1-12: write domain events to the OutboxEvent table INSIDE this same
@@ -572,7 +647,7 @@ export class MoyasarWebhookHandler {
           // PaymentCompletedEvent is staged ONLY when the invoice is fully PAID —
           // downstream consumers (booking confirmation, receipts) must not react
           // to a still-outstanding invoice.
-          if (status === PaymentStatus.COMPLETED && fullyPaid) {
+          if (status === PaymentStatus.COMPLETED && fullyPaid && !latePaidBooking) {
             const event = new PaymentCompletedEvent({
               paymentId: savedPayment.id,
               invoiceId: lockedInvoice.id,
@@ -597,6 +672,7 @@ export class MoyasarWebhookHandler {
             });
           } else if (
             status === PaymentStatus.COMPLETED &&
+            !latePaidBooking &&
             isDepositPayment({
               paidAfter: paidAfterWrite,
               total: Math.round(Number(lockedInvoice.total)),

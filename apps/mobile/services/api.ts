@@ -6,61 +6,75 @@ import { router } from 'expo-router';
 
 import { API_URL } from '@/constants/config';
 import type { ApiResponse } from '@/types/api';
-import { store } from '@/stores/store';
-import { logout } from '@/stores/slices/auth-slice';
+import { getSecureItem } from '@/stores/secure-storage';
 import {
-  getSecureItem,
-  setSecureItem,
-  deleteSecureItem,
-} from '@/stores/secure-storage';
+  clearSession,
+  getSessionEpoch,
+  isSessionCurrent,
+  persistSessionTokensAtEpoch,
+  shouldRevokeStaleRefresh,
+} from './native-session-state';
 
 const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED';
 
-let refreshAccessTokenPromise: Promise<string | null> | null = null;
-
-async function clearSession(): Promise<void> {
-  await deleteSecureItem('accessToken');
-  await deleteSecureItem('refreshToken');
-  store.dispatch(logout());
-}
+let refreshAccessTokenPromise: { epoch: number; promise: Promise<string | null> } | null = null;
 
 function refreshAccessToken(): Promise<string | null> {
-  if (!refreshAccessTokenPromise) {
-    refreshAccessTokenPromise = (async () => {
+  const epoch = getSessionEpoch();
+  if (!refreshAccessTokenPromise || refreshAccessTokenPromise.epoch !== epoch) {
+    let promise: Promise<string | null>;
+    promise = (async () => {
       const refreshToken = await getSecureItem('refreshToken');
-      if (!refreshToken) {
+      if (!refreshToken || !isSessionCurrent(epoch)) {
         return null;
       }
 
       try {
-        // Backend exposes POST /auth/refresh — older mobile versions hit
-        // /auth/refresh-token by mistake, so refreshes silently failed and
-        // users got logged out at every 15-minute access-token expiry.
-        const { data } = await axios.post<
-          ApiResponse<{ accessToken: string; refreshToken?: string }>
-        >(`${API_URL}/auth/refresh`, { refreshToken });
+        const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
+          `${API_URL}/mobile/auth/refresh`,
+          { refreshToken },
+        );
 
-        if (!data.success || !data.data) {
+        if (!data?.accessToken || !data.refreshToken) {
           return null;
         }
 
-        await setSecureItem('accessToken', data.data.accessToken);
-        if (data.data.refreshToken) {
-          await setSecureItem('refreshToken', data.data.refreshToken);
+        const persisted = await persistSessionTokensAtEpoch(
+          { accessToken: data.accessToken, refreshToken: data.refreshToken },
+          epoch,
+        );
+        if (!persisted) {
+          // Logout may have consumed the old token while this rotation was in
+          // flight. Revoke the newly issued token directly, without writing it
+          // to storage. A subsequent login clears the logout fence, so it is
+          // never revoked by a stale refresh from the prior session.
+          if (shouldRevokeStaleRefresh(epoch)) {
+            await axios.post(`${API_URL}/mobile/auth/logout`, {
+              refreshToken: data.refreshToken,
+            });
+          }
+          return null;
         }
 
-        return data.data.accessToken;
+        return data.accessToken;
       } catch (refreshError) {
-        // Every concurrent 401 awaits this same promise, so cleanup runs once.
-        await clearSession();
+        const status = (refreshError as AxiosError).response?.status;
+        // Preserve a session through transient outages. Only an explicit
+        // authentication rejection invalidates local credentials.
+        if ((status === 401 || status === 403) && isSessionCurrent(epoch)) {
+          await clearSession();
+        }
         throw refreshError;
       }
     })().finally(() => {
-      refreshAccessTokenPromise = null;
+      if (refreshAccessTokenPromise?.promise === promise) {
+        refreshAccessTokenPromise = null;
+      }
     });
+    refreshAccessTokenPromise = { epoch, promise };
   }
 
-  return refreshAccessTokenPromise;
+  return refreshAccessTokenPromise.promise;
 }
 
 const api = axios.create({
@@ -75,7 +89,12 @@ const api = axios.create({
 // context from auth state and does not read X-Org-Id in this single-tenant app.
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    const epoch = getSessionEpoch();
+    (config as InternalAxiosRequestConfig & { _sessionEpoch?: number })._sessionEpoch = epoch;
     const token = await getSecureItem('accessToken');
+    if (!isSessionCurrent(epoch)) {
+      throw new Error('Session changed while preparing request');
+    }
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -92,16 +111,22 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
+      _sessionEpoch?: number;
     };
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+    const requestEpoch = originalRequest._sessionEpoch ?? getSessionEpoch();
+    if (!isSessionCurrent(requestEpoch)) {
+      return Promise.reject(error);
+    }
     const responseCode =
       error.response?.data?.error ??
       error.response?.data?.message ??
       error.response?.data?.errorCode;
 
     if (error.response?.status === 401 && responseCode === ORG_SUSPENDED_CODE) {
-      await deleteSecureItem('accessToken');
-      await deleteSecureItem('refreshToken');
-      store.dispatch(logout());
+      await clearSession();
       router.replace('/(auth)/suspended');
       return Promise.reject(error);
     }
@@ -112,7 +137,7 @@ api.interceptors.response.use(
 
       try {
         const accessToken = await refreshAccessToken();
-        if (accessToken) {
+        if (accessToken && isSessionCurrent(requestEpoch)) {
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           }

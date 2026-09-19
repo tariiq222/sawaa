@@ -5,6 +5,7 @@ import { MobileEmployeeScheduleController } from './schedule.controller';
 import { PrismaService } from '../../../infrastructure/database';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { UpdateAvailabilityHandler } from '../../../modules/people/employees/update-availability.handler';
+import { GetAvailabilityHandler } from '../../../modules/people/employees/get-availability.handler';
 import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
@@ -17,6 +18,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
   };
   const mockListBookings = { execute: jest.fn() };
   const mockUpdateAvailability = { execute: jest.fn() };
+  const mockGetAvailability = { execute: jest.fn() };
   const mockResolveEmployeeId = { execute: jest.fn() };
 
   beforeAll(async () => {
@@ -26,6 +28,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ListBookingsHandler, useValue: mockListBookings },
         { provide: UpdateAvailabilityHandler, useValue: mockUpdateAvailability },
+        { provide: GetAvailabilityHandler, useValue: mockGetAvailability },
         { provide: ResolveEmployeeIdHandler, useValue: mockResolveEmployeeId },
       ],
     })
@@ -129,6 +132,27 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
       expect(mockUpdateAvailability.execute).toHaveBeenCalledWith(
         expect.objectContaining({ employeeId: 'employee-1' }),
       );
+    });
+  });
+
+  describe('GET /mobile/employee/schedule/availability', () => {
+    it('returns the resolved employee windows and exceptions', async () => {
+      mockGetAvailability.execute.mockResolvedValue({
+        schedule: [{ dayOfWeek: 1, startTime: '09:00', endTime: '12:00', isActive: true }],
+        exceptions: [{ startDate: '2026-09-20T00:00:00.000Z', endDate: '2026-09-21T00:00:00.000Z', reason: 'Leave' }],
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/mobile/employee/schedule/availability')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(res.body).toEqual({
+        employeeId: 'employee-1',
+        windows: [{ dayOfWeek: 1, startTime: '09:00', endTime: '12:00', isActive: true }],
+        exceptions: [{ startDate: '2026-09-20T00:00:00.000Z', endDate: '2026-09-21T00:00:00.000Z', reason: 'Leave' }],
+      });
+      expect(mockGetAvailability.execute).toHaveBeenCalledWith({ employeeId: 'employee-1' });
     });
   });
 });

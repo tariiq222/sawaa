@@ -34,24 +34,41 @@ jest.mock('@/hooks/use-redux', () => ({
 
 const mockSetAuthSession = jest.fn((payload: unknown) => ({ type: 'auth/setAuthSession', payload }));
 const mockSetUser = jest.fn((payload: unknown) => ({ type: 'auth/setUser', payload }));
+const mockSetCredentials = jest.fn((payload: unknown) => ({ type: 'auth/setCredentials', payload }));
 jest.mock('@/stores/slices/auth-slice', () => ({
   setAuthSession: (payload: unknown) => mockSetAuthSession(payload),
   setUser: (payload: unknown) => mockSetUser(payload),
+  setCredentials: (payload: unknown) => mockSetCredentials(payload),
 }));
 
 const mockVerifyOtp = jest.fn().mockResolvedValue({
   tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+  sessionEpoch: 1,
 });
 const mockRequestLoginOtp = jest.fn().mockResolvedValue({ maskedIdentifier: 't***@example.com' });
-const mockRefetchMe = jest.fn().mockResolvedValue({ data: { data: { id: 'u1', role: 'CLIENT' } } });
+const mockGetProfile = jest.fn().mockResolvedValue({
+  success: true,
+  data: { id: 'u1', role: 'CLIENT' },
+});
 jest.mock('@/hooks/queries', () => ({
   useVerifyOtp: () => ({ mutateAsync: mockVerifyOtp }),
   useRequestLoginOtp: () => ({ mutateAsync: mockRequestLoginOtp }),
-  useMe: () => ({ refetch: mockRefetchMe }),
 }));
 
 jest.mock('@/services/push', () => ({
   registerForPushAsync: jest.fn(),
+}));
+
+let mockCurrentEpoch = 1;
+const mockIsSessionCurrent = jest.fn((epoch: number) => epoch === mockCurrentEpoch);
+jest.mock('@/services/native-session-state', () => ({
+  isSessionCurrent: (epoch: number) => mockIsSessionCurrent(epoch),
+}));
+jest.mock('@/services/auth', () => ({
+  authService: {
+    getProfile: (kind?: 'client' | 'staff') => mockGetProfile(kind),
+  },
+  SessionSupersededError: class SessionSupersededError extends Error {},
 }));
 
 jest.mock('expo-haptics', () => ({
@@ -96,6 +113,7 @@ import OtpVerifyScreen from '../otp-verify';
 describe('OtpVerifyScreen Autofill & Auto-submit', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCurrentEpoch = 1;
   });
 
   it('renders 4 OTP input boxes with SMS autofill attributes', () => {
@@ -146,6 +164,76 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     });
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
+    });
+  });
+
+  it('routes a verified staff session to employee tabs after the profile is loaded', async () => {
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'staff-access', refreshToken: 'staff-refresh' },
+      sessionEpoch: 1,
+      sessionKind: 'staff',
+    });
+    mockGetProfile.mockResolvedValueOnce({
+      success: true,
+      data: { id: 'u1', role: 'RECEPTIONIST' },
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '1234');
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today'));
+    expect(mockGetProfile).toHaveBeenCalledWith('staff');
+  });
+
+  it('waits for the direct profile before committing auth or navigating', async () => {
+    let resolveProfile!: (value: unknown) => void;
+    mockGetProfile.mockReturnValueOnce(new Promise((resolve) => {
+      resolveProfile = resolve;
+    }));
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '1234');
+
+    await waitFor(() => expect(mockGetProfile).toHaveBeenCalled());
+    expect(mockDispatch).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    resolveProfile({ success: true, data: { id: 'u1', role: 'CLIENT' } });
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({
+        user: expect.objectContaining({ id: 'u1' }),
+      }),
+    })));
+    expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
+  });
+
+  it('does not commit auth or navigate when the profile fetch fails', async () => {
+    mockGetProfile.mockResolvedValueOnce({ success: false, data: undefined });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '1234');
+
+    await waitFor(() => expect(mockGetProfile).toHaveBeenCalled());
+    expect(mockDispatch).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('does not dispatch or navigate when successful verification is superseded', async () => {
+    mockCurrentEpoch = 2;
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'stale-access', refreshToken: 'stale-refresh' },
+      sessionEpoch: 1,
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+
+    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '6543');
+
+    await waitFor(() => {
+      expect(mockVerifyOtp).toHaveBeenCalledWith({
+        identifier: 'test@example.com',
+        code: '6543',
+        purpose: 'login',
+      });
+    });
+    await waitFor(() => {
+      expect(mockDispatch).not.toHaveBeenCalled();
+      expect(mockReplace).not.toHaveBeenCalled();
     });
   });
 });

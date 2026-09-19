@@ -18,7 +18,7 @@ export function useEmployeeClients({ search = '', limit = 50 }: UseEmployeeClien
     queryKey: employeeClientsKeys.list(search, limit),
     queryFn: async () => {
       const res = await clientsService.getAll({ search: search || undefined, limit });
-      return res.success ? (res.data.items ?? []) : [];
+      return res.data ?? [];
     },
     placeholderData: keepPreviousData,
   });

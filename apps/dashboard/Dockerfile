@@ -4,11 +4,11 @@
 #
 # Stage 1 (deps):         install all workspace deps — cached layer
 # Stage 2 (shared-build): compile packages/shared into dist/ — fixes TS2307
-# Stage 3 (app-build):    compile the Next.js app (adds arch-native CSS binaries here)
+# Stage 3 (app-build):    verify native CSS binaries and compile the Next.js app
 # Stage 4 (runner):       minimal standalone runtime image
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS deps
+FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
@@ -23,7 +23,7 @@ RUN pnpm install --frozen-lockfile
 # ── Stage 2: shared-build ────────────────────────────────────────────────────
 # Compiles packages/shared → dist/ so consuming apps can resolve its exports.
 # Does NOT install arch-native CSS binaries — those are only needed by next build.
-FROM node:20-bookworm-slim AS shared-build
+FROM node:22-bookworm-slim AS shared-build
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
@@ -56,7 +56,7 @@ RUN mkdir -p /app/node_modules/@sawaa \
  && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.js
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS app-build
+FROM node:22-bookworm-slim AS app-build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
@@ -66,11 +66,9 @@ COPY --from=shared-build /app/packages     ./packages
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY apps/dashboard/ ./apps/dashboard/
 
-# Add arch-native Tailwind/lightningcss binaries needed by next build
-RUN ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/x64/') \
- && pnpm add -w --ignore-scripts=false \
-      lightningcss-linux-${ARCH}-gnu \
-      @tailwindcss/oxide-linux-${ARCH}-gnu
+# Native optional dependencies were installed for this Linux architecture from
+# the frozen lockfile in shared-build. Verify them without re-resolving versions.
+RUN node -e "require('lightningcss'); require('@tailwindcss/oxide')"
 
 # Next.js bakes NEXT_PUBLIC_* into the JS bundle at build time.
 # These ARGs MUST be passed via --build-arg (Dokploy) or docker-compose build args.
@@ -96,7 +94,7 @@ ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 RUN pnpm --filter=dashboard run build
 
 # ── Stage 4: runner ──────────────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5103

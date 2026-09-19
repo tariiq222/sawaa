@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { ValidationPipe } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { MoyasarWebhookDto, MoyasarWebhookMetadataDto, MoyasarWebhookDataDto } from './moyasar-webhook.dto';
@@ -7,6 +8,47 @@ async function validateDto(plain: Record<string, unknown>) {
   const dto = plainToInstance(MoyasarWebhookDto, plain);
   return validate(dto);
 }
+
+const realisticNestedPayment = {
+  id: 'evt_abc123',
+  type: 'payment_paid',
+  created_at: '2026-09-19T18:43:35.072Z',
+  secret_token: 'the-shared-secret',
+  account_name: 'Sawa Counseling',
+  live: false,
+  data: {
+    id: 'pay_abc123',
+    status: 'paid',
+    amount: 13800,
+    fee: 345,
+    refunded: 0,
+    refunded_at: null,
+    captured: 13800,
+    captured_at: '2026-09-19T18:43:34.000Z',
+    voided_at: null,
+    description: 'Counseling booking',
+    amount_format: '138.00 SAR',
+    fee_format: '3.45 SAR',
+    refunded_format: '0.00 SAR',
+    captured_format: '138.00 SAR',
+    invoice_id: '00000000-0000-4000-a000-000000000001',
+    currency: 'SAR',
+    ip: '127.0.0.1',
+    callback_url: 'https://sawaa.test/payment/callback',
+    created_at: '2026-09-19T18:43:30.000Z',
+    updated_at: '2026-09-19T18:43:34.000Z',
+    source: { type: 'creditcard', company: 'mada', message: 'Approved' },
+    splits: [],
+    metadata: {
+      invoiceId: '00000000-0000-4000-a000-000000000001',
+      bookingId: 'booking-123',
+      source: 'public-booking',
+      internalPaymentId: 'payment-123',
+      packagePurchaseId: 'purchase-123',
+    },
+    message: 'Approved',
+  },
+};
 
 describe('MoyasarWebhookMetadataDto', () => {
   it('accepts an empty payload (invoiceId is optional)', async () => {
@@ -116,6 +158,34 @@ describe('MoyasarWebhookDto', () => {
     });
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
+  });
+
+  it('accepts a realistic nested Moyasar payment through the production validation pipe', async () => {
+    const pipe = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true });
+
+    await expect(pipe.transform(realisticNestedPayment, { type: 'body', metatype: MoyasarWebhookDto }))
+      .resolves.toEqual(expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            invoiceId: '00000000-0000-4000-a000-000000000001',
+            bookingId: 'booking-123',
+            source: 'public-booking',
+            internalPaymentId: 'payment-123',
+            packagePurchaseId: 'purchase-123',
+          }),
+        }),
+      }));
+  });
+
+  it('accepts the same provider payment fields in the supported flat shape', async () => {
+    const pipe = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true });
+    const flatPayment = realisticNestedPayment.data;
+
+    await expect(pipe.transform(flatPayment, { type: 'body', metatype: MoyasarWebhookDto }))
+      .resolves.toEqual(expect.objectContaining({
+        id: 'pay_abc123',
+        metadata: expect.objectContaining({ internalPaymentId: 'payment-123' }),
+      }));
   });
 
   it('rejects a genuinely-malformed payload (wrong field types)', async () => {

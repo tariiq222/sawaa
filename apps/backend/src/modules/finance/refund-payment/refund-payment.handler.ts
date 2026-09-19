@@ -191,6 +191,19 @@ export class RefundPaymentHandler {
       sourceEventId?: string;
     },
   ): Promise<CreateRefundRequestInTxResult> {
+    // Monetary transactions use invoice -> payment lock ordering. Resolve the
+    // relation without locking first, then acquire the invoice lock before the
+    // payment lock so cancellation/refund cannot deadlock reconciliation or a
+    // webhook that aggregates an invoice balance.
+    const paymentIdentity = await tx.payment.findUnique({
+      where: { id: cmd.paymentId },
+      select: { invoiceId: true },
+    });
+    if (!paymentIdentity) throw new NotFoundException('Payment not found');
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${paymentIdentity.invoiceId} FOR UPDATE`,
+    );
+
     const rows = await tx.$queryRaw<
       Array<{
         id: string;
@@ -228,7 +241,7 @@ export class RefundPaymentHandler {
     const isOffGateway = !row.gatewayRef;
 
     const invoice = await tx.invoice.findUniqueOrThrow({
-      where: { id: row.invoiceId },
+      where: { id: paymentIdentity.invoiceId },
       select: {
         id: true,
         bookingId: true,

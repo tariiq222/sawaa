@@ -30,7 +30,7 @@ jobs:
           POSTGRES_PASSWORD: test
           POSTGRES_DB: sawaa_test
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U test -d sawaa_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -74,7 +74,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -188,7 +188,7 @@ jobs:
           POSTGRES_PASSWORD: test
           POSTGRES_DB: sawaa_test
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U test -d sawaa_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -232,7 +232,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -286,7 +286,7 @@ jobs:
           POSTGRES_PASSWORD: test
           POSTGRES_DB: sawaa_test
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U test -d sawaa_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -298,7 +298,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

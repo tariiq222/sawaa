@@ -13,7 +13,7 @@ export default function EmployeeLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (!user || getPrimaryRole(user) !== 'employee') {
+  if (!user || getPrimaryRole(user) === 'client') {
     return <Redirect href="/(client)/(tabs)/home" />;
   }
 

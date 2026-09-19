@@ -20,9 +20,11 @@ import { ThemedText } from '@/theme/components/ThemedText';
 import { ThemedButton } from '@/theme/components/ThemedButton';
 import { useTheme } from '@/theme/useTheme';
 import { useAppDispatch } from '@/hooks/use-redux';
-import { setAuthSession, setUser } from '@/stores/slices/auth-slice';
-import { useVerifyOtp, useRequestLoginOtp, useMe } from '@/hooks/queries';
+import { setCredentials } from '@/stores/slices/auth-slice';
+import { useVerifyOtp, useRequestLoginOtp } from '@/hooks/queries';
 import { registerForPushAsync } from '@/services/push';
+import { authService, SessionSupersededError } from '@/services/auth';
+import { isSessionCurrent } from '@/services/native-session-state';
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN = 60;
@@ -45,10 +47,10 @@ export default function OtpVerifyScreen() {
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
   const [resendLoading, setResendLoading] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const submissionStarted = useRef(false);
 
   const verifyOtp = useVerifyOtp();
   const requestLoginOtp = useRequestLoginOtp();
-  const { refetch: refetchMe } = useMe();
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -102,26 +104,43 @@ export default function OtpVerifyScreen() {
 
   const handleVerify = useCallback(async () => {
     const code = otp.join('');
-    if (code.length !== OTP_LENGTH) return;
+    if (code.length !== OTP_LENGTH || submissionStarted.current) return;
 
+    submissionStarted.current = true;
     setIsLoading(true);
 
+    let verificationEpoch: number | null = null;
     try {
       const result = await verifyOtp.mutateAsync({ identifier, code, purpose });
+      verificationEpoch = result.sessionEpoch;
+      if (!isSessionCurrent(verificationEpoch)) return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      dispatch(setAuthSession({ tokens: result.tokens }));
+      // Fetch the profile directly after verifyMobileOtp persisted the new
+      // namespace tokens. A useMe query can be enabled before persistence
+      // finishes and refetch may join an in-flight request made with the
+      // previous session's tokens.
+      const profileResult = await authService.getProfile(result.sessionKind);
+      if (!isSessionCurrent(verificationEpoch)) return;
+      const profile = profileResult.success && profileResult.data;
+      if (!profile) throw new Error('Authenticated profile unavailable');
+      dispatch(setCredentials({
+        accessToken: result.tokens.accessToken,
+        refreshToken: result.tokens.refreshToken,
+        user: profile,
+      }));
       void registerForPushAsync();
 
-      const meResult = await refetchMe();
-      const profile = meResult.data?.data;
-      if (profile) {
-        dispatch(setUser(profile));
+      const destination = result.sessionKind === 'staff'
+        ? '/(employee)/(tabs)/today'
+        : '/(client)/(tabs)/home';
+      router.replace(destination);
+    } catch (error) {
+      if (error instanceof SessionSupersededError ||
+        (verificationEpoch !== null && !isSessionCurrent(verificationEpoch))) {
+        return;
       }
-
-      // Group layout guards redirect staff users to the employee tabs.
-      router.replace('/(client)/(tabs)/home');
-    } catch {
+      submissionStarted.current = false;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.otpError'));
       setOtp(Array(OTP_LENGTH).fill(''));
@@ -129,7 +148,7 @@ export default function OtpVerifyScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [otp, identifier, purpose, verifyOtp, dispatch, refetchMe, router, t]);
+  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t]);
 
   const handleResend = useCallback(async () => {
     if (purpose !== 'login') return;

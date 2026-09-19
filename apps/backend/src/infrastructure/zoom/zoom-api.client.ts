@@ -183,6 +183,23 @@ export class ZoomApiClient implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Durable cleanup path: 404 means the meeting is already gone, while every
+   * other provider failure must reject so the owning queue can retry.
+   */
+  async deleteMeetingStrict(token: string, meetingId: string): Promise<void> {
+    const res = await this.fetchWithRetry(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok && res.status !== 404) {
+      const error = await res.text();
+      this.logger.error(`Failed to delete Zoom meeting ${meetingId}: ${res.status} ${error}`);
+      throw new InternalServerErrorException(`Zoom meeting deletion failed: ${res.status}`);
+    }
+  }
+
   async updateMeeting(
     token: string,
     meetingId: string,

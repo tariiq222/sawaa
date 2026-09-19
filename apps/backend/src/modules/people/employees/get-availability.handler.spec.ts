@@ -5,12 +5,17 @@ import { GetAvailabilityHandler } from './get-availability.handler';
 
 describe('GetAvailabilityHandler', () => {
   let handler: GetAvailabilityHandler;
-  let prisma: { employee: { findFirst: jest.Mock }; employeeAvailability: { findMany: jest.Mock } };
+  let prisma: {
+    employee: { findFirst: jest.Mock };
+    employeeAvailability: { findMany: jest.Mock };
+    employeeAvailabilityException: { findMany: jest.Mock };
+  };
 
   beforeEach(async () => {
     prisma = {
       employee: { findFirst: jest.fn() },
       employeeAvailability: { findMany: jest.fn() },
+      employeeAvailabilityException: { findMany: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -37,13 +42,20 @@ describe('GetAvailabilityHandler', () => {
       { id: 'sa-2', dayOfWeek: 1, startTime: '13:00', endTime: '17:00' },
     ];
     prisma.employeeAvailability.findMany.mockResolvedValue(schedule);
+    const exceptions = [{ id: 'ex-1', startDate: new Date('2026-09-20'), endDate: new Date('2026-09-21'), reason: 'Leave' }];
+    prisma.employeeAvailabilityException.findMany.mockResolvedValue(exceptions);
 
     const result = await handler.execute({ employeeId: 'emp-1' });
 
     expect(result.schedule).toBe(schedule);
+    expect(result.exceptions).toBe(exceptions);
     expect(prisma.employeeAvailability.findMany).toHaveBeenCalledWith({
       where: { employeeId: 'emp-1' },
       orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+    });
+    expect(prisma.employeeAvailabilityException.findMany).toHaveBeenCalledWith({
+      where: { employeeId: 'emp-1' },
+      orderBy: { startDate: 'asc' },
     });
   });
 });

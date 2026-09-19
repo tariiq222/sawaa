@@ -20,7 +20,8 @@ jest.mock('@/stores/store', () => ({ store: { dispatch: (...a: unknown[]) => moc
 jest.mock('@/stores/slices/auth-slice', () => ({ logout: jest.fn(() => ({ type: 'auth/logout' })) }));
 
 import api from '../api';
-import { authService } from '../auth';
+import { authService, SessionSupersededError, verifyMobileOtp } from '../auth';
+import * as nativeSessionState from '../native-session-state';
 import type { User } from '@/types/auth';
 
 const mockedApi = api as unknown as { post: jest.Mock; get: jest.Mock };
@@ -138,16 +139,34 @@ describe('authService.sendOtp / verifyOtp', () => {
       authService.verifyOtp({ email: 'a@b.c', code: '0000' }),
     ).rejects.toThrow(/Invalid code/);
   });
+
+  it('rejects a successful mobile OTP when its session persistence was superseded', async () => {
+    mockedApi.post.mockResolvedValueOnce({
+      data: { tokens: { accessToken: 'stale-access', refreshToken: 'stale-refresh' } },
+    });
+    const persistSpy = jest
+      .spyOn(nativeSessionState, 'persistSessionTokensAtEpoch')
+      .mockResolvedValue(false);
+
+    try {
+      await expect(
+        verifyMobileOtp({ identifier: 'a@b.c', code: '1234', purpose: 'login' }),
+      ).rejects.toBeInstanceOf(SessionSupersededError);
+    } finally {
+      persistSpy.mockRestore();
+    }
+    expect(mockSetSecureItem).not.toHaveBeenCalledWith('accessToken', 'stale-access');
+  });
 });
 
 describe('authService.logout', () => {
-  it('hits /auth/logout, clears storage + redux', async () => {
+  it('hits the native logout endpoint, clears storage + redux', async () => {
     mockGetSecureItem.mockResolvedValueOnce('refresh-token-xyz');
     mockedApi.post.mockResolvedValueOnce({ data: {} });
 
     await authService.logout();
 
-    expect(mockedApi.post).toHaveBeenCalledWith('/auth/logout', {
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/auth/logout', {
       refreshToken: 'refresh-token-xyz',
     });
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('accessToken');
@@ -176,11 +195,32 @@ describe('authService.logout', () => {
 });
 
 describe('authService.getProfile / sendVerificationEmail / getStoredTokens', () => {
+  it('routes a client JWT to the client profile and maps it to CLIENT with no permissions', async () => {
+    const payload = Buffer.from(JSON.stringify({ namespace: 'client' })).toString('base64url');
+    mockGetSecureItem.mockResolvedValueOnce(`header.${payload}.signature`);
+    mockedApi.get.mockResolvedValueOnce({
+      data: { id: 'c1', name: 'Sara Al-Harbi', email: null, phone: '+966500000000', isActive: true },
+    });
+
+    const result = await authService.getProfile();
+
+    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/profile');
+    expect(result.data).toEqual(expect.objectContaining({
+      id: 'c1', role: 'CLIENT', firstName: 'Sara', lastName: 'Al-Harbi', permissions: [],
+    }));
+  });
+
   it('getProfile returns api envelope', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: { success: true, data: baseUser } });
     const r = await authService.getProfile();
     expect(r.success).toBe(true);
     expect(mockedApi.get).toHaveBeenCalledWith('/auth/me');
+  });
+
+  it('normalizes the bare staff /auth/me profile response', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: baseUser });
+    const r = await authService.getProfile('staff');
+    expect(r).toEqual({ success: true, data: baseUser });
   });
 
   it('getProfile rejects on 401', async () => {

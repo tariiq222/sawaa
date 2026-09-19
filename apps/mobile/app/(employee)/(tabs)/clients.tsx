@@ -4,6 +4,7 @@ import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import {
   AquaBackground,
@@ -52,6 +53,7 @@ export default function ClientsScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
+  const router = useRouter();
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -63,7 +65,7 @@ export default function ClientsScreen() {
     () =>
       (data ?? []).map((p) => ({
         id: p.id,
-        name: `${p.firstName} ${p.lastName}`,
+        name: p.name || [p.firstName, p.lastName].filter(Boolean).join(' '),
         avatarUrl: p.avatarUrl,
         lastVisit: null,
         visitCount: 0,
@@ -125,7 +127,15 @@ export default function ClientsScreen() {
               <Animated.View
                 entering={reduceMotion ? undefined : FadeInDown.delay(180 + index * 60).duration(600).easing(Easing.out(Easing.cubic))}
               >
-                <Pressable style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}>
+                <Pressable
+                  onPress={() => router.push({
+                    pathname: '/(employee)/client/[id]',
+                    params: {
+                      id: item.id,
+                    },
+                  })}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                >
                   <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
                     <View style={[styles.clientRow, { flexDirection: dir.row }]}>
                       <Avatar size={44} name={item.name} imageUrl={item.avatarUrl} color={sawaaColors.teal[600]} />
