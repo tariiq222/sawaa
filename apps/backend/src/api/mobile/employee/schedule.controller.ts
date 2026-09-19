@@ -5,7 +5,7 @@ import { Type } from 'class-transformer';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiOkResponse,
 } from '@nestjs/swagger';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../../common/swagger';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
@@ -17,6 +17,7 @@ import {
   AvailabilityWindow,
   AvailabilityException,
 } from '../../../modules/people/employees/update-availability.handler';
+import { GetAvailabilityHandler } from '../../../modules/people/employees/get-availability.handler';
 import { IsArray, ValidateNested } from 'class-validator';
 
 export class EmployeeScheduleQuery {
@@ -34,8 +35,31 @@ export class EmployeeScheduleQuery {
 }
 
 export class UpdateAvailabilityBody {
+  @ApiProperty({ description: 'Weekly availability windows', type: [AvailabilityWindow] })
   @IsArray() @ValidateNested({ each: true }) @Type(() => AvailabilityWindow) windows!: AvailabilityWindow[];
+  @ApiPropertyOptional({ description: 'Date-range exceptions (holidays, leave)', type: [AvailabilityException] })
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => AvailabilityException) exceptions?: AvailabilityException[];
+}
+
+class EmployeeAvailabilityWindowResponseDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ minimum: 0, maximum: 6 }) dayOfWeek!: number;
+  @ApiProperty({ example: '09:00' }) startTime!: string;
+  @ApiProperty({ example: '17:00' }) endTime!: string;
+  @ApiProperty({ example: true }) isActive!: boolean;
+}
+
+class EmployeeAvailabilityExceptionResponseDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ type: String, format: 'date-time' }) startDate!: Date;
+  @ApiProperty({ type: String, format: 'date-time' }) endDate!: Date;
+  @ApiProperty({ type: String, nullable: true }) reason!: string | null;
+}
+
+class EmployeeAvailabilityResponseDto {
+  @ApiProperty({ format: 'uuid' }) employeeId!: string;
+  @ApiProperty({ type: [EmployeeAvailabilityWindowResponseDto] }) windows!: EmployeeAvailabilityWindowResponseDto[];
+  @ApiProperty({ type: [EmployeeAvailabilityExceptionResponseDto] }) exceptions!: EmployeeAvailabilityExceptionResponseDto[];
 }
 
 @ApiTags('Mobile Employee / Schedule')
@@ -48,6 +72,7 @@ export class MobileEmployeeScheduleController {
     private readonly resolveEmployeeId: ResolveEmployeeIdHandler,
     private readonly listBookings: ListBookingsHandler,
     private readonly updateAvailability: UpdateAvailabilityHandler,
+    private readonly getAvailability: GetAvailabilityHandler,
   ) {}
 
   @ApiOperation({ summary: 'Get today\'s bookings for the authenticated employee' })
@@ -117,17 +142,7 @@ export class MobileEmployeeScheduleController {
   }
 
   @ApiOperation({ summary: 'Update availability windows and exceptions for the authenticated employee' })
-  @ApiOkResponse({
-    description: 'Availability updated successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        employeeId: { type: 'string', format: 'uuid' },
-        windows: { type: 'array', items: { type: 'object' } },
-        exceptions: { type: 'array', items: { type: 'object' } },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Availability updated successfully', type: EmployeeAvailabilityResponseDto })
   @Patch('availability')
   @CheckPermissions({ action: 'update', subject: 'Booking' })
   async updateAvailabilityEndpoint(
@@ -138,10 +153,24 @@ export class MobileEmployeeScheduleController {
       userId: user.sub,
       employeeId: user.employeeId,
     });
-    return this.updateAvailability.execute({
+    const result = await this.updateAvailability.execute({
       employeeId,
       windows: body.windows,
       exceptions: body.exceptions,
     });
+    return { employeeId, ...result };
+  }
+
+  @ApiOperation({ summary: 'Get availability windows and exceptions for the authenticated employee' })
+  @ApiOkResponse({ description: 'Availability windows and exceptions', type: EmployeeAvailabilityResponseDto })
+  @Get('availability')
+  @CheckPermissions({ action: 'read', subject: 'Booking' })
+  async getAvailabilityEndpoint(@CurrentUser() user: JwtUser) {
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
+    const result = await this.getAvailability.execute({ employeeId });
+    return { employeeId, windows: result.schedule, exceptions: result.exceptions };
   }
 }

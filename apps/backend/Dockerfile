@@ -27,7 +27,7 @@
 #     - Delete the duplicate pnpm install in app-build (lines 92)
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS deps
+FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -43,7 +43,7 @@ COPY packages/ui/package.json              ./packages/ui/
 RUN pnpm install --frozen-lockfile
 
 # ── Stage 2: shared-build ────────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS shared-build
+FROM node:22-bookworm-slim AS shared-build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -84,7 +84,7 @@ RUN mkdir -p /app/node_modules/@sawaa \
  && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.d.ts
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS app-build
+FROM node:22-bookworm-slim AS app-build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -93,16 +93,21 @@ RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 COPY --from=shared-build /app/node_modules ./node_modules
 COPY --from=shared-build /app/packages     ./packages
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY apps/backend/ ./apps/backend/
+# Keep the dependency layer keyed to manifests and the lockfile, not backend source.
+COPY apps/backend/package.json ./apps/backend/
 
 # Verify shared dist survived the COPY from shared-build
 RUN test -f /app/packages/shared/dist/constants/feature-keys.js \
   || (echo "❌ packages/shared/dist/ missing — COPY from shared-build failed" && exit 1)
 
-# pnpm install in app-build re-hoists all types (incl. backend's nested deps
-# like @types/uuid) and rebuilds workspace links now that full source is present.
-# --frozen-lockfile --prefer-offline → fast (cache hits from deps stage).
+# Install all workspace dependencies, including backend devDependencies needed by
+# Prisma generate, Nest build, TypeScript, and their type packages. This layer
+# remains cached when only apps/backend source files change.
 RUN pnpm install --frozen-lockfile --prefer-offline
+
+# Copy backend source only after install so auth/source edits do not invalidate
+# the dependency layer. Prisma and Nest compilation below still see full source.
+COPY apps/backend/ ./apps/backend/
 
 # Force @sawaa/* symlinks to point at /app/packages (pnpm install may reset them
 # to point through .pnpm/ store). Direct symlinks let TS resolve via the package's
@@ -118,7 +123,7 @@ RUN cd /app/apps/backend && /app/node_modules/.bin/prisma generate --schema=pris
 RUN cd /app/apps/backend && /app/node_modules/.bin/nest build
 
 # ── Stage 4: runner ──────────────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5100

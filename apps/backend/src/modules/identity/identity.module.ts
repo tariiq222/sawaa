@@ -65,6 +65,9 @@ import { UpdateEmployeeAccountHandler } from './employee-account/update-employee
 import { SystemRolesBootstrap } from './roles/system-roles.bootstrap';
 import { DashboardTwoFactorChallengeService } from './dashboard-two-factor-challenge.service';
 import { PlatformSettingsModule } from '../platform/settings/platform-settings.module';
+import { NativeSessionLookup } from './native-session/native-session.lookup';
+import { NativeRefreshHandler } from './native-session/native-refresh.handler';
+import { NativeLogoutHandler } from './native-session/native-logout.handler';
 
 const handlers = [
   LoginHandler, RefreshTokenHandler, LogoutHandler,
@@ -95,6 +98,9 @@ const handlers = [
   GetEmployeeAccountHandler,
   CreateEmployeeAccountHandler,
   UpdateEmployeeAccountHandler,
+  NativeSessionLookup,
+  NativeRefreshHandler,
+  NativeLogoutHandler,
 ];
 
 @Module({

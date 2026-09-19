@@ -239,6 +239,23 @@ describe('ApproveCancelBookingHandler', () => {
 
   // ─── Refund execution tests (Fix #5) ─────────────────────────────────────
 
+  it('re-reads a payment after the approval CAS when it commits during approval', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
+    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
+    // The payment lookup occurs after the approval CAS inside the transaction.
+    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-late', amount: 10000 });
+    const refundHandler = buildRefundHandler();
+    const handler = buildHandler(prisma, { refundHandler });
+
+    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
+
+    expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ paymentId: 'pay-late' }),
+    );
+  });
+
   it('creates refund request in transaction when booking is PAID and refundType is FULL', async () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);

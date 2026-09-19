@@ -3154,6 +3154,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke native mobile sessions */
+        post: operations["MobileClientAuthController_logout_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate a native mobile refresh token */
+        post: operations["MobileClientAuthController_refresh_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/auth/register": {
         parameters: {
             query?: never;
@@ -3654,6 +3688,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/employee/clients/{clientId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a client who has a booking with the authenticated employee */
+        get: operations["MobileEmployeeClientsController_getMyClient_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/employee/clients/{clientId}/history": {
         parameters: {
             query?: never;
@@ -3695,7 +3746,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get availability windows and exceptions for the authenticated employee */
+        get: operations["MobileEmployeeScheduleController_getAvailabilityEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7921,6 +7973,32 @@ export interface components {
              */
             sortOrder?: number;
         };
+        EmployeeAvailabilityExceptionResponseDto: {
+            /** Format: date-time */
+            endDate: string;
+            /** Format: uuid */
+            id: string;
+            reason: string | null;
+            /** Format: date-time */
+            startDate: string;
+        };
+        EmployeeAvailabilityResponseDto: {
+            /** Format: uuid */
+            employeeId: string;
+            exceptions: components["schemas"]["EmployeeAvailabilityExceptionResponseDto"][];
+            windows: components["schemas"]["EmployeeAvailabilityWindowResponseDto"][];
+        };
+        EmployeeAvailabilityWindowResponseDto: {
+            dayOfWeek: number;
+            /** @example 17:00 */
+            endTime: string;
+            /** Format: uuid */
+            id: string;
+            /** @example true */
+            isActive: boolean;
+            /** @example 09:00 */
+            startTime: string;
+        };
         EmployeeCancelBookingDto: {
             /**
              * @description Free-text notes about the cancellation
@@ -7944,6 +8022,31 @@ export interface components {
              * @example EMPLOYEE_UNAVAILABLE
              */
             reason?: components["schemas"]["CancellationReason"];
+        };
+        EmployeeClientResponseDto: {
+            avatarUrl: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            dateOfBirth: string | null;
+            /** @example sara@example.com */
+            email: string | null;
+            /** @example Sara */
+            firstName: string | null;
+            /** @example FEMALE */
+            gender: string | null;
+            /** @example 00000000-0000-4000-a000-000000000001 */
+            id: string;
+            /** @example true */
+            isActive: boolean;
+            /** @example Al-Harbi */
+            lastName: string | null;
+            /** @example Sara Al-Harbi */
+            name: string;
+            /** @example +966501234567 */
+            phone: string | null;
+            /** Format: date-time */
+            updatedAt: string;
         };
         EmployeeDurationItemDto: {
             /**
@@ -8855,12 +8958,57 @@ export interface components {
              */
             amount?: number;
             /**
+             * @description Formatted payment amount with currency
+             * @example 100.00 SAR
+             */
+            amount_format?: string;
+            /**
+             * @description Payment callback URL
+             * @example https://sawaa.test/payment/callback
+             */
+            callback_url?: string;
+            /**
+             * @description Amount captured in the smallest currency unit
+             * @example 10000
+             */
+            captured?: number;
+            /**
+             * @description Timestamp when the payment was captured
+             * @example 2026-09-19T18:43:34.000Z
+             */
+            captured_at?: string;
+            /**
+             * @description Formatted captured amount with currency
+             * @example 100.00 SAR
+             */
+            captured_format?: string;
+            /**
+             * @description Timestamp when the payment was created
+             * @example 2026-09-19T18:43:30.000Z
+             */
+            created_at?: string;
+            /**
              * @description ISO 4217 currency code
              * @example SAR
              */
             currency?: string;
             /**
-             * @description Moyasar payment ID
+             * @description Human-readable payment description
+             * @example Counseling booking
+             */
+            description?: string;
+            /**
+             * @description Estimated payment fee in the smallest currency unit
+             * @example 250
+             */
+            fee?: number;
+            /**
+             * @description Formatted payment fee with currency
+             * @example 2.50 SAR
+             */
+            fee_format?: string;
+            /**
+             * @description Moyasar payment ID (or event ID in the nested envelope)
              * @example pay_abc123
              */
             id?: string;
@@ -8870,6 +9018,11 @@ export interface components {
              */
             invoice_id?: string;
             /**
+             * @description Payer IP address reported by Moyasar
+             * @example 127.0.0.1
+             */
+            ip?: string;
+            /**
              * @description Human-readable message from Moyasar (e.g. failure reason)
              * @example Insufficient funds
              */
@@ -8877,11 +9030,40 @@ export interface components {
             /** @description Metadata attached when the payment was initiated */
             metadata?: components["schemas"]["MoyasarWebhookMetadataDto"];
             /**
+             * @description Amount refunded in the smallest currency unit
+             * @example 0
+             */
+            refunded?: number;
+            /**
+             * @description Timestamp when the payment was refunded
+             * @example 2026-09-19T18:43:34.000Z
+             */
+            refunded_at?: string;
+            /**
+             * @description Formatted refunded amount with currency
+             * @example 0.00 SAR
+             */
+            refunded_format?: string;
+            /** @description Payment source details returned by Moyasar */
+            source?: Record<string, never>;
+            /** @description Payment split details returned by Moyasar */
+            splits?: Record<string, never>[];
+            /**
              * @description Payment status reported by Moyasar
              * @example paid
              * @enum {string}
              */
             status?: "paid" | "failed" | "refunded" | "authorized" | "captured" | "voided";
+            /**
+             * @description Timestamp when the payment was last updated
+             * @example 2026-09-19T18:43:34.000Z
+             */
+            updated_at?: string;
+            /**
+             * @description Timestamp when the payment was voided
+             * @example 2026-09-19T18:43:34.000Z
+             */
+            voided_at?: string;
         };
         MoyasarWebhookDto: {
             /**
@@ -8890,48 +9072,112 @@ export interface components {
              */
             account_name?: string;
             /**
-             * @description Amount in the smallest currency unit (halalas) — flat shape only
+             * @description Amount in the smallest currency unit (halalas)
              * @example 10000
              */
             amount?: number;
             /**
-             * @description ISO 8601 timestamp when the event was created
-             * @example 2024-01-15T10:30:00Z
+             * @description Formatted payment amount with currency
+             * @example 100.00 SAR
+             */
+            amount_format?: string;
+            /**
+             * @description Payment callback URL
+             * @example https://sawaa.test/payment/callback
+             */
+            callback_url?: string;
+            /**
+             * @description Amount captured in the smallest currency unit
+             * @example 10000
+             */
+            captured?: number;
+            /**
+             * @description Timestamp when the payment was captured
+             * @example 2026-09-19T18:43:34.000Z
+             */
+            captured_at?: string;
+            /**
+             * @description Formatted captured amount with currency
+             * @example 100.00 SAR
+             */
+            captured_format?: string;
+            /**
+             * @description Timestamp when the payment was created
+             * @example 2026-09-19T18:43:30.000Z
              */
             created_at?: string;
             /**
-             * @description ISO 4217 currency code (flat shape only)
+             * @description ISO 4217 currency code
              * @example SAR
              */
             currency?: string;
             /** @description Nested payment object — the documented Moyasar webhook delivery shape */
             data?: components["schemas"]["MoyasarWebhookDataDto"];
             /**
-             * @description Payment ID (flat shape) OR event ID (nested shape)
+             * @description Human-readable payment description
+             * @example Counseling booking
+             */
+            description?: string;
+            /**
+             * @description Estimated payment fee in the smallest currency unit
+             * @example 250
+             */
+            fee?: number;
+            /**
+             * @description Formatted payment fee with currency
+             * @example 2.50 SAR
+             */
+            fee_format?: string;
+            /**
+             * @description Moyasar payment ID (or event ID in the nested envelope)
              * @example pay_abc123
              */
             id?: string;
             /**
-             * @description Moyasar hosted-checkout invoice ID (flat shape)
+             * @description Moyasar hosted-checkout invoice ID
              * @example inv_abc123
              */
             invoice_id?: string;
+            /**
+             * @description Payer IP address reported by Moyasar
+             * @example 127.0.0.1
+             */
+            ip?: string;
             /**
              * @description Indicates if the payment was made in live mode
              * @example true
              */
             live?: Record<string, never>;
             /**
-             * @description Human-readable message from Moyasar (flat shape only)
+             * @description Human-readable message from Moyasar (e.g. failure reason)
              * @example Insufficient funds
              */
             message?: string;
-            /** @description Metadata attached when the payment was initiated (flat shape only) */
+            /** @description Metadata attached when the payment was initiated */
             metadata?: components["schemas"]["MoyasarWebhookMetadataDto"];
+            /**
+             * @description Amount refunded in the smallest currency unit
+             * @example 0
+             */
+            refunded?: number;
+            /**
+             * @description Timestamp when the payment was refunded
+             * @example 2026-09-19T18:43:34.000Z
+             */
+            refunded_at?: string;
+            /**
+             * @description Formatted refunded amount with currency
+             * @example 0.00 SAR
+             */
+            refunded_format?: string;
             /** @description Shared secret token — present when the merchant configures body-token verification instead of an HMAC header */
             secret_token?: string;
+            /** @description Payment source details returned by Moyasar */
+            source?: Record<string, never>;
+            /** @description Payment split details returned by Moyasar */
+            splits?: Record<string, never>[];
             /**
-             * @description Payment status reported by Moyasar (flat shape only)
+             * @description Payment status reported by Moyasar
              * @example paid
              * @enum {string}
              */
@@ -8941,13 +9187,50 @@ export interface components {
              * @example payment_paid
              */
             type?: string;
+            /**
+             * @description Timestamp when the payment was last updated
+             * @example 2026-09-19T18:43:34.000Z
+             */
+            updated_at?: string;
+            /**
+             * @description Timestamp when the payment was voided
+             * @example 2026-09-19T18:43:34.000Z
+             */
+            voided_at?: string;
         };
         MoyasarWebhookMetadataDto: {
+            /**
+             * @description Booking identity embedded in the payment metadata
+             * @example booking_abc123
+             */
+            bookingId?: string;
+            /**
+             * @description Internal payment identity embedded in the payment metadata
+             * @example payment_abc123
+             */
+            internalPaymentId?: string;
             /**
              * @description Invoice UUID embedded in the payment metadata
              * @example 00000000-0000-0000-0000-000000000000
              */
             invoiceId?: string;
+            /**
+             * @description Package purchase identity embedded in the payment metadata
+             * @example purchase_abc123
+             */
+            packagePurchaseId?: string;
+            /**
+             * @description Internal source label embedded in the payment metadata
+             * @example public-booking
+             */
+            source?: string;
+        };
+        NativeSessionDto: {
+            /**
+             * @description Native refresh token. It is sent in the JSON body, never as a cookie.
+             * @example a1b2c3d4-0000-1111-2222-333344445555
+             */
+            refreshToken: string;
         };
         NotificationListMetaDto: {
             /** @description Whether a next page exists */
@@ -9854,7 +10137,12 @@ export interface components {
             /** @description Number of unread notifications */
             count: number;
         };
-        UpdateAvailabilityBody: Record<string, never>;
+        UpdateAvailabilityBody: {
+            /** @description Date-range exceptions (holidays, leave) */
+            exceptions?: components["schemas"]["AvailabilityException"][];
+            /** @description Weekly availability windows */
+            windows: components["schemas"]["AvailabilityWindow"][];
+        };
         UpdateAvailabilityDto: {
             /** @description Date-range exceptions (holidays, leave) */
             exceptions?: components["schemas"]["AvailabilityException"][];
@@ -27537,6 +27825,122 @@ export interface operations {
             };
         };
     };
+    MobileClientAuthController_logout_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeSessionDto"];
+            };
+        };
+        responses: {
+            /** @description Native sessions revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientAuthController_refresh_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeSessionDto"];
+            };
+        };
+        responses: {
+            /** @description Native access and refresh tokens issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientAuthController_registerUser_v1: {
         parameters: {
             query?: never;
@@ -27725,7 +28129,19 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Mobile routing hint; JWT guards remain authoritative
+                         * @enum {string}
+                         */
+                        sessionKind?: "client" | "staff";
+                        tokens?: {
+                            accessToken?: string;
+                            refreshToken?: string;
+                        };
+                    };
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29581,7 +29997,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data?: components["schemas"]["ClientResponseDto"][];
+                        data?: components["schemas"]["EmployeeClientResponseDto"][];
                         meta?: {
                             limit?: number;
                             page?: number;
@@ -29617,6 +30033,72 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmployeeClientsController_getMyClient_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Client UUID */
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee-safe client record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeClientResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -29798,6 +30280,62 @@ export interface operations {
             };
         };
     };
+    MobileEmployeeScheduleController_getAvailabilityEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Availability windows and exceptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeAvailabilityResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileEmployeeScheduleController_updateAvailabilityEndpoint_v1: {
         parameters: {
             query?: never;
@@ -29817,12 +30355,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        employeeId?: string;
-                        exceptions?: Record<string, never>[];
-                        windows?: Record<string, never>[];
-                    };
+                    "application/json": components["schemas"]["EmployeeAvailabilityResponseDto"];
                 };
             };
             /** @description Validation failed */

@@ -26,8 +26,9 @@ interface RefundCompletedPayload {
  *   2. Zoom meeting deleted (if zoomMeetingId present)
  *   3. zoomJoinUrl / zoomHostUrl / zoomStartUrl nulled
  *
- * Idempotent: a duplicate event finds the booking already CANCELLED and skips.
- * Errors do not block the refund — that already happened — but are logged.
+ * Idempotent: a duplicate event finds the booking already terminal and skips
+ * the status transition. Transient cascade failures reject the event so
+ * BullMQ retries with the stored Zoom identifier still available.
  */
 @Injectable()
 export class RefundCompletedEventHandler {
@@ -52,45 +53,65 @@ export class RefundCompletedEventHandler {
           return;
         }
 
-        try {
-          const booking = await this.cls.run(async () => {
-            this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-            return this.prisma.booking.findFirst({
-              where: { id: bookingId },
-              select: {
-                id: true,
-                status: true,
-                zoomMeetingId: true,
-              },
-            });
+        const booking = await this.cls.run(async () => {
+          this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+          return this.prisma.booking.findFirst({
+            where: { id: bookingId },
+            select: {
+              id: true,
+              status: true,
+              zoomMeetingId: true,
+            },
           });
-          if (!booking) {
-            this.logger.warn(`Refund ${refundRequestId}: booking ${bookingId} not found — skipping cascade`);
-            return;
+        });
+        if (!booking) {
+          // A duplicate event after the booking was deleted is benign. Any
+          // database error above is allowed to reject so BullMQ can retry it.
+          this.logger.warn(`Refund ${refundRequestId}: booking ${bookingId} not found — skipping cascade`);
+          return;
+        }
+
+        const alreadyTerminal =
+          booking.status === 'CANCELLED'
+          || booking.status === 'NO_SHOW'
+          || booking.status === 'COMPLETED'
+          || booking.status === 'EXPIRED';
+        if (!alreadyTerminal) {
+          let nextStatus;
+          try {
+            nextStatus = assertTransition(booking.status, 'DIRECT_CANCEL');
+          } catch (transitionErr) {
+            // Invalid lifecycle state is a benign duplicate/final-state event.
+            // Only this domain validation is swallowed; transaction/provider
+            // failures below must reject for BullMQ retry.
+            this.logger.warn(
+              `Refund ${refundRequestId}: booking ${bookingId} status '${booking.status}' does not allow DIRECT_CANCEL — leaving status alone`,
+              transitionErr instanceof Error ? transitionErr.message : String(transitionErr),
+            );
           }
-          if (booking.status === 'CANCELLED' || booking.status === 'NO_SHOW' || booking.status === 'COMPLETED') {
-            // Already in a terminal state. Still attempt zoom teardown below
-            // — receipts may have outlived the cancel flow.
-          } else {
-            try {
-              const nextStatus = assertTransition(booking.status, 'DIRECT_CANCEL');
-              await this.cls.run(async () => {
-                this.cls.set('tenant', {
-                  organizationId: DEFAULT_ORG_ID,
-                  id: 'system',
-                  role: 'system',
-                  isSuperAdmin: false,
+          if (nextStatus) {
+            await this.cls.run(async () => {
+              this.cls.set('tenant', {
+                organizationId: DEFAULT_ORG_ID,
+                id: 'system',
+                role: 'system',
+                isSuperAdmin: false,
+              });
+              await this.rlsTransaction.withTransaction(async (tx) => {
+                // The pre-transaction read only selects the intended transition.
+                // A cancellation/expiry may win the race before this transaction
+                // starts, so guard the write with the observed status and log it
+                // only when this handler actually changed the row.
+                const transitioned = await tx.booking.updateMany({
+                  where: { id: bookingId, status: booking.status },
+                  data: {
+                    status: nextStatus,
+                    cancelledAt: new Date(),
+                    cancelReason: 'OTHER',
+                  },
                 });
-                await this.rlsTransaction.withTransaction((tx) => Promise.all([
-                  tx.booking.update({
-                    where: { id: bookingId },
-                    data: {
-                      status: nextStatus,
-                      cancelledAt: new Date(),
-                      cancelReason: 'OTHER',
-                    },
-                  }),
-                  tx.bookingStatusLog.create({
+                if (transitioned.count === 1) {
+                  await tx.bookingStatusLog.create({
                     data: {
                       bookingId,
                       fromStatus: booking.status,
@@ -98,48 +119,30 @@ export class RefundCompletedEventHandler {
                       changedBy: 'system',
                       reason: `refund:${refundRequestId}`,
                     },
-                  }),
-                ]));
-              });
-            } catch (transitionErr) {
-              this.logger.warn(
-                `Refund ${refundRequestId}: booking ${bookingId} status '${booking.status}' does not allow DIRECT_CANCEL — leaving status alone, still tearing down Zoom`,
-                transitionErr instanceof Error ? transitionErr.message : String(transitionErr),
-              );
-            }
-          }
-
-          // Tear down the Zoom meeting last so the join URL stops working
-          // even if the status update above failed.
-          if (booking.zoomMeetingId) {
-            try {
-              await this.zoomMeetingService.deleteMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId);
-            } catch (zoomErr) {
-              this.logger.error(
-                `Refund ${refundRequestId}: failed to delete Zoom meeting ${booking.zoomMeetingId} — manual intervention required`,
-                zoomErr instanceof Error ? zoomErr.stack : String(zoomErr),
-              );
-            }
-            await this.cls.run(async () => {
-              this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-              await this.prisma.booking.update({
-                where: { id: bookingId },
-                data: {
-                  zoomMeetingId: null,
-                  zoomJoinUrl: null,
-                  zoomHostUrl: null,
-                  zoomStartUrl: null,
-                },
+                  });
+                }
               });
             });
           }
-        } catch (err) {
-          this.logger.error(
-            `Refund ${refundRequestId}: cascade for booking ${bookingId} failed`,
-            err instanceof Error ? err.stack : String(err),
-          );
-          // Do NOT rethrow — refund already moved real money, the cascade is
-          // best-effort. Reconciliation / human review covers any drift.
+        }
+
+        // Provider cleanup is part of the retryable cascade. Keep the stored
+        // meeting id when deletion fails so the next delivery can retry the
+        // same cleanup target; clear all URLs only after a successful delete.
+        if (booking.zoomMeetingId) {
+          await this.zoomMeetingService.deleteMeetingStrict(DEFAULT_ORG_ID, booking.zoomMeetingId);
+          await this.cls.run(async () => {
+            this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+            await this.prisma.booking.update({
+              where: { id: bookingId },
+              data: {
+                zoomMeetingId: null,
+                zoomJoinUrl: null,
+                zoomHostUrl: null,
+                zoomStartUrl: null,
+              },
+            });
+          });
         }
       },
     );

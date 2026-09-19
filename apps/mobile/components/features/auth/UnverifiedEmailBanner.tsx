@@ -15,7 +15,7 @@ export function UnverifiedEmailBanner() {
 
   const requestVerification = useRequestEmailVerification();
 
-  if (!user || user.emailVerifiedAt) return null;
+  if (!user || user.role === 'CLIENT' || user.emailVerifiedAt) return null;
 
   const handleSend = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

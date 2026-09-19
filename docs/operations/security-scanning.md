@@ -119,15 +119,27 @@ entries use standard weekly schedules.
 
 ## Private repository CI compatibility
 
-The existing CI security job keeps its current dependency-audit, Gitleaks, and
-Trivy scope and policy. It grants only `contents: read` and `pull-requests: read`
+The existing CI security job keeps its current dependency-audit and Gitleaks
+scope. Trivy runs as a blocking filesystem vulnerability gate in both
+`.github/workflows/ci.yml` and `.github/workflows/merge-gate.yml`. Each job grants
+only `contents: read` and `pull-requests: read`
 so Gitleaks can inspect pull-request commits in a private repository. Gitleaks
 comments are disabled with `GITLEAKS_ENABLE_COMMENTS=false`, so the job does not
 request write access or post unsolicited comments.
 
-Trivy continues to scan the filesystem for HIGH and CRITICAL vulnerabilities with
-`ignore-unfixed: true` and `exit-code: '0'`; it is informational in this job.
-The job now writes `trivy-fs.sarif` using Trivy's SARIF formatter and stores it in
-a private Actions artifact for seven days. Artifact upload runs after the job's
-other steps when the report exists. GitHub Code Scanning SARIF upload is not used
-because it is unavailable for the current private-repository account.
+Trivy scans the repository filesystem for HIGH and CRITICAL OS/library
+vulnerabilities with `ignore-unfixed: false` and `exit-code: '1'`. The scan skips
+generated dependency/build output (`coverage`, `dist`, `node_modules`, and `.next`)
+but does not exclude `apps/mobile`; both the root `pnpm-lock.yaml` and the
+standalone `apps/mobile/pnpm-lock.yaml` are included. The
+job writes `trivy-fs.sarif` using Trivy's SARIF formatter and stores it in a
+private Actions artifact for seven days. Artifact upload runs after the job's
+other steps when the report exists. GitHub Code Scanning SARIF upload is not
+used because it is unavailable for the current private-repository account.
+
+The pinned Trivy 0.72.0 validation on 2026-09-18 initially scanned the mobile
+lockfile and found 23 HIGH results across 15 CVE rules (`@xmldom/xmldom`,
+`image-size`, and `js-yaml`). Mobile now carries compatible nested overrides in
+its standalone workspace lockfile (`@xmldom/xmldom` 0.8.15/0.9.12,
+`image-size` 2.0.4, and `js-yaml` 3.15.2/4.3.2); the rerun produced valid SARIF
+with zero HIGH/CRITICAL results.

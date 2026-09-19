@@ -107,6 +107,21 @@ describe('ZoomApiClient', () => {
       mockedFetch.mockResolvedValue({ ok: false, status: 500, text: jest.fn().mockResolvedValue('Server error') });
       await expect(client.deleteMeeting('token', '123')).resolves.toBeUndefined();
     });
+
+    it('strict delete accepts an already deleted meeting', async () => {
+      mockedFetch.mockResolvedValue({ ok: false, status: 404, text: jest.fn().mockResolvedValue('Not found') });
+      await expect(client.deleteMeetingStrict('token', '123')).resolves.toBeUndefined();
+    });
+
+    it('strict delete rejects provider failures for durable retries', async () => {
+      mockedFetch.mockResolvedValue({ ok: false, status: 502, text: jest.fn().mockResolvedValue('Bad Gateway') });
+      await expect(client.deleteMeetingStrict('token', '123')).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it('strict delete propagates network failures', async () => {
+      mockedFetch.mockRejectedValue(new Error('network down'));
+      await expect(client.deleteMeetingStrict('token', '123')).rejects.toThrow('network down');
+    });
   });
 
   describe('updateMeeting', () => {

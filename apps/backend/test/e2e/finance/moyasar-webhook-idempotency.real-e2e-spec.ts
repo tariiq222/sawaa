@@ -1,12 +1,14 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+import { BookingStatus, CancellationReason } from '@prisma/client';
 import { AppModule } from '../../../src/app.module';
 import { PrismaService, RlsTransactionService } from '../../../src/infrastructure/database';
 import { MoyasarApiClient } from '../../../src/modules/finance/moyasar-api/moyasar-api.client';
 import { MoyasarCredentialsService } from '../../../src/infrastructure/payments/moyasar-credentials.service';
 import { stableEventId } from '../../../src/common/events';
 import { ReconcilePaymentsCron } from '../../../src/modules/ops/cron-tasks/reconcile-payments.cron';
+import { CancelBookingHandler } from '../../../src/modules/bookings/cancel-booking/cancel-booking.handler';
 
 /**
  * R-26 (focused): the Moyasar booking-payment webhook must be idempotent at the
@@ -44,6 +46,12 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
   const gatewayPaymentId = `pay_realE2e_${suffix}`;
   const concurrentInvoiceId = `10000000-0000-4000-8000-${suffix.replace(/[^0-9a-f]/gi, '1').slice(0, 12).padEnd(12, '1')}`;
   const concurrentGatewayPaymentId = `pay_concurrent_${suffix}`;
+  const lateCancelFirstInvoiceId = `20000000-0000-4000-8000-${suffix.replace(/[^0-9a-f]/gi, '2').slice(0, 12).padEnd(12, '2')}`;
+  const latePaidFirstInvoiceId = `30000000-0000-4000-8000-${suffix.replace(/[^0-9a-f]/gi, '3').slice(0, 12).padEnd(12, '3')}`;
+  const lateCancelFirstBookingId = `40000000-0000-4000-8000-${suffix.replace(/[^0-9a-f]/gi, '4').slice(0, 12).padEnd(12, '4')}`;
+  const latePaidFirstBookingId = `50000000-0000-4000-8000-${suffix.replace(/[^0-9a-f]/gi, '5').slice(0, 12).padEnd(12, '5')}`;
+  const lateCancelFirstGatewayPaymentId = `pay_late_cancel_first_${suffix}`;
+  const latePaidFirstGatewayPaymentId = `pay_late_paid_first_${suffix}`;
   let concurrentPaymentId = '';
   // The handler keys WebhookEvent.eventId on `${paymentId}:${normalizedStatus}`,
   // where normalizedStatus is the raw Moyasar status string ('paid'), not the
@@ -117,6 +125,16 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
         status: 'ISSUED',
       },
     });
+    await createBookingPaymentScenario({
+      bookingId: lateCancelFirstBookingId,
+      invoiceId: lateCancelFirstInvoiceId,
+      gatewayPaymentId: lateCancelFirstGatewayPaymentId,
+    });
+    await createBookingPaymentScenario({
+      bookingId: latePaidFirstBookingId,
+      invoiceId: latePaidFirstInvoiceId,
+      gatewayPaymentId: latePaidFirstGatewayPaymentId,
+    });
     await prisma.invoice.create({
       data: {
         id: concurrentInvoiceId,
@@ -169,21 +187,29 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
 
   async function cleanup() {
     await prisma.outboxEvent.deleteMany({
-      where: { aggregateId: { in: [invoiceId, concurrentInvoiceId] } },
+      where: { aggregateId: { in: [invoiceId, concurrentInvoiceId, lateCancelFirstInvoiceId, latePaidFirstInvoiceId] } },
+    }).catch(() => undefined);
+    await prisma.refundRequest.deleteMany({
+      where: { invoiceId: { in: [lateCancelFirstInvoiceId, latePaidFirstInvoiceId] } },
     }).catch(() => undefined);
     await prisma.webhookEvent.deleteMany({
       where: {
         OR: [
           { eventId: { startsWith: gatewayPaymentId } },
           { eventId: { startsWith: concurrentGatewayPaymentId } },
+          { eventId: { startsWith: lateCancelFirstGatewayPaymentId } },
+          { eventId: { startsWith: latePaidFirstGatewayPaymentId } },
         ],
       },
     }).catch(() => undefined);
     await prisma.payment.deleteMany({
-      where: { invoiceId: { in: [invoiceId, concurrentInvoiceId] } },
+      where: { invoiceId: { in: [invoiceId, concurrentInvoiceId, lateCancelFirstInvoiceId, latePaidFirstInvoiceId] } },
     }).catch(() => undefined);
     await prisma.invoice.deleteMany({
-      where: { id: { in: [invoiceId, concurrentInvoiceId] } },
+      where: { id: { in: [invoiceId, concurrentInvoiceId, lateCancelFirstInvoiceId, latePaidFirstInvoiceId] } },
+    }).catch(() => undefined);
+    await prisma.booking.deleteMany({
+      where: { id: { in: [lateCancelFirstBookingId, latePaidFirstBookingId] } },
     }).catch(() => undefined);
     if (previousPaymentConfig) {
       await prisma.organizationPaymentConfig
@@ -220,6 +246,69 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
         status: 'paid',
         amount: TOTAL_HALALAS,
         currency: 'SAR',
+        metadata: { invoiceId },
+      },
+    };
+  }
+
+  async function createBookingPaymentScenario(args: {
+    bookingId: string;
+    invoiceId: string;
+    gatewayPaymentId: string;
+  }) {
+    const scheduledAt = new Date(Date.now() + 48 * 3_600_000);
+    await prisma.booking.create({
+      data: {
+        id: args.bookingId,
+        branchId: `real-e2e-branch-${args.bookingId}`,
+        clientId: `real-e2e-client-${args.bookingId}`,
+        employeeId: `real-e2e-employee-${args.bookingId}`,
+        serviceId: `real-e2e-service-${args.bookingId}`,
+        deliveryType: 'IN_PERSON',
+        status: BookingStatus.PENDING,
+        scheduledAt,
+        endsAt: new Date(scheduledAt.getTime() + 60 * 60_000),
+        durationMins: 60,
+        price: TOTAL_HALALAS,
+        currency: 'SAR',
+        bookingNumber: args.bookingId === lateCancelFirstBookingId ? 700_000_001 : 700_000_002,
+      },
+    });
+    await prisma.invoice.create({
+      data: {
+        id: args.invoiceId,
+        branchId: `real-e2e-branch-${args.bookingId}`,
+        clientId: `real-e2e-client-${args.bookingId}`,
+        employeeId: `real-e2e-employee-${args.bookingId}`,
+        bookingId: args.bookingId,
+        subtotal: TOTAL_HALALAS,
+        vatAmt: 0,
+        total: TOTAL_HALALAS,
+        currency: 'SAR',
+        status: 'ISSUED',
+      },
+    });
+    await prisma.payment.create({
+      data: {
+        invoiceId: args.invoiceId,
+        amount: TOTAL_HALALAS,
+        currency: 'SAR',
+        method: 'ONLINE_CARD',
+        status: 'PENDING',
+        gatewayRef: args.gatewayPaymentId,
+        idempotencyKey: `client:${args.invoiceId}`,
+      },
+    });
+  }
+
+  function buildBookingWebhook(invoiceId: string, gatewayPaymentId: string) {
+    const payload = buildWebhook();
+    return {
+      ...payload,
+      id: `evt_${gatewayPaymentId}`,
+      data: {
+        ...payload.data,
+        id: gatewayPaymentId,
         metadata: { invoiceId },
       },
     };
@@ -414,5 +503,55 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
       if (!released) releaseLock();
       transactionSpy.mockRestore();
     }
+  });
+
+  it('preserves both cancel→paid and paid→cancel orderings, with one late-payment review on duplicate callbacks', async () => {
+    const cancelHandler = app.get(CancelBookingHandler);
+    const cancelFirstPayload = buildBookingWebhook(
+      lateCancelFirstInvoiceId,
+      lateCancelFirstGatewayPaymentId,
+    );
+
+    await cancelHandler.execute({
+      bookingId: lateCancelFirstBookingId,
+      reason: CancellationReason.CLIENT_REQUESTED,
+      changedBy: 'real-e2e',
+    });
+    const lateFirst = await request(app.getHttpServer())
+      .post('/api/v1/public/payments/webhook')
+      .send(cancelFirstPayload);
+    expect(lateFirst.status).toBe(200);
+    const duplicateLateFirst = await request(app.getHttpServer())
+      .post('/api/v1/public/payments/webhook')
+      .send(cancelFirstPayload);
+    expect(duplicateLateFirst.status).toBe(200);
+    expect(duplicateLateFirst.body).toMatchObject({ skipped: true, reason: 'duplicate' });
+
+    expect(await prisma.booking.findUnique({ where: { id: lateCancelFirstBookingId } }))
+      .toMatchObject({ status: BookingStatus.CANCELLED });
+    expect(await prisma.payment.count({
+      where: { invoiceId: lateCancelFirstInvoiceId, status: 'COMPLETED' },
+    })).toBe(1);
+    expect(await prisma.refundRequest.count({ where: { invoiceId: lateCancelFirstInvoiceId } })).toBe(1);
+    expect(await prisma.refundRequest.findFirst({ where: { invoiceId: lateCancelFirstInvoiceId } }))
+      .toMatchObject({ status: 'PENDING_REVIEW', providerState: 'NOT_CALLED' });
+
+    const paidFirstPayload = buildBookingWebhook(
+      latePaidFirstInvoiceId,
+      latePaidFirstGatewayPaymentId,
+    );
+    const paidFirst = await request(app.getHttpServer())
+      .post('/api/v1/public/payments/webhook')
+      .send(paidFirstPayload);
+    expect(paidFirst.status).toBe(200);
+    await cancelHandler.execute({
+      bookingId: latePaidFirstBookingId,
+      reason: CancellationReason.CLIENT_REQUESTED,
+      changedBy: 'real-e2e',
+    });
+
+    expect(await prisma.booking.findUnique({ where: { id: latePaidFirstBookingId } }))
+      .toMatchObject({ status: BookingStatus.CANCELLED });
+    expect(await prisma.refundRequest.count({ where: { invoiceId: latePaidFirstInvoiceId } })).toBe(1);
   });
 });

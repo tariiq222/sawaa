@@ -57,6 +57,15 @@ export class ZoomMeetingService {
     }
   }
 
+  /** Durable refund-cascade cleanup. Missing credentials/provider failures
+   * reject so the queue retains the meeting id and retries; the API client
+   * treats an already-deleted Zoom meeting as success. */
+  async deleteMeetingStrict(organizationId: string, meetingId: string): Promise<void> {
+    const token = await this.getAccessToken(organizationId);
+    if (!token) throw new ServiceUnavailableException('Zoom integration is unavailable');
+    await this.zoomApi.deleteMeetingStrict(token, meetingId);
+  }
+
   async updateMeeting(
     organizationId: string,
     meetingId: string,

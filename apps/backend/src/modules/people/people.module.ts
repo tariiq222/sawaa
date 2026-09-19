@@ -40,6 +40,7 @@ import { GetPublicEmployeeHandler } from './employees/public/get-public-employee
 import { SetClientActiveHandler } from './clients/set-client-active/set-client-active.handler';
 import { ListEmployeeClientsHandler } from './clients/list-employee-clients.handler';
 import { GetEmployeeClientHistoryHandler } from './clients/get-employee-client-history.handler';
+import { GetEmployeeClientHandler } from './clients/get-employee-client.handler';
 import { ResolveEmployeeIdHandler } from './employees/resolve-employee-id.handler';
 import { LogActivityHandler } from '../ops/log-activity/log-activity.handler';
 import { DashboardPeopleController } from '../../api/dashboard/people.controller';
@@ -49,7 +50,7 @@ import { NotificationOutboxModule } from '../comms/notification-outbox/notificat
 const handlers = [
   CreateClientHandler, UpdateClientHandler, ListClientsHandler, GetClientHandler, DeleteClientHandler,
   SetClientActiveHandler, LogActivityHandler,
-  ListEmployeeClientsHandler, GetEmployeeClientHistoryHandler, ResolveEmployeeIdHandler,
+  ListEmployeeClientsHandler, GetEmployeeClientHistoryHandler, GetEmployeeClientHandler, ResolveEmployeeIdHandler,
   CreateEmployeeHandler, UpdateAvailabilityHandler, EmployeeOnboardingHandler, OnboardEmployeeHandler, GetAvailabilityHandler, UpdateEmployeeHandler,
   ListEmployeesHandler, GetEmployeeHandler,
   DeleteEmployeeHandler, ListEmployeeServicesHandler, GetEmployeeServiceTypesHandler, AssignEmployeeServiceHandler,

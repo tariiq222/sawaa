@@ -225,6 +225,29 @@ describe('CancelBookingHandler', () => {
   });
 
   describe('refund request creation', () => {
+    it('re-reads a payment after taking the booking lock when it committed during cancellation', async () => {
+      prisma.booking.findFirst.mockResolvedValue(baseBooking);
+      // The payment lookup occurs after the booking CAS inside the transaction;
+      // this models the callback winning that interleaving.
+      prisma.payment.findFirst.mockResolvedValue({ id: 'pay-late', amount: 10_000, refundedAmount: 0 });
+      prisma.booking.update.mockResolvedValue({ ...baseBooking, status: BookingStatus.CANCELLED });
+      refundHandler.createRefundRequestInTx.mockResolvedValue({
+        refundRequestId: 'rr-late',
+        idempotencyKey: 'ik-late',
+      });
+
+      await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ paymentId: 'pay-late' }),
+      );
+    });
+
     it('creates refund request when completed payment exists and refundType is not NONE', async () => {
       const in48h = new Date(Date.now() + 48 * 3_600_000);
       prisma.booking.findFirst.mockResolvedValue({

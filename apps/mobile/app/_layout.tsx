@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 import { useEffect } from 'react';
 import { I18nManager } from 'react-native';
-import { Slot, useRouter } from 'expo-router';
+import { Slot } from 'expo-router';
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -32,23 +32,6 @@ function PushBootstrap() {
   return null;
 }
 
-function AuthRouter() {
-  const router = useRouter();
-  const token = useAppSelector((s) => s.auth.token);
-
-  useEffect(() => {
-    if (!token) {
-      router.replace('/(auth)/login');
-      return;
-    }
-    // Role-based redirection (client vs employee tabs) is handled by the
-    // group layouts' guards via getPrimaryRole(user).
-    router.replace('/(client)/(tabs)/home');
-  }, [token, router]);
-
-  return null;
-}
-
 function RootLayout() {
   useEffect(() => {
     if (!I18nManager.isRTL) {
@@ -64,7 +47,6 @@ function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ErrorBoundary>
             <PushBootstrap />
-            <AuthRouter />
             <DirContext.Provider value={dirState}>
               <ThemeProvider language="ar">
                 <SafeAreaProvider>

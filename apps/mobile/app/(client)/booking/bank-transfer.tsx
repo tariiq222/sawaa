@@ -13,7 +13,7 @@ import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
-import { clientPaymentsService } from '@/services/client';
+import { clientPaymentsService, type ReceiptUploadAsset } from '@/services/client';
 import { formatHalalas } from '@/lib/money';
 
 export default function BankTransferScreen() {
@@ -31,9 +31,9 @@ export default function BankTransferScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
-  const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<ReceiptUploadAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const uploaded = !!receiptUri;
+  const uploaded = !!receipt;
   // amount is integer halalas (forwarded from payment.tsx).
   const numericAmount = amount ? Number(amount) : 0;
   const amountLabel = `${formatHalalas(numericAmount, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
@@ -50,19 +50,20 @@ export default function BankTransferScreen() {
       quality: 0.85,
     });
     if (!result.canceled && result.assets[0]) {
-      setReceiptUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      setReceipt({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName });
     }
   };
 
   const submitReceipt = async () => {
-    if (!receiptUri || !invoiceId || submitting) return;
+    if (!receipt || !invoiceId || submitting) return;
     if (!numericAmount || numericAmount <= 0) {
       Alert.alert(dir.isRTL ? 'مبلغ غير صالح' : 'Invalid amount');
       return;
     }
     setSubmitting(true);
     try {
-      const payment = await clientPaymentsService.uploadBankTransfer(invoiceId, numericAmount, receiptUri);
+      const payment = await clientPaymentsService.uploadBankTransfer(invoiceId, numericAmount, receipt);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const successParams = bookingId
         ? { bookingId, invoiceId, paymentId: payment.id }

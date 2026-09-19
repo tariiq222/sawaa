@@ -7,14 +7,15 @@ import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 import { ListEmployeeClientsHandler } from '../../../modules/people/clients/list-employee-clients.handler';
 import { GetEmployeeClientHistoryHandler } from '../../../modules/people/clients/get-employee-client-history.handler';
+import { GetEmployeeClientHandler } from '../../../modules/people/clients/get-employee-client.handler';
 import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 
 describe('MobileEmployeeClientsController (e2e)', () => {
   let app: INestApplication;
 
   const mockPrisma = {
-    booking: { findMany: jest.fn() },
-    client: { findMany: jest.fn(), count: jest.fn() },
+    booking: { findMany: jest.fn(), findFirst: jest.fn() },
+    client: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn() },
     employee: { findFirst: jest.fn() },
   };
 
@@ -25,6 +26,7 @@ describe('MobileEmployeeClientsController (e2e)', () => {
         ResolveEmployeeIdHandler,
         ListEmployeeClientsHandler,
         GetEmployeeClientHistoryHandler,
+        GetEmployeeClientHandler,
         { provide: PrismaService, useValue: mockPrisma },
       ],
     })
@@ -191,6 +193,46 @@ describe('MobileEmployeeClientsController (e2e)', () => {
         .get('/mobile/employee/clients/not-a-uuid/history')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(400);
+    });
+  });
+
+  describe('GET /mobile/employee/clients/:clientId', () => {
+    it('returns the client only when the employee has a booking relationship', async () => {
+      const clientId = uuid(1);
+      mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(3) });
+      mockPrisma.client.findFirst.mockResolvedValue({
+        id: clientId,
+        firstName: 'Sara',
+        lastName: 'Ali',
+        phone: null,
+        email: 'sara@example.com',
+        avatarUrl: null,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/mobile/employee/clients/${clientId}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(res.body).toEqual(expect.objectContaining({ id: clientId, firstName: 'Sara', lastName: 'Ali' }));
+      expect(mockPrisma.booking.findFirst).toHaveBeenCalledWith({
+        where: { employeeId: 'emp-1', clientId },
+        select: { id: true },
+      });
+    });
+
+    it('rejects an unrelated client before reading client data', async () => {
+      const clientId = uuid(9);
+      mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+      mockPrisma.booking.findFirst.mockResolvedValue(null);
+
+      await request(app.getHttpServer())
+        .get(`/mobile/employee/clients/${clientId}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(404);
+
+      expect(mockPrisma.client.findFirst).not.toHaveBeenCalled();
     });
   });
 });

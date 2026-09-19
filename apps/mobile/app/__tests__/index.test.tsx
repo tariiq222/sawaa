@@ -46,6 +46,14 @@ jest.mock('@/stores/slices/auth-slice', () => ({
   setCredentials: (p: unknown) => mockSetCredentials(p),
 }));
 
+let mockSessionEpoch = 1;
+let mockLogoutFenceActive = false;
+jest.mock('@/services/native-session-state', () => ({
+  getSessionEpoch: () => mockSessionEpoch,
+  isLogoutFenceActive: () => mockLogoutFenceActive,
+  isSessionCurrent: (epoch: number) => epoch === mockSessionEpoch,
+}));
+
 // ── imports after mocks ──────────────────────────────────────────────────────
 
 import { authService } from '@/services/auth';
@@ -109,6 +117,8 @@ function setupSelector(token: string | null = null, user: User | null = null) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSessionEpoch = 1;
+  mockLogoutFenceActive = false;
   setupSelector(null, null);
   mockDispatch.mockImplementation(
     (action: { type?: string; payload?: Record<string, unknown> }) => {
@@ -172,6 +182,9 @@ describe('IndexScreen — valid stored token routes to correct tab', () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: 'valid-access',
       refreshToken: 'valid-refresh',
+    }).mockResolvedValueOnce({
+      accessToken: 'fresh-access',
+      refreshToken: 'fresh-refresh',
     });
     mockedGetProfile.mockResolvedValueOnce({ success: true, data: clientUser });
 
@@ -183,8 +196,8 @@ describe('IndexScreen — valid stored token routes to correct tab', () => {
     expect(mockDispatch).toHaveBeenCalled();
     expect(mockSetCredentials).toHaveBeenCalledWith(
       expect.objectContaining({
-        accessToken: 'valid-access',
-        refreshToken: 'valid-refresh',
+        accessToken: 'fresh-access',
+        refreshToken: 'fresh-refresh',
         user: clientUser,
       }),
     );
@@ -194,6 +207,9 @@ describe('IndexScreen — valid stored token routes to correct tab', () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: 'valid-access',
       refreshToken: 'valid-refresh',
+    }).mockResolvedValueOnce({
+      accessToken: 'fresh-access',
+      refreshToken: 'fresh-refresh',
     });
     mockedGetProfile.mockResolvedValueOnce({ success: true, data: employeeUser });
 
@@ -203,6 +219,82 @@ describe('IndexScreen — valid stored token routes to correct tab', () => {
       expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today');
     });
     expect(mockDispatch).toHaveBeenCalled();
+  });
+
+  it('routes every authorized staff role to employee tabs', async () => {
+    mockedGetStoredTokens.mockResolvedValueOnce({
+      accessToken: 'valid-access',
+      refreshToken: 'valid-refresh',
+    }).mockResolvedValueOnce({
+      accessToken: 'fresh-access',
+      refreshToken: 'fresh-refresh',
+    });
+    mockedGetProfile.mockResolvedValueOnce({
+      success: true,
+      data: { ...employeeUser, role: 'RECEPTIONIST' },
+    });
+
+    render(<IndexScreen />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today');
+    });
+  });
+
+  it('does not hydrate or navigate after logout supersedes the bootstrap request', async () => {
+    let resolveStored!: (value: { accessToken: string; refreshToken: string }) => void;
+    mockedGetStoredTokens.mockReturnValueOnce(new Promise((resolve) => {
+      resolveStored = resolve;
+    }));
+
+    render(<IndexScreen />);
+    mockSessionEpoch = 2;
+    resolveStored({ accessToken: 'stale-access', refreshToken: 'stale-refresh' });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockedGetProfile).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('finishes at login when an expired stored session is invalidated during bootstrap', async () => {
+    mockedGetStoredTokens.mockResolvedValueOnce({
+      accessToken: 'expired-access',
+      refreshToken: 'expired-refresh',
+    });
+    mockedGetProfile.mockImplementationOnce(async () => {
+      mockSessionEpoch = 2;
+      mockLogoutFenceActive = true;
+      throw new Error('401 Unauthorized');
+    });
+
+    render(<IndexScreen />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+    });
+    expect(mockDispatch).not.toHaveBeenCalled();
+  });
+
+  it('dispatches the fresh token pair after profile refreshes the stored session', async () => {
+    mockedGetStoredTokens.mockResolvedValueOnce({
+      accessToken: 'old-access',
+      refreshToken: 'old-refresh',
+    }).mockResolvedValueOnce({
+      accessToken: 'new-access',
+      refreshToken: 'new-refresh',
+    });
+    mockedGetProfile.mockResolvedValueOnce({ success: true, data: clientUser });
+
+    render(<IndexScreen />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
+    });
+    expect(mockSetCredentials).toHaveBeenCalledWith(expect.objectContaining({
+      accessToken: 'new-access',
+      refreshToken: 'new-refresh',
+    }));
   });
 });
 

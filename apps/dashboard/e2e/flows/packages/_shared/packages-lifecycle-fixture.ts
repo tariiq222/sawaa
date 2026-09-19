@@ -14,7 +14,6 @@ import { expect } from "@playwright/test"
 import { getTestTenant } from "../../../fixtures/tenant"
 import {
   assignEmployeeToService,
-  assignEmployeeToBranch,
   dashboardApiRequest,
   ensurePayAtClinicEnabled,
   ensureValidMainBranchId,
@@ -22,8 +21,6 @@ import {
   seedClient,
   seedEmployee,
   seedService,
-  setBranchBusinessHours,
-  setEmployeeAvailability,
 } from "../../../fixtures/seed"
 
 /** Mutable typed container for the identifiers + run-scoped names shared across
@@ -130,12 +127,12 @@ export async function seedPackagesLifecycleFixtures(
 
   // Wire employee to service + branch with availability — mirrors the lessons-
   // log chain that prevents the booking wizard from returning zero slots.
+  // prepareBookableSchedule owns the branch-hours, assignment, and availability
+  // calls; keep this chain single-write because the assignment endpoint uses
+  // EmployeeBranch.create and rejects duplicate links.
   await assignEmployeeToService(harness.token, employee.id, service.id).catch(
     () => undefined,
   )
-  await setBranchBusinessHours(harness.token, branch)
-  await assignEmployeeToBranch(harness.token, branch, employee.id).catch(() => undefined)
-  await setEmployeeAvailability(harness.token, employee.id)
   await prepareBookableSchedule(harness.token, { branchId: branch, employeeId: employee.id })
 
   // No-op for non-pay-at-clinic sells, but safe to call.

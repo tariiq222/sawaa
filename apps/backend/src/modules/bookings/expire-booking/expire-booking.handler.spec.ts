@@ -197,6 +197,21 @@ describe('ExpireBookingHandler — status log', () => {
 });
 
 describe('ExpireBookingHandler — deposit refund (MONEY-SAFETY P1)', () => {
+  it('re-reads a payment after the booking CAS when it commits during expiry', async () => {
+    const prisma = buildPrisma();
+    // The payment lookup occurs after the expiry CAS inside the transaction.
+    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-late', amount: 10_000, refundedAmount: 0 });
+    const refundHandler = buildRefundHandler();
+    refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-late', idempotencyKey: 'ik-late' });
+
+    await newHandler(prisma, buildEventBus(), refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ paymentId: 'pay-late' }),
+    );
+  });
+
   it('creates a FULL refund request when a COMPLETED deposit payment exists', async () => {
     const prisma = buildPrisma();
     prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10_000, refundedAmount: 0 });

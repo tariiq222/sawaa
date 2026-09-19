@@ -2,7 +2,7 @@ import { createHmac } from 'crypto';
 import { NotFoundException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { PaymentStatus } from '@prisma/client';
+import { BookingStatus, PaymentStatus } from '@prisma/client';
 import { MoyasarWebhookHandler, MoyasarWebhookRequest } from './moyasar-webhook.handler';
 import { MoyasarWebhookDto } from './moyasar-webhook.dto';
 import { DEFAULT_ORG_ID, TENANT_CLS_KEY } from '../../../common/constants';
@@ -40,6 +40,7 @@ interface MockPrisma {
   };
   booking: {
     findFirst: jest.Mock;
+    findUnique: jest.Mock;
   };
   service: {
     findFirst: jest.Mock;
@@ -54,6 +55,10 @@ interface MockPrisma {
     deleteMany: jest.Mock;
   };
   outboxEvent: {
+    create: jest.Mock;
+  };
+  refundRequest: {
+    findUnique: jest.Mock;
     create: jest.Mock;
   };
   $transaction: jest.Mock;
@@ -120,6 +125,7 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
     // legacy "full-payment" flow unless a test overrides these mocks.
     booking: {
       findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1' }),
+      findUnique: jest.fn().mockResolvedValue({ id: 'booking-inv-1', status: BookingStatus.PENDING }),
     },
     service: {
       findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
@@ -137,6 +143,10 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
     },
     outboxEvent: {
       create: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
+    },
+    refundRequest: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({ id: 'refund-review-1' }),
     },
     $transaction: jest.fn(async <T>(fn: (tx: MockPrisma) => Promise<T>): Promise<T> => {
       return fn(prisma);
@@ -256,6 +266,84 @@ describe('MoyasarWebhookHandler', () => {
   });
 
   describe('execute — happy path', () => {
+    it('records a late payment on a terminal booking and creates one review refund request', async () => {
+      const { handler, prisma } = makeHandler();
+      prisma.booking.findUnique.mockResolvedValue({
+        id: 'booking-inv-1',
+        status: BookingStatus.CANCELLED,
+      });
+
+      await handler.execute(makeReq());
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: PaymentStatus.COMPLETED }),
+      }));
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'PAID' }),
+      }));
+      expect(prisma.refundRequest.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          paymentId: 'payment-row-1',
+          amount: 230,
+          status: 'PENDING_REVIEW',
+          providerState: 'NOT_CALLED',
+          sourceEventId: expect.any(String),
+          idempotencyKey: 'refund:late-payment:moyasar-pay-1',
+        }),
+      }));
+      expect(outboxEventTypes(prisma)).not.toContain('finance.payment.completed');
+    });
+
+    it('does not duplicate the review request when the late-payment identity already exists', async () => {
+      const { handler, prisma } = makeHandler();
+      prisma.booking.findUnique.mockResolvedValue({
+        id: 'booking-inv-1',
+        status: BookingStatus.EXPIRED,
+      });
+      prisma.refundRequest.findUnique.mockResolvedValue({ id: 'refund-review-1' });
+
+      await handler.execute(makeReq());
+
+      expect(prisma.refundRequest.create).not.toHaveBeenCalled();
+      expect(outboxEventTypes(prisma)).not.toContain('finance.payment.completed');
+    });
+
+    it('records a late capture without reopening an already-closed invoice', async () => {
+      const prisma = buildPrisma({
+        ...buildInvoice(ORG_A),
+        status: 'PAID',
+      });
+      prisma.booking.findUnique.mockResolvedValue({
+        id: 'booking-inv-1',
+        status: BookingStatus.CANCELLED,
+      });
+      const { handler } = makeHandler({ prisma });
+
+      await handler.execute(makeReq());
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: PaymentStatus.COMPLETED }),
+      }));
+      expect(prisma.refundRequest.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'PENDING_REVIEW' }),
+      }));
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+      expect(outboxEventTypes(prisma)).not.toContain('finance.payment.completed');
+    });
+
+    it('keeps the normal payment event for a legitimately completed booking', async () => {
+      const { handler, prisma } = makeHandler();
+      prisma.booking.findUnique.mockResolvedValue({
+        id: 'booking-inv-1',
+        status: BookingStatus.COMPLETED,
+      });
+
+      await handler.execute(makeReq());
+
+      expect(prisma.refundRequest.create).not.toHaveBeenCalled();
+      expect(outboxEventTypes(prisma)).toContain('finance.payment.completed');
+    });
+
     it('processes paid webhook and stages PaymentCompletedEvent in the outbox', async () => {
       const { handler, prisma } = makeHandler();
       const result = await handler.execute(makeReq());
@@ -279,8 +367,8 @@ describe('MoyasarWebhookHandler', () => {
 
       await handler.execute(makeReq());
 
-      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
-      const sql = prisma.$queryRaw.mock.calls[0][0];
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+      const sql = prisma.$queryRaw.mock.calls[1][0];
       expect(sql.strings.join('')).toContain('Invoice');
       expect(sql.strings.join('')).toContain('FOR UPDATE');
       expect(prisma.$queryRaw.mock.invocationCallOrder[0])

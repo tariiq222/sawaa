@@ -24,7 +24,7 @@ export function EmailVerificationBanner({ onDismiss }: EmailVerificationBannerPr
   const { theme } = useTheme();
   const user = useAppSelector((s) => s.auth.user);
 
-  if (!user || user.emailVerified) return null;
+  if (!user || user.role === 'CLIENT' || user.emailVerified) return null;
 
   const handleResend = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -62,10 +62,11 @@ export function EmailVerificationBanner({ onDismiss }: EmailVerificationBannerPr
  * Returns true if verified, false + shows alert if not.
  */
 export function requireEmailVerification(
-  user: { emailVerified: boolean } | null,
+  user: { emailVerified: boolean; role?: string } | null,
   t: (key: string) => string,
 ): boolean {
   if (!user) return false;
+  if (user.role === 'CLIENT') return true;
   if (user.emailVerified) return true;
 
   Alert.alert(t('verification.requiredTitle'), t('verification.requiredMessage'));

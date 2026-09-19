@@ -7,6 +7,8 @@ import { RequestMobileLoginOtpHandler } from '../../../modules/identity/request-
 import { VerifyMobileOtpHandler } from '../../../modules/identity/verify-mobile-otp/verify-mobile-otp.handler';
 import { RequestEmailVerificationHandler } from '../../../modules/identity/request-email-verification/request-email-verification.handler';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
+import { NativeRefreshHandler } from '../../../modules/identity/native-session/native-refresh.handler';
+import { NativeLogoutHandler } from '../../../modules/identity/native-session/native-logout.handler';
 
 describe('MobileClientAuthController (e2e)', () => {
   let app: INestApplication;
@@ -15,6 +17,8 @@ describe('MobileClientAuthController (e2e)', () => {
   const mockRequestLogin = { execute: jest.fn() };
   const mockVerifyOtp = { execute: jest.fn() };
   const mockRequestEmail = { execute: jest.fn() };
+  const mockNativeRefresh = { execute: jest.fn() };
+  const mockNativeLogout = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -24,6 +28,8 @@ describe('MobileClientAuthController (e2e)', () => {
         { provide: RequestMobileLoginOtpHandler, useValue: mockRequestLogin },
         { provide: VerifyMobileOtpHandler, useValue: mockVerifyOtp },
         { provide: RequestEmailVerificationHandler, useValue: mockRequestEmail },
+        { provide: NativeRefreshHandler, useValue: mockNativeRefresh },
+        { provide: NativeLogoutHandler, useValue: mockNativeLogout },
       ],
     })
       .overrideGuard(JwtGuard)
@@ -179,5 +185,49 @@ describe('MobileClientAuthController (e2e)', () => {
     });
 
 
+  });
+
+  describe('POST /mobile/auth/refresh', () => {
+    it('returns bare rotated tokens without setting cookies', async () => {
+      mockNativeRefresh.execute.mockResolvedValue({ accessToken: 'access-1', refreshToken: 'refresh-2' });
+
+      const res = await request(app.getHttpServer())
+        .post('/mobile/auth/refresh')
+        .send({ refreshToken: 'refresh-1' })
+        .expect(200);
+
+      expect(res.body).toEqual({ accessToken: 'access-1', refreshToken: 'refresh-2' });
+      expect(res.headers['set-cookie']).toBeUndefined();
+      expect(mockNativeRefresh.execute).toHaveBeenCalledWith('refresh-1');
+    });
+
+    it.each([
+      [{}, 'missing token'],
+      [{ refreshToken: '' }, 'empty token'],
+      [{ refreshToken: 123 }, 'non-string token'],
+      [{ refreshToken: 'short' }, 'short token'],
+      [{ refreshToken: 'r'.repeat(257) }, 'long token'],
+      [{ refreshToken: 'valid-token', extra: true }, 'unknown field'],
+    ])('returns 400 for %s', async (body, _description) => {
+      await request(app.getHttpServer()).post('/mobile/auth/refresh').send(body).expect(400);
+    });
+  });
+
+  describe('POST /mobile/auth/logout', () => {
+    it('returns 204 and delegates the native token', async () => {
+      mockNativeLogout.execute.mockResolvedValue(undefined);
+
+      const res = await request(app.getHttpServer())
+        .post('/mobile/auth/logout')
+        .send({ refreshToken: 'refresh-1' })
+        .expect(204);
+
+      expect(res.text).toBe('');
+      expect(mockNativeLogout.execute).toHaveBeenCalledWith('refresh-1');
+    });
+
+    it('returns 400 when the token is missing', async () => {
+      return request(app.getHttpServer()).post('/mobile/auth/logout').send({}).expect(400);
+    });
   });
 });
