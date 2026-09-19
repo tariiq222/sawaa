@@ -46,7 +46,7 @@ interface BookingPosFormColumnProps {
   clientLabel: string
   onClientSelect: (id: string, name: string) => void
   onTrackSelect: (track: BookingTrack) => void
-  onUseCredit: (target: CreditTarget) => void
+  onUseCredit: (target: CreditTarget, packagePurchaseId: string) => void
   onPackageCreditSelected: (target: CreditTarget, packagePurchaseId: string) => void
   /**
    * W2B-T8 — the fixed prop name + signature the sibling task's
@@ -64,7 +64,7 @@ interface BookingPosFormColumnProps {
   onSelectDuration: (durationOptionId: string) => void
   onSelectDate: (date: string) => void
   onSelectTime: (startTime: string) => void
-  onAcceptCredit: () => void
+  onAcceptCredit: (creditId: string) => void
   onDismissCredit: () => void
 }
 
@@ -92,7 +92,7 @@ export function BookingPosFormColumn(p: BookingPosFormColumnProps) {
         <ClientStep onSelect={onClientSelect} />
       </CollapsibleSection>
 
-      {state.clientId && (
+      {state.clientId && state.track !== "PACKAGES" && (
         <ClientCreditsPanel clientId={state.clientId} onUseCredit={onUseCredit} />
       )}
 
@@ -128,6 +128,7 @@ export function BookingPosFormColumn(p: BookingPosFormColumnProps) {
           onSelectTime={onSelectTime}
           onAcceptCredit={onAcceptCredit}
           onDismissCredit={onDismissCredit}
+          deliveryType={state.deliveryType}
         />
       )}
 

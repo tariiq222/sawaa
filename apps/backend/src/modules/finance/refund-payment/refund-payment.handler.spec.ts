@@ -58,7 +58,7 @@ describe('RefundPaymentHandler', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       payment: {
-        findUnique: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue({ invoiceId: 'invoice-1' }),
         findUniqueOrThrow: jest.fn().mockResolvedValue(payment()),
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -126,23 +126,29 @@ describe('RefundPaymentHandler', () => {
     });
 
     it('rejects missing, non-refundable, in-flight and over-refund requests under the payment lock', async () => {
-      prisma.$queryRaw.mockResolvedValueOnce([]);
+      prisma.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
       await expect(handler.createRefundRequestInTx(prisma, {
         paymentId: 'missing', reason: 'cancel',
       })).rejects.toThrow(NotFoundException);
 
-      prisma.$queryRaw.mockResolvedValueOnce([rawPayment({ status: PaymentStatus.PENDING })]);
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([rawPayment({ status: PaymentStatus.PENDING })]);
       await expect(handler.createRefundRequestInTx(prisma, {
         paymentId: 'payment-1', reason: 'cancel',
       })).rejects.toThrow(BadRequestException);
 
-      prisma.$queryRaw.mockResolvedValueOnce([rawPayment()]);
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([rawPayment()]);
       prisma.refundRequest.findFirst.mockResolvedValueOnce({ id: 'in-flight' });
       await expect(handler.createRefundRequestInTx(prisma, {
         paymentId: 'payment-1', reason: 'cancel',
       })).rejects.toThrow('already processing');
 
-      prisma.$queryRaw.mockResolvedValueOnce([rawPayment({ refundedAmount: new Prisma.Decimal(80) })]);
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([rawPayment({ refundedAmount: new Prisma.Decimal(80) })]);
       prisma.refundRequest.findFirst.mockResolvedValueOnce(null);
       prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(invoice());
       await expect(handler.createRefundRequestInTx(prisma, {

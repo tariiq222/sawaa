@@ -18,9 +18,11 @@ import { getPackageColumns } from "./package-columns"
 import { DeletePackageDialog } from "./delete-package-dialog"
 
 import { usePackagesList } from "@/hooks/use-packages"
+import { usePackageFamilies } from "@/hooks/use-package-families"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
 import type { SessionPackage } from "@/lib/types/package"
+import type { PackageFamily } from "@sawaa/shared/types"
 
 export function PackageListPage() {
   const { t, locale } = useLocale()
@@ -30,6 +32,8 @@ export function PackageListPage() {
     search, setSearch, isActive, setIsActive,
     page, setPage, resetFilters, refetch,
   } = usePackagesList()
+  const familyQuery = usePackageFamilies()
+  const families = familyQuery.data ?? []
 
   const router = useRouter()
   const [deleteTarget, setDeleteTarget] = useState<SessionPackage | null>(null)
@@ -52,12 +56,25 @@ export function PackageListPage() {
         description={t("packages.description")}
       >
         {canDo("service", "create") && (
-          <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/packages/create")}>
-            <HugeiconsIcon icon={Add01Icon} size={16} />
-            {t("packages.addPackage")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" className="gap-2 rounded-lg px-5" onClick={() => router.push("/packages/families/create")}>
+              <HugeiconsIcon icon={Add01Icon} size={16} />
+              {t("packages.addFamily")}
+            </Button>
+            <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/packages/create")}>
+              <HugeiconsIcon icon={Add01Icon} size={16} />
+              {t("packages.addPackage")}
+            </Button>
+          </div>
         )}
       </PageHeader>
+
+      {families.length > 0 && <section className="mb-6 flex flex-col gap-3" aria-label={t("packages.family.list.title")}>
+        <h2 className="text-lg font-semibold">{t("packages.family.list.title")}</h2>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {families.map((family) => <FamilyCard key={family.id} family={family} locale={locale} onEdit={canDo("service", "update") ? () => router.push(`/packages/families/${family.id}/edit`) : undefined} t={t} />)}
+        </div>
+      </section>}
 
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("packages.searchPlaceholder") }}
@@ -80,6 +97,7 @@ export function PackageListPage() {
       />
 
       {error && <ErrorBanner message={error} onRetry={() => refetch()} />}
+      {familyQuery.isError && <ErrorBanner message={t("common.errorLoading")} onRetry={() => familyQuery.refetch()} />}
 
       {isLoading && packages.length === 0 ? (
         <div className="space-y-2">
@@ -108,4 +126,9 @@ export function PackageListPage() {
       <DeletePackageDialog pkg={deleteTarget} open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null) }} />
     </ListPageShell>
   )
+}
+
+function FamilyCard({ family, locale, onEdit, t }: { family: PackageFamily; locale: string; onEdit?: () => void; t: (key: string) => string }) {
+  const label = locale === "ar" ? family.nameAr : (family.nameEn ?? family.nameAr)
+  return <article className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-solid p-4 shadow-sm"><div><h3 className="font-semibold">{label}</h3><p className="text-sm text-muted-foreground">{family.options.length} · {family.options.map((option) => option.sessionCount ?? option.groups?.reduce((sum, group) => sum + group.sessions.length, 0) ?? 0).join(" / ")} {t("packages.summary.sessions")}</p></div>{onEdit && <Button variant="outline" size="sm" onClick={onEdit}>{t("packages.family.list.edit")}</Button>}</article>
 }

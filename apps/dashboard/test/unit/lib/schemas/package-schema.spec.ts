@@ -3,6 +3,7 @@ import {
   createPackageSchema,
   editPackageSchema,
 } from "@/lib/schemas/package.schema"
+import { validatePackageStep } from "@/lib/package-editor-step-validation"
 
 const SVC = "5a0e2c1d-9f3b-4c8a-b1d2-3e4f5a6b7c8d"
 const EMP = "6b1f3d2e-0a4c-4d9b-92e3-4f5a6b7c8d9e"
@@ -46,6 +47,21 @@ describe("createPackageSchema", () => {
 
   it("accepts a flexible item with a fixed unitPrice", () => {
     const result = createPackageSchema.safeParse({ ...validCreate, items: [flexibleItem] })
+    expect(result.success).toBe(true)
+  })
+
+  it("accepts an explicit zero flexible price when preserving legacy constraints", () => {
+    const result = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{
+        ...flexibleItem,
+        unitPriceSar: 0,
+        originalConstraints: [
+          { dimension: "SERVICE", mode: "INCLUDE", targetIds: [SVC] },
+          { dimension: "PRACTITIONER", mode: "ANY" },
+        ],
+      }],
+    })
     expect(result.success).toBe(true)
   })
 
@@ -265,5 +281,43 @@ describe("editPackageSchema", () => {
     expect(
       editPackageSchema.safeParse({ items: [singleSpecificItem] }).success,
     ).toBe(true)
+  })
+})
+
+describe("package editor steps", () => {
+  it("blocks the session step when a fixed item is incomplete", () => {
+    const result = validatePackageStep({
+      nameAr: "باقة",
+      items: [{
+        ...flexibleItem,
+        selectionMode: "FIXED",
+        practitioner: anyScope,
+        duration: anyScope,
+      }],
+    }, 2)
+
+    expect(result.success).toBe(false)
+    expect(result.issues.some((issue) => issue.path.join(".") === "items.0.practitioner.ids")).toBe(true)
+  })
+
+  it("blocks the pricing step when a flexible item has no fixed price", () => {
+    const { unitPriceSar: _omit, ...noPrice } = flexibleItem
+    const result = validatePackageStep({ nameAr: "باقة", items: [noPrice] }, 3)
+
+    expect(result.success).toBe(false)
+    expect(result.issues.some((issue) => issue.path.join(".") === "items.0.unitPriceSar")).toBe(true)
+  })
+
+  it("accepts a review only after all four steps are valid", () => {
+    expect(validatePackageStep({ ...validCreate, items: [singleSpecificItem] }, 4).success).toBe(true)
+  })
+
+  it("rejects NaN and negative quantities with localized validation keys", () => {
+    const nanResult = createPackageSchema.safeParse({ ...validCreate, items: [{ ...singleSpecificItem, paidQuantity: Number.NaN }] })
+    const negativeResult = createPackageSchema.safeParse({ ...validCreate, items: [{ ...singleSpecificItem, paidQuantity: -1 }] })
+    expect(nanResult.success).toBe(false)
+    expect(negativeResult.success).toBe(false)
+    expect(nanResult.error?.issues.some((issue) => issue.path.join(".") === "items.0.paidQuantity")).toBe(true)
+    expect(negativeResult.error?.issues.some((issue) => issue.message === "packages.errors.nonNegative")).toBe(true)
   })
 })

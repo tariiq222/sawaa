@@ -20,6 +20,7 @@ import { PublicBookingsController, PublicProgramsController } from './bookings.c
 import { PublicIntakeFormsController } from './intake-forms.controller';
 import { PublicPaymentsController } from './payments.controller';
 import { PublicPackagesController } from './packages.controller';
+import { PublicPackageFamiliesController } from './package-families.controller';
 import { PublicBranchesController } from './branches.controller';
 import { PublicInvoicesController } from './invoices.controller';
 import { PublicRefundsController } from './refunds.controller';
@@ -39,6 +40,6 @@ import { MyChatController } from './my-chat.controller';
 
 @Module({
   imports: [DatabaseModule, BookingsModule, OrgExperienceModule, IdentityModule, PeopleModule, CommsModule, FinanceModule, OrgConfigModule, PlatformModule, OpsModule, TelemetryModule],
-  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicProgramsController, PublicIntakeFormsController, PublicPaymentsController, PublicPackagesController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController, PublicTestimonialsController, PublicChatController, MyChatController],
+  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicProgramsController, PublicIntakeFormsController, PublicPaymentsController, PublicPackagesController, PublicPackageFamiliesController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController, PublicTestimonialsController, PublicChatController, MyChatController],
 })
 export class PublicModule {}

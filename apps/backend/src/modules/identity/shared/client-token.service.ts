@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 
 export interface ClientTokenPair {
@@ -47,6 +48,7 @@ export class ClientTokenService {
       email: string | null;
       tokenVersion?: number;
     },
+    transaction?: Prisma.TransactionClient,
   ): Promise<ClientTokenPair> {
     const jti = randomUUID();
     const payload: ClientJwtPayload = {
@@ -72,7 +74,7 @@ export class ClientTokenService {
     const tokenHash = await bcrypt.hash(rawRefresh, 10);
     const expiresAt = new Date(Date.now() + refreshMaxAgeMs);
 
-    await this.prisma.clientRefreshToken.create({
+    await (transaction ?? this.prisma).clientRefreshToken.create({
       data: {
         clientId: client.id,
         tokenSelector,

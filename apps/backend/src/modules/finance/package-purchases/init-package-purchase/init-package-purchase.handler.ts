@@ -25,12 +25,22 @@ import {
   parsePackageCreditSnapshot,
   type PackageCreditSnapshotItem,
 } from "../package-credit-snapshot";
+import { resolvePackageGroupOfferings } from "../../../org-experience/session-packages/package-group-offering.helper";
+import { decorateGroupedPackage } from "../../../org-experience/session-packages/package-group-catalog.helper";
+import {
+  createGroupedPackagePurchaseSnapshot,
+  GROUPED_PURCHASE_MODEL_VERSION,
+  parseGroupedPackagePurchaseSnapshot,
+  type GroupedPackagePurchaseSnapshot,
+} from "../package-group-purchase-snapshot";
 import {
   reconcileOrDiscardInFlightPayment,
   persistPendingGatewayRef,
   replaceTerminalInFlightPayment,
 } from "../../payments/client/init-client-payment/reconcile-in-flight-payment.helper";
 import { isNonPayableInvoiceStatus } from "../../invoice-payment-state.helper";
+import { buildPackageOfferSnapshot } from "../package-offer-snapshot";
+import { parsePackageOfferSnapshot } from "../package-offer-snapshot";
 
 export type InitPackagePurchaseCommand = InitPackagePurchaseDto & {
   /** Authenticated client id (set by the controller from the client session). */
@@ -54,6 +64,7 @@ export function selfPurchaseFingerprint(
         clientId: cmd.clientId,
         packageId: cmd.packageId,
         branchId: cmd.branchId,
+        ...(cmd.packageFamilyId ? { packageFamilyId: cmd.packageFamilyId } : {}),
       }),
     )
     .digest("hex");
@@ -122,8 +133,10 @@ export class InitPackagePurchaseHandler {
         status: true,
         subtotalSnapshot: true,
         discountSnapshot: true,
-        amountPaid: true,
-        creditSnapshot: true,
+      amountPaid: true,
+      creditSnapshot: true,
+      offerSnapshot: true,
+        modelVersion: true,
       },
     });
     if (keyedPurchase) {
@@ -143,29 +156,28 @@ export class InitPackagePurchaseHandler {
       discountAmount: number;
       finalPrice: number;
       itemUnitPrices: { unitPrice: number }[];
+      lines?: { net: number }[];
     };
-    let creditSnapshot: PackageCreditSnapshotItem[];
+    let creditSnapshot: PackageCreditSnapshotItem[] | GroupedPackagePurchaseSnapshot;
+    let offerSnapshot: ReturnType<typeof buildPackageOfferSnapshot> = null;
 
     if (keyedPurchase) {
       // A retry of an existing checkout must use the originally frozen money
       // and credits even if staff edited, hid, or archived the package later.
-      const persistedSnapshot = parsePackageCreditSnapshot(
-        keyedPurchase.creditSnapshot,
-      );
-      if (!persistedSnapshot) {
-        throw new ConflictException(
-          "Pending package purchase is missing its credit snapshot",
-        );
-      }
+      const persistedSnapshot = keyedPurchase.modelVersion === GROUPED_PURCHASE_MODEL_VERSION
+        ? parseGroupedPackagePurchaseSnapshot(keyedPurchase.creditSnapshot)
+        : parsePackageCreditSnapshot(keyedPurchase.creditSnapshot);
+      if (!persistedSnapshot) throw new ConflictException("Pending package purchase is missing its credit snapshot");
       price = {
         subtotal: Number(keyedPurchase.subtotalSnapshot),
         discountAmount: Number(keyedPurchase.discountSnapshot),
         finalPrice: Number(keyedPurchase.amountPaid),
-        itemUnitPrices: persistedSnapshot.map((item) => ({
-          unitPrice: item.unitPriceSnapshot,
-        })),
+        itemUnitPrices: 'credits' in persistedSnapshot
+          ? persistedSnapshot.credits.map((item) => ({ unitPrice: item.unitPriceSnapshot }))
+          : persistedSnapshot.map((item) => ({ unitPrice: item.unitPriceSnapshot })),
       };
       creditSnapshot = persistedSnapshot;
+      offerSnapshot = parsePackageOfferSnapshot(keyedPurchase.offerSnapshot);
     } else {
       // 1. Load the package — only a public, active, non-archived package is
       // self-purchasable. Same gate as the public catalog.
@@ -177,16 +189,65 @@ export class InitPackagePurchaseHandler {
           archivedAt: null,
         },
         include: {
+          groups: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              dependsOnGroup: { select: { key: true } },
+              items: {
+                orderBy: { sessionPosition: "asc" },
+                include: { constraints: { include: { targets: true } } },
+              },
+            },
+          },
           items: {
             orderBy: { sortOrder: "asc" },
             include: { constraints: { include: { targets: true } } },
           },
+          family: { select: { id: true, nameAr: true, nameEn: true, isActive: true, isPublic: true, archivedAt: true } },
         },
       });
       if (!pkg) {
         throw new NotFoundException("Session package not found");
       }
+      if (!pkg.isPublic || !pkg.isActive) throw new NotFoundException("Session package not found");
+      if (pkg.familyId) {
+        if (cmd.packageFamilyId !== pkg.familyId) throw new BadRequestException("Selected package option does not belong to the requested family");
+        if (!pkg.family || !pkg.family.isPublic || !pkg.family.isActive || pkg.family.archivedAt || !pkg.isPublic || !pkg.isActive) throw new BadRequestException("Package family is not available");
+      } else if (cmd.packageFamilyId) {
+        throw new BadRequestException("Selected package is not attached to the requested family");
+      }
       packageNameAr = pkg.nameAr;
+      offerSnapshot = buildPackageOfferSnapshot(pkg);
+
+      if (pkg.modelVersion === GROUPED_PURCHASE_MODEL_VERSION) {
+        const decorated = decorateGroupedPackage(pkg);
+        const resolved = await resolvePackageGroupOfferings(this.prisma, decorated.groups);
+        const built = createGroupedPackagePurchaseSnapshot(
+          resolved.map((group, index) => ({ ...group, sortOrder: index })),
+          decorated.globalDiscount,
+        );
+        creditSnapshot = built.snapshot;
+        price = built.price;
+      } else {
+        // 3. Freeze the price with the SAME service the catalog + reception sale use.
+        price = await this.pricing.compute({
+          items: pkg.items.map((it) => ({
+            serviceId: it.serviceId,
+            employeeId: it.employeeId,
+            durationOptionId: it.durationOptionId,
+            unitPrice: it.unitPrice != null ? Number(it.unitPrice) : null,
+            paidQuantity: it.paidQuantity,
+            freeQuantity: it.freeQuantity,
+            discountType: it.discountType,
+            discountValue: Number(it.discountValue),
+          })),
+        });
+        creditSnapshot = createPackageCreditSnapshot(
+          pkg.items,
+          price.itemUnitPrices,
+          price.lines,
+        );
+      }
 
       // 2. Verify the client exists (cross-BC — no FK).
       const client = await this.prisma.client.findFirst({
@@ -196,28 +257,11 @@ export class InitPackagePurchaseHandler {
       if (!client) {
         throw new NotFoundException("Client not found");
       }
+    }
 
-      // 3. Freeze the price with the SAME service the catalog + reception sale use.
-      price = await this.pricing.compute({
-        items: pkg.items.map((it) => ({
-          serviceId: it.serviceId,
-          employeeId: it.employeeId,
-          durationOptionId: it.durationOptionId,
-          unitPrice: it.unitPrice != null ? Number(it.unitPrice) : null,
-          paidQuantity: it.paidQuantity,
-          freeQuantity: it.freeQuantity,
-          discountType: it.discountType,
-          discountValue: Number(it.discountValue),
-        })),
-      });
-      if (price.finalPrice < 100) {
-        throw new BadRequestException(
-          "This package cannot be purchased online (price below the gateway minimum)",
-        );
-      }
-      creditSnapshot = createPackageCreditSnapshot(
-        pkg.items,
-        price.itemUnitPrices,
+    if (price.finalPrice < 100) {
+      throw new BadRequestException(
+        "This package cannot be purchased online (price below the gateway minimum)",
       );
     }
 
@@ -228,6 +272,7 @@ export class InitPackagePurchaseHandler {
         price,
         creditSnapshot,
         requestFingerprint,
+        offerSnapshot,
       );
 
     if (checkout) {
@@ -297,8 +342,9 @@ export class InitPackagePurchaseHandler {
   private async materializePending(
     cmd: InitPackagePurchaseCommand,
     price: { subtotal: number; discountAmount: number; finalPrice: number },
-    creditSnapshot: ReturnType<typeof createPackageCreditSnapshot>,
+    creditSnapshot: PackageCreditSnapshotItem[] | GroupedPackagePurchaseSnapshot,
     requestFingerprint: string,
+    offerSnapshot: ReturnType<typeof buildPackageOfferSnapshot>,
   ): Promise<{
     purchaseId: string;
     invoiceId: string;
@@ -440,6 +486,8 @@ export class InitPackagePurchaseHandler {
             idempotencyKey: cmd.idempotencyKey,
             requestFingerprint,
             creditSnapshot: creditSnapshot as unknown as Prisma.InputJsonValue,
+            ...(offerSnapshot ? { offerSnapshot: offerSnapshot as unknown as Prisma.InputJsonValue } : {}),
+            ...( "credits" in creditSnapshot && { modelVersion: GROUPED_PURCHASE_MODEL_VERSION }),
             packageId: cmd.packageId,
             clientId: cmd.clientId,
             branchId: cmd.branchId,
@@ -520,6 +568,7 @@ export class InitPackagePurchaseHandler {
         price,
         creditSnapshot,
         requestFingerprint,
+        offerSnapshot,
       );
     }
   }

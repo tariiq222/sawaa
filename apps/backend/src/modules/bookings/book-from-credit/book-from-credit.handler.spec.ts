@@ -11,8 +11,11 @@ import { BookFromCreditHandler } from './book-from-credit.handler';
 const CLIENT_ID = '00000000-0000-4000-a000-000000000001';
 const BRANCH_ID = '00000000-0000-4000-a000-000000000002';
 const EMPLOYEE_ID = '00000000-0000-4000-a000-000000000003';
+const MOVED_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000099';
 const SERVICE_ID = '00000000-0000-4000-a000-000000000004';
+const MOVED_SERVICE_ID = '00000000-0000-4000-a000-000000000098';
 const DURATION_OPTION_ID = '00000000-0000-4000-a000-000000000005';
+const MOVED_DURATION_OPTION_ID = '00000000-0000-4000-a000-000000000097';
 const CREDIT_ID = '00000000-0000-4000-a000-000000000006';
 const PURCHASE_ID = '00000000-0000-4000-a000-000000000007';
 const BOOKING_ID = '00000000-0000-4000-a000-000000000008';
@@ -38,7 +41,19 @@ const LEGACY_CONSTRAINTS: Array<{
 }> = [];
 
 /** A locked-credit row as returned by the `SELECT ... FOR UPDATE` raw query. */
-function lockedCreditRow(overrides: Partial<{ usedQuantity: number; totalQuantity: number }> = {}) {
+function lockedCreditRow(
+  overrides: Partial<{
+    id: string;
+    purchaseId: string;
+    serviceId: string | null;
+    employeeId: string | null;
+    durationOptionId: string | null;
+    constraints?: unknown[];
+    usedQuantity: number;
+    totalQuantity: number;
+    reservedQuantity: number;
+  }> = {},
+) {
   return {
     id: CREDIT_ID,
     purchaseId: PURCHASE_ID,
@@ -47,18 +62,24 @@ function lockedCreditRow(overrides: Partial<{ usedQuantity: number; totalQuantit
     durationOptionId: DURATION_OPTION_ID,
     totalQuantity: 5,
     usedQuantity: 0,
+    reservedQuantity: 0,
     ...overrides,
   };
 }
 
-function buildTx(lockedCredit = lockedCreditRow()) {
+function buildTx(
+  lockedCredit = lockedCreditRow(),
+  purchaseStatus: PackagePurchaseStatus = PackagePurchaseStatus.ACTIVE,
+) {
   const tx = {
     // FOR UPDATE raw select returns an array of rows.
     $queryRaw: jest.fn(async (strings: TemplateStringsArray, id: string) => {
       const sql = strings.join(' ');
       if (sql.includes('"Client"')) return [{ id, isActive: true, deletedAt: null }];
       if (sql.includes('"Employee"')) return [{ id, isActive: true }];
-      return [lockedCredit];
+      if (sql.includes('"PackagePurchase"')) return [{ id: PURCHASE_ID, status: purchaseStatus }];
+      if (sql.includes('"PackageCredit"')) return [lockedCredit];
+      return [];
     }),
     $executeRaw: jest.fn().mockResolvedValue(undefined),
     booking: {
@@ -76,6 +97,22 @@ function buildTx(lockedCredit = lockedCreditRow()) {
     packageCreditUsage: { create: jest.fn().mockResolvedValue({ id: 'usage-1' }) },
     packageCredit: {
       update: jest.fn().mockResolvedValue({ id: CREDIT_ID }),
+      findUnique: jest.fn().mockResolvedValue({
+        id: CREDIT_ID,
+        purchaseId: PURCHASE_ID,
+        serviceId: lockedCredit.serviceId,
+        employeeId: lockedCredit.employeeId,
+        durationOptionId: lockedCredit.durationOptionId,
+        durationMinsSnapshot: (lockedCredit as { durationMinsSnapshot?: number | null }).durationMinsSnapshot ?? null,
+        deliveryTypeSnapshot: (lockedCredit as { deliveryTypeSnapshot?: string | null }).deliveryTypeSnapshot ?? null,
+        totalQuantity: lockedCredit.totalQuantity,
+        usedQuantity: lockedCredit.usedQuantity,
+        reservedQuantity: lockedCredit.reservedQuantity,
+        sessionPosition: null,
+        constraints: (lockedCredit as { constraints?: unknown[] }).constraints ?? [],
+        purchase: { status: PackagePurchaseStatus.ACTIVE, modelVersion: 'LEGACY' },
+        purchaseGroup: null,
+      }),
       // After increment, used==total → triggers auto-complete check. Default: still remaining.
       findMany: jest.fn().mockResolvedValue([
         { id: CREDIT_ID, totalQuantity: 5, usedQuantity: 1 },
@@ -103,7 +140,15 @@ function buildPrisma() {
     service: {
       findFirst: jest.fn().mockResolvedValue({ id: SERVICE_ID, nameAr: 'خدمة', categoryId: null, isActive: true, archivedAt: null, bufferMinutes: 0 }),
     },
+    employeeService: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID,
+        isActive: true, disabledDeliveryTypes: [], useCustomPricing: false,
+      }),
+    },
     serviceDurationOption: { findFirst: jest.fn().mockResolvedValue(DURATION_OPTION) },
+    employeeServiceOption: { findFirst: jest.fn().mockResolvedValue(null) },
+    serviceBookingConfig: { findMany: jest.fn().mockResolvedValue([]) },
     // `fields` mirrors Prisma's field-reference API used for the column-to-column
     // `usedQuantity < totalQuantity` filter in resolveCreditAndTarget.
     // `findFirst` backs the creditId path; `findMany` backs the no-creditId
@@ -167,6 +212,19 @@ describe('BookFromCreditHandler', () => {
   it('is defined', () => {
     const { handler } = buildHandler();
     expect(handler).toBeDefined();
+  });
+
+  it('rejects a partial explicit target with creditId instead of falling back to legacy routing', async () => {
+    const { handler, tx } = buildHandler();
+
+    await expect(handler.execute({
+      ...baseCmd(),
+      serviceId: SERVICE_ID,
+      employeeId: EMPLOYEE_ID,
+    } as never)).rejects.toThrow(
+      'Provide all of serviceId, employeeId and durationOptionId when selecting a credit target',
+    );
+    expect(tx.booking.create).not.toHaveBeenCalled();
   });
 
   describe('credit resolution', () => {
@@ -248,6 +306,63 @@ describe('BookFromCreditHandler', () => {
         handler.execute({ clientId: CLIENT_ID, branchId: BRANCH_ID, scheduledAt: FUTURE } as never),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('rejects an explicit creditId whose bucket is fully booked out by RESERVED sessions (usedQuantity 0 but reservedQuantity == totalQuantity)', async () => {
+      const prisma = buildPrisma();
+      // The coarse DB `usedQuantity < totalQuantity` filter still passes this
+      // credit (usedQuantity is 0) — but real availability, which also
+      // counts reservedQuantity, is zero. The JS predicate must catch this.
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 3, usedQuantity: 0, reservedQuantity: 3,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const { handler } = buildHandler({ prisma });
+
+      await expect(handler.execute(baseCmd())).rejects.toThrow(NotFoundException);
+    });
+
+    it('auto-select skips a fully-reserved credit and picks an available sibling instead', async () => {
+      const prisma = buildPrisma();
+      const OTHER_CREDIT_ID = '00000000-0000-4000-a000-000000000099';
+      const OTHER_PURCHASE_ID = '00000000-0000-4000-a000-000000000098';
+      // First candidate (older purchase, so FIFO would pick it first) is
+      // fully booked out for the future even though usedQuantity is 0.
+      // Second candidate is genuinely available. Auto-select must skip the
+      // first and pick the second rather than bailing with "no credit".
+      prisma.packageCredit.findMany.mockResolvedValue([
+        {
+          id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+          employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+          totalQuantity: 2, usedQuantity: 0, reservedQuantity: 2,
+          constraints: LEGACY_CONSTRAINTS,
+        },
+        {
+          id: OTHER_CREDIT_ID, purchaseId: OTHER_PURCHASE_ID, serviceId: SERVICE_ID,
+          employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+          totalQuantity: 5, usedQuantity: 1, reservedQuantity: 0,
+          constraints: LEGACY_CONSTRAINTS,
+        },
+      ]);
+      const tx = buildTx(lockedCreditRow({ id: OTHER_CREDIT_ID, purchaseId: OTHER_PURCHASE_ID, totalQuantity: 5, usedQuantity: 1, reservedQuantity: 0 }));
+      const { handler } = buildHandler({ prisma, tx });
+
+      await handler.execute({
+        clientId: CLIENT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      });
+
+      // The booking must have been reserved against the available sibling
+      // credit, not the fully-reserved one.
+      const usageArgs = (tx.packageCreditUsage.create as jest.Mock).mock.calls[0][0];
+      expect(usageArgs.data.creditId).toBe(OTHER_CREDIT_ID);
+    });
   });
 
   describe('flexible credit constraints (creditId + explicit triple)', () => {
@@ -268,10 +383,125 @@ describe('BookFromCreditHandler', () => {
       };
     }
 
+    it.each([
+      ['inactive duration', { durationOptionId: DURATION_OPTION_ID }],
+      ['unrelated service', { serviceId: MOVED_SERVICE_ID }],
+      ['unrelated practitioner', { employeeId: MOVED_EMPLOYEE_ID }],
+    ])('rejects a flexible credit target with %s before reservation', async (_name, targetChange) => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
+      if (_name === 'inactive duration') {
+        prisma.serviceDurationOption.findFirst.mockResolvedValue({
+          ...DURATION_OPTION,
+          isActive: false,
+        });
+      } else {
+        prisma.employeeService.findUnique.mockResolvedValue(null);
+      }
+      const { handler, tx } = buildHandler({ prisma });
+
+      await expect(handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+        ...targetChange,
+      })).rejects.toThrow();
+      expect(tx.booking.create).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
+      expect(tx.packageCredit.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a flexible credit target when the practitioner disables its delivery', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
+      prisma.employeeService.findUnique.mockResolvedValue({
+        id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID,
+        isActive: true, disabledDeliveryTypes: ['ONLINE'], useCustomPricing: false,
+      });
+      prisma.serviceDurationOption.findFirst.mockResolvedValue({
+        ...DURATION_OPTION,
+        deliveryType: 'ONLINE',
+      });
+      const { handler, tx } = buildHandler({
+        prisma,
+        tx: buildTx({
+          ...lockedCreditRow({ serviceId: null, employeeId: null, durationOptionId: null }),
+          constraints: [{
+            dimension: PackageConstraintDimension.DELIVERY_TYPE,
+            mode: PackageConstraintMode.INCLUDE,
+            targets: [{ targetId: 'ONLINE' }],
+          }],
+        }),
+      });
+
+      await expect(handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        deliveryType: 'ONLINE',
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      })).rejects.toThrow('Practitioner does not offer this delivery type');
+      expect(tx.booking.create).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
+    });
+
+    it('uses the selected duration delivery when a constrained flexible credit omits deliveryType', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        ...flexibleCreditAnyPractitioner(),
+        constraints: [{
+          dimension: PackageConstraintDimension.DELIVERY_TYPE,
+          mode: PackageConstraintMode.INCLUDE,
+          targets: [{ targetId: 'ONLINE' }],
+        }],
+      });
+      prisma.serviceDurationOption.findFirst.mockResolvedValue({
+        ...DURATION_OPTION,
+        deliveryType: 'ONLINE',
+      });
+      const { handler, tx } = buildHandler({
+        prisma,
+        tx: buildTx(lockedCreditRow({ serviceId: null, employeeId: null, durationOptionId: null })),
+      });
+
+      await handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      });
+
+      expect(tx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ deliveryType: 'ONLINE', price: expect.anything() }),
+      }));
+      expect(tx.packageCreditUsage.create).toHaveBeenCalledTimes(1);
+      expect(tx.packageCredit.update).toHaveBeenCalledTimes(1);
+    });
+
     it('succeeds when the explicit triple satisfies the credit constraints (PRACTITIONER ANY)', async () => {
       const prisma = buildPrisma();
       prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
-      const { handler, tx } = buildHandler({ prisma });
+      const tx = buildTx(lockedCreditRow({
+        serviceId: null,
+        employeeId: null,
+        durationOptionId: null,
+        constraints: [{
+          dimension: PackageConstraintDimension.PRACTITIONER,
+          mode: PackageConstraintMode.ANY,
+          targets: [],
+        }],
+      }));
+      const { handler } = buildHandler({ prisma, tx });
 
       await handler.execute({
         clientId: CLIENT_ID,
@@ -289,6 +519,61 @@ describe('BookFromCreditHandler', () => {
       expect(bookingData.serviceId).toBe(SERVICE_ID);
       expect(bookingData.durationOptionId).toBe(DURATION_OPTION_ID);
       expect(bookingData.packageCreditId).toBe(CREDIT_ID);
+    });
+
+    it('keeps flexible routing valid when the locked row still has null fixed routing fields', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
+      const tx = buildTx(lockedCreditRow({
+        serviceId: null,
+        employeeId: null,
+        durationOptionId: null,
+        constraints: [{
+          dimension: PackageConstraintDimension.PRACTITIONER,
+          mode: PackageConstraintMode.ANY,
+          targets: [],
+        }],
+      }));
+      const { handler } = buildHandler({ prisma, tx });
+
+      await handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      });
+
+      expect(tx.booking.create).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['service', { serviceId: MOVED_SERVICE_ID }],
+      ['employee', { employeeId: MOVED_EMPLOYEE_ID }],
+      ['duration', { durationOptionId: MOVED_DURATION_OPTION_ID }],
+    ])('rejects when %s routing changed after preflight resolution', async (_field, changedField) => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID,
+        purchaseId: PURCHASE_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 5,
+        usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const tx = buildTx(lockedCreditRow(changedField));
+      const { handler } = buildHandler({ prisma, tx });
+
+      await expect(handler.execute(baseCmd())).rejects.toThrow(ConflictException);
+      expect(tx.booking.create).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
+      expect(tx.packageCredit.update).not.toHaveBeenCalled();
+      expect(tx.activityLog.create).not.toHaveBeenCalled();
     });
 
     it('throws 400 "The selected credit is not valid for this booking" when the triple violates an EXCLUDE constraint', async () => {
@@ -405,7 +690,7 @@ describe('BookFromCreditHandler', () => {
       expect(tx.invoice.create).not.toHaveBeenCalled();
     });
 
-    it('records a CONSUMED PackageCreditUsage linked to the booking', async () => {
+    it('records a RESERVED PackageCreditUsage linked to the booking', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const { handler, tx } = buildHandler({ prisma });
@@ -416,10 +701,10 @@ describe('BookFromCreditHandler', () => {
       const usageData = tx.packageCreditUsage.create.mock.calls[0][0].data;
       expect(usageData.creditId).toBe(CREDIT_ID);
       expect(usageData.bookingId).toBe(BOOKING_ID);
-      expect(usageData.status).toBe('CONSUMED');
+      expect(usageData.status).toBe('RESERVED');
     });
 
-    it('increments credit.usedQuantity by 1 via an id-keyed update', async () => {
+    it('reserves the session instead of consuming it: increments reservedQuantity, not usedQuantity', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const { handler, tx } = buildHandler({ prisma });
@@ -428,7 +713,7 @@ describe('BookFromCreditHandler', () => {
 
       expect(tx.packageCredit.update).toHaveBeenCalledWith({
         where: { id: CREDIT_ID },
-        data: { usedQuantity: { increment: 1 } },
+        data: { reservedQuantity: { increment: 1 } },
       });
     });
 
@@ -538,11 +823,48 @@ describe('BookFromCreditHandler', () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const tx = buildTx();
-      tx.booking.findFirst.mockResolvedValue({ id: 'other-booking' }); // overlap present
+      tx.booking.findFirst
+        .mockResolvedValueOnce(null) // client overlap: none
+        .mockResolvedValueOnce({ id: 'other-booking' }); // employee overlap present
       const { handler } = buildHandler({ prisma, tx });
 
-      await expect(handler.execute(baseCmd())).rejects.toThrow(ConflictException);
+      await expect(handler.execute(baseCmd())).rejects.toThrow(
+        'Employee already has a booking in this time slot',
+      );
       expect(tx.booking.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects with 409 when the client already has an overlapping active appointment', async () => {
+      const prisma = buildPrisma();
+      mockResolvedCredit(prisma);
+      const tx = buildTx();
+      tx.booking.findFirst.mockResolvedValueOnce({ id: 'client-other-booking' });
+      const { handler } = buildHandler({ prisma, tx });
+
+      await expect(handler.execute(baseCmd())).rejects.toThrow(
+        new ConflictException('Client already has an overlapping appointment'),
+      );
+      expect(tx.booking.create).not.toHaveBeenCalled();
+      expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
+    });
+
+    it('scopes the client overlap query to live, non-historical active statuses of this client', async () => {
+      const prisma = buildPrisma();
+      mockResolvedCredit(prisma);
+      const { handler, tx } = buildHandler({ prisma });
+
+      await handler.execute(baseCmd());
+
+      const clientQuery = tx.booking.findFirst.mock.calls[0][0];
+      expect(clientQuery.where).toEqual(
+        expect.objectContaining({
+          clientId: CLIENT_ID,
+          isHistoricalImport: false,
+          status: { in: expect.arrayContaining(['CONFIRMED', 'PENDING', 'AWAITING_PAYMENT']) },
+          scheduledAt: { lt: expect.any(Date) },
+          endsAt: { gt: FUTURE },
+        }),
+      );
     });
 
     it('rejects a booking scheduled in the past', async () => {
@@ -694,12 +1016,31 @@ describe('BookFromCreditHandler', () => {
       expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
     });
 
+    it('rejects a booking when reserved plus used already fills the bucket', async () => {
+      // 3 sessions: 2 delivered (usedQuantity), 1 already booked for a future
+      // appointment (reservedQuantity) — the bucket has no seats left even
+      // though usedQuantity alone would look like there is 1 remaining.
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 3, usedQuantity: 2,
+        constraints: LEGACY_CONSTRAINTS,
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const tx = buildTx(lockedCreditRow({ totalQuantity: 3, usedQuantity: 2, reservedQuantity: 1 }));
+      const { handler } = buildHandler({ prisma, tx });
+
+      await expect(handler.execute(baseCmd())).rejects.toThrow(ConflictException);
+      expect(tx.booking.create).not.toHaveBeenCalled();
+    });
+
     it('exactly one of two concurrent bookings on the LAST credit succeeds; the second is rejected', async () => {
       // Deterministic simulation of the Serializable + FOR UPDATE recount.
       // A shared in-memory credit row models the DB row under the lock; the
       // FOR UPDATE select returns the CURRENT used/total, and the increment
       // mutates it — so the second caller's recount sees used == total.
-      const credit = { id: CREDIT_ID, purchaseId: PURCHASE_ID, totalQuantity: 1, usedQuantity: 0 };
+      const credit = { id: CREDIT_ID, purchaseId: PURCHASE_ID, totalQuantity: 1, usedQuantity: 0, reservedQuantity: 0 };
 
       const makeTx = () => {
         const tx = buildTx();
@@ -712,11 +1053,22 @@ describe('BookFromCreditHandler', () => {
             if (sql.includes('"Employee"')) {
               return Promise.resolve([{ id, isActive: true }]);
             }
-            return Promise.resolve([{ ...lockedCreditRow(), totalQuantity: credit.totalQuantity, usedQuantity: credit.usedQuantity }]);
+            if (sql.includes('"PackagePurchase"')) {
+              return Promise.resolve([{ id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE }]);
+            }
+            if (sql.includes('"PackageCredit"')) {
+              return Promise.resolve([{
+                ...lockedCreditRow(),
+                totalQuantity: credit.totalQuantity,
+                usedQuantity: credit.usedQuantity,
+                reservedQuantity: credit.reservedQuantity,
+              }]);
+            }
+            return Promise.resolve([]);
           },
         );
-        tx.packageCredit.update = jest.fn().mockImplementation((args: { data: { usedQuantity: { increment: number } } }) => {
-          credit.usedQuantity += args.data.usedQuantity.increment;
+        tx.packageCredit.update = jest.fn().mockImplementation((args: { data: { reservedQuantity: { increment: number } } }) => {
+          credit.reservedQuantity += args.data.reservedQuantity.increment;
           return Promise.resolve({ id: CREDIT_ID });
         });
         tx.packageCredit.findMany = jest.fn().mockResolvedValue([
@@ -747,7 +1099,7 @@ describe('BookFromCreditHandler', () => {
       expect(first).toBeDefined();
 
       await expect(handlerB.execute(baseCmd())).rejects.toThrow(ConflictException);
-      expect(credit.usedQuantity).toBe(1); // exactly one consumed — no over-draw
+      expect(credit.reservedQuantity).toBe(1); // exactly one reserved — no over-draw
     });
   });
 
@@ -768,11 +1120,10 @@ describe('BookFromCreditHandler', () => {
       // status guard must reject so a refunded purchase's credit is never bookable.
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
-      const tx = buildTx(lockedCreditRow({ totalQuantity: 5, usedQuantity: 0 }));
-      tx.packagePurchase.findUnique.mockResolvedValue({
-        id: PURCHASE_ID,
-        status: PackagePurchaseStatus.REFUNDED,
-      });
+      const tx = buildTx(
+        lockedCreditRow({ totalQuantity: 5, usedQuantity: 0 }),
+        PackagePurchaseStatus.REFUNDED,
+      );
       const { handler } = buildHandler({ prisma, tx });
 
       await expect(handler.execute(baseCmd())).rejects.toThrow(BadRequestException);
@@ -782,16 +1133,19 @@ describe('BookFromCreditHandler', () => {
       expect(tx.packageCreditUsage.create).not.toHaveBeenCalled();
     });
 
-    it('queries the parent purchase status under the credit row lock', async () => {
+    it('locks the parent purchase before the credit row', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const { handler, tx } = buildHandler({ prisma });
 
       await handler.execute(baseCmd());
 
-      expect(tx.packagePurchase.findUnique).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: PURCHASE_ID } }),
-      );
+      const queries = tx.$queryRaw.mock.calls.map(([parts]) => parts.join(' '));
+      const purchaseLock = queries.findIndex((sql) => sql.includes('"PackagePurchase"'));
+      const creditLock = queries.findIndex((sql) => sql.includes('"PackageCredit"'));
+      expect(purchaseLock).toBeGreaterThanOrEqual(0);
+      expect(creditLock).toBeGreaterThan(purchaseLock);
+      expect(queries[purchaseLock]).toContain('FOR UPDATE');
     });
   });
 
@@ -806,32 +1160,14 @@ describe('BookFromCreditHandler', () => {
       });
     }
 
-    it('sets the purchase to COMPLETED when every credit of the purchase is fully used after the increment', async () => {
+    // A purchase completes when its last session is DELIVERED, not booked —
+    // the auto-complete rule moved to `consumePackageCreditForBooking`. This
+    // handler only ever reserves, so it must never flip a purchase to
+    // COMPLETED, even when the reservation fills the last remaining seat.
+    it('does NOT auto-complete the purchase — reserving is not delivering', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
-      const tx = buildTx(lockedCreditRow({ totalQuantity: 1, usedQuantity: 0 }));
-      // After increment, the recount shows all credits exhausted.
-      tx.packageCredit.findMany.mockResolvedValue([
-        { id: CREDIT_ID, totalQuantity: 1, usedQuantity: 1 },
-      ]);
-      const { handler } = buildHandler({ prisma, tx });
-
-      await handler.execute(baseCmd());
-
-      expect(tx.packagePurchase.update).toHaveBeenCalledWith({
-        where: { id: PURCHASE_ID },
-        data: { status: PackagePurchaseStatus.COMPLETED },
-      });
-    });
-
-    it('does NOT complete the purchase while other credits still have remaining', async () => {
-      const prisma = buildPrisma();
-      mockResolvedCredit(prisma);
-      const tx = buildTx(lockedCreditRow({ totalQuantity: 5, usedQuantity: 0 }));
-      tx.packageCredit.findMany.mockResolvedValue([
-        { id: CREDIT_ID, totalQuantity: 5, usedQuantity: 1 },
-        { id: 'credit-2', totalQuantity: 3, usedQuantity: 0 },
-      ]);
+      const tx = buildTx(lockedCreditRow({ totalQuantity: 1, usedQuantity: 0, reservedQuantity: 0 }));
       const { handler } = buildHandler({ prisma, tx });
 
       await handler.execute(baseCmd());

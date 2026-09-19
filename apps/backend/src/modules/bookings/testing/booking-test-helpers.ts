@@ -127,8 +127,17 @@ const buildPrismaRaw = () => ({
 //   prisma.$transaction([promise1, promise2])   -> array form
 //   prisma.$transaction(async (tx) => { ... })  -> interactive form
 export const buildPrisma = () => {
-  const p = buildPrismaRaw() as ReturnType<typeof buildPrismaRaw> & { $transaction: jest.Mock; $executeRaw: jest.Mock };
+  const p = buildPrismaRaw() as ReturnType<typeof buildPrismaRaw> & { $transaction: jest.Mock; $executeRaw: jest.Mock; $queryRaw: jest.Mock };
   p.$executeRaw = jest.fn().mockResolvedValue(undefined);
+  p.$queryRaw = jest.fn(async (strings: TemplateStringsArray, id: string) => {
+    const sql = strings.join(' ');
+    if (sql.includes('"PackagePurchase"')) return [{ id, status: 'ACTIVE' }];
+    if (sql.includes('"PackageCredit"')) {
+      const credit = await p.packageCredit.findUnique({ where: { id } });
+      return credit ? [{ id, totalQuantity: credit.totalQuantity ?? 10, usedQuantity: credit.usedQuantity ?? 0, reservedQuantity: credit.reservedQuantity ?? 0 }] : [];
+    }
+    return [];
+  });
   p.$transaction = jest.fn(
     (arg: Promise<unknown>[] | ((tx: unknown) => Promise<unknown>)) => {
       if (typeof arg === 'function') return arg(p);

@@ -427,13 +427,13 @@
             "type": "string"
           },
           "durationOptionId": {
-            "description": "Duration option to match a credit on (required when creditId is omitted)",
+            "description": "Concrete duration target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit",
             "example": "00000000-0000-4000-a000-000000000005",
             "format": "uuid",
             "type": "string"
           },
           "employeeId": {
-            "description": "Employee to match a credit on (required when creditId is omitted)",
+            "description": "Concrete practitioner target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit",
             "example": "00000000-0000-4000-a000-000000000003",
             "format": "uuid",
             "type": "string"
@@ -450,7 +450,7 @@
             "type": "string"
           },
           "serviceId": {
-            "description": "Service to match a credit on (required when creditId is omitted)",
+            "description": "Concrete service target; required when creditId is omitted and must be supplied with the other target fields when overriding a credit",
             "example": "00000000-0000-4000-a000-000000000004",
             "format": "uuid",
             "type": "string"
@@ -2053,6 +2053,58 @@
         },
         "required": [
           "password"
+        ],
+        "type": "object"
+      },
+      "ClientPackageBookDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where the appointment takes place",
+            "format": "uuid",
+            "type": "string"
+          },
+          "creditId": {
+            "description": "Exact package credit bucket to book",
+            "format": "uuid",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery channel for legacy flexible credits",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "type": "string"
+          },
+          "durationOptionId": {
+            "description": "Duration target for legacy flexible credits",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Practitioner target for legacy flexible credits",
+            "format": "uuid",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Optional note attached to the booking",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Appointment start time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service target for legacy flexible credits",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "creditId",
+          "branchId",
+          "scheduledAt"
         ],
         "type": "object"
       },
@@ -3790,6 +3842,59 @@
         ],
         "type": "object"
       },
+      "CreatePackageFamilyDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Arabic family description",
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English family description",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Catalog image URL",
+            "type": "string"
+          },
+          "isActive": {
+            "default": true,
+            "description": "Whether the family is active",
+            "type": "boolean"
+          },
+          "isPublic": {
+            "default": false,
+            "description": "Whether the family is public",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic family name",
+            "example": "باقة الاستشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English family name",
+            "example": "Consultation pack",
+            "type": "string"
+          },
+          "options": {
+            "description": "Complete option list",
+            "items": {
+              "$ref": "#/components/schemas/PackageFamilyOptionDto"
+            },
+            "type": "array"
+          },
+          "sortOrder": {
+            "default": 0,
+            "description": "Catalog ordering",
+            "type": "number"
+          }
+        },
+        "required": [
+          "nameAr",
+          "options"
+        ],
+        "type": "object"
+      },
       "CreatePackagePurchaseDto": {
         "properties": {
           "branchId": {
@@ -3823,6 +3928,11 @@
           "notes": {
             "description": "Free-form notes attached to the purchase",
             "example": "Walk-in sale, paid in cash",
+            "type": "string"
+          },
+          "packageFamilyId": {
+            "description": "Package family containing the selected option; required for attached options",
+            "format": "uuid",
             "type": "string"
           },
           "packageId": {
@@ -4184,6 +4294,21 @@
             "minimum": 0,
             "type": "number"
           },
+          "globalDiscount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GlobalDiscountDto"
+              }
+            ],
+            "description": "V2 global package discount. Required when modelVersion is GROUPED_V2."
+          },
+          "groups": {
+            "description": "V2 package groups. Required when modelVersion is GROUPED_V2.",
+            "items": {
+              "$ref": "#/components/schemas/GroupedPackageGroupDto"
+            },
+            "type": "array"
+          },
           "iconBgColor": {
             "description": "Icon background color (hex)",
             "example": "#FFD8A8",
@@ -4212,11 +4337,20 @@
             "type": "boolean"
           },
           "items": {
-            "description": "Package items (min 1)",
+            "description": "Legacy package items (min 1). Required unless modelVersion is GROUPED_V2.",
             "items": {
               "$ref": "#/components/schemas/CreateSessionPackageItemDto"
             },
             "type": "array"
+          },
+          "modelVersion": {
+            "description": "Package model version. Omit for the legacy item-based contract.",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "GROUPED_V2",
+            "type": "string"
           },
           "nameAr": {
             "description": "Arabic name",
@@ -4230,6 +4364,13 @@
             "maxLength": 200,
             "type": "string"
           },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner owner. Omit or null for a general package.",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
           "sortOrder": {
             "default": 0,
             "description": "Display order (ascending)",
@@ -4239,8 +4380,7 @@
           }
         },
         "required": [
-          "nameAr",
-          "items"
+          "nameAr"
         ],
         "type": "object"
       },
@@ -4952,6 +5092,125 @@
         ],
         "type": "object"
       },
+      "EmployeeAvailabilityExceptionResponseDto": {
+        "properties": {
+          "endDate": {
+            "description": "Inclusive last date of the time-off range",
+            "example": "2026-09-21T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Availability exception UUID",
+            "example": "00000000-0000-4000-a000-000000000011",
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Reason for the time-off exception",
+            "example": "Annual leave",
+            "nullable": true,
+            "type": "string"
+          },
+          "startDate": {
+            "description": "Inclusive first date of the time-off range",
+            "example": "2026-09-20T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "startDate",
+          "endDate",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "EmployeeAvailabilityResponseDto": {
+        "properties": {
+          "employeeId": {
+            "description": "Employee whose availability is returned",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "exceptions": {
+            "description": "Date ranges when the employee is unavailable",
+            "example": [
+              {
+                "endDate": "2026-09-21T00:00:00.000Z",
+                "id": "00000000-0000-4000-a000-000000000011",
+                "reason": "Annual leave",
+                "startDate": "2026-09-20T00:00:00.000Z"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityExceptionResponseDto"
+            },
+            "type": "array"
+          },
+          "windows": {
+            "description": "Recurring weekly availability windows",
+            "example": [
+              {
+                "dayOfWeek": 1,
+                "endTime": "17:00",
+                "id": "00000000-0000-4000-a000-000000000010",
+                "isActive": true,
+                "startTime": "09:00"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityWindowResponseDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "employeeId",
+          "windows",
+          "exceptions"
+        ],
+        "type": "object"
+      },
+      "EmployeeAvailabilityWindowResponseDto": {
+        "properties": {
+          "dayOfWeek": {
+            "description": "Day of week (0=Sunday through 6=Saturday)",
+            "example": 1,
+            "maximum": 6,
+            "minimum": 0,
+            "type": "number"
+          },
+          "endTime": {
+            "example": "17:00",
+            "type": "string"
+          },
+          "id": {
+            "description": "Availability window UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "example": true,
+            "type": "boolean"
+          },
+          "startTime": {
+            "example": "09:00",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "isActive"
+        ],
+        "type": "object"
+      },
       "EmployeeCancelBookingDto": {
         "properties": {
           "cancelNotes": {
@@ -4988,6 +5247,87 @@
             "example": "EMPLOYEE_UNAVAILABLE"
           }
         },
+        "type": "object"
+      },
+      "EmployeeClientResponseDto": {
+        "properties": {
+          "avatarUrl": {
+            "description": "Client avatar URL",
+            "example": "https://cdn.example.com/avatars/client-1.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Timestamp when the client record was created",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "description": "Client date of birth in ISO 8601 format",
+            "example": "1990-06-15T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "example": "Sara",
+            "nullable": true,
+            "type": "string"
+          },
+          "gender": {
+            "example": "FEMALE",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "isActive": {
+            "example": true,
+            "type": "boolean"
+          },
+          "lastName": {
+            "example": "Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "example": "Sara Al-Harbi",
+            "type": "string"
+          },
+          "phone": {
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Timestamp when the client record was last updated",
+            "example": "2026-01-02T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "firstName",
+          "lastName",
+          "phone",
+          "email",
+          "gender",
+          "dateOfBirth",
+          "avatarUrl",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
         "type": "object"
       },
       "EmployeeDurationItemDto": {
@@ -5433,6 +5773,131 @@
         ],
         "type": "object"
       },
+      "GlobalDiscountDto": {
+        "properties": {
+          "type": {
+            "description": "Package-wide discount type",
+            "enum": [
+              "NONE",
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "value": {
+            "description": "Percentage from 0 to 100, or fixed amount in integer halalas",
+            "example": 10,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "type": "object"
+      },
+      "GroupedPackageGroupDto": {
+        "properties": {
+          "dependsOnGroupKey": {
+            "description": "Stable key of the group that must complete first",
+            "example": null,
+            "nullable": true,
+            "type": "object"
+          },
+          "employeeId": {
+            "description": "Practitioner UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "key": {
+            "description": "Stable editor key for this group",
+            "example": "group-1",
+            "type": "string"
+          },
+          "label": {
+            "description": "Optional group label",
+            "example": "المرحلة الأولى",
+            "type": "string"
+          },
+          "sequenceMode": {
+            "description": "Session sequence behavior",
+            "enum": [
+              "ORDERED",
+              "UNORDERED"
+            ],
+            "example": "ORDERED",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sessions": {
+            "description": "Explicit sessions in this group",
+            "items": {
+              "$ref": "#/components/schemas/GroupedPackageSessionDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "serviceId",
+          "employeeId",
+          "sequenceMode",
+          "sessions"
+        ],
+        "type": "object"
+      },
+      "GroupedPackageSessionDto": {
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery channel",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationOptionId": {
+            "description": "Active service duration option UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "key": {
+            "description": "Stable editor key for this session",
+            "example": "session-1",
+            "type": "string"
+          },
+          "position": {
+            "description": "Zero-based position within the group",
+            "example": 0,
+            "minimum": 0,
+            "type": "number"
+          },
+          "unitPrice": {
+            "description": "Package override price in integer halalas",
+            "example": 25000,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "position",
+          "durationOptionId",
+          "deliveryType",
+          "unitPrice"
+        ],
+        "type": "object"
+      },
       "GuestRequestHandoffDto": {
         "properties": {
           "guestName": {
@@ -5484,6 +5949,11 @@
           "idempotencyKey": {
             "description": "Stable UUID for this checkout attempt; reuse it when retrying the same request",
             "example": "00000000-0000-4000-a000-000000000099",
+            "type": "string"
+          },
+          "packageFamilyId": {
+            "description": "Package family containing the selected option; required for attached options",
+            "format": "uuid",
             "type": "string"
           },
           "packageId": {
@@ -6588,19 +7058,69 @@
             "example": 10000,
             "type": "number"
           },
+          "amount_format": {
+            "description": "Formatted payment amount with currency",
+            "example": "100.00 SAR",
+            "type": "string"
+          },
+          "callback_url": {
+            "description": "Payment callback URL",
+            "example": "https://sawaa.test/payment/callback",
+            "type": "string"
+          },
+          "captured": {
+            "description": "Amount captured in the smallest currency unit",
+            "example": 10000,
+            "type": "number"
+          },
+          "captured_at": {
+            "description": "Timestamp when the payment was captured",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "captured_format": {
+            "description": "Formatted captured amount with currency",
+            "example": "100.00 SAR",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "Timestamp when the payment was created",
+            "example": "2026-09-19T18:43:30.000Z",
+            "type": "string"
+          },
           "currency": {
             "description": "ISO 4217 currency code",
             "example": "SAR",
             "type": "string"
           },
+          "description": {
+            "description": "Human-readable payment description",
+            "example": "Counseling booking",
+            "type": "string"
+          },
+          "fee": {
+            "description": "Estimated payment fee in the smallest currency unit",
+            "example": 250,
+            "type": "number"
+          },
+          "fee_format": {
+            "description": "Formatted payment fee with currency",
+            "example": "2.50 SAR",
+            "type": "string"
+          },
           "id": {
-            "description": "Moyasar payment ID",
+            "description": "Moyasar payment ID (or event ID in the nested envelope)",
             "example": "pay_abc123",
             "type": "string"
           },
           "invoice_id": {
             "description": "Moyasar hosted-checkout invoice ID",
             "example": "inv_abc123",
+            "type": "string"
+          },
+          "ip": {
+            "description": "Payer IP address reported by Moyasar",
+            "example": "127.0.0.1",
             "type": "string"
           },
           "message": {
@@ -6616,6 +7136,32 @@
             ],
             "description": "Metadata attached when the payment was initiated"
           },
+          "refunded": {
+            "description": "Amount refunded in the smallest currency unit",
+            "example": 0,
+            "type": "number"
+          },
+          "refunded_at": {
+            "description": "Timestamp when the payment was refunded",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "refunded_format": {
+            "description": "Formatted refunded amount with currency",
+            "example": "0.00 SAR",
+            "type": "string"
+          },
+          "source": {
+            "description": "Payment source details returned by Moyasar",
+            "type": "object"
+          },
+          "splits": {
+            "description": "Payment split details returned by Moyasar",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
           "status": {
             "description": "Payment status reported by Moyasar",
             "enum": [
@@ -6627,6 +7173,16 @@
               "voided"
             ],
             "example": "paid",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "Timestamp when the payment was last updated",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "voided_at": {
+            "description": "Timestamp when the payment was voided",
+            "example": "2026-09-19T18:43:34.000Z",
             "type": "string"
           }
         },
@@ -6640,17 +7196,42 @@
             "type": "string"
           },
           "amount": {
-            "description": "Amount in the smallest currency unit (halalas) — flat shape only",
+            "description": "Amount in the smallest currency unit (halalas)",
             "example": 10000,
             "type": "number"
           },
+          "amount_format": {
+            "description": "Formatted payment amount with currency",
+            "example": "100.00 SAR",
+            "type": "string"
+          },
+          "callback_url": {
+            "description": "Payment callback URL",
+            "example": "https://sawaa.test/payment/callback",
+            "type": "string"
+          },
+          "captured": {
+            "description": "Amount captured in the smallest currency unit",
+            "example": 10000,
+            "type": "number"
+          },
+          "captured_at": {
+            "description": "Timestamp when the payment was captured",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "captured_format": {
+            "description": "Formatted captured amount with currency",
+            "example": "100.00 SAR",
+            "type": "string"
+          },
           "created_at": {
-            "description": "ISO 8601 timestamp when the event was created",
-            "example": "2024-01-15T10:30:00Z",
+            "description": "Timestamp when the payment was created",
+            "example": "2026-09-19T18:43:30.000Z",
             "type": "string"
           },
           "currency": {
-            "description": "ISO 4217 currency code (flat shape only)",
+            "description": "ISO 4217 currency code",
             "example": "SAR",
             "type": "string"
           },
@@ -6662,14 +7243,34 @@
             ],
             "description": "Nested payment object — the documented Moyasar webhook delivery shape"
           },
+          "description": {
+            "description": "Human-readable payment description",
+            "example": "Counseling booking",
+            "type": "string"
+          },
+          "fee": {
+            "description": "Estimated payment fee in the smallest currency unit",
+            "example": 250,
+            "type": "number"
+          },
+          "fee_format": {
+            "description": "Formatted payment fee with currency",
+            "example": "2.50 SAR",
+            "type": "string"
+          },
           "id": {
-            "description": "Payment ID (flat shape) OR event ID (nested shape)",
+            "description": "Moyasar payment ID (or event ID in the nested envelope)",
             "example": "pay_abc123",
             "type": "string"
           },
           "invoice_id": {
-            "description": "Moyasar hosted-checkout invoice ID (flat shape)",
+            "description": "Moyasar hosted-checkout invoice ID",
             "example": "inv_abc123",
+            "type": "string"
+          },
+          "ip": {
+            "description": "Payer IP address reported by Moyasar",
+            "example": "127.0.0.1",
             "type": "string"
           },
           "live": {
@@ -6678,7 +7279,7 @@
             "type": "object"
           },
           "message": {
-            "description": "Human-readable message from Moyasar (flat shape only)",
+            "description": "Human-readable message from Moyasar (e.g. failure reason)",
             "example": "Insufficient funds",
             "type": "string"
           },
@@ -6688,14 +7289,40 @@
                 "$ref": "#/components/schemas/MoyasarWebhookMetadataDto"
               }
             ],
-            "description": "Metadata attached when the payment was initiated (flat shape only)"
+            "description": "Metadata attached when the payment was initiated"
+          },
+          "refunded": {
+            "description": "Amount refunded in the smallest currency unit",
+            "example": 0,
+            "type": "number"
+          },
+          "refunded_at": {
+            "description": "Timestamp when the payment was refunded",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "refunded_format": {
+            "description": "Formatted refunded amount with currency",
+            "example": "0.00 SAR",
+            "type": "string"
           },
           "secret_token": {
             "description": "Shared secret token — present when the merchant configures body-token verification instead of an HMAC header",
             "type": "string"
           },
+          "source": {
+            "description": "Payment source details returned by Moyasar",
+            "type": "object"
+          },
+          "splits": {
+            "description": "Payment split details returned by Moyasar",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
           "status": {
-            "description": "Payment status reported by Moyasar (flat shape only)",
+            "description": "Payment status reported by Moyasar",
             "enum": [
               "paid",
               "failed",
@@ -6711,18 +7338,61 @@
             "description": "Webhook event type (nested shape)",
             "example": "payment_paid",
             "type": "string"
+          },
+          "updated_at": {
+            "description": "Timestamp when the payment was last updated",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
+          },
+          "voided_at": {
+            "description": "Timestamp when the payment was voided",
+            "example": "2026-09-19T18:43:34.000Z",
+            "type": "string"
           }
         },
         "type": "object"
       },
       "MoyasarWebhookMetadataDto": {
         "properties": {
+          "bookingId": {
+            "description": "Booking identity embedded in the payment metadata",
+            "example": "booking_abc123",
+            "type": "string"
+          },
+          "internalPaymentId": {
+            "description": "Internal payment identity embedded in the payment metadata",
+            "example": "payment_abc123",
+            "type": "string"
+          },
           "invoiceId": {
             "description": "Invoice UUID embedded in the payment metadata",
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
+          },
+          "packagePurchaseId": {
+            "description": "Package purchase identity embedded in the payment metadata",
+            "example": "purchase_abc123",
+            "type": "string"
+          },
+          "source": {
+            "description": "Internal source label embedded in the payment metadata",
+            "example": "public-booking",
+            "type": "string"
           }
         },
+        "type": "object"
+      },
+      "NativeSessionDto": {
+        "properties": {
+          "refreshToken": {
+            "description": "Native refresh token. It is sent in the JSON body, never as a cookie.",
+            "example": "a1b2c3d4-0000-1111-2222-333344445555",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
         "type": "object"
       },
       "NotificationListMetaDto": {
@@ -7022,6 +7692,56 @@
         "required": [
           "dimension",
           "mode"
+        ],
+        "type": "object"
+      },
+      "PackageFamilyOptionDto": {
+        "properties": {
+          "globalDiscount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GlobalDiscountDto"
+              }
+            ],
+            "description": "Option-wide discount"
+          },
+          "groups": {
+            "description": "Complete grouped session graph",
+            "items": {
+              "$ref": "#/components/schemas/GroupedPackageGroupDto"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Existing grouped option UUID; omit to create a new option",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "default": true,
+            "description": "Whether the option can be purchased",
+            "type": "boolean"
+          },
+          "isPublic": {
+            "default": false,
+            "description": "Whether the option is shown publicly",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic option name",
+            "example": "5 جلسات",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English option name",
+            "example": "5 sessions",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nameAr",
+          "groups",
+          "globalDiscount"
         ],
         "type": "object"
       },
@@ -8417,6 +9137,16 @@
       },
       "TransferCreditDto": {
         "properties": {
+          "reason": {
+            "description": "Reason recorded in the package-credit assignment history",
+            "example": "Practitioner left the clinic",
+            "type": "string"
+          },
+          "targetDurationOptionId": {
+            "description": "Optional active duration option on the target practitioner with the same frozen duration and delivery type",
+            "format": "uuid",
+            "type": "string"
+          },
           "toEmployeeId": {
             "description": "Target employee (practitioner) to move the credit to",
             "example": "00000000-0000-4000-a000-000000000099",
@@ -8458,7 +9188,25 @@
         "type": "object"
       },
       "UpdateAvailabilityBody": {
-        "properties": {},
+        "properties": {
+          "exceptions": {
+            "description": "Date-range exceptions (holidays, leave)",
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityException"
+            },
+            "type": "array"
+          },
+          "windows": {
+            "description": "Weekly availability windows",
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityWindow"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "windows"
+        ],
         "type": "object"
       },
       "UpdateAvailabilityDto": {
@@ -9188,6 +9936,59 @@
         },
         "type": "object"
       },
+      "UpdatePackageFamilyDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Arabic family description",
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English family description",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Catalog image URL",
+            "type": "string"
+          },
+          "isActive": {
+            "default": true,
+            "description": "Whether the family is active",
+            "type": "boolean"
+          },
+          "isPublic": {
+            "default": false,
+            "description": "Whether the family is public",
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic family name",
+            "example": "باقة الاستشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English family name",
+            "example": "Consultation pack",
+            "type": "string"
+          },
+          "options": {
+            "description": "Complete option list",
+            "items": {
+              "$ref": "#/components/schemas/PackageFamilyOptionDto"
+            },
+            "type": "array"
+          },
+          "sortOrder": {
+            "default": 0,
+            "description": "Catalog ordering",
+            "type": "number"
+          }
+        },
+        "required": [
+          "nameAr",
+          "options"
+        ],
+        "type": "object"
+      },
       "UpdateProblemReportStatusDto": {
         "properties": {
           "resolution": {
@@ -9430,6 +10231,21 @@
             "minimum": 0,
             "type": "number"
           },
+          "globalDiscount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GlobalDiscountDto"
+              }
+            ],
+            "description": "Replacement V2 global package discount. Omit to preserve the existing discount."
+          },
+          "groups": {
+            "description": "Replacement V2 package groups. Omit to preserve the existing template.",
+            "items": {
+              "$ref": "#/components/schemas/GroupedPackageGroupDto"
+            },
+            "type": "array"
+          },
           "iconBgColor": {
             "description": "Icon background color (hex)",
             "type": "string"
@@ -9459,6 +10275,15 @@
             },
             "type": "array"
           },
+          "modelVersion": {
+            "description": "Package model version. Existing packages cannot change version in place.",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "GROUPED_V2",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic name",
             "example": "باقة محدّثة",
@@ -9469,6 +10294,13 @@
             "description": "English name",
             "example": "Updated Pack",
             "maxLength": 200,
+            "type": "string"
+          },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner owner. Omit to preserve; null makes the package general.",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "nullable": true,
             "type": "string"
           },
           "sortOrder": {
@@ -12937,6 +13769,9 @@
                       "remaining": {
                         "type": "number"
                       },
+                      "reservedQuantity": {
+                        "type": "number"
+                      },
                       "totalQuantity": {
                         "type": "number"
                       },
@@ -14202,7 +15037,7 @@
                 }
               }
             },
-            "description": "Booking restored to CONFIRMED with check-in timestamp set"
+            "description": "Booking restored to CONFIRMED while preserving attendance and suppressing automatic no-show"
           },
           "400": {
             "content": {
@@ -22621,7 +23456,7 @@
         ],
         "responses": {
           "200": {
-            "description": "JSON report object (shape depends on the report type)"
+            "description": "JSON report object by report type. REFUNDED uses historyMode EVENTS with individual refund events and separate undatedHistorical records after reconciliation; otherwise historyMode LEGACY preserves the previous report with an incomplete historyReconciliation indicator."
           },
           "400": {
             "content": {
@@ -25323,6 +26158,356 @@
         "summary": "Replace all fields on an intake form",
         "tags": [
           "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/package-families": {
+      "get": {
+        "operationId": "DashboardPackageFamiliesController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Package families and their grouped options"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List package families",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardPackageFamiliesController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePackageFamilyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Package family created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a package family",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/package-families/{familyId}": {
+      "delete": {
+        "operationId": "DashboardPackageFamiliesController_archive_v1",
+        "parameters": [
+          {
+            "description": "Package family UUID",
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Package family archived"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Package family not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archive a package family",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      },
+      "get": {
+        "operationId": "DashboardPackageFamiliesController_get_v1",
+        "parameters": [
+          {
+            "description": "Package family UUID",
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package family details"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Package family not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a package family",
+        "tags": [
+          "Dashboard / Organization / Package Families"
+        ]
+      },
+      "patch": {
+        "operationId": "DashboardPackageFamiliesController_update_v1",
+        "parameters": [
+          {
+            "description": "Package family UUID",
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePackageFamilyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Package family updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a package family",
+        "tags": [
+          "Dashboard / Organization / Package Families"
         ]
       }
     },
@@ -32600,6 +33785,136 @@
         ]
       }
     },
+    "/api/v1/mobile/auth/logout": {
+      "post": {
+        "operationId": "MobileClientAuthController_logout_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Native sessions revoked"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Revoke native mobile sessions",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/refresh": {
+      "post": {
+        "operationId": "MobileClientAuthController_refresh_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Native access and refresh tokens issued"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Rotate a native mobile refresh token",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
     "/api/v1/mobile/auth/register": {
       "post": {
         "operationId": "MobileClientAuthController_registerUser_v1",
@@ -32801,6 +34116,34 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "sessionKind": {
+                      "description": "Mobile routing hint; JWT guards remain authoritative",
+                      "enum": [
+                        "client",
+                        "staff"
+                      ],
+                      "type": "string"
+                    },
+                    "tokens": {
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
             "description": "OTP verified, tokens issued"
           },
           "400": {
@@ -33847,6 +35190,216 @@
         "summary": "Get unread notification count for the current client",
         "tags": [
           "Mobile Client / Notifications"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/packages/book": {
+      "post": {
+        "operationId": "MobileClientPackagesController_bookCredit[0]_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientPackageBookDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Package credit booking created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book an appointment using an owned package credit",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/packages/purchases": {
+      "get": {
+        "operationId": "MobileClientPackagesController_listMyPurchases[0]_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PackagePurchaseStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchases owned by the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated client package purchases and credit balance",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/packages/purchases/{id}": {
+      "get": {
+        "operationId": "MobileClientPackagesController_getMyPurchase[0]_v1",
+        "parameters": [
+          {
+            "description": "Package purchase UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchase status"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read an authenticated client package purchase status",
+        "tags": [
+          "Mobile Client / Packages"
         ]
       }
     },
@@ -35362,7 +36915,7 @@
                   "properties": {
                     "data": {
                       "items": {
-                        "$ref": "#/components/schemas/ClientResponseDto"
+                        "$ref": "#/components/schemas/EmployeeClientResponseDto"
                       },
                       "type": "array"
                     },
@@ -35437,6 +36990,87 @@
           }
         ],
         "summary": "List the authenticated employee's clients",
+        "tags": [
+          "Mobile Employee / Clients"
+        ]
+      }
+    },
+    "/api/v1/mobile/employee/clients/{clientId}": {
+      "get": {
+        "operationId": "MobileEmployeeClientsController_getMyClient_v1",
+        "parameters": [
+          {
+            "description": "Client UUID",
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeClientResponseDto"
+                }
+              }
+            },
+            "description": "Employee-safe client record"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Client not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a client who has a booking with the authenticated employee",
         "tags": [
           "Mobile Employee / Clients"
         ]
@@ -35681,6 +37315,71 @@
       }
     },
     "/api/v1/mobile/employee/schedule/availability": {
+      "get": {
+        "operationId": "MobileEmployeeScheduleController_getAvailabilityEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeAvailabilityResponseDto"
+                }
+              }
+            },
+            "description": "Availability windows and exceptions"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get availability windows and exceptions for the authenticated employee",
+        "tags": [
+          "Mobile Employee / Schedule"
+        ]
+      },
       "patch": {
         "operationId": "MobileEmployeeScheduleController_updateAvailabilityEndpoint_v1",
         "parameters": [],
@@ -35699,25 +37398,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "employeeId": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "exceptions": {
-                      "items": {
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "windows": {
-                      "items": {
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeAvailabilityResponseDto"
                 }
               }
             },
@@ -39248,6 +40929,216 @@
         ]
       }
     },
+    "/api/v1/public/me/packages/book": {
+      "post": {
+        "operationId": "MobileClientPackagesController_bookCredit[1]_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientPackageBookDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Package credit booking created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book an appointment using an owned package credit",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/public/me/packages/purchases": {
+      "get": {
+        "operationId": "MobileClientPackagesController_listMyPurchases[1]_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PackagePurchaseStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchases owned by the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated client package purchases and credit balance",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/public/me/packages/purchases/{id}": {
+      "get": {
+        "operationId": "MobileClientPackagesController_getMyPurchase[1]_v1",
+        "parameters": [
+          {
+            "description": "Package purchase UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchase status"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read an authenticated client package purchase status",
+        "tags": [
+          "Mobile Client / Packages"
+        ]
+      }
+    },
     "/api/v1/public/otp/request": {
       "post": {
         "operationId": "PublicOtpController_request_v1",
@@ -39355,6 +41246,89 @@
         "summary": "Verify OTP and obtain session tokens",
         "tags": [
           "Public / OTP"
+        ]
+      }
+    },
+    "/api/v1/public/package-families": {
+      "get": {
+        "operationId": "PublicPackageFamiliesController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Public package families with sellable options"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get public package families",
+        "tags": [
+          "Public / Package Families"
+        ]
+      }
+    },
+    "/api/v1/public/package-families/{familyId}": {
+      "get": {
+        "operationId": "PublicPackageFamiliesController_get_v1",
+        "parameters": [
+          {
+            "description": "Package family UUID",
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public package family details"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Family not found or not sellable"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get one public package family",
+        "tags": [
+          "Public / Package Families"
         ]
       }
     },

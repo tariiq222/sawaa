@@ -38,6 +38,22 @@ function validCreate() {
   }
 }
 
+describe('package owner input', () => {
+  it('keeps the selected owner when parsing a create payload', () => {
+    const ownerEmployeeId = '58c15b80-f8bf-4b70-824f-9c004a90345b'
+    expect(createSessionPackageSchema.parse({ ...validCreate(), ownerEmployeeId }))
+      .toMatchObject({ ownerEmployeeId })
+  })
+
+  it('preserves an explicit clear but leaves omission unchanged on update', () => {
+    expect(updateSessionPackageSchema.parse({ ownerEmployeeId: null }))
+      .toEqual({ ownerEmployeeId: null })
+    expect(updateSessionPackageSchema.parse({})).toEqual({})
+    expect(updateSessionPackageSchema.safeParse({ ownerEmployeeId: 'invalid' }).success)
+      .toBe(false)
+  })
+})
+
 describe('discountTypeSchema', () => {
   it.each(['PERCENTAGE', 'FIXED'] as const)('accepts "%s"', (value) => {
     expect(discountTypeSchema.safeParse(value).success).toBe(true)
@@ -63,7 +79,7 @@ describe('packagePurchaseStatusSchema', () => {
 })
 
 describe('packageCreditUsageStatusSchema', () => {
-  it.each(['CONSUMED', 'RETURNED'] as const)('accepts "%s"', (value) => {
+  it.each(['RESERVED', 'CONSUMED', 'RETURNED'] as const)('accepts "%s"', (value) => {
     expect(packageCreditUsageStatusSchema.safeParse(value).success).toBe(true)
   })
 

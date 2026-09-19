@@ -13,6 +13,21 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { Blob as NodeBlob } from 'node:buffer'
+
+const jsdomBlob = globalThis.Blob
+
+function readBlobText(blob: Blob): Promise<string> {
+  if (typeof blob.text === 'function') return blob.text()
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob'))
+    reader.onabort = () => reject(new DOMException('Blob read aborted', 'AbortError'))
+    reader.readAsText(blob)
+  })
+}
 
 // ---------------------------------------------------------------------------
 // We need to import the module fresh each test to reset module-level state
@@ -25,6 +40,14 @@ describe('API Client (lib/api.ts)', () => {
   let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(async () => {
+    // jsdom's Blob has no body readers, while Node's Response.blob() uses
+    // those readers to expose downloaded content. Scope the Node Blob to this
+    // download/auth suite so upload tests in other suites retain jsdom Blob.
+    Object.defineProperty(globalThis, 'Blob', {
+      configurable: true,
+      writable: true,
+      value: NodeBlob,
+    })
     // Reset module so accessToken state is clean
     vi.resetModules()
     fetchMock = vi.fn()
@@ -34,6 +57,11 @@ describe('API Client (lib/api.ts)', () => {
   })
 
   afterEach(() => {
+    Object.defineProperty(globalThis, 'Blob', {
+      configurable: true,
+      writable: true,
+      value: jsdomBlob,
+    })
     vi.unstubAllGlobals()
   })
 
@@ -253,7 +281,7 @@ describe('API Client (lib/api.ts)', () => {
 
     const blob = await api.postBlob('/dashboard/ops/reports', { format: 'EXCEL' })
 
-    expect(await blob.text()).toBe('xlsx-bytes')
+    expect(await readBlobText(blob)).toBe('xlsx-bytes')
     expect(blob.size).toBe(new TextEncoder().encode('xlsx-bytes').byteLength)
     expect(getAccessToken()).toBe('new-token')
     expect((fetchMock.mock.calls[2][1].headers as Record<string, string>).Authorization).toBe('Bearer new-token')
@@ -273,7 +301,7 @@ describe('API Client (lib/api.ts)', () => {
     firstResponse.resolve(new Response(null, { status: 401 }))
 
     const blob = await download
-    expect(await blob.text()).toBe('xlsx-bytes')
+    expect(await readBlobText(blob)).toBe('xlsx-bytes')
     expect(blob.size).toBe(new TextEncoder().encode('xlsx-bytes').byteLength)
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect((fetchMock.mock.calls[1][1].headers as Record<string, string>).Authorization)

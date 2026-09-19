@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PackagePurchaseStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../infrastructure/database';
+import { validateBookingTargetEligibility } from '../../../bookings/booking-target-eligibility.helper';
+import { getPackageCreditAvailability } from '../../../bookings/package-credit-availability.helper';
+import { parsePackageOfferSnapshot } from '../package-offer-snapshot';
 
 export interface ListClientPackagePurchasesQuery {
   clientId: string;
@@ -31,7 +34,9 @@ export interface ClientPackageCreditRow {
   unitPriceSnapshot: number;
   totalQuantity: number;
   usedQuantity: number;
-  /** Computed: totalQuantity − usedQuantity. */
+  // Booked but not-yet-delivered sessions; they occupy a seat like a used one.
+  reservedQuantity: number;
+  /** Computed: totalQuantity − usedQuantity − reservedQuantity. */
   remaining: number;
   categoryId: string | null;
   categoryNameAr: string;
@@ -50,6 +55,18 @@ export interface ClientPackageCreditRow {
    * modules/bookings/package-credit-matching.helper.ts.
    */
   constraints: ClientPackageCreditConstraintRow[];
+  purchaseGroupId: string | null;
+  sessionPosition: number | null;
+  groupLabel: string | null;
+  sequenceMode: 'ORDERED' | 'UNORDERED' | null;
+  dependsOnGroupId: string | null;
+  durationMinsSnapshot: number | null;
+  deliveryTypeSnapshot: string | null;
+  serviceNameSnapshot: string | null;
+  employeeNameSnapshot: string | null;
+  listPriceSnapshot: number | null;
+  netValue: number | null;
+  availability: { bookable: boolean; reason: string | null };
 }
 
 export interface ClientPackagePurchaseRow {
@@ -57,6 +74,14 @@ export interface ClientPackagePurchaseRow {
   packageId: string;
   packageNameAr: string;
   packageNameEn: string | null;
+  /** Immutable family/option identity captured when the purchase was made. */
+  offerSnapshot: ReturnType<typeof parsePackageOfferSnapshot>;
+  familyId: string | null;
+  familyNameAr: string | null;
+  familyNameEn: string | null;
+  optionNameAr: string | null;
+  optionNameEn: string | null;
+  sessionCount: number | null;
   status: PackagePurchaseStatus;
   /** Integer halalas (1 SAR = 100). */
   subtotalSnapshot: number;
@@ -71,14 +96,17 @@ export interface ClientPackagePurchaseRow {
   notes: string | null;
   createdAt: string;
   credits: ClientPackageCreditRow[];
+  modelVersion: 'LEGACY' | 'GROUPED_V2';
 }
 
 /**
  * List every package purchase a given client has made (newest paid first),
  * with each purchase's credits enriched with resolved service / employee /
- * duration display names. `remaining = totalQuantity − usedQuantity` is
- * pre-computed so the dashboard's "credit balance" widget does not have to
- * do arithmetic on the client.
+ * duration display names. `remaining = totalQuantity − usedQuantity −
+ * reservedQuantity` is pre-computed so the dashboard's "credit balance"
+ * widget does not have to do arithmetic on the client — a reserved session
+ * belongs to a booked-but-not-yet-delivered appointment and is not available
+ * to offer again.
  */
 @Injectable()
 export class ListClientPackagePurchasesHandler {
@@ -93,13 +121,45 @@ export class ListClientPackagePurchasesHandler {
     const purchases = await this.prisma.packagePurchase.findMany({
       where,
       include: {
-        credits: {
-          include: {
+          credits: {
+            include: {
             constraints: {
               select: {
                 dimension: true,
                 mode: true,
                 targets: { select: { targetId: true } },
+              },
+            },
+            purchaseGroup: {
+              select: {
+                id: true,
+                label: true,
+                sequenceMode: true,
+                dependsOnGroupId: true,
+                credits: {
+                  select: {
+                    id: true,
+                    sessionPosition: true,
+                    totalQuantity: true,
+                    usedQuantity: true,
+                    reservedQuantity: true,
+                    usages: { select: { status: true, deliveredAt: true } },
+                  },
+                },
+                dependsOnGroup: {
+                  select: {
+                    credits: {
+                      select: {
+                        id: true,
+                        sessionPosition: true,
+                        totalQuantity: true,
+                        usedQuantity: true,
+                        reservedQuantity: true,
+                        usages: { select: { status: true, deliveredAt: true } },
+                      },
+                    },
+                  },
+                },
               },
             },
           },
@@ -133,10 +193,11 @@ export class ListClientPackagePurchasesHandler {
             where: { id: { in: serviceIds } },
             select: {
               id: true, nameAr: true, nameEn: true, isActive: true, archivedAt: true,
+              isHidden: true,
               categoryId: true,
               category: {
                 select: {
-                  id: true, nameAr: true, nameEn: true, bookingMode: true, departmentId: true,
+                  id: true, nameAr: true, nameEn: true, bookingMode: true, isActive: true, departmentId: true,
                   department: { select: { id: true, nameAr: true, nameEn: true } },
                 },
               },
@@ -179,19 +240,92 @@ export class ListClientPackagePurchasesHandler {
     const activeLinkSet = new Set(
       activeLinks.map((l) => `${l.employeeId}:${l.serviceId}`),
     );
-
     const packageMap = new Map(packages.map((p) => [p.id, p]));
     const serviceMap = new Map(services.map((s) => [s.id, s]));
     const employeeMap = new Map(employees.map((e) => [e.id, e]));
     const durationMap = new Map(durationOptions.map((d) => [d.id, d]));
 
+    // Keep the legacy serviceIsBookable projection unchanged. Grouped V2
+    // availability also needs the current effective duration/delivery offering
+    // because a practitioner can disable a channel, remove an option, or add a
+    // duration override after the sale. Cache repeated targets across session
+    // positions so this does not become one eligibility lookup per credit.
+    const v2OfferingAvailability = new Map<string, boolean>();
+    const v2Targets = new Map<string, {
+      serviceId: string;
+      employeeId: string;
+      durationOptionId: string;
+      deliveryType: string;
+      durationMinsSnapshot: number | null;
+    }>();
+    for (const purchase of purchases) {
+      if (purchase.modelVersion !== 'GROUPED_V2') continue;
+      for (const credit of purchase.credits) {
+        if (
+          !credit.serviceId || !credit.employeeId || !credit.durationOptionId ||
+          !credit.deliveryTypeSnapshot
+        ) continue;
+        const key = [
+          credit.serviceId,
+          credit.employeeId,
+          credit.durationOptionId,
+          credit.deliveryTypeSnapshot,
+          credit.durationMinsSnapshot ?? 'missing',
+        ].join(':');
+        v2Targets.set(key, {
+          serviceId: credit.serviceId,
+          employeeId: credit.employeeId,
+          durationOptionId: credit.durationOptionId,
+          deliveryType: credit.deliveryTypeSnapshot,
+          durationMinsSnapshot: credit.durationMinsSnapshot,
+        });
+      }
+    }
+    await Promise.all([...v2Targets.entries()].map(async ([key, target]) => {
+      const service = serviceMap.get(target.serviceId);
+      const employee = employeeMap.get(target.employeeId);
+      if (
+        !service || service.isActive !== true || service.archivedAt !== null ||
+        service.category?.isActive === false || !employee || employee.isActive !== true ||
+        !activeLinkSet.has(`${target.employeeId}:${target.serviceId}`) ||
+        target.durationMinsSnapshot == null
+      ) {
+        v2OfferingAvailability.set(key, false);
+        return;
+      }
+      try {
+        const eligibility = await validateBookingTargetEligibility(this.prisma, {
+          serviceId: target.serviceId,
+          employeeId: target.employeeId,
+          durationOptionId: target.durationOptionId,
+          deliveryType: target.deliveryType,
+          bookingType: 'INDIVIDUAL',
+        });
+        v2OfferingAvailability.set(
+          key,
+          eligibility.durationOption?.durationMins === target.durationMinsSnapshot &&
+            eligibility.deliveryType === target.deliveryType,
+        );
+      } catch {
+        v2OfferingAvailability.set(key, false);
+      }
+    }));
+
     return purchases.map((purchase) => {
       const pkg = packageMap.get(purchase.packageId);
+      const offerSnapshot = parsePackageOfferSnapshot(purchase.offerSnapshot);
       return {
         id: purchase.id,
         packageId: purchase.packageId,
-        packageNameAr: pkg?.nameAr ?? '',
-        packageNameEn: pkg?.nameEn ?? null,
+        packageNameAr: offerSnapshot?.familyNameAr ?? pkg?.nameAr ?? '',
+        packageNameEn: offerSnapshot?.familyNameEn ?? pkg?.nameEn ?? null,
+        offerSnapshot,
+        familyId: offerSnapshot?.familyId ?? null,
+        familyNameAr: offerSnapshot?.familyNameAr ?? null,
+        familyNameEn: offerSnapshot?.familyNameEn ?? null,
+        optionNameAr: offerSnapshot?.optionNameAr ?? null,
+        optionNameEn: offerSnapshot?.optionNameEn ?? null,
+        sessionCount: offerSnapshot?.sessionCount ?? null,
         status: purchase.status,
         subtotalSnapshot: Number(purchase.subtotalSnapshot),
         discountSnapshot: Number(purchase.discountSnapshot),
@@ -201,6 +335,7 @@ export class ListClientPackagePurchasesHandler {
         refundedAt: purchase.refundedAt?.toISOString() ?? null,
         notes: purchase.notes,
         createdAt: purchase.createdAt.toISOString(),
+        modelVersion: purchase.modelVersion === 'GROUPED_V2' ? 'GROUPED_V2' : 'LEGACY',
         credits: purchase.credits.map((credit) => {
           const service = credit.serviceId ? serviceMap.get(credit.serviceId) : undefined;
           const employee = credit.employeeId ? employeeMap.get(credit.employeeId) : undefined;
@@ -214,23 +349,63 @@ export class ListClientPackagePurchasesHandler {
             !!employee &&
             employee.isActive &&
             activeLinkSet.has(`${credit.employeeId}:${credit.serviceId}`);
+          const group = credit.purchaseGroup;
+          const v2TargetKey =
+            credit.serviceId && credit.employeeId && credit.durationOptionId && credit.deliveryTypeSnapshot
+              ? [
+                credit.serviceId,
+                credit.employeeId,
+                credit.durationOptionId,
+                credit.deliveryTypeSnapshot,
+                credit.durationMinsSnapshot ?? 'missing',
+              ].join(':')
+              : null;
+          const availability = getPackageCreditAvailability({
+            modelVersion: purchase.modelVersion,
+            purchaseStatus: purchase.status,
+            totalQuantity: credit.totalQuantity,
+            usedQuantity: credit.usedQuantity,
+            reservedQuantity: credit.reservedQuantity,
+            offeringAvailable: purchase.modelVersion === 'GROUPED_V2'
+              ? v2TargetKey != null && v2OfferingAvailability.get(v2TargetKey) === true
+              : serviceIsBookable,
+            sequenceMode: group?.sequenceMode,
+            sessionPosition: credit.sessionPosition,
+            creditId: credit.id,
+            purchaseGroupId: group?.id,
+            usages: group?.credits.find((groupCredit) => groupCredit.id === credit.id)?.usages,
+            dependsOnGroupId: group?.dependsOnGroupId,
+            dependencyCredits: group?.dependsOnGroup?.credits,
+            groupCredits: group?.credits,
+          });
+          // A direct-booking clinic books through one hidden internal service;
+          // the clinic is the name staff and clients recognise.
+          const namedByClinic =
+            !!service?.isHidden && category?.bookingMode === 'DIRECT';
           return {
             id: credit.id,
             serviceId: credit.serviceId,
             employeeId: credit.employeeId,
             durationOptionId: credit.durationOptionId,
-            serviceNameAr: service?.nameAr ?? '',
-            serviceNameEn: service?.nameEn ?? null,
+            serviceNameAr: (namedByClinic ? category?.nameAr : service?.nameAr) ?? '',
+            serviceNameEn: (namedByClinic ? category?.nameEn : service?.nameEn) ?? null,
             employeeNameAr: employee?.nameAr ?? employee?.name ?? '',
             employeeNameEn: employee?.nameEn ?? null,
             durationLabelAr: duration?.labelAr ?? '',
             // The duration model has no labelEn — fall back to label (English).
             durationLabelEn: duration?.label ?? null,
             durationMins: duration?.durationMins ?? null,
+            durationMinsSnapshot: credit.durationMinsSnapshot ?? null,
+            deliveryTypeSnapshot: credit.deliveryTypeSnapshot ?? null,
+            serviceNameSnapshot: credit.serviceNameSnapshot ?? null,
+            employeeNameSnapshot: credit.employeeNameSnapshot ?? null,
+            listPriceSnapshot: credit.listPriceSnapshot == null ? null : Number(credit.listPriceSnapshot),
+            netValue: credit.netValue == null ? null : Number(credit.netValue),
             unitPriceSnapshot: Number(credit.unitPriceSnapshot),
             totalQuantity: credit.totalQuantity,
             usedQuantity: credit.usedQuantity,
-            remaining: credit.totalQuantity - credit.usedQuantity,
+            reservedQuantity: credit.reservedQuantity,
+            remaining: credit.totalQuantity - credit.usedQuantity - credit.reservedQuantity,
             categoryId: service?.categoryId ?? null,
             categoryNameAr: category?.nameAr ?? '',
             categoryNameEn: category?.nameEn ?? null,
@@ -244,6 +419,12 @@ export class ListClientPackagePurchasesHandler {
               mode: c.mode as ClientPackageCreditConstraintRow['mode'],
               targetIds: c.targets.map((t) => t.targetId),
             })),
+            purchaseGroupId: credit.purchaseGroupId ?? null,
+            sessionPosition: credit.sessionPosition ?? null,
+            groupLabel: group?.label ?? null,
+            sequenceMode: group?.sequenceMode ?? null,
+            dependsOnGroupId: group?.dependsOnGroupId ?? null,
+            availability,
           };
         }),
       };

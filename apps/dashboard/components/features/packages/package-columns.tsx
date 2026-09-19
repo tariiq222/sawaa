@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/money"
 import type { SessionPackage } from "@/lib/types/package"
+import { packageSavings } from "./package-savings"
 
 const iconBtnBase =
   "flex size-9 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-all duration-200 hover:bg-muted hover:border-border hover:text-foreground"
@@ -66,13 +67,17 @@ export function getPackageColumns(
       id: "discount",
       header: label("packages.col.discount", "Discount"),
       cell: ({ row }) => {
-        const p = row.original
-        const display =
-          p.discountType === "PERCENTAGE"
-            ? `${num(p.discountValue)}%`
-            : formatPrice(num(p.discountValue))
+        // Discounts are per item; the package-level fields are deprecated zeros.
+        const { discount, freeValue } = packageSavings(row.original)
         return (
-          <span className="tabular-nums text-sm text-muted-foreground">{display}</span>
+          <div className="flex flex-col">
+            <span className="tabular-nums text-sm text-muted-foreground">{formatPrice(discount)}</span>
+            {freeValue > 0 && (
+              <span className="tabular-nums text-xs text-muted-foreground">
+                {label("packages.col.freeValue", "Free sessions")} {formatPrice(freeValue)}
+              </span>
+            )}
+          </div>
         )
       },
     },

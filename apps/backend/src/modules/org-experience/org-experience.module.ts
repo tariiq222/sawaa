@@ -52,6 +52,14 @@ import { ArchiveSessionPackageHandler } from './session-packages/archive-session
 import { ListPublicPackagesHandler } from './session-packages/list-public-packages/list-public-packages.handler';
 import { GetPublicPackageHandler } from './session-packages/get-public-package/get-public-package.handler';
 import { GetPublicCatalogHandler } from './public-catalog/get-public-catalog.handler';
+import { CreatePackageFamilyHandler } from './package-families/create-package-family/create-package-family.handler';
+import { UpdatePackageFamilyHandler } from './package-families/update-package-family/update-package-family.handler';
+import { ListPackageFamiliesHandler } from './package-families/list-package-families/list-package-families.handler';
+import { GetPackageFamilyHandler } from './package-families/get-package-family/get-package-family.handler';
+import { ListPublicPackageFamiliesHandler } from './package-families/list-public-package-families/list-public-package-families.handler';
+import { GetPublicPackageFamilyHandler } from './package-families/get-public-package-family/get-public-package-family.handler';
+import { ArchivePackageFamilyHandler } from './package-families/archive-package-family/archive-package-family.handler';
+import { DashboardPackageFamiliesController } from '../../api/dashboard/package-families.controller';
 
 const serviceHandlers = [
   CreateServiceHandler, UpdateServiceHandler, ListServicesHandler, GetServiceHandler, ArchiveServiceHandler,
@@ -81,13 +89,24 @@ const sessionPackageHandlers = [
   GetPublicPackageHandler,
 ];
 
+const packageFamilyHandlers = [
+  CreatePackageFamilyHandler,
+  UpdatePackageFamilyHandler,
+  ListPackageFamiliesHandler,
+  GetPackageFamilyHandler,
+  ListPublicPackageFamiliesHandler,
+  GetPublicPackageFamilyHandler,
+  ArchivePackageFamilyHandler,
+];
+
 @Module({
   imports: [DatabaseModule, MessagingModule],
-  controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController],
+  controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController, DashboardPackageFamiliesController],
   providers: [
     ...serviceHandlers,
     ...discountReasonHandlers,
     ...sessionPackageHandlers,
+    ...packageFamilyHandlers,
     ComputePackagePriceService,
     GetPublicBrandingHandler,
     GetPublicCatalogHandler,
@@ -102,6 +121,7 @@ const sessionPackageHandlers = [
     ...serviceHandlers,
     ...discountReasonHandlers,
     ...sessionPackageHandlers,
+    ...packageFamilyHandlers,
     ComputePackagePriceService,
     GetPublicBrandingHandler,
     GetPublicCatalogHandler,

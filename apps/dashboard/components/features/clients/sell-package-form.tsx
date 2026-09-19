@@ -41,6 +41,7 @@ import {
 
 import { useLocale } from "@/components/locale-provider"
 import { usePackagesList } from "@/hooks/use-packages"
+import { usePackageFamilies } from "@/hooks/use-package-families"
 import { useBranches } from "@/hooks/use-branches"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
 import { useSellPackage } from "@/hooks/use-package-purchases"
@@ -90,6 +91,7 @@ interface SellPackageFormProps {
 export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
   const { t, locale } = useLocale()
   const { packages, isLoading: packagesLoading } = usePackagesList()
+  const { data: families = [], isLoading: familiesLoading } = usePackageFamilies()
   const { branches, isLoading: branchesLoading } = useBranches()
   const { data: paymentSettings } = usePaymentSettings()
   const sellMut = useSellPackage()
@@ -100,6 +102,10 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
   const sellable = useMemo(
     () => (packages ?? []).filter((p) => p.isActive),
     [packages],
+  )
+  const familyChoices = useMemo(
+    () => families.flatMap((family) => family.options.filter((option) => option.isActive && !option.archivedAt).map((option) => ({ option, familyId: family.id, familyNameAr: family.nameAr, familyNameEn: family.nameEn }))),
+    [families],
   )
 
   const activeBranches = useMemo(
@@ -114,7 +120,7 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
     return list.length > 0 ? list : METHOD_OPTIONS.filter((m) => m.value === "CASH")
   }, [paymentSettings])
 
-  const [packageId, setPackageId] = useState<string>("")
+  const [packageSelection, setPackageSelection] = useState<string>("")
   const purchaseAttemptRef = useRef<{
     fingerprint: string
     idempotencyKey: string
@@ -125,10 +131,16 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
   )
   const [notes, setNotes] = useState("")
 
-  const selectedPkg = useMemo<SessionPackage | undefined>(
-    () => sellable.find((p) => p.id === packageId),
-    [sellable, packageId],
-  )
+  const selectedChoice = useMemo(() => {
+    if (packageSelection.startsWith("family:")) {
+      const [familyId, packageId] = packageSelection.slice("family:".length).split(":")
+      return familyChoices.find((choice) => choice.familyId === familyId && choice.option.id === packageId)
+    }
+    const option = sellable.find((pkg) => pkg.id === packageSelection)
+    return option ? { option, familyId: undefined, familyNameAr: undefined, familyNameEn: undefined } : undefined
+  }, [familyChoices, packageSelection, sellable])
+  const selectedPkg = selectedChoice?.option as SessionPackage | undefined
+  const packageId = selectedChoice?.option.id ?? ""
 
   // The activeMethod handles the late-loads-settings race: if the user
   // already picked a method that gets disabled, fall back to the first
@@ -143,12 +155,14 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
     !!activeMethod &&
     !sellMut.isPending &&
     !packagesLoading &&
+    !familiesLoading &&
     !branchesLoading
 
   async function onSubmit() {
     if (!packageId || !branchId) return
     const fingerprint = JSON.stringify({
       packageId,
+      packageFamilyId: selectedChoice?.familyId ?? null,
       clientId,
       branchId,
       method: activeMethod,
@@ -163,6 +177,7 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
     const payload: CreatePackagePurchasePayload = {
       idempotencyKey: purchaseAttemptRef.current.idempotencyKey,
       packageId,
+      packageFamilyId: selectedChoice?.familyId,
       clientId,
       branchId,
       method: activeMethod as PackagePurchasePaymentMethod,
@@ -192,14 +207,14 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
           {/* ── Package selector ── */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="sell-package">{t("packages.sell.package")}</Label>
-            {packagesLoading ? (
+            {packagesLoading || familiesLoading ? (
               <Skeleton className="h-10 w-full" />
-            ) : sellable.length === 0 ? (
+            ) : sellable.length === 0 && familyChoices.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {t("packages.sell.noPackages")}
               </p>
             ) : (
-              <Select value={packageId} onValueChange={setPackageId}>
+              <Select value={packageSelection} onValueChange={setPackageSelection}>
                 <SelectTrigger id="sell-package" className="w-full">
                   <SelectValue placeholder={t("packages.sell.packagePlaceholder")} />
                 </SelectTrigger>
@@ -207,6 +222,11 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
                   {sellable.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {packageLabel(p)}
+                    </SelectItem>
+                  ))}
+                  {familyChoices.map(({ option, familyId, familyNameAr, familyNameEn }) => (
+                    <SelectItem key={`family:${familyId}:${option.id}`} value={`family:${familyId}:${option.id}`}>
+                      {locale === "ar" ? (familyNameAr ?? familyNameEn ?? option.nameAr) : (familyNameEn ?? familyNameAr ?? option.nameAr)} · {locale === "ar" ? option.nameAr : (option.nameEn ?? option.nameAr)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import type { PaymentSettings } from "@/lib/api/organization-settings"
 import type { PayMethod } from "@/components/features/shared/payment-method-picker"
 import { CollectionTimingSection } from "./collection-timing-section"
+import type { SelectedPackageSummary } from "./selected-package-summary"
 
 /* ─── Props ─── */
 
@@ -27,6 +28,14 @@ interface BookingSummaryProps {
    *  shared PaymentMethodPicker) is hidden. Used by the package-credit
    *  wizard path, which is zero-priced and pre-paid. */
   hideCollectionTiming: boolean
+  /** True when the session is funded by package credit: nothing is due, so
+   *  the price row names the package instead of the service price and the
+   *  coupon field is hidden (coupons never apply to credit bookings). */
+  fundedByPackage?: boolean
+  /** Active package and selected credit details, resolved from the current
+   *  client's purchase query. Optional to keep this summary reusable for
+   *  paid and legacy callers. */
+  packageSummary?: SelectedPackageSummary | null
   /** W2-T2 — current payment settings (loaded via `usePaymentSettings`
    *  by booking-pos.tsx). `undefined` means the request is still in
    *  flight; the collection-timing section treats that as "do not
@@ -96,6 +105,8 @@ export function BookingSummary({
   payAtClinic,
   collectionMethod,
   hideCollectionTiming,
+  fundedByPackage = false,
+  packageSummary = null,
   paymentSettings,
   couponCode,
   submitting,
@@ -127,6 +138,36 @@ export function BookingSummary({
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         {t("bookings.pos.summary.title")}
       </h2>
+
+      {fundedByPackage && packageSummary && (
+        <dl
+          data-testid="booking-package-summary"
+          className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3"
+        >
+          <SummaryRow
+            label={t("bookings.pos.summary.packageName")}
+            value={packageSummary.packageName}
+          />
+          {packageSummary.sessionPosition != null && (
+            <SummaryRow
+              label={t("bookings.pos.summary.packageSession")}
+              value={String(packageSummary.sessionPosition + 1)}
+            />
+          )}
+          {packageSummary.serviceName && (
+            <SummaryRow
+              label={t("bookings.pos.summary.packageService")}
+              value={packageSummary.serviceName}
+            />
+          )}
+          {packageSummary.remaining != null && (
+            <SummaryRow
+              label={t("bookings.pos.summary.packageUnreservedBalance")}
+              value={String(packageSummary.remaining)}
+            />
+          )}
+        </dl>
+      )}
 
       {/* Summary rows */}
       <dl className="flex flex-col gap-3">
@@ -163,7 +204,11 @@ export function BookingSummary({
         <span className="text-sm font-medium text-foreground">
           {t("bookings.pos.summary.servicePrice")}
         </span>
-        {servicePriceHalalas != null ? (
+        {fundedByPackage ? (
+          <span className="text-sm font-semibold text-primary">
+            {t("bookings.pos.summary.fromPackage")}
+          </span>
+        ) : servicePriceHalalas != null ? (
           <FormattedCurrency
             amount={servicePriceHalalas}
             locale={locale}
@@ -192,17 +237,19 @@ export function BookingSummary({
       )}
 
       {/* Coupon code */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("bookings.wizard.step.confirm.couponHeader")}
-        </p>
-        <Input
-          placeholder={t("bookings.wizard.step.confirm.couponPlaceholder")}
-          value={couponCode ?? ""}
-          onChange={(e) => onCouponChange(e.target.value || null)}
-          className="bg-surface"
-        />
-      </div>
+      {!fundedByPackage && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("bookings.wizard.step.confirm.couponHeader")}
+          </p>
+          <Input
+            placeholder={t("bookings.wizard.step.confirm.couponPlaceholder")}
+            value={couponCode ?? ""}
+            onChange={(e) => onCouponChange(e.target.value || null)}
+            className="bg-surface"
+          />
+        </div>
+      )}
 
       {/* Submit button */}
       <Button

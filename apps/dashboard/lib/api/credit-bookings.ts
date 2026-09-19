@@ -39,6 +39,7 @@ export async function fetchMatchingCredits(
       serviceId: query.serviceId,
       employeeId: query.employeeId,
       durationOptionId: query.durationOptionId,
+      ...(query.deliveryType ? { deliveryType: query.deliveryType } : {}),
     },
   )
 }

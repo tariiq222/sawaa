@@ -124,6 +124,7 @@ describe('GetSessionPackageHandler', () => {
     prisma.sessionPackage.findFirst.mockResolvedValue(fixturePackage());
     const result = await handler.execute({ packageId: PACKAGE_ID });
     expect(result.id).toBe(PACKAGE_ID);
+    expect(result.ownerEmployeeId).toBeNull();
     expect(result.price.subtotal).toBe(40_000);
     expect(result.price.discountAmount).toBe(0);
     expect(result.price.finalPrice).toBe(40_000);

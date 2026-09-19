@@ -21,9 +21,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
-import { clientsService, type ClientRecord } from '@/services/clients';
+import { clientsService, type ClientRecord, type EmployeeClientVisit } from '@/services/clients';
 import { getStatusLabel } from '@/lib/status-helpers';
-import type { Booking } from '@/types/models';
 
 export default function DoctorClientRecordScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,27 +38,20 @@ export default function DoctorClientRecordScreen() {
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   const [client, setClient] = useState<ClientRecord | null>(null);
-  const [visits, setVisits] = useState<Booking[]>([]);
+  const [visits, setVisits] = useState<EmployeeClientVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    Promise.allSettled([
-      clientsService.getById(id),
-      clientsService.getEmployeeBookings(id),
-    ]).then(([clientResult, bookingsResult]) => {
-      if (clientResult.status === 'fulfilled' && clientResult.value.success && clientResult.value.data) {
-        setClient(clientResult.value.data);
-      } else {
-        setError(t('common.error'));
-      }
-      if (bookingsResult.status === 'fulfilled' && bookingsResult.value.success) {
-        setVisits(bookingsResult.value.data.items ?? []);
-      }
-      setLoading(false);
-    });
+    Promise.all([clientsService.getById(id), clientsService.getEmployeeBookings(id)])
+      .then(([record, history]) => {
+        setClient(record);
+        setVisits(history);
+      })
+      .catch(() => setError(t('common.error')))
+      .finally(() => setLoading(false));
   }, [id, t]);
 
   if (loading) {
@@ -93,7 +85,7 @@ export default function DoctorClientRecordScreen() {
     );
   }
 
-  const fullName = `${client.firstName} ${client.lastName}`;
+  const fullName = client.name || [client.firstName, client.lastName].filter(Boolean).join(' ');
 
   return (
     <AquaBackground>
@@ -143,16 +135,18 @@ export default function DoctorClientRecordScreen() {
                     </Text>
                   </Pressable>
                 )}
-                <Pressable
-                  onPress={() => Linking.openURL(`mailto:${client.email}`)}
-                  accessibilityRole="button"
-                  style={[styles.contactRow, { flexDirection: dir.row }]}
-                >
-                  <Mail size={14} strokeWidth={1.5} color={sawaaColors.teal[700]} />
-                  <Text style={[styles.contactText, { fontFamily: f400, fontWeight: '400' }]}>
-                    {client.email}
-                  </Text>
-                </Pressable>
+                {client.email && (
+                  <Pressable
+                    onPress={() => Linking.openURL(`mailto:${client.email}`)}
+                    accessibilityRole="button"
+                    style={[styles.contactRow, { flexDirection: dir.row }]}
+                  >
+                    <Mail size={14} strokeWidth={1.5} color={sawaaColors.teal[700]} />
+                    <Text style={[styles.contactText, { fontFamily: f400, fontWeight: '400' }]}>
+                      {client.email}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           </GlassSurface>

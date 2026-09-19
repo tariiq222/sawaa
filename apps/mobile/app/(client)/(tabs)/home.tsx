@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaColors } from '@/theme/sawaa';
+import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { getFontName } from '@/theme/fonts';
@@ -117,11 +118,11 @@ export default function HomeScreen() {
           entering={reduceMotion ? undefined : FadeInDown.delay(380).duration(700).easing(Easing.out(Easing.cubic))}
           style={[styles.sectionHead, { flexDirection: dir.row }]}
         >
-          <Text style={[styles.sectionTitle, { fontFamily: f700 }]}> 
+          <Text style={[styles.sectionTitle, { fontFamily: f700 }]}>
             {t('clinics.title')}
           </Text>
           <Pressable onPress={() => router.push('/(client)/clinics')} accessibilityRole="button">
-            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}> 
+            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}>
               {t('home.seeAll')}
             </Text>
           </Pressable>
@@ -130,15 +131,22 @@ export default function HomeScreen() {
           <FeaturedClinics dir={dir} f600={f600} f700={f700} />
         </Animated.View>
 
+        <Glass variant="strong" radius={20} onPress={() => router.push('/(client)/packages')} interactive>
+          <View style={[styles.packageEntry, { flexDirection: dir.row }]}>
+            <Text style={[styles.packageEntryTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.homeEntry')}</Text>
+            <Text style={[styles.packageEntryAction, { fontFamily: f600 }]}>{t('home.seeAll')}</Text>
+          </View>
+        </Glass>
+
         <Animated.View
           entering={reduceMotion ? undefined : FadeInDown.delay(520).duration(700).easing(Easing.out(Easing.cubic))}
           style={[styles.sectionHead, { flexDirection: dir.row }]}
         >
-          <Text style={[styles.sectionTitle, { fontFamily: f700 }]}> 
+          <Text style={[styles.sectionTitle, { fontFamily: f700 }]}>
             {t('groups.title')}
           </Text>
           <Pressable onPress={() => router.push('/(client)/groups')} accessibilityRole="button">
-            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}> 
+            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}>
               {t('groups.seeAll')}
             </Text>
           </Pressable>
@@ -176,4 +184,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 16, color: sawaaColors.ink[900] },
   sectionMeta: { fontSize: 12 },
+  packageEntry: { alignItems: 'center', justifyContent: 'space-between', padding: 18 },
+  packageEntryTitle: { flex: 1, color: sawaaColors.ink[900], fontSize: 16 },
+  packageEntryAction: { color: sawaaColors.teal[700], fontSize: 12 },
 });

@@ -14,6 +14,11 @@ import {
   InitPackagePurchaseHandler,
   selfPurchaseFingerprint,
 } from "./init-package-purchase.handler";
+import { resolvePackageGroupOfferings } from "../../../org-experience/session-packages/package-group-offering.helper";
+
+jest.mock("../../../org-experience/session-packages/package-group-offering.helper", () => ({
+  resolvePackageGroupOfferings: jest.fn(),
+}));
 
 const PACKAGE_ID = "00000000-0000-4000-a000-000000000001";
 const CLIENT_ID = "00000000-0000-4000-a000-000000000002";
@@ -53,6 +58,47 @@ const PACKAGE_ROW = {
 };
 
 const FINAL_PRICE = 36_000;
+
+const GROUPED_PACKAGE_ROW = {
+  ...PACKAGE_ROW,
+  modelVersion: "GROUPED_V2",
+  groups: [{
+    id: "group-1",
+    key: "group-1",
+    label: "Group 1",
+    serviceId: SERVICE_ID,
+    employeeId: EMPLOYEE_ID,
+    sequenceMode: "ORDERED",
+    sortOrder: 0,
+    dependsOnGroupId: null,
+    items: [{
+      id: "group-item-1",
+      groupId: "group-1",
+      sessionPosition: 0,
+      durationOptionId: DURATION_OPTION_ID,
+      unitPrice: new Prisma.Decimal(0),
+      constraints: [{
+        dimension: "DELIVERY_TYPE",
+        mode: "INCLUDE",
+        targets: [{ targetId: "IN_PERSON" }],
+      }],
+    }],
+  }],
+  items: [{
+    id: "group-item-1",
+    groupId: "group-1",
+    sessionPosition: 0,
+    serviceId: SERVICE_ID,
+    employeeId: EMPLOYEE_ID,
+    durationOptionId: DURATION_OPTION_ID,
+    unitPrice: new Prisma.Decimal(0),
+    constraints: [{
+      dimension: "DELIVERY_TYPE",
+      mode: "INCLUDE",
+      targets: [{ targetId: "IN_PERSON" }],
+    }],
+  }],
+};
 
 function buildTx() {
   return {
@@ -104,6 +150,7 @@ function buildPricing(finalPrice = FINAL_PRICE) {
       itemUnitPrices: [
         { durationOptionId: DURATION_OPTION_ID, unitPrice: 10_000 },
       ],
+      lines: [{ durationOptionId: DURATION_OPTION_ID, net: finalPrice }],
     }),
   };
 }
@@ -205,6 +252,8 @@ describe("InitPackagePurchaseHandler", () => {
           employeeId: EMPLOYEE_ID,
           durationOptionId: DURATION_OPTION_ID,
           unitPriceSnapshot: 10_000,
+          // Net paid for the item's sessions, frozen before payment.
+          netValue: FINAL_PRICE,
           totalQuantity: 5,
           constraints: [],
         },
@@ -332,6 +381,40 @@ describe("InitPackagePurchaseHandler", () => {
       );
 
       await expect(handler.execute(cmd())).rejects.toThrow(BadRequestException);
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+    });
+
+    it("rejects a zero-total GROUPED_V2 package before any purchase, invoice, payment, or gateway write", async () => {
+      jest.mocked(resolvePackageGroupOfferings).mockResolvedValue([
+        {
+          key: "group-1",
+          label: "Group 1",
+          serviceId: SERVICE_ID,
+          employeeId: EMPLOYEE_ID,
+          sequenceMode: "ORDERED",
+          dependsOnGroupKey: null,
+          sessions: [{
+            key: "group-item-1",
+            position: 0,
+            durationOptionId: DURATION_OPTION_ID,
+            deliveryType: "IN_PERSON",
+            unitPrice: 0,
+            durationMins: 60,
+            listPrice: 0,
+            effectivePrice: 0,
+            serviceName: "Service",
+            employeeName: "Employee",
+          }],
+        },
+      ] as never);
+      const prisma = buildPrisma();
+      prisma.sessionPackage.findFirst.mockResolvedValue(GROUPED_PACKAGE_ROW);
+      const { handler, tx, moyasar } = buildHandler(prisma, buildPricing(0));
+
+      await expect(handler.execute(cmd())).rejects.toThrow(/below the gateway minimum/i);
+      expect(tx.packagePurchase.create).not.toHaveBeenCalled();
+      expect(tx.invoice.create).not.toHaveBeenCalled();
+      expect(tx.payment.create).not.toHaveBeenCalled();
       expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
   });

@@ -88,6 +88,8 @@ model Booking {
   cancelledAt              DateTime?
   confirmedAt              DateTime?
   checkedInAt              DateTime?
+  /// Restore/no-show automation suppression; never a substitute for attendance.
+  autoNoShowSuppressedAt    DateTime?
   completedAt              DateTime?
   noShowAt                 DateTime?
   expiresAt                DateTime?
@@ -346,8 +348,10 @@ enum PackagePurchaseStatus {
   REFUNDED
 }
 
-// استهلاك الرصيد لكل دلو: محجوز (CONSUMED) أو مُرجَع (RETURNED) عند الإلغاء/عدم الحضور.
+// استهلاك الرصيد لكل دلو: محجوز لموعد قائم (RESERVED)، مستهلك بعد الحضور
+// (CONSUMED)، أو مُرجَع للرصيد (RETURNED) عند الإلغاء/عدم الحضور.
 enum PackageCreditUsageStatus {
+  RESERVED
   CONSUMED
   RETURNED
 }
@@ -361,9 +365,12 @@ model PackagePurchase {
   /// Immutable credit buckets captured before payment initiation. The payment
   /// webhook issues credits from this snapshot, never from the mutable package.
   creditSnapshot   Json?
+  /// Catalog identity and total session count frozen at purchase; never re-derived from mutable offers.
+  offerSnapshot    Json?
   packageId        String
   clientId         String
   branchId         String
+  modelVersion     PackageModelVersion   @default(LEGACY)
   status           PackagePurchaseStatus @default(ACTIVE)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   subtotalSnapshot Decimal               @db.Decimal(12, 2)
@@ -379,6 +386,7 @@ model PackagePurchase {
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
+  groups PackagePurchaseGroup[]
   credits PackageCredit[]
 
   @@index([clientId])
@@ -386,7 +394,32 @@ model PackagePurchase {
   @@index([status])
 }
 
-// الدلو = رصيد بند مشترى محكوم بقيود متعددة الأبعاد. remaining = totalQuantity − usedQuantity.
+// Immutable V2 purchase topology. This snapshot is intentionally separate from
+// the mutable SessionPackageGroup definition.
+model PackagePurchaseGroup {
+  id                String                @id @default(uuid())
+  purchaseId        String
+  purchase          PackagePurchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  key               String
+  label             String?
+  serviceId         String
+  employeeId        String
+  sequenceMode      GroupSequenceMode     @default(ORDERED)
+  dependsOnGroupId  String?
+  dependsOnGroup    PackagePurchaseGroup? @relation("PackagePurchaseGroupDependency", fields: [dependsOnGroupId], references: [id], onDelete: Restrict)
+  dependentGroups   PackagePurchaseGroup[] @relation("PackagePurchaseGroupDependency")
+  sortOrder         Int                   @default(0)
+  createdAt         DateTime              @default(now())
+
+  credits PackageCredit[]
+
+  @@unique([purchaseId, key])
+  @@index([purchaseId])
+  @@index([dependsOnGroupId])
+}
+
+// الدلو = رصيد بند مشترى محكوم بقيود متعددة الأبعاد.
+// المتاح = totalQuantity − usedQuantity − reservedQuantity.
 // serviceId / employeeId / durationOptionId are LEGACY single-specific refs kept nullable
 // for backward compatibility; eligibility is a snapshot of the item's `constraints` taken
 // at purchase time so later package edits never affect existing purchases.
@@ -394,21 +427,54 @@ model PackageCredit {
   id                String          @id @default(uuid())
   purchaseId        String
   purchase          PackagePurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  purchaseGroupId   String?
+  purchaseGroup     PackagePurchaseGroup? @relation(fields: [purchaseGroupId], references: [id], onDelete: Cascade)
+  sessionPosition   Int?
   serviceId         String?
   employeeId        String?
   durationOptionId  String?
+  durationMinsSnapshot Int?
+  deliveryTypeSnapshot DeliveryType?
+  serviceNameSnapshot  String?
+  employeeNameSnapshot String?
+  listPriceSnapshot    Decimal?        @db.Decimal(12, 2)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   unitPriceSnapshot Decimal         @db.Decimal(12, 2)
+  /// Net amount paid for this credit's sessions, in integer halalas: the item's
+  /// payable after its discount, shared by paid and free sessions. Null for
+  /// credits issued before net values were stored (reports then allocate the
+  /// purchase amount across its credits).
+  netValue          Decimal?        @db.Decimal(12, 2)
   totalQuantity     Int
   usedQuantity      Int             @default(0)
+  // الجلسات المحجوزة لمواعيد قائمة ولم تُقدَّم بعد. تشغل مقعداً تماماً كالمستهلكة.
+  reservedQuantity  Int             @default(0)
   createdAt         DateTime        @default(now())
 
   usages      PackageCreditUsage[]
   constraints PackageCreditConstraint[]
+  assignmentEvents PackageCreditAssignmentEvent[]
 
   @@index([purchaseId])
+  @@index([purchaseGroupId])
+  @@unique([purchaseGroupId, sessionPosition])
   // Composite index supports FIFO credit-matching lookups by (service, employee, duration).
   @@index([serviceId, employeeId, durationOptionId])
+}
+
+// Append-only practitioner assignment history for purchased credits.
+model PackageCreditAssignmentEvent {
+  id             String        @id @default(uuid())
+  creditId       String
+  credit         PackageCredit @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  fromEmployeeId String?
+  toEmployeeId   String
+  actorId        String
+  reason         String
+  createdAt      DateTime      @default(now())
+
+  @@index([creditId])
+  @@index([toEmployeeId])
 }
 
 // Snapshot of a package item's eligibility constraint for one credit bucket, frozen at
@@ -444,6 +510,8 @@ model PackageCreditUsage {
   bookingId  String? // cross-BC ref to Booking — plain string, no FK
   status     PackageCreditUsageStatus @default(CONSUMED)
   usedAt     DateTime                 @default(now())
+  consumedAt DateTime?
+  deliveredAt DateTime?
   returnedAt DateTime?
 
   @@index([creditId])

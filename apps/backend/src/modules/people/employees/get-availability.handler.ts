@@ -20,6 +20,11 @@ export class GetAvailabilityHandler {
       orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
     });
 
-    return { schedule };
+    const exceptions = await this.prisma.employeeAvailabilityException.findMany({
+      where: { employeeId: cmd.employeeId },
+      orderBy: { startDate: 'asc' },
+    });
+
+    return { schedule, exceptions };
   }
 }

@@ -1,0 +1,32 @@
+
+Running 5 tests using 1 worker
+
+(node:26860) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:26860) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[setup] Required auth state will be refreshed → /Users/tariq/code/sawaa/.worktrees/packages-phase-3-editor/apps/dashboard/playwright/.auth/admin.json
+[setup] Auth state saved for admin → /Users/tariq/code/sawaa/.worktrees/packages-phase-3-editor/apps/dashboard/playwright/.auth/admin.json
+  ✓  1 [setup] › e2e/setup/auth.setup.ts:161:6 › authenticate as admin (206ms)
+[setup] Required auth state will be refreshed → /Users/tariq/code/sawaa/.worktrees/packages-phase-3-editor/apps/dashboard/playwright/.auth/owner.json
+[setup] Auth state copied from admin for owner alias → /Users/tariq/code/sawaa/.worktrees/packages-phase-3-editor/apps/dashboard/playwright/.auth/owner.json
+  ✓  2 [setup] › e2e/setup/auth.setup.ts:165:6 › authenticate as owner alias (0ms)
+[setup] Optional auth state will be refreshed → /Users/tariq/code/sawaa/.worktrees/packages-phase-3-editor/apps/dashboard/playwright/.auth/receptionist.json
+[setup] Auth state saved for receptionist → /Users/tariq/code/sawaa/.worktrees/packages-phase-3-editor/apps/dashboard/playwright/.auth/receptionist.json
+  ✓  3 [setup] › e2e/setup/auth.setup.ts:169:6 › authenticate as receptionist (189ms)
+[setup] Optional auth state will be refreshed → /Users/tariq/code/sawaa/.worktrees/packages-phase-3-editor/apps/dashboard/playwright/.auth/employee.json
+[setup] Auth state saved for employee → /Users/tariq/code/sawaa/.worktrees/packages-phase-3-editor/apps/dashboard/playwright/.auth/employee.json
+  ✓  4 [setup] › e2e/setup/auth.setup.ts:173:6 › authenticate as employee (182ms)
+(node:26867) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:26867) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[package-groups-lifecycle] scales reserved: feb619d6-bc80-4cf6-b6c8-66622a52eda4
+[package-groups-lifecycle] scales completed: feb619d6-bc80-4cf6-b6c8-66622a52eda4
+[package-groups-lifecycle] clinic session 1 reserved: 150fc8e1-6166-4d3e-b0c3-79212bcccd9d
+[package-groups-lifecycle] clinic session 1 cancelled: 150fc8e1-6166-4d3e-b0c3-79212bcccd9d
+[package-groups-lifecycle] clinic session 1 rebooked: 9cbb6514-fca5-4b51-9bcc-f521a457c9c3
+[package-groups-lifecycle] clinic session 1 no-show: 9cbb6514-fca5-4b51-9bcc-f521a457c9c3
+  ✓  5 [flows] › e2e/flows/packages/package-groups-lifecycle.spec.ts:51:7 › GROUPED_V2 package lifecycle — real dashboard journey › reserves, completes, cancels, no-shows, and transfers grouped credits (11.3s)
+
+  5 passed (14.1s)

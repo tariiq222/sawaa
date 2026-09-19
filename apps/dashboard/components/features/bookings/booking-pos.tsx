@@ -114,7 +114,8 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectCategory, selectService, selectEmployee, selectDeliveryType,
     selectDurationOption, selectDate, selectTime, selectProgram,
     setPayAtClinic, setCollectionMethod, setCouponCode,
-    applyCreditTarget, applyPackageCreditTarget,
+    setPackageCreditId,
+    applyPackageCreditTarget,
     applyCreditFilter, clearCreditFilter,
   } = useBookingFormState()
 
@@ -125,7 +126,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const {
     isServiceAutoSelected, summaries, canShowTypeDuration, canShowDatetime,
     serviceTypes, servicePriceHalalas, selectedDurationMins,
-    durationSummaryLabel, creditBadgeReady,
+    durationSummaryLabel, creditBadgeReady, selectedPackageSummary,
   } = useBookingPosDerived({ state, t, locale })
 
   const {
@@ -134,7 +135,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     handleProgramEnrolled,
   } = useBookingPosTrackHandlers({
     setOpenSection, setUseCredit, setCreditDismissed, reset, onSuccess,
-    applyCreditTarget, selectTrack, applyPackageCreditTarget,
+    selectTrack, applyPackageCreditTarget,
     applyCreditFilter, clearCreditFilter, selectProgram,
   })
 
@@ -148,6 +149,11 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectClient, selectDepartment, selectService, selectEmployee,
     selectDeliveryType, selectDurationOption, selectCategory,
   })
+
+  // PACKAGES-track sessions and an accepted matching credit both post to
+  // /from-credit: nothing is due, so collection UI and the price are replaced.
+  const fundedByPackage =
+    useCredit || state.track === "PACKAGES" || !!state.packagePurchaseId
 
   return (
     <div className="flex flex-col gap-4 p-4 md:p-5">
@@ -194,7 +200,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
           onSelectDuration={handleSelectDuration}
           onSelectDate={selectDate}
           onSelectTime={selectTime}
-          onAcceptCredit={() => { setUseCredit(true); setCreditDismissed(false) }}
+          onAcceptCredit={(creditId) => { setPackageCreditId(creditId); setUseCredit(true); setCreditDismissed(false) }}
           onDismissCredit={() => { setUseCredit(false); setCreditDismissed(true) }}
         />
 
@@ -214,11 +220,9 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             // selection both post to /from-credit. Those bookings are
             // zero-priced and pre-paid, so any collection UI would be
             // misleading; hide the timing group + method picker.
-            hideCollectionTiming={
-              useCredit ||
-              state.track === "PACKAGES" ||
-              !!state.packagePurchaseId
-            }
+            hideCollectionTiming={fundedByPackage}
+            fundedByPackage={fundedByPackage}
+            packageSummary={selectedPackageSummary}
             paymentSettings={paymentSettings}
             couponCode={state.couponCode}
             submitting={isSubmitting}

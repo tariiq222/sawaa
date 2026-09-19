@@ -119,15 +119,45 @@ entries use standard weekly schedules.
 
 ## Private repository CI compatibility
 
-The existing CI security job keeps its current dependency-audit, Gitleaks, and
-Trivy scope and policy. It grants only `contents: read` and `pull-requests: read`
+The existing CI security job keeps its current dependency-audit and Gitleaks
+scope. Trivy runs as a blocking filesystem vulnerability gate in both
+`.github/workflows/ci.yml` and `.github/workflows/merge-gate.yml`. Each job grants
+only `contents: read` and `pull-requests: read`
 so Gitleaks can inspect pull-request commits in a private repository. Gitleaks
 comments are disabled with `GITLEAKS_ENABLE_COMMENTS=false`, so the job does not
 request write access or post unsolicited comments.
 
-Trivy continues to scan the filesystem for HIGH and CRITICAL vulnerabilities with
-`ignore-unfixed: true` and `exit-code: '0'`; it is informational in this job.
-The job now writes `trivy-fs.sarif` using Trivy's SARIF formatter and stores it in
-a private Actions artifact for seven days. Artifact upload runs after the job's
-other steps when the report exists. GitHub Code Scanning SARIF upload is not used
-because it is unavailable for the current private-repository account.
+Trivy scans the repository filesystem for HIGH and CRITICAL OS/library
+vulnerabilities with `ignore-unfixed: false` and `exit-code: '1'`. The scan skips
+generated dependency/build output (`coverage`, `dist`, `node_modules`, and `.next`)
+at the scan root and at nested paths using Trivy doublestar glob patterns. It
+does not exclude `apps/mobile`; both the root `pnpm-lock.yaml` and the standalone
+`apps/mobile/pnpm-lock.yaml` are included. The explicit directory/file patterns
+target generated trees only, so they do not exclude either tracked lockfile. The
+job writes `trivy-fs.sarif` using Trivy's SARIF formatter and stores it in a
+private Actions artifact for seven days. Artifact upload runs after the job's
+other steps when the report exists. GitHub Code Scanning SARIF upload is not
+used because it is unavailable for the current private-repository account.
+
+Both workflows pass `scanners: 'vuln'`, so Trivy reports OS/library
+vulnerabilities only. Gitleaks remains the dedicated secret-pattern scanner and
+its existing settings are unchanged. This keeps fixture and example secret
+patterns out of the Trivy vulnerability gate.
+
+The v0.31.0 Trivy action entrypoint clears the configured `severity` when it
+builds SARIF unless `limit-severities-for-sarif: true` is set. Both workflows
+therefore pass that input so the stored SARIF follows the configured
+HIGH/CRITICAL threshold. Without it, the previous remote run produced 48 SARIF
+findings, including lower-severity vulnerabilities and secret-pattern findings
+from the default scanner set; the job failed because that broadened scope was
+not limited to the intended gate.
+
+The pinned Trivy 0.72.0 validation on 2026-09-18 initially scanned the mobile
+lockfile and found 23 HIGH results across 15 CVE rules (`@xmldom/xmldom`,
+`image-size`, and `js-yaml`). Mobile now carries compatible nested overrides in
+its standalone workspace lockfile (`@xmldom/xmldom` 0.8.15/0.9.12,
+`image-size` 2.0.4, and `js-yaml` 3.15.2/4.3.2). The PR76 artifact recorded
+33 vulnerability findings (25 MEDIUM, 8 LOW, zero HIGH/CRITICAL) and the old
+misconfigured SARIF also contained 15 secret-pattern findings owned by Gitleaks.
+Those results describe the artifact from the broadened run; they do not claim
+that the vulnerability backlog is empty or that the workflow has passed.

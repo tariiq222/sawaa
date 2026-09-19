@@ -21,7 +21,8 @@ import type { PackageDiscountType } from "./package"
 
 /* ─── Status ─── */
 
-export type PackagePurchaseStatus = "ACTIVE" | "COMPLETED" | "REFUNDED"
+export type PackagePurchaseStatus = "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED"
+export type PackagePurchaseModelVersion = "LEGACY" | "GROUPED_V2"
 
 /**
  * Mirrors the backend `PaymentMethod` enum exposed by `@prisma/client`.
@@ -47,9 +48,11 @@ export type PackagePurchasePaymentMethod =
  * One credit bucket attached to a PackagePurchase — represents
  * `(service + employee + duration)` with a frozen unit price.
  *
- * `remaining = totalQuantity - usedQuantity` is pre-computed by the backend
- * so the dashboard's "balance" widget never has to do arithmetic on the
- * client. `serviceNameAr` / `employeeNameAr` / `durationLabelAr` are the
+ * `remaining = totalQuantity - usedQuantity - reservedQuantity` is
+ * pre-computed by the backend so the dashboard's "balance" widget never has
+ * to do arithmetic on the client — a reserved session belongs to a
+ * booked-but-not-yet-delivered appointment and is not available to book
+ * again. `serviceNameAr` / `employeeNameAr` / `durationLabelAr` are the
  * resolved display strings — the model stores cross-BC IDs as plain
  * strings, so the dashboard never has to chase FKs itself.
  */
@@ -80,6 +83,8 @@ export interface PackageCredit {
   unitPriceSnapshot: number
   totalQuantity: number
   usedQuantity: number
+  // Booked but not-yet-delivered sessions; they occupy a seat like a used one.
+  reservedQuantity: number
   remaining: number
   /**
    * Wizard-jump fields (booking wizard credits panel). Resolved backend-side
@@ -104,6 +109,21 @@ export interface PackageCredit {
    * `@/lib/credit-constraints` handles that synthesis.
    */
   constraints: PackageCreditConstraint[]
+  /** Grouped V2 metadata. Legacy responses may omit these fields. */
+  modelVersion?: PackagePurchaseModelVersion
+  purchaseGroupId?: string | null
+  sessionPosition?: number | null
+  groupLabel?: string | null
+  sequenceMode?: "ORDERED" | "UNORDERED" | null
+  dependsOnGroupId?: string | null
+  durationMinsSnapshot?: number | null
+  deliveryTypeSnapshot?: "IN_PERSON" | "ONLINE" | null
+  serviceNameSnapshot?: string | null
+  employeeNameSnapshot?: string | null
+  listPriceSnapshot?: number | null
+  netValue?: number | null
+  /** Backend availability is authoritative for grouped sequencing and offering state. */
+  availability?: { bookable: boolean; reason: string | null }
 }
 
 /* ─── Constraint snapshot ─── */
@@ -165,6 +185,8 @@ export interface PackagePurchase {
   notes: string | null
   createdAt: string
   credits: PackageCredit[]
+  /** Optional for legacy list payloads; present on grouped purchases. */
+  modelVersion?: PackagePurchaseModelVersion
 }
 
 /* ─── Write side ─── */
@@ -172,6 +194,8 @@ export interface PackagePurchase {
 export interface CreatePackagePurchasePayload {
   idempotencyKey: string
   packageId: string
+  /** Required when selling an offer attached to a package family. */
+  packageFamilyId?: string
   clientId: string
   branchId: string
   /**
@@ -192,7 +216,7 @@ export interface CreatePackagePurchasePayload {
 export interface CreatePackagePurchaseResult {
   purchase: PackagePurchase
   invoiceId: string
-  paymentId: string
+  paymentId: string | null
   credits: Array<{
     serviceId: string
     employeeId: string
@@ -201,6 +225,8 @@ export interface CreatePackagePurchaseResult {
     unitPriceSnapshot: number
     totalQuantity: number
     usedQuantity: number
+    /** Always 0 at creation — no booking exists yet to reserve a slot. */
+    reservedQuantity: number
   }>
 }
 

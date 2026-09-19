@@ -12,8 +12,11 @@ import {
   MaxLength,
   Min,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { DiscountType, PackageConstraintDimension, PackageConstraintMode } from '@prisma/client';
+import { GlobalDiscountDto, GroupedPackageGroupDto } from '../grouped-package.dto';
+import type { DiscriminatedGlobalDiscountDto } from '../grouped-package.dto';
 
 /**
  * One eligibility constraint on a package item. `mode = ANY` needs no targets;
@@ -90,6 +93,15 @@ export class CreateSessionPackageItemDto {
  * covered by the create / update handler specs.
  */
 export class CreateSessionPackageDto {
+  @ApiPropertyOptional({ description: 'Package-level practitioner owner. Omit or null for a general package.', type: String, format: 'uuid', example: '00000000-0000-4000-a000-000000000002', nullable: true })
+  @IsOptional() @IsUUID()
+  ownerEmployeeId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Package model version. Omit for the legacy item-based contract.', enum: ['LEGACY', 'GROUPED_V2'], example: 'GROUPED_V2' })
+  @IsOptional()
+  @IsEnum(['LEGACY', 'GROUPED_V2'])
+  modelVersion?: 'LEGACY' | 'GROUPED_V2';
+
   @ApiProperty({ description: 'Arabic name', maxLength: 200, example: 'باقة الاستشارة العائلية' })
   @IsString() @MaxLength(200)
   nameAr!: string;
@@ -143,8 +155,23 @@ export class CreateSessionPackageDto {
   @IsOptional() @IsInt() @Min(0)
   sortOrder?: number;
 
-  @ApiProperty({ description: 'Package items (min 1)', type: [CreateSessionPackageItemDto] })
+  @ApiPropertyOptional({ description: 'V2 package groups. Required when modelVersion is GROUPED_V2.', type: [GroupedPackageGroupDto] })
+  @ValidateIf((dto) => dto.modelVersion === 'GROUPED_V2')
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => GroupedPackageGroupDto)
+  groups?: GroupedPackageGroupDto[];
+
+  @ApiPropertyOptional({ description: 'V2 global package discount. Required when modelVersion is GROUPED_V2.', type: GlobalDiscountDto })
+  @ValidateIf((dto) => dto.modelVersion === 'GROUPED_V2')
+  @ValidateNested()
+  @Type(() => GlobalDiscountDto)
+  globalDiscount?: DiscriminatedGlobalDiscountDto;
+
+  @ApiPropertyOptional({ description: 'Legacy package items (min 1). Required unless modelVersion is GROUPED_V2.', type: [CreateSessionPackageItemDto] })
+  @ValidateIf((dto) => dto.modelVersion !== 'GROUPED_V2')
   @IsArray() @ArrayMinSize(1)
   @ValidateNested({ each: true }) @Type(() => CreateSessionPackageItemDto)
-  items!: CreateSessionPackageItemDto[];
+  items?: CreateSessionPackageItemDto[];
 }

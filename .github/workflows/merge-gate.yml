@@ -88,7 +88,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -120,6 +120,18 @@ jobs:
       - name: Website — typecheck + unit
         run: pnpm --filter @sawaa/website typecheck && pnpm --filter @sawaa/website test -- --run
 
+      - name: Install mobile workspace dependencies
+        working-directory: apps/mobile
+        run: pnpm install --frozen-lockfile
+
+      - name: Mobile — build shared package + typecheck
+        working-directory: apps/mobile
+        run: pnpm --filter=@sawaa/shared build && pnpm typecheck
+
+      - name: Mobile — unit tests
+        working-directory: apps/mobile
+        run: pnpm test --runInBand
+
       - name: OpenAPI snapshot drift
         run: cd apps/backend && pnpm run openapi:build-and-snapshot && git diff --exit-code -- openapi.json
 
@@ -145,14 +157,26 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          format: 'table'
-          exit-code: '0'
-          ignore-unfixed: true
-          skip-dirs: 'coverage,dist,node_modules,.next'
-          skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,apps/*/coverage/**,apps/*/dist/**'
+          format: 'sarif'
+          output: 'trivy-fs.sarif'
+          scanners: 'vuln'
+          limit-severities-for-sarif: true
+          exit-code: '1'
+          ignore-unfixed: false
+          skip-dirs: 'coverage,dist,node_modules,.next,**/coverage,**/dist,**/node_modules,**/.next'
+          skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,**/coverage/**,**/dist/**,**/node_modules/**,**/.next/**,apps/*/coverage/**,apps/*/dist/**'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
           version: 'v0.72.0'
+
+      - name: Upload Trivy SARIF artifact
+        if: always() && hashFiles('trivy-fs.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: merge-gate-trivy-fs-sarif
+          path: trivy-fs.sarif
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Lefthook pre-push (eslint + typecheck + multi-tenant guard)
         # Single source of truth: this is the SAME lefthook config that runs

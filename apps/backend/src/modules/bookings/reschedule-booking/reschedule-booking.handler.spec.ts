@@ -174,6 +174,65 @@ describe('RescheduleBookingHandler', () => {
     );
   });
 
+  it('5c. rejects a duration change on a package-funded booking', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(
+      makeBooking({ durationMins: 60, packageCreditId: 'credit-1' }),
+    );
+    const prisma = buildPrisma();
+    const availability = buildAvailabilityHandler();
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      availability as never,
+    );
+
+    await expect(
+      handler.execute({
+        bookingId: 'book-1',
+        newScheduledAt: futureDate,
+        changedBy: 'user-1',
+        newDurationMins: 30,
+      }),
+    ).rejects.toThrow(
+      new BadRequestException('Package-funded bookings keep the duration of their package credit'),
+    );
+    expect(availability.execute).not.toHaveBeenCalled();
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('5d. reschedules a package-funded booking when the duration is unchanged', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(
+      makeBooking({ durationMins: 60, packageCreditId: 'credit-1' }),
+    );
+    const prisma = buildPrisma();
+    prisma.booking.update = jest.fn().mockResolvedValue(makeBooking());
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      buildAvailabilityHandler() as never,
+    );
+
+    await handler.execute({
+      bookingId: 'book-1',
+      newScheduledAt: futureDate,
+      changedBy: 'user-1',
+      newDurationMins: 60,
+    });
+
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          durationMins: 60,
+          autoNoShowSuppressedAt: null,
+        }),
+      }),
+    );
+  });
+
   it('5b. falls back to booking.durationMins when newDurationMins omitted', async () => {
     (fetchBookingOrFail as jest.Mock).mockResolvedValue(
       makeBooking({ durationMins: 60 }),

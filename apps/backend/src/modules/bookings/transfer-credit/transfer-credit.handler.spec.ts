@@ -7,6 +7,7 @@ const SERVICE_ID = '00000000-0000-4000-a000-000000000004';
 const DURATION_OPTION_ID = '00000000-0000-4000-a000-000000000005';
 const FROM_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000003';
 const TO_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000099';
+const CURRENT_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000098';
 
 function activeCredit(overrides: Record<string, unknown> = {}) {
   return {
@@ -24,12 +25,53 @@ function activeCredit(overrides: Record<string, unknown> = {}) {
 
 function buildPrisma(opts: {
   credit?: unknown;
+  currentCreditEmployeeId?: string;
   employeeService?: unknown;
   durationOption?: unknown;
   targetEmployee?: unknown;
 } = {}) {
+  const configuredCredit = opts.credit === undefined ? activeCredit() : opts.credit;
+  const configuredValues = (configuredCredit ?? {}) as {
+    durationMinsSnapshot?: number | null;
+    deliveryTypeSnapshot?: string | null;
+    usedQuantity?: number;
+    reservedQuantity?: number;
+    purchaseGroupId?: string | null;
+  };
+  const preflightEmployeeId =
+    configuredCredit && typeof configuredCredit === 'object' && 'employeeId' in configuredCredit
+      ? (configuredCredit as { employeeId?: string }).employeeId ?? FROM_EMPLOYEE_ID
+      : FROM_EMPLOYEE_ID;
+  const currentEmployeeId = opts.currentCreditEmployeeId ?? preflightEmployeeId;
   const tx = {
-    packageCredit: { update: jest.fn().mockResolvedValue({ id: CREDIT_ID, employeeId: TO_EMPLOYEE_ID }) },
+    $queryRaw: jest.fn(async (strings: TemplateStringsArray) => {
+      const sql = strings.join(' ');
+      if (sql.includes('"PackageCredit"')) {
+        return [{ id: CREDIT_ID, employeeId: currentEmployeeId }];
+      }
+      return [{ id: 'p1', status: PackagePurchaseStatus.ACTIVE }];
+    }),
+    packageCredit: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: currentEmployeeId,
+        durationOptionId: DURATION_OPTION_ID,
+        durationMinsSnapshot: configuredValues.durationMinsSnapshot ?? null,
+        deliveryTypeSnapshot: configuredValues.deliveryTypeSnapshot ?? null,
+        usedQuantity: configuredValues.usedQuantity ?? 1,
+        reservedQuantity: configuredValues.reservedQuantity ?? 0,
+        purchaseGroupId: configuredValues.purchaseGroupId ?? null,
+      }),
+      update: jest.fn().mockResolvedValue({ id: CREDIT_ID, employeeId: TO_EMPLOYEE_ID }),
+    },
+    packageCreditConstraint: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      create: jest.fn().mockResolvedValue({ id: 'constraint-1' }),
+    },
+    packageCreditAssignmentEvent: {
+      create: jest.fn().mockResolvedValue({ id: 'assignment-1' }),
+    },
     activityLog: { create: jest.fn().mockResolvedValue({ id: 'log-1' }) },
   };
   return {
@@ -57,6 +99,16 @@ function buildPrisma(opts: {
             ? { id: DURATION_OPTION_ID, serviceId: SERVICE_ID }
             : opts.durationOption,
         ),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      service: {
+        findFirst: jest.fn().mockResolvedValue({ id: SERVICE_ID, isActive: true, archivedAt: null, category: { isActive: true } }),
+      },
+      serviceBookingConfig: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      employeeServiceOption: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
     },
     tx,
@@ -110,6 +162,24 @@ describe('TransferCreditHandler', () => {
         }),
       }),
     );
+  });
+
+  it('rejects when the credit routing changes after preflight and before the purchase lock', async () => {
+    const parts = buildPrisma({ currentCreditEmployeeId: CURRENT_EMPLOYEE_ID });
+    const handler = buildHandler(parts);
+
+    await expect(handler.execute(cmd())).rejects.toThrow(BadRequestException);
+    expect(parts.tx.packageCredit.update).not.toHaveBeenCalled();
+    expect(parts.tx.activityLog.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects as a no-op when the current locked owner already equals the target', async () => {
+    const parts = buildPrisma({ currentCreditEmployeeId: TO_EMPLOYEE_ID });
+    const handler = buildHandler(parts);
+
+    await expect(handler.execute(cmd())).rejects.toThrow(BadRequestException);
+    expect(parts.tx.packageCredit.update).not.toHaveBeenCalled();
+    expect(parts.tx.activityLog.create).not.toHaveBeenCalled();
   });
 
   it('does NOT re-price — unitPriceSnapshot is never written', async () => {
@@ -179,7 +249,53 @@ describe('TransferCreditHandler', () => {
 
     expect(parts.prisma.employeeService.findFirst).toHaveBeenCalledWith({
       where: { employeeId: TO_EMPLOYEE_ID, serviceId: SERVICE_ID, isActive: true },
-      select: { id: true },
+      select: { id: true, isActive: true, disabledDeliveryTypes: true, useCustomPricing: true },
     });
+  });
+
+  it('requires an actor and reason for grouped V2 transfers', async () => {
+    const parts = buildPrisma({
+      credit: activeCredit({
+        usedQuantity: 0,
+        purchaseGroupId: 'group-1',
+        durationMinsSnapshot: 60,
+        deliveryTypeSnapshot: 'IN_PERSON',
+        purchase: { id: 'p1', status: PackagePurchaseStatus.ACTIVE, clientId: 'client-1', modelVersion: 'GROUPED_V2' },
+      }),
+    });
+    const handler = buildHandler(parts);
+
+    await expect(handler.execute({ creditId: CREDIT_ID, toEmployeeId: TO_EMPLOYEE_ID })).rejects.toThrow(BadRequestException);
+    expect(parts.tx.packageCredit.update).not.toHaveBeenCalled();
+  });
+
+  it('selects the target effective inherited duration and records the V2 assignment', async () => {
+    const parts = buildPrisma({
+      credit: activeCredit({
+        usedQuantity: 0,
+        purchaseGroupId: 'group-1',
+        durationMinsSnapshot: 60,
+        deliveryTypeSnapshot: 'IN_PERSON',
+        purchase: { id: 'p1', status: PackagePurchaseStatus.ACTIVE, clientId: 'client-1', modelVersion: 'GROUPED_V2' },
+      }),
+    });
+    parts.prisma.serviceDurationOption.findMany.mockResolvedValue([
+      { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, durationMins: 30, deliveryType: 'IN_PERSON' },
+    ]);
+    parts.prisma.employeeServiceOption.findMany.mockResolvedValue([
+      { durationOptionId: DURATION_OPTION_ID, durationOverride: 60 },
+    ]);
+    const handler = buildHandler(parts);
+
+    await handler.execute({
+      creditId: CREDIT_ID,
+      toEmployeeId: TO_EMPLOYEE_ID,
+      reason: 'Practitioner changed',
+      userId: 'actor-1',
+    });
+
+    expect(parts.tx.packageCreditAssignmentEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ actorId: 'actor-1', reason: 'Practitioner changed' }),
+    }));
   });
 });

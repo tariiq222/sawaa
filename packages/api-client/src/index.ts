@@ -55,3 +55,4 @@ export {
   confirmChatOperation,
   declineChatOperation,
 } from './modules/chat'
+export * as packageFamiliesApi from './modules/package-families'

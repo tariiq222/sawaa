@@ -21,18 +21,25 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
-import { useAppSelector } from '@/hooks/use-redux';
 import { employeesService } from '@/services/employees';
-import type { EmployeeAvailability } from '@/services/employees';
+import { toggleAvailabilityDay } from '@/services/employees';
+import type { AvailabilityDayGroup, AvailabilityException, EmployeeAvailability } from '@/services/employees';
 
 type DaySchedule = EmployeeAvailability;
 
-const DEFAULT_SCHEDULE: DaySchedule[] = Array.from({ length: 7 }, (_, i) => ({
+type DayScheduleGroup = AvailabilityDayGroup;
+
+const DEFAULT_SCHEDULE: DayScheduleGroup[] = Array.from({ length: 7 }, (_, i) => ({
   dayOfWeek: i,
-  isWorking: i >= 0 && i <= 4,
-  startTime: '08:00',
-  endTime: '17:00',
+  windows: i <= 4 ? [{ dayOfWeek: i, startTime: '08:00', endTime: '17:00', isActive: true }] : [],
 }));
+
+function groupSchedule(windows: DaySchedule[]): DayScheduleGroup[] {
+  return Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    dayOfWeek,
+    windows: windows.filter((window) => window.dayOfWeek === dayOfWeek),
+  }));
+}
 
 export default function AvailabilityScreen() {
   const { t } = useTranslation();
@@ -41,56 +48,40 @@ export default function AvailabilityScreen() {
   const reduceMotion = useReduceMotion();
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const user = useAppSelector((state) => state.auth.user);
-  const [schedule, setSchedule] = useState<DaySchedule[]>(DEFAULT_SCHEDULE);
+  const [schedule, setSchedule] = useState<DayScheduleGroup[]>(DEFAULT_SCHEDULE);
+  const [exceptions, setExceptions] = useState<AvailabilityException[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
-  useEffect(() => {
-    const pid = user?.employeeId;
-    if (!pid) {
-      setLoading(false);
-      return;
-    }
-    employeesService.getAvailabilitySchedule(pid).then((res) => {
-      const data = res.data;
-      if (res.success && Array.isArray(data) && data.length > 0) {
-        setSchedule(
-          DEFAULT_SCHEDULE.map((def) => {
-            const found = data.find((d) => d.dayOfWeek === def.dayOfWeek);
-            return found ?? def;
-          }),
-        );
-      }
-      setLoading(false);
-    });
-  }, [user?.employeeId]);
-
   const toggleDay = useCallback((dayIndex: number) => {
-    setSchedule((prev) =>
-      prev.map((d) =>
-        d.dayOfWeek === dayIndex ? { ...d, isWorking: !d.isWorking } : d,
-      ),
-    );
+    setSchedule((prev) => toggleAvailabilityDay(prev, dayIndex));
   }, []);
 
+  useEffect(() => {
+    employeesService.getAvailabilitySchedule().then((result) => {
+      setSchedule(groupSchedule(result.windows));
+      setExceptions(result.exceptions);
+    }).catch(() => {
+      setSchedule(groupSchedule([]));
+      setLoadFailed(true);
+      Alert.alert(t('common.error'), t('availability.saveError'));
+    }).finally(() => setLoading(false));
+  }, [t]);
+
   const handleSave = async () => {
-    const pid = user?.employeeId;
-    if (!pid) return;
     setSaving(true);
     try {
-      const res = await employeesService.updateAvailabilitySchedule(
-        pid,
-        schedule.filter((d) => d.isWorking),
-      );
-      if (res.success) {
-        Alert.alert(t('common.saved'), t('availability.saveSuccess'));
-        router.back();
-      } else {
-        Alert.alert(t('common.error'), t('availability.saveError'));
-      }
+      await employeesService.updateAvailabilitySchedule({
+        windows: schedule.flatMap((day) => day.windows),
+        exceptions,
+      });
+      Alert.alert(t('common.saved'), t('availability.saveSuccess'));
+      router.back();
+    } catch {
+      Alert.alert(t('common.error'), t('availability.saveError'));
     } finally {
       setSaving(false);
     }
@@ -145,15 +136,17 @@ export default function AvailabilityScreen() {
                     >
                       {t(`days.${day.dayOfWeek}`)}
                     </Text>
-                    {day.isWorking && (
-                      <View style={[styles.timeChip, { backgroundColor: withAlpha(sawaaColors.teal[600], 0.1) }]}>
-                        <Text style={[styles.timeChipText, { fontFamily: f600, fontWeight: '600' }]}>
-                          {day.startTime} - {day.endTime}
-                        </Text>
-                      </View>
-                    )}
+                    <View style={styles.timeChips}>
+                      {day.windows.filter((window) => window.isActive !== false).map((window) => (
+                        <View key={`${window.startTime}-${window.endTime}`} style={[styles.timeChip, { backgroundColor: withAlpha(sawaaColors.teal[600], 0.1) }]}>
+                          <Text style={[styles.timeChipText, { fontFamily: f600, fontWeight: '600' }]}>
+                            {window.startTime} - {window.endTime}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
                     <Switch
-                      value={day.isWorking}
+                      value={day.windows.some((window) => window.isActive !== false)}
                       onValueChange={() => toggleDay(day.dayOfWeek)}
                       trackColor={{ true: sawaaColors.teal[500] }}
                       accessibilityLabel={t(`days.${day.dayOfWeek}`)}
@@ -166,7 +159,7 @@ export default function AvailabilityScreen() {
         )}
       </ScrollView>
 
-      {!loading && (
+      {!loading && !loadFailed && (
         <FloatingActionBar>
           <PrimaryButton
             label={t('availability.save')}
@@ -195,6 +188,7 @@ const styles = StyleSheet.create({
   skeletonList: { gap: sawaaSpacing.sm },
   dayList: { gap: sawaaSpacing.sm },
   dayRow: { alignItems: 'center', gap: sawaaSpacing.md },
+  timeChips: { flex: 1, alignItems: 'flex-end', gap: sawaaSpacing.xs },
   dayLabel: {
     flex: 1,
     fontSize: sawaaType.body.fontSize,

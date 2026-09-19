@@ -9,6 +9,12 @@ import type {
   PackageCredit,
   PackagePurchase,
   PackageCreditUsage,
+  GroupedPackageInput,
+  PackageGroupInput,
+  PackageSessionInput,
+  PackageModelVersion,
+  GroupSequenceMode,
+  GlobalDiscount,
 } from '@sawaa/shared'
 
 // Re-export shared types so callers can `import { SessionPackage } from '@sawaa/api-client/types'`
@@ -23,6 +29,12 @@ export type {
   PackageCredit,
   PackagePurchase,
   PackageCreditUsage,
+  GroupedPackageInput,
+  PackageGroupInput,
+  PackageSessionInput,
+  PackageModelVersion,
+  GroupSequenceMode,
+  GlobalDiscount,
 }
 
 /**
@@ -48,7 +60,7 @@ export interface SessionPackageItemInput {
   sortOrder?: number
 }
 
-export interface CreateSessionPackagePayload {
+export interface SessionPackageMetadataInput {
   nameAr: string
   nameEn?: string
   descriptionAr?: string
@@ -56,18 +68,30 @@ export interface CreateSessionPackagePayload {
   imageUrl?: string
   iconName?: string
   iconBgColor?: string
-  discountType: DiscountType
+  isActive?: boolean
+  isPublic?: boolean
+  sortOrder?: number
+}
+
+export interface LegacySessionPackageInput {
+  modelVersion?: 'LEGACY'
+  /** Null denotes a general legacy package. */
+  ownerEmployeeId?: string | null
+  /** Deprecated on legacy packages; discounts live on legacy items. */
+  discountType?: DiscountType
   /**
    * Integer halalas for FIXED, 0..100 for PERCENTAGE. The handler also
    * caps PERCENTAGE at 100 and FIXED at the computed subtotal — those
    * bounds are enforced server-side only.
    */
-  discountValue: number
-  isActive?: boolean
-  isPublic?: boolean
-  sortOrder?: number
+  discountValue?: number
   items: SessionPackageItemInput[]
 }
+
+export type CreateSessionPackagePayload = SessionPackageMetadataInput & (
+  | LegacySessionPackageInput
+  | (GroupedPackageInput & { ownerEmployeeId?: never; items?: never; discountType?: never; discountValue?: never })
+)
 
 /**
  * Update payload — every field optional. When `items` is provided it is

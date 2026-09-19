@@ -23,7 +23,12 @@ describe('NoShowBookingHandler', () => {
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
     await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' });
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.NO_SHOW }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: BookingStatus.NO_SHOW,
+          autoNoShowSuppressedAt: null,
+        }),
+      }),
     );
   });
 
@@ -118,7 +123,15 @@ describe('NoShowBookingHandler — session-package credit return', () => {
 
   it('reopens a COMPLETED purchase to ACTIVE on credit return', async () => {
     const prisma = buildPrisma();
-    (prisma as any).packagePurchase.findUnique = jest.fn().mockResolvedValue({ status: 'COMPLETED' });
+    (prisma as any).$queryRaw = jest.fn().mockImplementation(
+      async (strings: TemplateStringsArray, id: string) => {
+        const sql = strings.join(' ');
+        if (sql.includes('"PackagePurchase"')) {
+          return [{ id, status: 'COMPLETED' }];
+        }
+        return [];
+      },
+    );
     prisma.booking.findUnique = jest.fn().mockResolvedValue({
       ...mockBooking,
       status: BookingStatus.CONFIRMED,

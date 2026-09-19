@@ -48,15 +48,12 @@ export class ExpireBookingHandler {
 		// collected (invoice PARTIALLY_PAID). Mirror the cancel-booking refund
 		// path so the captured payment is refunded in FULL instead of being
 		// silently forfeited.
-		const completedPayment = await this.prisma.payment.findFirst({
-			where: { invoice: { bookingId: booking.id }, status: "COMPLETED" },
-			select: { id: true, amount: true, refundedAmount: true },
-		});
-
+		// Read only after the booking CAS inside the transaction so a payment
+		// committed while expiry was waiting cannot be missed.
 		let refundRequestId: string | null = null;
 		let idempotencyKey: string | null = null;
 
-		const updated = await this.rlsTransaction.withTransaction(async (tx) => {
+		const { updated, completedPayment } = await this.rlsTransaction.withTransaction(async (tx) => {
 			const [expiredBooking] = await Promise.all([
 				// Guarded status write: updateMany where status=currentStatus +
 				// assert count===1, so a concurrent PAYMENT_CONFIRMED/expire race
@@ -77,6 +74,10 @@ export class ExpireBookingHandler {
 					},
 				}),
 			]);
+			const completedPayment = await tx.payment.findFirst({
+				where: { invoice: { bookingId: booking.id }, status: "COMPLETED" },
+				select: { id: true, amount: true, refundedAmount: true },
+			});
 
 			if (completedPayment) {
 				// FULL refund — amount left undefined so the finance handler refunds
@@ -113,7 +114,7 @@ export class ExpireBookingHandler {
 				);
 			}
 
-			return expiredBooking;
+			return { updated: expiredBooking, completedPayment };
 		});
 
 		// Reuse the existing cancellation/refund event so

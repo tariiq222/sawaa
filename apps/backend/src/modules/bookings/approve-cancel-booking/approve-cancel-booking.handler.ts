@@ -62,13 +62,9 @@ export class ApproveCancelBookingHandler {
         ? (settings as Record<string, unknown>).autoRefundOnCancel === true
         : true;
 
-    // Look up completed payment BEFORE the transaction (read-only — no race
-    // risk here; the FOR UPDATE lock inside createRefundRequestInTx guards
-    // against concurrent refunds on the same payment).
-    const completedPayment = await this.prisma.payment.findFirst({
-      where: { invoice: { bookingId: cmd.bookingId }, status: 'COMPLETED' },
-      select: { id: true, amount: true },
-    });
+    // Read only after the booking CAS inside the transaction so a payment
+    // committed while approval was waiting is included in the refund.
+    let completedPayment: { id: string; amount: unknown } | null = null;
 
     const refundSummary = cmd.refundType
       ? ` — refund: ${cmd.refundType}${cmd.refundType === RefundType.PARTIAL ? ` ${cmd.refundAmount} halalas` : ''}`
@@ -105,6 +101,10 @@ export class ApproveCancelBookingHandler {
             },
           } : {}),
         });
+      completedPayment = await tx.payment.findFirst({
+        where: { invoice: { bookingId: cmd.bookingId }, status: 'COMPLETED' },
+        select: { id: true, amount: true },
+      });
       await tx.bookingStatusLog.create({
         data: {
           bookingId: cmd.bookingId,

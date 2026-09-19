@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PackagePurchaseStatus, RefundStatus } from '@prisma/client';
+import { PackageCreditUsageStatus, PackagePurchaseStatus, RefundStatus } from '@prisma/client';
 import { RefundPackagePurchaseHandler } from './refund-package-purchase.handler';
+import { consumePackageCreditForBooking } from '../../../bookings/package-credit-consume.helper';
 
 const PURCHASE_ID = '00000000-0000-4000-a000-000000000007';
 const INVOICE_ID = '00000000-0000-4000-a000-000000000010';
@@ -34,6 +35,7 @@ function buildTx(opts: { purchaseRow?: unknown; updateManyCount?: number } = {})
     packageCredit: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
     packageCreditUsage: {
       findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     booking: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -54,6 +56,8 @@ function buildTx(opts: { purchaseRow?: unknown; updateManyCount?: number } = {})
     refundRequest: { create: jest.fn().mockResolvedValue({ id: 'rr-1' }) },
     // The credit-void uses a literal column expression — model the raw path too.
     $executeRaw: jest.fn().mockResolvedValue(2),
+    // The append-only refund history ledger (Task 2) — one row per committed refund.
+    packageRefundEvent: { create: jest.fn().mockResolvedValue({ id: 'evt-1' }) },
   };
 }
 
@@ -209,6 +213,70 @@ describe('RefundPackagePurchaseHandler', () => {
     expect(joined).toContain('usedQuantity');
   });
 
+  // A credit voided by a full refund must also drop any reservations it still
+  // holds — otherwise a booked-but-undelivered session on a refunded/void
+  // credit would leave the bucket over-subscribed (usedQuantity = totalQuantity
+  // but reservedQuantity still counting extra seats against it).
+  it('full refund also zeroes reservedQuantity so a voided credit cannot be over-subscribed', async () => {
+    const { handler, tx } = buildHandler();
+    await handler.execute(cmd());
+
+    expect(tx.$executeRaw).toHaveBeenCalled();
+    const sql = tx.$executeRaw.mock.calls[0][0];
+    const joined = Array.isArray(sql) ? sql.join('?') : String(sql);
+    expect(joined).toContain('reservedQuantity');
+  });
+
+  // Finding 4: a booking past its scheduled time but still CONFIRMED (staff
+  // never checked it in / completed it / marked it no-show) does not match
+  // the future-booking guard's `scheduledAt: { gt: now }` filter, so the
+  // refund proceeds while the booking's PackageCreditUsage row is still
+  // RESERVED. Without termination, a later check-in would consume a credit
+  // whose usedQuantity is already pinned at totalQuantity by the void above.
+  it('terminates every RESERVED usage row for the purchase on a full refund, so a later check-in cannot double-consume the voided credit', async () => {
+    const tx = buildTx();
+    const PAST_DUE_BOOKING_ID = '00000000-0000-4000-a000-000000000077';
+    tx.packageCreditUsage.findMany.mockResolvedValue([{ bookingId: PAST_DUE_BOOKING_ID }]);
+    // Past-due: the guard's own query (scoped to scheduledAt > now) finds
+    // nothing, so the refund is allowed to proceed.
+    tx.booking.findFirst.mockResolvedValue(null);
+    const { handler } = buildHandler({ tx });
+
+    await handler.execute(cmd());
+
+    expect(tx.packageCreditUsage.updateMany).toHaveBeenCalledWith({
+      where: {
+        credit: { purchaseId: PURCHASE_ID },
+        status: PackageCreditUsageStatus.RESERVED,
+      },
+      data: {
+        status: PackageCreditUsageStatus.RETURNED,
+        returnedAt: expect.any(Date),
+      },
+    });
+
+    // Prove the corruption this prevents: with the usage row terminated, a
+    // subsequent check-in's consume call must find nothing and touch no
+    // counters — instead of flipping a phantom RESERVED row to CONSUMED and
+    // incrementing usedQuantity past a totalQuantity the refund already
+    // pinned it to.
+    const consumeTx = {
+      packageCreditUsage: { findFirst: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      packageCredit: { update: jest.fn(), findUnique: jest.fn() },
+      packagePurchase: { update: jest.fn() },
+    };
+    const consumed = await consumePackageCreditForBooking(consumeTx as never, PAST_DUE_BOOKING_ID);
+    expect(consumed).toBe(false);
+    expect(consumeTx.packageCredit.update).not.toHaveBeenCalled();
+  });
+
+  it('does NOT touch PackageCreditUsage rows on a partial refund (credits stay intact)', async () => {
+    const { handler, tx } = buildHandler();
+    await handler.execute(cmd({ refundAmount: 20_000 }));
+
+    expect(tx.packageCreditUsage.updateMany).not.toHaveBeenCalled();
+  });
+
   // P1-2 regression: a PARTIAL money refund must NOT wipe the credits and must
   // keep the purchase ACTIVE so the still-paid sessions survive.
   it('partial refund (20k of 50k) keeps the purchase ACTIVE and does NOT void credits', async () => {
@@ -318,5 +386,128 @@ describe('RefundPackagePurchaseHandler', () => {
     // No payment → cannot create a payment-linked RefundRequest, but the
     // purchase is still marked REFUNDED (financial record kept on the purchase).
     expect(tx.refundRequest.create).not.toHaveBeenCalled();
+  });
+
+  // Task 2: the append-only PackageRefundEvent ledger. Exactly one row is
+  // written inside the existing transaction for every committed manual
+  // refund — full or partial — regardless of whether a RefundRequest exists.
+  describe('PackageRefundEvent history write', () => {
+    it('a full refund writes exactly one LIVE FULL event linked to its RefundRequest', async () => {
+      const { handler, tx } = buildHandler();
+      await handler.execute(cmd());
+
+      expect(tx.packageRefundEvent.create).toHaveBeenCalledTimes(1);
+      const data = tx.packageRefundEvent.create.mock.calls[0][0].data;
+      expect(data.purchaseId).toBe(PURCHASE_ID);
+      expect(data.source).toBe('LIVE');
+      expect(data.refundType).toBe('FULL');
+      expect(Number(data.amount)).toBe(50_000);
+      expect(Number(data.cumulativeRefundAmount)).toBe(50_000);
+      expect(data.occurredAt).toBeInstanceOf(Date);
+      expect(data.notes).toBe('client moved abroad');
+      expect(data.processedBy).toBe('manager-1');
+      expect(data.sourceRefundRequestId).toBe('rr-1');
+      expect(data.legacyAggregateKey).toBeNull();
+    });
+
+    it('a partial refund writes exactly one LIVE PARTIAL event', async () => {
+      const { handler, tx } = buildHandler();
+      await handler.execute(cmd({ refundAmount: 20_000 }));
+
+      expect(tx.packageRefundEvent.create).toHaveBeenCalledTimes(1);
+      const data = tx.packageRefundEvent.create.mock.calls[0][0].data;
+      expect(data.refundType).toBe('PARTIAL');
+      expect(Number(data.amount)).toBe(20_000);
+      expect(Number(data.cumulativeRefundAmount)).toBe(20_000);
+      expect(data.sourceRefundRequestId).toBe('rr-1');
+      expect(data.legacyAggregateKey).toBeNull();
+    });
+
+    it('still writes an event when there is no linked invoice (no RefundRequest can be created)', async () => {
+      const tx = buildTx();
+      tx.invoice.findFirst.mockResolvedValue(null);
+      const { handler } = buildHandler({ tx });
+
+      await handler.execute(cmd());
+
+      expect(tx.refundRequest.create).not.toHaveBeenCalled();
+      expect(tx.packageRefundEvent.create).toHaveBeenCalledTimes(1);
+      const data = tx.packageRefundEvent.create.mock.calls[0][0].data;
+      expect(data.refundType).toBe('FULL');
+      expect(Number(data.amount)).toBe(50_000);
+    });
+
+    it('still writes an event when the invoice has no recordable payment (no RefundRequest can be created)', async () => {
+      const tx = buildTx();
+      tx.invoice.findFirst.mockResolvedValue({
+        id: INVOICE_ID, total: 50_000, vatAmt: 0, refundedAmount: 0,
+        currency: 'SAR', clientId: CLIENT_ID, payments: [],
+      });
+      const { handler } = buildHandler({ tx });
+
+      await handler.execute(cmd());
+
+      expect(tx.refundRequest.create).not.toHaveBeenCalled();
+      expect(tx.packageRefundEvent.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('a zero-money full refund (cancellation) still writes an event, with amount 0', async () => {
+      const { handler, tx } = buildHandler();
+      await handler.execute(cmd({ refundAmount: 0 }));
+
+      expect(tx.packageRefundEvent.create).toHaveBeenCalledTimes(1);
+      const data = tx.packageRefundEvent.create.mock.calls[0][0].data;
+      expect(data.refundType).toBe('FULL');
+      expect(Number(data.amount)).toBe(0);
+      expect(Number(data.cumulativeRefundAmount)).toBe(0);
+    });
+
+    it('records the rounded, validated amount actually applied — not the raw unrounded request', async () => {
+      // 30k already refunded against 50k paid → outstanding is exactly 20k.
+      // A fractional request that rounds down to 20k must be accepted (it
+      // does not exceed outstanding) and the event must record the rounded
+      // 20k that was actually validated and applied, not the raw 19999.6.
+      const tx = buildTx({ purchaseRow: activePurchase({ refundAmount: 30_000 }) });
+      const { handler } = buildHandler({ tx });
+
+      await handler.execute(cmd({ refundAmount: 19_999.6 }));
+
+      const data = tx.packageRefundEvent.create.mock.calls[0][0].data;
+      expect(Number(data.amount)).toBe(20_000);
+      expect(Number(data.cumulativeRefundAmount)).toBe(50_000);
+    });
+
+    it('partial refund followed by the closing full refund each write their own event', async () => {
+      const tx = buildTx({ purchaseRow: activePurchase({ refundAmount: 10_000 }) });
+      const { handler } = buildHandler({ tx });
+      await handler.execute(cmd({ refundAmount: 40_000 }));
+
+      expect(tx.packageRefundEvent.create).toHaveBeenCalledTimes(1);
+      const data = tx.packageRefundEvent.create.mock.calls[0][0].data;
+      expect(data.refundType).toBe('FULL');
+      expect(Number(data.amount)).toBe(40_000);
+      expect(Number(data.cumulativeRefundAmount)).toBe(50_000);
+    });
+
+    it('rolls back the event together with the rest of the transaction when a later mutation fails', async () => {
+      const tx = buildTx();
+      tx.invoice.update.mockRejectedValue(new Error('db exploded'));
+      const rls = {
+        withTransaction: jest.fn((fn: (t: typeof tx) => Promise<unknown>) => fn(tx)),
+      };
+      const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
+      const handler = new RefundPackagePurchaseHandler(
+        {} as never,
+        rls as never,
+        eventBus as never,
+      );
+
+      // The whole callback rejects — withTransaction (and Prisma underneath
+      // it in the real implementation) rolls back every write made inside,
+      // the event insert included. Nothing here asserts persistence beyond
+      // the mock boundary, but it proves the event write does not swallow
+      // or outlive a failure elsewhere in the same transaction body.
+      await expect(handler.execute(cmd())).rejects.toThrow('db exploded');
+    });
   });
 });

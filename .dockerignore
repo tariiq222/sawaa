@@ -1,10 +1,17 @@
 node_modules/
+**/node_modules
 dist/
+**/dist
 .next/
+**/.next
 .expo/
+**/.expo
 .turbo/
+**/.turbo
 apps/dashboard/playwright/.auth/
 .git/
+.git
+.worktrees/
 .sawaa-data/
 outputs/
 .secrets/

@@ -14,6 +14,10 @@ import { SawaaAccountPage } from './sawaa/pages/account';
 import { SawaaAccountBookingsPage } from './sawaa/pages/account-bookings';
 import { SawaaAccountBookingDetailPage } from './sawaa/pages/account-booking-detail';
 import { SawaaSupportGroupsPage } from './sawaa/pages/support-groups';
+import { SawaaPackagesPage } from './sawaa/pages/packages';
+import { SawaaPackageDetailPage } from './sawaa/pages/package-detail';
+import { SawaaPackagePurchasePage } from './sawaa/pages/package-purchase';
+import { SawaaAccountPackagesPage } from './sawaa/pages/account-packages';
 
 export const theme: Theme = {
   Layout: SawaaLayout,
@@ -32,6 +36,10 @@ export const theme: Theme = {
     accountBookings: SawaaAccountBookingsPage,
     accountBookingDetail: SawaaAccountBookingDetailPage,
     supportGroups: SawaaSupportGroupsPage,
+    packages: SawaaPackagesPage,
+    packageDetail: SawaaPackageDetailPage,
+    packagePurchase: SawaaPackagePurchasePage,
+    accountPackages: SawaaAccountPackagesPage,
   },
 };
 

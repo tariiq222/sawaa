@@ -73,6 +73,43 @@ describe('GetMatchingCreditsHandler', () => {
         targets: { select: { targetId: true } },
       },
     });
+    expect(args.select.purchaseGroupId).toBe(true);
+  });
+
+  it('preserves the grouped credit scalar purchaseGroupId in the matching response', async () => {
+    const prisma = buildPrisma();
+    prisma.packageCredit.findMany.mockResolvedValue([
+      {
+        id: 'credit-grouped', purchaseId: 'purchase-1',
+        purchaseGroupId: 'group-1', serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        sessionPosition: 0, totalQuantity: 1, usedQuantity: 0,
+        reservedQuantity: 0, createdAt: new Date(),
+        purchase: { modelVersion: 'GROUPED_V2' },
+        purchaseGroup: {
+          id: 'group-1', label: 'Ordered', sequenceMode: 'ORDERED',
+          dependsOnGroupId: null,
+          credits: [{
+            id: 'credit-grouped', sessionPosition: 0, totalQuantity: 1,
+            usedQuantity: 0, reservedQuantity: 0, usages: [],
+          }],
+          dependsOnGroup: null,
+        },
+        constraints: [],
+      },
+    ]);
+    const { handler } = buildHandler(prisma);
+
+    const result = await handler.execute(query());
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        creditId: 'credit-grouped',
+        modelVersion: 'GROUPED_V2',
+        purchaseGroupId: 'group-1',
+        sessionPosition: 0,
+      }),
+    ]);
   });
 
   it('orders results FIFO (oldest purchase first)', async () => {
@@ -92,13 +129,13 @@ describe('GetMatchingCreditsHandler', () => {
       {
         id: 'credit-1', purchaseId: 'p-1', serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
-        totalQuantity: 5, usedQuantity: 2, createdAt: new Date(),
+        totalQuantity: 5, usedQuantity: 2, reservedQuantity: 0, createdAt: new Date(),
         constraints: [],
       },
       {
         id: 'credit-2', purchaseId: 'p-2', serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
-        totalQuantity: 3, usedQuantity: 3, createdAt: new Date(), // exhausted
+        totalQuantity: 3, usedQuantity: 3, reservedQuantity: 0, createdAt: new Date(), // exhausted
         constraints: [],
       },
     ]);
@@ -110,6 +147,44 @@ describe('GetMatchingCreditsHandler', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual(
       expect.objectContaining({ creditId: 'credit-1', remaining: 3, totalQuantity: 5, usedQuantity: 2 }),
+    );
+  });
+
+  it('excludes a credit whose reserved sessions already fill its remaining capacity', async () => {
+    const prisma = buildPrisma();
+    prisma.packageCredit.findMany.mockResolvedValue([
+      {
+        // 5 total, 2 delivered, 3 already booked for future appointments — nothing left to offer.
+        id: 'credit-fully-reserved', purchaseId: 'p-1', serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 5, usedQuantity: 2, reservedQuantity: 3, createdAt: new Date(),
+        constraints: [],
+      },
+    ]);
+    const { handler } = buildHandler(prisma);
+
+    const result = await handler.execute(query());
+
+    expect(result).toEqual([]);
+  });
+
+  it('subtracts reserved sessions from the remaining count of a partially reserved credit', async () => {
+    const prisma = buildPrisma();
+    prisma.packageCredit.findMany.mockResolvedValue([
+      {
+        id: 'credit-partially-reserved', purchaseId: 'p-1', serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+        totalQuantity: 5, usedQuantity: 1, reservedQuantity: 2, createdAt: new Date(),
+        constraints: [],
+      },
+    ]);
+    const { handler } = buildHandler(prisma);
+
+    const result = await handler.execute(query());
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(
+      expect.objectContaining({ reservedQuantity: 2, remaining: 2 }),
     );
   });
 
@@ -125,13 +200,13 @@ describe('GetMatchingCreditsHandler', () => {
       {
         id: 'credit-match', purchaseId: 'p-1', serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
-        totalQuantity: 5, usedQuantity: 0, createdAt: new Date(),
+        totalQuantity: 5, usedQuantity: 0, reservedQuantity: 0, createdAt: new Date(),
         constraints: [],
       },
       {
         id: 'credit-other-service', purchaseId: 'p-2', serviceId: OTHER_SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
-        totalQuantity: 5, usedQuantity: 0, createdAt: new Date(),
+        totalQuantity: 5, usedQuantity: 0, reservedQuantity: 0, createdAt: new Date(),
         constraints: [],
       },
     ]);
@@ -149,7 +224,7 @@ describe('GetMatchingCreditsHandler', () => {
       {
         id: 'credit-legacy', purchaseId: 'p-1', serviceId: null,
         employeeId: null, durationOptionId: null,
-        totalQuantity: 5, usedQuantity: 0, createdAt: new Date(),
+        totalQuantity: 5, usedQuantity: 0, reservedQuantity: 0, createdAt: new Date(),
         constraints: exactConstraints(),
       },
     ]);
@@ -167,7 +242,7 @@ describe('GetMatchingCreditsHandler', () => {
       {
         id: 'credit-flexible', purchaseId: 'p-1', serviceId: null,
         employeeId: null, durationOptionId: null,
-        totalQuantity: 4, usedQuantity: 1, createdAt: new Date(),
+        totalQuantity: 4, usedQuantity: 1, reservedQuantity: 0, createdAt: new Date(),
         constraints: [
           {
             dimension: PackageConstraintDimension.PRACTITIONER,
@@ -209,7 +284,7 @@ describe('GetMatchingCreditsHandler', () => {
       {
         id: 'credit-broad', purchaseId: 'p-1', serviceId: null,
         employeeId: null, durationOptionId: null,
-        totalQuantity: 10, usedQuantity: 0, createdAt: new Date('2026-01-01'),
+        totalQuantity: 10, usedQuantity: 0, reservedQuantity: 0, createdAt: new Date('2026-01-01'),
         constraints: [
           {
             dimension: PackageConstraintDimension.SERVICE,
@@ -221,7 +296,7 @@ describe('GetMatchingCreditsHandler', () => {
       {
         id: 'credit-exact', purchaseId: 'p-2', serviceId: null,
         employeeId: null, durationOptionId: null,
-        totalQuantity: 5, usedQuantity: 0, createdAt: new Date('2026-01-02'),
+        totalQuantity: 5, usedQuantity: 0, reservedQuantity: 0, createdAt: new Date('2026-01-02'),
         constraints: exactConstraints(),
       },
     ]);

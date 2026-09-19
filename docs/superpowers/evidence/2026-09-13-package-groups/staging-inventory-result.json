@@ -1,0 +1,83 @@
+{
+  "checkedAt": "2026-09-13T10:47:13.281756+00:00",
+  "environment": "staging",
+  "projectId": "proj_7M0RNj59nQnafh1m",
+  "deploymentId": "dep_x5WXnzpVrVzdEe6Z",
+  "readOnly": true,
+  "inventory": {
+    "usage": {
+      "usage_count": 12,
+      "consumed_usage_count": 8,
+      "reserved_usage_count": 1,
+      "returned_usage_count": 3,
+      "usage_without_booking_count": 0
+    },
+    "credits": {
+      "credit_count": 14,
+      "orphan_credit_count": 0,
+      "null_net_value_count": 8,
+      "negative_counter_count": 0,
+      "used_over_capacity_count": 0,
+      "populated_net_value_count": 6,
+      "combined_over_capacity_count": 0,
+      "reserved_over_capacity_count": 0,
+      "nonpositive_total_quantity_count": 0,
+      "missing_constraint_snapshot_count": 4
+    },
+    "purchases": {
+      "active_count": 11,
+      "pending_count": 0,
+      "purchase_count": 14,
+      "refunded_count": 3,
+      "completed_count": 0,
+      "null_credit_snapshot_count": 14,
+      "refund_over_amount_paid_count": 0,
+      "purchase_without_invoice_count": 5,
+      "pending_null_credit_snapshot_count": 0,
+      "purchase_with_missing_template_count": 0,
+      "purchase_money_snapshot_mismatch_count": 0,
+      "empty_or_non_array_credit_snapshot_count": 0
+    },
+    "templates": {
+      "items": {
+        "item_count": 26,
+        "free_session_count": 16,
+        "paid_session_count": 103,
+        "free_only_item_count": 0,
+        "paid_only_item_count": 10,
+        "any_scoped_item_count": 12,
+        "item_discount_item_count": 18,
+        "legacy_scalar_item_count": 25,
+        "paid_and_free_item_count": 16,
+        "exclude_scoped_item_count": 1,
+        "delivery_scoped_item_count": 5,
+        "flexible_scoped_item_count": 1,
+        "fixed_unit_price_item_count": 12,
+        "unscoped_flexible_item_count": 0,
+        "complete_legacy_triple_item_count": 13
+      },
+      "packages": {
+        "package_count": 20,
+        "owner_package_count": 2,
+        "no_practitioner_package_count": 0,
+        "mixed_practitioner_package_count": 4,
+        "global_discount_nonzero_package_count": 0
+      }
+    },
+    "refund_events": {
+      "refund_event_count": 7,
+      "live_refund_event_count": 5,
+      "legacy_request_event_count": 0,
+      "undated_refund_event_count": 2,
+      "legacy_aggregate_event_count": 2,
+      "live_event_without_request_count": 2
+    },
+    "snapshot_items": {
+      "snapshot_item_count": 0,
+      "malformed_snapshot_item_count": 0,
+      "snapshot_item_missing_quantity_count": 0,
+      "snapshot_item_missing_net_value_count": 0
+    }
+  },
+  "sqlSha256": "d12698573974f83f97781177863e0d5b2fad33a3b9b0ca1857e67aeb6b05c5ba"
+}

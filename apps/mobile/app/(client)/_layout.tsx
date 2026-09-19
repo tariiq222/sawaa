@@ -13,7 +13,7 @@ export default function ClientLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (token && user && getPrimaryRole(user) === 'employee') {
+  if (token && user && getPrimaryRole(user) !== 'client') {
     return <Redirect href="/(employee)/(tabs)/today" />;
   }
 

@@ -221,6 +221,7 @@ export class DashboardBookingsController {
           purchaseId: { type: 'string', format: 'uuid' },
           totalQuantity: { type: 'number' },
           usedQuantity: { type: 'number' },
+          reservedQuantity: { type: 'number' },
           remaining: { type: 'number' },
         },
       },
@@ -257,6 +258,8 @@ export class DashboardBookingsController {
     return this.transferCreditHandler.execute({
       creditId,
       toEmployeeId: body.toEmployeeId,
+      reason: body.reason,
+      targetDurationOptionId: body.targetDurationOptionId,
       userId,
     });
   }
@@ -568,7 +571,7 @@ export class DashboardBookingsController {
   @ApiOperation({ summary: 'Restore a no-show booking to confirmed' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({
-    description: 'Booking restored to CONFIRMED with check-in timestamp set',
+    description: 'Booking restored to CONFIRMED while preserving attendance and suppressing automatic no-show',
     schema: {
       type: 'object',
       properties: {

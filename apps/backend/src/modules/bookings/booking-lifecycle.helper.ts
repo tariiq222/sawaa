@@ -1,4 +1,4 @@
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database';
 
@@ -75,4 +75,36 @@ export async function updateBookingAtomically(
     throw new NotFoundException(`Booking ${input.bookingId} not found`);
   }
   return updated;
+}
+
+/**
+ * All call sites of `consumePackageCreditForBooking` / `returnPackageCreditForBooking`
+ * / `reclaimPackageCreditForBooking` gate the call on `booking.packageCreditId`
+ * being set, so every invocation is for a package-funded booking. Each helper
+ * scopes its lookup to one status (RESERVED, RESERVED-or-CONSUMED, RETURNED) so
+ * that "no row" is the expected, idempotent no-op when the booking's usage row
+ * is simply in a different terminal state already.
+ *
+ * But if NO usage row exists for the booking at all — across every status —
+ * that is not idempotency, it is a data problem: a package-funded booking
+ * whose paid session was never recorded, or whose record was lost (a bug, a
+ * bad backfill, a manual data repair). That case is otherwise silent — the
+ * helper returns `false` exactly like the idempotent case — so surface it via
+ * a log line callers can find, without throwing or altering the transaction.
+ */
+export async function warnIfPackageCreditUsageRowMissing(
+  tx: Prisma.TransactionClient,
+  bookingId: string,
+  callerName: string,
+): Promise<void> {
+  const anyUsage = await tx.packageCreditUsage.findFirst({
+    where: { bookingId },
+    select: { id: true },
+  });
+  if (!anyUsage) {
+    Logger.error(
+      `${callerName}: booking ${bookingId} is package-funded but has no PackageCreditUsage row at all — a paid session may have been silently lost or never returned. Needs manual investigation.`,
+      'PackageCreditLifecycle',
+    );
+  }
 }

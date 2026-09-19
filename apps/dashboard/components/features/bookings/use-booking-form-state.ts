@@ -63,6 +63,9 @@ export interface CreditTarget {
   employeeId: string
   employeeName: string
   durationOptionId: string
+  /** Exact purchased session selected by the operator. */
+  creditId?: string
+  deliveryType?: 'IN_PERSON' | 'ONLINE'
 }
 
 export interface BookingFormState {
@@ -92,6 +95,8 @@ export interface BookingFormState {
   programName: string | null
   /** Phase 6 — PACKAGES track purchase the first session consumes. */
   packagePurchaseId: string | null
+  /** Exact PackageCredit selected for this booking, when known. */
+  packageCreditId: string | null
   /** Wave 2 — set when the operator spends a FLEXIBLE package credit. Non-null
    *  means the wizard's service/practitioner/duration lists are restricted to
    *  what this credit's constraints permit. Null = unrestricted. */
@@ -128,6 +133,7 @@ const INITIAL_STATE: BookingFormState = {
   programId: null,
   programName: null,
   packagePurchaseId: null,
+  packageCreditId: null,
   creditFilter: null,
   payAtClinic: true,
   collectionMethod: "CASH",
@@ -159,6 +165,7 @@ function downstreamReset(overrides: DownstreamReset = {}): DownstreamReset {
     programId: null,
     programName: null,
     packagePurchaseId: null,
+    packageCreditId: null,
     creditFilter: null,
     ...overrides,
   }
@@ -336,33 +343,21 @@ export function useBookingFormState() {
     setState((prev) => ({ ...prev, couponCode }))
   }, [])
 
-  /** Jump the wizard straight to a package credit's target: fills
-   *  department → category (+mode) → service → employee → durationOption in
-   *  one atomic update, leaving deliveryType/date/time for the user. */
-  const applyCreditTarget = useCallback((t: CreditTarget) => {
-    setState((prev) => ({
-      ...prev,
-      departmentId: t.departmentId,
-      departmentName: t.departmentName,
-      categoryId: t.categoryId,
-      categoryName: t.categoryName,
-      categoryBookingMode: t.categoryBookingMode,
-      serviceId: t.serviceId,
-      serviceName: t.serviceName,
-      employeeId: t.employeeId,
-      employeeName: t.employeeName,
-      durationOptionId: t.durationOptionId,
-      creditFilter: null,
-      deliveryType: null,
-      type: null,
-      date: null,
-      startTime: null,
-    }))
+  const setPackageCreditId = useCallback((creditId: string | null) => {
+    setState((prev) => ({ ...prev, packageCreditId: creditId }))
   }, [])
 
-  /** Phase 6 — PACKAGES track variant of `applyCreditTarget`. Identical
-   *  jump-fill PLUS records `packagePurchaseId` so the submit path can
-   *  prove which package purchase the first session consumed. */
+  // W6 fix — 2026-09-12 — the standalone `applyCreditTarget` (jump-fill
+  // without a packagePurchaseId) was deleted. It backed only the
+  // client-credits panel's button, which never selected a track and
+  // therefore rendered no النوع/الموعد sections — a dead end. The panel now
+  // threads a purchase id through and uses `applyPackageCreditTarget` below,
+  // same as the designed PACKAGES-track credit pick.
+  /** Phase 6 — PACKAGES track jump-fill: fills department → category
+   *  (+mode) → service → employee → durationOption in one atomic update,
+   *  leaving deliveryType/date/time for the user, PLUS records
+   *  `packagePurchaseId` so the submit path can prove which package
+   *  purchase the first session consumed. */
   const applyPackageCreditTarget = useCallback(
     (t: CreditTarget, packagePurchaseId: string) => {
       setState((prev) => ({
@@ -378,9 +373,10 @@ export function useBookingFormState() {
         employeeName: t.employeeName,
         durationOptionId: t.durationOptionId,
         packagePurchaseId,
+        packageCreditId: t.creditId ?? null,
         creditFilter: null,
-        deliveryType: null,
-        type: null,
+        deliveryType: t.deliveryType ?? null,
+        type: t.deliveryType ?? null,
         date: null,
         startTime: null,
       }))
@@ -396,6 +392,7 @@ export function useBookingFormState() {
       ...prev,
       creditFilter: filter,
       packagePurchaseId: filter.packagePurchaseId,
+      packageCreditId: filter.creditId,
       departmentId: null,
       departmentName: null,
       categoryId: null,
@@ -420,6 +417,7 @@ export function useBookingFormState() {
       ...prev,
       creditFilter: null,
       packagePurchaseId: null,
+      packageCreditId: null,
       departmentId: null,
       departmentName: null,
       categoryId: null,
@@ -457,7 +455,7 @@ export function useBookingFormState() {
     setPayAtClinic,
     setCollectionMethod,
     setCouponCode,
-    applyCreditTarget,
+    setPackageCreditId,
     applyPackageCreditTarget,
     applyCreditFilter,
     clearCreditFilter,

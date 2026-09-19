@@ -20,6 +20,9 @@ export class CreatePackagePurchaseDto {
   @ApiProperty({ description: 'Session package being sold', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() packageId!: string;
 
+  @ApiPropertyOptional({ description: 'Package family containing the selected option; required for attached options', format: 'uuid' })
+  @IsOptional() @IsUUID() packageFamilyId?: string;
+
   @ApiProperty({ description: 'Client buying the package', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() clientId!: string;
 

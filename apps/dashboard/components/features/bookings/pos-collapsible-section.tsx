@@ -41,6 +41,7 @@ export function CollapsibleSection({
   isOpen,
   isFilled,
   onToggle,
+  stepNumber,
   children,
 }: {
   id: SectionId
@@ -49,6 +50,7 @@ export function CollapsibleSection({
   isOpen: boolean
   isFilled: boolean
   onToggle: () => void
+  stepNumber?: number
   children: React.ReactNode
 }) {
   return (
@@ -70,7 +72,7 @@ export function CollapsibleSection({
                   : "border-2 border-muted-foreground/30 text-muted-foreground/50"
             )}
           >
-            {STEP_NUMBERS[id]}
+            {stepNumber ?? STEP_NUMBERS[id]}
           </div>
           <div className="flex min-w-0 flex-col">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

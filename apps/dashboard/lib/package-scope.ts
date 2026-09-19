@@ -37,24 +37,49 @@ export function isSingleSpecificItem(item: {
   )
 }
 
+/** UI selection mode; legacy items infer flexibility from their scopes. */
+export function isFlexibleItem(item: {
+  selectionMode?: "FIXED" | "FLEXIBLE"
+  service: ScopeFormData
+  practitioner: ScopeFormData
+  duration: ScopeFormData
+}): boolean {
+  return item.selectionMode === "FLEXIBLE" ||
+    (item.selectionMode == null && !isSingleSpecificItem(item))
+}
+
 /**
- * Build the constraints payload from a form item. DURATION is only emitted as a
- * real (non-ANY) constraint when the item is single-specific — otherwise the
- * backend rejects it. Delivery is emitted only when constrained.
+ * Build the constraints payload from a form item. A duration remains useful
+ * whenever a single service is selected, even if the practitioner is inherited
+ * or intentionally flexible. Delivery is emitted only when constrained.
  */
 export function scopesToConstraints(item: PackageItemFormData): PackageConstraintInput[] {
-  const singleSpecific = isSingleSpecificItem(item)
+  if (item.originalConstraints) return item.originalConstraints
+  const singleService = isSingleInclude(item.service)
   const out: PackageConstraintInput[] = [
     dimConstraint("SERVICE", item.service),
     dimConstraint("PRACTITIONER", item.practitioner),
-    // Duration is meaningful only for single-specific items; drop it to ANY otherwise.
-    dimConstraint("DURATION", singleSpecific ? item.duration : EMPTY_SCOPE),
+    dimConstraint("DURATION", singleService ? item.duration : EMPTY_SCOPE),
   ]
   // Delivery is secondary — only send when actually constrained.
   if (item.delivery.mode !== "ANY") {
     out.push(dimConstraint("DELIVERY_TYPE", item.delivery))
   }
   return out
+}
+
+/** Preserve the exact constraint rows while an existing item remains untouched. */
+export function responseConstraintsToInputs(
+  constraints: PackageConstraintResponse[] | undefined,
+): PackageConstraintInput[] | undefined {
+  if (!constraints || constraints.length === 0) return undefined
+  return constraints.map((constraint) => ({
+    dimension: constraint.dimension,
+    mode: constraint.mode,
+    ...(constraint.mode === "ANY"
+      ? {}
+      : { targetIds: constraint.targets.map((target) => target.targetId) }),
+  }))
 }
 
 function dimConstraint(

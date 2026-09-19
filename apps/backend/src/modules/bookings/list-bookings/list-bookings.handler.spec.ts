@@ -22,7 +22,7 @@ describe('ListBookingsHandler', () => {
       { bookingId: 'book-1', creditId: 'credit-1', status: 'CONSUMED' },
     ]);
     prisma.packageCredit.findMany = jest.fn().mockResolvedValue([
-      { id: 'credit-1', purchaseId: 'purchase-1' },
+      { id: 'credit-1', purchaseId: 'purchase-1', netValue: 2910_00, totalQuantity: 10 },
     ]);
     prisma.packagePurchase.findMany = jest.fn().mockResolvedValue([
       { id: 'purchase-1', packageId: 'package-1' },
@@ -40,11 +40,77 @@ describe('ListBookingsHandler', () => {
       packageNameAr: 'باقة الجلسات',
       packageNameEn: 'Session package',
       usageStatus: 'CONSUMED',
+      sessionValue: 291_00,
     });
     expect(prisma.packageCreditUsage.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.packageCredit.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.packagePurchase.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.sessionPackage.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps a null sessionValue when the credit has no netValue and the purchase cannot be resolved', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { ...mockBooking, packageCreditId: 'credit-1' },
+    ]);
+    prisma.packageCreditUsage.findMany = jest.fn().mockResolvedValue([
+      { bookingId: 'book-1', creditId: 'credit-1', status: 'RESERVED' },
+    ]);
+    prisma.packageCredit.findMany = jest
+      .fn()
+      // First call: credits directly referenced by the page's bookings.
+      .mockResolvedValueOnce([
+        { id: 'credit-1', purchaseId: 'purchase-1', netValue: null, totalQuantity: 10 },
+      ])
+      // Second call: fallback sibling-credit batch load — empty means the
+      // purchase's credits could not be resolved.
+      .mockResolvedValueOnce([]);
+    prisma.packagePurchase.findMany = jest.fn().mockResolvedValue([
+      { id: 'purchase-1', packageId: 'package-1', amountPaid: 0, refundAmount: 0 },
+    ]);
+    prisma.sessionPackage.findMany = jest.fn().mockResolvedValue([
+      { id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package' },
+    ]);
+
+    const result = await new ListBookingsHandler(prisma as never).execute({ page: 1, limit: 10 });
+
+    expect(result.items[0]?.packageFunding?.sessionValue).toBeNull();
+  });
+
+  // Phase 0 added `netValue` to PackageCredit; every credit issued before that
+  // migration has netValue: null. sessionValue must fall back to allocating
+  // the parent purchase's net amount (amountPaid − refundAmount) across ALL
+  // sibling credits by list value, same as the outstanding-credit report.
+  it('falls back to allocatePurchaseNet when netValue is null, using the purchase amountPaid', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { ...mockBooking, packageCreditId: 'credit-1' },
+    ]);
+    prisma.packageCreditUsage.findMany = jest.fn().mockResolvedValue([
+      { bookingId: 'book-1', creditId: 'credit-1', status: 'CONSUMED' },
+    ]);
+    prisma.packageCredit.findMany = jest
+      .fn()
+      .mockResolvedValueOnce([
+        { id: 'credit-1', purchaseId: 'purchase-1', netValue: null, totalQuantity: 6 },
+      ])
+      // Sibling-credit batch load for the fallback: this purchase has a
+      // single credit, so it gets the full purchase net amount.
+      .mockResolvedValueOnce([
+        { id: 'credit-1', purchaseId: 'purchase-1', unitPriceSnapshot: 29166, totalQuantity: 6 },
+      ]);
+    prisma.packagePurchase.findMany = jest.fn().mockResolvedValue([
+      { id: 'purchase-1', packageId: 'package-1', amountPaid: 175000, refundAmount: 0 },
+    ]);
+    prisma.sessionPackage.findMany = jest.fn().mockResolvedValue([
+      { id: 'package-1', nameAr: 'باقة الجلسات', nameEn: 'Session package' },
+    ]);
+
+    const result = await new ListBookingsHandler(prisma as never).execute({ page: 1, limit: 10 });
+
+    expect(result.items[0]?.packageFunding?.sessionValue).toBe(29166);
+    // Batched — one query for the whole page's sibling credits, not one per booking.
+    expect(prisma.packageCredit.findMany).toHaveBeenCalledTimes(2);
   });
 
   it('loads Booknetic payment metadata for imported booking rows', async () => {

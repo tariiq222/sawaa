@@ -15,6 +15,8 @@ import {
 } from 'class-validator';
 import { DiscountType } from '@prisma/client';
 import { CreateSessionPackageItemDto } from '../create-session-package/create-session-package.dto';
+import { GlobalDiscountDto, GroupedPackageGroupDto } from '../grouped-package.dto';
+import type { DiscriminatedGlobalDiscountDto } from '../grouped-package.dto';
 
 /**
  * Every field is optional. Items may be omitted (no replacement) or
@@ -22,6 +24,15 @@ import { CreateSessionPackageItemDto } from '../create-session-package/create-se
  * handler so sortOrder / quantity changes stay atomic).
  */
 export class UpdateSessionPackageDto {
+  @ApiPropertyOptional({ description: 'Package model version. Existing packages cannot change version in place.', enum: ['LEGACY', 'GROUPED_V2'], example: 'GROUPED_V2' })
+  @IsOptional()
+  @IsEnum(['LEGACY', 'GROUPED_V2'])
+  modelVersion?: 'LEGACY' | 'GROUPED_V2';
+
+  @ApiPropertyOptional({ description: 'Package-level practitioner owner. Omit to preserve; null makes the package general.', type: String, format: 'uuid', example: '00000000-0000-4000-a000-000000000002', nullable: true })
+  @IsOptional() @IsUUID()
+  ownerEmployeeId?: string | null;
+
   @ApiPropertyOptional({ description: 'Arabic name', maxLength: 200, example: 'باقة محدّثة' })
   @IsOptional() @IsString() @MaxLength(200)
   nameAr?: string;
@@ -69,6 +80,20 @@ export class UpdateSessionPackageDto {
   @ApiPropertyOptional({ description: 'Display order (ascending)', minimum: 0 })
   @IsOptional() @IsInt() @Min(0)
   sortOrder?: number;
+
+  @ApiPropertyOptional({ description: 'Replacement V2 package groups. Omit to preserve the existing template.', type: [GroupedPackageGroupDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => GroupedPackageGroupDto)
+  groups?: GroupedPackageGroupDto[];
+
+  @ApiPropertyOptional({ description: 'Replacement V2 global package discount. Omit to preserve the existing discount.', type: GlobalDiscountDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => GlobalDiscountDto)
+  globalDiscount?: DiscriminatedGlobalDiscountDto;
 
   @ApiPropertyOptional({
     description: 'Replacement items (full set; delete-and-create semantics in the handler)',

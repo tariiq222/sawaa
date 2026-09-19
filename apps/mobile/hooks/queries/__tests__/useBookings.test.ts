@@ -22,10 +22,13 @@ const mockedGetById = clientBookingsService.getById as jest.Mock;
 const mockedCancel = clientBookingsService.cancel as jest.Mock;
 const mockedRate = clientBookingsService.rate as jest.Mock;
 
+const queryClients = new Set<QueryClient>();
+
 function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  queryClients.add(qc);
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
   return { qc, Wrapper };
@@ -33,6 +36,17 @@ function makeWrapper() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+afterEach(() => {
+  for (const qc of queryClients) {
+    // QueryClient.clear() destroys queries, but TanStack Query's
+    // MutationCache.clear() only drops its references. Destroy mutation
+    // instances first so their five-minute GC timers cannot keep Jest alive.
+    for (const mutation of qc.getMutationCache().getAll()) mutation.destroy();
+    qc.clear();
+  }
+  queryClients.clear();
 });
 
 describe('useClientBookings', () => {

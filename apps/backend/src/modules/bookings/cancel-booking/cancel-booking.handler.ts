@@ -76,10 +76,13 @@ export class CancelBookingHandler {
       lateCancelRefundPercent: settings.lateCancelRefundPercent,
     });
 
-    const completedPayment = await this.prisma.payment.findFirst({
-      where: { invoice: { bookingId: booking.id }, status: 'COMPLETED' },
-      select: { id: true, amount: true, refundedAmount: true },
-    });
+    // Read only after the guarded booking mutation inside the transaction. A
+    // payment callback can commit while cancellation is waiting on that row.
+    let completedPayment: {
+      id: string;
+      amount: unknown;
+      refundedAmount: unknown;
+    } | null = null;
 
     let refundRequestId: string | null = null;
     let idempotencyKey: string | null = null;
@@ -121,6 +124,13 @@ export class CancelBookingHandler {
               },
             }
           : {}),
+      });
+      // Read after the guarded booking mutation. A payment callback may have
+      // committed while the caller was preparing cancellation; using the
+      // earlier snapshot would leave that captured payment without a refund.
+      completedPayment = await tx.payment.findFirst({
+        where: { invoice: { bookingId: booking.id }, status: 'COMPLETED' },
+        select: { id: true, amount: true, refundedAmount: true },
       });
       await tx.bookingStatusLog.create({
         data: {

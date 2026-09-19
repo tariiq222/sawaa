@@ -7,13 +7,14 @@ import {
 } from '@nestjs/swagger';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../../common/swagger';
-import { ClientResponseDto } from '../../dashboard/dto/people-response.dto';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
 import { ListEmployeeClientsHandler } from '../../../modules/people/clients/list-employee-clients.handler';
 import { GetEmployeeClientHistoryHandler } from '../../../modules/people/clients/get-employee-client-history.handler';
+import { GetEmployeeClientHandler } from '../../../modules/people/clients/get-employee-client.handler';
 import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
+import { EmployeeClientResponseDto } from './dto/employee-client-response.dto';
 
 export class EmployeeClientListQuery {
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -29,7 +30,7 @@ export class EmployeeClientListQuery {
 @ApiTags('Mobile Employee / Clients')
 @ApiBearerAuth()
 @ApiStandardResponses()
-@ApiExtraModels(ClientResponseDto)
+@ApiExtraModels(EmployeeClientResponseDto)
 @UseGuards(JwtGuard, CaslGuard)
 @Controller('mobile/employee/clients')
 export class MobileEmployeeClientsController {
@@ -37,6 +38,7 @@ export class MobileEmployeeClientsController {
     private readonly resolveEmployeeId: ResolveEmployeeIdHandler,
     private readonly listEmployeeClients: ListEmployeeClientsHandler,
     private readonly getEmployeeClientHistory: GetEmployeeClientHistoryHandler,
+    private readonly getEmployeeClient: GetEmployeeClientHandler,
   ) {}
 
   @CheckPermissions({ action: 'read', subject: 'Client' })
@@ -50,7 +52,7 @@ export class MobileEmployeeClientsController {
     schema: {
       type: 'object',
       properties: {
-        data: { type: 'array', items: { $ref: getSchemaPath(ClientResponseDto) } },
+        data: { type: 'array', items: { $ref: getSchemaPath(EmployeeClientResponseDto) } },
         meta: {
           type: 'object',
           properties: {
@@ -79,6 +81,23 @@ export class MobileEmployeeClientsController {
       limit,
       search: q.search,
     });
+  }
+
+  @CheckPermissions({ action: 'read', subject: 'Client' })
+  @Get(':clientId')
+  @ApiOperation({ summary: "Get a client who has a booking with the authenticated employee" })
+  @ApiParam({ name: 'clientId', description: 'Client UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Employee-safe client record', type: EmployeeClientResponseDto })
+  @ApiNotFoundResponse({ description: 'Client not found' })
+  async getMyClient(
+    @CurrentUser() user: JwtUser,
+    @Param('clientId', ParseUUIDPipe) clientId: string,
+  ) {
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
+    return this.getEmployeeClient.execute({ employeeId, clientId });
   }
 
   @CheckPermissions({ action: 'read', subject: 'Client' })

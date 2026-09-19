@@ -169,8 +169,8 @@ describe('BookingStateMachine — assertTransition', () => {
     });
 
     it('RESTORE_NO_SHOW (audited exception): NO_SHOW → CONFIRMED', () => {
-      // Sole legal escape out of a terminal status. The handler always sets
-      // checkedInAt to `now` so the auto-no-show cron does not re-mark it.
+      // Sole legal escape out of a terminal status. The handler preserves
+      // attendance and sets a separate suppression marker.
       expect(assertTransition(BookingStatus.NO_SHOW, 'RESTORE_NO_SHOW')).toBe(BookingStatus.CONFIRMED);
     });
 

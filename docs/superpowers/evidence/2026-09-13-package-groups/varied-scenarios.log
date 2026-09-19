@@ -1,0 +1,19 @@
+(node:35892) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASS test/e2e/packages/package-group-booking-http.real-e2e-spec.ts (13.918 s)
+PASS test/e2e/packages/package-template-conversion.real-e2e-spec.ts
+(node:35892) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+PASS test/e2e/packages/package-credit-concurrency.real-e2e-spec.ts
+PASS test/e2e/packages/package-group-reassignment.real-e2e-spec.ts
+PASS test/e2e/packages/package-group-purchase.real-e2e-spec.ts
+(node:35892) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+PASS test/e2e/packages/package-group-concurrency.real-e2e-spec.ts
+PASS test/e2e/packages/package-group-sequence.real-e2e-spec.ts
+PASS test/e2e/packages/package-refund-ledger.real-e2e-spec.ts
+
+Test Suites: 8 passed, 8 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        24.104 s
+Ran all test suites within paths "test/e2e/packages/package-group-sequence.real-e2e-spec.ts", "test/e2e/packages/package-group-reassignment.real-e2e-spec.ts", "test/e2e/packages/package-group-concurrency.real-e2e-spec.ts", "test/e2e/packages/package-group-booking-http.real-e2e-spec.ts", "test/e2e/packages/package-credit-concurrency.real-e2e-spec.ts", "test/e2e/packages/package-refund-ledger.real-e2e-spec.ts", "test/e2e/packages/package-group-purchase.real-e2e-spec.ts", "test/e2e/packages/package-template-conversion.real-e2e-spec.ts".
+Test results written to: ../../.superpowers/sdd/2026-09-13-package-groups/varied-scenarios.json

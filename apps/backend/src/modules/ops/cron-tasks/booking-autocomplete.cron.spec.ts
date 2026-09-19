@@ -65,6 +65,8 @@ describe('BookingAutocompleteCron', () => {
         take: 100,
       }),
     );
+    const [[{ where }]] = prisma.booking.findMany.mock.calls;
+    expect(where).not.toHaveProperty('autoNoShowSuppressedAt');
   });
 
   it('delegates each autocomplete to CompleteBookingHandler', async () => {

@@ -72,6 +72,7 @@ import {
   PaymentStatusCell,
   ActionsCell,
 } from "@/components/features/bookings/booking-column-cells"
+import { AmountCell } from "@/components/features/bookings/booking-amount-cell"
 import type { Booking } from "@/lib/types/booking"
 
 const mockUseAuth = vi.mocked(useAuth)
@@ -213,6 +214,81 @@ test("ActionsCell hides manual-refund button without update:Payment", () => {
   mockUseAuth.mockReturnValue(authWith())
   render(<ActionsCell booking={refundableBooking} onView={vi.fn()} onDelete={vi.fn()} t={(k) => k} />)
   expect(screen.queryByRole("button", { name: "refund.title" })).not.toBeInTheDocument()
+})
+
+/* ─── AmountCell — package-funded session value ─── */
+
+/** Build a minimal Booking fixture, overridable per test. */
+function buildBooking(overrides: Partial<Booking> = {}): Booking {
+  return {
+    id: "b-amount",
+    isHistoricalImport: false,
+    historicalPayment: null,
+    payment: null,
+    priceSnapshot: null,
+    service: null,
+    packageFunding: null,
+    ...overrides,
+  } as unknown as Booking
+}
+
+const funding = {
+  creditId: "credit-1",
+  purchaseId: "purchase-1",
+  packageId: "package-1",
+  packageNameAr: "باقة الاستشارات",
+  packageNameEn: "Counseling package",
+  usageStatus: "CONSUMED" as const,
+  sessionValue: null as number | null,
+}
+
+test("shows the session value and the package marker for a package booking", () => {
+  render(
+    <AmountCell
+      booking={buildBooking({
+        payment: null,
+        priceSnapshot: null,
+        packageFunding: { ...funding, sessionValue: 29100 },
+      })}
+    />,
+  )
+
+  expect(screen.getByText(/291/)).toBeInTheDocument()
+  expect(screen.getByText("bookings.amount.fromPackage")).toBeInTheDocument()
+})
+
+test("falls back to the payment total when there is no package funding", () => {
+  render(
+    <AmountCell
+      booking={buildBooking({
+        payment: { totalAmount: 50000 } as Booking["payment"],
+      })}
+    />,
+  )
+
+  expect(screen.getByText(/500/)).toBeInTheDocument()
+  expect(screen.queryByText("bookings.amount.fromPackage")).not.toBeInTheDocument()
+})
+
+test("prefers the package session value over a stray payment total", () => {
+  // Package funding is more specific than a payment/priceSnapshot/service
+  // fallback — it should win even if one of those happens to be present.
+  render(
+    <AmountCell
+      booking={buildBooking({
+        payment: { totalAmount: 99999 } as Booking["payment"],
+        packageFunding: { ...funding, sessionValue: 29100 },
+      })}
+    />,
+  )
+
+  expect(screen.getByText(/291/)).toBeInTheDocument()
+  expect(screen.queryByText(/999/)).not.toBeInTheDocument()
+})
+
+test("shows an em dash when there is no payment, snapshot, or package funding", () => {
+  render(<AmountCell booking={buildBooking()} />)
+  expect(screen.getByText("—")).toBeInTheDocument()
 })
 
 test("ActionsCell starts bounded booking polling after approving a transfer", () => {

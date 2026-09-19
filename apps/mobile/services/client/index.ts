@@ -7,6 +7,15 @@ export { publicBranchesService } from './branches';
 export { publicBrandingService } from './branding';
 export { publicEmployeesService } from './employees';
 export { groupSessionsService } from './group-sessions';
+export {
+  clientPackagesService,
+  clearPackagePurchaseAttemptKey,
+  clearPendingPackagePurchase,
+  getPendingPackagePurchase,
+  getPackagePurchaseAttemptKey,
+  packagePurchaseAttemptStorageKey,
+  savePendingPackagePurchase,
+} from './packages';
 export type { PublicService } from './catalog';
 export type { PublicEmployeeItem } from './employees';
 export type {
@@ -16,7 +25,11 @@ export type {
   BookingType as ClientBookingType,
   DeliveryType as ClientDeliveryType,
 } from './bookings';
-export type { PaymentsListResponse } from './payments';
+export type {
+  PaymentsListResponse,
+  ReceiptUploadAsset,
+  ReceiptUploadMetadata,
+} from './payments';
 export type { GroupSession, BookGroupSessionResponse } from './group-sessions';
 export type {
   PublicBranchSummary,

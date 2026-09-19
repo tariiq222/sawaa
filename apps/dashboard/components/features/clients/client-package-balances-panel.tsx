@@ -21,7 +21,9 @@
  *     + amount paid + date) and an inner credits list
  *
  * Money comes pre-coerced as integer halalas; the backend also does the
- * `remaining = totalQuantity - usedQuantity` math for us, so this panel
+ * `remaining = totalQuantity - usedQuantity - reservedQuantity` math for
+ * us — a reserved session has a booked appointment that hasn't happened
+ * yet, so it isn't available capacity either. This panel
  * is read-only presentation EXCEPT for the per-credit "احجز موعد" button
  * (Phase 3) and the Phase 5 transfer/refund operator actions:
  *   - "نقل الرصيد" per credit  → TransferCreditDialog (gated on
@@ -54,6 +56,11 @@ import { CreditBookDialog } from "@/components/features/clients/credit-book-dial
 import { TransferCreditDialog } from "@/components/features/clients/transfer-credit-dialog"
 import { RefundPackageDialog } from "@/components/features/clients/refund-package-dialog"
 import { cn } from "@/lib/utils"
+import {
+  creditAvailabilityReason,
+  isCreditBookable,
+  isGroupedV2Credit,
+} from "@/lib/package-credit-usability"
 import type {
   PackageCredit,
   PackagePurchase,
@@ -268,11 +275,12 @@ function PurchaseCard({
               <CreditRow
                 key={credit.id}
                 credit={credit}
+                modelVersion={purchase.modelVersion}
                 locale={locale}
                 t={t}
                 canTransferCredit={canTransferCredit}
                 onBook={() => onBookCredit(credit)}
-                onTransfer={() => onTransferCredit(credit)}
+                onTransfer={() => onTransferCredit({ ...credit, modelVersion: purchase.modelVersion })}
               />
             ))}
           </ul>
@@ -292,6 +300,7 @@ function PurchaseCard({
 
 function CreditRow({
   credit,
+  modelVersion,
   locale,
   t,
   canTransferCredit,
@@ -299,6 +308,7 @@ function CreditRow({
   onTransfer,
 }: {
   credit: PackageCredit
+  modelVersion?: string | null
   locale: "ar" | "en"
   t: (key: string) => string
   canTransferCredit: boolean
@@ -319,6 +329,10 @@ function CreditRow({
       : (credit.durationLabelEn ?? credit.durationLabelAr)
 
   const isDepleted = credit.remaining <= 0
+  const grouped = isGroupedV2Credit(credit, modelVersion)
+  const availabilityReason = creditAvailabilityReason(credit)
+  const canBook = credit.remaining > 0 && isCreditBookable(credit)
+  const canTransfer = credit.reservedQuantity === 0 && (!grouped || credit.usedQuantity === 0)
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md bg-muted/30 px-3 py-2">
@@ -329,6 +343,22 @@ function CreditRow({
         <span className="text-xs text-muted-foreground">
           {employeeName} • {durationLabel}
         </span>
+        {(grouped || credit.deliveryTypeSnapshot) && (
+          <span className="text-xs text-muted-foreground">
+            {grouped && credit.sessionPosition != null
+              ? `${t("packages.credits.session")} ${credit.sessionPosition + 1}`
+              : null}
+            {grouped && credit.groupLabel ? ` · ${credit.groupLabel}` : ""}
+            {credit.deliveryTypeSnapshot
+              ? ` · ${t(`packages.credits.delivery.${credit.deliveryTypeSnapshot}`)}`
+              : ""}
+          </span>
+        )}
+        {availabilityReason && (
+          <span className="text-xs font-medium text-warning">
+            {t(`packages.credits.availability.${availabilityReason}`)}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <span
@@ -348,6 +378,7 @@ function CreditRow({
             size="sm"
             variant="ghost"
             onClick={onTransfer}
+            disabled={!canTransfer}
             aria-label={t("packages.balances.transfer.aria")}
             data-testid="credit-transfer-button"
             className="h-8"
@@ -360,7 +391,7 @@ function CreditRow({
             {t("packages.balances.transfer.button")}
           </Button>
         )}
-        {!isDepleted && (
+        {canBook && (
           <Button
             type="button"
             size="sm"
@@ -386,12 +417,14 @@ function CreditRow({
 /* ─── Status badge ─── */
 
 const STATUS_LABEL_KEY: Record<PackagePurchaseStatus, string> = {
+  PENDING: "packages.balances.status.pending",
   ACTIVE: "packages.balances.status.active",
   COMPLETED: "packages.balances.status.completed",
   REFUNDED: "packages.balances.status.refunded",
 }
 
 const STATUS_BADGE_STYLES: Record<PackagePurchaseStatus, string> = {
+  PENDING: "border-warning/30 bg-warning/10 text-warning",
   ACTIVE: "border-success/30 bg-success/10 text-success",
   COMPLETED: "border-muted-foreground/30 bg-muted text-muted-foreground",
   REFUNDED: "border-error/30 bg-error/10 text-error",

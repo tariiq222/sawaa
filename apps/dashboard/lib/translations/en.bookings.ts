@@ -192,7 +192,7 @@ export const enBookings: Record<string, string> = {
   "bookings.actions.action.cancel": "Cancel Booking",
   "bookings.actions.action.approveCancel": "Approve Cancellation",
   "bookings.actions.action.rejectCancel": "Reject Cancellation",
-  "bookings.actions.action.restoreNoShow": "Restore attendance",
+  "bookings.actions.action.restoreNoShow": "Restore booking",
   "bookings.actions.status.pending": "Awaiting Confirmation",
   "bookings.actions.status.pending_group_fill": "Awaiting Group Fill",
   "bookings.actions.status.awaiting_payment": "Awaiting Payment",
@@ -218,10 +218,10 @@ export const enBookings: Record<string, string> = {
 
   // restore-no-show dialog
   "bookings.restoreNoShow.title": "Restore booking from no-show",
-  "bookings.restoreNoShow.desc": "The booking will be restored to confirmed status with check-in time recorded; you can then complete it as usual.",
+  "bookings.restoreNoShow.desc": "The booking will return to confirmed status. Record check-in when the client arrives if it has not already been recorded.",
   "bookings.restoreNoShow.reasonLabel": "Reason *",
   "bookings.restoreNoShow.reasonPlaceholder": "Write the reason for restoring the booking...",
-  "bookings.restoreNoShow.confirm": "Restore attendance",
+  "bookings.restoreNoShow.confirm": "Restore booking",
 
   // pagination
   "bookings.pagination.page": "Page",
@@ -353,6 +353,7 @@ export const enBookings: Record<string, string> = {
   "bookings.pos.disabled.employee": "No times available",
   "bookings.pos.summary.title": "Booking Summary",
   "bookings.pos.summary.servicePrice": "Price",
+  "bookings.pos.summary.fromPackage": "Covered by package",
   "bookings.pos.confirm": "Confirm Booking",
   "bookings.pos.missingPrefix": "Complete first",
 
@@ -371,7 +372,7 @@ export const enBookings: Record<string, string> = {
   "bookings.pos.package.existing.title": "Client's Active Packages",
   "bookings.pos.package.existing.empty": "No active packages for this client",
   "bookings.pos.package.remaining": "{remaining} of {total} remaining",
-  "bookings.pos.package.use": "Book from this credit",
+  "bookings.pos.package.use": "Book using credit",
   "bookings.pos.package.buyNew": "Buy a new package",
   "bookings.pos.package.catalog.title": "Available Packages",
   "bookings.pos.package.catalog.empty": "No packages available for purchase",
@@ -409,6 +410,7 @@ export const enBookings: Record<string, string> = {
   "bookings.col.header.type": "Type",
   "bookings.col.header.datetime": "Appointment Date",
   "bookings.col.header.amount": "Amount",
+  "bookings.amount.fromPackage": "Paid from package",
   "bookings.col.header.paymentStatus": "Payment Status",
   "bookings.col.paymentStatus.unpaid": "Unpaid",
   "bookings.col.paymentStatus.pending": "Pending",
@@ -442,6 +444,8 @@ export const enBookings: Record<string, string> = {
   "bookings.col.type.group": "Group",
   "bookings.col.source.reception": "Front desk",
   "bookings.col.source.online": "Online booking",
+  "bookings.col.source.whatsapp": "From WhatsApp",
+  "bookings.col.source.aiChat": "From assistant chat",
   "bookings.col.quickAction.confirm": "Confirm Appointment",
   "bookings.col.quickAction.cancel": "Cancel Appointment",
 

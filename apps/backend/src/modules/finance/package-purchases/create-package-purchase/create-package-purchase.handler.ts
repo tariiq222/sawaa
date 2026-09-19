@@ -11,7 +11,17 @@ import { EventBusService } from '../../../../infrastructure/events';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
 import { ProcessPaymentHandler } from '../../process-payment/process-payment.handler';
 import { buildCreditConstraintCreate } from '../build-credit-constraints.helper';
+import { resolvePackageGroupOfferings } from '../../../org-experience/session-packages/package-group-offering.helper';
+import { decorateGroupedPackage } from '../../../org-experience/session-packages/package-group-catalog.helper';
+import {
+  createGroupedPackagePurchaseSnapshot,
+  GROUPED_PURCHASE_MODEL_VERSION,
+  issueGroupedPackageCredits,
+  parseGroupedPackagePurchaseSnapshot,
+  type GroupedPackagePurchaseSnapshot,
+} from '../package-group-purchase-snapshot';
 import { CreatePackagePurchaseDto } from './create-package-purchase.dto';
+import { buildPackageOfferSnapshot } from '../package-offer-snapshot';
 
 export type CreatePackagePurchaseCommand = CreatePackagePurchaseDto & {
   /** Optional override of the authenticated user id (set by the controller). */
@@ -21,11 +31,12 @@ export type CreatePackagePurchaseCommand = CreatePackagePurchaseDto & {
 export function packagePurchaseRequestFingerprint(
   dto: Pick<
     CreatePackagePurchaseCommand,
-    'packageId' | 'clientId' | 'branchId' | 'employeeId' | 'method' | 'notes'
+    'packageId' | 'packageFamilyId' | 'clientId' | 'branchId' | 'employeeId' | 'method' | 'notes'
   >,
 ): string {
   const canonical = JSON.stringify({
     packageId: dto.packageId,
+    ...(dto.packageFamilyId ? { packageFamilyId: dto.packageFamilyId } : {}),
     clientId: dto.clientId,
     branchId: dto.branchId,
     employeeId: dto.employeeId ?? null,
@@ -104,10 +115,21 @@ export class CreatePackagePurchaseHandler {
     const pkg = await this.prisma.sessionPackage.findFirst({
       where: { id: dto.packageId, archivedAt: null },
       include: {
+        groups: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            dependsOnGroup: { select: { key: true } },
+            items: {
+              orderBy: { sessionPosition: 'asc' },
+              include: { constraints: { include: { targets: true } } },
+            },
+          },
+        },
         items: {
           orderBy: { sortOrder: 'asc' },
           include: { constraints: { include: { targets: true } } },
         },
+        family: { select: { id: true, nameAr: true, nameEn: true, isActive: true, isPublic: true, archivedAt: true } },
       },
     });
     if (!pkg) {
@@ -115,6 +137,26 @@ export class CreatePackagePurchaseHandler {
     }
     if (!pkg.isActive) {
       throw new BadRequestException('SessionPackage is not active');
+    }
+    if (pkg.familyId) {
+      if (dto.packageFamilyId !== pkg.familyId) throw new BadRequestException('Selected package option does not belong to the requested family');
+      if (!pkg.family || !pkg.family.isActive || !pkg.family.isPublic || pkg.family.archivedAt) throw new BadRequestException('Package family is not available');
+      if (!pkg.isPublic) throw new BadRequestException('Package option is not public');
+    } else if (dto.packageFamilyId) {
+      throw new BadRequestException('Selected package is not attached to the requested family');
+    }
+
+    let groupedSnapshot: GroupedPackagePurchaseSnapshot | null = null;
+    let groupedPrice: { subtotal: number; discountAmount: number; finalPrice: number; itemUnitPrices: { unitPrice: number }[]; lines: { net: number }[] } | null = null;
+    if (pkg.modelVersion === GROUPED_PURCHASE_MODEL_VERSION) {
+      const decorated = decorateGroupedPackage(pkg);
+      const resolved = await resolvePackageGroupOfferings(this.prisma, decorated.groups);
+      const built = createGroupedPackagePurchaseSnapshot(
+        resolved.map((group, index) => ({ ...group, sortOrder: index })),
+        decorated.globalDiscount,
+      );
+      groupedSnapshot = built.snapshot;
+      groupedPrice = built.price;
     }
 
     // 2. Verify the client exists. Cross-BC — no FK, so a manual check is
@@ -131,7 +173,7 @@ export class CreatePackagePurchaseHandler {
     // the percentage itself (e.g. 10 = 10%), for FIXED it's integer halalas —
     // both forms are exactly what ComputePackagePriceService expects (the
     // Create/Update handlers already normalised them at write time).
-    const price = await this.pricing.compute({
+    const price = groupedPrice ?? await this.pricing.compute({
       items: pkg.items.map((it) => ({
         serviceId: it.serviceId,
         employeeId: it.employeeId,
@@ -157,9 +199,14 @@ export class CreatePackagePurchaseHandler {
           idempotencyKey: dto.idempotencyKey,
           requestFingerprint,
           packageId: pkg.id,
+          offerSnapshot: buildPackageOfferSnapshot(pkg) as unknown as Prisma.InputJsonValue,
           clientId: dto.clientId,
           branchId: dto.branchId,
           status: PackagePurchaseStatus.ACTIVE,
+          ...(groupedSnapshot && {
+            modelVersion: GROUPED_PURCHASE_MODEL_VERSION,
+            creditSnapshot: groupedSnapshot as unknown as Prisma.InputJsonValue,
+          }),
           subtotalSnapshot: new Prisma.Decimal(price.subtotal),
           discountSnapshot: new Prisma.Decimal(price.discountAmount),
           amountPaid: new Prisma.Decimal(price.finalPrice),
@@ -174,7 +221,10 @@ export class CreatePackagePurchaseHandler {
       // the FIFO credit-consumption logic in Phase 3 has the right number.
       // Per-credit create (not createMany) so each credit snapshots its item's
       // eligibility constraints — the rule the matching engine reads at booking.
-      for (let idx = 0; idx < pkg.items.length; idx++) {
+      if (groupedSnapshot) {
+        await issueGroupedPackageCredits(tx, purchase.id, groupedSnapshot);
+      }
+      for (let idx = 0; idx < (groupedSnapshot ? 0 : pkg.items.length); idx++) {
         const item = pkg.items[idx];
         await tx.packageCredit.create({
           data: {
@@ -183,6 +233,12 @@ export class CreatePackagePurchaseHandler {
             employeeId: item.employeeId,
             durationOptionId: item.durationOptionId,
             unitPriceSnapshot: new Prisma.Decimal(unitPriceByIndex[idx] ?? 0),
+            // Net paid for this item's sessions (after its discount), so reports
+            // value remaining sessions at what the client actually paid.
+            netValue:
+              price.lines?.[idx] != null
+                ? new Prisma.Decimal(price.lines[idx].net)
+                : null,
             totalQuantity: item.paidQuantity + item.freeQuantity,
             usedQuantity: 0,
             constraints: { create: buildCreditConstraintCreate(item) },
@@ -200,7 +256,7 @@ export class CreatePackagePurchaseHandler {
           // employeeId is optional in the DTO; default to the first item's
           // employee so the invoice always has a human on it (mirror of the
           // old bundle handler which required employeeId at the top level).
-          employeeId: dto.employeeId ?? pkg.items[0]?.employeeId ?? '',
+          employeeId: dto.employeeId ?? groupedSnapshot?.groups[0]?.employeeId ?? pkg.items[0]?.employeeId ?? '',
           bookingId: null,
           packagePurchaseId: purchase.id,
           subtotal: new Prisma.Decimal(price.subtotal),
@@ -208,20 +264,23 @@ export class CreatePackagePurchaseHandler {
           vatRate: new Prisma.Decimal(0),
           vatAmt: new Prisma.Decimal(0),
           total: new Prisma.Decimal(price.finalPrice),
-          status: 'DRAFT',
+          status: groupedSnapshot && price.finalPrice === 0 ? 'PAID' : 'DRAFT',
+          ...(groupedSnapshot && price.finalPrice === 0 && { issuedAt: new Date(), paidAt: new Date() }),
           notes: dto.notes ?? null,
         },
       });
 
-      const payment = await this.processPayment.execute({
-        invoiceId: invoice.id,
-        amount: price.finalPrice,
-        method: dto.method,
-        // Deterministic idempotency key per purchase — replaying this exact sale
-        // (dashboard retry, double-click) collapses to the existing Payment row.
-        idempotencyKey: `pkg-purchase:${purchase.id}`,
-        transaction: tx,
-      });
+      const payment = groupedSnapshot && price.finalPrice === 0
+        ? null
+        : await this.processPayment.execute({
+            invoiceId: invoice.id,
+            amount: price.finalPrice,
+            method: dto.method,
+            // Deterministic idempotency key per purchase — replaying this exact sale
+            // (dashboard retry, double-click) collapses to the existing Payment row.
+            idempotencyKey: `pkg-purchase:${purchase.id}`,
+            transaction: tx,
+          });
 
       return { purchase, invoiceId: invoice.id, payment };
     });
@@ -276,15 +335,23 @@ export class CreatePackagePurchaseHandler {
     return {
       purchase,
       invoiceId,
-      paymentId: payment.id,
-      credits: pkg.items.map((item, idx) => ({
-        serviceId: item.serviceId,
-        employeeId: item.employeeId,
-        durationOptionId: item.durationOptionId,
-        unitPriceSnapshot: unitPriceByIndex[idx] ?? 0,
-        totalQuantity: item.paidQuantity + item.freeQuantity,
-        usedQuantity: 0,
-      })),
+      paymentId: payment?.id ?? null,
+      credits: groupedSnapshot
+        ? groupedSnapshot.credits.map((credit) => ({
+          ...credit,
+          usedQuantity: 0,
+          reservedQuantity: 0,
+        }))
+        : pkg.items.map((item, idx) => ({
+          serviceId: item.serviceId,
+          employeeId: item.employeeId,
+          durationOptionId: item.durationOptionId,
+          unitPriceSnapshot: unitPriceByIndex[idx] ?? 0,
+          totalQuantity: item.paidQuantity + item.freeQuantity,
+          usedQuantity: 0,
+          // No booking exists yet at purchase time, so nothing is reserved.
+          reservedQuantity: 0,
+        })),
     };
   }
 
@@ -293,9 +360,10 @@ export class CreatePackagePurchaseHandler {
     requestFingerprint: string | null;
     [key: string]: unknown;
   }) {
+    const modelVersion = (purchase as { modelVersion?: string }).modelVersion;
     const invoice = await this.prisma.invoice.findUnique({
       where: { packagePurchaseId: purchase.id },
-      select: { id: true },
+      select: { id: true, total: true, status: true },
     });
     if (!invoice) {
       throw new ConflictException('Package purchase replay is missing its invoice');
@@ -305,7 +373,10 @@ export class CreatePackagePurchaseHandler {
       orderBy: { createdAt: 'desc' },
       select: { id: true },
     });
-    if (!payment) {
+    const isFreeGroupedSale = modelVersion === GROUPED_PURCHASE_MODEL_VERSION &&
+      Number((purchase as { amountPaid?: unknown }).amountPaid ?? 0) === 0 &&
+      Number(invoice.total) === 0 && invoice.status === 'PAID';
+    if (!payment && !isFreeGroupedSale) {
       throw new ConflictException('Package purchase replay is missing its payment');
     }
     const credits = await this.prisma.packageCredit.findMany({
@@ -316,14 +387,48 @@ export class CreatePackagePurchaseHandler {
         employeeId: true,
         durationOptionId: true,
         unitPriceSnapshot: true,
+        netValue: true,
         totalQuantity: true,
         usedQuantity: true,
+        reservedQuantity: true,
+        sessionPosition: true,
+        purchaseGroup: { select: { key: true, sortOrder: true } },
       },
     });
+    if (modelVersion === GROUPED_PURCHASE_MODEL_VERSION) {
+      const snapshot = parseGroupedPackagePurchaseSnapshot(
+        (purchase as { creditSnapshot?: Prisma.JsonValue | null }).creditSnapshot ?? null,
+      );
+      if (credits.length !== snapshot.credits.length || credits.some((credit) => !credit.purchaseGroup || credit.sessionPosition === null)) {
+        throw new ConflictException('Package purchase replay has an incomplete grouped credit set');
+      }
+      const byIdentity = new Map(credits.map((credit) => [
+        `${credit.purchaseGroup?.key ?? ''}:${credit.sessionPosition ?? -1}`,
+        credit,
+      ]));
+        return {
+        purchase,
+        invoiceId: invoice.id,
+        paymentId: payment?.id ?? null,
+        credits: snapshot.credits.map((credit) => {
+          const row = byIdentity.get(`${credit.groupKey}:${credit.sessionPosition}`);
+          if (!row || row.serviceId !== credit.serviceId || row.employeeId !== credit.employeeId ||
+            row.durationOptionId !== credit.durationOptionId || Number(row.unitPriceSnapshot) !== credit.unitPriceSnapshot ||
+            Number(row.netValue ?? -1) !== credit.netValue || row.totalQuantity !== 1) {
+            throw new ConflictException('Package purchase replay has corrupted grouped credit rows');
+          }
+          return {
+            ...credit,
+            usedQuantity: row.usedQuantity,
+            reservedQuantity: row.reservedQuantity,
+          };
+        }),
+      };
+    }
     return {
       purchase,
       invoiceId: invoice.id,
-      paymentId: payment.id,
+      paymentId: payment!.id,
       credits: credits.map((credit) => ({
         ...credit,
         unitPriceSnapshot: Number(credit.unitPriceSnapshot),

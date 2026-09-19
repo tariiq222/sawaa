@@ -36,15 +36,17 @@ export class PackageReportsHandler {
     let to = new Date(cmd.to);
     if (from > to) [from, to] = [to, from];
 
+    // Every body carries `kind` so the dashboard can discriminate the union
+    // (apps/dashboard/lib/types/package-report.ts) without guessing the shape.
     switch (cmd.report) {
       case PackageReportType.SALES:
-        return buildPackageSalesReport(this.prisma, { from, to });
+        return { kind: cmd.report, ...(await buildPackageSalesReport(this.prisma, { from, to })) };
       case PackageReportType.OUTSTANDING_CREDIT:
-        return buildOutstandingCreditReport(this.prisma, { from, to });
+        return { kind: cmd.report, ...(await buildOutstandingCreditReport(this.prisma, { from, to })) };
       case PackageReportType.CONSUMPTION:
-        return buildPackageConsumptionReport(this.prisma, { from, to });
+        return { kind: cmd.report, ...(await buildPackageConsumptionReport(this.prisma, { from, to })) };
       case PackageReportType.REFUNDED:
-        return buildRefundedPackagesReport(this.prisma, { from, to });
+        return { kind: cmd.report, ...(await buildRefundedPackagesReport(this.prisma, { from, to })) };
       default:
         throw new BadRequestException(`Unsupported package report type: ${cmd.report}`);
     }
