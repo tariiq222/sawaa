@@ -52,6 +52,15 @@ function jsonResponse(body: unknown, status = 200): Response {
   })
 }
 
+const CSRF_TOKEN = 'a'.repeat(64)
+
+function csrfBootstrapResponse(): Response {
+  return new Response(JSON.stringify({}), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+  })
+}
+
 describe('getMe', () => {
   it('uses the central client refresh flow for public client endpoints', async () => {
     vi.mocked(fetch)
@@ -109,14 +118,14 @@ describe('getMyBookings', () => {
 
 describe('updateMyProfile', () => {
   it('PATCHes /public/me with credentials and the payload', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ success: true, data: fakeProfile }),
-    )
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(csrfBootstrapResponse())
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: fakeProfile }))
 
     const result = await updateMyProfile({ name: 'New Name', phone: '+966500000001' })
 
     expect(result).toEqual(fakeProfile)
-    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    const [url, init] = vi.mocked(fetch).mock.calls[1]!
     expect(url).toBe('http://api.test/api/v1/public/me')
     expect(init?.method).toBe('PATCH')
     expect((init as RequestInit).credentials).toBe('include')
@@ -145,14 +154,14 @@ describe('getMyInvoices', () => {
 
 describe('requestRefund', () => {
   it('POSTs /public/refunds/request with credentials and invoiceId + reason', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ success: true, data: { status: 'REQUESTED' } }),
-    )
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(csrfBootstrapResponse())
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { status: 'REQUESTED' } }))
 
     const result = await requestRefund('inv_1', 'changed my mind')
 
     expect(result).toEqual({ status: 'REQUESTED' })
-    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    const [url, init] = vi.mocked(fetch).mock.calls[1]!
     expect(url).toBe('http://api.test/api/v1/public/refunds/request')
     expect(init?.method).toBe('POST')
     expect((init as RequestInit).credentials).toBe('include')
@@ -163,13 +172,13 @@ describe('requestRefund', () => {
   })
 
   it('omits reason when not provided', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ success: true, data: { status: 'REQUESTED' } }),
-    )
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(csrfBootstrapResponse())
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { status: 'REQUESTED' } }))
 
     await requestRefund('inv_2')
 
-    const [, init] = vi.mocked(fetch).mock.calls[0]!
+    const [, init] = vi.mocked(fetch).mock.calls[1]!
     expect(JSON.parse(init?.body as string)).toEqual({ invoiceId: 'inv_2' })
   })
 })
@@ -181,14 +190,14 @@ describe('cancelMyBooking', () => {
       booking: { id: 'booking_1' },
       requiresApproval: false,
     }
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ success: true, data: fakeResult }),
-    )
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(csrfBootstrapResponse())
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: fakeResult }))
 
     const result = await cancelMyBooking('booking_1', { reason: 'changed plans' })
 
     expect(result).toEqual(fakeResult)
-    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    const [url, init] = vi.mocked(fetch).mock.calls[1]!
     expect(url).toBe('http://api.test/api/v1/public/me/bookings/booking_1/cancel')
     expect(init?.method).toBe('PATCH')
     expect(JSON.parse(init?.body as string)).toEqual({ reason: 'changed plans' })
@@ -198,9 +207,9 @@ describe('cancelMyBooking', () => {
 describe('rescheduleMyBooking', () => {
   it('PATCHes /public/me/bookings/:id/reschedule with payload', async () => {
     const fakeResult = { booking: { id: 'booking_1' } }
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ success: true, data: fakeResult }),
-    )
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(csrfBootstrapResponse())
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: fakeResult }))
 
     const result = await rescheduleMyBooking('booking_1', {
       newScheduledAt: '2026-06-06T12:00:00.000Z',
@@ -208,7 +217,7 @@ describe('rescheduleMyBooking', () => {
     })
 
     expect(result).toEqual(fakeResult)
-    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    const [url, init] = vi.mocked(fetch).mock.calls[1]!
     expect(url).toBe('http://api.test/api/v1/public/me/bookings/booking_1/reschedule')
     expect(init?.method).toBe('PATCH')
     expect(JSON.parse(init?.body as string)).toEqual({
