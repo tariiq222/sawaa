@@ -23,7 +23,6 @@
     "tokens/**/*.ts",
     "theme/**/*.ts",
     "state-machines/**/*.ts",
-    "terminology/**/*.ts",
     "money/**/*.ts",
     "schemas/**/*.ts",
     "catalog/**/*.ts",

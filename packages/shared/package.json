@@ -48,10 +48,6 @@
       "types": "./dist/state-machines/index.d.ts",
       "default": "./dist/state-machines/index.js"
     },
-    "./terminology": {
-      "types": "./dist/terminology/index.d.ts",
-      "default": "./dist/terminology/index.js"
-    },
     "./money": {
       "types": "./dist/money/index.d.ts",
       "default": "./dist/money/index.js"
