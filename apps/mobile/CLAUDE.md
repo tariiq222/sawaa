@@ -53,13 +53,15 @@ Subdirectories: `services/client/` (client-only endpoints), `services/employee/`
 
 ## Deployment Strategy — One App Instance
 
+**Read the "Operational safety rules" section in [../../CLAUDE.md](../../CLAUDE.md) / [../../AGENTS.md](../../AGENTS.md) first** — they are binding here too.
+
 `apps/mobile/` is **single-tenant by design**. Every published build is locked to exactly one Sawa deployment.
 
 - **Current build:** `سواء للإرشاد الأسري` (Sawa) — bundle `sa.sawa.app`, vertical `family-consulting`. See `app.config.ts`.
 - **Request context:** Mobile sends only auth credentials. It must not send a legacy organization-selection header; the backend stamps the fixed single-tenant context from the authenticated session.
 - **No runtime organization switching.** Do not add an organization switcher, multi-org membership UI, or terminology hot-swap to mobile.
 - **Membership/organization-switch scaffolding has been removed.** The memberships service, the org-id (tenant) service, the memberships query hook, and the auth slice's organization/membership fields were deleted in the single-tenant cleanup. The backend has no `/auth/memberships` endpoint. Do not reintroduce them.
-- **Branding** is still fetched at runtime via `PublicBranding` — for this deployment only. `useTerminology()` is inert: the backend no longer exposes `/public/verticals/:slug/terminology`, so its `t()` always returns the caller-provided fallback (or the key). Switching organizations is not a user-facing operation.
+- **Branding** is still fetched at runtime via `PublicBranding` — for this deployment only. `useTerminology()` was deleted along with the endpoint it called (`/public/verticals/:slug/terminology` no longer exists on the backend). Switching organizations is not a user-facing operation.
 
 ### Adding a New Branded App
 
@@ -81,8 +83,8 @@ Backend, dashboard, and admin do not change.
 
 ## Terminology
 
-- `hooks/useTerminology.ts` mirrors the dashboard's hook, but is **inert**: the `/public/verticals/:slug/terminology` endpoint it targets was removed in the single-tenant cleanup, so `t(key, fallback)` always resolves to the fallback (or the key).
-- Do not wire it to a new endpoint; prefer plain i18n keys for new screens.
+- `hooks/useTerminology.ts` **no longer exists** (deleted with the rest of the multi-tenant scaffolding; verified 2026-09-21). The backend exposes no `/public/verticals/:slug/terminology` endpoint.
+- Do not recreate it and do not add a replacement: use plain i18n keys for every new screen.
 
 ## Push Notifications (FCM)
 
@@ -101,7 +103,7 @@ Backend, dashboard, and admin do not change.
 ## Key Rules
 
 - No `any` in TypeScript
-- No hardcoded strings — use i18n keys (and `useTerminology` for vertical-sensitive nouns)
+- No hardcoded strings — use i18n keys (there is no `useTerminology`; vertical-sensitive terminology was removed with the multi-tenant scaffolding)
 - No hardcoded colors — **STRICT: No hex colors (#...) or ad-hoc RGBA in components.** Use `sawaaTokens` or `sawaaColors` from `theme/sawaa/tokens.ts`, or the shared re-exports in `theme/tokens.ts`.
 - **Deprecated: `theme/glass.ts` has been deleted.** Use the unified Sawaa design system (`theme/sawaa/`).
 - 350-line max per file

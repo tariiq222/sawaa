@@ -73,19 +73,34 @@ pnpm --filter=dashboard run e2e -- path/to/spec.ts
 
 Sawa serves exactly one counseling center. There is no organization switching and no subscription billing, and Prisma queries carry no `organizationId` filters.
 
-**Dead scaffolding status (verified 2026-07-29):**
+**Dead scaffolding status (re-verified 2026-09-21):**
 
-| File | Status | Action |
-|------|--------|--------|
-| `apps/dashboard/hooks/use-terminology.ts` | **Deleted 2026-06-22** | None — already removed. Do not reintroduce. |
-| `apps/mobile/hooks/useTerminology.ts` | **Inert** (calls dead endpoint, falls back to provided label) | Treat as removed. Do not wire to new endpoints. |
-| `apps/mobile/services/organization.ts` | **Empty export** (dead) | Treat as removed. |
-| `apps/mobile/components/features/settings/OrganizationSwitcherSection.tsx` | **Returns null** (no-op) | Treat as removed. |
-| `apps/mobile/hooks/useTerminology.test.ts` | Tests pass against fallback only | Treat as removed. |
+| Path | Status |
+|------|--------|
+| `apps/dashboard/hooks/use-terminology.ts` | **Deleted** — file absent, no references remain |
+| `apps/mobile/hooks/useTerminology.ts` (+ its test) | **Deleted** — file absent, no references remain |
+| `apps/mobile/hooks/useTerminology.test.ts` | **Deleted** — file absent |
+| `apps/mobile/components/features/settings/OrganizationSwitcherSection.tsx` | **Deleted** — file absent |
+| `apps/mobile/services/organization.ts` | **Comment-only stub** (`export {}`) — keep as a stub, do not add behaviour |
 
-Do not wire any of the above to new endpoints. See [apps/dashboard/CLAUDE.md](apps/dashboard/CLAUDE.md) and [apps/mobile/CLAUDE.md](apps/mobile/CLAUDE.md) for per-app details.
+The backend exposes no `/public/verticals/:slug/terminology` endpoint and no `/auth/memberships` endpoint. Do not wire any of the above back up, and do not add new terminology or organization-switching surfaces. See [apps/dashboard/CLAUDE.md](apps/dashboard/CLAUDE.md) and [apps/mobile/CLAUDE.md](apps/mobile/CLAUDE.md) for per-app details.
 
 Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
+
+## Operational safety rules (verified 2026-09-21)
+
+These protect encrypted data and live operations. Breaking one is a data-loss or production incident, not a lint error.
+
+- **Never change `DEFAULT_ORG_ID` or the encryption AAD.** Zoom / SMS / Email / Moyasar / AI provider credentials are AES-256-GCM encrypted with `DEFAULT_ORG_ID` as AAD (`apps/backend/src/common/constants.ts`); any other value silently makes every stored credential undecryptable.
+- **Never rename `PLATFORM_SETTINGS_KEY`.** Production boot fails without it and existing platform-settings ciphertext stays bound to that key.
+- **Never drop `organizationId` from money, booking, or comms events** before the staff guards in `apps/backend/src/modules/comms/events/` (`on-payment-completed-staff`, `on-booking-cancelled-staff`, `on-client-enrolled-staff`) stop reading it — removing it silently kills staff notifications.
+- **Do not refactor `moyasar-webhook`, `refund-payment`, or `create-booking` for cleanliness** without owner approval, tests, and a Moyasar sandbox run.
+- **Never run `apps/backend/scripts/billing/*` against a live database.**
+- **Never reintroduce `FeatureKey`, subscription plans, tenant switching, memberships, or `useTerminology`.** They were deleted in the single-tenant cleanup; only built `packages/shared/dist` artifacts still mention feature keys.
+- **Never move `DEFAULT_VAT_RATE` off `0`** (`apps/backend/src/modules/finance/create-invoice/create-invoice.handler.ts`) and never hardcode a rate such as 15% in copy, Swagger, or fallbacks.
+- **SMS dispatch goes through `SmsProviderFactory.resolve()`** with no tenant argument. Do not reintroduce `forCurrentTenant(orgId)`.
+- **Prisma queries carry no `organizationId` filter.** `DEFAULT_ORG_ID` exists for encryption AAD and the fixed single-tenant context only.
+- **Root commands do not cover mobile** — run mobile as `pnpm --dir apps/mobile ...`.
 
 ## Migrations are immutable
 

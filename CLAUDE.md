@@ -73,11 +73,28 @@ pnpm --filter=dashboard run e2e -- path/to/spec.ts
 
 Sawa serves exactly one counseling center. There is no organization switching and no subscription billing, and Prisma queries carry no `organizationId` filters.
 
-The mobile app's `memberships`/`tenant-switch` services and membership query hook were deleted in the single-tenant cleanup — do not reintroduce them. The only intentional leftovers are the terminology hooks: the dashboard's `useTerminology` (`hooks/use-terminology.ts`) resolves a small static label map locally with no backend call, and the mobile `useTerminology` (`hooks/useTerminology.ts`) targets a `/public/verticals/:slug/terminology` endpoint that no longer exists, so its `t()` always falls back to the provided label. Both are inert; do not wire them to new endpoints.
+Everything from the multi-tenant era is gone: `memberships`, `tenant-switch`, the mobile membership query hook, `OrganizationSwitcherSection.tsx`, the dashboard's `hooks/use-terminology.ts`, and the mobile's `hooks/useTerminology.ts` were all deleted (verified 2026-09-21 — the files do not exist and the backend exposes no `/public/verticals/:slug/terminology` endpoint). Do not reintroduce any of them.
+
+The only surviving artifact is `apps/mobile/services/organization.ts`, which exists solely as a comment-only stub (`export {}`) pointing callers at the `/public/branding` endpoint and the `useBranding` hook. Keep it a stub; do not add behaviour.
 
 Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
 
 Do not introduce new `platform*` / `organization*` / `tenant*` / `membership*` concepts in code, schema, or env var naming. Exception: the existing required `PLATFORM_SETTINGS_KEY` env var is legacy — do not rename it; the backend fails to boot without it in prod.
+
+## Operational safety rules (verified 2026-09-21)
+
+These protect encrypted data and live operations. Breaking one is a data-loss or production incident, not a lint error.
+
+- **Never change `DEFAULT_ORG_ID` or the encryption AAD.** Zoom / SMS / Email / Moyasar / AI provider credentials are AES-256-GCM encrypted with `DEFAULT_ORG_ID` as AAD (`apps/backend/src/common/constants.ts`); any other value silently makes every stored credential undecryptable.
+- **Never rename `PLATFORM_SETTINGS_KEY`.** Production boot fails without it and existing platform-settings ciphertext stays bound to that key.
+- **Never drop `organizationId` from money, booking, or comms events** before the staff guards in `apps/backend/src/modules/comms/events/` (`on-payment-completed-staff`, `on-booking-cancelled-staff`, `on-client-enrolled-staff`) stop reading it — removing it silently kills staff notifications.
+- **Do not refactor `moyasar-webhook`, `refund-payment`, or `create-booking` for cleanliness** without owner approval, tests, and a Moyasar sandbox run.
+- **Never run `apps/backend/scripts/billing/*` against a live database.**
+- **Never reintroduce `FeatureKey`, subscription plans, tenant switching, memberships, or `useTerminology`.** They were deleted in the single-tenant cleanup; only built `packages/shared/dist` artifacts still mention feature keys.
+- **Never move `DEFAULT_VAT_RATE` off `0`** (`apps/backend/src/modules/finance/create-invoice/create-invoice.handler.ts`) and never hardcode a rate such as 15% in copy, Swagger, or fallbacks.
+- **SMS dispatch goes through `SmsProviderFactory.resolve()`** with no tenant argument. Do not reintroduce `forCurrentTenant(orgId)`.
+- **Prisma queries carry no `organizationId` filter.** `DEFAULT_ORG_ID` exists for encryption AAD and the fixed single-tenant context only.
+- **Root commands do not cover mobile** — run mobile as `pnpm --dir apps/mobile ...`.
 
 ## Business rules (owner-confirmed invariants)
 
