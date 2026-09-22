@@ -135,7 +135,7 @@ export const enFinance: Record<string, string> = {
   "invoices.detail.loading": "Loading...",
   "invoices.detail.amounts": "Amounts",
   "invoices.detail.subtotal": "Subtotal",
-  "invoices.detail.vat": "VAT (15%)",
+  "invoices.detail.vat": "VAT",
   "invoices.detail.total": "Total",
   "invoices.detail.status": "Status",
   "invoices.detail.hash": "Hash",

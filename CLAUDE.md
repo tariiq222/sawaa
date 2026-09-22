@@ -73,11 +73,17 @@ pnpm --filter=dashboard run e2e -- path/to/spec.ts
 
 Sawa serves exactly one counseling center. There is no organization switching and no subscription billing, and Prisma queries carry no `organizationId` filters.
 
-The mobile app's `memberships`/`tenant-switch` services and membership query hook were deleted in the single-tenant cleanup — do not reintroduce them. The only intentional leftovers are the terminology hooks: the dashboard's `useTerminology` (`hooks/use-terminology.ts`) resolves a small static label map locally with no backend call, and the mobile `useTerminology` (`hooks/useTerminology.ts`) targets a `/public/verticals/:slug/terminology` endpoint that no longer exists, so its `t()` always falls back to the provided label. Both are inert; do not wire them to new endpoints.
+`memberships`, `tenant-switch`, `useTerminology` (`apps/dashboard/hooks/use-terminology.ts` and `apps/mobile/hooks/useTerminology.ts`), and `OrganizationSwitcherSection` were deleted in the single-tenant cleanup — do not reintroduce them or wire them to new endpoints.
+
+## Operational safety rules
 
 Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
 
+Do not change `DEFAULT_ORG_ID` or its cryptographic context/AAD usage; existing encrypted credentials depend on that stable context.
+
 Do not introduce new `platform*` / `organization*` / `tenant*` / `membership*` concepts in code, schema, or env var naming. Exception: the existing required `PLATFORM_SETTINGS_KEY` env var is legacy — do not rename it; the backend fails to boot without it in prod.
+
+Do not strip `organizationId` from money/comms events. It remains a fixed deployment identifier in those payloads, not an instruction to restore tenant switching or add Prisma query filters.
 
 ## Business rules (owner-confirmed invariants)
 

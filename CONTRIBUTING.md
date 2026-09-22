@@ -114,7 +114,7 @@ When changing backend endpoints or DTOs:
 - **`apps/backend/openapi.json` is committed.** Keep it in sync (`pnpm openapi:sync`).
 - **Package names stay as-is.** `@sawaa/ui` and `@sawaa/website` scopes are inherited from the original fork — do not rename them.
 - **Money is stored as integer halalas** — never floats.
-- **Dead frontend stubs stay dead.** `useTerminology` (dashboard) and the mobile `memberships`/`tenant-switch` services are inert leftovers; do not wire them up.
+- **Dead frontend stubs stay dead.** `useTerminology`, memberships, and tenant-switch were deleted (verified 2026-09-21). Do not reintroduce them. See Operational safety rules in [CLAUDE.md](CLAUDE.md). Do not change `DEFAULT_ORG_ID`, rename `PLATFORM_SETTINGS_KEY`, or strip `organizationId` from money/comms events.
 
 ## Pre-PR Checklist
 
