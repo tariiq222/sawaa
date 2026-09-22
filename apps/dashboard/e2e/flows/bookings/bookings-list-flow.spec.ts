@@ -143,19 +143,11 @@ test.describe('Bookings List — user flow', () => {
       'button:has-text("حجز جديد"), button:has-text("إضافة"), a[href="/bookings/create"]',
     ).first();
 
-    // E2E-CONTRACT: allow-optional-click — the create button may be behind a
-    // feature gate or differently labelled across environments, so its presence
-    // is genuinely optional; the else branch asserts the page rendered instead.
-    if (await createBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await createBtn.click();
-      // The create action renders the booking POS inline (not in a Dialog and
-      // not a page navigation) — wait for the POS container to appear.
-      const pos = page.locator('.rounded-2xl.border').filter({ hasText: /حجز جديد/ });
-      await expect(pos).toBeVisible({ timeout: 10_000 });
-    } else {
-      // Button may be behind a feature gate or differently labelled
-      await expect(page.locator('body')).toBeVisible();
-    }
+    await expect(createBtn).toBeVisible({ timeout: 5_000 });
+    await createBtn.click();
+    // The create action renders the booking POS inline.
+    const pos = page.locator('.rounded-2xl.border').filter({ hasText: /حجز جديد/ });
+    await expect(pos).toBeVisible({ timeout: 10_000 });
   });
 
 });
