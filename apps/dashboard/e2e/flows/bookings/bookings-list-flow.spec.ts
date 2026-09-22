@@ -14,6 +14,60 @@
 
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../../fixtures/auth';
+import { getTestTenant } from '../../fixtures/tenant';
+import {
+  cleanupBooking,
+  cleanupClient,
+  cleanupEmployee,
+  cleanupService,
+  seedBooking,
+  seedClient,
+  seedEmployee,
+  seedService,
+  type SeededBooking,
+  type SeededClient,
+  type SeededEmployee,
+  type SeededService,
+} from '../../fixtures/seed';
+
+let token = '';
+let seededClient: SeededClient;
+let seededService: SeededService;
+let seededEmployee: SeededEmployee;
+let seededBooking: SeededBooking;
+const runId = String(Date.now()).slice(-6);
+
+test.beforeAll(async () => {
+  token = (await getTestTenant()).accessToken;
+  seededClient = await seedClient(token, {
+    firstName: 'قائمة',
+    lastName: `حجز ${runId}`,
+    gender: 'FEMALE',
+  });
+  seededService = await seedService(token, {
+    nameAr: 'خدمة قائمة الحجوزات',
+    nameEn: 'Bookings List Service',
+    durationMins: 30,
+    price: 100,
+  });
+  seededEmployee = await seedEmployee(token, {
+    name: `ممارس قائمة الحجوزات ${runId}`,
+    gender: 'MALE',
+  });
+  seededBooking = await seedBooking(token, {
+    clientId: seededClient.id,
+    employeeId: seededEmployee.id,
+    serviceId: seededService.id,
+    payAtClinic: true,
+  });
+});
+
+test.afterAll(async () => {
+  if (seededBooking?.id) await cleanupBooking(seededBooking.id, token).catch(() => undefined);
+  if (seededEmployee?.id) await cleanupEmployee(seededEmployee.id, token).catch(() => undefined);
+  if (seededService?.id) await cleanupService(seededService.id, token).catch(() => undefined);
+  if (seededClient?.id) await cleanupClient(seededClient.id, token).catch(() => undefined);
+});
 
 test.describe('Bookings List — user flow', () => {
 
@@ -25,36 +79,42 @@ test.describe('Bookings List — user flow', () => {
     await page.goto('/bookings');
     await expect(page).toHaveURL(/\/bookings/);
 
-    // 3. Wait for table rows to appear (seeded data or empty state)
-    const table = page.locator('table');
-    const emptyState = page.locator('text=/لا توجد حجوزات|no bookings/i');
-    await expect(table.or(emptyState).first()).toBeVisible({ timeout: 15_000 });
+    // The list defaults to Today, while seedBooking creates tomorrow's slot.
+    // Select All before searching so this assertion exercises the seeded row.
+    const allTab = page.getByRole('tab', { name: /^الكل$|^All$/ }).first();
+    await expect(allTab).toBeVisible({ timeout: 10_000 });
+    await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          new URL(r.url()).pathname.endsWith('/api/proxy/dashboard/bookings') &&
+          r.request().method() === 'GET' &&
+          r.ok(),
+        { timeout: 15_000 },
+      ),
+      allTab.click(),
+    ]);
 
-    // 4. The bookings table or empty state must be visible
+    const search = page.getByPlaceholder(/بحث بالاسم|Search by name/i).first();
+    await expect(search).toBeVisible({ timeout: 10_000 });
+    await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          new URL(r.url()).pathname.endsWith('/api/proxy/dashboard/bookings') &&
+          r.request().method() === 'GET' &&
+          r.ok(),
+        { timeout: 15_000 },
+      ),
+      search.fill(seededBooking.id),
+    ]);
 
-    const hasTable = await table.isVisible().catch(() => false);
-    const hasEmpty = await emptyState.isVisible().catch(() => false);
+    const clientBtn = page
+      .getByRole('button', { name: new RegExp(escapeRegex(`${seededClient.firstName} ${seededClient.lastName}`)) })
+      .first();
+    await expect(clientBtn).toBeVisible({ timeout: 20_000 });
+    await clientBtn.click();
 
-    if (hasTable) {
-      // 5. Open the detail sheet. Only the client-name cell is a real <button>
-      //    wired to onRowClick — clicking the bare <tr> does nothing — so click
-      //    the first button inside the row (the client cell is the first one).
-      const firstRow = page.locator('tbody tr').first();
-      await expect(firstRow).toBeVisible({ timeout: 10_000 });
-      const clientBtn = firstRow.getByRole('button').first();
-      await expect(clientBtn).toBeVisible({ timeout: 10_000 });
-      await clientBtn.click();
-
-      // 6. Detail sheet (Dialog) should open
-      const sheet = page.locator('[role="dialog"]').first();
-      await expect(sheet).toBeVisible({ timeout: 10_000 });
-    } else if (hasEmpty) {
-      // No bookings yet — this is valid for a fresh organization
-      await expect(emptyState).toBeVisible();
-    } else {
-      // At minimum, the page should be stable
-      await expect(page.locator('body')).toBeVisible();
-    }
+    // Detail sheet (Dialog) must open for the exact seeded booking row.
+    await expect(page.locator('[role="dialog"]').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('login → bookings list → filter by status "confirmed"', async ({ page }) => {
@@ -99,3 +159,7 @@ test.describe('Bookings List — user flow', () => {
   });
 
 });
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
