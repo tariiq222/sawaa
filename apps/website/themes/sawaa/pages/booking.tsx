@@ -1,4 +1,4 @@
-import BookingWizardPage from '@/app/booking/page';
+import BookingWizardPage from '@/features/booking/booking-wizard';
 
 export function SawaaBookingPage() {
   return (

@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Route } from '@playwright/test'
+import { loginAs } from '../../fixtures/auth'
 
 test.describe('Error States', () => {
   test('should display 404 page for non-existent route', async ({ page }) => {
@@ -50,29 +51,52 @@ test.describe('Error States', () => {
     expect(typeof hasError).toBe('boolean')
   })
 
-  test('should display error boundary on API failure', async ({ page }) => {
-    await page.route('**/api/**', (route) => {
-      route.abort('failed')
+  test.describe('authenticated API recovery', () => {
+    test('should recover the bookings page after a temporary API failure', async ({ page }) => {
+      const abortApi = async (route: Route) => {
+        await route.abort('failed')
+      }
+
+      // Auth setup refreshes the rotating ck_refresh cookie immediately before
+      // the fault injection. This avoids consuming a shared storage-state token
+      // that an earlier flow may already have rotated.
+      await loginAs(page, 'admin')
+      await page.route('**/api/**', abortApi)
+
+      await page.goto('/bookings')
+
+      const restoreError = page
+        .getByRole('alert')
+        .filter({ hasText: /تعذّر التحقق من الجلسة مؤقتاً|could not verify your session/i })
+      const retryButton = page.getByRole('button', { name: /إعادة المحاولة|retry/i })
+
+      // AuthGate holds the route behind its explicit session-verification state
+      // while bootstrap requests fail; authenticated content must not leak through.
+      await expect(restoreError).toBeVisible({ timeout: 10_000 })
+      await expect(retryButton).toBeVisible()
+      await expect(page.getByRole('navigation')).toHaveCount(0)
+      await expect(page.locator('main')).toHaveCount(0)
+
+      // Let the retry perform a fresh refresh + /me sequence. The old aborted
+      // bootstrap request must not restore the error after this succeeds.
+      await page.unroute('**/api/**', abortApi)
+      const refreshResponse = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === '/api/proxy/auth/refresh' &&
+          response.request().method() === 'POST' &&
+          response.ok(),
+      )
+      await retryButton.click()
+      await refreshResponse
+
+      await expect(page.getByRole('heading', { name: /الحجوزات|bookings/i })).toBeVisible({
+        timeout: 15_000,
+      })
+      await expect(
+        page.locator('table').or(page.getByText(/لا توجد حجوزات|no bookings/i)).first(),
+      ).toBeVisible({ timeout: 15_000 })
+      await expect(restoreError).toBeHidden({ timeout: 5_000 })
     })
-
-    await page.goto('/bookings')
-
-    // App-Router app gates auth client-side: an aborted-API load keeps the same
-    // URL and renders either the dashboard shell (sidebar/main) or the inline
-    // login gate (#identifier). Assert a concrete app landmark mounted (no
-    // crash) instead of a generic <body> check; the retry check stays best-effort.
-    await expect(
-      page.locator('#identifier, main, nav, [data-sidebar]').first(),
-    ).toBeVisible({ timeout: 10_000 })
-
-    const retryButton = page.locator('button:has-text("retry"), button:has-text("إعادة المحاولة")')
-    const hasRetry = await retryButton.first().isVisible().catch(() => false)
-
-    if (hasRetry) {
-      await expect(retryButton.first()).toBeVisible()
-      await retryButton.first().click()
-      await expect(retryButton.first()).toBeHidden({ timeout: 5_000 })
-    }
   })
 
   test('clearing the session shows the inline login gate (no dashboard content)', async ({ page }) => {

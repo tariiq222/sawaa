@@ -226,8 +226,8 @@ describe('apiRequest 401 refresh flow', () => {
     const body = JSON.stringify({ clientMessageId: 'message-1', text: 'hello' })
     const csrfToken = 'b'.repeat(64)
     vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
       .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': csrfToken }))
+      .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
       .mockResolvedValueOnce(
         jsonResponse({ success: true, data: { accessToken: 'new.access' } }),
       )
@@ -243,12 +243,12 @@ describe('apiRequest 401 refresh flow', () => {
 
     const calls = vi.mocked(fetch).mock.calls
     expect(calls.map(([url]) => url)).toEqual([
-      'http://api.test/public/me/chat/conversations/c1/messages',
       'http://api.test/public/branding',
+      'http://api.test/public/me/chat/conversations/c1/messages',
       'http://api.test/public/auth/refresh',
       'http://api.test/public/me/chat/conversations/c1/messages',
     ])
-    expect(calls[1]?.[1]).toMatchObject({ method: 'GET', credentials: 'include' })
+    expect(calls[0]?.[1]).toMatchObject({ method: 'GET', credentials: 'include' })
     expect(new Headers(calls[2]?.[1]?.headers).get('x-csrf-token')).toBe(csrfToken)
     expect(calls[3]?.[1]?.body).toBe(body)
     expect(new Headers(calls[3]?.[1]?.headers).get('authorization')).toBe('Bearer new.access')
@@ -475,7 +475,7 @@ describe('apiRequest 401 refresh flow', () => {
 })
 
 describe('apiRequest CSRF mismatch recovery', () => {
-  it('rebootstraps once after a stale tab token and retries the unchanged mutation body', async () => {
+  it('replays once with the token echoed on the CSRF 403, without a second bootstrap GET', async () => {
     vi.stubGlobal('window', {})
     const staleToken = 'a'.repeat(64)
     const freshToken = 'b'.repeat(64)
@@ -489,7 +489,6 @@ describe('apiRequest CSRF mismatch recovery', () => {
           { 'X-CSRF-Token': freshToken },
         ),
       )
-      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': freshToken }))
       .mockResolvedValueOnce(jsonResponse({ success: true, data: { id: 'message-1' } }))
 
     const token = await ensureCsrfToken()
@@ -506,12 +505,34 @@ describe('apiRequest CSRF mismatch recovery', () => {
     expect(calls.map(([url]) => url)).toEqual([
       'http://api.test/public/branding',
       'http://api.test/public/chat/conversations/c1/messages',
-      'http://api.test/public/branding',
       'http://api.test/public/chat/conversations/c1/messages',
     ])
     expect(calls[1]?.[1]?.body).toBe(body)
-    expect(calls[3]?.[1]?.body).toBe(body)
-    expect(new Headers(calls[3]?.[1]?.headers).get('x-csrf-token')).toBe(freshToken)
+    expect(calls[2]?.[1]?.body).toBe(body)
+    expect(new Headers(calls[2]?.[1]?.headers).get('x-csrf-token')).toBe(freshToken)
+  })
+
+  it('attaches CSRF on the first public login POST so the browser does not 403 first', async () => {
+    vi.stubGlobal('window', {})
+    const token = 'c'.repeat(64)
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({}, 200, { 'X-CSRF-Token': token }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { clientId: 'c1' } }))
+
+    await expect(
+      apiRequest('/public/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({ phone: '+966501234567', password: 'x' }),
+      }),
+    ).resolves.toEqual({ clientId: 'c1' })
+
+    const calls = vi.mocked(fetch).mock.calls
+    expect(calls.map(([url]) => url)).toEqual([
+      'http://api.test/public/branding',
+      'http://api.test/public/auth/login',
+    ])
+    expect(new Headers(calls[1]?.[1]?.headers).get('x-csrf-token')).toBe(token)
   })
 
   it('does not retry a second CSRF rejection', async () => {

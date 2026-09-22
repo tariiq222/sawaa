@@ -250,6 +250,17 @@ async function requestWithParser<T>(
     setHeader(headers, 'Content-Type', 'application/json')
   }
   if (token) setHeader(headers, 'Authorization', `Bearer ${token}`)
+  // Public cookie mutations (login/register/logout/me) are CSRF-gated.
+  // Chat already attaches the header; login/register did not, so the first
+  // POST always 403'd in the browser console before the retry path ran.
+  if (
+    isUnsafeMethod(options.method) &&
+    path.startsWith('/public/') &&
+    typeof window !== 'undefined' &&
+    !hasHeader(headers, CSRF_HEADER_NAME)
+  ) {
+    setHeader(headers, CSRF_HEADER_NAME, await ensureCsrfToken())
+  }
 
   const res = await fetch(`${config.baseUrl}${path}`, { ...options, headers })
   captureCsrfToken(res)
@@ -291,10 +302,14 @@ async function requestWithParser<T>(
       isUnsafeMethod(options.method) &&
       isReplayableBody(options.body)
     ) {
-      // CSRF rejects before the controller, so one exact-body replay after a
-      // fresh safe GET cannot duplicate a mutation. A second 403 is surfaced.
-      invalidateCsrfToken()
-      const freshToken = await ensureCsrfToken()
+      // The 403 already rotated/echoed the cookie and exposed it on the
+      // response header. Replaying with that value avoids a second GET that
+      // can mint a competing cookie before the browser stores the first.
+      // CSRF rejects before the controller, so one exact-body replay cannot
+      // duplicate a mutation. A second 403 is surfaced.
+      const replayToken = csrfToken
+      if (!replayToken) invalidateCsrfToken()
+      const freshToken = replayToken ?? (await ensureCsrfToken())
       return requestWithParser(
         path,
         withCsrfHeader(options, freshToken),
