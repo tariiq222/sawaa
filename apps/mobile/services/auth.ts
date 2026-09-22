@@ -146,6 +146,15 @@ export const authService = {
     return normalized;
   },
 
+  /**
+   * Close the signed-in client account, then clear this device.
+   * The server keeps clinical and financial records and revokes every session.
+   */
+  async requestAccountDeletion(): Promise<void> {
+    await api.delete('/mobile/client/profile');
+    await this.logout();
+  },
+
   /** Logout: call backend + clear storage + clear Redux */
   async logout(): Promise<void> {
     const epoch = fenceSession();

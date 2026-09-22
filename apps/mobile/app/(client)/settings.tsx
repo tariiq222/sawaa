@@ -24,12 +24,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 import { ThemedText } from '@/theme/components/ThemedText';
+import { sawaaColors } from '@/theme/sawaa';
 import { ThemedCard } from '@/theme/components/ThemedCard';
 import { useTheme } from '@/theme/useTheme';
 import { UnverifiedEmailBanner } from '@/components/features/auth/UnverifiedEmailBanner';
 import { SettingsProfileSection } from './settings-profile-section';
 import { clientProfileService } from '@/services/client/profile';
 import { registerForPushAsync, unregisterPushAsync } from '@/services/push';
+import { authService } from '@/services/auth';
 
 const LANGUAGE_KEY = '@sawaa/language';
 const PUSH_KEY = '@sawaa/push-enabled';
@@ -170,6 +172,26 @@ export default function SettingsScreen() {
           </View>
         </ThemedCard>
 
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountBody'), [
+              { text: t('profile.deleteAccountCancel'), style: 'cancel' },
+              {
+                text: t('profile.deleteAccountConfirm'),
+                style: 'destructive',
+                onPress: () => {
+                  void authService.requestAccountDeletion()
+                    .catch(() => Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountError')));
+                },
+              },
+            ]);
+          }}
+          style={styles.deleteBtn}
+        >
+          <ThemedText variant="body" style={styles.deleteText}>{t('profile.deleteAccount')}</ThemedText>
+        </Pressable>
+
         {/* About Section */}
         <ThemedCard padding={20}>
           <SectionHeader icon={Info} label={t('settings.about')} />
@@ -277,6 +299,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  deleteBtn: { alignItems: 'center', paddingVertical: 16 },
+  deleteText: { color: sawaaColors.accent.coral },
   aboutRow: {
     flexDirection: 'row',
     alignItems: 'center',

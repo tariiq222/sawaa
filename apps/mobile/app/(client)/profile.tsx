@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import { useDir } from '@/hooks/useDir';
 import { useAppSelector, useAppDispatch } from '@/hooks/use-redux';
 import { logout } from '@/stores/slices/auth-slice';
 import { unregisterPushAsync } from '@/services/push';
+import { authService } from '@/services/auth';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useSummary } from '@/hooks/queries';
 import { PRIVACY_POLICY_URL } from '@/constants/config';
@@ -244,6 +245,27 @@ export default function ProfileScreen() {
         ) : null}
 
         <Animated.View entering={FadeInDown.delay(420).duration(700).easing(Easing.out(Easing.cubic))}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountBody'), [
+                { text: t('profile.deleteAccountCancel'), style: 'cancel' },
+                {
+                  text: t('profile.deleteAccountConfirm'),
+                  style: 'destructive',
+                  onPress: () => {
+                    void authService.requestAccountDeletion()
+                      .catch(() => Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountError')));
+                  },
+                },
+              ]);
+            }}
+            style={styles.deleteBtn}
+          >
+            <Text style={[styles.deleteText, { fontFamily: f700 }]}>
+              {t('profile.deleteAccount')}
+            </Text>
+          </Pressable>
           <Glass variant="regular" radius={sawaaRadius.pill} onPress={async () => {
             try { await unregisterPushAsync(); } catch { /* best-effort */ }
             dispatch(logout());
@@ -309,6 +331,8 @@ const styles = StyleSheet.create({
   sosTitle: { fontSize: 13.5, color: sawaaColors.ink[900] },
   sosSub: { fontSize: 11, color: sawaaColors.ink[500], marginTop: 2 },
   sosPhone: { fontSize: 12, color: sawaaColors.accent.coral },
+  deleteBtn: { alignItems: 'center', paddingVertical: 12 },
+  deleteText: { fontSize: 14, color: sawaaColors.accent.rose },
   logoutBtn: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   logoutText: { fontSize: 14, color: sawaaColors.accent.coral },
 });

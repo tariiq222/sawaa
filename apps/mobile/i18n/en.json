@@ -260,6 +260,12 @@
     "logoutConfirm": "Are you sure you want to logout?",
     "edit": "Edit",
     "signOut": "Sign out",
+    "deleteAccount": "Delete account",
+    "deleteAccountTitle": "Delete account",
+    "deleteAccountBody": "Your login will be closed and you will not be able to sign in with this account. Appointment and invoice records stay with the center as required.",
+    "deleteAccountConfirm": "Delete account",
+    "deleteAccountCancel": "Cancel",
+    "deleteAccountError": "Could not delete the account. Try again.",
     "crisisSupport": {
       "title": "Crisis support · 24/7",
       "subtitle": "Instant expert call"

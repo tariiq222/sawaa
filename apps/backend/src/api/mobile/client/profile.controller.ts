@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode, Patch, Body, UseGuards } from '@nestjs/common';
 import { IsOptional, IsString } from 'class-validator';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse,
@@ -10,6 +10,7 @@ import { ClientSessionGuard } from '../../../common/guards/client-session.guard'
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { GetClientHandler } from '../../../modules/people/clients/get-client.handler';
 import { UpdateClientProfileHandler } from '../../../modules/identity/client-auth/update-client-profile.handler';
+import { RequestAccountDeletionHandler } from '../../../modules/identity/request-account-deletion/request-account-deletion.handler';
 import { Public } from '../../../common/guards/jwt.guard';
 
 export class MobileUpdateProfileBody {
@@ -36,6 +37,7 @@ export class MobileClientProfileController {
   constructor(
     private readonly getClient: GetClientHandler,
     private readonly updateClientProfile: UpdateClientProfileHandler,
+    private readonly requestAccountDeletion: RequestAccountDeletionHandler,
   ) {}
 
   @Get()
@@ -53,5 +55,22 @@ export class MobileClientProfileController {
     @Body() body: MobileUpdateProfileBody,
   ) {
     return this.updateClientProfile.execute(user.id, body);
+  }
+
+  @Delete()
+  @HttpCode(200)
+  @ApiOperation({ summary: "Close the authenticated client's login and schedule account deletion" })
+  @ApiOkResponse({
+    description: 'Login closed. Clinical and financial records are retained.',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['scheduled'] },
+        retained: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  })
+  requestDeletion(@ClientSession() user: ClientSession) {
+    return this.requestAccountDeletion.execute({ clientId: user.id });
   }
 }

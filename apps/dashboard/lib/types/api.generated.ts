@@ -3649,7 +3649,8 @@ export interface paths {
         get: operations["MobileClientProfileController_getProfile_v1"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Close the authenticated client's login and schedule account deletion */
+        delete: operations["MobileClientProfileController_requestDeletion_v1"];
         options?: never;
         head?: never;
         /** Update the authenticated client's profile */
@@ -30409,6 +30410,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClientResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientProfileController_requestDeletion_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Login closed. Clinical and financial records are retained. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        retained?: string[];
+                        /** @enum {string} */
+                        status?: "scheduled";
+                    };
                 };
             };
             /** @description Validation failed */

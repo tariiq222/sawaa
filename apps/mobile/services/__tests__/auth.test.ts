@@ -3,6 +3,7 @@ jest.mock('../api', () => ({
   default: {
     post: jest.fn(),
     get: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -24,7 +25,7 @@ import { authService, SessionSupersededError, verifyMobileOtp } from '../auth';
 import * as nativeSessionState from '../native-session-state';
 import type { User } from '@/types/auth';
 
-const mockedApi = api as unknown as { post: jest.Mock; get: jest.Mock };
+const mockedApi = api as unknown as { post: jest.Mock; get: jest.Mock; delete: jest.Mock };
 
 // Deprecated multi-tenant contract fields are intentionally omitted; the
 // double assertion keeps the fixture compiling while the API contract sheds
@@ -156,6 +157,32 @@ describe('authService.sendOtp / verifyOtp', () => {
       persistSpy.mockRestore();
     }
     expect(mockSetSecureItem).not.toHaveBeenCalledWith('accessToken', 'stale-access');
+  });
+});
+
+describe('authService.requestAccountDeletion', () => {
+  it('closes the account before clearing the local session', async () => {
+    mockedApi.delete.mockResolvedValueOnce({ data: { status: 'scheduled' } });
+    mockGetSecureItem.mockResolvedValueOnce('refresh-token-xyz');
+    mockedApi.post.mockResolvedValueOnce({ data: {} });
+
+    await authService.requestAccountDeletion();
+
+    expect(mockedApi.delete).toHaveBeenCalledWith('/mobile/client/profile');
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/auth/logout', {
+      refreshToken: 'refresh-token-xyz',
+    });
+    expect(mockDeleteSecureItem).toHaveBeenCalledWith('accessToken');
+    expect(mockedApi.delete.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedApi.post.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('keeps the local session when account closure fails', async () => {
+    mockedApi.delete.mockRejectedValueOnce(new Error('401'));
+
+    await expect(authService.requestAccountDeletion()).rejects.toThrow('401');
+    expect(mockDeleteSecureItem).not.toHaveBeenCalled();
   });
 });
 

@@ -260,6 +260,12 @@
     "logoutConfirm": "هل أنت متأكد من تسجيل الخروج؟",
     "edit": "تعديل",
     "signOut": "تسجيل الخروج",
+    "deleteAccount": "حذف الحساب",
+    "deleteAccountTitle": "حذف الحساب",
+    "deleteAccountBody": "سيُغلق تسجيل الدخول ولن تتمكن من الدخول بهذا الحساب. تبقى سجلات المواعيد والفواتير لدى المركز حسب المتطلبات النظامية.",
+    "deleteAccountConfirm": "حذف الحساب",
+    "deleteAccountCancel": "إلغاء",
+    "deleteAccountError": "تعذّر حذف الحساب. حاول مرة أخرى.",
     "crisisSupport": {
       "title": "دعم الأزمات · ٢٤/٧",
       "subtitle": "اتصال فوري بمختص"
