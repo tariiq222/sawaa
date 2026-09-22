@@ -5,10 +5,6 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
-  User,
-  Star,
-  Globe,
-  Bell,
   Info,
   Shield,
   LogOut,
@@ -106,7 +102,6 @@ export default function EmployeeProfileScreen() {
   const reduceMotion = useReduceMotion();
   const user = useAppSelector((s) => s.auth.user);
   const f400 = getFontName(dir.locale, '400');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : '';
@@ -147,8 +142,6 @@ export default function EmployeeProfileScreen() {
     ]);
   }, [dispatch, router, t]);
 
-  const soon = () => Alert.alert('قريباً', 'هذه الميزة قيد التطوير');
-
   return (
     <AquaBackground>
       <ScrollView
@@ -173,30 +166,9 @@ export default function EmployeeProfileScreen() {
                 <Text style={[styles.profileEmail, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                   {user?.email}
                 </Text>
-                <View style={[styles.ratingRow, { flexDirection: dir.row }]}>
-                  <Star size={14} fill={sawaaSemantic.warning} color={sawaaSemantic.warning} />
-                  <Text style={[styles.ratingValue, { fontFamily: f600, fontWeight: '600' }]}>4.8</Text>
-                  <Text style={[styles.ratingMeta, { fontFamily: f400, fontWeight: '400', writingDirection: dir.writingDirection }]}>
-                    (120 {t('home.rating')})
-                  </Text>
-                </View>
               </View>
             </View>
           </GlassSurface>
-        </Animated.View>
-
-        <Animated.View
-          entering={reduceMotion ? undefined : FadeInDown.delay(180).duration(600).easing(Easing.out(Easing.cubic))}
-          style={styles.group}
-        >
-          <MenuGroup
-            entries={[
-              { icon: User, label: t('profile.personalInfo'), onPress: soon },
-              { icon: Star, label: t('doctor.ratingsReviews'), onPress: soon },
-              { icon: Globe, label: t('profile.language'), value: t('profile.arabic'), onPress: soon },
-              { icon: Bell, label: t('profile.notifications'), onPress: soon },
-            ]}
-          />
         </Animated.View>
 
         <Animated.View
@@ -246,17 +218,6 @@ const styles = StyleSheet.create({
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
     color: sawaaColors.ink[500],
-  },
-  ratingRow: { alignItems: 'center', gap: sawaaSpacing.xs },
-  ratingValue: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[900],
-  },
-  ratingMeta: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[400],
   },
   group: { marginBottom: sawaaSpacing.xl },
   menuRow: {

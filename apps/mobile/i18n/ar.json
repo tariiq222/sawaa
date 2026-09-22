@@ -148,6 +148,8 @@
     "spotsLeft": "متبقي {{count}} مقاعد",
     "full": "مكتمل",
     "join": "انضم",
+    "joining": "جارٍ التسجيل…",
+    "redirectingToPayment": "جارٍ فتح الدفع…",
     "booked": "تم تسجيلك في المجموعة بنجاح",
     "bookError": "تعذر إتمام الانضمام، حاول مرة أخرى",
     "duration": "{{count}} دقيقة",

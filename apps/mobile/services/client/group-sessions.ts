@@ -47,6 +47,10 @@ export type GroupSession = Program;
 export interface EnrollInProgramResponse {
   type: 'ENROLLED';
   bookingId?: string;
+  /** AWAITING_PAYMENT for paid programs, CONFIRMED for free ones. */
+  status?: string;
+  /** Present when the enrollment created an invoice that still needs payment. */
+  invoiceId?: string | null;
 }
 
 /** @deprecated use EnrollInProgramResponse */

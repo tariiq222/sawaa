@@ -148,6 +148,8 @@
     "spotsLeft": "{{count}} spots left",
     "full": "Full",
     "join": "Join",
+    "joining": "Joining…",
+    "redirectingToPayment": "Opening payment…",
     "booked": "You're in — enrollment confirmed",
     "bookError": "Could not join the group. Please try again",
     "duration": "{{count}} minutes",

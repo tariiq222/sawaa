@@ -65,8 +65,20 @@ describe('programsService (mobile, /public/programs)', () => {
   });
 
   it('enroll posts to the new /enroll endpoint and unwraps', async () => {
-    mockedApi.post.mockResolvedValueOnce({ data: { type: 'ENROLLED', bookingId: 'b1' } });
-    await expect(programsService.enroll('prog-1')).resolves.toEqual({ type: 'ENROLLED', bookingId: 'b1' });
+    mockedApi.post.mockResolvedValueOnce({
+      data: {
+        type: 'ENROLLED',
+        bookingId: 'b1',
+        status: 'AWAITING_PAYMENT',
+        invoiceId: 'inv-1',
+      },
+    });
+    await expect(programsService.enroll('prog-1')).resolves.toEqual({
+      type: 'ENROLLED',
+      bookingId: 'b1',
+      status: 'AWAITING_PAYMENT',
+      invoiceId: 'inv-1',
+    });
     expect(mockedApi.post).toHaveBeenCalledWith('/public/programs/prog-1/enroll');
   });
 });

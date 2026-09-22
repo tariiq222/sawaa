@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Users } from 'lucide-react-native';
@@ -8,6 +9,8 @@ import { CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, User
 import { AppIcon } from '@/components/ui/AppIcon';
 import { useBranding, useBookGroupSession, useGroupSession } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
+import { APP_SCHEME } from '@/constants/config';
+import { clientPaymentsService } from '@/services/client/payments';
 import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { ThemedText } from '@/theme/components/ThemedText';
@@ -38,12 +41,19 @@ export default function GroupDetailScreen() {
   const contactPhone = brandingQuery.data?.contactPhone ?? null;
   const groupQuery = useGroupSession(id);
   const book = useBookGroupSession();
+  const [paying, setPaying] = useState(false);
   const group = groupQuery.data;
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const backSymbol = (dir.isRTL ? 'chevron.right' : 'chevron.left') as React.ComponentProps<typeof AppIcon>['sf'];
 
   const isClosed = Boolean(group?.isFull);
-  const ctaLabel = isClosed ? t('groups.contactUs') : t('groups.join');
+  const ctaLabel = isClosed
+    ? t('groups.contactUs')
+    : paying
+      ? t('groups.redirectingToPayment')
+      : book.isPending
+        ? t('groups.joining')
+        : t('groups.join');
   const description = group ? (dir.isRTL ? group.descriptionAr : group.descriptionEn ?? group.descriptionAr) : null;
 
   const onContactUs = () => {
@@ -53,9 +63,43 @@ export default function GroupDetailScreen() {
   };
 
   const onJoin = () => {
-    if (!id) return;
+    if (!id || paying) return;
     book.mutate(id, {
-      onSuccess: () => Alert.alert(t('groups.title'), t('groups.booked')),
+      onSuccess: (result) => {
+        if (!result.invoiceId) {
+          Alert.alert(t('groups.title'), t('groups.booked'));
+          return;
+        }
+        const invoiceId = result.invoiceId;
+        const bookingId = result.bookingId;
+        setPaying(true);
+        void (async () => {
+          try {
+            const payment = await clientPaymentsService.initPayment(invoiceId, 'ONLINE_CARD');
+            if (!payment.redirectUrl) {
+              Alert.alert(t('groups.title'), t('groups.bookError'));
+              return;
+            }
+            const webResult = await WebBrowser.openAuthSessionAsync(
+              payment.redirectUrl,
+              `${APP_SCHEME}://booking/payment-callback`,
+            );
+            router.replace({
+              pathname: '/(client)/booking/success',
+              params: {
+                ...(bookingId ? { bookingId } : {}),
+                invoiceId,
+                paymentId: payment.paymentId,
+                webResult: webResult.type,
+              },
+            });
+          } catch {
+            Alert.alert(t('groups.title'), t('groups.bookError'));
+          } finally {
+            setPaying(false);
+          }
+        })();
+      },
       onError: () => Alert.alert(t('groups.title'), t('groups.bookError')),
     });
   };
@@ -117,7 +161,7 @@ export default function GroupDetailScreen() {
             <PrimaryButton
               label={ctaLabel}
               onPress={isClosed ? onContactUs : onJoin}
-              disabled={book.isPending || (isClosed && !contactPhone)}
+              disabled={book.isPending || paying || (isClosed && !contactPhone)}
               height={50}
             />
           </Glass>

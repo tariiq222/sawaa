@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  MessageCircle,
   Video,
   XCircle,
 } from 'lucide-react-native';
@@ -188,14 +187,6 @@ export default function AppointmentDetailScreen() {
         entering={FadeInDown.delay(360).duration(800).easing(Easing.out(Easing.cubic))}
         style={[styles.ctaWrap, { bottom: insets.bottom + 20, flexDirection: dir.row }]}
       >
-        <Pressable onPress={() => router.push('/(client)/chat')} style={styles.secondaryBtn}>
-          <Glass variant="strong" radius={sawaaRadius.pill} style={styles.secondaryGlass}>
-            <MessageCircle size={18} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            <Text style={[styles.secondaryText, { fontFamily: f600, fontWeight: '600' }]}>
-              {dir.isRTL ? 'محادثة' : 'Chat'}
-            </Text>
-          </Glass>
-        </Pressable>
         {canShowZoom && booking ? (
           <JoinVideoCallButton
             url={booking.zoomJoinUrl ?? booking.zoomLink ?? null}

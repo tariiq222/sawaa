@@ -1,5 +1,5 @@
 export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5200/api/v1';
 
 /**
  * Reserved for future vertical-specific builds. Currently unused — Sawa is
@@ -18,4 +18,4 @@ export const SUPPORTED_LANGUAGES = ['ar', 'en'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 export const PRIVACY_POLICY_URL =
-  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? 'https://sawa.sa/privacy';
+  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? 'https://sawaa.sa/privacy';

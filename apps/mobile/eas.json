@@ -24,7 +24,7 @@
     "production": {
       "ios": {
         "ascAppId": "${IOS_APP_ID}",
-        "ascTeamId": "${IOS_TEAM_ID}"
+        "appleTeamId": "${IOS_TEAM_ID}"
       },
       "android": {
         "serviceAccountKeyPath": "${ANDROID_SERVICE_ACCOUNT_KEY_PATH}",

@@ -9,7 +9,6 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Heart,
   Leaf,
   Lock,
   Moon,
@@ -107,9 +106,8 @@ export default function ProfileScreen() {
   const settingsItems: SettingItem[] = [
     { icon: <Ticket size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.balance'), en: t('packages.balance') }, color: sawaaColors.teal[600], onPress: () => router.push('/(client)/packages/purchases') },
     { icon: <Lock size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />, label: { ar: 'الخصوصية والأمان', en: 'Privacy & Security' }, color: sawaaColors.teal[600], onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
-    { icon: <Bell size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />, label: { ar: 'الإشعارات', en: 'Notifications' }, color: sawaaColors.accent.violet, meta: { ar: 'مفعّلة', en: 'On' } },
+    { icon: <Bell size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />, label: { ar: 'الإشعارات', en: 'Notifications' }, color: sawaaColors.accent.violet, onPress: () => router.push('/(client)/settings') },
     { icon: <Moon size={18} color={sawaaColors.ink[700]} strokeWidth={1.75} />, label: { ar: 'الوضع الليلي', en: 'Dark mode' }, color: sawaaColors.ink[700], toggle: darkMode, onToggle: () => setDarkMode((v) => !v) },
-    { icon: <Heart size={18} color={sawaaColors.accent.rose} strokeWidth={1.75} />, label: { ar: 'الصحة النفسية', en: 'Wellness' }, color: sawaaColors.accent.rose },
     { icon: <Settings size={18} color={sawaaColors.ink[500]} strokeWidth={1.75} />, label: { ar: 'الإعدادات العامة', en: 'General' }, color: sawaaColors.ink[500], onPress: () => router.push('/(client)/settings') },
   ];
 

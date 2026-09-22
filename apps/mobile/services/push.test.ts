@@ -1,4 +1,4 @@
-jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
+jest.mock('react-native', () => ({ Platform: { OS: 'android' } }));
 
 jest.mock('expo-device', () => ({ isDevice: true }));
 
@@ -49,18 +49,42 @@ beforeEach(() => {
   mockedService.unregisterFcmToken.mockClear();
 });
 
+describe('registerForPushAsync — iOS cannot register an APNs token as FCM', () => {
+  it('does not send the raw APNs token to the backend', async () => {
+    const { Platform } = jest.requireMock('react-native') as { Platform: { OS: string } };
+    Platform.OS = 'ios';
+    try {
+      mockedNotifications.getPermissionsAsync.mockResolvedValue({ status: 'granted' });
+
+      const result = await registerForPushAsync();
+
+      expect(result).toBeNull();
+      expect(mockedNotifications.getDevicePushTokenAsync).not.toHaveBeenCalled();
+      expect(mockedService.registerFcmToken).not.toHaveBeenCalled();
+    } finally {
+      Platform.OS = 'android';
+    }
+  });
+});
+
 describe('registerForPushAsync — happy path', () => {
   it('requests permission, fetches token, calls backend with platform', async () => {
     mockedNotifications.getPermissionsAsync.mockResolvedValue({ status: 'undetermined' });
     mockedNotifications.requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
-    mockedNotifications.getDevicePushTokenAsync.mockResolvedValue({ data: 'apns-token-abc' });
+    mockedNotifications.getDevicePushTokenAsync.mockResolvedValue({
+      type: 'android',
+      data: 'fcm-registration-token',
+    });
 
     const result = await registerForPushAsync();
 
-    expect(result).toBe('apns-token-abc');
+    expect(result).toBe('fcm-registration-token');
     expect(mockedNotifications.setNotificationHandler).toHaveBeenCalledTimes(1);
     expect(mockedNotifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(mockedService.registerFcmToken).toHaveBeenCalledWith('apns-token-abc', 'ios');
+    expect(mockedService.registerFcmToken).toHaveBeenCalledWith(
+      'fcm-registration-token',
+      'android',
+    );
 
     await unregisterPushAsync();
     expect(mockedService.unregisterFcmToken).toHaveBeenCalledTimes(1);

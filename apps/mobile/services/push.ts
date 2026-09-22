@@ -43,12 +43,29 @@ async function requestPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
-async function getDeviceToken(): Promise<string | null> {
+/**
+ * The backend delivers every push through Firebase Admin `messaging().send()`,
+ * which only accepts an FCM registration token.
+ *
+ * Android's device token is already an FCM token. iOS's device token is a raw
+ * APNs token, and `getExpoPushTokenAsync()` returns an Expo token — neither
+ * can be sent through FCM. Registering the APNs token would store a value the
+ * sender always rejects, so iOS registration waits until `googleServicesFile`
+ * is configured and a real FCM registration token can be read.
+ */
+async function getFcmRegistrationToken(): Promise<string | null> {
+  if (Platform.OS === 'ios') {
+    console.warn(
+      '[Push] iOS FCM registration is not configured. Add googleServicesFile before registering a token.',
+    );
+    return null;
+  }
+
   try {
-    const tokenData = await Notifications.getDevicePushTokenAsync();
-    return tokenData.data;
+    const deviceToken = await Notifications.getDevicePushTokenAsync();
+    return typeof deviceToken.data === 'string' ? deviceToken.data : null;
   } catch (error) {
-    console.warn('[Push] Failed to get device push token:', error);
+    console.warn('[Push] Failed to get FCM registration token:', error);
     return null;
   }
 }
@@ -72,7 +89,7 @@ export async function registerForPushAsync(): Promise<string | null> {
 
   await setupAndroidChannel();
 
-  const token = await getDeviceToken();
+  const token = await getFcmRegistrationToken();
   if (!token) return null;
 
   const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
