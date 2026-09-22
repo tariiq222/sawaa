@@ -66,6 +66,7 @@ interface UseEmployeeFormOptions {
         educationAr?: string | null
         avatarUrl?: string | null
         isActive: boolean
+        isPublic?: boolean
         branchIds?: string[]
       }
     | undefined
@@ -148,6 +149,7 @@ export function useEmployeeForm({
       educationAr: employee.educationAr ?? "",
       avatarUrl: employee.avatarUrl ?? "",
       isActive: employee.isActive,
+      isPublic: employee.isPublic ?? false,
     })
   }, [employee, form])
 
@@ -223,6 +225,7 @@ export function useEmployeeForm({
         educationAr: data.educationAr || undefined,
         avatarUrl: data.avatarUrl || undefined,
         isActive: data.isActive,
+        isPublic: data.isPublic,
       })
     } catch (err) {
       toast.error(

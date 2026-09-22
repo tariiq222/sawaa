@@ -198,7 +198,7 @@ export function EmployeeFormPage(props: Props) {
               showEmail
               emailRequired={!isEdit}
               employeeName={isEdit ? employeeDisplayName : undefined}
-              showPublicToggle={!isEdit}
+              showPublicToggle
             />
           </TabsContent>
 
