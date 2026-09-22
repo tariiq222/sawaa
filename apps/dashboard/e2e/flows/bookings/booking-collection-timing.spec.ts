@@ -249,22 +249,15 @@ test.describe("Booking POS — collection-timing radiogroup", () => {
 
     const bookingCreate = page.waitForResponse(
       (r) =>
-        r.url().includes("/api/proxy/dashboard/bookings") &&
-        !r.url().includes("/invoice") &&
-        !r.url().includes("/cancel") &&
+        new URL(r.url()).pathname.endsWith("/api/proxy/dashboard/bookings") &&
         r.request().method() === "POST",
       { timeout: 30_000 },
     )
-    const invoiceCreate = page.waitForResponse(
+    // Collect-now uses one endpoint; match its exact route for the invoice/payment contract.
+    const collectionCreate = page.waitForResponse(
       (r) =>
-        r.url().includes("/api/proxy/dashboard/finance/bookings/") &&
-        r.url().includes("/invoice") &&
-        r.request().method() === "POST",
-      { timeout: 30_000 },
-    )
-    const paymentCreate = page.waitForResponse(
-      (r) =>
-        r.url().includes("/api/proxy/dashboard/finance/payments") &&
+        new URL(r.url()).pathname.includes("/api/proxy/dashboard/finance/bookings/") &&
+        new URL(r.url()).pathname.endsWith("/collect") &&
         r.request().method() === "POST",
       { timeout: 30_000 },
     )
@@ -274,18 +267,24 @@ test.describe("Booking POS — collection-timing radiogroup", () => {
       .click()
 
     const bookingRes = await bookingCreate
-    const invoiceRes = await invoiceCreate
-    const paymentRes = await paymentCreate
+    const collectionRes = await collectionCreate
 
     expect(bookingRes.ok(), "createBooking must succeed").toBeTruthy()
-    expect(invoiceRes.ok(), "ensureInvoice must succeed").toBeTruthy()
-    expect(paymentRes.ok(), "recordPayment must succeed").toBeTruthy()
+    expect(collectionRes.ok(), "collectBookingPayment must succeed").toBeTruthy()
 
-    const invoiceBody = (await invoiceRes.json()) as { id: string; outstanding: number }
-    const paymentBody = (await paymentRes.json()) as { invoiceId: string; amount: number }
-    expect(paymentBody.invoiceId).toBe(invoiceBody.id)
-    expect(Number(paymentBody.amount)).toBe(Number(invoiceBody.outstanding))
-    expect(Number(invoiceBody.outstanding)).toBeGreaterThan(0)
+    const collectionBody = (await collectionRes.json()) as {
+      bookingId: string
+      invoice: { id: string; total: number; outstanding: number }
+      payment: { id: string; amount: number; method: string; status: string } | null
+    }
+    expect(collectionBody.invoice.id, "collection must return the ensured invoice").toBeTruthy()
+    expect(Number(collectionBody.invoice.total)).toBeGreaterThan(0)
+    expect(Number(collectionBody.invoice.outstanding)).toBe(0)
+    expect(collectionBody.payment, "collect-now must record a payment").not.toBeNull()
+    expect(collectionBody.payment?.id).toBeTruthy()
+    expect(Number(collectionBody.payment?.amount)).toBe(Number(collectionBody.invoice.total))
+    expect(collectionBody.payment?.method).toBe("CASH")
+    expect(collectionBody.payment?.status).toBe("COMPLETED")
 
     const bookingPayload = (await bookingRes.json()) as
       | { data?: { id: string; clientId: string; scheduledAt: string; status: string } }
@@ -300,6 +299,7 @@ test.describe("Booking POS — collection-timing radiogroup", () => {
             status: string
           })
     expect(bookingData.id, "createBooking response must include an id").toBeTruthy()
+    expect(collectionBody.bookingId).toBe(bookingData.id)
     harness.createdBookings.push({
       id: bookingData.id,
       clientId: bookingData.clientId,
@@ -312,6 +312,9 @@ test.describe("Booking POS — collection-timing radiogroup", () => {
 
     await page.goto("/bookings")
     await expectCurrentPath(page, "/bookings")
+    const allTab = page.getByRole("tab", { name: /^الكل$|^All$/ }).first()
+    await expect(allTab).toBeVisible({ timeout: 10_000 })
+    await allTab.click()
     await page
       .getByPlaceholder(/بحث بالاسم|Search by name/i)
       .fill(bookingId)

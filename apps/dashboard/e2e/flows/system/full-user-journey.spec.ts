@@ -142,10 +142,10 @@ test.describe("Full system user journey", () => {
     await page.goto("/bookings")
     await expectCurrentPath(page, "/bookings")
     await expectNoAppCrash(page)
-    // The bookings-list search field is a placeholder-only input
-    // (bookings.searchPlaceholder = "بحث بالاسم، رقم الحجز...") with no
-    // accessible name, so getByRole('textbox', { name }) never resolves. Target
-    // it by placeholder substring (tolerant of the Arabic-comma variant).
+    const allTab = page.getByRole("tab", { name: /^الكل$|^All$/ }).first()
+    await expect(allTab).toBeVisible({ timeout: 10_000 })
+    await allTab.click()
+    // Search uses the placeholder because the input exposes no textbox name.
     await page
       .getByPlaceholder(/بحث بالاسم|Search by name/i)
       .fill(booking.id)
@@ -252,7 +252,7 @@ async function createBookingFromDashboardPos(page: Page): Promise<SeededBooking>
 
   const createResponsePromise = page.waitForResponse(
     (response) =>
-      response.url().includes("/api/proxy/dashboard/bookings") &&
+      new URL(response.url()).pathname.endsWith("/api/proxy/dashboard/bookings") &&
       response.request().method() === "POST",
     { timeout: 30_000 }
   )
@@ -276,6 +276,9 @@ async function expectBookingVisibleInList(
 ) {
   await page.goto("/bookings")
   await expectCurrentPath(page, "/bookings")
+  const allTab = page.getByRole("tab", { name: /^الكل$|^All$/ }).first()
+  await expect(allTab).toBeVisible({ timeout: 10_000 })
+  await allTab.click()
   // Placeholder-only search input (no accessible name) — match by placeholder.
   await page
     .getByPlaceholder(/بحث بالاسم|Search by name/i)
