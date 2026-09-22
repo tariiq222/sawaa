@@ -43,7 +43,7 @@ app/
 
 ## Service Files (`services/`)
 
-Top-level: `api.ts` (base Axios + interceptors), `auth.ts`, `branches.ts`, `chatbot.ts`, `clients.ts`, `employees.ts`, `notifications.ts`, `organization.ts`, `payments.ts`, `push.ts`, `query-client.ts`.
+Top-level: `api.ts` (base Axios + interceptors), `auth.ts`, `branches.ts`, `chatbot.ts`, `clients.ts`, `employees.ts`, `notifications.ts`, `payments.ts`, `push.ts`, `query-client.ts`.
 
 Subdirectories: `services/client/` (client-only endpoints), `services/employee/` (employee-only endpoints).
 
@@ -59,7 +59,7 @@ Subdirectories: `services/client/` (client-only endpoints), `services/employee/`
 - **Request context:** Mobile sends only auth credentials. It must not send a legacy organization-selection header; the backend stamps the fixed single-tenant context from the authenticated session.
 - **No runtime organization switching.** Do not add an organization switcher, multi-org membership UI, or terminology hot-swap to mobile.
 - **Membership/organization-switch scaffolding has been removed.** The memberships service, the org-id (tenant) service, the memberships query hook, and the auth slice's organization/membership fields were deleted in the single-tenant cleanup. The backend has no `/auth/memberships` endpoint. Do not reintroduce them.
-- **Branding** is still fetched at runtime via `PublicBranding` — for this deployment only. `useTerminology()` is inert: the backend no longer exposes `/public/verticals/:slug/terminology`, so its `t()` always returns the caller-provided fallback (or the key). Switching organizations is not a user-facing operation.
+- **Branding** is still fetched at runtime via `PublicBranding` — for this deployment only. Switching organizations is not a user-facing operation.
 
 ### Adding a New Branded App
 
@@ -79,11 +79,6 @@ Backend, dashboard, and admin do not change.
 - Theme slice (Redux) consumes the result and exposes tokens to RN components.
 - All colors, logo, and typography flow from this — no hardcoded brand values anywhere.
 
-## Terminology
-
-- `hooks/useTerminology.ts` mirrors the dashboard's hook, but is **inert**: the `/public/verticals/:slug/terminology` endpoint it targets was removed in the single-tenant cleanup, so `t(key, fallback)` always resolves to the fallback (or the key).
-- Do not wire it to a new endpoint; prefer plain i18n keys for new screens.
-
 ## Push Notifications (FCM)
 
 - `services/push.ts` registers the Expo push token with the backend, handles permission prompts, and routes incoming notifications.
@@ -101,7 +96,7 @@ Backend, dashboard, and admin do not change.
 ## Key Rules
 
 - No `any` in TypeScript
-- No hardcoded strings — use i18n keys (and `useTerminology` for vertical-sensitive nouns)
+- No hardcoded strings — use i18n keys only — do not reintroduce `useTerminology`
 - No hardcoded colors — **STRICT: No hex colors (#...) or ad-hoc RGBA in components.** Use `sawaaTokens` or `sawaaColors` from `theme/sawaa/tokens.ts`, or the shared re-exports in `theme/tokens.ts`.
 - **Deprecated: `theme/glass.ts` has been deleted.** Use the unified Sawaa design system (`theme/sawaa/`).
 - 350-line max per file

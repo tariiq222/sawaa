@@ -17,8 +17,9 @@ import { REQUEST_TX_CLS_KEY } from '../../common/constants';
  * - Callers that read `prisma.user.findMany(...)` transparently hit the
  *   extended client's hooks, which is exactly what we want.
  *
- * Single-tenant: no automatic organizationId scoping. Every handler is
- * responsible for passing the correct organizationId explicitly.
+ * Single-tenant: PrismaService is not automatically filtered by organizationId.
+ * Handlers do not add organizationId as a query filter. DEFAULT_ORG_ID remains
+ * AAD for encryption and an identifier on some events.
  */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {

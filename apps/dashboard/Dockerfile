@@ -45,7 +45,7 @@ COPY apps/backend/prisma.config.ts ./apps/backend/prisma.config.ts
 RUN pnpm --filter=backend run prisma:generate
 # Invoke tsc directly — hoisted linker puts typescript at node_modules/typescript/,
 # not in the .pnpm store that pnpm's script runner expects.
-RUN cd /app/packages/shared && node /app/node_modules/typescript/bin/tsc -p tsconfig.json && test -f dist/constants/feature-keys.js
+RUN cd /app/packages/shared && node /app/node_modules/typescript/bin/tsc -p tsconfig.json && test -f dist/constants/index.js
 
 # Establish node_modules/@sawaa/* symlinks pointing to packages/* (see backend note)
 RUN mkdir -p /app/node_modules/@sawaa \
@@ -53,7 +53,7 @@ RUN mkdir -p /app/node_modules/@sawaa \
  && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
  && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client \
  && ln -sf /app/packages/ui         /app/node_modules/@sawaa/ui \
- && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.js
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/index.js
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
 FROM node:22-bookworm-slim AS app-build

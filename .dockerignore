@@ -8,6 +8,15 @@ dist/
 **/.expo
 .turbo/
 **/.turbo
+# Tool/agent state, local package store and editor caches — never part of a build context
+.agent-teams/
+**/.agent-teams
+.pnpm-store/
+**/.pnpm-store
+.commandcode/
+**/.commandcode
+.cursor/
+**/.cursor
 apps/dashboard/playwright/.auth/
 .git/
 .git

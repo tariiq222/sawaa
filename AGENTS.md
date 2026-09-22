@@ -73,15 +73,15 @@ pnpm --filter=dashboard run e2e -- path/to/spec.ts
 
 Sawa serves exactly one counseling center. There is no organization switching and no subscription billing, and Prisma queries carry no `organizationId` filters.
 
-**Dead scaffolding status (verified 2026-07-29):**
+**Dead scaffolding status (verified 2026-09-21):**
 
 | File | Status | Action |
 |------|--------|--------|
-| `apps/dashboard/hooks/use-terminology.ts` | **Deleted 2026-06-22** | None — already removed. Do not reintroduce. |
-| `apps/mobile/hooks/useTerminology.ts` | **Inert** (calls dead endpoint, falls back to provided label) | Treat as removed. Do not wire to new endpoints. |
-| `apps/mobile/services/organization.ts` | **Empty export** (dead) | Treat as removed. |
-| `apps/mobile/components/features/settings/OrganizationSwitcherSection.tsx` | **Returns null** (no-op) | Treat as removed. |
-| `apps/mobile/hooks/useTerminology.test.ts` | Tests pass against fallback only | Treat as removed. |
+| `apps/dashboard/hooks/use-terminology.ts` | **Deleted** | None — already removed. Do not reintroduce. |
+| `apps/mobile/hooks/useTerminology.ts` | **Deleted** | None — already removed. Do not reintroduce. |
+| `apps/mobile/hooks/useTerminology.test.ts` | **Deleted** | None — already removed. Do not reintroduce. |
+| `apps/mobile/services/organization.ts` | **Deleted** | None — already removed. Do not reintroduce. |
+| `apps/mobile/components/features/settings/OrganizationSwitcherSection.tsx` | **Deleted** | None — already removed. Do not reintroduce. |
 
 Do not wire any of the above to new endpoints. See [apps/dashboard/CLAUDE.md](apps/dashboard/CLAUDE.md) and [apps/mobile/CLAUDE.md](apps/mobile/CLAUDE.md) for per-app details.
 

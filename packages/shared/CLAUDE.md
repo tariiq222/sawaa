@@ -9,8 +9,7 @@ types/            domain types (auth, client-auth, payment, service, employee,
                   guest, branding, public-branding, notification, rating, api…)
 enums/            shared enums (auth, user, branding, chat, notification,
                   payment, rating, otp)
-constants/        roles, brand, config, feature-keys, feature-catalog,
-                  permissions-catalog
+constants/        roles, brand, config, permissions-catalog
 tokens/           design tokens (colors, typography, spacing, shadows,
                   radius, breakpoints, animations, branding)
 theme/            theme token composition
@@ -21,7 +20,7 @@ index.ts          re-exports everything
 
 ## Exports
 
-The package exposes granular sub-paths in `package.json` `exports`: `.`, `./types`, `./enums`, `./constants`, `./tokens`, `./theme`, `./state-machines`, plus `./constants/{feature-keys,feature-catalog,permissions-catalog}`. Import the narrowest path you need.
+The package exposes granular sub-paths in `package.json` `exports`: `.`, `./types`, `./enums`, `./constants`, `./tokens`, `./theme`, `./state-machines`, plus `./constants/permissions-catalog`. Import the narrowest path you need.
 
 ## Commands
 
@@ -36,7 +35,7 @@ This package **compiles to `dist/`** — `package.json` `main` points at `dist/i
 
 - Types/enums used by 2+ apps.
 - Design tokens (single source of truth for colors/spacing/etc.).
-- Business constants (roles, permission catalog, feature keys).
+- Business constants (roles, permission catalog).
 - Pure logic with no IO (state machines).
 
 ## What does NOT belong here
