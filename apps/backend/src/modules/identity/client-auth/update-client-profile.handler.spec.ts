@@ -17,6 +17,8 @@ describe('UpdateClientProfileHandler', () => {
     phone: '+966500000001',
     emailVerified: null,
     phoneVerified: new Date('2026-01-01T00:00:00Z'),
+    preferredLocale: 'en',
+    pushEnabled: true,
     accountType: 'FULL',
     claimedAt: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
@@ -30,6 +32,8 @@ describe('UpdateClientProfileHandler', () => {
     phone: '+966500000001',
     emailVerified: null,
     phoneVerified: new Date('2026-01-01T00:00:00Z'),
+    preferredLocale: 'ar',
+    pushEnabled: false,
     accountType: 'FULL',
     claimedAt: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
@@ -185,6 +189,30 @@ describe('UpdateClientProfileHandler', () => {
     expect(mockPrisma.client.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: {} }),
     );
+  });
+
+  it('updates preferences without changing unrelated profile fields and returns the saved values', async () => {
+    mockPrisma.client.findFirst.mockResolvedValue(existingClient);
+    mockPrisma.client.update.mockResolvedValue({
+      ...updatedProfile,
+      preferredLocale: 'ar',
+      pushEnabled: false,
+    });
+
+    const result = await handler.execute('cl-1', {
+      preferredLocale: 'ar',
+      pushEnabled: false,
+    });
+
+    expect(mockPrisma.client.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'cl-1' },
+        data: { preferredLocale: 'ar', pushEnabled: false },
+        select: expect.objectContaining({ preferredLocale: true, pushEnabled: true }),
+      }),
+    );
+    expect((result as any).preferredLocale).toBe('ar');
+    expect((result as any).pushEnabled).toBe(false);
   });
 
   describe('email', () => {

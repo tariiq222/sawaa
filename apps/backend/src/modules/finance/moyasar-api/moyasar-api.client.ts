@@ -15,6 +15,7 @@ export interface MoyasarCreateCheckoutInvoiceParams {
 	description: string;
 	successUrl: string;
 	backUrl: string;
+	expiresAt?: Date;
 	metadata: Record<string, string>;
 }
 
@@ -225,6 +226,9 @@ export class MoyasarApiClient {
 					description: params.description,
 					success_url: params.successUrl,
 					back_url: params.backUrl,
+					...(params.expiresAt
+						? { expired_at: params.expiresAt.toISOString() }
+						: {}),
 					metadata: params.metadata,
 				}),
 			},

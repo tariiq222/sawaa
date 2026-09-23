@@ -5,6 +5,7 @@ import {
   type EnrollInProgramResponse,
   type Program,
 } from '@/services/client/group-sessions';
+import { clientBookingsKeys } from './useClientBookings';
 
 export const programKeys = {
   all: ['programs'] as const,
@@ -34,9 +35,12 @@ export function useBookGroupSession() {
   const queryClient = useQueryClient();
   return useMutation<EnrollInProgramResponse, Error, string>({
     mutationFn: (id) => programsService.enroll(id),
-    onSuccess: (_data, id) => {
-      void queryClient.invalidateQueries({ queryKey: programKeys.lists() });
-      void queryClient.invalidateQueries({ queryKey: programKeys.detail(id) });
+    onSuccess: async (_data, id) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: programKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: programKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: clientBookingsKeys.all }),
+      ]);
     },
   });
 }

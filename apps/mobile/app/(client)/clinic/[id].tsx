@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Building2, ChevronLeft, ChevronRight, Heart, Star } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -23,6 +24,7 @@ const HERO_HEIGHT = 200;
 
 export default function ClinicDetailScreen() {
   const { id: _id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -66,7 +68,7 @@ export default function ClinicDetailScreen() {
       >
         {/* Back button over hero */}
         <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive style={styles.backBtn}>
+          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
             <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>

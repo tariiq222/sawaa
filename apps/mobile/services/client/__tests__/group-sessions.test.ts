@@ -6,7 +6,7 @@ jest.mock('../../api', () => ({
   },
 }));
 
-import { programsService } from '../group-sessions';
+import { programsService, resolveEnrollmentNextStep } from '../group-sessions';
 import api from '../../api';
 
 const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock };
@@ -43,7 +43,16 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('programsService (mobile, /public/programs)', () => {
+describe('programsService (mobile)', () => {
+  it('routes every invoice-backed enrollment to existing checkout', () => {
+    expect(resolveEnrollmentNextStep({ type: 'ENROLLED', bookingId: 'b1', status: 'CONFIRMED', invoiceId: 'inv-1' })).toBe('checkout');
+  });
+
+  it('keeps only confirmed no-invoice enrollment immediate', () => {
+    expect(resolveEnrollmentNextStep({ type: 'ENROLLED', bookingId: 'b1', status: 'CONFIRMED', invoiceId: null })).toBe('confirmed');
+    expect(resolveEnrollmentNextStep({ type: 'ENROLLED', bookingId: 'b1', status: 'PENDING', invoiceId: null })).toBe('error');
+  });
+
   it('list unwraps enveloped responses', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: { success: true, programs: [program] } });
     const out = await programsService.list();
@@ -64,9 +73,14 @@ describe('programsService (mobile, /public/programs)', () => {
     expect(mockedApi.get).toHaveBeenCalledWith('/public/programs/prog%2F1');
   });
 
-  it('enroll posts to the new /enroll endpoint and unwraps', async () => {
-    mockedApi.post.mockResolvedValueOnce({ data: { type: 'ENROLLED', bookingId: 'b1' } });
-    await expect(programsService.enroll('prog-1')).resolves.toEqual({ type: 'ENROLLED', bookingId: 'b1' });
-    expect(mockedApi.post).toHaveBeenCalledWith('/public/programs/prog-1/enroll');
+  it('enroll posts to the authenticated mobile endpoint and unwraps', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: { type: 'ENROLLED', bookingId: 'b1', status: 'AWAITING_PAYMENT', invoiceId: 'inv-1' } });
+    await expect(programsService.enroll('prog-1')).resolves.toEqual({
+      type: 'ENROLLED',
+      bookingId: 'b1',
+      status: 'AWAITING_PAYMENT',
+      invoiceId: 'inv-1',
+    });
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/programs/prog-1/enroll');
   });
 });

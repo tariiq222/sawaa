@@ -29,10 +29,15 @@ describe('EnrollInProgramHandler', () => {
       $executeRaw: jest.fn().mockResolvedValue(undefined),
       program: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-        findUnique: jest.fn().mockResolvedValue({
-          enrolledCount: 4,
-          minParticipants: 4,
-        }),
+        findUnique: jest.fn().mockImplementation(({ select }: { select?: Record<string, unknown> }) =>
+          select?.status
+            ? Promise.resolve({
+                status: ProgramStatus.OPEN,
+                enrolledCount: 0,
+                maxParticipants: 10,
+                minParticipants: 1,
+              })
+            : Promise.resolve({ enrolledCount: 4, minParticipants: 4 })),
         update: jest.fn().mockResolvedValue({}),
       },
       booking: {
@@ -50,9 +55,11 @@ describe('EnrollInProgramHandler', () => {
       },
       invoice: {
         create: jest.fn().mockResolvedValue({ id: 'inv-1' }),
+        findUnique: jest.fn().mockResolvedValue(null),
       },
       programEnrollment: {
         create: jest.fn().mockResolvedValue({ id: 'pe-1' }),
+        findUnique: jest.fn().mockResolvedValue(null),
       },
       organizationSettings: {
         findFirst: jest.fn().mockResolvedValue({ vatRate: '0' }),
@@ -114,6 +121,12 @@ describe('EnrollInProgramHandler', () => {
       ref: 1,
       supervisors: [{ employeeId: 'emp-1' }],
     });
+    tx.program.findUnique.mockResolvedValue({
+      status: ProgramStatus.DRAFT,
+      enrolledCount: 0,
+      maxParticipants: 10,
+      minParticipants: 1,
+    });
     await expect(
       handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
     ).rejects.toThrow(BadRequestException);
@@ -132,6 +145,12 @@ describe('EnrollInProgramHandler', () => {
       nameEn: null,
       ref: 1,
       supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.program.findUnique.mockResolvedValue({
+      status: ProgramStatus.SCHEDULED,
+      enrolledCount: 0,
+      maxParticipants: 10,
+      minParticipants: 1,
     });
     await expect(
       handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
@@ -168,7 +187,174 @@ describe('EnrollInProgramHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('rejects duplicate enrollment (same client enrolling twice)', async () => {
+  it('resumes an active paid enrollment even when the program is full', async () => {
+    prisma.program.findFirst.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+      enrolledCount: 10,
+      maxParticipants: 10,
+      price: new Prisma.Decimal(10000),
+      currency: 'SAR',
+      branchId: 'b-1',
+      hoursPerDay: 4,
+      nameAr: 'x',
+      nameEn: null,
+      ref: 1,
+      supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      programId: 'prog-1',
+      clientId: 'client-1',
+      bookingId: 'book-existing',
+      booking: {
+        id: 'book-existing',
+        programId: 'prog-1',
+        clientId: 'client-1',
+        status: BookingStatus.AWAITING_PAYMENT,
+        price: new Prisma.Decimal(10000),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    tx.invoice.findUnique.mockResolvedValue({ id: 'inv-existing' });
+
+    await expect(
+      handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
+    ).resolves.toEqual({
+      type: 'ENROLLED',
+      bookingId: 'book-existing',
+      status: BookingStatus.AWAITING_PAYMENT,
+      invoiceId: 'inv-existing',
+    });
+    expect(prisma.programEnrollment.findUnique).not.toHaveBeenCalled();
+    expect(tx.booking.create).not.toHaveBeenCalled();
+    expect(tx.invoice.create).not.toHaveBeenCalled();
+    expect(tx.program.updateMany).not.toHaveBeenCalled();
+    expect(eventBus.publishOptional).not.toHaveBeenCalled();
+  });
+
+  it('resumes an active free enrollment without creating a second invoice or booking', async () => {
+    prisma.program.findFirst.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.MIN_REACHED,
+      enrolledCount: 2,
+      maxParticipants: 2,
+      price: new Prisma.Decimal(0),
+      currency: 'SAR',
+      branchId: 'b-1',
+      hoursPerDay: 4,
+      nameAr: 'x',
+      nameEn: null,
+      ref: 1,
+      supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      programId: 'prog-1',
+      clientId: 'client-1',
+      bookingId: 'book-existing',
+      booking: {
+        id: 'book-existing',
+        programId: 'prog-1',
+        clientId: 'client-1',
+        status: BookingStatus.CONFIRMED,
+        price: new Prisma.Decimal(0),
+        expiresAt: null,
+      },
+    });
+
+    await expect(
+      handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
+    ).resolves.toEqual({
+      type: 'ENROLLED',
+      bookingId: 'book-existing',
+      status: BookingStatus.CONFIRMED,
+      invoiceId: null,
+    });
+    expect(tx.invoice.findUnique).toHaveBeenCalledWith({
+      where: { bookingId: 'book-existing' },
+      select: { id: true },
+    });
+  });
+
+  it('uses the booked price when a formerly free confirmed enrollment is resumed', async () => {
+    prisma.program.findFirst.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+      enrolledCount: 1,
+      maxParticipants: 10,
+      price: new Prisma.Decimal(50000),
+      currency: 'SAR',
+      branchId: 'b-1',
+      hoursPerDay: 4,
+      nameAr: 'x',
+      nameEn: null,
+      ref: 1,
+      supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      programId: 'prog-1',
+      clientId: 'client-1',
+      bookingId: 'book-existing',
+      booking: {
+        id: 'book-existing',
+        programId: 'prog-1',
+        clientId: 'client-1',
+        status: BookingStatus.CONFIRMED,
+        price: new Prisma.Decimal(0),
+        expiresAt: null,
+      },
+    });
+
+    await expect(
+      handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
+    ).resolves.toEqual({
+      type: 'ENROLLED',
+      bookingId: 'book-existing',
+      status: BookingStatus.CONFIRMED,
+      invoiceId: null,
+    });
+    expect(tx.invoice.findUnique).toHaveBeenCalled();
+  });
+
+  it('rejects a paid existing booking with no invoice even when the program is now free', async () => {
+    prisma.program.findFirst.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+      enrolledCount: 1,
+      maxParticipants: 10,
+      price: new Prisma.Decimal(0),
+      currency: 'SAR',
+      branchId: 'b-1',
+      hoursPerDay: 4,
+      nameAr: 'x',
+      nameEn: null,
+      ref: 1,
+      supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      programId: 'prog-1',
+      clientId: 'client-1',
+      bookingId: 'book-existing',
+      booking: {
+        id: 'book-existing',
+        programId: 'prog-1',
+        clientId: 'client-1',
+        status: BookingStatus.AWAITING_PAYMENT,
+        price: new Prisma.Decimal(50000),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    await expect(
+      handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
+    ).rejects.toThrow(ConflictException);
+    expect(tx.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('rechecks the duplicate enrollment under the program lock', async () => {
     prisma.program.findFirst.mockResolvedValue({
       id: 'prog-1',
       status: ProgramStatus.OPEN,
@@ -177,16 +363,169 @@ describe('EnrollInProgramHandler', () => {
       price: new Prisma.Decimal(10000),
       currency: 'SAR',
       branchId: 'b-1',
+      hoursPerDay: 4,
       nameAr: 'x',
       nameEn: null,
       ref: 1,
       supervisors: [{ employeeId: 'emp-1' }],
     });
-    prisma.programEnrollment.findUnique.mockResolvedValue({ id: 'existing' });
+    // The outside snapshot has no enrollment, but the row created by a
+    // concurrent request is visible after this call waits on the lock.
+    tx.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      programId: 'prog-1',
+      clientId: 'client-1',
+      bookingId: 'book-existing',
+      booking: {
+        id: 'book-existing',
+        programId: 'prog-1',
+        clientId: 'client-1',
+        status: BookingStatus.AWAITING_PAYMENT,
+        price: new Prisma.Decimal(10000),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    tx.invoice.findUnique.mockResolvedValue({ id: 'inv-existing' });
+
+    const result = await handler.execute({ programId: 'prog-1', clientId: 'client-1' });
+
+    expect(result.bookingId).toBe('book-existing');
+    expect(tx.programEnrollment.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { programId_clientId: { programId: 'prog-1', clientId: 'client-1' } },
+    }));
+    expect(tx.booking.create).not.toHaveBeenCalled();
+    expect(tx.programEnrollment.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unrelated client when the locked program is full', async () => {
+    prisma.program.findFirst.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+      enrolledCount: 10,
+      maxParticipants: 10,
+      price: new Prisma.Decimal(10000),
+      currency: 'SAR',
+      branchId: 'b-1',
+      hoursPerDay: 4,
+      nameAr: 'x',
+      nameEn: null,
+      ref: 1,
+      supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.program.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      handler.execute({ programId: 'prog-1', clientId: 'different-client' }),
+    ).rejects.toThrow(ConflictException);
+    expect(tx.booking.create).not.toHaveBeenCalled();
+    expect(tx.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    BookingStatus.CANCELLED,
+    BookingStatus.EXPIRED,
+    BookingStatus.COMPLETED,
+    BookingStatus.NO_SHOW,
+  ])('does not resurrect a terminal enrollment (%s)', async (status) => {
+    prisma.program.findFirst.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+      enrolledCount: 1,
+      maxParticipants: 10,
+      price: new Prisma.Decimal(10000),
+      currency: 'SAR',
+      branchId: 'b-1',
+      hoursPerDay: 4,
+      nameAr: 'x',
+      nameEn: null,
+      ref: 1,
+      supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      programId: 'prog-1',
+      clientId: 'client-1',
+      bookingId: 'book-terminal',
+      booking: {
+        id: 'book-terminal',
+        programId: 'prog-1',
+        clientId: 'client-1',
+        status,
+        price: new Prisma.Decimal(10000),
+        expiresAt: null,
+      },
+    });
 
     await expect(
       handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
     ).rejects.toThrow(ConflictException);
+    expect(tx.booking.create).not.toHaveBeenCalled();
+    expect(tx.program.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('does not resume an unpaid enrollment after its booking deadline', async () => {
+    prisma.program.findFirst.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+      enrolledCount: 1,
+      maxParticipants: 10,
+      price: new Prisma.Decimal(10000),
+      currency: 'SAR',
+      branchId: 'b-1',
+      hoursPerDay: 4,
+      nameAr: 'x',
+      nameEn: null,
+      ref: 1,
+      supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      programId: 'prog-1',
+      clientId: 'client-1',
+      bookingId: 'book-expired',
+      booking: {
+        id: 'book-expired',
+        programId: 'prog-1',
+        clientId: 'client-1',
+        status: BookingStatus.AWAITING_PAYMENT,
+        price: new Prisma.Decimal(10000),
+        expiresAt: new Date(Date.now() - 1),
+      },
+    });
+
+    await expect(
+      handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
+    ).rejects.toThrow(ConflictException);
+    expect(tx.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an enrollment whose booking reference is inconsistent', async () => {
+    prisma.program.findFirst.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+      enrolledCount: 1,
+      maxParticipants: 10,
+      price: new Prisma.Decimal(10000),
+      currency: 'SAR',
+      branchId: 'b-1',
+      hoursPerDay: 4,
+      nameAr: 'x',
+      nameEn: null,
+      ref: 1,
+      supervisors: [{ employeeId: 'emp-1' }],
+    });
+    tx.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      programId: 'prog-1',
+      clientId: 'client-1',
+      bookingId: 'book-missing',
+      booking: null,
+    });
+
+    await expect(
+      handler.execute({ programId: 'prog-1', clientId: 'client-1' }),
+    ).rejects.toThrow(ConflictException);
+    expect(tx.booking.create).not.toHaveBeenCalled();
   });
 
   it('creates a CONFIRMED booking and skips invoice when the program is free', async () => {
@@ -205,10 +544,10 @@ describe('EnrollInProgramHandler', () => {
       supervisors: [{ employeeId: 'emp-1' }],
     });
     // For a free program we stay OPEN (no min-reached transition)
-    tx.program.findUnique.mockResolvedValue({
-      enrolledCount: 1,
-      minParticipants: 5,
-    });
+    tx.program.findUnique.mockImplementation(({ select }: { select?: Record<string, unknown> }) =>
+      select?.status
+        ? Promise.resolve({ status: ProgramStatus.OPEN, enrolledCount: 0, maxParticipants: 10, minParticipants: 5 })
+        : Promise.resolve({ enrolledCount: 1, minParticipants: 5 }));
 
     const result = await handler.execute({ programId: 'prog-1', clientId: 'client-1' });
 
@@ -256,10 +595,10 @@ describe('EnrollInProgramHandler', () => {
       minParticipants: 4,
       supervisors: [{ employeeId: 'emp-1' }],
     });
-    tx.program.findUnique.mockResolvedValue({
-      enrolledCount: 4,
-      minParticipants: 4,
-    });
+    tx.program.findUnique.mockImplementation(({ select }: { select?: Record<string, unknown> }) =>
+      select?.status
+        ? Promise.resolve({ status: ProgramStatus.OPEN, enrolledCount: 3, maxParticipants: 10, minParticipants: 4 })
+        : Promise.resolve({ enrolledCount: 4, minParticipants: 4 }));
 
     const result = await handler.execute({ programId: 'prog-1', clientId: 'client-1' });
 
@@ -300,10 +639,10 @@ describe('EnrollInProgramHandler', () => {
       minParticipants: 5,
       supervisors: [{ employeeId: 'emp-1' }],
     });
-    tx.program.findUnique.mockResolvedValue({
-      enrolledCount: 2,
-      minParticipants: 5,
-    });
+    tx.program.findUnique.mockImplementation(({ select }: { select?: Record<string, unknown> }) =>
+      select?.status
+        ? Promise.resolve({ status: ProgramStatus.OPEN, enrolledCount: 1, maxParticipants: 10, minParticipants: 5 })
+        : Promise.resolve({ enrolledCount: 2, minParticipants: 5 }));
 
     await handler.execute({ programId: 'prog-1', clientId: 'client-1' });
 

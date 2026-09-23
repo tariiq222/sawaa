@@ -7,6 +7,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Apple, Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -22,6 +23,7 @@ import type { DeliveryType } from '@/types/booking-enums';
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
 
 export default function BookingPaymentScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{
     serviceId?: string;
     employeeId?: string;
@@ -148,7 +150,7 @@ export default function BookingPaymentScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive style={styles.backBtn}>
+          <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
             <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>

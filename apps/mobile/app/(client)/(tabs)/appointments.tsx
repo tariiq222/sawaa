@@ -66,6 +66,7 @@ function tabOf(status: ClientBookingStatus): TabKey {
 }
 
 function formatDate(iso: string, isRTL: boolean) {
+  if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
@@ -73,6 +74,7 @@ function formatDate(iso: string, isRTL: boolean) {
 }
 
 function formatTime(iso: string, isRTL: boolean) {
+  if (!iso) return '—';
   return new Date(iso).toLocaleTimeString(isRTL ? 'ar-SA' : 'en-US', {
     hour: 'numeric', minute: '2-digit',
   });

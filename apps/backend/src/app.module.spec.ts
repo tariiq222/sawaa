@@ -1,5 +1,10 @@
 process.env.AI_PROVIDER_ENCRYPTION_KEY ??=
   'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=';
+// AppModule boot requires every key in env.validation.ts; the spec must stay
+// hermetic and not depend on the developer's shell or .env freshness. This
+// fixture is one of the committed non-production values from
+// config/guest-chat-token-secret.policy.ts.
+process.env.CHAT_GUEST_TOKEN_SECRET ??= 'test-chat-guest-token-secret-for-e2e-only';
 
 describe('AppModule', () => {
   it('should be defined', async () => {

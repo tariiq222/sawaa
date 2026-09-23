@@ -3,8 +3,11 @@ jest.mock('../api', () => ({
   default: {
     post: jest.fn(),
     get: jest.fn(),
+    delete: jest.fn(),
   },
 }));
+const mockUnregisterPushAsync = jest.fn().mockResolvedValue(undefined);
+jest.mock('../push', () => ({ unregisterPushAsync: (...a: unknown[]) => mockUnregisterPushAsync(...a) }));
 
 const mockGetSecureItem = jest.fn();
 const mockSetSecureItem = jest.fn();
@@ -24,7 +27,7 @@ import { authService, SessionSupersededError, verifyMobileOtp } from '../auth';
 import * as nativeSessionState from '../native-session-state';
 import type { User } from '@/types/auth';
 
-const mockedApi = api as unknown as { post: jest.Mock; get: jest.Mock };
+const mockedApi = api as unknown as { post: jest.Mock; get: jest.Mock; delete: jest.Mock };
 
 // Deprecated multi-tenant contract fields are intentionally omitted; the
 // double assertion keeps the fixture compiling while the API contract sheds
@@ -159,6 +162,58 @@ describe('authService.sendOtp / verifyOtp', () => {
   });
 });
 
+describe('authService.requestAccountDeletion', () => {
+  it('closes once and clears the current session after server confirmation', async () => {
+    mockedApi.delete.mockResolvedValueOnce({ data: { status: 'closed' } });
+
+    const first = authService.requestAccountDeletion();
+    const second = authService.requestAccountDeletion();
+    await Promise.all([first, second]);
+
+    expect(mockedApi.delete).toHaveBeenCalledTimes(1);
+    expect(mockedApi.delete).toHaveBeenCalledWith('/mobile/client/profile');
+    expect(mockDeleteSecureItem).toHaveBeenCalledWith('accessToken');
+    expect(mockDeleteSecureItem).toHaveBeenCalledWith('refreshToken');
+    expect(mockedApi.post).not.toHaveBeenCalled();
+  });
+
+  it('keeps the local session when closure fails or is not confirmed', async () => {
+    mockedApi.delete.mockRejectedValueOnce(new Error('401'));
+    await expect(authService.requestAccountDeletion()).rejects.toThrow('401');
+    mockedApi.delete.mockResolvedValueOnce({ data: { status: 'scheduled' } });
+    await expect(authService.requestAccountDeletion()).rejects.toThrow('not confirmed');
+    expect(mockDeleteSecureItem).not.toHaveBeenCalled();
+  });
+
+  it('does not clear a newer login that completed while closure was pending', async () => {
+    let completeClosure: ((value: { data: { status: string } }) => void) | undefined;
+    mockedApi.delete.mockReturnValueOnce(new Promise((resolve) => { completeClosure = resolve; }));
+
+    const closure = authService.requestAccountDeletion();
+    nativeSessionState.beginSession();
+    completeClosure?.({ data: { status: 'closed' } });
+    await closure;
+
+    expect(mockDeleteSecureItem).not.toHaveBeenCalled();
+  });
+
+  it('lets a newer session submit its own closure while the old request is pending', async () => {
+    let completeOld: ((value: { data: { status: string } }) => void) | undefined;
+    mockedApi.delete.mockReturnValueOnce(new Promise((resolve) => { completeOld = resolve; }));
+    mockedApi.delete.mockResolvedValueOnce({ data: { status: 'closed' } });
+
+    const oldClosure = authService.requestAccountDeletion();
+    nativeSessionState.beginSession();
+    const newClosure = authService.requestAccountDeletion();
+    await newClosure;
+    completeOld?.({ data: { status: 'closed' } });
+    await oldClosure;
+
+    expect(mockedApi.delete).toHaveBeenCalledTimes(2);
+    expect(mockDeleteSecureItem).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('authService.logout', () => {
   it('hits the native logout endpoint, clears storage + redux', async () => {
     mockGetSecureItem.mockResolvedValueOnce('refresh-token-xyz');
@@ -169,6 +224,7 @@ describe('authService.logout', () => {
     expect(mockedApi.post).toHaveBeenCalledWith('/mobile/auth/logout', {
       refreshToken: 'refresh-token-xyz',
     });
+    expect(mockUnregisterPushAsync).toHaveBeenCalledTimes(1);
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('accessToken');
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('refreshToken');
     expect(mockDispatch).toHaveBeenCalled();

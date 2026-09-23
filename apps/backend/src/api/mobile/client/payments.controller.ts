@@ -114,6 +114,7 @@ export class MobileClientPaymentsController {
       clientId: user.id,
       invoiceId: body.invoiceId,
       method: body.method,
+      returnTo: 'MOBILE',
     });
   }
 

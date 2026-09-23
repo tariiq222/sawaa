@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { sawaaColors } from './tokens';
+import { colors as sharedColors } from '@sawaa/shared/tokens';
 
 interface Props {
   label: string;
@@ -19,10 +20,14 @@ interface Props {
  * Use everywhere a primary action is surfaced so the app stays visually uniform.
  */
 export function PrimaryButton({ label, onPress, fontFamily, style, height = 52, disabled, icon }: Props) {
+  const isDisabled = Boolean(disabled || !onPress);
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
-      style={[{ opacity: disabled ? 0.55 : 1 }, style]}
+      onPress={isDisabled ? undefined : onPress}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled }}
+      style={[{ opacity: isDisabled ? 0.55 : 1 }, style]}
     >
       <LinearGradient
         colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
@@ -32,7 +37,7 @@ export function PrimaryButton({ label, onPress, fontFamily, style, height = 52, 
       >
         {/* Specular sheen on top half */}
         <LinearGradient
-          colors={['rgba(255,255,255,0.38)', 'rgba(255,255,255,0)']}
+          colors={[sawaaColors.glass.border, 'transparent']}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={styles.sheen}
@@ -65,7 +70,7 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: sawaaColors.glass.border,
   },
-  label: { color: '#fff', fontSize: 15, letterSpacing: 0.2 },
+  label: { color: sharedColors.white, fontSize: 15, letterSpacing: 0.2 },
 });

@@ -9,7 +9,6 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Heart,
   Leaf,
   Lock,
   Moon,
@@ -21,12 +20,12 @@ import {
 import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
-import { useAppSelector, useAppDispatch } from '@/hooks/use-redux';
-import { logout } from '@/stores/slices/auth-slice';
-import { unregisterPushAsync } from '@/services/push';
+import { useAppSelector } from '@/hooks/use-redux';
+import { authService } from '@/services/auth';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useSummary } from '@/hooks/queries';
 import { PRIVACY_POLICY_URL } from '@/constants/config';
+import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -43,7 +42,6 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const router = useRouter();
-  const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
@@ -107,9 +105,8 @@ export default function ProfileScreen() {
   const settingsItems: SettingItem[] = [
     { icon: <Ticket size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.balance'), en: t('packages.balance') }, color: sawaaColors.teal[600], onPress: () => router.push('/(client)/packages/purchases') },
     { icon: <Lock size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />, label: { ar: 'الخصوصية والأمان', en: 'Privacy & Security' }, color: sawaaColors.teal[600], onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
-    { icon: <Bell size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />, label: { ar: 'الإشعارات', en: 'Notifications' }, color: sawaaColors.accent.violet, meta: { ar: 'مفعّلة', en: 'On' } },
+    { icon: <Bell size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />, label: { ar: 'الإشعارات', en: 'Notifications' }, color: sawaaColors.accent.violet, onPress: () => router.push('/(client)/settings') },
     { icon: <Moon size={18} color={sawaaColors.ink[700]} strokeWidth={1.75} />, label: { ar: 'الوضع الليلي', en: 'Dark mode' }, color: sawaaColors.ink[700], toggle: darkMode, onToggle: () => setDarkMode((v) => !v) },
-    { icon: <Heart size={18} color={sawaaColors.accent.rose} strokeWidth={1.75} />, label: { ar: 'الصحة النفسية', en: 'Wellness' }, color: sawaaColors.accent.rose },
     { icon: <Settings size={18} color={sawaaColors.ink[500]} strokeWidth={1.75} />, label: { ar: 'الإعدادات العامة', en: 'General' }, color: sawaaColors.ink[500], onPress: () => router.push('/(client)/settings') },
   ];
 
@@ -246,10 +243,8 @@ export default function ProfileScreen() {
         ) : null}
 
         <Animated.View entering={FadeInDown.delay(420).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="regular" radius={sawaaRadius.pill} onPress={async () => {
-            try { await unregisterPushAsync(); } catch { /* best-effort */ }
-            dispatch(logout());
-          }} interactive style={styles.logoutBtn}>
+          <DeleteAccountButton />
+          <Glass variant="regular" radius={sawaaRadius.pill} onPress={() => void authService.logout()} interactive style={styles.logoutBtn}>
             <Text style={[styles.logoutText, { fontFamily: f700 }]}>
               {t('profile.signOut')}
             </Text>

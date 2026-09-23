@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Calendar,
@@ -10,12 +11,11 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  MessageCircle,
   Video,
   XCircle,
 } from 'lucide-react-native';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -25,6 +25,7 @@ import { hasZoomMeetingAccess, resolveDeliveryType } from '@/types/booking-enums
 
 export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -47,16 +48,27 @@ export default function AppointmentDetailScreen() {
     : 'in_person';
   const isOnline = deliveryType === 'online';
   const canShowZoom = booking ? hasZoomMeetingAccess(booking) : false;
-  const scheduledDate = booking
+  const canResumePayment = Boolean(
+    booking?.invoiceId &&
+      !['cancelled', 'expired', 'no_show', 'completed', 'cancel_requested'].includes(booking.status) &&
+      !['PAID', 'DEPOSIT_PAID', 'CANCELLED', 'VOID', 'REFUNDED'].includes((booking.invoiceStatus ?? '').toUpperCase()) &&
+      (booking.status === 'pending' ||
+        booking.status === 'awaiting_payment' ||
+        booking.invoiceStatus === 'PARTIALLY_PAID' ||
+        booking.invoiceStatus === 'DRAFT' ||
+        booking.invoiceStatus === 'ISSUED'),
+  );
+  const hasScheduledTime = Boolean(booking?.scheduledAt);
+  const scheduledDate = booking && hasScheduledTime
     ? new Date(booking.scheduledAt).toLocaleDateString(dir.isRTL ? 'ar-SA' : 'en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
       })
-    : '—';
-  const scheduledTime = booking
+    : t('appointments.toBeScheduled');
+  const scheduledTime = booking && hasScheduledTime
     ? `${new Date(booking.scheduledAt).toLocaleTimeString(dir.isRTL ? 'ar-SA' : 'en-US', {
         hour: 'numeric', minute: '2-digit',
       })} · ${booking.durationMins} ${dir.isRTL ? 'دقيقة' : 'min'}`
-    : '—';
+    : t('appointments.toBeScheduled');
   const branchLocation = booking
     ? (dir.isRTL
         ? booking.branch?.nameAr ?? booking.branch?.nameEn
@@ -106,7 +118,7 @@ export default function AppointmentDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive style={styles.backBtn}>
+          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
             <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
@@ -181,6 +193,19 @@ export default function AppointmentDetailScreen() {
             </Text>
           </Glass>
         </Animated.View>
+
+        {canResumePayment ? (
+          <Animated.View entering={FadeInDown.delay(300).duration(700)}>
+            <PrimaryButton
+              label={t('appointments.completePayment')}
+              onPress={() => router.push({
+                pathname: '/(client)/booking/checkout',
+                params: { bookingId: booking!.id, invoiceId: booking!.invoiceId! },
+              })}
+              fontFamily={f700}
+            />
+          </Animated.View>
+        ) : null}
       </ScrollView>
 
       {/* Bottom actions */}
@@ -188,14 +213,6 @@ export default function AppointmentDetailScreen() {
         entering={FadeInDown.delay(360).duration(800).easing(Easing.out(Easing.cubic))}
         style={[styles.ctaWrap, { bottom: insets.bottom + 20, flexDirection: dir.row }]}
       >
-        <Pressable onPress={() => router.push('/(client)/chat')} style={styles.secondaryBtn}>
-          <Glass variant="strong" radius={sawaaRadius.pill} style={styles.secondaryGlass}>
-            <MessageCircle size={18} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            <Text style={[styles.secondaryText, { fontFamily: f600, fontWeight: '600' }]}>
-              {dir.isRTL ? 'محادثة' : 'Chat'}
-            </Text>
-          </Glass>
-        </Pressable>
         {canShowZoom && booking ? (
           <JoinVideoCallButton
             url={booking.zoomJoinUrl ?? booking.zoomLink ?? null}

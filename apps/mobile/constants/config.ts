@@ -1,5 +1,13 @@
-export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+import { resolveApiUrl } from './api-url-validation';
+export { resolveApiUrl };
+export type { ApiUrlResolutionEnv } from './api-url-validation';
+
+// Keep the EXPO_PUBLIC access direct so Expo can inline it during bundling.
+export const API_URL = resolveApiUrl({
+  configuredApiUrl: process.env.EXPO_PUBLIC_API_URL,
+  easBuildProfile: process.env.EAS_BUILD_PROFILE,
+  nodeEnv: process.env.NODE_ENV,
+});
 
 /**
  * Reserved for future vertical-specific builds. Currently unused — Sawa is
@@ -18,4 +26,4 @@ export const SUPPORTED_LANGUAGES = ['ar', 'en'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 export const PRIVACY_POLICY_URL =
-  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? 'https://sawa.sa/privacy';
+  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? 'https://sawaa.sa/privacy';

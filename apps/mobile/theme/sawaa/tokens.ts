@@ -36,6 +36,9 @@ export const sawaaColors = {
     borderSoft: 'rgba(255, 255, 255, 0.35)',
     darkBg: 'rgba(12, 36, 36, 0.55)',
     darkBorder: 'rgba(255, 255, 255, 0.18)',
+    opaqueBg: '#F7F9FB',
+    opaqueDarkBg: '#0c2424',
+    opaqueDarkBorder: '#FFFFFF',
   },
 } as const;
 

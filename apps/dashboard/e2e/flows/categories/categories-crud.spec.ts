@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { devLogin } from './helpers/auth'
+import { dashboardApiRequest, getPersonaToken } from '../../fixtures/seed'
 
 test.describe('Categories CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
@@ -41,14 +42,37 @@ test.describe('Categories CRUD Operations', () => {
   })
 
   test('should paginate categories', async ({ page }) => {
-    const pagination = page.locator('[class*="pagination"], [class*="pager"], button:has-text("next"), button:has-text("التالي")')
-    const hasPagination = await pagination.first().isVisible().catch(() => false)
-    test.skip(!hasPagination, 'No pagination present for current dataset')
+    const token = await getPersonaToken('admin')
+    const seededIds: string[] = []
+    try {
+      const runId = Date.now()
+      for (let index = 0; index < 21; index += 1) {
+        const response = await dashboardApiRequest('/dashboard/organization/categories', token, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nameAr: `تصنيف ترقيم ${runId} ${index}`,
+            nameEn: `Pagination category ${runId} ${index}`,
+          }),
+        })
+        expect(response.ok, `create pagination category ${index}`).toBeTruthy()
+        seededIds.push((await response.json() as { id: string }).id)
+      }
 
-    const nextButton = page.locator('button:has-text("next"), button:has-text("التالي"), [aria-label*="next"]')
-    await expect(nextButton.first()).toBeVisible({ timeout: 10_000 })
-    await nextButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+      await page.reload()
+      await expect(page.getByText(/^1 \/ \d+$/)).toBeVisible({ timeout: 15_000 })
+      const firstPageRows = await page.locator('tbody tr').allTextContents()
+      // Scope to the server pager; the table also renders its local pager.
+      await page.getByText(/^1 \/ \d+$/).locator('..').getByRole('button', { name: /التالي|Next/ }).click()
+      await expect(page.getByText(/^2 \/ \d+$/)).toBeVisible({ timeout: 15_000 })
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+      await expect.poll(() => page.locator('tbody tr').allTextContents()).not.toEqual(firstPageRows)
+    } finally {
+      const cleanup = await Promise.all(seededIds.map((id) =>
+        dashboardApiRequest(`/dashboard/organization/categories/${id}`, token, { method: 'DELETE' }),
+      ))
+      expect(cleanup.every((response) => response.ok || response.status === 404), 'pagination category cleanup').toBeTruthy()
+    }
   })
 
   test('should view category details', async ({ page }) => {

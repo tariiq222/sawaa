@@ -43,6 +43,22 @@ export interface EnrollInProgramResult {
   invoiceId: string | null;
 }
 
+const ACTIVE_ENROLLMENT_BOOKING_STATUSES = new Set<BookingStatus>([
+  BookingStatus.PENDING,
+  BookingStatus.PENDING_GROUP_FILL,
+  BookingStatus.AWAITING_PAYMENT,
+  BookingStatus.CONFIRMED,
+  BookingStatus.CANCEL_REQUESTED,
+  BookingStatus.DEPOSIT_PAID,
+]);
+
+const TERMINAL_ENROLLMENT_BOOKING_STATUSES = new Set<BookingStatus>([
+  BookingStatus.CANCELLED,
+  BookingStatus.COMPLETED,
+  BookingStatus.NO_SHOW,
+  BookingStatus.EXPIRED,
+]);
+
 @Injectable()
 export class EnrollInProgramHandler {
   constructor(
@@ -64,43 +80,139 @@ export class EnrollInProgramHandler {
       throw new NotFoundException('Program not found');
     }
 
-    if (!isProgramOpenForEnrollment(program.status)) {
-      throw new BadRequestException(
-        `Program is not open for enrollment (status: ${program.status})`,
-      );
-    }
-
-    if (program.enrolledCount >= program.maxParticipants) {
-      throw new ConflictException('Program is full');
-    }
-
-    const existingEnrollment = await this.prisma.programEnrollment.findUnique({
-      where: {
-        programId_clientId: {
-          programId: cmd.programId,
-          clientId: cmd.clientId,
-        },
-      },
-    });
-
-    if (existingEnrollment) {
-      throw new ConflictException('Already enrolled in this program');
-    }
-
-    const firstSupervisor = program.supervisors[0]?.employeeId;
-    if (!firstSupervisor) {
-      // Defensive — a program without supervisors cannot accept bookings.
-      throw new BadRequestException('Program has no supervisor assigned');
-    }
-
-    const price = Number(program.price);
-    const initialBookingStatus =
-      price > 0 ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED;
-
     const result = await this.rlsTransaction
       .withTransaction(async (tx) => {
         // Lock the program row so concurrent enrollment attempts serialise.
         await tx.$queryRaw`SELECT id FROM "Program" WHERE id = ${program.id} FOR UPDATE`;
+
+        // The pre-transaction program snapshot is only an existence/public
+        // check. Read the lock-protected counters and lifecycle state before
+        // making the capacity decision, otherwise a stale full/open snapshot
+        // can reject a retry or admit a second seat.
+        const lockedProgram = await tx.program.findUnique({
+          where: { id: program.id },
+          select: {
+            status: true,
+            enrolledCount: true,
+            maxParticipants: true,
+            minParticipants: true,
+          },
+        });
+        if (!lockedProgram) {
+          throw new NotFoundException('Program not found');
+        }
+
+        // This lookup must stay inside the same program-row lock. Two calls
+        // for one client can therefore converge on the first committed
+        // booking/invoice rather than racing the unique constraint after
+        // reserving another seat.
+        const existingEnrollment = await tx.programEnrollment.findUnique({
+          where: {
+            programId_clientId: {
+              programId: cmd.programId,
+              clientId: cmd.clientId,
+            },
+          },
+          select: {
+            id: true,
+            programId: true,
+            clientId: true,
+            bookingId: true,
+            booking: {
+              select: {
+                id: true,
+                programId: true,
+                clientId: true,
+                status: true,
+                price: true,
+                expiresAt: true,
+              },
+            },
+          },
+        });
+
+        if (existingEnrollment) {
+          const existingBooking = existingEnrollment.booking;
+          if (
+            !existingBooking ||
+            existingEnrollment.programId !== program.id ||
+            existingEnrollment.clientId !== cmd.clientId ||
+            existingBooking.id !== existingEnrollment.bookingId ||
+            existingBooking.programId !== program.id ||
+            existingBooking.clientId !== cmd.clientId
+          ) {
+            throw new ConflictException('Existing enrollment is inconsistent');
+          }
+
+          if (
+            lockedProgram.status === ProgramStatus.COMPLETED ||
+            lockedProgram.status === ProgramStatus.CANCELLED
+          ) {
+            throw new ConflictException('Enrollment is no longer active');
+          }
+
+          if (TERMINAL_ENROLLMENT_BOOKING_STATUSES.has(existingBooking.status)) {
+            throw new ConflictException('Enrollment is no longer active');
+          }
+
+          if (!ACTIVE_ENROLLMENT_BOOKING_STATUSES.has(existingBooking.status)) {
+            throw new ConflictException('Enrollment is no longer active');
+          }
+
+          // Expiry is authoritative for payment-pending states. A confirmed
+          // booking can retain its historical deadline after payment, so it
+          // must remain resumable even when that old timestamp has passed.
+          const expiryApplies =
+            existingBooking.status === BookingStatus.PENDING ||
+            existingBooking.status === BookingStatus.PENDING_GROUP_FILL ||
+            existingBooking.status === BookingStatus.AWAITING_PAYMENT ||
+            existingBooking.status === BookingStatus.DEPOSIT_PAID;
+          if (
+            expiryApplies &&
+            existingBooking.expiresAt &&
+            existingBooking.expiresAt <= new Date()
+          ) {
+            throw new ConflictException('Enrollment has expired');
+          }
+
+          const existingInvoice = await tx.invoice.findUnique({
+            where: { bookingId: existingBooking.id },
+            select: { id: true },
+          });
+          if (Number(existingBooking.price) > 0 && !existingInvoice) {
+            throw new ConflictException('Existing enrollment is inconsistent');
+          }
+
+          return {
+            booking: existingBooking,
+            invoiceId: existingInvoice?.id ?? null,
+            reachedMin: false,
+            enrolledCount: lockedProgram.enrolledCount,
+          };
+        }
+
+        const currentStatus = lockedProgram.status;
+        const currentCount = lockedProgram.enrolledCount;
+        const maxParticipants = lockedProgram.maxParticipants;
+        if (!isProgramOpenForEnrollment(currentStatus)) {
+          throw new BadRequestException(
+            `Program is not open for enrollment (status: ${currentStatus})`,
+          );
+        }
+
+        if (currentCount >= maxParticipants) {
+          throw new ConflictException('Program is full');
+        }
+
+        const firstSupervisor = program.supervisors[0]?.employeeId;
+        if (!firstSupervisor) {
+          // Defensive — a program without supervisors cannot accept bookings.
+          throw new BadRequestException('Program has no supervisor assigned');
+        }
+
+        const price = Number(program.price);
+        const initialBookingStatus =
+          price > 0 ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED;
 
         await lockPersonReferences(
           tx,
@@ -118,7 +230,7 @@ export class EnrollInProgramHandler {
           where: {
             id: program.id,
             status: { in: [ProgramStatus.OPEN, ProgramStatus.MIN_REACHED] },
-            enrolledCount: { lt: program.maxParticipants },
+            enrolledCount: { lt: maxParticipants },
           },
           data: { enrolledCount: { increment: 1 } },
         });
@@ -217,7 +329,8 @@ export class EnrollInProgramHandler {
         // minimum, flip it to MIN_REACHED inside the same transaction so the
         // event we publish below reflects the post-commit state.
         let reachedMin = false;
-        if (program.status === ProgramStatus.OPEN) {
+        let enrolledCountAfterReservation = currentCount + 1;
+        if (currentStatus === ProgramStatus.OPEN) {
           const updated = await tx.program.findUnique({
             where: { id: program.id },
             select: { enrolledCount: true, minParticipants: true },
@@ -226,6 +339,7 @@ export class EnrollInProgramHandler {
             updated &&
             updated.enrolledCount >= updated.minParticipants
           ) {
+            enrolledCountAfterReservation = updated.enrolledCount;
             assertProgramTransition(ProgramStatus.OPEN, 'MIN_REACHED');
             await tx.program.update({
               where: { id: program.id },
@@ -235,7 +349,12 @@ export class EnrollInProgramHandler {
           }
         }
 
-        return { booking, invoiceId, reachedMin };
+        return {
+          booking,
+          invoiceId,
+          reachedMin,
+          enrolledCount: enrolledCountAfterReservation,
+        };
       })
       .catch((err: unknown) => {
         if (
@@ -253,7 +372,7 @@ export class EnrollInProgramHandler {
         programRef: program.ref,
         programNameAr: program.nameAr,
         programNameEn: program.nameEn,
-        enrolledCount: program.enrolledCount + 1,
+        enrolledCount: result.enrolledCount,
         minParticipants: program.minParticipants,
         reachedAt: new Date(),
       });

@@ -46,7 +46,16 @@ export type GroupSession = Program;
 
 export interface EnrollInProgramResponse {
   type: 'ENROLLED';
-  bookingId?: string;
+  bookingId: string;
+  status: string;
+  invoiceId: string | null;
+}
+
+export type EnrollmentNextStep = 'checkout' | 'confirmed' | 'error';
+
+export function resolveEnrollmentNextStep(enrollment: EnrollInProgramResponse): EnrollmentNextStep {
+  if (enrollment.invoiceId) return 'checkout';
+  return enrollment.status.toUpperCase() === 'CONFIRMED' ? 'confirmed' : 'error';
 }
 
 /** @deprecated use EnrollInProgramResponse */
@@ -116,7 +125,9 @@ export const programsService = {
   },
 
   async enroll(id: string): Promise<EnrollInProgramResponse> {
-    const response = await api.post<unknown>(`/public/programs/${encodeURIComponent(id)}/enroll`);
+    // Enrollment is authenticated mobile traffic. The public route is subject
+    // to browser CSRF protection and rejects bearer-only native requests.
+    const response = await api.post<unknown>(`/mobile/client/programs/${encodeURIComponent(id)}/enroll`);
     return unwrap<EnrollInProgramResponse>(response.data);
   },
 };

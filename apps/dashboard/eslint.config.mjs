@@ -14,50 +14,99 @@ import nextTs from "eslint-config-next/typescript";
 
 /** Feature directories that must stay isolated from each other */
 const FEATURES = [
+  "activity-log",
   "bookings",
-  "practitioners",
-  "patients",
-  "services",
-  "payments",
-  "invoices",
-  "users",
   "branches",
-  "coupons",
-  "intake-forms",
   "chatbot",
+  "clients",
+  "contact-messages",
+  "conversations",
+  "coupons",
+  "dashboard",
+  "departments",
+  "email-config",
+  "employees",
+  "groups",
+  "intake-forms",
+  "invoices",
+  "login",
   "notifications",
+  "packages",
+  "patients",
+  "payments",
+  "practitioners",
+  "profile",
+  "programs",
   "ratings",
   "reports",
+  "services",
   "settings",
-  "activity-log",
-  "groups",
-  "contact-messages",
-  "programs",
-  "packages",
+  "sms",
+  "users",
   "whatsapp",
-  "conversations",
+  "zoom",
 ]
 
 /**
  * For a given feature, build the list of sibling features it must NOT import from.
  * Returns an array of no-restricted-imports patterns.
  */
+/**
+ * Composition exceptions: a page shell may embed a feature that has no other
+ * consumer. Shared widgets belong in components/features/shared or the feature
+ * root, not in this list.
+ */
+const FEATURE_IMPORT_ALLOWLIST = {
+  settings: new Set(["zoom", "email-config"]),
+}
+
 function crossFeatureRestrictions(feature) {
-  return FEATURES.filter((f) => f !== feature).map((sibling) => ({
-    // Matches both @/components/features/[sibling] and relative paths
-    name: `@/components/features/${sibling}`,
-    message: `Cross-feature import detected. Components from '${sibling}' must not be imported into '${feature}'. Extract shared logic to components/features/ root or lib/ instead.`,
+  const allowed = FEATURE_IMPORT_ALLOWLIST[feature] ?? new Set()
+  return FEATURES.filter((f) => f !== feature && !allowed.has(f)).map((sibling) => ({
+    // `patterns` matches `group`, not `name` (that key belongs to `paths` and was a no-op here).
+    group: [
+      `@/components/features/${sibling}`,
+      `@/components/features/${sibling}/**`,
+      `../${sibling}`,
+      `../${sibling}/**`,
+      `../../${sibling}`,
+      `../../${sibling}/**`,
+    ],
+    message: `Cross-feature import detected. Components from '${sibling}' must not be imported into '${feature}'. Extract shared logic to components/features/shared or the feature root instead.`,
   }))
 }
 
-/** Rules applied to all feature component files */
+const ICON_LIBRARY_RESTRICTIONS = [
+  {
+    group: ["lucide-react"],
+    message: "Use @hugeicons/react instead of lucide-react (DS rule: single icon library).",
+  },
+  {
+    group: ["@phosphor-icons/*"],
+    message: "Use @hugeicons/react instead of phosphor-icons (DS rule: single icon library).",
+  },
+  {
+    group: ["react-icons"],
+    message: "Use @hugeicons/react instead of react-icons (DS rule: single icon library).",
+  },
+  {
+    group: ["@heroicons/*"],
+    message: "Use @hugeicons/react instead of heroicons (DS rule: single icon library).",
+  },
+]
+
+/**
+ * Flat config replaces a rule instead of merging it. These blocks must stay
+ * after the baseline icon rule and repeat its patterns, or the later block
+ * silently deletes the earlier restriction.
+ */
 const featureRules = FEATURES.flatMap((feature) => ({
   files: [`components/features/${feature}/**/*.{ts,tsx}`],
   rules: {
     "no-restricted-imports": [
       "error",
       {
-        patterns: crossFeatureRestrictions(feature),
+        patterns: [...ICON_LIBRARY_RESTRICTIONS, ...crossFeatureRestrictions(feature)],
       },
     ],
   },
@@ -71,6 +120,7 @@ const libLayerRules = {
       "error",
       {
         patterns: [
+          ...ICON_LIBRARY_RESTRICTIONS,
           {
             group: ["@/components/*", "../components/*", "../../components/*"],
             message: "lib/ must not import from components/. Keep lib/ framework-agnostic.",
@@ -93,6 +143,7 @@ const hooksLayerRules = {
       "error",
       {
         patterns: [
+          ...ICON_LIBRARY_RESTRICTIONS,
           {
             group: [
               "@/components/ui/*",
@@ -148,24 +199,7 @@ const iconLibraryRules = {
     "no-restricted-imports": [
       "error",
       {
-        patterns: [
-          {
-            group: ["lucide-react"],
-            message: "Use @hugeicons/react instead of lucide-react (DS rule: single icon library).",
-          },
-          {
-            group: ["@phosphor-icons/*"],
-            message: "Use @hugeicons/react instead of phosphor-icons (DS rule: single icon library).",
-          },
-          {
-            group: ["react-icons"],
-            message: "Use @hugeicons/react instead of react-icons (DS rule: single icon library).",
-          },
-          {
-            group: ["@heroicons/*"],
-            message: "Use @hugeicons/react instead of heroicons (DS rule: single icon library).",
-          },
-        ],
+        patterns: ICON_LIBRARY_RESTRICTIONS,
       },
     ],
   },
@@ -248,10 +282,12 @@ const eslintConfig = defineConfig([
   ...nextTs,
 
   // ── Architectural boundary rules ──
-  ...featureRules,
+  // Icon restrictions are the baseline. Later blocks replace this rule, so
+  // they repeat ICON_LIBRARY_RESTRICTIONS instead of inheriting it.
+  iconLibraryRules,
   libLayerRules,
   hooksLayerRules,
-  iconLibraryRules,
+  ...featureRules,
   nativeDateInputRules,
   designTokensRules,
   unusedVarsRule,

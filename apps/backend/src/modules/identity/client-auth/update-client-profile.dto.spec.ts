@@ -84,4 +84,19 @@ describe('UpdateClientProfileDto', () => {
     const errors = await validateDto({ name: 12345 });
     expect(errors.some((e) => e.property === 'name')).toBe(true);
   });
+
+  it('accepts the supported client preference values', async () => {
+    const errors = await validateDto({ preferredLocale: 'ar', pushEnabled: false });
+    expect(errors).toHaveLength(0);
+  });
+
+  it.each([
+    ['preferredLocale', 'fr'],
+    ['preferredLocale', null],
+    ['pushEnabled', 'false'],
+    ['pushEnabled', null],
+  ])('rejects an invalid %s preference value', async (field, value) => {
+    const errors = await validateDto({ [field]: value });
+    expect(errors.some((e) => e.property === field)).toBe(true);
+  });
 });

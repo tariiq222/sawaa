@@ -59,9 +59,10 @@ export const notificationsService = {
     return response.data;
   },
 
-  async unregisterFcmToken() {
+  async unregisterFcmToken(token?: string) {
     const response = await api.delete<ApiResponse<{ deleted: number }>>(
       `${BASE}/fcm-token`,
+      { params: token ? { token } : undefined },
     );
     return response.data;
   },

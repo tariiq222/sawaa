@@ -234,6 +234,35 @@ describe('MoyasarApiClient', () => {
       );
     });
 
+    it('serializes an optional expiry deadline as Moyasar expired_at', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => hostedInvoiceResponse,
+      });
+      const expiresAt = new Date('2026-09-22T12:30:00.000Z');
+
+      await client.createCheckoutInvoice(ORG_ID, {
+        amountHalalas: 12500,
+        currency: 'SAR',
+        description: 'Program hold invoice',
+        successUrl: 'https://sawaa.example/payments/success',
+        backUrl: 'https://sawaa.example/payments/cancel',
+        metadata: { invoiceId: 'invoice-42' },
+        expiresAt,
+      });
+
+      const requestOptions = (fetchWithTimeout as jest.Mock).mock.calls.at(-1)[1];
+      expect(JSON.parse(requestOptions.body)).toEqual({
+        amount: 12500,
+        currency: 'SAR',
+        description: 'Program hold invoice',
+        success_url: 'https://sawaa.example/payments/success',
+        back_url: 'https://sawaa.example/payments/cancel',
+        metadata: { invoiceId: 'invoice-42' },
+        expired_at: '2026-09-22T12:30:00.000Z',
+      });
+    });
+
     it('fetches and maps one hosted invoice by gateway id', async () => {
       (fetchWithTimeout as jest.Mock).mockResolvedValue({
         ok: true,

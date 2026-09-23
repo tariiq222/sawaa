@@ -13,7 +13,7 @@ import {
 } from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
 
-import { getActivityLogColumns } from "@/components/features/activity-log/activity-log-columns"
+import { getActivityLogColumns } from "@/components/features/shared/activity-log-columns"
 import { useActivityLogs } from "@/hooks/use-activity-log"
 import { useLocale } from "@/components/locale-provider"
 

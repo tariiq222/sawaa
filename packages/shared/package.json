@@ -24,14 +24,6 @@
       "types": "./dist/constants/index.d.ts",
       "default": "./dist/constants/index.js"
     },
-    "./constants/feature-keys": {
-      "types": "./dist/constants/feature-keys.d.ts",
-      "default": "./dist/constants/feature-keys.js"
-    },
-    "./constants/feature-catalog": {
-      "types": "./dist/constants/feature-catalog.d.ts",
-      "default": "./dist/constants/feature-catalog.js"
-    },
     "./constants/permissions-catalog": {
       "types": "./dist/constants/permissions-catalog.d.ts",
       "default": "./dist/constants/permissions-catalog.js"
@@ -47,10 +39,6 @@
     "./state-machines": {
       "types": "./dist/state-machines/index.d.ts",
       "default": "./dist/state-machines/index.js"
-    },
-    "./terminology": {
-      "types": "./dist/terminology/index.d.ts",
-      "default": "./dist/terminology/index.js"
     },
     "./money": {
       "types": "./dist/money/index.d.ts",
@@ -74,7 +62,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist/terminology dist/date && rm -f dist/constants/feature-keys.js dist/constants/feature-keys.d.ts dist/constants/feature-catalog.js dist/constants/feature-catalog.d.ts && tsc -p tsconfig.json",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

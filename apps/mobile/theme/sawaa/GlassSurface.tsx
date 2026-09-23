@@ -1,8 +1,10 @@
 import React from 'react';
 import { Platform, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useReducedTransparency, useIncreasedContrast } from '../../hooks/useA11y';
+import { useTheme } from '../useTheme';
 import { sawaaBlur, sawaaColors, sawaaRadius } from './tokens';
 
 type Variant = 'base' | 'strong' | 'soft' | 'dark';
@@ -56,45 +58,79 @@ export function GlassSurface({
   ...rest
 }: Props) {
   const isDark = variant === 'dark';
-  const nativeGlass = isLiquidGlassAvailable();
+  const reduceTransparency = useReducedTransparency();
+  const increasedContrast = useIncreasedContrast();
+  const { theme, scheme } = useTheme();
+  const glassScheme = isDark || scheme === 'dark' ? 'dark' : 'light';
+  const isDarkAppearance = glassScheme === 'dark';
+  const opaqueSurface = isDark
+    ? sawaaColors.glass.opaqueDarkBg
+    : theme.colors.surface ?? sawaaColors.glass.opaqueBg;
+  const fallbackFill = isDarkAppearance ? sawaaColors.glass.darkBg : fillMap[variant];
+  const fallbackBorder = isDarkAppearance ? sawaaColors.glass.darkBorder : borderMap[variant];
+  const nativeGlass =
+    Platform.OS === 'ios' &&
+    !reduceTransparency &&
+    isGlassEffectAPIAvailable() &&
+    isLiquidGlassAvailable();
   const containerStyle: ViewStyle = {
     borderRadius: radius,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: borderMap[variant],
+    borderWidth: increasedContrast ? 2 : StyleSheet.hairlineWidth,
+    borderColor: increasedContrast
+      ? isDark
+        ? sawaaColors.glass.opaqueDarkBorder
+        : theme.colors.textPrimary
+      : fallbackBorder,
     overflow: 'hidden',
-    backgroundColor: Platform.OS === 'android' ? fillMap[variant] : 'transparent',
+    backgroundColor: reduceTransparency
+      ? opaqueSurface
+      : Platform.OS === 'android'
+        ? fallbackFill
+        : 'transparent',
   };
 
-  const highlightColors = isDark
+  const highlightColors = isDarkAppearance
     ? (['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.10)'] as const)
     : (['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.25)'] as const);
 
   return (
-    <View style={[containerStyle, style]} {...rest}>
+    <View
+      style={[
+        containerStyle,
+        style,
+        reduceTransparency && { backgroundColor: opaqueSurface },
+      ]}
+      {...rest}
+    >
       {Platform.OS === 'ios' && nativeGlass ? (
         <GlassView
           style={StyleSheet.absoluteFill}
           glassEffectStyle={variant === 'soft' ? 'clear' : 'regular'}
+          colorScheme={glassScheme}
           tintColor={isDark ? sawaaColors.glass.darkBg : undefined}
         />
       ) : (
         <>
-          {Platform.OS === 'ios' && (
+          {Platform.OS === 'ios' && !reduceTransparency && (
             <BlurView
               intensity={intensityMap[variant]}
-              tint={tintMap[variant]}
+              tint={isDarkAppearance ? 'dark' : tintMap[variant]}
               style={StyleSheet.absoluteFill}
             />
           )}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: fillMap[variant] }]} pointerEvents="none" />
-          <LinearGradient
-            colors={highlightColors}
-            locations={[0, 0.22, 0.55, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
+          {!reduceTransparency ? (
+            <>
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: fallbackFill }]} pointerEvents="none" />
+              <LinearGradient
+                colors={highlightColors}
+                locations={[0, 0.22, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+            </>
+          ) : null}
         </>
       )}
       <View style={{ padding }}>{children}</View>

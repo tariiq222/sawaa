@@ -4,7 +4,7 @@ import {
   ApiOkResponse, ApiNoContentResponse, ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, IsNotEmpty, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
@@ -27,6 +27,12 @@ export class MobileListNotificationsQuery {
 
   @ApiPropertyOptional({ description: 'Number of results per page', example: 20 })
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit?: number;
+}
+
+export class MobileUnregisterFcmQuery {
+  @ApiPropertyOptional({ description: 'FCM registration token for this device; omit to remove all devices' })
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(512)
+  token?: string;
 }
 
 @ApiTags('Mobile Client / Notifications')
@@ -85,7 +91,7 @@ export class MobileClientNotificationsController {
     });
   }
 
-  @ApiOperation({ summary: 'Register an FCM/APNs device token for the current client' })
+  @ApiOperation({ summary: 'Register an FCM registration token for the current client' })
   @ApiCreatedResponse({ description: 'Token stored' })
   @Post('fcm-token')
   @HttpCode(201)
@@ -96,11 +102,11 @@ export class MobileClientNotificationsController {
     return this.registerFcm.execute({ clientId: user.id, ...body });
   }
 
-  @ApiOperation({ summary: 'Remove all FCM tokens for the current client' })
+  @ApiOperation({ summary: 'Remove a device token, or all tokens when omitted' })
   @ApiNoContentResponse({ description: 'Tokens removed' })
   @Delete('fcm-token')
   @HttpCode(204)
-  async unregisterFcmEndpoint(@ClientSession() user: ClientSession) {
-    await this.unregisterFcm.execute({ clientId: user.id });
+  async unregisterFcmEndpoint(@ClientSession() user: ClientSession, @Query() query: MobileUnregisterFcmQuery) {
+    await this.unregisterFcm.execute({ clientId: user.id, ...(query.token ? { token: query.token } : {}) });
   }
 }

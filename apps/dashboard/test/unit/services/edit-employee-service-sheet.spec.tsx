@@ -24,13 +24,13 @@ vi.mock("@/hooks/use-services", () => ({ useServiceEmployees }))
 vi.mock("@/hooks/use-employee-mutations", () => ({ useEmployeeServiceMutations }))
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
 
-vi.mock("@/components/features/services/employee-service-toggles", () => ({
+vi.mock("@/components/features/shared/employee-service-toggles", () => ({
   EmployeeServiceToggles: (props: { item: { id: string } }) => (
     <div data-testid="employee-service-toggles" data-item-id={props.item.id} />
   ),
 }))
 
-vi.mock("@/components/features/services/employee-custom-pricing-row", () => ({
+vi.mock("@/components/features/shared/employee-custom-pricing-row", () => ({
   EmployeeCustomPricingRow: (props: { item: { id: string }; employeeId: string }) => (
     <div
       data-testid="employee-custom-pricing-row"

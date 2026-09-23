@@ -103,6 +103,7 @@ export default function RegisterScreen() {
               router.back();
             }}
             interactive
+            accessibilityLabel={t('a11y.buttonBack')}
             style={styles.backBtn}
           >
             {dir.isRTL ? (

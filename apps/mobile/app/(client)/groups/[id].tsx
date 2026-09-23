@@ -1,12 +1,13 @@
 import React from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Users } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
-import { useBranding, useBookGroupSession, useGroupSession } from '@/hooks/queries';
+import { useBookGroupSession, useGroupSession } from '@/hooks/queries';
+import { resolveEnrollmentNextStep } from '@/services/client/group-sessions';
 import { useDir } from '@/hooks/useDir';
 import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -34,8 +35,6 @@ export default function GroupDetailScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
-  const brandingQuery = useBranding();
-  const contactPhone = brandingQuery.data?.contactPhone ?? null;
   const groupQuery = useGroupSession(id);
   const book = useBookGroupSession();
   const group = groupQuery.data;
@@ -43,19 +42,34 @@ export default function GroupDetailScreen() {
   const backSymbol = (dir.isRTL ? 'chevron.right' : 'chevron.left') as React.ComponentProps<typeof AppIcon>['sf'];
 
   const isClosed = Boolean(group?.isFull);
-  const ctaLabel = isClosed ? t('groups.contactUs') : t('groups.join');
+  // Keep the enrollment action available when a program is full: the server
+  // can return an existing active enrollment for this client, which is the
+  // recovery path for a previously reserved place.
+  const ctaLabel = t('groups.join');
   const description = group ? (dir.isRTL ? group.descriptionAr : group.descriptionEn ?? group.descriptionAr) : null;
-
-  const onContactUs = () => {
-    if (contactPhone) {
-      void Linking.openURL(`tel:${contactPhone}`);
-    }
-  };
 
   const onJoin = () => {
     if (!id) return;
     book.mutate(id, {
-      onSuccess: () => Alert.alert(t('groups.title'), t('groups.booked')),
+      onSuccess: (enrollment) => {
+        const nextStep = resolveEnrollmentNextStep(enrollment);
+        if (nextStep === 'checkout' && enrollment.invoiceId) {
+          router.replace({
+            pathname: '/(client)/booking/checkout',
+            params: {
+              bookingId: enrollment.bookingId,
+              invoiceId: enrollment.invoiceId,
+              programId: id,
+            },
+          });
+          return;
+        }
+        if (nextStep === 'confirmed') {
+          Alert.alert(t('groups.title'), t('groups.booked'));
+          return;
+        }
+        Alert.alert(t('groups.title'), t('groups.invoiceMissing'));
+      },
       onError: () => Alert.alert(t('groups.title'), t('groups.bookError')),
     });
   };
@@ -67,7 +81,7 @@ export default function GroupDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.headerRow, { flexDirection: dir.row }]}> 
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
             <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={sawaaColors.ink[900]} strokeWidth={1.5} />
           </Pressable>
           <ThemedText variant="subheading">{t('groups.title')}</ThemedText>
@@ -97,7 +111,7 @@ export default function GroupDetailScreen() {
             </View>
 
             <View style={styles.detailsGrid}>
-              <DetailRow icon="calendar" label={formatDateTime(group.scheduledAt ?? '', dir.isRTL)} dir={dir} />
+              {group.scheduledAt ? <DetailRow icon="calendar" label={formatDateTime(group.scheduledAt, dir.isRTL)} dir={dir} /> : null}
               <DetailRow icon="duration" label={t('groups.duration', { count: group.durationMins ?? 0 })} dir={dir} />
               <DetailRow icon="users" label={t('groups.enrolled', { count: group.enrolledCount, max: group.maxCapacity ?? 0 })} dir={dir} />
               <DetailRow icon="price" label={formatPrice(Number(group.price), dir.isRTL, t('home.sar'))} dir={dir} />
@@ -116,8 +130,8 @@ export default function GroupDetailScreen() {
           <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaPill}>
             <PrimaryButton
               label={ctaLabel}
-              onPress={isClosed ? onContactUs : onJoin}
-              disabled={book.isPending || (isClosed && !contactPhone)}
+              onPress={onJoin}
+              disabled={book.isPending}
               height={50}
             />
           </Glass>

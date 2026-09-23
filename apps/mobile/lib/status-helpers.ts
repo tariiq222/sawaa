@@ -8,6 +8,7 @@ export const STATUS_LABEL_MAP: Record<BookingStatus, string> = {
   pending: 'appointments.pending',
   pending_group_fill: 'appointments.pending',
   awaiting_payment: 'appointments.pending',
+  deposit_paid: 'appointments.depositPaid',
   confirmed: 'appointments.confirmed',
   completed: 'appointments.completed',
   cancelled: 'appointments.cancelledStatus',

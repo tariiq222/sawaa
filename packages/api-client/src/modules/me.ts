@@ -23,12 +23,19 @@ export async function getMe(): Promise<ClientProfile> {
  */
 export type UpdateMyProfileRequest = UpdateClientProfilePayload & {
   email?: string;
+  preferredLocale?: 'ar' | 'en';
+  pushEnabled?: boolean;
+};
+
+export type UpdatedMyProfile = ClientProfile & {
+  preferredLocale: string | null;
+  pushEnabled: boolean;
 };
 
 export async function updateMyProfile(
   payload: UpdateMyProfileRequest,
-): Promise<ClientProfile> {
-  return apiRequest<ClientProfile>('/public/me', {
+): Promise<UpdatedMyProfile> {
+  return apiRequest<UpdatedMyProfile>('/public/me', {
     method: 'PATCH',
     credentials: 'include',
     body: JSON.stringify(payload),

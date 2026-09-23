@@ -13,7 +13,7 @@ import { useLocale } from "@/components/locale-provider"
 import { toast } from "sonner"
 import { AssignServiceSheet } from "./assign-service-sheet"
 import { EditEmployeeServiceSheet } from "./edit-employee-service-sheet"
-import { RemoveServiceDialog } from "./remove-service-dialog"
+import { RemoveServiceDialog } from "@/components/features/shared/remove-service-dialog"
 import { EmployeeServiceRow } from "./employee-service-row"
 import type { EmployeeService, UpdateServicePayload } from "@/lib/types/employee"
 

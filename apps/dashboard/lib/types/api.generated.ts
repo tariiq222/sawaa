@@ -3422,9 +3422,9 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register an FCM/APNs device token for the current client */
+        /** Register an FCM registration token for the current client */
         post: operations["MobileClientNotificationsController_registerFcmEndpoint_v1"];
-        /** Remove all FCM tokens for the current client */
+        /** Remove a device token, or all tokens when omitted */
         delete: operations["MobileClientNotificationsController_unregisterFcmEndpoint_v1"];
         options?: never;
         head?: never;
@@ -3649,11 +3649,29 @@ export interface paths {
         get: operations["MobileClientProfileController_getProfile_v1"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Close the authenticated client's login immediately */
+        delete: operations["MobileClientProfileController_deleteProfile_v1"];
         options?: never;
         head?: never;
         /** Update the authenticated client's profile */
         patch: operations["MobileClientProfileController_updateProfile_v1"];
+        trace?: never;
+    };
+    "/api/v1/mobile/client/programs/{id}/enroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enroll the authenticated client in a public program */
+        post: operations["MobileClientProgramsController_enroll_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/mobile/employee/bookings": {
@@ -9369,6 +9387,17 @@ export interface components {
              * @example +966501234567
              */
             phone?: string;
+            /**
+             * @description Preferred app locale
+             * @example ar
+             * @enum {string}
+             */
+            preferredLocale?: "ar" | "en";
+            /**
+             * @description Whether push notifications are enabled
+             * @example true
+             */
+            pushEnabled?: boolean;
         };
         MoyasarWebhookDataDto: {
             /**
@@ -10191,7 +10220,7 @@ export interface components {
              */
             platform: "ios" | "android";
             /**
-             * @description Device push token (FCM/APNs)
+             * @description FCM registration token (not an APNs or Expo token)
              * @example eXampleToken123
              */
             token: string;
@@ -10841,6 +10870,17 @@ export interface components {
              * @example +966501234567
              */
             phone?: string;
+            /**
+             * @description Preferred app locale
+             * @example ar
+             * @enum {string}
+             */
+            preferredLocale?: "ar" | "en";
+            /**
+             * @description Whether push notifications are enabled
+             * @example true
+             */
+            pushEnabled?: boolean;
         };
         UpdateContactMessageStatusDto: {
             /**
@@ -29594,7 +29634,10 @@ export interface operations {
     };
     MobileClientNotificationsController_unregisterFcmEndpoint_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description FCM registration token for this device; omit to remove all devices */
+                token?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -30449,6 +30492,66 @@ export interface operations {
             };
         };
     };
+    MobileClientProfileController_deleteProfile_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Login closed; clinical and financial records retained */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        retained: ("clinical_records" | "financial_records")[];
+                        /** @enum {string} */
+                        status: "closed";
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientProfileController_updateProfile_v1: {
         parameters: {
             query?: never;
@@ -30497,6 +30600,87 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientProgramsController_enroll_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public program UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Program enrollment created or resumed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        bookingId: string;
+                        /** Format: uuid */
+                        invoiceId: string | null;
+                        status: string;
+                        /** @enum {string} */
+                        type: "ENROLLED";
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Program not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Program full or enrollment unavailable */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {

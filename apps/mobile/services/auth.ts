@@ -1,4 +1,5 @@
 import api from './api';
+import { unregisterPushAsync } from './push';
 import {
   getSecureItem,
 } from '@/stores/secure-storage';
@@ -26,6 +27,8 @@ export class SessionSupersededError extends Error {
     this.name = 'SessionSupersededError';
   }
 }
+
+let accountClosureRequest: { epoch: number; promise: Promise<void> } | null = null;
 
 export type RegisterPayload = { firstName: string; lastName: string; phone: string; email: string };
 export type RegisterResponse = { userId: string; maskedPhone: string };
@@ -146,9 +149,33 @@ export const authService = {
     return normalized;
   },
 
+  requestAccountDeletion(): Promise<void> {
+    const sessionEpoch = getSessionEpoch();
+    if (accountClosureRequest?.epoch === sessionEpoch) return accountClosureRequest.promise;
+    const pending = (async () => {
+      const response = await api.delete<{ status: string }>('/mobile/client/profile');
+      if (response.data?.status !== 'closed') {
+        throw new Error('Account closure was not confirmed');
+      }
+      // A login that began while the request was pending owns a newer epoch.
+      // Clear only the session whose account was closed.
+      if (isSessionCurrent(sessionEpoch)) {
+        await clearSessionAtEpoch(fenceSession());
+      }
+    })();
+    accountClosureRequest = { epoch: sessionEpoch, promise: pending };
+    void pending.finally(() => {
+      if (accountClosureRequest?.promise === pending) accountClosureRequest = null;
+    }).catch(() => undefined);
+    return pending;
+  },
+
   /** Logout: call backend + clear storage + clear Redux */
   async logout(): Promise<void> {
     const epoch = fenceSession();
+    if (getSessionEpoch() === epoch) {
+      try { await unregisterPushAsync(); } catch { /* best effort before clearing credentials */ }
+    }
     try {
       const refreshToken = await getSecureItem('refreshToken');
       // A newer login may have replaced the token while SecureStore was

@@ -68,7 +68,8 @@ export function useReducedTransparency() {
 }
 
 /**
- * `prefers-contrast: more` (web) / `isHighTextContrastEnabled` (iOS).
+ * `prefers-contrast: more` (web) / darker system colors (iOS) / high text
+ * contrast (Android).
  * When true, Liquid Glass surfaces should thicken their border + raise the
  * specular highlight so edges are unambiguous.
  */
@@ -84,19 +85,27 @@ export function useIncreasedContrast() {
       mq.addEventListener?.("change", handler);
       return () => mq.removeEventListener?.("change", handler);
     }
-    // Native — iOS 13+. These APIs are typed loosely on RN, so we narrow them
-    // to a structural shape rather than reach for `any`.
+    // iOS and Android expose different accessibility signals. Narrow the RN
+    // surface structurally because the installed typings vary by platform.
     const a11y = AccessibilityInfo as unknown as {
+      isDarkerSystemColorsEnabled?: () => Promise<boolean>;
       isHighTextContrastEnabled?: () => Promise<boolean>;
       addEventListener: (
         event: string,
         handler: (value: boolean) => void,
       ) => { remove?: () => void };
     };
-    a11y.isHighTextContrastEnabled?.()
+
+    const isIOS = Platform.OS === 'ios';
+    const check = isIOS
+      ? a11y.isDarkerSystemColorsEnabled
+      : a11y.isHighTextContrastEnabled;
+    const event = isIOS ? 'darkerSystemColorsChanged' : 'highTextContrastChanged';
+
+    check?.()
       .then((v) => setOn(!!v))
       .catch(() => {});
-    const sub = a11y.addEventListener("highTextContrastChanged", (v) => setOn(!!v));
+    const sub = a11y.addEventListener(event, (v) => setOn(!!v));
     return () => sub?.remove?.();
   }, []);
 

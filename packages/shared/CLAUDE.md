@@ -1,6 +1,6 @@
 # @sawaa/shared — Cross-App Types, Enums, Tokens
 
-Pure, framework-agnostic code shared across backend, dashboard, website, and mobile: TypeScript types, enums, design tokens, business constants, terminology, and state machines. **No runtime framework deps, no data fetching, no React.**
+Pure, framework-agnostic code shared across backend, dashboard, website, and mobile: TypeScript types, enums, design tokens, business constants, and state machines. **No runtime framework deps, no data fetching, no React.**
 
 ## Layout
 
@@ -9,12 +9,10 @@ types/            domain types (auth, client-auth, payment, service, employee,
                   guest, branding, public-branding, notification, rating, api…)
 enums/            shared enums (auth, user, branding, chat, notification,
                   payment, rating, otp)
-constants/        roles, brand, config, feature-keys, feature-catalog,
-                  permissions-catalog
+constants/        roles, brand, config, permissions-catalog
 tokens/           design tokens (colors, typography, spacing, shadows,
                   radius, breakpoints, animations, branding)
 theme/            theme token composition
-terminology/      vertical terminology packs
 state-machines/   e.g. booking-wizard.ts (with colocated .test.ts)
 i18n/             shared translation data
 index.ts          re-exports everything
@@ -22,7 +20,7 @@ index.ts          re-exports everything
 
 ## Exports
 
-The package exposes granular sub-paths in `package.json` `exports`: `.`, `./types`, `./enums`, `./constants`, `./tokens`, `./theme`, `./state-machines`, `./terminology`, plus `./constants/{feature-keys,feature-catalog,permissions-catalog}`. Import the narrowest path you need.
+The package exposes granular sub-paths in `package.json` `exports`: `.`, `./types`, `./enums`, `./constants`, `./tokens`, `./theme`, `./state-machines`, plus `./constants/permissions-catalog`. Import the narrowest path you need.
 
 ## Commands
 
@@ -37,7 +35,7 @@ This package **compiles to `dist/`** — `package.json` `main` points at `dist/i
 
 - Types/enums used by 2+ apps.
 - Design tokens (single source of truth for colors/spacing/etc.).
-- Business constants (roles, permission catalog, feature keys).
+- Business constants (roles, permission catalog).
 - Pure logic with no IO (state machines).
 
 ## What does NOT belong here
@@ -45,5 +43,4 @@ This package **compiles to `dist/`** — `package.json` `main` points at `dist/i
 - Anything importing React, Next, NestJS, or Prisma client at runtime (`@prisma/client` is a peer/dev dep for *types* only).
 - API calls, data fetching, env access.
 - App-specific UI components.
-
-Some `terminology/` content is leftover scaffolding from the old codebase. Sawa serves one center — don't build new features on the terminology packs.
+- Vertical terminology packs — deleted; do not reintroduce them. Sawa serves one center.

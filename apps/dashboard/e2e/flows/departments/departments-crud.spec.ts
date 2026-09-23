@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { devLogin } from './helpers/auth'
+import { dashboardApiRequest, getPersonaToken } from '../../fixtures/seed'
 
 test.describe('Departments CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
@@ -44,14 +45,36 @@ test.describe('Departments CRUD Operations', () => {
   })
 
   test('should paginate departments', async ({ page }) => {
-    const pagination = page.locator('[class*="pagination"], [class*="pager"], button:has-text("next"), button:has-text("التالي")')
-    const hasPagination = await pagination.first().isVisible().catch(() => false)
-    test.skip(!hasPagination, 'No pagination present for current dataset')
+    const token = await getPersonaToken('admin')
+    const seededIds: string[] = []
+    try {
+      const runId = Date.now()
+      for (let index = 0; index < 21; index += 1) {
+        const response = await dashboardApiRequest('/dashboard/organization/departments', token, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nameAr: `قسم ترقيم ${runId} ${index}`,
+            nameEn: `Pagination department ${runId} ${index}`,
+          }),
+        })
+        expect(response.ok, `create pagination department ${index}`).toBeTruthy()
+        seededIds.push((await response.json() as { id: string }).id)
+      }
 
-    const nextButton = page.locator('button:has-text("next"), button:has-text("التالي"), [aria-label*="next"]')
-    await expect(nextButton.first()).toBeVisible({ timeout: 10_000 })
-    await nextButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+      await page.reload()
+      await expect(page.getByText(/^(صفحة 1 من \d+|Page 1 of \d+)$/)).toBeVisible({ timeout: 15_000 })
+      const firstPageRows = await page.locator('tbody tr').allTextContents()
+      await page.getByRole('button', { name: /التالي|Next/ }).click()
+      await expect(page.getByText(/^(صفحة 2 من \d+|Page 2 of \d+)$/)).toBeVisible({ timeout: 15_000 })
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+      await expect.poll(() => page.locator('tbody tr').allTextContents()).not.toEqual(firstPageRows)
+    } finally {
+      const cleanup = await Promise.all(seededIds.map((id) =>
+        dashboardApiRequest(`/dashboard/organization/departments/${id}`, token, { method: 'DELETE' }),
+      ))
+      expect(cleanup.every((response) => response.ok || response.status === 404), 'pagination department cleanup').toBeTruthy()
+    }
   })
 
   test('should view department details', async ({ page }) => {

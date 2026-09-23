@@ -45,7 +45,6 @@
     "openapi:snapshot": "WRITE_OPENAPI_SPEC=1 tsx -e \"require('./dist/src/main.js')\" && cp dist/openapi.json openapi.json",
     "openapi:build-and-snapshot": "pnpm run build && pnpm run openapi:snapshot",
     "check:openapi-coverage": "tsx scripts/check-openapi-coverage.ts",
-    "backfill:counters": "tsx scripts/billing/recompute-all-counters.ts",
     "legacy:extract": "tsx scripts/legacy-import/extract-booknetic.ts",
     "legacy:import": "tsx src/ops/legacy-import-runner.ts",
     "rekey:credentials": "tsx scripts/rekey-credentials.ts",

@@ -22,7 +22,6 @@ import { useTheme } from '@/theme/useTheme';
 import { useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
 import { useVerifyOtp, useRequestLoginOtp } from '@/hooks/queries';
-import { registerForPushAsync } from '@/services/push';
 import { authService, SessionSupersededError } from '@/services/auth';
 import { isSessionCurrent } from '@/services/native-session-state';
 
@@ -129,7 +128,6 @@ export default function OtpVerifyScreen() {
         refreshToken: result.tokens.refreshToken,
         user: profile,
       }));
-      void registerForPushAsync();
 
       const destination = result.sessionKind === 'staff'
         ? '/(employee)/(tabs)/today'
@@ -193,6 +191,8 @@ export default function OtpVerifyScreen() {
               router.back();
             }}
             style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.buttonBack')}
           >
             <BackIcon
               size={24}

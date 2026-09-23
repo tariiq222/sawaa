@@ -1,35 +1,23 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { registerForPushAsync, subscribeToFcmTokenRefresh, unregisterPushAsync } from '@/services/push';
+import { getSessionEpoch, isSessionCurrent } from '@/services/native-session-state';
 
-import { registerForPushAsync, unregisterPushAsync } from '@/services/push';
-
-/**
- * Registers the device for FCM push notifications when the user is
- * authenticated. On cleanup (logout / unmount) it unregisters the token
- * from the backend so stale tokens are not left behind.
- *
- * Usage:
- *   const token = useAppSelector((s) => s.auth.token);
- *   usePushNotifications(!!token);
- */
-export function usePushNotifications(isAuthenticated: boolean): void {
-  const registeredRef = useRef(false);
-
+/** One owner per client session; staff never calls the client notification API. */
+export function usePushNotifications(clientId: string | null, enabled: boolean): void {
   useEffect(() => {
-    if (!isAuthenticated) return;
-
+    if (!clientId || !enabled) return;
+    const epoch = getSessionEpoch();
     let cancelled = false;
-
-    registerForPushAsync().then((token) => {
-      if (cancelled) return;
-      if (token) registeredRef.current = true;
-    });
-
+    const isCurrent = () => !cancelled && isSessionCurrent(epoch);
+    const register = () => { void registerForPushAsync(isCurrent); };
+    register();
+    const unsubscribe = subscribeToFcmTokenRefresh(register);
     return () => {
       cancelled = true;
-      if (registeredRef.current) {
-        unregisterPushAsync().catch(() => {});
-        registeredRef.current = false;
-      }
+      unsubscribe();
+      // Explicit logout clears the token before clearing auth. A stale cleanup
+      // must never issue a deletion using a newer client's credentials.
+      if (isSessionCurrent(epoch)) void unregisterPushAsync();
     };
-  }, [isAuthenticated]);
+  }, [clientId, enabled]);
 }

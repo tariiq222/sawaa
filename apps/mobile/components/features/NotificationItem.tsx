@@ -30,12 +30,12 @@ interface TypeConfig {
 }
 
 const TYPE_MAP: Partial<Record<Notification['type'], TypeConfig>> = {
-  booking_confirmed: { icon: Calendar, color: '#059669' },
-  booking_cancelled: { icon: CalendarX, color: '#DC2626' },
-  reminder: { icon: Bell, color: '#F59E0B' },
-  payment_received: { icon: CreditCard, color: '#1D4ED8' },
-  new_rating: { icon: Star, color: '#7C3AED' },
-  problem_report: { icon: AlertTriangle, color: '#DC2626' },
+  booking_confirmed: { icon: Calendar, color: sharedColors.success },
+  booking_cancelled: { icon: CalendarX, color: sharedColors.error },
+  reminder: { icon: Bell, color: sharedColors.warning },
+  payment_received: { icon: CreditCard, color: sharedColors.primary[600] },
+  new_rating: { icon: Star, color: sharedColors.purple },
+  problem_report: { icon: AlertTriangle, color: sharedColors.error },
 };
 
 const DEFAULT_TYPE_CONFIG: TypeConfig = { icon: Bell, color: sharedColors.textSecondary };
@@ -77,6 +77,8 @@ export function NotificationItem({
   return (
     <Pressable
       onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${body}. ${t(notification.isRead ? 'notifications.read' : 'notifications.unread')}`}
       style={({ pressed }) => [
         styles.row,
         {
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: sharedColors.primary[600],
     marginTop: 8,
   },
 });

@@ -94,6 +94,16 @@ const buildHandler = () => {
 };
 
 describe('InitClientPaymentHandler', () => {
+  const originalWebsiteUrl = process.env.PUBLIC_WEBSITE_URL;
+
+  beforeEach(() => {
+    process.env.PUBLIC_WEBSITE_URL = 'https://website.example.test';
+  });
+
+  afterAll(() => {
+    if (originalWebsiteUrl === undefined) delete process.env.PUBLIC_WEBSITE_URL;
+    else process.env.PUBLIC_WEBSITE_URL = originalWebsiteUrl;
+  });
   it('returns redirect data and creates a pending payment row', async () => {
     const { handler, prisma, moyasar } = buildHandler();
 
@@ -119,8 +129,8 @@ describe('InitClientPaymentHandler', () => {
       amountHalalas: 230,
       currency: 'SAR',
       description: `Invoice payment - ${invoiceId}`,
-      successUrl: `http://localhost:3000/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
-      backUrl: `http://localhost:3000/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
+      successUrl: `https://website.example.test/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
+      backUrl: `https://website.example.test/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
       metadata: {
         invoiceId,
         bookingId,
@@ -136,6 +146,55 @@ describe('InitClientPaymentHandler', () => {
       },
       data: { gatewayRef: 'moyasar-invoice-1' },
     });
+  });
+
+  it('builds a fixed native callback only for a mobile return command and encodes its identifiers', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.invoice.findFirst.mockResolvedValue({
+      ...mockInvoice,
+      id: 'invoice/id?mobile',
+      bookingId: 'booking id&mobile',
+    });
+
+    await handler.execute({ invoiceId, clientId, returnTo: 'MOBILE' });
+
+    expect(moyasar.createCheckoutInvoice.mock.calls[0][1]).toEqual(expect.objectContaining({
+      successUrl:
+        'https://website.example.test/booking/payment-callback?source=mobile&bookingId=booking%20id%26mobile&invoiceId=invoice%2Fid%3Fmobile',
+      backUrl:
+        'https://website.example.test/booking/payment-callback?source=mobile&bookingId=booking%20id%26mobile&invoiceId=invoice%2Fid%3Fmobile',
+    }));
+  });
+
+  it('rejects an expired program hold before reserving or creating hosted checkout', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.booking.findFirst.mockResolvedValue({
+      ...mockBooking,
+      programId: 'program-1',
+      expiresAt: new Date(Date.now() - 1_000),
+    });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow('expired');
+
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+  });
+
+  it('passes an active program hold deadline to hosted checkout', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1_000);
+    prisma.booking.findFirst.mockResolvedValue({
+      ...mockBooking,
+      programId: 'program-1',
+      expiresAt,
+    });
+
+    await handler.execute({ invoiceId, clientId });
+
+    expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
+      organizationId,
+      expect.objectContaining({ expiresAt }),
+    );
   });
 
   it('binds the hosted invoice to the durable internal Payment id', async () => {

@@ -46,3 +46,10 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase native client files supplied by the build environment
+GoogleService-Info.plist
+google-services.json
+
+# Local Firebase and APNs configuration, inventory and private keys
+/private-config/

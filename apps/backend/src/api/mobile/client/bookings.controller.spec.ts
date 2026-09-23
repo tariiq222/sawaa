@@ -9,7 +9,8 @@ import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/c
 import { ClientRescheduleBookingHandler } from '../../../modules/bookings/client/client-reschedule-booking.handler';
 import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/submit-rating.handler';
 import { CreateZoomMeetingHandler } from '../../../modules/bookings/create-zoom-meeting/create-zoom-meeting.handler';
-import { PrismaService } from '../../../infrastructure/database';
+import { GetClientBookingForActionHandler } from '../../../modules/bookings/client/get-client-booking-for-action.handler';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 
 describe('MobileClientBookingsController (e2e)', () => {
@@ -22,13 +23,7 @@ describe('MobileClientBookingsController (e2e)', () => {
   const mockReschedule = { execute: jest.fn() };
   const mockRate = { execute: jest.fn() };
   const mockZoom = { execute: jest.fn() };
-
-  const mockPrisma = {
-    booking: {
-      findFirst: jest.fn(),
-      count: jest.fn(),
-    },
-  };
+  const mockBookingAction = { executeForJoin: jest.fn(), executeForRate: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -41,7 +36,7 @@ describe('MobileClientBookingsController (e2e)', () => {
         { provide: ClientRescheduleBookingHandler, useValue: mockReschedule },
         { provide: SubmitRatingHandler, useValue: mockRate },
         { provide: CreateZoomMeetingHandler, useValue: mockZoom },
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: GetClientBookingForActionHandler, useValue: mockBookingAction },
       ],
     })
       .overrideGuard(ClientSessionGuard)
@@ -185,11 +180,7 @@ describe('MobileClientBookingsController (e2e)', () => {
 
   describe('GET /mobile/client/bookings/:id/join', () => {
       it('returns 200 with existing zoom url', async () => {
-        mockPrisma.booking.findFirst.mockResolvedValue({
-          id: bookingId,
-          clientId: 'client-1',
-          deliveryType: 'ONLINE',
-          status: 'CONFIRMED',
+        mockBookingAction.executeForJoin.mockResolvedValue({
           zoomJoinUrl: 'https://zoom.us/j/123',
           scheduledAt: '2026-12-31T09:00:00Z',
         });
@@ -203,14 +194,7 @@ describe('MobileClientBookingsController (e2e)', () => {
     });
 
     it('rejects a stored zoom url for a cancelled booking', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({
-        id: bookingId,
-        clientId: 'client-1',
-        deliveryType: 'ONLINE',
-        status: 'CANCELLED',
-        zoomJoinUrl: 'https://zoom.us/j/123',
-        scheduledAt: '2026-12-31T09:00:00Z',
-      });
+      mockBookingAction.executeForJoin.mockRejectedValue(new ForbiddenException('Join is not available for this booking'));
 
       const res = await request(app.getHttpServer())
         .get(`/mobile/client/bookings/${bookingId}/join`)
@@ -222,13 +206,7 @@ describe('MobileClientBookingsController (e2e)', () => {
     });
 
     it('returns 403 for non-online booking', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({
-        id: bookingId,
-        clientId: 'client-1',
-        deliveryType: 'IN_PERSON',
-        zoomJoinUrl: null,
-        scheduledAt: '2026-12-31T09:00:00Z',
-      });
+      mockBookingAction.executeForJoin.mockRejectedValue(new ForbiddenException('Join is only available for online bookings'));
 
       const res = await request(app.getHttpServer())
         .get(`/mobile/client/bookings/${bookingId}/join`)
@@ -239,7 +217,7 @@ describe('MobileClientBookingsController (e2e)', () => {
     });
 
     it('returns 404 for missing booking', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue(null);
+      mockBookingAction.executeForJoin.mockRejectedValue(new NotFoundException('Booking not found'));
 
       const res = await request(app.getHttpServer())
         .get(`/mobile/client/bookings/${bookingId}/join`)
@@ -252,7 +230,7 @@ describe('MobileClientBookingsController (e2e)', () => {
 
   describe('POST /mobile/client/bookings/:id/rate', () => {
     it('returns 201 on rating', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({
+      mockBookingAction.executeForRate.mockResolvedValue({
         id: bookingId,
         clientId: 'client-1',
         employeeId: 'emp-1',
@@ -277,11 +255,7 @@ describe('MobileClientBookingsController (e2e)', () => {
     });
 
     it('returns 403 for non-owner booking', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({
-        id: bookingId,
-        clientId: 'other-client',
-        employeeId: 'emp-1',
-      });
+      mockBookingAction.executeForRate.mockRejectedValue(new ForbiddenException('Not your booking'));
 
       const res = await request(app.getHttpServer())
         .post(`/mobile/client/bookings/${bookingId}/rate`)

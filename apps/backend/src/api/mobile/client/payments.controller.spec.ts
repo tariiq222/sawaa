@@ -118,7 +118,12 @@ describe('MobileClientPaymentsController (e2e)', () => {
 
       expect(res.body.paymentId).toBe('pay-1');
       expect(mockInitPayment.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ clientId: 'client-1', invoiceId, method: 'ONLINE_CARD' }),
+        expect.objectContaining({
+          clientId: 'client-1',
+          invoiceId,
+          method: 'ONLINE_CARD',
+          returnTo: 'MOBILE',
+        }),
       );
     });
 

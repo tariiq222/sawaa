@@ -6,6 +6,13 @@ import { PackageBookingAction } from '../PackageBookingAction';
 import { PackageCreditCard } from '../PackageCreditCard';
 import { PackagePaymentStatus } from '../PackagePaymentStatus';
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+jest.mock('@/hooks/queries/useBranding', () => ({
+  useBranding: () => ({ data: undefined }),
+}));
+
 interface TestNode {
   type: unknown;
   props: {
