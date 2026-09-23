@@ -9,9 +9,9 @@ import {
   Alert,
   StyleSheet,
   TextInput,
+  Image,
 } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,6 +34,7 @@ export default function LoginScreen() {
   const f700 = getFontName(dir.locale, '700');
 
   const [identifier, setIdentifier] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const requestOtp = useRequestLoginOtp();
@@ -80,22 +81,12 @@ export default function LoginScreen() {
             entering={FadeIn.duration(700).easing(Easing.out(Easing.cubic))}
             style={styles.logoContainer}
           >
-            <Glass variant="strong" radius={sawaaTokens.radius.xl} style={styles.logo}>
-              <Svg width={40} height={40} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12Z"
-                  stroke={sawaaColors.teal[700]}
-                  strokeWidth={1.7}
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M12 22V10"
-                  stroke={sawaaColors.teal[700]}
-                  strokeWidth={1.7}
-                  strokeLinecap="round"
-                />
-              </Svg>
-            </Glass>
+            <Image
+              source={require('../../assets/sawa/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessible={false}
+            />
           </Animated.View>
 
           <Animated.Text
@@ -133,14 +124,19 @@ export default function LoginScreen() {
                 >
                   {t('auth.login.identifier')}
                 </Text>
-                <Glass variant="clear" radius={sawaaTokens.radius.md} style={styles.input}>
+                <View style={[styles.input, inputFocused && styles.inputFocused, error ? styles.inputError : undefined]}>
                   <TextInput
                     value={identifier}
                     onChangeText={(text) => {
                       setIdentifier(text.trim());
                       if (error) setError(undefined);
                     }}
-                    placeholder={t('auth.login.identifier')}
+                    placeholder={t('auth.login.identifierPlaceholder')}
+                    accessibilityLabel={t('auth.login.identifier')}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
+                    autoCorrect={false}
+                    selectionColor={sawaaColors.teal[600]}
                     placeholderTextColor={sawaaColors.ink[500]}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -151,7 +147,7 @@ export default function LoginScreen() {
                       { textAlign: 'left', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }
                     ]}
                   />
-                </Glass>
+                </View>
                 {error ? (
                   <Text
                     style={[
@@ -208,17 +204,19 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   scroll: { paddingHorizontal: 24 },
-  logoContainer: { alignItems: 'center', marginBottom: 24 },
-  logo: { width: 80, height: 80, alignItems: 'center', justifyContent: 'center' },
+  logoContainer: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  logo: { width: 144, height: 144, tintColor: sawaaColors.teal[700] },
   title: { fontSize: 32, color: sawaaColors.teal[700], lineHeight: 42, marginBottom: 8, alignSelf: 'stretch' },
   subtitle: { fontSize: 14, color: sawaaColors.ink[500], lineHeight: 20, marginBottom: 32, alignSelf: 'stretch' },
   form: { padding: 24 },
   formInner: { gap: 20 },
-  field: { gap: 8 },
+  field: { gap: 10 },
   label: { fontSize: 14, color: sawaaColors.teal[700] },
-  input: { padding: 14, flexDirection: 'row', alignItems: 'center' },
+  input: { minHeight: 56, paddingHorizontal: 16, borderRadius: sawaaTokens.radius.md, borderWidth: 1, borderColor: sawaaColors.teal[200], backgroundColor: sawaaColors.glass.opaqueBg, flexDirection: 'row', alignItems: 'center' },
+  inputFocused: { borderColor: sawaaColors.teal[600], backgroundColor: sawaaColors.glass.opaqueBg },
+  inputError: { borderColor: sawaaColors.accent.coral },
   inputRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', width: '100%' },
-  inputText: { flex: 1, fontSize: 14, color: sawaaColors.teal[700] },
+  inputText: { flex: 1, minHeight: 56, paddingVertical: 12, fontSize: 16, color: sawaaColors.ink[900] },
   error: { fontSize: 12, color: sawaaColors.accent.coral },
   forgotLink: { fontSize: 13, color: sawaaColors.teal[600] },
   registerRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },

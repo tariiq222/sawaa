@@ -32,8 +32,8 @@ import { SettingsProfileSection } from './settings-profile-section';
 import { clientProfileService } from '@/services/client/profile';
 import { registerForPushAsync, unregisterPushAsync } from '@/services/push';
 import { authService } from '@/services/auth';
+import { LANGUAGE_KEY } from '@/hooks/language-preference';
 
-const LANGUAGE_KEY = '@sawaa/language';
 const PUSH_KEY = '@sawaa/push-enabled';
 
 export default function SettingsScreen() {
@@ -115,6 +115,8 @@ export default function SettingsScreen() {
               router.back();
             }}
             style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.buttonBack')}
           >
             <BackIcon size={24} strokeWidth={1.5} color={theme.colors.textPrimary} />
           </Pressable>

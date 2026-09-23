@@ -10,6 +10,7 @@ import { useTheme } from '@/theme/useTheme';
 import { formatHalalas } from '@/lib/money';
 import type { Booking } from '@/types/models';
 import { withAlpha } from '@/theme/sawaa/tokens';
+import { colors as sharedColors } from '@sawaa/shared/tokens';
 
 const TYPE_ICON = {
   individual: Building2,
@@ -20,11 +21,11 @@ const TYPE_ICON = {
 };
 
 const TYPE_COLOR = {
-  individual: '#1D4ED8',
-  in_person: '#1D4ED8',
-  online: '#7C3AED',
-  walk_in: '#059669',
-  group: '#7C3AED',
+  individual: sharedColors.primary[600],
+  in_person: sharedColors.primary[600],
+  online: sharedColors.purple,
+  walk_in: sharedColors.success,
+  group: sharedColors.purple,
 };
 
 interface AppointmentCardProps {
@@ -88,7 +89,7 @@ export function AppointmentCard({ booking, onPress }: AppointmentCardProps) {
         <ThemedText variant="caption" color={theme.colors.textSecondary}>
           {formattedDate} • {booking.startTime}
         </ThemedText>
-        <ThemedText variant="caption" color="#1D4ED8" style={{ fontWeight: '600' }}>
+        <ThemedText variant="caption" color={theme.colors.primary} style={{ fontWeight: '600' }}>
           {formatHalalas(booking.totalAmount, { locale: isRTL ? 'ar-SA' : 'en-US' })} {t('home.sar')}
         </ThemedText>
       </View>

@@ -1,4 +1,4 @@
-import { Redirect, Slot } from 'expo-router';
+import { Redirect, Stack } from 'expo-router';
 
 import { useAppSelector } from '@/hooks/use-redux';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
@@ -17,5 +17,5 @@ export default function EmployeeLayout() {
     return <Redirect href="/(client)/(tabs)/home" />;
   }
 
-  return <Slot />;
+  return <Stack screenOptions={{ headerShown: false, gestureEnabled: true }} />;
 }

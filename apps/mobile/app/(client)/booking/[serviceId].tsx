@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Building2, ChevronLeft, ChevronRight, Video } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import {
   AquaBackground,
@@ -30,6 +31,7 @@ import {
 
 export default function BookingTypeScreen() {
   const { serviceId, employeeId } = useLocalSearchParams<{ serviceId: string; employeeId?: string }>();
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -121,7 +123,7 @@ export default function BookingTypeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={1} onBack={() => router.back()} />
+          <BookingStepHeader step={1} onBack={() => router.back()} backAccessibilityLabel={t('a11y.buttonBack')} />
         </Animated.View>
 
         {/* Title */}

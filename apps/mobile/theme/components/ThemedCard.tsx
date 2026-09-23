@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, View, ViewStyle } from 'react-native';
 import { useTheme } from '../useTheme';
+import { withAlpha } from '../sawaa/tokens';
 
 interface ThemedCardProps {
   children: React.ReactNode;
@@ -27,11 +28,11 @@ export function ThemedCard({
   const { theme } = useTheme();
 
   const cardStyle: ViewStyle = {
-    backgroundColor: selected ? '#1D4ED808' : theme.colors.white,
+    backgroundColor: selected ? withAlpha(theme.colors.primary, 0.05) : theme.colors.white,
     borderRadius: 12,
     padding,
     borderWidth: selected ? 1.5 : 0,
-    borderColor: selected ? '#1D4ED84D' : 'transparent',
+    borderColor: selected ? withAlpha(theme.colors.primary, 0.3) : 'transparent',
     ...theme.shadows[elevation],
   };
 
@@ -39,6 +40,8 @@ export function ThemedCard({
     return (
       <Pressable
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityState={{ selected: Boolean(selected) }}
         style={({ pressed }) => [
           cardStyle,
           { transform: [{ scale: pressed ? 0.98 : 1 }] },

@@ -131,7 +131,7 @@ export default function TherapistsListScreen() {
   const ListHeader = useMemo(() => (
     <View style={styles.header}>
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500)}>
-        <Glass variant="strong" radius={22} onPress={() => router.back()} interactive style={styles.backBtn}>
+        <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
           <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
         </Glass>
       </Animated.View>

@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -32,6 +33,7 @@ const REVIEWS = [
 
 export default function EmployeeProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -73,6 +75,7 @@ export default function EmployeeProfileScreen() {
             radius={22}
             onPress={() => router.back()}
             interactive
+            accessibilityLabel={t('a11y.buttonBack')}
             style={styles.backBtn}
           >
             <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />

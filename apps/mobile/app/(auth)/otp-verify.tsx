@@ -193,6 +193,8 @@ export default function OtpVerifyScreen() {
               router.back();
             }}
             style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.buttonBack')}
           >
             <BackIcon
               size={24}

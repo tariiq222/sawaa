@@ -35,6 +35,8 @@ const config: ExpoConfig = {
     'expo-secure-store',
     'expo-notifications',
     'expo-image-picker',
+    ['expo-build-properties', { ios: { deploymentTarget: '15.1' } }],
+    './plugins/with-ios-pod-deployment-target',
     [
       '@sentry/react-native/expo',
       {

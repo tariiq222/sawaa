@@ -111,7 +111,7 @@ export default function GroupDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.headerRow, { flexDirection: dir.row }]}> 
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
             <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={sawaaColors.ink[900]} strokeWidth={1.5} />
           </Pressable>
           <ThemedText variant="subheading">{t('groups.title')}</ThemedText>

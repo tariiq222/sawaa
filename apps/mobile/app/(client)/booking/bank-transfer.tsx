@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Banknote, ChevronLeft, ChevronRight, Copy, Upload } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -17,6 +18,7 @@ import { clientPaymentsService, type ReceiptUploadAsset } from '@/services/clien
 import { formatHalalas } from '@/lib/money';
 
 export default function BankTransferScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -97,7 +99,7 @@ export default function BankTransferScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive style={styles.backBtn}>
+          <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
             <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
