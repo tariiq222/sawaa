@@ -69,7 +69,7 @@ COPY apps/backend/prisma.config.ts ./apps/backend/prisma.config.ts
 RUN pnpm --filter=backend run prisma:generate
 # pnpm resolves tsc via .pnpm store symlinks, but with hoisted linker typescript
 # lands at node_modules/typescript/ (not .pnpm/). Invoke tsc directly.
-RUN cd /app/packages/shared && node /app/node_modules/typescript/bin/tsc -p tsconfig.json && ls -la dist/ && test -f dist/constants/feature-keys.js
+RUN cd /app/packages/shared && node /app/node_modules/typescript/bin/tsc -p tsconfig.json && ls -la dist/ && test -f dist/constants/index.js
 
 # Manually establish node_modules/@sawaa/* → packages/* symlinks so consumers
 # resolve via the package.json#exports map. pnpm's hoisted linker doesn't
@@ -80,8 +80,8 @@ RUN mkdir -p /app/node_modules/@sawaa \
  && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
  && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client \
  && ln -sf /app/packages/ui         /app/node_modules/@sawaa/ui \
- && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.js \
- && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.d.ts
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/index.js \
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/index.d.ts
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
 FROM node:22-bookworm-slim AS app-build
@@ -97,7 +97,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY apps/backend/package.json ./apps/backend/
 
 # Verify shared dist survived the COPY from shared-build
-RUN test -f /app/packages/shared/dist/constants/feature-keys.js \
+RUN test -f /app/packages/shared/dist/constants/index.js \
   || (echo "❌ packages/shared/dist/ missing — COPY from shared-build failed" && exit 1)
 
 # Install all workspace dependencies, including backend devDependencies needed by
@@ -116,7 +116,7 @@ RUN mkdir -p /app/node_modules/@sawaa \
  && rm -rf /app/node_modules/@sawaa/shared /app/node_modules/@sawaa/api-client \
  && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
  && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client \
- && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.d.ts \
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/index.d.ts \
   || (echo "❌ @sawaa/shared/dist not reachable through symlink" && exit 1)
 
 RUN cd /app/apps/backend && /app/node_modules/.bin/prisma generate --schema=prisma/schema

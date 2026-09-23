@@ -2,7 +2,7 @@ import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import type { ColumnDef, Row } from "@tanstack/react-table"
 
-import { getActivityLogColumns } from "@/components/features/activity-log/activity-log-columns"
+import { getActivityLogColumns } from "@/components/features/shared/activity-log-columns"
 import type { ActivityLog } from "@/lib/types/activity-log"
 
 const t = (k: string) => k

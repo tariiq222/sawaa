@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Calendar, ChevronLeft, ChevronRight, Clock, Video } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import {
   AquaBackground,
@@ -59,6 +60,7 @@ export default function BookingConfirmScreen() {
     chargedPrice?: string;
     currency?: string;
   }>();
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -184,7 +186,7 @@ export default function BookingConfirmScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={3} onBack={() => router.back()} />
+          <BookingStepHeader step={3} onBack={() => router.back()} backAccessibilityLabel={t('a11y.buttonBack')} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>

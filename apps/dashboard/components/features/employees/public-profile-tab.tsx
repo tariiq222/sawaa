@@ -6,7 +6,6 @@ import { Card, CardContent } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
-import { Switch } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { Employee, UpdateEmployeePayload } from "@/lib/types/employee"
@@ -30,7 +29,6 @@ export function PublicProfileTab({ employee }: Props) {
   const { updateMutation } = useEmployeeMutations()
 
   const [form, setForm] = useState({
-    isPublic: employee.isPublic ?? false,
     slug: employee.slug ?? "",
     publicBioAr: employee.publicBioAr ?? "",
     publicBioEn: employee.publicBioEn ?? "",
@@ -44,7 +42,6 @@ export function PublicProfileTab({ employee }: Props) {
 
   const save = async () => {
     const payload: UpdateEmployeePayload = {
-      isPublic: form.isPublic,
       slug: form.slug || null,
       publicBioAr: form.publicBioAr || null,
       publicBioEn: form.publicBioEn || null,
@@ -56,21 +53,6 @@ export function PublicProfileTab({ employee }: Props) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-4 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Label className="text-base font-semibold">
-              {t("employees.public.showInDirectory")}
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              {t("employees.public.showDirectoryDesc")}
-            </p>
-          </div>
-          <Switch
-            checked={form.isPublic}
-            onCheckedChange={(v) => setForm((f) => ({ ...f, isPublic: v }))}
-          />
-        </div>
-
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label>{t("employees.public.slug")}</Label>

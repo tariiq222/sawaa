@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../useTheme';
+import { withAlpha, sawaaColors } from '../sawaa/tokens';
+import { colors as sharedColors } from '@sawaa/shared/tokens';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -59,26 +61,27 @@ export function ThemedButton({
   };
 
   const isGradient = variant === 'primary' || variant === 'secondary';
+  const isDisabled = Boolean(disabled || loading);
 
-  const gradientColors: Record<string, [string, string]> = {
-    primary: ['#0037B0', '#1D4ED8'],
-    secondary: ['#65A30D', '#84CC16'],
+  const gradientColors: Record<'primary' | 'secondary', [string, string]> = {
+    primary: [theme.colors.primary, sawaaColors.teal[700]],
+    secondary: [sawaaColors.teal[600], sawaaColors.teal[700]],
   };
 
   const flatBgColor: Record<ButtonVariant, string> = {
-    primary: '#1D4ED8',
-    secondary: '#84CC16',
+    primary: theme.colors.primary,
+    secondary: sawaaColors.teal[700],
     outline: 'transparent',
     ghost: 'transparent',
     danger: 'transparent',
   };
 
   const textColor: Record<ButtonVariant, string> = {
-    primary: '#FFFFFF',
-    secondary: '#FFFFFF',
-    outline: '#1D4ED8',
-    ghost: '#1D4ED8',
-    danger: '#DC2626',
+    primary: sharedColors.white,
+    secondary: sharedColors.white,
+    outline: theme.colors.primary,
+    ghost: theme.colors.primary,
+    danger: theme.colors.error,
   };
 
   const content = (
@@ -114,10 +117,10 @@ export function ThemedButton({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
-    opacity: disabled ? 0.5 : 1,
+    opacity: isDisabled ? 0.5 : 1,
     width: full ? '100%' : undefined,
     ...(variant === 'outline'
-      ? { borderWidth: 1.5, borderColor: '#1D4ED833' }
+      ? { borderWidth: 1.5, borderColor: withAlpha(theme.colors.primary, 0.2) }
       : {}),
   };
 
@@ -125,9 +128,11 @@ export function ThemedButton({
     return (
       <Pressable
         onPress={onPress}
-        disabled={disabled || loading}
+        disabled={isDisabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
         style={({ pressed }) => [
-          { transform: [{ scale: pressed && !disabled ? 0.97 : 1 }] },
+          { transform: [{ scale: pressed && !isDisabled ? 0.97 : 1 }] },
           full ? { width: '100%' } : {},
           style,
         ]}
@@ -147,11 +152,13 @@ export function ThemedButton({
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
       style={({ pressed }) => [
         containerStyle,
         { backgroundColor: flatBgColor[variant] },
-        { transform: [{ scale: pressed && !disabled ? 0.97 : 1 }] },
+        { transform: [{ scale: pressed && !isDisabled ? 0.97 : 1 }] },
         style,
       ]}
     >

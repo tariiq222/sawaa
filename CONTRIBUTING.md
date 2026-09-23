@@ -2,6 +2,8 @@
 
 Sawa is a **single-tenant family counseling platform** — a booking and management system for one counseling center. This guide gets you productive in under 30 minutes.
 
+> **Before you change anything, read "Operational safety rules" in [CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md).** A few identifiers are load-bearing: changing `DEFAULT_ORG_ID` makes every encrypted provider credential undecryptable, renaming `PLATFORM_SETTINGS_KEY` breaks production boot, and removing `organizationId` from money/comms events silently kills staff notifications. Those are incident-class mistakes, not style issues.
+
 ## The Apps
 
 | App | Stack | Port |
@@ -114,7 +116,8 @@ When changing backend endpoints or DTOs:
 - **`apps/backend/openapi.json` is committed.** Keep it in sync (`pnpm openapi:sync`).
 - **Package names stay as-is.** `@sawaa/ui` and `@sawaa/website` scopes are inherited from the original fork — do not rename them.
 - **Money is stored as integer halalas** — never floats.
-- **Dead frontend stubs stay dead.** `useTerminology` (dashboard) and the mobile `memberships`/`tenant-switch` services are inert leftovers; do not wire them up.
+- **Dead frontend stubs stay dead.** `useTerminology`, memberships, and tenant-switch were deleted (verified 2026-09-21). Do not reintroduce them. See Operational safety rules in [CLAUDE.md](CLAUDE.md). Do not change `DEFAULT_ORG_ID`, rename `PLATFORM_SETTINGS_KEY`, or strip `organizationId` from money/comms events.
+- **Load-bearing identifiers.** Do not change `DEFAULT_ORG_ID` (it is the AES-256-GCM AAD for every stored provider credential), do not rename `PLATFORM_SETTINGS_KEY` (production boot fails), and do not strip `organizationId` from money/comms events before the staff guards in `apps/backend/src/modules/comms/events/` stop reading it. See "Operational safety rules" in [CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md).
 
 ## Pre-PR Checklist
 

@@ -7047,6 +7047,20 @@
             "description": "Saudi mobile number",
             "example": "+966501234567",
             "type": "string"
+          },
+          "preferredLocale": {
+            "description": "Preferred app locale",
+            "enum": [
+              "ar",
+              "en"
+            ],
+            "example": "ar",
+            "type": "string"
+          },
+          "pushEnabled": {
+            "description": "Whether push notifications are enabled",
+            "example": true,
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -8427,7 +8441,7 @@
             "type": "string"
           },
           "token": {
-            "description": "Device push token (FCM/APNs)",
+            "description": "FCM registration token (not an APNs or Expo token)",
             "example": "eXampleToken123",
             "type": "string"
           }
@@ -9515,6 +9529,20 @@
             "description": "Saudi mobile number (any common format; normalized to E.164)",
             "example": "+966501234567",
             "type": "string"
+          },
+          "preferredLocale": {
+            "description": "Preferred app locale",
+            "enum": [
+              "ar",
+              "en"
+            ],
+            "example": "ar",
+            "type": "string"
+          },
+          "pushEnabled": {
+            "description": "Whether push notifications are enabled",
+            "example": true,
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -34937,7 +34965,17 @@
     "/api/v1/mobile/client/notifications/fcm-token": {
       "delete": {
         "operationId": "MobileClientNotificationsController_unregisterFcmEndpoint_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "FCM registration token for this device; omit to remove all devices",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "Tokens removed"
@@ -34988,7 +35026,7 @@
             "bearer": []
           }
         ],
-        "summary": "Remove all FCM tokens for the current client",
+        "summary": "Remove a device token, or all tokens when omitted",
         "tags": [
           "Mobile Client / Notifications"
         ]
@@ -35056,7 +35094,7 @@
             "bearer": []
           }
         ],
-        "summary": "Register an FCM/APNs device token for the current client",
+        "summary": "Register an FCM registration token for the current client",
         "tags": [
           "Mobile Client / Notifications"
         ]
@@ -36052,6 +36090,93 @@
       }
     },
     "/api/v1/mobile/client/profile": {
+      "delete": {
+        "operationId": "MobileClientProfileController_deleteProfile_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "retained": {
+                      "items": {
+                        "enum": [
+                          "clinical_records",
+                          "financial_records"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "status": {
+                      "enum": [
+                        "closed"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "retained"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Login closed; clinical and financial records retained"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Close the authenticated client's login immediately",
+        "tags": [
+          "Mobile Client / Profile"
+        ]
+      },
       "get": {
         "operationId": "MobileClientProfileController_getProfile_v1",
         "parameters": [],
@@ -36190,6 +36315,116 @@
         "summary": "Update the authenticated client's profile",
         "tags": [
           "Mobile Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/programs/{id}/enroll": {
+      "post": {
+        "operationId": "MobileClientProgramsController_enroll_v1",
+        "parameters": [
+          {
+            "description": "Public program UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bookingId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "invoiceId": {
+                      "format": "uuid",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "enum": [
+                        "ENROLLED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "bookingId",
+                    "status",
+                    "invoiceId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Program enrollment created or resumed"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Program not found"
+          },
+          "409": {
+            "description": "Program full or enrollment unavailable"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enroll the authenticated client in a public program",
+        "tags": [
+          "Mobile Client / Programs"
         ]
       }
     },

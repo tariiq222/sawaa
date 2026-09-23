@@ -2,14 +2,23 @@ import { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 
 import { useTheme } from '@/theme/useTheme';
+import { useReduceMotion } from '@/hooks/useA11y';
 
 export function ChatTypingIndicator() {
   const { theme } = useTheme();
+  const reduceMotion = useReduceMotion();
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      dot1.setValue(0);
+      dot2.setValue(0);
+      dot3.setValue(0);
+      return;
+    }
+
     const animate = (dot: Animated.Value, delay: number) =>
       Animated.loop(
         Animated.sequence([
@@ -32,7 +41,7 @@ export function ChatTypingIndicator() {
       anim2.stop();
       anim3.stop();
     };
-  }, [dot1, dot2, dot3]);
+  }, [dot1, dot2, dot3, reduceMotion]);
 
   const dotStyle = (dot: Animated.Value) => ({
     opacity: dot.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),

@@ -16,20 +16,31 @@ import { QueryClientProvider } from '@tanstack/react-query';
 
 import { store, persistor } from '@/stores/store';
 import { queryClient } from '@/services/query-client';
-import { ThemeProvider } from '@/theme/ThemeProvider';
+import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { DirContext, buildDirState } from '@/hooks/useDir';
+import { useLanguagePreference } from '@/hooks/language-preference';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { useAppSelector } from '@/hooks/use-redux';
-import { registerForPushAsync } from '@/services/push';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { usePushResponses } from '@/hooks/use-push-responses';
+import { usePushPreference } from '@/hooks/queries/usePushPreference';
 import '@/i18n';
 
 function PushBootstrap() {
-  const token = useAppSelector((s) => s.auth.token);
-  useEffect(() => {
-    if (!token) return;
-    void registerForPushAsync();
-  }, [token]);
+  const { clientId, query } = usePushPreference();
+  usePushNotifications(clientId, query.data?.enabled === true);
+  usePushResponses(clientId);
   return null;
+}
+
+function RootContent() {
+  const { scheme } = useTheme();
+
+  return (
+    <SafeAreaProvider>
+      <Slot />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+    </SafeAreaProvider>
+  );
 }
 
 function RootLayout() {
@@ -39,7 +50,11 @@ function RootLayout() {
     }
   }, []);
 
-  const dirState = buildDirState('ar');
+  const { language, ready } = useLanguagePreference();
+
+  if (!ready) return null;
+
+  const dirState = buildDirState(language);
 
   return (
     <ReduxProvider store={store}>
@@ -48,11 +63,8 @@ function RootLayout() {
           <ErrorBoundary>
             <PushBootstrap />
             <DirContext.Provider value={dirState}>
-              <ThemeProvider language="ar">
-                <SafeAreaProvider>
-                  <Slot />
-                  <StatusBar style="dark" />
-                </SafeAreaProvider>
+              <ThemeProvider language={language}>
+                <RootContent />
               </ThemeProvider>
             </DirContext.Provider>
           </ErrorBoundary>

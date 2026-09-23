@@ -20,7 +20,6 @@ import { OnboardEmployeeHandler } from '../../modules/people/employees/onboard-e
 import { GetAvailabilityHandler } from '../../modules/people/employees/get-availability.handler';
 import { ListEmployeeServicesHandler } from '../../modules/people/employees/list-employee-services.handler';
 import { GetEmployeeServiceTypesHandler } from '../../modules/people/employees/get-employee-service-types.handler';
-import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { AssignEmployeeServiceHandler } from '../../modules/people/employees/assign-employee-service.handler';
 import { RemoveEmployeeServiceHandler } from '../../modules/people/employees/remove-employee-service.handler';
 import { ListEmployeeExceptionsHandler } from '../../modules/people/employees/list-employee-exceptions.handler';
@@ -39,7 +38,7 @@ import { SetEmployeePricingModeHandler } from '../../modules/org-experience/serv
 import { GetEmployeeAccountHandler } from '../../modules/identity/employee-account/get-employee-account.handler';
 import { CreateEmployeeAccountHandler } from '../../modules/identity/employee-account/create-employee-account.handler';
 import { UpdateEmployeeAccountHandler } from '../../modules/identity/employee-account/update-employee-account.handler';
-import { GetMainBranchHandler } from '../../modules/org-config/branches/get-main-branch.handler';
+import { EmployeeAvailabilityQueryHandler } from '../../modules/bookings/employee-availability-query.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -64,8 +63,7 @@ describe('DashboardPeopleController (e2e)', () => {
   const mockGetAvailability = { execute: jest.fn() };
   const mockListEmployeeServices = { execute: jest.fn() };
   const mockGetEmployeeServiceTypes = { execute: jest.fn() };
-  const mockCheckAvailability = { execute: jest.fn() };
-  const mockGetMainBranch = { execute: jest.fn() };
+  const mockAvailabilityQuery = { slots: jest.fn(), availableDays: jest.fn() };
   const mockAssignEmployeeService = { execute: jest.fn() };
   const mockRemoveEmployeeService = { execute: jest.fn() };
   const mockListEmployeeExceptions = { execute: jest.fn() };
@@ -119,8 +117,7 @@ describe('DashboardPeopleController (e2e)', () => {
         { provide: GetAvailabilityHandler, useValue: mockGetAvailability },
         { provide: ListEmployeeServicesHandler, useValue: mockListEmployeeServices },
         { provide: GetEmployeeServiceTypesHandler, useValue: mockGetEmployeeServiceTypes },
-        { provide: CheckAvailabilityHandler, useValue: mockCheckAvailability },
-        { provide: GetMainBranchHandler, useValue: mockGetMainBranch },
+        { provide: EmployeeAvailabilityQueryHandler, useValue: mockAvailabilityQuery },
         { provide: AssignEmployeeServiceHandler, useValue: mockAssignEmployeeService },
         { provide: RemoveEmployeeServiceHandler, useValue: mockRemoveEmployeeService },
         { provide: ListEmployeeExceptionsHandler, useValue: mockListEmployeeExceptions },
@@ -678,10 +675,7 @@ describe('DashboardPeopleController (e2e)', () => {
 
   describe('GET /dashboard/people/employees/:id/slots', () => {
     it('returns 200 with slots without duration', async () => {
-      const start = new Date('2026-05-01T09:00:00Z');
-      const end = new Date('2026-05-01T09:30:00Z');
-      mockGetMainBranch.execute.mockResolvedValue({ id: 'resolved-branch-id', isMain: true });
-      mockCheckAvailability.execute.mockResolvedValue([{ startTime: start, endTime: end }]);
+      mockAvailabilityQuery.slots.mockResolvedValue([{ startTime: '09:00', endTime: '09:30' }]);
 
       const res = await request(app.getHttpServer())
         .get(`/dashboard/people/employees/${uuid(2)}/slots?date=2026-05-01`)
@@ -689,16 +683,13 @@ describe('DashboardPeopleController (e2e)', () => {
         .expect(200);
 
       expect(res.body).toEqual([{ startTime: '09:00', endTime: '09:30' }]);
-      expect(mockCheckAvailability.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ branchId: 'resolved-branch-id', durationMins: undefined }),
+      expect(mockAvailabilityQuery.slots).toHaveBeenCalledWith(
+        expect.objectContaining({ employeeId: uuid(2), date: '2026-05-01', duration: undefined }),
       );
     });
 
-    it('returns 200 with slots including single-digit hour padding (formatHHmm branch)', async () => {
-      const start = new Date('2026-05-01T08:05:00Z');
-      const end = new Date('2026-05-01T10:15:00Z');
-      mockGetMainBranch.execute.mockResolvedValue({ id: 'resolved-branch-id', isMain: true });
-      mockCheckAvailability.execute.mockResolvedValue([{ startTime: start, endTime: end }]);
+    it('returns 200 with slots including duration', async () => {
+      mockAvailabilityQuery.slots.mockResolvedValue([{ startTime: '08:05', endTime: '10:15' }]);
 
       const res = await request(app.getHttpServer())
         .get(`/dashboard/people/employees/${uuid(2)}/slots?date=2026-05-01&duration=45`)
@@ -706,8 +697,8 @@ describe('DashboardPeopleController (e2e)', () => {
         .expect(200);
 
       expect(res.body).toEqual([{ startTime: '08:05', endTime: '10:15' }]);
-      expect(mockCheckAvailability.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ durationMins: 45 }),
+      expect(mockAvailabilityQuery.slots).toHaveBeenCalledWith(
+        expect.objectContaining({ duration: 45 }),
       );
     });
 

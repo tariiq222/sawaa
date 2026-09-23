@@ -1,34 +1,42 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useT } from '@/features/locale/locale-provider';
 
-// Moyasar's 3DS flow returns the client here via a cross-site top-level GET
-// redirect (callback_url is built in the backend's init-client-payment
-// handler). This page renders nothing user-facing — it immediately bounces to
-// /booking/confirm, which polls the booking status. It must NOT be added to
-// the middleware PROTECTED_PATHS: the bounce must stay publicly reachable.
+// Moyasar returns here after 3DS. The payment result is verified only after
+// the client chooses a channel and that channel checks the booking status.
+// Keep this public route out of middleware PROTECTED_PATHS.
 function PaymentCallbackContent() {
-  const router = useRouter();
+  const t = useT();
   const params = useSearchParams();
+  const identifiers = new URLSearchParams();
+  const bookingId = params.get('bookingId');
+  const invoiceId = params.get('invoiceId');
+  if (bookingId) identifiers.set('bookingId', bookingId);
+  if (invoiceId) identifiers.set('invoiceId', invoiceId);
+  const query = identifiers.toString();
+  const suffix = query ? `?${query}` : '';
 
-  useEffect(() => {
-    const target = new URLSearchParams();
-    const bookingId = params.get('bookingId');
-    const invoiceId = params.get('invoiceId');
-    if (bookingId) target.set('bookingId', bookingId);
-    if (invoiceId) target.set('invoiceId', invoiceId);
-    const qs = target.toString();
-    // No bookingId → /booking/confirm renders its failed state on its own.
-    router.replace(qs ? `/booking/confirm?${qs}` : '/booking/confirm');
-  }, [params, router]);
-
-  return <div style={{ textAlign: 'center', padding: '3rem' }}>جارٍ التحميل...</div>;
+  return (
+    <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center gap-5 px-6 py-12 text-center">
+      <h1 className="text-2xl font-semibold text-[var(--sw-secondary-700)]">{t('payment.callback.title')}</h1>
+      <p className="text-[var(--sw-body)]">{t('payment.callback.description')}</p>
+      <div className="flex w-full flex-col gap-3 sm:flex-row">
+        <a className="flex-1 rounded-xl bg-[var(--sw-primary-600)] px-5 py-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sw-primary-600)]" href={`sawa://booking/payment-callback${suffix}`}>
+          {t('payment.callback.app')}
+        </a>
+        <a className="flex-1 rounded-xl border border-[var(--sw-primary-600)] px-5 py-3 font-semibold text-[var(--sw-primary-600)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sw-primary-600)]" href={`/booking/confirm${suffix}`}>
+          {t('payment.callback.website')}
+        </a>
+      </div>
+    </main>
+  );
 }
 
 export default function PaymentCallbackPage() {
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>جارٍ التحميل...</div>}>
+    <Suspense fallback={null}>
       <PaymentCallbackContent />
     </Suspense>
   );

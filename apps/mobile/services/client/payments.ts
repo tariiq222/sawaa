@@ -60,12 +60,17 @@ export interface ClientPaymentInitResponse {
 export interface ClientInvoice {
   id: string;
   status: string;
+  total?: number | string;
+  currency?: string;
   payments?: ClientInvoicePayment[];
 }
 
 export interface ClientInvoicePayment {
   id: string;
   status: string;
+  createdAt?: string;
+  amount?: number | string;
+  method?: string;
 }
 
 export interface ClientBankTransferUploadResponse {

@@ -3,7 +3,6 @@ import {
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
   UseInterceptors, UploadedFile, BadRequestException, ForbiddenException, Request,
 } from '@nestjs/common';
-import type { DeliveryType } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery,
@@ -46,8 +45,7 @@ import { EmployeeOnboardingDto } from '../../modules/people/employees/employee-o
 import { DeleteEmployeeHandler } from '../../modules/people/employees/delete-employee.handler';
 import { ListEmployeeServicesHandler } from '../../modules/people/employees/list-employee-services.handler';
 import { GetEmployeeServiceTypesHandler } from '../../modules/people/employees/get-employee-service-types.handler';
-import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
-import { GetMainBranchHandler } from '../../modules/org-config/branches/get-main-branch.handler';
+import { EmployeeAvailabilityQueryHandler } from '../../modules/bookings/employee-availability-query.handler';
 import { Type } from 'class-transformer';
 import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { AssignEmployeeServiceHandler } from '../../modules/people/employees/assign-employee-service.handler';
@@ -112,16 +110,6 @@ class AssignEmployeeServiceDto {
   serviceId!: string;
 }
 
-function formatHHmm(d: Date): string {
-  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
-  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
-}
-
-function formatDateYmd(d: Date): string {
-  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 @ApiTags('Dashboard / People')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -152,8 +140,7 @@ export class DashboardPeopleController {
     private readonly deleteEmployee: DeleteEmployeeHandler,
     private readonly listEmployeeServices: ListEmployeeServicesHandler,
     private readonly getEmployeeServiceTypes: GetEmployeeServiceTypesHandler,
-    private readonly checkAvailability: CheckAvailabilityHandler,
-    private readonly getMainBranch: GetMainBranchHandler,
+    private readonly availabilityQuery: EmployeeAvailabilityQueryHandler,
     private readonly assignEmployeeService: AssignEmployeeServiceHandler,
     private readonly updateEmployeeService: UpdateEmployeeServiceHandler,
     private readonly removeEmployeeService: RemoveEmployeeServiceHandler,
@@ -800,27 +787,11 @@ export class DashboardPeopleController {
     },
   })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  async getEmployeeSlotsEndpoint(
+  getEmployeeSlotsEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() q: EmployeeSlotsQuery,
   ) {
-    let branchId = q.branchId;
-    if (!branchId) {
-      const mainBranch = await this.getMainBranch.execute();
-      branchId = mainBranch.id;
-    }
-    const slots = await this.checkAvailability.execute({
-      employeeId: id,
-      branchId,
-      date: new Date(q.date),
-      durationMins: q.duration,
-      serviceId: q.serviceId,
-      deliveryType: q.deliveryType as DeliveryType | undefined,
-    });
-    return slots.map((s) => ({
-      startTime: formatHHmm(s.startTime),
-      endTime: formatHHmm(s.endTime),
-    }));
+    return this.availabilityQuery.slots({ employeeId: id, ...q });
   }
 
   @Get('employees/:id/available-days')
@@ -839,39 +810,11 @@ export class DashboardPeopleController {
     description: 'Array of ISO dates that have ≥1 available slot',
     schema: { type: 'array', items: { type: 'string', example: '2026-05-25' } },
   })
-  async getEmployeeAvailableDaysEndpoint(
+  getEmployeeAvailableDaysEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() q: EmployeeAvailableDaysQuery,
   ) {
-    let branchId = q.branchId;
-    if (!branchId) {
-      const mainBranch = await this.getMainBranch.execute();
-      branchId = mainBranch.id;
-    }
-    const horizon = Math.min(q.days ?? 30, 90);
-    const start = new Date(q.startDate);
-    const dates = Array.from({ length: horizon }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
-    });
-    const results = await Promise.all(
-      dates.map(async (date) => {
-        const slots = await this.checkAvailability.execute({
-          employeeId: id,
-          branchId: branchId!,
-          date,
-          durationMins: q.duration,
-          serviceId: q.serviceId,
-          deliveryType: q.deliveryType as DeliveryType | undefined,
-          // Day-strip probe: a missing ServiceBookingConfig must disable the
-          // day chips, not 400 the whole strip.
-          silentOnMissingConfig: true,
-        });
-        return slots.length > 0 ? formatDateYmd(date) : null;
-      }),
-    );
-    return results.filter((d): d is string => !!d);
+    return this.availabilityQuery.availableDays({ employeeId: id, ...q });
   }
 
   @Get('employees/:id/services/:serviceId/types')

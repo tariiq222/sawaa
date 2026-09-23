@@ -166,6 +166,13 @@ describe('MobileClientNotificationsController (e2e)', () => {
   });
 
   describe('DELETE /mobile/client/notifications/fcm-token', () => {
+    it('unregisters only the supplied device token', async () => {
+      await request(app.getHttpServer())
+        .delete('/mobile/client/notifications/fcm-token?token=this-device')
+        .expect(204);
+      expect(mockUnregisterFcm.execute).toHaveBeenCalledWith({ clientId: 'client-1', token: 'this-device' });
+    });
+
     it('returns 204 on unregister', async () => {
       mockUnregisterFcm.execute.mockResolvedValue(undefined);
 

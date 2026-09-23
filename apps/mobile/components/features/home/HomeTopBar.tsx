@@ -10,6 +10,7 @@ import { useAppSelector } from '@/hooks/use-redux';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { getFontName } from '@/theme/fonts';
 import { useDir } from '@/hooks/useDir';
+import { useTranslation } from 'react-i18next';
 
 interface HomeTopBarProps {
   f600: string;
@@ -18,6 +19,7 @@ interface HomeTopBarProps {
 export function HomeTopBar({ f600 }: HomeTopBarProps) {
   const router = useRouter();
   const dir = useDir();
+  const { t } = useTranslation();
   const fBadge = getFontName(dir.locale, '700');
   const user = useAppSelector((s) => s.auth.user);
   const initial = (user?.firstName ?? 'س').charAt(0);
@@ -28,7 +30,12 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
     <View style={styles.topBar}>
       <View style={styles.topBarLeft}>
         <Glass variant="regular" radius={21} style={styles.iconBtn}>
-          <Pressable onPress={() => {}} style={styles.iconBtnInner}>
+          <Pressable
+            onPress={() => router.push('/(client)/therapists')}
+            style={styles.iconBtnInner}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.searchTherapists')}
+          >
             <Search size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
           </Pressable>
         </Glass>
@@ -36,6 +43,8 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
           <Pressable
             onPress={() => router.push('/(client)/notifications')}
             style={styles.iconBtnInner}
+            accessibilityRole="button"
+            accessibilityLabel={t('nav.notifications')}
           >
             <AppIcon sf="bell.fill" fallback={Bell} size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
             {unreadCount > 0 ? (
@@ -57,6 +66,8 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
         <Pressable
           onPress={() => router.push('/(client)/profile')}
           style={styles.avatarInner}
+          accessibilityRole="button"
+          accessibilityLabel={t('nav.profile')}
         >
           <Text style={[styles.avatarText, { fontFamily: f600, fontWeight: '600' }]}>{initial}</Text>
         </Pressable>

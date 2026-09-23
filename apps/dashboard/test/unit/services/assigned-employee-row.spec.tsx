@@ -45,14 +45,14 @@ vi.mock("@/components/providers/auth-provider", () => ({
   useAuth: () => ({ canDo: () => true }),
 }))
 
-vi.mock("@/components/features/employees/remove-service-dialog", () => ({
+vi.mock("@/components/features/shared/remove-service-dialog", () => ({
   RemoveServiceDialog: () => <div data-testid="remove-service-dialog" />,
 }))
 
-vi.mock("@/components/features/services/employee-service-toggles", () => ({
+vi.mock("@/components/features/shared/employee-service-toggles", () => ({
   EmployeeServiceToggles: () => <div data-testid="employee-service-toggles" />,
 }))
-vi.mock("@/components/features/services/employee-custom-pricing-row", () => ({
+vi.mock("@/components/features/shared/employee-custom-pricing-row", () => ({
   EmployeeCustomPricingRow: () => <div data-testid="employee-custom-pricing-row" />,
 }))
 vi.mock("@/components/features/shared/employee-avatar", () => ({

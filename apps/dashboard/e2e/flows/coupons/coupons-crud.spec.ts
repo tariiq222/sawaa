@@ -20,6 +20,8 @@ import {
   type SeededCoupon,
 } from '../../fixtures/seed'
 
+const API_BASE = process.env.PW_API_URL ?? 'http://localhost:5200'
+
 let token = ''
 let seededCoupon: SeededCoupon
 
@@ -114,7 +116,7 @@ test.describe('Coupons CRUD Operations', () => {
 
     // Clean up the UI-created coupon through the API so the suite is idempotent.
     const res = await fetch(
-      `http://localhost:5200/api/v1/dashboard/finance/coupons?search=${encodeURIComponent(code)}`,
+      `${API_BASE}/api/v1/dashboard/finance/coupons?search=${encodeURIComponent(code)}`,
       { headers: { Authorization: `Bearer ${token}` } },
     )
     if (res.ok) {
@@ -178,7 +180,7 @@ test.describe('Coupons CRUD Operations', () => {
     // The backend serialises numbers as strings for Prisma Decimal columns,
     // so coerce before comparing.
     const detailRes = await fetch(
-      `http://localhost:5200/api/v1/dashboard/finance/coupons/${seededCoupon.id}`,
+      `${API_BASE}/api/v1/dashboard/finance/coupons/${seededCoupon.id}`,
       { headers: { Authorization: `Bearer ${token}` } },
     )
     expect(detailRes.ok).toBeTruthy()
@@ -188,7 +190,7 @@ test.describe('Coupons CRUD Operations', () => {
     // Restore the original discount value via the API so the seeded assertion
     // in the next runs remains valid (seededCoupon.discountValue = 15).
     const restoreRes = await fetch(
-      `http://localhost:5200/api/v1/dashboard/finance/coupons/${seededCoupon.id}`,
+      `${API_BASE}/api/v1/dashboard/finance/coupons/${seededCoupon.id}`,
       {
         method: 'PATCH',
         headers: {

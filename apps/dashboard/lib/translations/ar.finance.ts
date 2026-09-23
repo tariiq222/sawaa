@@ -135,7 +135,7 @@ export const arFinance: Record<string, string> = {
   "invoices.detail.loading": "جاري التحميل...",
   "invoices.detail.amounts": "المبالغ",
   "invoices.detail.subtotal": "المجموع الفرعي",
-  "invoices.detail.vat": "ضريبة القيمة المضافة (15%)",
+  "invoices.detail.vat": "ضريبة القيمة المضافة",
   "invoices.detail.total": "الإجمالي",
   "invoices.detail.status": "الحالة",
   "invoices.detail.hash": "الرمز",

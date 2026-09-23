@@ -127,6 +127,14 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     }
   });
 
+  it('exposes the icon-only back control as a labeled button', () => {
+    const { getByRole } = render(<OtpVerifyScreen />);
+
+    fireEvent.press(getByRole('button', { name: 'a11y.buttonBack' }));
+
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
   it('auto-submits when all 4 digits are filled', async () => {
     const { getByLabelText } = render(<OtpVerifyScreen />);
 

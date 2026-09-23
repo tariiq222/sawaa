@@ -81,7 +81,7 @@ export function BasicInfoTab({ form, showEmail = false, emailRequired = false, e
             form.setValue("avatarUrl", "")
           }}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-2">
               <Label htmlFor="employee-active" className="cursor-pointer text-xs text-muted-foreground">{t("employees.status.active")}</Label>
               <Switch id="employee-active" checked={form.watch("isActive") ?? true} onCheckedChange={handleSwitchChange} />

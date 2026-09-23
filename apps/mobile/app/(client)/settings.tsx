@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -29,10 +29,10 @@ import { useTheme } from '@/theme/useTheme';
 import { UnverifiedEmailBanner } from '@/components/features/auth/UnverifiedEmailBanner';
 import { SettingsProfileSection } from './settings-profile-section';
 import { clientProfileService } from '@/services/client/profile';
-import { registerForPushAsync, unregisterPushAsync } from '@/services/push';
+import { usePushPreference } from '@/hooks/queries/usePushPreference';
+import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
+import { LANGUAGE_KEY } from '@/hooks/language-preference';
 
-const LANGUAGE_KEY = '@sawaa/language';
-const PUSH_KEY = '@sawaa/push-enabled';
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
@@ -40,7 +40,8 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { theme, isRTL, language, scheme, setThemeMode } = useTheme();
 
-  const [pushEnabled, setPushEnabled] = useState(false);
+  const { query: pushPreference, mutation: pushMutation } = usePushPreference();
+  const pushEnabled = pushPreference.data?.enabled === true && pushPreference.data?.permitted === true;
   const BackIcon = isRTL ? ChevronRight : ChevronLeft;
 
   const version = Constants.expoConfig?.version ?? '1.0.0';
@@ -48,12 +49,6 @@ export default function SettingsScreen() {
     Constants.expoConfig?.ios?.buildNumber ??
     Constants.expoConfig?.android?.versionCode?.toString() ??
     '1';
-
-  useEffect(() => {
-    AsyncStorage.getItem(PUSH_KEY).then((val) => {
-      if (val !== null) setPushEnabled(val === 'true');
-    });
-  }, []);
 
   const handleLanguageSelect = useCallback(
     async (lang: 'ar' | 'en') => {
@@ -80,20 +75,13 @@ export default function SettingsScreen() {
   const handleTogglePush = useCallback(
     async (val: boolean) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setPushEnabled(val);
-      await AsyncStorage.setItem(PUSH_KEY, String(val));
       try {
-        await clientProfileService.updateProfile({ pushEnabled: val });
-      } catch (err) {
-        console.warn('[Settings] Failed to sync push pref to server:', err);
-      }
-      if (val) {
-        await registerForPushAsync();
-      } else {
-        await unregisterPushAsync();
+        await pushMutation.mutateAsync(val);
+      } catch {
+        Alert.alert(t('settings.pushNotifications'), t('settings.pushUpdateError'));
       }
     },
-    [],
+    [pushMutation, t],
   );
 
   return (
@@ -113,6 +101,8 @@ export default function SettingsScreen() {
               router.back();
             }}
             style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.buttonBack')}
           >
             <BackIcon size={24} strokeWidth={1.5} color={theme.colors.textPrimary} />
           </Pressable>
@@ -140,7 +130,7 @@ export default function SettingsScreen() {
           />
         </ThemedCard>
 
-        {/* Notifications + Appearance (local-only) */}
+        {/* Notifications + Appearance */}
         <ThemedCard padding={20} style={{ marginBottom: 16 }}>
           <SectionHeader icon={Bell} label={t('settings.pushNotifications')} />
           <ThemedText
@@ -154,6 +144,7 @@ export default function SettingsScreen() {
             <ThemedText variant="body">{t('settings.pushNotifications')}</ThemedText>
             <Switch
               value={pushEnabled}
+              disabled={pushPreference.isPending || pushPreference.isError || pushMutation.isPending}
               onValueChange={handleTogglePush}
               trackColor={{ false: '#E2E8F0', true: '#1D4ED880' }}
               thumbColor={pushEnabled ? '#1D4ED8' : '#CBD5E1'}
@@ -169,6 +160,8 @@ export default function SettingsScreen() {
             />
           </View>
         </ThemedCard>
+
+        <DeleteAccountButton />
 
         {/* About Section */}
         <ThemedCard padding={20}>

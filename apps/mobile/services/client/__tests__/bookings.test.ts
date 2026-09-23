@@ -28,11 +28,44 @@ const sampleRow: ClientBookingRow = {
   zoomMeetingStatus: null,
 };
 
+const mappedBookingWire = {
+  id: 'b-program',
+  bookingNumber: 42,
+  employeeId: 'e-program',
+  serviceId: null,
+  type: 'group',
+  deliveryType: 'in_person',
+  date: '2026-09-25',
+  startTime: '15:00',
+  endTime: '17:00',
+  status: 'pending',
+  branchNameSnapshot: 'Main branch',
+  priceSnapshot: 10000,
+  durationMinutesSnapshot: 120,
+  employee: { id: 'e-program', user: { firstName: 'A', lastName: 'Counselor' }, specialty: '', specialtyAr: '' },
+  service: null,
+  payment: { id: 'pay-1', amount: 10000, method: 'moyasar', status: 'pending', totalAmount: 10000 },
+  invoice: { id: 'inv-program', subtotal: 10000, vatRate: 0, total: 10000, outstanding: 10000, status: 'DRAFT' },
+  zoomJoinUrl: null,
+  zoomStartUrl: null,
+  zoomMeetingStatus: null,
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('clientBookingsService.list', () => {
+  it('normalizes mapped list rows and canonical limit metadata', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: {
+      items: [mappedBookingWire],
+      meta: { total: 1, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+    } });
+    const r = await clientBookingsService.list();
+    expect(r.items[0]).toMatchObject({ invoiceId: 'inv-program', status: 'pending' });
+    expect(r.meta.perPage).toBe(20);
+  });
+
   it('GETs /mobile/client/bookings and UPPERCASES the status param (backend DTO has no Transform)', async () => {
     const payload: BookingsListResponse = {
       items: [sampleRow],
@@ -102,6 +135,35 @@ describe('clientBookingsService.getById', () => {
   it('rejects on 401', async () => {
     mockedApi.get.mockRejectedValueOnce(new Error('401'));
     await expect(clientBookingsService.getById('b1')).rejects.toThrow(/401/);
+  });
+
+  it('normalizes the actual nested mapper response used by the mobile controller', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: mappedBookingWire });
+    const r = await clientBookingsService.getById('b-program');
+    expect(r).toMatchObject({
+      id: 'b-program',
+      invoiceId: 'inv-program',
+      invoiceStatus: 'DRAFT',
+      paymentStatus: 'pending',
+      status: 'pending',
+      scheduledAt: '2026-09-25T15:00:00+03:00',
+      branchName: 'Main branch',
+      employee: { nameEn: 'A Counselor' },
+    });
+  });
+
+  it('does not expose the program booking sentinel as a scheduled appointment', async () => {
+    mockedApi.get.mockResolvedValueOnce({
+      data: { ...mappedBookingWire, id: 'b-unscheduled', date: '2999-01-01', startTime: '03:00' },
+    });
+    await expect(clientBookingsService.getById('b-unscheduled')).resolves.toMatchObject({ scheduledAt: '' });
+  });
+
+  it('does not invent midnight when a mapped appointment has no valid start time', async () => {
+    mockedApi.get.mockResolvedValueOnce({
+      data: { ...mappedBookingWire, id: 'b-no-time', startTime: null },
+    });
+    await expect(clientBookingsService.getById('b-no-time')).resolves.toMatchObject({ scheduledAt: '' });
   });
 });
 

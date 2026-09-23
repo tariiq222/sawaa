@@ -90,25 +90,43 @@ test.describe('Services CRUD Operations', () => {
   })
 
   test('should filter services', async ({ page }) => {
-    const filterSelect = page.locator('select').first()
-    const hasFilter = await filterSelect.isVisible().catch(() => false)
-    test.skip(!hasFilter, 'No filter select present')
+    const search = page.getByRole('searchbox')
+    await search.fill(seededService.nameAr)
+    const serviceRow = page.getByRole('row').filter({ hasText: seededService.nameAr })
+    await expect(serviceRow).toBeVisible({ timeout: 15_000 })
 
-    const options = await filterSelect.locator('option').count()
-    test.skip(options <= 1, 'Filter select has no selectable options')
-    await filterSelect.selectOption({ index: 1 })
-    await page.waitForResponse(r => r.url().includes('/services') && r.request().method() === 'GET' && r.ok()).catch(() => {})
+    const filterSelect = page.getByRole('combobox').first()
+    await expect(filterSelect).toBeVisible({ timeout: 10_000 })
+    await filterSelect.click()
+    await page.getByRole('option', { name: /^(غير نشطة|Inactive)$/ }).click()
+    await expect(serviceRow).toHaveCount(0)
+    await filterSelect.click()
+    await page.getByRole('option', { name: /^(نشطة|Active)$/ }).click()
+    await expect(serviceRow).toBeVisible({ timeout: 10_000 })
   })
 
   test('should paginate services', async ({ page }) => {
-    const pagination = page.locator('[class*="pagination"], [class*="pager"], button:has-text("next"), button:has-text("التالي")')
-    const hasPagination = await pagination.first().isVisible().catch(() => false)
-    test.skip(!hasPagination, 'No pagination present for current dataset')
+    const token = await getPersonaToken('admin')
+    const seeded: SeededService[] = []
+    try {
+      const runId = Date.now()
+      for (let index = 0; index < 20; index += 1) {
+        seeded.push(await seedService(token, {
+          nameAr: `خدمة ترقيم ${runId} ${index}`,
+          nameEn: `Pagination service ${runId} ${index}`,
+        }))
+      }
 
-    const nextButton = page.locator('button:has-text("next"), button:has-text("التالي"), [aria-label*="next"]')
-    await expect(nextButton.first()).toBeVisible({ timeout: 10_000 })
-    await nextButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+      await page.reload()
+      await expect(page.getByText(/^(صفحة 1 من \d+|Page 1 of \d+)$/)).toBeVisible({ timeout: 15_000 })
+      const firstPageRows = await page.locator('tbody tr').allTextContents()
+      await page.getByRole('button', { name: /التالي|Next/ }).click()
+      await expect(page.getByText(/^(صفحة 2 من \d+|Page 2 of \d+)$/)).toBeVisible({ timeout: 15_000 })
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+      await expect.poll(() => page.locator('tbody tr').allTextContents()).not.toEqual(firstPageRows)
+    } finally {
+      await Promise.all(seeded.map((service) => cleanupService(service.id, token)))
+    }
   })
 
   test('should sort services', async ({ page }) => {
@@ -203,11 +221,37 @@ test.describe('Services CRUD Operations', () => {
   })
 
   test('should toggle service active/inactive status', async ({ page }) => {
-    const toggleButton = page.locator('button[role="switch"], button[class*="toggle"], input[type="checkbox"]').first()
-    const hasToggle = await toggleButton.isVisible({ timeout: 3000 }).catch(() => false)
-    test.skip(!hasToggle, 'No status toggle present')
+    const statusService = await seedService(adminToken, {
+      nameAr: `خدمة حالة ${Date.now()}`,
+      nameEn: `Status service ${Date.now()}`,
+    })
+    try {
+      const search = page.getByRole('searchbox')
+      await search.fill(statusService.nameAr)
+      const serviceRow = page.getByRole('row').filter({ hasText: statusService.nameAr })
+      await expect(serviceRow).toBeVisible({ timeout: 15_000 })
+      await serviceRow.getByRole('button', { name: /تعديل|Edit/ }).click()
+      await page.waitForURL(/\/services\/[^/]+\/edit/, { timeout: 15_000 })
 
-    await toggleButton.click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+      const activeSwitch = page.getByRole('switch').first()
+      await expect(activeSwitch).toBeVisible({ timeout: 15_000 })
+      await expect(activeSwitch).toHaveAttribute('data-state', 'checked')
+      await activeSwitch.click()
+      await expect(activeSwitch).toHaveAttribute('data-state', 'unchecked')
+
+      const saved = page.waitForResponse((response) =>
+        /\/organization\/services\//.test(response.url()) && response.request().method() === 'PATCH' && response.ok(),
+        { timeout: 15_000 },
+      )
+      await page.locator('form button[type="submit"]').click()
+      await saved
+      await page.goto('/services')
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 })
+      await page.getByRole('searchbox').fill(statusService.nameAr)
+      await expect(page.getByRole('row').filter({ hasText: statusService.nameAr }).getByText(/غير نشطة|Inactive/))
+        .toBeVisible({ timeout: 15_000 })
+    } finally {
+      await cleanupService(statusService.id, adminToken)
+    }
   })
 })

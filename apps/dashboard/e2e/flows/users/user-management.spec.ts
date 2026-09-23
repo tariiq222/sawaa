@@ -20,6 +20,8 @@ import {
   type SeededUser,
 } from '../../fixtures/seed'
 
+const API_BASE = process.env.PW_API_URL ?? 'http://localhost:5200'
+
 let token = ''
 let seededUser: SeededUser
 
@@ -149,7 +151,7 @@ test.describe('User Management', () => {
 
     // Clean up the UI-created user via the API so the suite is idempotent.
     const res = await fetch(
-      `http://localhost:5200/api/v1/dashboard/identity/users?search=${encodeURIComponent(email)}`,
+      `${API_BASE}/api/v1/dashboard/identity/users?search=${encodeURIComponent(email)}`,
       { headers: { Authorization: `Bearer ${token}` } },
     )
     if (res.ok) {
@@ -206,7 +208,7 @@ test.describe('User Management', () => {
     // Confirm the rename actually landed by reading the seeded user's record
     // directly — this avoids coupling to client-side refetch timing.
     const detailRes = await fetch(
-      `http://localhost:5200/api/v1/dashboard/identity/users/${seededUser.id}`,
+      `${API_BASE}/api/v1/dashboard/identity/users/${seededUser.id}`,
       { headers: { Authorization: `Bearer ${token}` } },
     )
     expect(detailRes.ok).toBeTruthy()
@@ -215,7 +217,7 @@ test.describe('User Management', () => {
 
     // Restore the original name via the API so this test is idempotent.
     const restoreRes = await fetch(
-      `http://localhost:5200/api/v1/dashboard/identity/users/${seededUser.id}`,
+      `${API_BASE}/api/v1/dashboard/identity/users/${seededUser.id}`,
       {
         method: 'PATCH',
         headers: {
@@ -233,7 +235,7 @@ test.describe('User Management', () => {
 
     // Restore the original name via the API so this test is idempotent.
     const res = await fetch(
-      `http://localhost:5200/api/v1/dashboard/identity/users/${seededUser.id}`,
+      `${API_BASE}/api/v1/dashboard/identity/users/${seededUser.id}`,
       {
         method: 'PATCH',
         headers: {

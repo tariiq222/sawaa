@@ -1,5 +1,5 @@
-import { Transform } from 'class-transformer';
-import { IsEmail, IsOptional, IsString, IsUrl, Length, Matches } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsEmail, IsIn, IsOptional, IsString, IsUrl, IsBoolean, Length, Matches, ValidateIf } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { SAUDI_PHONE_REGEX, SAUDI_PHONE_ERROR_AR } from '@sawaa/shared/validators/phone';
 import { NormalizePhone } from '../shared/normalize-phone.transform';
@@ -42,4 +42,16 @@ export class UpdateClientProfileDto {
   @IsOptional()
   @IsUrl({}, { message: 'رابط الصورة الشخصية غير صالح' })
   avatarUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Preferred app locale', enum: ['ar', 'en'], example: 'ar' })
+  @Type(() => Object)
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['ar', 'en'], { message: 'اللغة المفضلة غير صالحة' })
+  preferredLocale?: 'ar' | 'en';
+
+  @ApiPropertyOptional({ description: 'Whether push notifications are enabled', example: true })
+  @Type(() => Object)
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean({ message: 'قيمة الإشعارات الفورية يجب أن تكون منطقية' })
+  pushEnabled?: boolean;
 }

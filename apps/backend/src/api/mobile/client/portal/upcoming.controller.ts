@@ -1,20 +1,17 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
 import { IsInt, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
 import { ClientSessionGuard } from '../../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../../../common/swagger';
-import { PrismaService } from '../../../../infrastructure/database';
 import { Public } from '../../../../common/guards/jwt.guard';
+import { ListClientUpcomingBookingsHandler } from '../../../../modules/bookings/client/list-client-upcoming-bookings.handler';
 
 export class UpcomingQuery {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit?: number;
 }
-
-const UPCOMING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
 
 @ApiTags('Mobile Client / Portal')
 @ApiBearerAuth()
@@ -23,7 +20,7 @@ const UPCOMING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus
 @Public()
 @Controller('mobile/client/portal/upcoming')
 export class MobileClientUpcomingController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly upcomingHandler: ListClientUpcomingBookingsHandler) {}
 
   @Get()
   @ApiOperation({ summary: 'List upcoming bookings for the authenticated client' })
@@ -47,30 +44,10 @@ export class MobileClientUpcomingController {
       },
     },
   })
-  async upcoming(
+  upcoming(
     @ClientSession() user: ClientSession,
     @Query() q: UpcomingQuery,
   ) {
-    const page = q.page ?? 1;
-    const limit = q.limit ?? 10;
-    const now = new Date();
-
-    const where = {
-      clientId: user.id,
-      scheduledAt: { gte: now },
-      status: { in: UPCOMING_STATUSES },
-    };
-
-    const [data, total] = await Promise.all([
-      this.prisma.booking.findMany({
-        where,
-        orderBy: { scheduledAt: 'asc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.booking.count({ where }),
-    ]);
-
-    return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    return this.upcomingHandler.execute({ clientId: user.id, page: q.page, limit: q.limit });
   }
 }

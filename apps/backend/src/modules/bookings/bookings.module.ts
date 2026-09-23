@@ -2,6 +2,7 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
+import { OrgConfigModule } from '../org-config/org-config.module';
 import { FinanceModule } from '../finance/finance.module';
 import { CreateBookingHandler } from './create-booking/create-booking.handler';
 import { CancelBookingHandler } from './cancel-booking/cancel-booking.handler';
@@ -62,6 +63,10 @@ import { TransferCreditHandler } from './transfer-credit/transfer-credit.handler
 import { BookingZoomRescheduleHandler } from './zoom-reschedule/booking-zoom-reschedule.handler';
 import { BookingZoomCreateRequestedHandler } from './create-zoom-meeting/booking-zoom-create-requested.handler';
 import { AssertEmployeeBookingOwnershipHandler } from './assert-employee-booking-ownership/assert-employee-booking-ownership.handler';
+import { GetClientPortalSummaryHandler } from './client/get-client-portal-summary.handler';
+import { ListClientUpcomingBookingsHandler } from './client/list-client-upcoming-bookings.handler';
+import { GetClientBookingForActionHandler } from './client/get-client-booking-for-action.handler';
+import { EmployeeAvailabilityQueryHandler } from './employee-availability-query.handler';
 
 const handlers = [
   CreateBookingHandler,
@@ -116,6 +121,10 @@ const handlers = [
   BookingZoomRescheduleHandler,
   BookingZoomCreateRequestedHandler,
   AssertEmployeeBookingOwnershipHandler,
+  GetClientPortalSummaryHandler,
+  ListClientUpcomingBookingsHandler,
+  GetClientBookingForActionHandler,
+  EmployeeAvailabilityQueryHandler,
 ];
 
 @Module({
@@ -123,12 +132,13 @@ const handlers = [
     DatabaseModule,
     MessagingModule,
     OrgExperienceModule,
+    OrgConfigModule,
     ZoomModule,
     FinanceModule,
   ],
   controllers: [DashboardBookingsController, DashboardProgramsController],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
-  exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler, RestoreNoShowBookingHandler],
+  exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler, RestoreNoShowBookingHandler, GetClientPortalSummaryHandler, ListClientUpcomingBookingsHandler, GetClientBookingForActionHandler, EmployeeAvailabilityQueryHandler],
 })
 export class BookingsModule implements OnModuleInit {
   constructor(

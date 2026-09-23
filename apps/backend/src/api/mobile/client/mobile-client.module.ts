@@ -15,6 +15,7 @@ import { MobileClientUpcomingController } from './portal/upcoming.controller';
 import { MobileClientSummaryController } from './portal/summary.controller';
 import { MobileClientAuthController } from './auth.controller';
 import { MobileClientPackagesController } from './packages.controller';
+import { MobileClientProgramsController } from './programs.controller';
 import { ClientPackageBookHandler } from '../../../modules/bookings/client/client-package-book.handler';
 import { ClientPackagePurchaseStatusHandler } from '../../../modules/bookings/client/client-package-purchase-status.handler';
 
@@ -30,6 +31,7 @@ import { ClientPackagePurchaseStatusHandler } from '../../../modules/bookings/cl
     MobileClientSummaryController,
     MobileClientAuthController,
     MobileClientPackagesController,
+    MobileClientProgramsController,
   ],
   providers: [ClientPackageBookHandler, ClientPackagePurchaseStatusHandler],
 })

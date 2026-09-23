@@ -13,7 +13,7 @@ import {
   ApiTags, ApiBearerAuth, ApiOperation,
   ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse,
 } from '@nestjs/swagger';
-import { BookingStatus, CancellationReason, DeliveryType } from '@prisma/client';
+import { BookingStatus, CancellationReason } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -30,8 +30,7 @@ import { ClientRescheduleBookingDto } from '../../../modules/bookings/client/cli
 import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/submit-rating.handler';
 import { CreateZoomMeetingHandler } from '../../../modules/bookings/create-zoom-meeting/create-zoom-meeting.handler';
 import { IsBoolean, Max, MaxLength } from 'class-validator';
-import { PrismaService } from '../../../infrastructure/database';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { GetClientBookingForActionHandler } from '../../../modules/bookings/client/get-client-booking-for-action.handler';
 export class MobileRateBookingDto {
   @ApiProperty({ description: 'Rating score from 1 to 5', example: 5 })
   @IsInt() @Min(1) @Max(5) score!: number;
@@ -96,7 +95,7 @@ export class MobileClientBookingsController {
     private readonly cancel: CancelBookingHandler,
     private readonly reschedule: ClientRescheduleBookingHandler,
     private readonly rate: SubmitRatingHandler,
-    private readonly prisma: PrismaService,
+    private readonly bookingAction: GetClientBookingForActionHandler,
     private readonly zoom: CreateZoomMeetingHandler,
   ) {}
 
@@ -184,18 +183,7 @@ export class MobileClientBookingsController {
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    const booking = await this.prisma.booking.findFirst({
-      where: { id },
-      select: { id: true, clientId: true, deliveryType: true, status: true, zoomJoinUrl: true, scheduledAt: true },
-    });
-    if (!booking) throw new NotFoundException('Booking not found');
-    if (booking.clientId !== user.id) throw new ForbiddenException('Not your booking');
-    if (booking.deliveryType !== DeliveryType.ONLINE && !booking.zoomJoinUrl) {
-      throw new ForbiddenException('Join is only available for online bookings');
-    }
-    if (!([BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] as BookingStatus[]).includes(booking.status)) {
-      throw new ForbiddenException('Join is not available for this booking');
-    }
+    const booking = await this.bookingAction.executeForJoin(id, user.id);
     if (booking.zoomJoinUrl) {
       return { joinUrl: booking.zoomJoinUrl, scheduledAt: booking.scheduledAt };
     }
@@ -213,12 +201,7 @@ export class MobileClientBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: MobileRateBookingDto,
   ) {
-    const booking = await this.prisma.booking.findFirst({
-      where: { id },
-      select: { id: true, clientId: true, employeeId: true },
-    });
-    if (!booking) throw new NotFoundException('Booking not found');
-    if (booking.clientId !== user.id) throw new ForbiddenException('Not your booking');
+    const booking = await this.bookingAction.executeForRate(id, user.id);
     return this.rate.execute({
       bookingId: id,
       clientId: booking.clientId,

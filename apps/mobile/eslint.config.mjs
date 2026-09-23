@@ -31,6 +31,32 @@ export default defineConfig([
   js.configs.recommended,
 
   {
+    files: ["plugins/**/*.js"],
+    languageOptions: {
+      globals: {
+        module: "readonly",
+        require: "readonly",
+      },
+    },
+  },
+
+  {
+    files: ["**/*.test.js", "**/__tests__/**/*.js"],
+    languageOptions: {
+      globals: {
+        __dirname: "readonly",
+        describe: "readonly",
+        expect: "readonly",
+        it: "readonly",
+        jest: "readonly",
+        process: "readonly",
+        require: "readonly",
+        test: "readonly",
+      },
+    },
+  },
+
+  {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parser: tsParser,

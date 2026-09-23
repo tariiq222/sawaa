@@ -14,7 +14,7 @@ maybeDescribe('legacy import writer', () => {
 
   afterAll(async () => prisma.$disconnect());
 
-  it('adds rows without changing finance, comms, or outbox counts', async () => {
+  it('rejects legacy writes on the migrated schema without changing operational or financial rows', async () => {
     const suffix = Date.now().toString();
     const clientKey = `legacy-client:${suffix}`;
     const employeeKey = `legacy-staff:${suffix}`;
@@ -123,23 +123,34 @@ maybeDescribe('legacy import writer', () => {
       appointmentCustomData: [],
     } satisfies LegacyBundleV1;
     const before = await Promise.all([
+      prisma.service.count(),
+      prisma.employee.count(),
+      prisma.client.count(),
+      prisma.booking.count(),
+      prisma.legacyImportRecord.count(),
       prisma.invoice.count(),
       prisma.payment.count(),
       prisma.notification.count(),
       prisma.outboxEvent.count(),
     ]);
 
-    const report = await applyLegacyImportPlan(prisma, bundle, plan);
+    await expect(applyLegacyImportPlan(prisma, bundle, plan)).rejects.toThrow(
+      'Legacy import apply is disabled after intake history expansion',
+    );
 
     const after = await Promise.all([
+      prisma.service.count(),
+      prisma.employee.count(),
+      prisma.client.count(),
+      prisma.booking.count(),
+      prisma.legacyImportRecord.count(),
       prisma.invoice.count(),
       prisma.payment.count(),
       prisma.notification.count(),
       prisma.outboxEvent.count(),
     ]);
-    expect(report.insertedBookings).toBe(1);
     expect(after).toEqual(before);
-    expect(await prisma.booking.count({ where: { bookingNumber: 1_900_001 } })).toBe(1);
+    expect(await prisma.booking.count({ where: { bookingNumber: 1_900_001 } })).toBe(0);
     expect(
       await prisma.legacyImportRecord.count({
         where: { entityType: 'APPOINTMENT', legacyId: '15886' },

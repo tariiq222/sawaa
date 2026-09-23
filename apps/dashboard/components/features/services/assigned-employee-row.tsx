@@ -12,11 +12,11 @@ import { SurfaceRow } from "@sawaa/ui"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { useAuth } from "@/components/providers/auth-provider"
 import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
-import { RemoveServiceDialog } from "@/components/features/employees/remove-service-dialog"
+import { RemoveServiceDialog } from "@/components/features/shared/remove-service-dialog"
 import { toast } from "sonner"
 import type { ServiceEmployee } from "@/lib/types/service"
 import type { EmployeeService } from "@/lib/types/employee"
-import { EmployeeCustomPricingRow } from "./employee-custom-pricing-row"
+import { EmployeeCustomPricingRow } from "@/components/features/shared/employee-custom-pricing-row"
 
 /* ─── Props ─── */
 

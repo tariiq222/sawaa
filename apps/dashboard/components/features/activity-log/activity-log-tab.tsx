@@ -5,7 +5,7 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { FilterBar } from "@/components/features/filter-bar"
 import { Skeleton } from "@sawaa/ui"
 
-import { getActivityLogColumns } from "@/components/features/activity-log/activity-log-columns"
+import { getActivityLogColumns } from "@/components/features/shared/activity-log-columns"
 import { useActivityLogs } from "@/hooks/use-activity-log"
 import { useLocale } from "@/components/locale-provider"
 

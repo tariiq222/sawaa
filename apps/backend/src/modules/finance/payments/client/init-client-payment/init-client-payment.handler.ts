@@ -35,6 +35,7 @@ const PAYMENT_INIT_BOOKING_STATUSES: readonly BookingStatus[] = [
 
 export type InitClientPaymentCommand = InitClientPaymentDto & {
   clientId: string;
+  returnTo?: 'MOBILE';
 };
 
 export interface InitClientPaymentResult {
@@ -76,7 +77,7 @@ export class InitClientPaymentHandler {
     }
 
     let reservation = await this.reservePayment(cmd);
-    let { invoice, outstanding, payment, existing } = reservation;
+    let { invoice, outstanding, payment, existing, programHoldExpiresAt } = reservation;
 
     if (existing) {
       if (payment.status === PaymentStatus.COMPLETED) {
@@ -128,7 +129,7 @@ export class InitClientPaymentHandler {
         payment,
         (tx) => this.createReservation(tx, cmd),
       );
-      ({ invoice, outstanding, payment, existing } = reservation);
+      ({ invoice, outstanding, payment, existing, programHoldExpiresAt } = reservation);
       if (existing) {
         throw new ConflictException('تعذّر حجز دفعة جديدة لهذه الفاتورة، حاول مرة أخرى لاحقاً');
       }
@@ -144,8 +145,9 @@ export class InitClientPaymentHandler {
         amountHalalas,
         currency: invoice.currency,
         description: `Invoice payment - ${invoice.id}`,
-        successUrl: this.buildCallbackUrl(invoice.bookingId ?? '', invoice.id),
-        backUrl: this.buildCallbackUrl(invoice.bookingId ?? '', invoice.id),
+        successUrl: this.buildCallbackUrl(invoice.bookingId ?? '', invoice.id, cmd.returnTo),
+        backUrl: this.buildCallbackUrl(invoice.bookingId ?? '', invoice.id, cmd.returnTo),
+        ...(programHoldExpiresAt ? { expiresAt: programHoldExpiresAt } : {}),
         metadata: {
           invoiceId: invoice.id,
           bookingId: invoice.bookingId ?? '',
@@ -208,6 +210,7 @@ export class InitClientPaymentHandler {
   }
 
   private async createReservation(tx: Prisma.TransactionClient, cmd: InitClientPaymentCommand) {
+      let programHoldExpiresAt: Date | null = null;
       const invoice = await tx.invoice.findFirst({
         where: { id: cmd.invoiceId },
         select: {
@@ -234,7 +237,7 @@ export class InitClientPaymentHandler {
       if (invoice.bookingId) {
         const booking = await tx.booking.findFirst({
           where: { id: invoice.bookingId },
-          select: { id: true, status: true },
+          select: { id: true, status: true, programId: true, expiresAt: true },
         });
         if (!booking) {
           throw new NotFoundException(`Booking ${invoice.bookingId} not found`);
@@ -243,6 +246,14 @@ export class InitClientPaymentHandler {
           throw new BadRequestException(
             `Booking ${invoice.bookingId} cannot initialize payment in status ${booking.status}`,
           );
+        }
+        if (booking.programId) {
+          if (booking.expiresAt && booking.expiresAt <= new Date()) {
+            throw new BadRequestException(
+              `Booking ${invoice.bookingId} program hold has expired`,
+            );
+          }
+          programHoldExpiresAt = booking.expiresAt;
         }
       }
 
@@ -262,7 +273,13 @@ export class InitClientPaymentHandler {
         select: { id: true, status: true, gatewayRef: true },
       });
       if (existingPayment) {
-        return { invoice, outstanding, payment: existingPayment, existing: true as const };
+        return {
+          invoice,
+          outstanding,
+          payment: existingPayment,
+          existing: true as const,
+          programHoldExpiresAt,
+        };
       }
 
       const competingReservation = await tx.payment.findFirst({
@@ -292,6 +309,7 @@ export class InitClientPaymentHandler {
         outstanding,
         payment: { ...payment, status: PaymentStatus.PENDING, gatewayRef: null },
         existing: false as const,
+        programHoldExpiresAt,
       };
   }
 
@@ -342,9 +360,16 @@ export class InitClientPaymentHandler {
     );
   }
 
-  private buildCallbackUrl(bookingId: string, invoiceId: string): string {
+  private buildCallbackUrl(
+    bookingId: string,
+    invoiceId: string,
+    returnTo?: InitClientPaymentCommand['returnTo'],
+  ): string {
     const baseUrl = process.env['PUBLIC_WEBSITE_URL'];
     const fallbackUrl = 'http://localhost:3000';
-    return `${baseUrl || fallbackUrl}/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`;
+    const encodedBookingId = encodeURIComponent(bookingId);
+    const encodedInvoiceId = encodeURIComponent(invoiceId);
+    const source = returnTo === 'MOBILE' ? 'source=mobile&' : '';
+    return `${baseUrl || fallbackUrl}/booking/payment-callback?${source}bookingId=${encodedBookingId}&invoiceId=${encodedInvoiceId}`;
   }
 }

@@ -68,6 +68,7 @@ import { PlatformSettingsModule } from '../platform/settings/platform-settings.m
 import { NativeSessionLookup } from './native-session/native-session.lookup';
 import { NativeRefreshHandler } from './native-session/native-refresh.handler';
 import { NativeLogoutHandler } from './native-session/native-logout.handler';
+import { RequestAccountDeletionHandler } from './request-account-deletion/request-account-deletion.handler';
 
 const handlers = [
   LoginHandler, RefreshTokenHandler, LogoutHandler,
@@ -101,6 +102,7 @@ const handlers = [
   NativeSessionLookup,
   NativeRefreshHandler,
   NativeLogoutHandler,
+  RequestAccountDeletionHandler,
 ];
 
 @Module({

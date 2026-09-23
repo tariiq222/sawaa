@@ -104,7 +104,7 @@ npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit 
 ## Comms cluster — SMS
 
 - **SMS uses a single provider** (Unifonic or Taqnyat) configured via `/settings/sms`.
-- Dispatch always goes through `SmsProviderFactory.forCurrentTenant(orgId)` — never construct an adapter manually from a handler.
+- Dispatch always goes through `SmsProviderFactory.resolve()` — **no tenant argument** (the `forCurrentTenant(orgId)` variant is gone). Never construct an adapter manually from a handler.
 - Credentials are AES-256-GCM encrypted with `SMS_PROVIDER_ENCRYPTION_KEY` and `DEFAULT_ORG_ID` as AAD (single-tenant) — a DB dump alone cannot decrypt without the encryption key.
 - DLR webhooks (`POST /api/v1/public/sms/webhooks/:provider`) follow the three-stage flow: config lookup → signature verify → mutation.
 - The `GetOrgSmsConfigHandler` NEVER returns `credentialsCiphertext` or `webhookSecret` — the dashboard form is write-only.
@@ -126,13 +126,18 @@ npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit 
 
 ## Integrations cluster (`modules/integrations/`)
 
-- **Zoom** (`integrations/zoom/`) owns the encrypted-credentials lifecycle: get/upsert/test of `accountId`, `clientId`, `clientSecret`. Credentials are AES-256-GCM encrypted with `DEFAULT_ORG_ID` as AAD (single-tenant) — the `Get*` handler never returns ciphertext.
+- **Zoom** (`modules/integrations/zoom/`) owns the encrypted-credentials lifecycle: get/upsert/test of `accountId`, `clientId`, `clientSecret`. Credentials are AES-256-GCM encrypted with `DEFAULT_ORG_ID` as AAD (single-tenant) — the `Get*` handler never returns ciphertext.
 - The bookings cluster (`bookings/create-zoom-meeting/`, `bookings/retry-zoom-meeting/`) **consumes** integrations via `ZoomMeetingService`. Never reach into Zoom credentials from a booking handler — go through the integrations slice.
 - Public branding read endpoints also live here (used by unauthenticated mobile/website surfaces).
 
 ## Conventions that catch new contributors
 
+- **Read the "Operational safety rules" section in [../../CLAUDE.md](../../CLAUDE.md) / [../../AGENTS.md](../../AGENTS.md) before touching anything in this app.** They name the load-bearing identifiers (`DEFAULT_ORG_ID`, `PLATFORM_SETTINGS_KEY`, `DEFAULT_VAT_RATE`, SMS factory, comms staff guards). Breaking one is an incident, not a style issue.
 - **Single-tenant deployment.** Sawa runs as a single-tenant deployment. The old request-scoping guards and helpers from the original codebase were removed in the single-tenant cleanup. Handlers no longer carry an `organizationId` filter. Encryption AAD for provider credentials uses a static `DEFAULT_ORG_ID` constant (`apps/backend/src/common/constants.ts`).
+  - `organizationId` columns still exist in `apps/backend/prisma/schema/*.prisma` for legacy rows and for the comms event payloads — that is not a licence to re-add tenant scoping. Do not drop the column from money/booking/comms events before the staff guards in `src/modules/comms/events/` stop reading it.
+  - **Never change `DEFAULT_ORG_ID`**: every encrypted provider credential (Zoom, SMS, Email, Moyasar, AI) is bound to it as AES-256-GCM AAD, so a different value makes the stored ciphertext undecryptable.
+  - `DEFAULT_VAT_RATE = 0` in `src/modules/finance/create-invoice/create-invoice.handler.ts` is intentional (owner-confirmed). Never pin a percentage such as 15% in copy, Swagger, or fallbacks.
+  - `src/modules/finance/moyasar-webhook/`, `src/modules/finance/refund-payment/`, and `src/modules/bookings/create-booking/` are owner-only surfaces: no cleanliness refactors without approval, tests, and a Moyasar sandbox run. Never run `apps/backend/scripts/billing/*` on a live database.
 - **One handler = one public method (`execute`).** Don't add `executeVariant()`; create a new slice.
 - **Tests colocated as `*.handler.spec.ts`** next to the handler, not in a parallel `test/` tree.
 - **Payments, auth, and migrations are owner-only** (see root CLAUDE.md "Security Sensitivity Tiers").

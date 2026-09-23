@@ -1,0 +1,5 @@
+---
+description: Approved Sawaa deployment authorization and staging/manual testing policy
+alwaysApply: true
+---
+Read and follow `AGENTS.md` and `docs/operations/deployment-policy.md`. Generic «انشر» / «ننشر» means develop/staging only. Production requires the owner's manual staging acceptance and explicit production command. Never infer production authorization from passing automated checks.
