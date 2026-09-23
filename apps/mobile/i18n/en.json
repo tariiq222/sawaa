@@ -164,6 +164,8 @@
     "loading": "Checking your enrollment…",
     "program": "Program",
     "amount": "Amount",
+    "remainingAmount": "Remaining amount",
+    "amountUnavailable": "Amount unavailable",
     "continue": "Continue to secure payment",
     "processing": "Opening secure payment…",
     "pending": "Payment is processing",

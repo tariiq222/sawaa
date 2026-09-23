@@ -10,7 +10,7 @@ import { APP_SCHEME } from '@/constants/config';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useGroupSession } from '@/hooks/queries';
-import { clientPaymentsService } from '@/services/client/payments';
+import { clientPaymentsService, type ClientInvoice } from '@/services/client/payments';
 import { formatHalalas } from '@/lib/money';
 import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -36,6 +36,28 @@ function phaseCopy(phase: ExistingBookingCheckoutPhase, t: (key: string) => stri
   }
 }
 
+function validAmount(value: number | string | undefined): number | null {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
+function remainingHalalas(invoice: ClientInvoice | null): number | null {
+  if (!invoice || !Array.isArray(invoice.payments)) return null;
+  const rawTotal = validAmount(invoice.total);
+  if (rawTotal === null || !Number.isSafeInteger(Math.round(rawTotal))) return null;
+  const total = Math.round(rawTotal);
+  let completed = 0;
+  for (const payment of invoice.payments) {
+    if (payment.status !== 'COMPLETED') continue;
+    const amount = validAmount(payment.amount);
+    if (amount === null || !Number.isSafeInteger(amount)) return null;
+    completed += amount;
+    if (!Number.isSafeInteger(completed)) return null;
+  }
+  return Math.max(0, total - completed);
+}
+
 export default function ExistingBookingCheckoutScreen() {
   const { bookingId, invoiceId, programId } = useLocalSearchParams<{
     bookingId?: string;
@@ -55,14 +77,14 @@ export default function ExistingBookingCheckoutScreen() {
   const submittingRef = useRef(false);
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const copy = phaseCopy(checkout.phase, t);
-  const amount = checkout.invoice?.total;
+  const amount = remainingHalalas(checkout.invoice);
   const currency = checkout.invoice?.currency ?? 'SAR';
-  const amountText = typeof amount === 'number' || typeof amount === 'string'
+  const amountText = amount !== null
     ? t('checkout.currency', {
-        amount: formatHalalas(Number(amount), { locale: dir.isRTL ? 'ar-SA' : 'en-US' }),
+        amount: formatHalalas(amount, { locale: dir.isRTL ? 'ar-SA' : 'en-US' }),
         currency,
       })
-    : '—';
+    : t('checkout.amountUnavailable');
   const canPay = Boolean(checkout.invoice?.id) && canStartHostedPayment(checkout.invoice) && !submitting && (
     ['ready', 'failed'].includes(checkout.phase) ||
     (checkout.phase === 'pending' && canResumeHostedPayment(checkout.invoice))
@@ -130,7 +152,7 @@ export default function ExistingBookingCheckoutScreen() {
           {checkout.invoice ? (
             <View style={styles.amountBlock}>
               <Text style={[styles.label, { fontFamily: f400, textAlign: dir.textAlign }]}>
-                {t('checkout.amount')}
+                {t('checkout.remainingAmount')}
               </Text>
               <Text style={[styles.amount, { fontFamily: f700, textAlign: dir.textAlign }]}>
                 {amountText}

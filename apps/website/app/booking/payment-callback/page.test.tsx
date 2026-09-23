@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 let searchParams = new URLSearchParams();
 const replaceMock = vi.fn();
@@ -19,44 +19,40 @@ describe('/booking/payment-callback page', () => {
     vi.stubGlobal('location', { ...window.location, assign: assignMock });
   });
 
-  it('bounces to /booking/confirm preserving bookingId and invoiceId', () => {
+  it.each(['mobile', 'website', 'other', null])('offers both channels for source %s without automatic routing', (source) => {
     searchParams = new URLSearchParams({ bookingId: 'bk_42', invoiceId: 'inv_7' });
+    if (source) searchParams.set('source', source);
     render(<PaymentCallbackPage />);
-    expect(replaceMock).toHaveBeenCalledWith('/booking/confirm?bookingId=bk_42&invoiceId=inv_7');
-  });
-
-  it('bounces to /booking/confirm without params when bookingId is missing', () => {
-    searchParams = new URLSearchParams();
-    render(<PaymentCallbackPage />);
-    expect(replaceMock).toHaveBeenCalledWith('/booking/confirm');
-  });
-
-  it('attempts the fixed native callback and keeps an encoded return link for mobile source', () => {
-    searchParams = new URLSearchParams({
-      source: 'mobile',
-      bookingId: 'booking/id?mobile',
-      invoiceId: 'invoice id&mobile',
-    });
-
-    const { getByRole } = render(<PaymentCallbackPage />);
-
-    const nativeUrl =
-      'sawa://booking/payment-callback?bookingId=booking%2Fid%3Fmobile&invoiceId=invoice+id%26mobile';
-    expect(assignMock).toHaveBeenCalledWith(nativeUrl);
-    expect(getByRole('link', { name: 'العودة إلى التطبيق' }).getAttribute('href')).toBe(nativeUrl);
+    expect(screen.getByRole('link', { name: 'المتابعة في التطبيق' }).getAttribute('href'))
+      .toBe('sawa://booking/payment-callback?bookingId=bk_42&invoiceId=inv_7');
+    expect(screen.getByRole('link', { name: 'المتابعة على الموقع' }).getAttribute('href'))
+      .toBe('/booking/confirm?bookingId=bk_42&invoiceId=inv_7');
+    expect(assignMock).not.toHaveBeenCalled();
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
-  it('keeps unknown callback sources on the website confirmation route', () => {
+  it('encodes identifiers and ignores untrusted callback routing parameters', () => {
     searchParams = new URLSearchParams({
-      source: 'other',
-      bookingId: 'bk_42',
-      invoiceId: 'inv_7',
+      source: 'mobile', bookingId: 'booking/id?x', invoiceId: 'invoice id&x',
+      returnUrl: 'https://attacker.example/',
     });
-
     render(<PaymentCallbackPage />);
-
-    expect(replaceMock).toHaveBeenCalledWith('/booking/confirm?bookingId=bk_42&invoiceId=inv_7');
+    expect(screen.getByRole('link', { name: 'المتابعة في التطبيق' }).getAttribute('href'))
+      .toBe('sawa://booking/payment-callback?bookingId=booking%2Fid%3Fx&invoiceId=invoice+id%26x');
+    expect(screen.getByRole('link', { name: 'المتابعة على الموقع' }).getAttribute('href'))
+      .toBe('/booking/confirm?bookingId=booking%2Fid%3Fx&invoiceId=invoice+id%26x');
     expect(assignMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it('does not claim payment success when callback identifiers are absent', () => {
+    render(<PaymentCallbackPage />);
+    expect(screen.getByRole('link', { name: 'المتابعة في التطبيق' }).getAttribute('href'))
+      .toBe('sawa://booking/payment-callback');
+    expect(screen.getByRole('link', { name: 'المتابعة على الموقع' }).getAttribute('href'))
+      .toBe('/booking/confirm');
+    expect(screen.queryByText(/تم الدفع|تأكيد الدفع/)).toBeNull();
+    expect(assignMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 });

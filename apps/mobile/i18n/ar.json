@@ -164,6 +164,8 @@
     "loading": "جارٍ التحقق من تسجيلك…",
     "program": "البرنامج",
     "amount": "المبلغ",
+    "remainingAmount": "المبلغ المتبقي",
+    "amountUnavailable": "المبلغ غير متاح",
     "continue": "المتابعة للدفع الآمن",
     "processing": "جارٍ فتح بوابة الدفع…",
     "pending": "الدفع قيد المعالجة",
