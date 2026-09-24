@@ -53,3 +53,6 @@ google-services.json
 
 # Local Firebase and APNs configuration, inventory and private keys
 /private-config/
+
+# Local EAS signing configuration; never commit credentials.
+/credentials.json

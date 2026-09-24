@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "environment": "staging",
+  "expectedCommit": "REPLACE_WITH_FULL_EXPECTED_GIT_SHA",
+  "deployedCommit": "REPLACE_WITH_INDEPENDENTLY_OBSERVED_GIT_SHA",
+  "deploymentId": "REPLACE_WITH_ACTIVE_OPENSHIP_DEPLOYMENT_ID",
+  "status": "REPLACE_WITH_OBSERVED_STATUS",
+  "observedAt": "REPLACE_WITH_UTC_OBSERVATION_TIME",
+  "verifiedBy": "REPLACE_WITH_OPERATOR_IDENTIFIER",
+  "services": [
+    { "name": "backend", "health": "REPLACE", "deploymentId": "REPLACE" },
+    { "name": "dashboard", "health": "REPLACE", "deploymentId": "REPLACE" },
+    { "name": "website", "health": "REPLACE", "deploymentId": "REPLACE" },
+    { "name": "postgres", "health": "REPLACE", "deploymentId": "REPLACE" },
+    { "name": "redis", "health": "REPLACE", "deploymentId": "REPLACE" },
+    { "name": "minio", "health": "REPLACE", "deploymentId": "REPLACE" }
+  ],
+  "checks": [
+    { "name": "backend", "status": null },
+    { "name": "dashboard", "status": null },
+    { "name": "website", "status": null }
+  ]
+}

@@ -2,7 +2,7 @@
 // scripts/check-deploy-state.mjs
 //
 // Verifies that the candidate commit (default HEAD) is at-or-after the
-// most recent production release on the target branch (default origin/main).
+// most recent tagged code release on the target branch (default origin/main). This checks Git ancestry only, not deployment or merge approval.
 //
 // Catches the class of bug where develop was force-pushed or someone
 // retargeted a stale PR — the merge target would otherwise be considered
@@ -47,17 +47,17 @@ try {
 
 let latestRelease;
 try {
-  // git describe --tags picks the most recent reachable tag. If the
-  // target branch has no tags yet (first release), describe fails.
-  latestRelease = git("describe", "--tags", "--abbrev=0", targetCommit);
+  // Git --match is a glob, not a regex; filter exact CalVer names first.
+  const tags = git("tag", "--merged", targetCommit).split("\n")
+    .filter(tag => /^v\d{4}\.\d{2}\.\d{2}\.\d+$/.test(tag));
+  if (tags.length === 0) {
+    ok(`No code-release tags on ${targetBranch} — ancestry check skipped; deployment remains unverified.`);
+    process.exit(0);
+  }
+  latestRelease = git("describe", "--tags", "--abbrev=0",
+    ...tags.flatMap(tag => ["--match", tag]), targetCommit);
 } catch {
-  ok(`No release tags yet on ${targetBranch} — skipping state check.`);
-  process.exit(0);
-}
-
-if (!latestRelease) {
-  ok(`No release tags found on ${targetBranch} — skipping state check.`);
-  process.exit(0);
+  fail("Unable to resolve code-release ancestry; inspect Git state.");
 }
 
 console.log(`  target branch : ${targetBranch}`);
@@ -83,7 +83,7 @@ try {
 if (mergeBase === releaseCommit) {
   ok(
     `${candidate} is at-or-after ${latestRelease} — merge target is ` +
-      `ahead of production. Safe to merge.`,
+      `valid by tagged code-release ancestry only; deployment and approval remain separate.`,
   );
   process.exit(0);
 }
@@ -99,5 +99,5 @@ if (mergeBase === candidateCommit) {
 fail(
   `${candidate} and ${latestRelease} diverged at ${mergeBase}. ` +
     `Either rebase the candidate or fast-forward main to ${candidate} ` +
-    `after a manual production release.`,
+    `only through the approved release policy.`,
 );
