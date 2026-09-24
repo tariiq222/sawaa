@@ -1,3 +1,5 @@
+> Latest staging update: account provisioned in staging only; deployment and login activation blocked by CI registry authentication. Production untouched. See releases/2026-09-24/evidence/staging-release-status.json. Earlier local-only statements below are historical.
+
 # حساب مراجع التطبيق
 
 ## الحالة الحالية — 2026-09-24

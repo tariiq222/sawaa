@@ -1,0 +1,16 @@
+{
+  "status": "blocked_before_merge",
+  "pr": "https://github.com/tariiq222/sawaa/pull/92",
+  "commit": "11c4d65e2a3b6647c207f0da82bc20c91d5aa858",
+  "configTestsPassed": 81,
+  "mobileTestsPassed": 294,
+  "dashboardSmokePassed": 41,
+  "dashboardSmokeSkipped": 1,
+  "composeEnvironmentForwarding": "passed",
+  "blocker": "CI cannot pull quay.io/minio/minio:latest: unauthorized, exit 125. Repeated on latest commit. Existing runtime Docker Hub pinned digest also denied on manifest check.",
+  "stagingAccountCreated": true,
+  "stagingLoginEnabled": false,
+  "stagingDeployed": false,
+  "productionModified": false,
+  "testFlightAvailable": false
+}

@@ -51,24 +51,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Start MinIO
-        run: |
-          docker run -d --name minio \
-            -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin123 \
-            quay.io/minio/minio:latest server /data
-          minio_ready=false
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:9000/minio/health/live; then
-              minio_ready=true
-              break
-            fi
-            sleep 1
-          done
-          if [ "$minio_ready" != "true" ]; then
-            echo "MinIO did not become healthy after 30 seconds" >&2
-            exit 1
-          fi
+        uses: ./.github/actions/start-minio
 
       - uses: pnpm/action-setup@v4
 
@@ -209,24 +192,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Start MinIO
-        run: |
-          docker run -d --name minio \
-            -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin123 \
-            quay.io/minio/minio:latest server /data
-          minio_ready=false
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:9000/minio/health/live; then
-              minio_ready=true
-              break
-            fi
-            sleep 1
-          done
-          if [ "$minio_ready" != "true" ]; then
-            echo "MinIO did not become healthy after 30 seconds" >&2
-            exit 1
-          fi
+        uses: ./.github/actions/start-minio
 
       - uses: pnpm/action-setup@v4
 
