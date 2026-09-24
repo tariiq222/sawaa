@@ -180,6 +180,10 @@ export default function LoginScreen() {
                 </Text>
               </Pressable>
 
+              <Pressable onPress={() => router.push('/(auth)/review-login')} accessibilityRole="button" style={{ alignSelf: 'center' }}>
+                <Text style={[styles.forgotLink, { fontFamily: f600 }]}>{t('auth.review.link')}</Text>
+              </Pressable>
+
               <View style={[styles.registerRow, { flexDirection: dir.row }]}>
                 <Text style={[styles.registerText, { fontFamily: f400, fontWeight: '400' }]}>{t('auth.noAccount')} </Text>
                 <Pressable

@@ -23,7 +23,7 @@ jest.mock('@/stores/store', () => ({ store: { dispatch: (...a: unknown[]) => moc
 jest.mock('@/stores/slices/auth-slice', () => ({ logout: jest.fn(() => ({ type: 'auth/logout' })) }));
 
 import api from '../api';
-import { authService, SessionSupersededError, verifyMobileOtp } from '../auth';
+import { authService, SessionSupersededError, verifyMobileOtp, loginReviewAccount } from '../auth';
 import * as nativeSessionState from '../native-session-state';
 import type { User } from '@/types/auth';
 
@@ -295,5 +295,33 @@ describe('authService.getProfile / sendVerificationEmail / getStoredTokens', () 
     mockGetSecureItem.mockResolvedValueOnce('r-tok');
     const tokens = await authService.getStoredTokens();
     expect(tokens).toEqual({ accessToken: 'a-tok', refreshToken: 'r-tok' });
+  });
+});
+
+
+describe('loginReviewAccount', () => {
+  it('persists client tokens through the native session fence', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: { sessionKind: 'client', tokens: { accessToken: 'review-access', refreshToken: 'review-refresh' } } });
+    const result = await loginReviewAccount({ email: 'apple@review.sawaa.invalid', password: 'test-only-secret' });
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/auth/review-login', { email: 'apple@review.sawaa.invalid', password: 'test-only-secret' });
+    expect(result.sessionKind).toBe('client');
+    expect(nativeSessionState.isSessionCurrent(result.sessionEpoch)).toBe(true);
+    expect(mockSetSecureItem).toHaveBeenCalledWith('accessToken', 'review-access');
+    expect(mockSetSecureItem).toHaveBeenCalledWith('refreshToken', 'review-refresh');
+    expect(mockSetSecureItem).not.toHaveBeenCalledWith('password', expect.anything());
+  });
+  it('rejects a staff response before storing credentials', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: { sessionKind: 'staff', tokens: { accessToken: 'staff-access', refreshToken: 'staff-refresh' } } });
+    await expect(loginReviewAccount({ email: 'apple@review.sawaa.invalid', password: 'test-only-secret' })).rejects.toThrow();
+    expect(mockSetSecureItem).not.toHaveBeenCalled();
+  });
+  it('does not replace a newer login when a review response arrives late', async () => {
+    let resolve!: (value: unknown) => void;
+    mockedApi.post.mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    const pending = loginReviewAccount({ email: 'apple@review.sawaa.invalid', password: 'test-only-secret' });
+    nativeSessionState.beginSession();
+    resolve({ data: { sessionKind: 'client', tokens: { accessToken: 'old', refreshToken: 'old' } } });
+    await expect(pending).rejects.toBeInstanceOf(SessionSupersededError);
+    expect(mockSetSecureItem).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback, ReactNode } from 'react';
-import { I18nManager, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildTheme, type AppTheme } from './tokens';
 import { useBranding } from '@/hooks/queries/useBranding';
@@ -58,12 +58,6 @@ export function ThemeProvider({ children, language = 'ar' }: ThemeProviderProps)
   }, []);
 
   const theme = useMemo(() => buildTheme(branding ?? null, scheme), [branding, scheme]);
-
-  useEffect(() => {
-    if (I18nManager.isRTL !== isRTL) {
-      I18nManager.forceRTL(isRTL);
-    }
-  }, [isRTL]);
 
   return (
     <ThemeContext.Provider value={{ theme, isRTL, language, scheme, mode, setThemeMode }}>

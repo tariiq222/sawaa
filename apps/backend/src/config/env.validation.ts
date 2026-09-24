@@ -30,6 +30,9 @@ export const envValidationSchema = Joi.object({
   CORS_ORIGINS: Joi.string().allow('').optional(),
 
   // Database (Prisma)
+  // Optional, fail-closed dedicated synthetic account; never a generic OTP bypass.
+  MOBILE_REVIEW_CLIENT_ID: Joi.string().guid({ version: 'uuidv4' }).optional(),
+
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required()

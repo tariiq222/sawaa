@@ -5,7 +5,8 @@ const mobileRoot = path.resolve(__dirname);
 const expoCli = path.join(mobileRoot, 'node_modules/.bin/expo');
 
 function resolveExpoConfig(overrides: NodeJS.ProcessEnv, json = true) {
-  const env = { ...process.env, ...overrides };
+  // Keep local dotenv files from supplying values deliberately absent in a test.
+  const env: NodeJS.ProcessEnv = { ...process.env, ...overrides, EXPO_NO_DOTENV: '1' };
   if (overrides.EXPO_PUBLIC_API_URL === undefined) {
     delete env.EXPO_PUBLIC_API_URL;
   }

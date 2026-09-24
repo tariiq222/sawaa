@@ -3276,6 +3276,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/review-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Log in to the explicitly configured synthetic review account */
+        post: operations["MobileReviewAuthController_loginReviewAccount_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/auth/verify-otp": {
         parameters: {
             query?: never;
@@ -10350,6 +10367,18 @@ export interface components {
             reason: string;
         };
         RetryAdministrativeMessageDto: Record<string, never>;
+        ReviewLoginDto: {
+            /**
+             * @description Dedicated synthetic review account email
+             * @example apple@review.sawaa.invalid
+             */
+            email: string;
+            /**
+             * @description Review account password
+             * @example AccountPassword123!
+             */
+            password: string;
+        };
         ScheduleProgramDto: {
             /** @description Override the duration in minutes (advisory) */
             durationMins?: number;
@@ -28924,6 +28953,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileReviewAuthController_loginReviewAccount_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewLoginDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        sessionKind: "client";
+                        tokens: {
+                            accessToken: string;
+                            refreshToken: string;
+                        };
+                    };
+                };
             };
             /** @description Validation failed */
             400: {

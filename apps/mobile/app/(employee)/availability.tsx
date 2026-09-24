@@ -99,7 +99,7 @@ export default function AvailabilityScreen() {
       >
         <Pressable
           onPress={() => router.back()}
-          style={styles.backBtn}
+          style={[styles.backBtn, { alignSelf: dir.alignStart }]}
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >

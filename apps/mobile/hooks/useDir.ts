@@ -1,5 +1,4 @@
 import { createContext, useContext } from "react";
-import { Platform } from "react-native";
 
 export type Locale = "ar" | "en";
 
@@ -7,8 +6,8 @@ export type DirState = {
   locale: Locale;
   isRTL: boolean;
   /**
-   * Use for ROWS of localized children. On web, always "row" — the browser
-   * mirrors layout via `document.dir`. On native, explicit flip is required.
+   * Use for ROWS of localized children. The root layout basis is LTR on all
+   * platforms; this helper performs the single locale-dependent mirror.
    */
   row: "row" | "row-reverse";
   /** Opposite of `row` — for rare cases (LTR numbers inside RTL, etc.). */
@@ -27,16 +26,13 @@ export type DirState = {
 
 const build = (locale: Locale): DirState => {
   const isRTL = locale === "ar";
-  const onWeb = Platform.OS === "web";
   return {
     locale,
     isRTL,
-    // Web: rely on CSS `direction` on <html> — `flex-start` already maps to
-    // the logical start. Native: no CSS direction, so explicit flip required.
-    row: onWeb ? "row" : isRTL ? "row-reverse" : "row",
-    rowReverse: onWeb ? "row-reverse" : isRTL ? "row" : "row-reverse",
-    alignStart: onWeb ? "flex-start" : isRTL ? "flex-end" : "flex-start",
-    alignEnd: onWeb ? "flex-end" : isRTL ? "flex-start" : "flex-end",
+    row: isRTL ? "row-reverse" : "row",
+    rowReverse: isRTL ? "row" : "row-reverse",
+    alignStart: isRTL ? "flex-end" : "flex-start",
+    alignEnd: isRTL ? "flex-start" : "flex-end",
     textAlign: isRTL ? "right" : "left",
     writingDirection: isRTL ? "rtl" : "ltr",
     iconScaleX: isRTL ? -1 : 1,

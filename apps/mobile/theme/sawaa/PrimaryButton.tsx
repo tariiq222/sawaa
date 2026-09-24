@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { sawaaColors } from './tokens';
 import { colors as sharedColors } from '@sawaa/shared/tokens';
+import { getFontName } from '../fonts';
 
 interface Props {
   label: string;
@@ -19,7 +20,7 @@ interface Props {
  * Matches the "ابدأ الآن / تسجيل جديد" CTA style from the welcome screen.
  * Use everywhere a primary action is surfaced so the app stays visually uniform.
  */
-export function PrimaryButton({ label, onPress, fontFamily, style, height = 52, disabled, icon }: Props) {
+export function PrimaryButton({ label, onPress, fontFamily = getFontName('ar', '600'), style, height = 52, disabled, icon }: Props) {
   const isDisabled = Boolean(disabled || !onPress);
   return (
     <Pressable

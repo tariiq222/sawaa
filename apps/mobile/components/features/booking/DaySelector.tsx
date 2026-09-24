@@ -1,5 +1,6 @@
+import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
@@ -47,8 +48,8 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
         </Text>
         <View />
       </View>
-      <ScrollView
-        horizontal
+      <LocalizedHorizontalScroll
+        dir={dir}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[styles.daysRow, { flexDirection: dir.row }]}
       >
@@ -97,7 +98,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
             </Pressable>
           );
         })}
-      </ScrollView>
+      </LocalizedHorizontalScroll>
     </GlassSurface>
   );
 }

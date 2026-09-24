@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react-native';
@@ -39,8 +40,8 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
   if (sessions.length === 0) return null;
 
   return (
-    <ScrollView
-      horizontal
+    <LocalizedHorizontalScroll
+      dir={dir}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.hScrollContent, { flexDirection: dir.row }]}
     >
@@ -73,7 +74,7 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
         </Glass>
         );
       })}
-    </ScrollView>
+    </LocalizedHorizontalScroll>
   );
 }
 

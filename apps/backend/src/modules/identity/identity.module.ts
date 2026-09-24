@@ -1,3 +1,4 @@
+import { ReviewLoginHandler } from './review-login/review-login.handler';
 import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -71,6 +72,7 @@ import { NativeLogoutHandler } from './native-session/native-logout.handler';
 import { RequestAccountDeletionHandler } from './request-account-deletion/request-account-deletion.handler';
 
 const handlers = [
+  ReviewLoginHandler,
   LoginHandler, RefreshTokenHandler, LogoutHandler,
   GetCurrentUserHandler, CreateUserHandler, GetUserHandler, UpdateUserHandler, UpdateUserRoleHandler, ListUsersHandler,
   DeactivateUserHandler, DeleteUserHandler, AssignRoleHandler, RemoveRoleHandler,

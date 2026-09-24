@@ -28,7 +28,7 @@ export default function HomeScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const firstName = user?.firstName ?? (dir.isRTL ? 'سارة' : 'Sara');
+  const firstName = user?.firstName?.trim() ?? '';
   const today = new Date().toLocaleDateString(dir.isRTL ? 'ar-SA' : 'en-US', {
     weekday: 'long',
     day: 'numeric',
@@ -84,7 +84,7 @@ export default function HomeScreen() {
             {today}
           </Text>
           <Text style={[styles.greeting, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {`${greeting}، ${firstName}`}
+            {firstName ? `${greeting}${dir.isRTL ? '،' : ','} ${firstName}` : greeting}
           </Text>
         </Animated.View>
 

@@ -63,6 +63,18 @@ export const verifyMobileOtp = async (body: VerifyOtpPayload): Promise<VerifiedM
   return { ...data, sessionEpoch: epoch };
 };
 
+export const loginReviewAccount = async (body: { email: string; password: string }): Promise<VerifiedMobileOtpResponse> => {
+  const epoch = beginSession();
+  const { data } = await api.post<VerifyOtpResponse>('/mobile/auth/review-login', body);
+  if (!isSessionCurrent(epoch)) throw new SessionSupersededError();
+  if (data.sessionKind !== 'client' || !data.tokens?.accessToken || !data.tokens?.refreshToken) {
+    throw new Error('Invalid review account response');
+  }
+  const persisted = await persistSessionTokensAtEpoch(data.tokens, epoch);
+  if (!persisted || !isSessionCurrent(epoch)) throw new SessionSupersededError();
+  return { ...data, sessionEpoch: epoch };
+};
+
 export const requestEmailVerification = async () => {
   await assertStaffSession('request email verification');
   return api.post<{ success: true }>('/mobile/auth/request-email-verification').then(r => r.data);

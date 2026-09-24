@@ -1,3 +1,4 @@
+import { MobileReviewAuthController } from './review-auth.controller';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../../infrastructure/database';
 import { BookingsModule } from '../../../modules/bookings/bookings.module';
@@ -22,6 +23,7 @@ import { ClientPackagePurchaseStatusHandler } from '../../../modules/bookings/cl
 @Module({
   imports: [DatabaseModule, BookingsModule, PeopleModule, FinanceModule, CommsModule, OrgExperienceModule, IdentityModule],
   controllers: [
+    MobileReviewAuthController,
     MobileClientBookingsController,
     MobileClientProfileController,
     MobileClientPaymentsController,
