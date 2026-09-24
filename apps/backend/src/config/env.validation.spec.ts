@@ -818,3 +818,16 @@ describe('envValidationSchema', () => {
     });
   });
 });
+
+describe('optional mobile review account deployment configuration', () => {
+  it.each([undefined, ''])('keeps unconfigured environments disabled without preventing boot (%s)', (value) => {
+    const result = envValidationSchema.validate({ ...baseValidEnv, MOBILE_REVIEW_CLIENT_ID: value });
+    expect(result.error).toBeUndefined();
+    expect(result.value.MOBILE_REVIEW_CLIENT_ID).toBeUndefined();
+  });
+  it('accepts an explicit account UUID and rejects an invalid one', () => {
+    expect(envValidationSchema.validate({ ...baseValidEnv, MOBILE_REVIEW_CLIENT_ID: '97e32394-5ec7-441c-a090-af4ffb187fb8' }).error).toBeUndefined();
+    const invalid = envValidationSchema.validate({ ...baseValidEnv, MOBILE_REVIEW_CLIENT_ID: 'customer-email@example.com' });
+    expect(invalid.error?.details[0].path).toEqual(['MOBILE_REVIEW_CLIENT_ID']);
+  });
+});
