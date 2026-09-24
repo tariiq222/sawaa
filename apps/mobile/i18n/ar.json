@@ -202,6 +202,16 @@
       "under300": "< ٣٠٠ ﷼"
     }
   },
+  "employeeProfile": {
+    "about": "نبذة",
+    "services": "الخدمات",
+    "ratingCount": "({{count}} تقييم)",
+    "noServices": "لا توجد خدمات متاحة",
+    "selectService": "اختر الخدمة",
+    "unavailable": "الحجز غير متاح",
+    "priceAtNextStep": "يظهر السعر في الخطوة التالية",
+    "bookNow": "احجز جلسة"
+  },
   "appointments": {
     "title": "مواعيدي",
     "upcoming": "القادمة",

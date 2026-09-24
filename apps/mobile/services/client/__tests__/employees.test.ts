@@ -33,7 +33,7 @@ describe('publicEmployeesService.getSlots', () => {
         branchId: 'branch-1',
         date: '2026-05-20',
         serviceId: 'service-1',
-        deliveryType: 'online',
+        deliveryType: 'ONLINE',
         bookingType: 'INDIVIDUAL',
       },
     });
@@ -54,7 +54,7 @@ describe('publicEmployeesService.getSlots', () => {
         employeeId: 'emp-1',
         branchId: 'branch-1',
         date: '2026-05-20',
-        deliveryType: 'in_person',
+        deliveryType: 'IN_PERSON',
         bookingType: 'GROUP',
       },
     });
