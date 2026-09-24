@@ -202,6 +202,16 @@
       "under300": "< 300 ﷼"
     }
   },
+  "employeeProfile": {
+    "about": "About",
+    "services": "Services",
+    "ratingCount": "({{count}} reviews)",
+    "noServices": "No services available",
+    "selectService": "Select a service",
+    "unavailable": "Booking unavailable",
+    "priceAtNextStep": "Price shown in next step",
+    "bookNow": "Book now"
+  },
   "appointments": {
     "title": "My Appointments",
     "upcoming": "Upcoming",

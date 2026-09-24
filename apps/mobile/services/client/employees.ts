@@ -47,6 +47,7 @@ export const publicEmployeesService = {
   }) {
     const { deliveryType, bookingType, ...rest } = params;
     const selectedDeliveryType = resolveDeliveryType(deliveryType);
+    const wireDeliveryType = selectedDeliveryType === 'online' ? 'ONLINE' : 'IN_PERSON';
     const bookingCategoryParam = bookingType === 'group'
       ? 'GROUP'
       : bookingType === 'walk_in'
@@ -58,7 +59,7 @@ export const publicEmployeesService = {
       {
         params: {
           ...rest,
-          deliveryType: selectedDeliveryType,
+          deliveryType: wireDeliveryType,
           bookingType: bookingCategoryParam,
         },
       },
