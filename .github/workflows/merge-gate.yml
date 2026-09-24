@@ -1,30 +1,6 @@
-# Merge Gate — ensures develop → main can only be merged with all checks green.
-#
-# This workflow is NOT a substitute for the standard CI (ci.yml). It is a
-# dedicated check that runs ON PRs targeting main, with the full test
-# surface (not just unit tests), so that the "merge to production" step
-# has an explicit, fast feedback gate.
-#
-# Why this exists separately from ci.yml:
-#   1. Branch protection rules in GitHub can list a specific check
-#      ("merge-gate") as a required status check. A single umbrella job
-#      named "gate" gives the team one thing to wait for, instead of
-#      asking them to interpret 5 parallel jobs.
-#   2. The umbrella gates ALL the other jobs: backend, dashboard,
-#      website, drift. If any fails, the gate fails.
-#   3. Adds a release-state consistency check (deploy-state.yml) that
-#      verifies the develop HEAD is at-or-after the last deployed main
-#      release. This catches the "merged something we never deployed"
-#      class of bug.
-#
-# Required checks before merge to main (per .github/RELEASE.md):
-#   - gate (this workflow)
-#   - OpenAPI snapshot drift (ci.yml)
-#   - api-client drift (ci.yml)
-#   - Prisma migration immutability (ci.yml)
-#   - Trivy filesystem scan HIGH/CRITICAL (ci.yml)
-#   - Gitleaks (ci.yml)
-#   - Dependabot auto-merge clean (dependabot.yml)
+# Additional merge checks. This job does not aggregate the separate CI jobs.
+# Require CI jobs separately in branch protection; see docs/operations/current-state.md.
+# The Git ancestry check is not proof of a deployed or manually accepted revision.
 
 name: merge-gate
 
@@ -42,7 +18,7 @@ concurrency:
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────
-  # gate — single umbrella job that must pass for merge.
+  # gate — additional checks alongside the separate CI workflow.
   # ─────────────────────────────────────────────────────────────────────
   gate:
     name: gate
@@ -106,8 +82,8 @@ jobs:
 
       - name: Deploy-state consistency
         # Verifies that the candidate merge target is at-or-after the
-        # last production release (most recent tag on main). Catches the
-        # "merged something we never deployed" scenario where develop was
+        # latest tagged code release on main; does not verify deployment. Catches the
+        # stale/divergent candidate scenario where develop was
         # force-pushed or someone re-targeted a stale PR.
         run: node scripts/check-deploy-state.mjs origin/main HEAD
 

@@ -1,0 +1,22 @@
+name: release-integrity
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  release-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Release metadata, ancestry and deployment evidence contracts
+        run: node --test scripts/tag-release.test.mjs scripts/check-deploy-state.test.mjs scripts/record-deployment.test.mjs
