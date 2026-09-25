@@ -589,7 +589,13 @@ jobs:
         working-directory: apps/mobile
         run: pnpm typecheck
 
-      - name: Unit tests
+      - name: Lint
+        working-directory: apps/mobile
+        run: pnpm lint
+
+      # `pnpm test` runs jest with --coverage, so the coverageThreshold block in
+      # apps/mobile/package.json is enforced here (not just collected locally).
+      - name: Unit tests (with coverage thresholds)
         working-directory: apps/mobile
         run: pnpm test --runInBand
 

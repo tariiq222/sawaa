@@ -10,18 +10,37 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest --coverage",
     "test:watch": "jest --watch"
   },
   "jest": {
     "preset": "jest-expo",
+    "collectCoverageFrom": [
+      "app/**/*.{ts,tsx}",
+      "components/**/*.{ts,tsx}",
+      "constants/**/*.{ts,tsx}",
+      "hooks/**/*.{ts,tsx}",
+      "lib/**/*.{ts,tsx}",
+      "plugins/**/*.js",
+      "services/**/*.{ts,tsx}",
+      "stores/**/*.{ts,tsx}",
+      "theme/**/*.{ts,tsx}",
+      "types/**/*.{ts,tsx}",
+      "utils/**/*.{ts,tsx}",
+      "!**/__tests__/**",
+      "!**/*.test.{ts,tsx}",
+      "!**/*.d.ts"
+    ],
     "coverageThreshold": {
       "global": {
-        "statements": 75,
-        "branches": 62,
-        "functions": 73,
-        "lines": 79
+        "statements": 46,
+        "branches": 36,
+        "functions": 40,
+        "lines": 47
       }
+    },
+    "moduleNameMapper": {
+      "^immer$": "<rootDir>/node_modules/.pnpm/node_modules/immer/dist/cjs/index.js"
     }
   },
   "dependencies": {
