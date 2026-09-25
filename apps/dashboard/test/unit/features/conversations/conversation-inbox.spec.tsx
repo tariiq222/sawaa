@@ -5,6 +5,23 @@ import { ConversationList } from "@/components/features/conversations/conversati
 import { ConversationDetail } from "@/components/features/conversations/conversation-detail"
 import { ConversationComposer } from "@/components/features/conversations/conversation-composer"
 
+vi.mock("@/components/ui/date-picker", () => ({
+  DatePicker: ({ id, value, onChange, dir }: {
+    id?: string
+    value?: string
+    onChange: (value: string) => void
+    dir?: "ltr" | "rtl"
+  }) => (
+    <input
+      id={id}
+      type="date"
+      dir={dir}
+      value={value ?? ""}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}))
+
 const labels: Record<string, string> = {
   "conversations.loading": "جارٍ تحميل المحادثات",
   "conversations.error": "تعذّر تحميل المحادثات",
