@@ -21,6 +21,8 @@ import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
 import { formatHalalas } from '@/lib/money';
 import type { DeliveryType } from '@/types/booking-enums';
+import { useBankTransferSettings } from '@/hooks/queries';
+import { isClientBankTransferAvailable } from './payment-methods';
 
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
 
@@ -46,8 +48,8 @@ export default function BookingPaymentScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const { data: bankTransferSettings } = useBankTransferSettings();
   const f400 = getFontName(dir.locale, '400');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const [method, setMethod] = useState<Method>('card');
   const [submitting, setSubmitting] = useState(false);
@@ -77,6 +79,10 @@ export default function BookingPaymentScreen() {
     { key: 'apple_pay', icon: <Apple size={20} color={colors.ink[900]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.ink[900] },
     { key: 'bank_transfer', icon: <Banknote size={20} color={colors.accent.amber} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: colors.accent.amber },
   ];
+  const availableMethods = methods.filter(
+    (paymentMethod) => paymentMethod.key !== 'bank_transfer' ||
+      isClientBankTransferAvailable(bankTransferSettings),
+  );
 
   const canPay =
     (!!createdBooking ||
@@ -198,7 +204,7 @@ export default function BookingPaymentScreen() {
           </Text>
         </Animated.View>
 
-        {methods.map((m, i) => {
+        {availableMethods.map((m, i) => {
           const isSelected = method === m.key;
           return (
             <Animated.View

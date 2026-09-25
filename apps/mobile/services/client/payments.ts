@@ -1,4 +1,5 @@
 import api from '../api';
+import type { ClientBankTransferSettings } from '@sawaa/shared';
 import type { Payment } from '@/types/models';
 
 export interface ReceiptUploadAsset {
@@ -90,6 +91,13 @@ export interface PaymentsListResponse {
 }
 
 export const clientPaymentsService = {
+  async getBankTransferSettings(): Promise<ClientBankTransferSettings> {
+    const response = await api.get<ClientBankTransferSettings>(
+      '/mobile/client/payments/bank-transfer/settings',
+    );
+    return response.data;
+  },
+
   async list(params?: { page?: number; limit?: number }) {
     const response = await api.get<PaymentsListResponse>(
       '/mobile/client/payments',

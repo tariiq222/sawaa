@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { Banknote, ChevronLeft, ChevronRight, Copy, Upload } from 'lucide-react-native';
+import { Banknote, ChevronLeft, ChevronRight, Upload } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
@@ -18,6 +18,10 @@ import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { clientPaymentsService, type ReceiptUploadAsset } from '@/services/client';
 import { formatHalalas } from '@/lib/money';
+import { useBankTransferSettings } from '@/hooks/queries';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { BankTransferAccountDetails } from '@/components/features/booking/BankTransferAccountDetails';
 
 export default function BankTransferScreen() {
   const colors = useSawaaColors();
@@ -28,22 +32,24 @@ export default function BankTransferScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const bankTransferQuery = useBankTransferSettings();
   const { invoiceId, amount, bookingId } = useLocalSearchParams<{
     invoiceId?: string;
     amount?: string;
     bookingId?: string;
   }>();
   const f400 = getFontName(dir.locale, '400');
-  const f500 = getFontName(dir.locale, '500');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const [receipt, setReceipt] = useState<ReceiptUploadAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const uploaded = !!receipt;
   // amount is integer halalas (forwarded from payment.tsx).
   const numericAmount = amount ? Number(amount) : 0;
   const amountLabel = `${formatHalalas(numericAmount, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
+  const accounts = bankTransferQuery.data?.enabled ? bankTransferQuery.data.accounts : [];
+  const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? accounts[0];
 
   const pickReceipt = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -63,7 +69,7 @@ export default function BankTransferScreen() {
   };
 
   const submitReceipt = async () => {
-    if (!receipt || !invoiceId || submitting) return;
+    if (!receipt || !invoiceId || !selectedAccount || submitting) return;
     if (!numericAmount || numericAmount <= 0) {
       Alert.alert(dir.isRTL ? 'مبلغ غير صالح' : 'Invalid amount');
       return;
@@ -89,13 +95,6 @@ export default function BankTransferScreen() {
       setSubmitting(false);
     }
   };
-
-  const details = [
-    { labelAr: 'البنك', labelEn: 'Bank', value: dir.isRTL ? 'البنك الأهلي السعودي' : 'Al-Ahli Bank' },
-    { labelAr: 'اسم المستفيد', labelEn: 'Beneficiary', value: dir.isRTL ? 'سَواء للرعاية النفسية' : 'Sawaa Mental Care' },
-    { labelAr: 'IBAN', labelEn: 'IBAN', value: 'SA03 8000 0000 6080 1016 7519' },
-    { labelAr: 'المبلغ', labelEn: 'Amount', value: amountLabel },
-  ];
 
   return (
     <AquaBackground>
@@ -125,37 +124,25 @@ export default function BankTransferScreen() {
           </View>
         </Animated.View>
 
-        {/* Bank details */}
-        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
-            {details.map((d, i) => (
-              <View
-                key={d.labelEn}
-                style={[
-                  styles.row,
-                  { flexDirection: dir.row },
-                  i < details.length - 1 && styles.rowDivider,
-                ]}
-              >
-                <View style={styles.rowMid}>
-                  <Text style={[styles.rowLabel, { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? d.labelAr : d.labelEn}
-                  </Text>
-                  <Text style={[styles.rowValue, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                    {d.value}
-                  </Text>
-                </View>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => Haptics.selectionAsync()}
-                  style={styles.copyBtn}
-                >
-                  <Copy size={14} color={colors.teal[700]} strokeWidth={2} />
-                </Pressable>
-              </View>
-            ))}
-          </Glass>
-        </Animated.View>
+        {bankTransferQuery.isLoading ? (
+          <Skeleton height={190} radius={sawaaRadius.xl} />
+        ) : !selectedAccount ? (
+          <EmptyState
+            icon="information-circle-outline"
+            title={t('payment.bankTransferUnavailable')}
+            actionLabel={t('common.back')}
+            onAction={() => router.back()}
+          />
+        ) : (
+          <>
+            <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
+              <BankTransferAccountDetails
+                accounts={accounts}
+                selectedAccountId={selectedAccountId}
+                onSelectAccount={setSelectedAccountId}
+                amountLabel={amountLabel}
+              />
+            </Animated.View>
 
         {/* Upload receipt */}
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(700).easing(Easing.out(Easing.cubic))}>
@@ -187,18 +174,20 @@ export default function BankTransferScreen() {
             </View>
           </Glass>
         </Animated.View>
+          </>
+        )}
       </ScrollView>
 
       <Animated.View
         entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
         style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
       >
-        <Pressable disabled={!uploaded || submitting} onPress={submitReceipt}>
+        <Pressable disabled={!uploaded || !selectedAccount || submitting} onPress={submitReceipt}>
           <LinearGradient
             colors={theme.colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.ctaBtn, (!uploaded || submitting) && { opacity: 0.55 }]}
+            style={[styles.ctaBtn, (!uploaded || !selectedAccount || submitting) && { opacity: 0.55 }]}
           >
             <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
               {submitting
@@ -234,33 +223,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: Re
     lineHeight: sawaaType.caption.lineHeight,
     color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
-  },
-  card: { padding: 0 },
-  row: { padding: sawaaSpacing.lg, alignItems: 'center', gap: sawaaSpacing.md },
-  rowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: withAlpha(colors.ink[900], 0.06),
-  },
-  rowMid: { flex: 1 },
-  rowLabel: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[500],
-  },
-  rowValue: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: colors.ink[900],
-    marginTop: sawaaSpacing.xs,
-    fontVariant: ['tabular-nums'],
-  },
-  copyBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: sawaaRadius.sm,
-    backgroundColor: withAlpha(colors.teal[500], 0.12),
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   sectionTitle: {
     fontSize: sawaaType.body.fontSize,

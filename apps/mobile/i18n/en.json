@@ -379,6 +379,8 @@
     "continue": "Continue",
     "processing": "Processing payment...",
     "bankDetails": "Bank Account Details",
+    "bankAccountLabel": "Account",
+    "bankTransferUnavailable": "Bank transfer is currently unavailable. Please choose another payment method.",
     "bankName": "Bank Name",
     "iban": "IBAN",
     "accountHolder": "Account Holder",
