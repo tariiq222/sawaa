@@ -6968,6 +6968,15 @@
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
           },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Session delivery channel. Omitted defaults to IN_PERSON.",
+            "example": "IN_PERSON"
+          },
           "durationOptionId": {
             "description": "Specific duration option to resolve price and duration",
             "example": "00000000-0000-0000-0000-000000000000",

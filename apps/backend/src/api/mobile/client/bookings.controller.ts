@@ -13,7 +13,7 @@ import {
   ApiTags, ApiBearerAuth, ApiOperation,
   ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse,
 } from '@nestjs/swagger';
-import { BookingStatus, CancellationReason } from '@prisma/client';
+import { BookingStatus, CancellationReason, DeliveryType } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -57,6 +57,14 @@ export class MobileCreateBookingDto {
 
   @ApiPropertyOptional({ description: 'Specific duration option to resolve price and duration', example: '00000000-0000-0000-0000-000000000000' })
   @IsOptional() @IsUUID() durationOptionId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Session delivery channel. Omitted defaults to IN_PERSON.',
+    enum: DeliveryType,
+    enumName: 'DeliveryType',
+    example: DeliveryType.IN_PERSON,
+  })
+  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 
   @ApiPropertyOptional({ description: 'Free-text notes for the booking', example: 'Please prepare the room in advance' })
   @IsOptional() @IsString() notes?: string;
@@ -122,6 +130,9 @@ export class MobileClientBookingsController {
       serviceId: body.serviceId,
       scheduledAt: new Date(body.scheduledAt),
       durationOptionId: body.durationOptionId,
+      // Without this the ONLINE choice made in the mobile booking flow was
+      // dropped and normalizeBookingTypes defaulted the session to IN_PERSON.
+      deliveryType: body.deliveryType,
       notes: body.notes,
       source: 'ONLINE',
     });

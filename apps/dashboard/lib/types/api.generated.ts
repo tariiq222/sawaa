@@ -9324,6 +9324,11 @@ export interface components {
              */
             branchId: string;
             /**
+             * @description Session delivery channel. Omitted defaults to IN_PERSON.
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
+            /**
              * @description Specific duration option to resolve price and duration
              * @example 00000000-0000-0000-0000-000000000000
              */

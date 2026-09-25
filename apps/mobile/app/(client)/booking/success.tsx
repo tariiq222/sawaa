@@ -51,11 +51,13 @@ export default function BookingSuccessScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
-  const { bookingId, invoiceId, paymentId, webResult } = useLocalSearchParams<{
+  const { bookingId, invoiceId, paymentId, webResult, amount, currency } = useLocalSearchParams<{
     bookingId?: string;
     invoiceId?: string;
     paymentId?: string;
     webResult?: string;
+    amount?: string;
+    currency?: string;
   }>();
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
@@ -67,6 +69,27 @@ export default function BookingSuccessScreen() {
   // Payment phase is derived by polling the backend (the source of truth). The
   // WebBrowser result alone is NOT trusted: see use-payment-status for the rules.
   const { phase, checkAgain } = usePaymentStatus(invoiceId, webResult);
+
+  // The booking and its invoice already exist by the time this screen renders,
+  // so a failed payment must resume THAT invoice. Going back with router.back()
+  // landed on the wizard (payment was entered with replace), where paying again
+  // created a second booking for the same slot — which then failed the slot
+  // conflict, leaving the created invoice unreachable from the UI.
+  const retryPayment = () => {
+    if (!bookingId || !invoiceId) {
+      router.back();
+      return;
+    }
+    router.replace({
+      pathname: '/(client)/booking/payment',
+      params: {
+        bookingId,
+        invoiceId,
+        ...(amount ? { amount } : {}),
+        ...(currency ? { currency } : {}),
+      },
+    });
+  };
 
   useEffect(() => {
     if (!bookingId) return;
@@ -230,7 +253,7 @@ export default function BookingSuccessScreen() {
           ) : phase === 'failed' ? (
             <PrimaryButton
               label={dir.isRTL ? 'إعادة المحاولة' : 'Try again'}
-              onPress={() => router.back()}
+              onPress={retryPayment}
               fontFamily={f700}
             />
           ) : (
