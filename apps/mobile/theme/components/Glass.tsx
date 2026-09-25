@@ -12,7 +12,7 @@ import { BlurView } from "expo-blur";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useReducedTransparency, useIncreasedContrast, useReduceMotion } from "../../hooks/useA11y";
 import { useTheme } from "../useTheme";
-import { GLASS_CFG, sawaaColors, type GlassCfg as Cfg, type GlassVariant as Variant } from "../sawaa/tokens";
+import { GLASS_CFG, getSawaaColors, getGlassEffects, type GlassCfg as Cfg, type GlassVariant as Variant } from "../sawaa/tokens";
 
 function applyA11y(cfg: Cfg, reduceT: boolean, increaseC: boolean): Cfg {
   let out = { ...cfg };
@@ -57,6 +57,8 @@ export const Glass = ({
   const reduceMotion = useReduceMotion();
   const { theme, scheme } = useTheme();
   const isDarkAppearance = scheme === 'dark';
+  const sawaaColors = getSawaaColors(scheme);
+  const effects = getGlassEffects(isDarkAppearance);
   const cfg = applyA11y(GLASS_CFG[variant], reduceTransparency, increaseContrast);
   const useNativeGlass =
     Platform.OS === 'ios' &&
@@ -118,7 +120,7 @@ export const Glass = ({
                 {
                   backgroundColor: isDarkAppearance
                     ? sawaaColors.glass.darkBg
-                    : `rgba(255,255,255,${cfg.mainTintAlpha + 0.15})`,
+                    : effects.tint(cfg.mainTintAlpha + 0.15),
                 },
               ]}
             />
@@ -134,7 +136,7 @@ export const Glass = ({
                   ? theme.colors.textPrimary
                   : isDarkAppearance
                     ? sawaaColors.glass.darkBorder
-                    : `rgba(255,255,255,${cfg.borderAlpha + 0.15})`,
+                    : effects.border(cfg.borderAlpha + 0.15),
               },
             ]}
           />
@@ -211,7 +213,7 @@ function WebLayers({
   });
 
   const baseAlpha = pressed ? cfg.baseTintAlpha + 0.05 : cfg.baseTintAlpha;
-  const rgb = isDark ? '12,36,36' : '255,255,255';
+  const effects = getGlassEffects(isDark);
   const animatedPress = pressed && !reduceMotion;
 
   return (
@@ -222,10 +224,10 @@ function WebLayers({
         isolation: "isolate",
       })}
     >
-      <View style={abs({ backgroundColor: `rgba(${rgb},${baseAlpha})` })} />
+      <View style={abs({ backgroundColor: effects.tint(baseAlpha) })} />
       <View
         style={abs({
-          backgroundColor: `rgba(${rgb},${cfg.mainTintAlpha})`,
+          backgroundColor: effects.tint(cfg.mainTintAlpha),
           backdropFilter: `blur(${cfg.mainBlur}px) saturate(180%)`,
           WebkitBackdropFilter: `blur(${cfg.mainBlur}px) saturate(180%)`,
         })}
@@ -237,7 +239,7 @@ function WebLayers({
             right: 5,
             top: 6,
             bottom: 6,
-            backgroundColor: `rgba(${rgb},${cfg.bloomAlpha})`,
+            backgroundColor: effects.tint(cfg.bloomAlpha),
             filter: "blur(3px)",
             borderRadius: radius,
           })}
@@ -246,7 +248,7 @@ function WebLayers({
       <View
         style={abs({
           background:
-            "radial-gradient(ellipse at center, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.25) 40%, rgba(255,255,255,0) 72%)",
+            effects.pressGlow,
           opacity: animatedPress ? 1 : 0,
           transform: `scale(${animatedPress ? 1 : 0.6})`,
           transition: reduceMotion ? 'none' : "opacity 240ms ease-out, transform 340ms cubic-bezier(0.2,0.9,0.25,1)",
@@ -257,8 +259,8 @@ function WebLayers({
       <View
         style={abs({
           boxShadow: pressed
-            ? "inset 0 2px 10px rgba(21,79,87,0.18), inset 0 0 0 1px rgba(21,79,87,0.08)"
-            : "inset 0 0 0 rgba(0,0,0,0)",
+            ? effects.pressedShadow
+            : effects.restingShadow,
           transition: "box-shadow 220ms ease-out",
           borderRadius: radius,
         })}
@@ -269,7 +271,7 @@ function WebLayers({
           bottom: "60%",
           left: 0,
           right: 0,
-          backgroundColor: "rgba(255,255,255,0.15)",
+          backgroundColor: effects.sheen,
           backgroundBlendMode: "overlay",
           filter: "blur(6px)",
           borderRadius: radius,
@@ -277,7 +279,7 @@ function WebLayers({
       />
       <View
         style={abs({
-          boxShadow: "inset 0 0 0 1px rgba(21,79,87,0.08)",
+          boxShadow: effects.innerShadow,
           mixBlendMode: "multiply",
           filter: "blur(4px)",
         })}
@@ -285,14 +287,14 @@ function WebLayers({
       <View
         style={abs({
           boxShadow:
-            "inset 0 2px 6px rgba(255,255,255,0.55), inset 0 -1px 2px rgba(255,255,255,0.2)",
+            effects.edgeShadow,
           mixBlendMode: "plus-lighter",
           filter: "blur(1.5px)",
         })}
       />
       <View
         style={abs({
-          border: `1px solid rgba(255,255,255,${cfg.borderAlpha})`,
+          border: `1px solid ${effects.border(cfg.borderAlpha)}`,
           mixBlendMode: "plus-lighter",
           borderRadius: radius,
         })}

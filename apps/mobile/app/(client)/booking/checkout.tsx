@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -12,7 +13,7 @@ import { getFontName } from '@/theme/fonts';
 import { useBranding, useGroupSession } from '@/hooks/queries';
 import { clientPaymentsService, type ClientInvoice } from '@/services/client/payments';
 import { formatHalalas } from '@/lib/money';
-import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import {
   useExistingBookingCheckout,
@@ -59,6 +60,8 @@ function remainingHalalas(invoice: ClientInvoice | null): number | null {
 }
 
 export default function ExistingBookingCheckoutScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { bookingId, invoiceId, programId } = useLocalSearchParams<{
     bookingId?: string;
     invoiceId?: string;
@@ -125,7 +128,7 @@ export default function ExistingBookingCheckoutScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive style={styles.back}>
-          <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
+          <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
         </Glass>
 
         <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
@@ -135,7 +138,7 @@ export default function ExistingBookingCheckoutScreen() {
           {copy.body}
         </Text>
 
-        {checkout.isRefreshing && !checkout.booking ? <ActivityIndicator color={sawaaColors.teal[600]} /> : null}
+        {checkout.isRefreshing && !checkout.booking ? <ActivityIndicator color={colors.teal[600]} /> : null}
 
         <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
           <Text style={[styles.label, { fontFamily: f400, textAlign: dir.textAlign }]}>
@@ -204,15 +207,15 @@ export default function ExistingBookingCheckoutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { color: sawaaColors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  body: { color: sawaaColors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  title: { color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
+  body: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   card: { padding: sawaaSpacing.lg, gap: sawaaSpacing.xs },
-  label: { color: sawaaColors.ink[500], fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
-  value: { color: sawaaColors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  label: { color: colors.ink[500], fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
+  value: { color: colors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   amountBlock: { marginTop: sawaaSpacing.md, gap: sawaaSpacing.xs },
-  amount: { color: sawaaColors.teal[700], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  contact: { color: sawaaColors.teal[700], fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight },
+  amount: { color: colors.teal[700], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
+  contact: { color: colors.teal[700], fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight },
 });

@@ -8,7 +8,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useReduceMotion } from '@/hooks/useA11y';
-import { sawaaColors, sawaaRadius, withAlpha } from '@/theme/sawaa/tokens';
+import { sawaaRadius, withAlpha } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 interface SkeletonProps {
   width?: DimensionValue;
@@ -17,7 +18,6 @@ interface SkeletonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const FILL = withAlpha(sawaaColors.teal[900], 0.08);
 const PULSE_MS = 1100;
 const OPACITY_LOW = 0.45;
 const OPACITY_HIGH = 0.9;
@@ -33,6 +33,8 @@ export function Skeleton({
   radius = sawaaRadius.md,
   style,
 }: SkeletonProps) {
+  const sawaaColors = useSawaaColors();
+  const fill = withAlpha(sawaaColors.ink[900], 0.12);
   const reduceMotion = useReduceMotion();
   const opacity = useSharedValue(OPACITY_HIGH);
 
@@ -55,7 +57,7 @@ export function Skeleton({
     <Animated.View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[{ width, height, borderRadius: radius, backgroundColor: FILL }, animatedStyle, style]}
+      style={[{ width, height, borderRadius: radius, backgroundColor: fill }, animatedStyle, style]}
     />
   );
 }

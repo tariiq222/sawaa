@@ -3,7 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
-import { sawaaColors, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
 import { useReduceMotion } from '@/hooks/useA11y';
@@ -30,6 +32,10 @@ export function BookingCta({
   f400,
   f700,
 }: BookingCtaProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const reduceMotion = useReduceMotion();
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const dayLabel = dir.isRTL ? DAYS_AR[selectedDay.getDay()] : DAYS_EN_SHORT[selectedDay.getDay()];
@@ -70,14 +76,14 @@ export function BookingCta({
           disabled={!selectedSlot}
           fontFamily={f700}
           height={46}
-          icon={<GoIcon size={14} color={sawaaColors.teal[50]} strokeWidth={2} />}
+          icon={<GoIcon size={14} color={action.foreground} strokeWidth={2} />}
         />
       </FloatingActionBar>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   summary: { flex: 1, paddingHorizontal: sawaaSpacing.sm },
   summaryTop: {
     fontSize: sawaaType.micro.fontSize,

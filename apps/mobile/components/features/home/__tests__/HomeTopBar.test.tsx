@@ -24,8 +24,8 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 jest.mock('@/components/ui/AppIcon', () => ({ AppIcon: () => null }));
-jest.mock('@/theme/sawaa', () => ({
-  sawaaColors: { teal: { 700: '#123456' }, accent: { rose: '#654321' } },
+jest.mock('@/theme/ThemeProvider', () => ({
+  useTheme: () => ({ scheme: 'light' }),
 }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/components/Glass', () => ({

@@ -4,7 +4,9 @@ import { useRouter } from 'expo-router';
 import { Bell, Search } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
-import { sawaaColors } from '@/theme/sawaa';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Glass } from '@/theme/components/Glass';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
@@ -17,6 +19,10 @@ interface HomeTopBarProps {
 }
 
 export function HomeTopBar({ f600 }: HomeTopBarProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
   const router = useRouter();
   const dir = useDir();
   const { t } = useTranslation();
@@ -76,7 +82,7 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -97,9 +103,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: sawaaColors.accent.rose,
+    backgroundColor: action.fill,
     borderWidth: 1.5,
-    borderColor: '#fff',
+    borderColor: sawaaColors.glass.opaqueBg,
   },
   bellBadgeWide: {
     minWidth: 22,
@@ -108,7 +114,7 @@ const styles = StyleSheet.create({
   bellBadgeText: {
     fontSize: 9.5,
     lineHeight: 12,
-    color: '#fff',
+    color: action.foreground,
     textAlign: 'center',
   },
   avatarInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },

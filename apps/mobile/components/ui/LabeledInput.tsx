@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, TextInput, View, type KeyboardTypeOptions 
 import { Eye, EyeOff } from 'lucide-react-native';
 
 import { Glass } from '@/theme';
-import { sawaaTokens, sawaaColors } from '@/theme/sawaa/tokens';
+import { sawaaTokens } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import type { DirState } from '@/hooks/useDir';
 
 interface LabeledInputProps {
@@ -35,6 +36,8 @@ export function LabeledInput({
   onToggleVisibility,
   dir,
 }: LabeledInputProps) {
+  const sawaaColors = useSawaaColors();
+  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   return (
     <View style={styles.field}>
       <Text style={[styles.label, { textAlign: dir.textAlign }]}>{label}</Text>
@@ -66,12 +69,12 @@ export function LabeledInput({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   field: { gap: 8 },
   label: { fontSize: 14, fontWeight: '700', color: sawaaColors.teal[700] },
   input: { padding: 14, flexDirection: 'row', alignItems: 'center' },
   inputRow: { alignItems: 'center', alignSelf: 'stretch', width: '100%' },
-  inputText: { flex: 1, fontSize: 14, color: sawaaColors.teal[700] },
+  inputText: { flex: 1, fontSize: 14, color: sawaaColors.ink[900] },
   eyeBtn: { padding: 4 },
   error: { fontSize: 12, color: sawaaColors.accent.coral },
 });

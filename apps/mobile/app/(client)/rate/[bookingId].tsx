@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -23,6 +25,9 @@ const QUICK_TAGS = [
 ];
 
 export default function RateScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const { t } = useTranslation();
   const router = useRouter();
@@ -83,7 +88,7 @@ export default function RateScreen() {
       >
         <Animated.View entering={FadeInDown.duration(500)}>
           <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
+            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
 
@@ -101,7 +106,7 @@ export default function RateScreen() {
           <Glass variant="strong" radius={sawaaRadius.xl} style={styles.therapistCard}>
             <View style={[styles.therapistRow, { flexDirection: dir.row }]}>
               <LinearGradient
-                colors={['#f7cbb7', '#e88f6c']}
+                colors={theme.colors.primaryGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.avatar}
@@ -136,8 +141,8 @@ export default function RateScreen() {
               >
                 <Star
                   size={40}
-                  color={filled ? sawaaColors.accent.amber : sawaaColors.ink[400]}
-                  fill={filled ? sawaaColors.accent.amber : 'transparent'}
+                  color={filled ? colors.accent.amber : colors.ink[400]}
+                  fill={filled ? colors.accent.amber : 'transparent'}
                   strokeWidth={1.75}
                 />
               </Pressable>
@@ -160,12 +165,12 @@ export default function RateScreen() {
                     radius={14}
                     style={[
                       styles.tag,
-                      isActive && { borderWidth: 1.5, borderColor: sawaaColors.teal[500] },
+                      isActive && { borderWidth: 1.5, borderColor: colors.teal[500] },
                     ]}
                   >
                     <Text style={[
                       styles.tagText,
-                      { fontFamily: f600, fontWeight: '600', color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700] },
+                      { fontFamily: f600, fontWeight: '600', color: isActive ? colors.teal[700] : colors.ink[700] },
                     ]}>
                       {dir.isRTL ? t.ar : t.en}
                     </Text>
@@ -186,12 +191,12 @@ export default function RateScreen() {
               value={note}
               onChangeText={setNote}
               placeholder={dir.isRTL ? 'شاركي تجربتكِ باختصار…' : 'Share briefly…'}
-              placeholderTextColor={sawaaColors.ink[400]}
+              placeholderTextColor={colors.ink[400]}
               multiline
               numberOfLines={4}
               style={[
                 styles.noteInput,
-                { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
+                { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: colors.ink[900] },
               ]}
             />
           </Glass>
@@ -204,7 +209,7 @@ export default function RateScreen() {
       >
         <Pressable disabled={rating === 0 || submitting} onPress={submit}>
           <LinearGradient
-            colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+            colors={theme.colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.ctaBtn, (rating === 0 || submitting) && { opacity: 0.55 }]}
@@ -221,21 +226,21 @@ export default function RateScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 14 },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
-  title: { fontSize: 24, color: sawaaColors.ink[900], marginTop: 8, paddingHorizontal: 4 },
-  subtitle: { fontSize: 12.5, color: sawaaColors.ink[500], marginTop: 4, paddingHorizontal: 4 },
+  title: { fontSize: 24, color: colors.ink[900], marginTop: 8, paddingHorizontal: 4 },
+  subtitle: { fontSize: 12.5, color: colors.ink[500], marginTop: 4, paddingHorizontal: 4 },
   therapistCard: { padding: 14 },
   therapistRow: { alignItems: 'center', gap: 12 },
   avatar: { width: 48, height: 48, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 20, color: '#fff' },
+  avatarText: { fontSize: 20, color: theme.colors.primaryForeground },
   therapistMid: { flex: 1 },
-  therapistName: { fontSize: 14, color: sawaaColors.ink[900] },
-  therapistMeta: { fontSize: 11.5, color: sawaaColors.ink[500], marginTop: 2 },
+  therapistName: { fontSize: 14, color: colors.ink[900] },
+  therapistMeta: { fontSize: 11.5, color: colors.ink[500], marginTop: 2 },
   starsWrap: { flexDirection: 'row', justifyContent: 'center', gap: 10, paddingVertical: 14 },
   starBtn: { padding: 4 },
-  sectionTitle: { fontSize: 14, color: sawaaColors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
+  sectionTitle: { fontSize: 14, color: colors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
   tagRow: { flexWrap: 'wrap', gap: 6 },
   tag: { paddingHorizontal: 12, paddingVertical: 8 },
   tagText: { fontSize: 12 },
@@ -245,7 +250,7 @@ const styles = StyleSheet.create({
   ctaBtn: {
     borderRadius: 999, height: 52,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
+    shadowColor: colors.teal[600], shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
   },
-  ctaBtnText: { color: '#fff', fontSize: 14 },
+  ctaBtnText: { color: theme.colors.primaryForeground, fontSize: 14 },
 });

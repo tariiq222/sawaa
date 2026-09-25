@@ -4,12 +4,10 @@ import {
   Text,
   ActivityIndicator,
   ViewStyle,
-  StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../useTheme';
-import { withAlpha, sawaaColors } from '../sawaa/tokens';
-import { colors as sharedColors } from '@sawaa/shared/tokens';
+import { withAlpha } from '../sawaa/tokens';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -64,23 +62,23 @@ export function ThemedButton({
   const isDisabled = Boolean(disabled || loading);
 
   const gradientColors: Record<'primary' | 'secondary', [string, string]> = {
-    primary: [theme.colors.primary, sawaaColors.teal[700]],
-    secondary: [sawaaColors.teal[600], sawaaColors.teal[700]],
+    primary: [...theme.colors.primaryGradient],
+    secondary: [...theme.colors.primaryGradient],
   };
 
   const flatBgColor: Record<ButtonVariant, string> = {
-    primary: theme.colors.primary,
-    secondary: sawaaColors.teal[700],
+    primary: theme.colors.primaryFill,
+    secondary: theme.colors.primaryFill,
     outline: 'transparent',
     ghost: 'transparent',
     danger: 'transparent',
   };
 
   const textColor: Record<ButtonVariant, string> = {
-    primary: sharedColors.white,
-    secondary: sharedColors.white,
-    outline: theme.colors.primary,
-    ghost: theme.colors.primary,
+    primary: theme.colors.primaryForeground,
+    secondary: theme.colors.primaryForeground,
+    outline: theme.colors.focus,
+    ghost: theme.colors.focus,
     danger: theme.colors.error,
   };
 

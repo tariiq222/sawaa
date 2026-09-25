@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { View, FlatList, Pressable, RefreshControl, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -9,9 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AquaBackground,
   GlassSurface,
-  sawaaColors,
   sawaaRadius,
-  sawaaSemantic,
   sawaaSpacing,
   sawaaType,
   withAlpha,
@@ -35,15 +34,18 @@ const TYPE_ICON = {
   group: Building2,
 };
 
-const TYPE_COLOR = {
-  individual: sawaaSemantic.info,
-  in_person: sawaaSemantic.info,
-  online: sawaaColors.accent.violet,
-  walk_in: sawaaSemantic.success,
-  group: sawaaColors.accent.violet,
-};
+const getTypeColors = (colors: ReturnType<typeof useSawaaColors>) => ({
+  individual: colors.accent.sky,
+  in_person: colors.accent.sky,
+  online: colors.accent.violet,
+  walk_in: colors.teal[500],
+  group: colors.accent.violet,
+});
 
 export default function TodayScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const TYPE_COLOR = getTypeColors(colors);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -81,9 +83,9 @@ export default function TodayScreen() {
   const remaining = confirmed;
 
   const stats: { label: string; value: number; color: string }[] = [
-    { label: t('doctor.totalToday'), value: bookings.length, color: sawaaSemantic.info },
-    { label: t('doctor.remaining'), value: remaining, color: sawaaSemantic.warning },
-    { label: t('doctor.completedToday'), value: completed, color: sawaaSemantic.success },
+    { label: t('doctor.totalToday'), value: bookings.length, color: colors.accent.sky },
+    { label: t('doctor.remaining'), value: remaining, color: colors.accent.amber },
+    { label: t('doctor.completedToday'), value: completed, color: colors.teal[500] },
   ];
 
   const greeting = user?.firstName
@@ -123,7 +125,7 @@ export default function TodayScreen() {
                 {clientName}
               </Text>
               <View style={[styles.timeRow, { flexDirection: dir.row }]}>
-                <Clock size={12} strokeWidth={1.5} color={sawaaColors.ink[400]} />
+                <Clock size={12} strokeWidth={1.5} color={colors.ink[400]} />
                 <Text style={[styles.timeText, { writingDirection: dir.writingDirection }]}>
                   {item.startTime} — {item.endTime}
                 </Text>
@@ -201,7 +203,7 @@ export default function TodayScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={sawaaColors.teal[600]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal[600]} />
         }
         contentContainerStyle={[styles.list, { paddingTop: insets.top + sawaaSpacing.sm }]}
         showsVerticalScrollIndicator={false}
@@ -213,20 +215,20 @@ export default function TodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   list: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 140 },
   headerWrap: { gap: sawaaSpacing.lg, marginBottom: sawaaSpacing.lg },
   greetingBlock: { paddingHorizontal: sawaaSpacing.xs, marginTop: sawaaSpacing.xs },
   dateLabel: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.teal[700],
+    color: colors.teal[700],
     opacity: 0.75,
   },
   greeting: {
     fontSize: sawaaType.display.fontSize,
     lineHeight: sawaaType.display.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginTop: sawaaSpacing.xs,
   },
   statsRow: { gap: sawaaSpacing.sm },
@@ -240,14 +242,14 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     textAlign: 'center',
     marginTop: sawaaSpacing.xs,
   },
   sectionTitle: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     paddingHorizontal: sawaaSpacing.xs,
   },
   itemRow: { alignItems: 'center', gap: sawaaSpacing.md },
@@ -262,13 +264,13 @@ const styles = StyleSheet.create({
   clientName: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   timeRow: { alignItems: 'center', gap: sawaaSpacing.xs },
   timeText: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   skeletonList: { gap: sawaaSpacing.md },
 });

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTheme } from '@/theme/useTheme';
 
 import { useAppSelector, useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
@@ -13,6 +14,7 @@ import {
 import { getPrimaryRole } from '@/types/auth';
 
 export default function IndexScreen() {
+  const { theme } = useTheme();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { token, user } = useAppSelector((state) => state.auth);
@@ -103,8 +105,8 @@ export default function IndexScreen() {
 
   if (hydrating) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FB' }}>
-        <ActivityIndicator size="large" color="#1D4ED8" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }

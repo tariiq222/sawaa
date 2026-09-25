@@ -1,12 +1,13 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 const AR_DIGITS = ['١', '٢', '٣'] as const;
 const TOTAL_STEPS = 3;
@@ -23,6 +24,8 @@ interface BookingStepHeaderProps {
  * shared determinate ProgressBar (replaces the per-screen inline bars).
  */
 export function BookingStepHeader({ step, onBack, backAccessibilityLabel }: BookingStepHeaderProps) {
+  const sawaaColors = useSawaaColors();
+  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const dir = useDir();
   const f600 = getFontName(dir.locale, '600');
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
@@ -50,15 +53,11 @@ export function BookingStepHeader({ step, onBack, backAccessibilityLabel }: Book
           <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
         </Glass>
         <Text
-          style={{
-            fontSize: sawaaType.caption.fontSize,
-            lineHeight: sawaaType.caption.lineHeight,
+          style={[styles.label, {
             fontFamily: f600,
-            fontWeight: '600',
-            color: sawaaColors.ink[500],
             textAlign: dir.textAlign,
             writingDirection: dir.writingDirection,
-          }}
+          }]}
         >
           {label}
         </Text>
@@ -67,3 +66,12 @@ export function BookingStepHeader({ step, onBack, backAccessibilityLabel }: Book
     </View>
   );
 }
+
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
+  label: {
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
+    fontWeight: '600',
+    color: sawaaColors.ink[500],
+  },
+});

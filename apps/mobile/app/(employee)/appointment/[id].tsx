@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { View, ScrollView, Pressable, Linking, Alert, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,9 +21,7 @@ import {
   AquaBackground,
   GlassSurface,
   PrimaryButton,
-  sawaaColors,
   sawaaRadius,
-  sawaaSemantic,
   sawaaSpacing,
   sawaaType,
   withAlpha,
@@ -38,15 +38,19 @@ import type { Booking } from '@/types/models';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
 import { hasZoomMeetingAccess, resolveBookingType, resolveDeliveryType } from '@/types/booking-enums';
 
-const TYPE_META: Record<string, { icon: React.ElementType; color: string }> = {
-  individual: { icon: Building2, color: sawaaSemantic.info },
-  in_person: { icon: Building2, color: sawaaSemantic.info },
-  online: { icon: Video, color: sawaaColors.accent.violet },
-  walk_in: { icon: Building2, color: sawaaSemantic.success },
-  group: { icon: Building2, color: sawaaColors.accent.violet },
-};
+const getTypeMeta = (colors: ReturnType<typeof useSawaaColors>): Record<string, { icon: React.ElementType; color: string }> => ({
+  individual: { icon: Building2, color: colors.accent.sky },
+  in_person: { icon: Building2, color: colors.accent.sky },
+  online: { icon: Video, color: colors.accent.violet },
+  walk_in: { icon: Building2, color: colors.teal[500] },
+  group: { icon: Building2, color: colors.accent.violet },
+});
 
 export default function DoctorAppointmentDetailScreen() {
+  const { theme } = useTheme();
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const TYPE_META = getTypeMeta(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
@@ -168,10 +172,10 @@ export default function DoctorAppointmentDetailScreen() {
     },
     {
       icon: Calendar,
-      color: sawaaSemantic.info,
+      color: colors.accent.sky,
       text: new Date(booking.date).toLocaleDateString(dir.isRTL ? 'ar-SA' : 'en-US', { month: 'long', day: 'numeric' }),
     },
-    { icon: Clock, color: sawaaSemantic.warning, text: `${booking.startTime} — ${booking.endTime}` },
+    { icon: Clock, color: colors.accent.amber, text: `${booking.startTime} — ${booking.endTime}` },
   ];
 
   return (
@@ -191,7 +195,7 @@ export default function DoctorAppointmentDetailScreen() {
         >
           <GlassSurface variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
             <View style={styles.backInner}>
-              <BackIcon size={22} strokeWidth={1.5} color={sawaaColors.ink[900]} />
+              <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
             </View>
           </GlassSurface>
         </Pressable>
@@ -256,7 +260,7 @@ export default function DoctorAppointmentDetailScreen() {
               onPress={handleStartSession}
               fontFamily={f600}
               style={styles.barAction}
-              icon={<Check size={16} color={sawaaColors.teal[50]} />}
+              icon={<Check size={16} color={theme.colors.primaryForeground} />}
             />
           )}
           {canComplete && (
@@ -265,7 +269,7 @@ export default function DoctorAppointmentDetailScreen() {
               onPress={handleMarkComplete}
               fontFamily={f600}
               style={styles.barAction}
-              icon={<Check size={16} color={sawaaColors.teal[50]} />}
+              icon={<Check size={16} color={theme.colors.primaryForeground} />}
             />
           )}
           {canCancel && (
@@ -289,7 +293,7 @@ export default function DoctorAppointmentDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: sawaaSpacing.xl, gap: sawaaSpacing.lg },
   loaderBack: { marginBottom: sawaaSpacing.sm },
   loaderTitle: { marginBottom: sawaaSpacing.sm },
@@ -301,7 +305,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   infoCard: { marginBottom: sawaaSpacing.sm },
   infoList: { gap: sawaaSpacing.md },
@@ -317,7 +321,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   barAction: { flex: 1 },
   cancelInner: {
@@ -329,7 +333,7 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaSemantic.danger,
+    color: colors.accent.coral,
     textAlign: 'center',
   },
 })

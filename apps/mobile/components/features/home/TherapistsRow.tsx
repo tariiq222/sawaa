@@ -3,7 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
-import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 import type { PublicEmployeeItem } from '@/services/client/employees';
@@ -17,6 +19,10 @@ interface TherapistsRowProps {
 }
 
 export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsRowProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
   const router = useRouter();
 
   if (therapists.length === 0) {
@@ -46,7 +52,7 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
               style={styles.inner}
             >
               <LinearGradient
-                colors={[sawaaColors.teal[400], sawaaColors.teal[600]]}
+                colors={action.gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.avatar}
@@ -73,7 +79,7 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   hScrollContent: { gap: 10, paddingHorizontal: 2 },
   empty: { padding: 24, alignItems: 'center' },
   emptyText: { fontSize: 13, color: sawaaColors.ink[700] },
@@ -88,7 +94,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     position: 'relative',
   },
-  avatarText: { fontSize: 26, color: 'rgba(255,255,255,0.95)' },
+  avatarText: { fontSize: 26, color: action.foreground },
   name: { fontSize: 12.5, color: sawaaColors.ink[900], width: '100%' },
   spec: { fontSize: 10.5, color: sawaaColors.ink[500], width: '100%' },
 });

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,7 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Banknote, ChevronLeft, ChevronRight, Copy, Upload } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AquaBackground, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
@@ -18,6 +20,9 @@ import { clientPaymentsService, type ReceiptUploadAsset } from '@/services/clien
 import { formatHalalas } from '@/lib/money';
 
 export default function BankTransferScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -100,14 +105,14 @@ export default function BankTransferScreen() {
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
+            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
           <View style={[styles.titleRow, { flexDirection: dir.row }]}>
             <View style={styles.titleIcon}>
-              <Banknote size={22} color={sawaaColors.accent.amber} strokeWidth={1.75} />
+              <Banknote size={22} color={colors.accent.amber} strokeWidth={1.75} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
@@ -145,7 +150,7 @@ export default function BankTransferScreen() {
                   onPress={() => Haptics.selectionAsync()}
                   style={styles.copyBtn}
                 >
-                  <Copy size={14} color={sawaaColors.teal[700]} strokeWidth={2} />
+                  <Copy size={14} color={colors.teal[700]} strokeWidth={2} />
                 </Pressable>
               </View>
             ))}
@@ -167,9 +172,9 @@ export default function BankTransferScreen() {
             <View style={styles.uploadInner}>
               <View style={[
                 styles.uploadIcon,
-                { backgroundColor: uploaded ? withAlpha(sawaaColors.teal[500], 0.18) : sawaaColors.glass.bgStrong },
+                { backgroundColor: uploaded ? withAlpha(colors.teal[500], 0.18) : colors.glass.bgStrong },
               ]}>
-                <Upload size={24} color={uploaded ? sawaaColors.teal[600] : sawaaColors.ink[500]} strokeWidth={1.75} />
+                <Upload size={24} color={uploaded ? colors.teal[600] : colors.ink[500]} strokeWidth={1.75} />
               </View>
               <Text style={[styles.uploadTitle, { fontFamily: f700 }]}>
                 {uploaded
@@ -190,7 +195,7 @@ export default function BankTransferScreen() {
       >
         <Pressable disabled={!uploaded || submitting} onPress={submitReceipt}>
           <LinearGradient
-            colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+            colors={theme.colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.ctaBtn, (!uploaded || submitting) && { opacity: 0.55 }]}
@@ -207,7 +212,7 @@ export default function BankTransferScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   titleRow: { alignItems: 'center', gap: sawaaSpacing.md, paddingHorizontal: sawaaSpacing.xs },
@@ -215,37 +220,37 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: sawaaRadius.md,
-    backgroundColor: withAlpha(sawaaColors.accent.amber, 0.16),
+    backgroundColor: withAlpha(colors.accent.amber, 0.16),
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
   },
   card: { padding: 0 },
   row: { padding: sawaaSpacing.lg, alignItems: 'center', gap: sawaaSpacing.md },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: withAlpha(sawaaColors.ink[900], 0.06),
+    borderBottomColor: withAlpha(colors.ink[900], 0.06),
   },
   rowMid: { flex: 1 },
   rowLabel: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   rowValue: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginTop: sawaaSpacing.xs,
     fontVariant: ['tabular-nums'],
   },
@@ -253,14 +258,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: sawaaRadius.sm,
-    backgroundColor: withAlpha(sawaaColors.teal[500], 0.12),
+    backgroundColor: withAlpha(colors.teal[500], 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionTitle: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginBottom: sawaaSpacing.sm,
     paddingHorizontal: sawaaSpacing.xs,
   },
@@ -276,12 +281,12 @@ const styles = StyleSheet.create({
   uploadTitle: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   uploadSub: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   ctaWrap: { position: 'absolute', left: sawaaSpacing.lg, right: sawaaSpacing.lg },
   ctaBtn: {
@@ -289,13 +294,13 @@ const styles = StyleSheet.create({
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: sawaaColors.teal[600],
+    shadowColor: colors.teal[600],
     shadowOpacity: 0.35,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
   },
   ctaBtnText: {
-    color: sawaaColors.teal[50],
+    color: themeColors.primaryForeground,
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
   },

@@ -10,7 +10,7 @@ import { useTheme } from '@/theme/useTheme';
 import { formatHalalas } from '@/lib/money';
 import type { Booking } from '@/types/models';
 import { withAlpha } from '@/theme/sawaa/tokens';
-import { colors as sharedColors } from '@sawaa/shared/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 const TYPE_ICON = {
   individual: Building2,
@@ -20,13 +20,13 @@ const TYPE_ICON = {
   group: Building2,
 };
 
-const TYPE_COLOR = {
-  individual: sharedColors.primary[600],
-  in_person: sharedColors.primary[600],
-  online: sharedColors.purple,
-  walk_in: sharedColors.success,
-  group: sharedColors.purple,
-};
+const typeColors = (colors: ReturnType<typeof useSawaaColors>) => ({
+  individual: colors.teal[700],
+  in_person: colors.teal[700],
+  online: colors.accent.violet,
+  walk_in: colors.teal[600],
+  group: colors.accent.violet,
+});
 
 interface AppointmentCardProps {
   booking: Booking;
@@ -37,7 +37,8 @@ export function AppointmentCard({ booking, onPress }: AppointmentCardProps) {
   const { t } = useTranslation();
   const { theme, isRTL } = useTheme();
   const Icon = TYPE_ICON[booking.type];
-  const color = TYPE_COLOR[booking.type];
+  const palette = useSawaaColors();
+  const color = typeColors(palette)[booking.type];
 
   const statusLabels: Record<string, string> = {
     pending: t('appointments.pending'),
@@ -89,7 +90,7 @@ export function AppointmentCard({ booking, onPress }: AppointmentCardProps) {
         <ThemedText variant="caption" color={theme.colors.textSecondary}>
           {formattedDate} • {booking.startTime}
         </ThemedText>
-        <ThemedText variant="caption" color={theme.colors.primary} style={{ fontWeight: '600' }}>
+        <ThemedText variant="caption" color={palette.teal[700]} style={{ fontWeight: '600' }}>
           {formatHalalas(booking.totalAmount, { locale: isRTL ? 'ar-SA' : 'en-US' })} {t('home.sar')}
         </ThemedText>
       </View>

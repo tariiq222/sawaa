@@ -45,7 +45,14 @@
     "phonePlaceholder": "05xxxxxxxx",
     "loginWithOtp": "Login with OTP",
     "loginWithPassword": "Login with Password",
-    "forgotPassword": "Forgot Password?",
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "subtitle": "Enter your email and we'll send a 6-digit code",
+      "emailLabel": "Email",
+      "submit": "Send Code",
+      "back": "Back to Sign In",
+      "linkLabel": "Forgot password?"
+    },
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
     "createAccount": "Create Account",
@@ -80,14 +87,6 @@
     "otpError": "Invalid code. Please try again",
     "otpSent": "Verification code sent successfully",
     "employeeNote": "Employees and staff are registered from the admin dashboard",
-    "forgotPassword": {
-      "title": "Forgot Password",
-      "subtitle": "Enter your email and we'll send a 6-digit code",
-      "emailLabel": "Email",
-      "submit": "Send Code",
-      "back": "Back to Sign In",
-      "linkLabel": "Forgot password?"
-    },
     "resetPassword": {
       "title": "Reset Password",
       "otpStepSubtitle": "Enter the 6-digit code sent to {{email}}",
@@ -112,6 +111,10 @@
     "clients": "Clients",
     "notifications": "Notifications",
     "records": "Records"
+  },
+  "nav": {
+    "notifications": "Notifications",
+    "profile": "Profile"
   },
   "home": {
     "greeting": "Hello",
@@ -195,6 +198,9 @@
     "loading": "Loading…",
     "empty": "No therapists yet",
     "unknownName": "Therapist",
+    "bookingService": "{{service}}",
+    "bookingServiceTitle": "Choose a service",
+    "noBookableServices": "No services are currently available for booking.",
     "filters": {
       "available": "Available",
       "women": "Women",
@@ -379,6 +385,7 @@
     "arabic": "العربية",
     "english": "English",
     "pushNotifications": "Push Notifications",
+    "enablePush": "Enable notifications",
     "pushNotificationsDesc": "Receive appointment reminders and updates",
     "pushUpdateError": "Could not update notifications. Check notification permission and your connection, then try again.",
     "about": "About",
@@ -423,10 +430,15 @@
         "EMPLOYEE": "Employee",
         "CLIENT": "Client"
       }
-    }
+    },
+    "privacySecurity": "Privacy & Security",
+    "appearance": "Appearance"
   },
   "notifications": {
     "title": "Notifications",
+    "loadMore": "Load more",
+    "loadingMore": "Loading more…",
+    "loadError": "Could not load notifications. Try again.",
     "read": "Read",
     "unread": "Unread",
     "markAllRead": "Mark all as read",
@@ -542,8 +554,17 @@
     "paymentFailedDescription": "The payment was not activated. You can return to the catalog and try again.",
     "paymentError": "Payment status unavailable",
     "paymentErrorDescription": "We could not verify this payment. Return to your balance or retry the status check.",
-    "status": { "pending": "Payment pending", "active": "Active", "completed": "Completed", "refunded": "Refunded" },
-    "locked": { "depleted": "No sessions remaining", "unavailable": "This session is temporarily unavailable", "support": "Please contact the center to book this flexible credit" }
+    "status": {
+      "pending": "Payment pending",
+      "active": "Active",
+      "completed": "Completed",
+      "refunded": "Refunded"
+    },
+    "locked": {
+      "depleted": "No sessions remaining",
+      "unavailable": "This session is temporarily unavailable",
+      "support": "Please contact the center to book this flexible credit"
+    }
   },
   "availability": {
     "title": "Manage Availability",
@@ -562,12 +583,6 @@
   },
   "a11y": {
     "buttonBack": "Back button",
-    "tabUpcoming": "Upcoming appointments",
-    "tabCompleted": "Completed appointments",
-    "tabCancelled": "Cancelled appointments",
-    "tabNotifications": "Notifications",
-    "tabProfile": "Profile",
-    "tabChat": "Chat",
     "cardOpenAppointment": "Open appointment details",
     "refreshAppointments": "Refresh appointments",
     "messageInput": "Message input field",

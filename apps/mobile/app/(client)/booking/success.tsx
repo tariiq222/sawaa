@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,9 +8,7 @@ import { Check, Clock, X } from 'lucide-react-native';
 
 import {
   AquaBackground,
-  sawaaColors,
   sawaaRadius,
-  sawaaSemantic,
   sawaaSpacing,
   sawaaType,
   withAlpha,
@@ -47,6 +46,8 @@ function shortBookingRef(id: string): string {
 }
 
 export default function BookingSuccessScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -118,10 +119,10 @@ export default function BookingSuccessScreen() {
   const { title: headerTitle, subtitle: paymentStatusCopy } = headerCopy[phase];
   const phaseColor =
     phase === 'failed'
-      ? sawaaSemantic.danger
+      ? colors.accent.coral
       : phase === 'pending' || phase === 'polling'
-        ? sawaaSemantic.warning
-        : sawaaSemantic.success;
+        ? colors.accent.amber
+        : colors.teal[500];
 
   const centeredText = { textAlign: 'center', writingDirection: dir.writingDirection } as const;
   const startText = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
@@ -204,7 +205,7 @@ export default function BookingSuccessScreen() {
                       style={[
                         styles.summaryValue,
                         { fontFamily: f700 },
-                        row.accent && { color: sawaaColors.teal[700] },
+                        row.accent && { color: colors.teal[700] },
                         startText,
                       ]}
                     >
@@ -258,7 +259,7 @@ export default function BookingSuccessScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: sawaaSpacing['2xl'],
@@ -278,29 +279,29 @@ const styles = StyleSheet.create({
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   subtitle: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   summaryWrap: { width: '100%' },
   summaryRow: { padding: sawaaSpacing.lg, gap: sawaaSpacing.xs },
   summaryLabel: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   summaryValue: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     fontVariant: ['tabular-nums'],
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: withAlpha(sawaaColors.ink[900], 0.06),
+    backgroundColor: withAlpha(colors.ink[900], 0.06),
     marginHorizontal: sawaaSpacing.lg,
   },
   skeletonBlock: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
@@ -314,6 +315,6 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.teal[700],
+    color: colors.teal[700],
   },
 });

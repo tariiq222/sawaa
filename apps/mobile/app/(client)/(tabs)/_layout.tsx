@@ -2,11 +2,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+
 export default function ClientTabsLayout() {
   const { t } = useTranslation();
+  const colors = useSawaaColors();
 
   return (
-    <NativeTabs minimizeBehavior="onScrollDown">
+    <NativeTabs minimizeBehavior="onScrollDown" tintColor={colors.teal[600]}>
       <NativeTabs.Trigger name="home">
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
         <NativeTabs.Trigger.Label>{t('tabs.home')}</NativeTabs.Trigger.Label>

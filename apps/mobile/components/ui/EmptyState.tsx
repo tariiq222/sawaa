@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import type { ComponentProps } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +7,6 @@ import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { GlassSurface } from '@/theme/sawaa/GlassSurface';
 import {
-  sawaaColors,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -40,6 +40,7 @@ export function EmptyState({
   onAction,
   tone = 'default',
 }: EmptyStateProps) {
+  const sawaaColors = useSawaaColors();
   const { locale, writingDirection } = useDir();
   const accentColor = tone === 'danger' ? sawaaColors.accent.coral : sawaaColors.teal[700];
 

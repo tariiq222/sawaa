@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +10,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { useClinics } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import type { ClinicEntry } from '@/lib/clinics';
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { concentricRadius } from '@/theme/sawaa/tokens';
 import { Glass } from '@/theme/components/Glass';
 import { ThemedText } from '@/theme/components/ThemedText';
@@ -18,6 +19,8 @@ const CARD_RADIUS = sawaaRadius.xl;
 const CARD_PADDING = 16;
 
 export default function ClinicsScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -39,31 +42,31 @@ export default function ClinicsScreen() {
       >
         <View style={[styles.cardBody, { flexDirection: dir.row }]}> 
           <View style={styles.iconWrap}>
-            <AppIcon sf="building.2.fill" fallback={Building2} size={24} color={sawaaColors.teal[700]} strokeWidth={1.6} />
+            <AppIcon sf="building.2.fill" fallback={Building2} size={24} color={colors.teal[700]} strokeWidth={1.6} />
           </View>
           <View style={styles.cardText}>
             <ThemedText variant="subheading" style={{ textAlign: dir.textAlign }} numberOfLines={2}>
               {name}
             </ThemedText>
-            <ThemedText variant="bodySm" color={sawaaColors.ink[500]} style={{ textAlign: dir.textAlign }}>
+            <ThemedText variant="bodySm" color={colors.ink[500]} style={{ textAlign: dir.textAlign }}>
               {`${t('clinics.therapistsCount', { count: item.therapistCount })} · ${t('clinics.servicesCount', { count: item.serviceCount })}`}
             </ThemedText>
           </View>
         </View>
       </Glass>
     );
-  }, [dir, router, t]);
+  }, [colors, styles, dir, router, t]);
 
   const emptyState = useMemo(() => {
     if (clinicsQuery.isLoading) return null;
     return (
       <View style={styles.emptyState}>
-        <ThemedText variant="bodySm" color={sawaaColors.ink[500]} align="center">
+        <ThemedText variant="bodySm" color={colors.ink[500]} align="center">
           {t('clinics.empty')}
         </ThemedText>
       </View>
     );
-  }, [clinicsQuery.isLoading, t]);
+  }, [colors, styles, clinicsQuery.isLoading, t]);
 
   return (
     <AquaBackground>
@@ -76,7 +79,7 @@ export default function ClinicsScreen() {
         ListHeaderComponent={(
           <View style={[styles.headerRow, { flexDirection: dir.row }]}> 
             <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-              <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={sawaaColors.ink[900]} strokeWidth={1.5} />
+              <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={colors.ink[900]} strokeWidth={1.5} />
             </Pressable>
             <ThemedText variant="subheading">{t('clinics.title')}</ThemedText>
             <View style={styles.backBtn} />
@@ -88,7 +91,7 @@ export default function ClinicsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   list: { flexGrow: 1, paddingHorizontal: 24, gap: 12 },
   headerRow: {
     alignItems: 'center',
@@ -107,7 +110,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING),
-    backgroundColor: sawaaColors.glass.bgStrong,
+    backgroundColor: colors.glass.bgStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },

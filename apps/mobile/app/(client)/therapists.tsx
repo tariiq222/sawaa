@@ -1,4 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,27 +10,13 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Search, Star } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useClinics, useTherapists } from '@/hooks/queries';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { applyTherapistFilters, type TherapistChip } from './therapistsFilter';
-
-const GRADIENTS: Array<readonly [string, string]> = [
-  [sawaaColors.teal[100], sawaaColors.teal[300]],
-  [sawaaColors.teal[200], sawaaColors.accent.sky],
-  [sawaaColors.teal[100], sawaaColors.accent.violet],
-  [sawaaColors.teal[200], sawaaColors.teal[500]],
-  [sawaaColors.teal[50], sawaaColors.accent.amber],
-];
-
-function gradientFor(id: string) {
-  let h = 0;
-  for (const ch of id) h = (h + ch.charCodeAt(0)) % GRADIENTS.length;
-  return GRADIENTS[h];
-}
 
 const CHIPS: Array<{ key: Exclude<TherapistChip, null>; labelKey: string }> = [
   { key: 'available', labelKey: 'therapists.filters.available' },
@@ -38,6 +26,9 @@ const CHIPS: Array<{ key: Exclude<TherapistChip, null>; labelKey: string }> = [
 ];
 
 export default function TherapistsListScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { clinicId } = useLocalSearchParams<{ clinicId?: string }>();
   const insets = useSafeAreaInsets();
@@ -76,7 +67,7 @@ export default function TherapistsListScreen() {
   const renderItem = useCallback(({ item, index }: { item: typeof list[0]; index: number }) => {
     const name = (dir.isRTL ? item.nameAr : item.nameEn) ?? item.nameEn ?? item.nameAr ?? t('therapists.unknownName');
     const spec = (dir.isRTL ? item.specialtyAr : item.specialty) ?? item.specialty ?? item.specialtyAr ?? '';
-    const gradient = gradientFor(item.id);
+    const gradient = theme.colors.primaryGradient;
     const initial = name.charAt(0);
     const navKey = item.slug ?? item.id;
 
@@ -98,7 +89,7 @@ export default function TherapistsListScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.avatar}
             >
-              <Text style={[styles.avatarText, { fontFamily: f700 }]}>{initial}</Text>
+              <Text style={[styles.avatarText, { fontFamily: f700, color: theme.colors.primaryForeground }]}>{initial}</Text>
             </LinearGradient>
             <View style={styles.therapistBody}>
               <View style={[styles.therapistTop, { flexDirection: dir.row }]}>
@@ -111,7 +102,7 @@ export default function TherapistsListScreen() {
               </Text>
               {item.title ? (
                 <View style={[styles.therapistMeta, { flexDirection: dir.row }]}>
-                  <AppIcon sf="star.fill" fallback={Star} size={11} color={sawaaColors.accent.amber} strokeWidth={2} />
+                  <AppIcon sf="star.fill" fallback={Star} size={11} color={colors.accent.amber} strokeWidth={2} />
                   <Text style={[styles.therapistExp, { fontFamily: f500, fontWeight: '500' }]}> 
                     {item.title}
                   </Text>
@@ -122,7 +113,7 @@ export default function TherapistsListScreen() {
         </Glass>
       </Animated.View>
     );
-  }, [dir, f400, f500, f700, reduceMotion, router, t]);
+  }, [colors, styles, theme, dir, f400, f500, f700, reduceMotion, router, t]);
 
   const screenTitle = selectedClinic
     ? (dir.isRTL ? selectedClinic.nameAr : (selectedClinic.nameEn ?? selectedClinic.nameAr))
@@ -132,7 +123,7 @@ export default function TherapistsListScreen() {
     <View style={styles.header}>
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500)}>
         <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-          <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
+          <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
         </Glass>
       </Animated.View>
 
@@ -148,17 +139,17 @@ export default function TherapistsListScreen() {
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
         <Glass variant="strong" radius={sawaaRadius.xl} style={styles.searchCard}>
           <View style={[styles.searchRow, { flexDirection: dir.row }]}>
-            <AppIcon sf="magnifyingglass" fallback={Search} size={17} color={sawaaColors.ink[500]} strokeWidth={1.75} />
+            <AppIcon sf="magnifyingglass" fallback={Search} size={17} color={colors.ink[500]} strokeWidth={1.75} />
             <TextInput
               value={query}
               onChangeText={setQuery}
               placeholder={t('therapists.searchPlaceholder')}
-              placeholderTextColor={sawaaColors.ink[400]}
+              placeholderTextColor={colors.ink[400]}
               accessibilityLabel={t('a11y.searchTherapists')}
               testID="therapist-search"
               style={[
                 styles.searchInput,
-                { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
+                { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: colors.ink[900] },
               ]}
             />
           </View>
@@ -183,12 +174,12 @@ export default function TherapistsListScreen() {
                   radius={14}
                   style={[
                     styles.chip,
-                    isActive && { backgroundColor: sawaaColors.teal[700] },
+                    isActive && { backgroundColor: theme.colors.primaryFill },
                   ]}
                 >
                   <Text style={[
                     styles.chipText,
-                    { fontFamily: f600, fontWeight: '600', color: isActive ? sawaaColors.teal[50] : sawaaColors.ink[700] },
+                    { fontFamily: f600, fontWeight: '600', color: isActive ? theme.colors.primaryForeground : colors.ink[700] },
                   ]}>
                     {t(chip.labelKey)}
                   </Text>
@@ -199,7 +190,7 @@ export default function TherapistsListScreen() {
         </ScrollView>
       </Animated.View>
     </View>
-  ), [BackIcon, activeChip, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t]);
+  ), [colors, styles, theme, BackIcon, activeChip, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t]);
 
   const ListEmpty = useMemo(() => {
     if (loading) {
@@ -214,7 +205,7 @@ export default function TherapistsListScreen() {
         {t('therapists.empty')}
       </Text>
     );
-  }, [f400, loading, t]);
+  }, [styles, f400, loading, t]);
 
   return (
     <AquaBackground>
@@ -232,12 +223,12 @@ export default function TherapistsListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16 },
   header: { gap: 14, marginBottom: 14 },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
-  title: { fontSize: 22, color: sawaaColors.ink[900], paddingHorizontal: 4 },
-  subtitle: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 2, paddingHorizontal: 4 },
+  title: { fontSize: 22, color: colors.ink[900], paddingHorizontal: 4 },
+  subtitle: { fontSize: 12, color: colors.ink[500], marginTop: 2, paddingHorizontal: 4 },
   searchCard: { padding: 0 },
   searchRow: { alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   searchInput: { flex: 1, fontSize: 13, height: 22 },
@@ -250,11 +241,11 @@ const styles = StyleSheet.create({
     width: 84, alignItems: 'center', justifyContent: 'flex-end',
     paddingBottom: 8, position: 'relative',
   },
-  avatarText: { fontSize: 36, color: sawaaColors.teal[50] },
+  avatarText: { fontSize: 36, color: colors.ink[900] },
   therapistBody: { flex: 1, padding: 12 },
   therapistTop: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-  therapistName: { fontSize: 14, color: sawaaColors.ink[900] },
-  therapistSpec: { fontSize: 11.5, color: sawaaColors.ink[500], marginTop: 3 },
+  therapistName: { fontSize: 14, color: colors.ink[900] },
+  therapistSpec: { fontSize: 11.5, color: colors.ink[500], marginTop: 3 },
   therapistMeta: { alignItems: 'center', gap: 6, marginTop: 8 },
-  therapistExp: { fontSize: 11, color: sawaaColors.ink[500] },
+  therapistExp: { fontSize: 11, color: colors.ink[500] },
 });

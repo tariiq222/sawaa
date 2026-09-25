@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
+import { withAlpha } from '@/theme/sawaa/tokens';
 import { useAppSelector } from '@/hooks/use-redux';
 import { authService } from '@/services/auth';
 
@@ -36,14 +37,14 @@ export function EmailVerificationBanner({ onDismiss }: EmailVerificationBannerPr
   };
 
   return (
-    <View style={[styles.banner, { backgroundColor: '#F59E0B14' }]}>
-      <Mail size={18} strokeWidth={1.5} color="#F59E0B" />
+    <View style={[styles.banner, { backgroundColor: withAlpha(theme.colors.warning, 0.08) }]}>
+      <Mail size={18} strokeWidth={1.5} color={theme.colors.warning} />
       <View style={styles.textWrap}>
         <ThemedText variant="bodySm" style={{ fontWeight: '500' }}>
           {t('verification.bannerTitle')}
         </ThemedText>
         <Pressable onPress={handleResend}>
-          <ThemedText variant="caption" color="#1D4ED8" style={{ fontWeight: '600' }}>
+          <ThemedText variant="caption" color={theme.colors.info} style={{ fontWeight: '600' }}>
             {t('verification.resend')}
           </ThemedText>
         </Pressable>

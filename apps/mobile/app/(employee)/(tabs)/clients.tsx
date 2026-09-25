@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { View, FlatList, Pressable, TextInput, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +10,6 @@ import { useRouter } from 'expo-router';
 import {
   AquaBackground,
   GlassSurface,
-  sawaaColors,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -32,6 +32,8 @@ interface ClientItem {
 }
 
 function ClientRowSkeleton() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
       <View style={styles.skeletonRow}>
@@ -46,6 +48,8 @@ function ClientRowSkeleton() {
 }
 
 export default function ClientsScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -93,12 +97,12 @@ export default function ClientsScreen() {
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
           <GlassSurface variant="strong" radius={sawaaRadius.pill} style={styles.searchCard}>
             <View style={[styles.searchRow, { flexDirection: dir.row }]}>
-              <Search size={18} strokeWidth={1.5} color={sawaaColors.ink[500]} />
+              <Search size={18} strokeWidth={1.5} color={colors.ink[500]} />
               <TextInput
                 value={search}
                 onChangeText={handleSearch}
                 placeholder={t('doctor.searchClients')}
-                placeholderTextColor={sawaaColors.ink[400]}
+                placeholderTextColor={colors.ink[400]}
                 textAlign={dir.textAlign}
                 accessibilityRole="search"
                 style={[
@@ -138,7 +142,7 @@ export default function ClientsScreen() {
                 >
                   <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
                     <View style={[styles.clientRow, { flexDirection: dir.row }]}>
-                      <Avatar size={44} name={item.name} imageUrl={item.avatarUrl} color={sawaaColors.teal[600]} />
+                      <Avatar size={44} name={item.name} imageUrl={item.avatarUrl} color={colors.teal[600]} />
                       <View style={styles.clientMid}>
                         <Text
                           numberOfLines={1}
@@ -157,7 +161,7 @@ export default function ClientsScreen() {
                         )}
                       </View>
                       {item.visitCount > 0 && (
-                        <View style={[styles.visitBadge, { backgroundColor: withAlpha(sawaaColors.teal[600], 0.1) }]}>
+                        <View style={[styles.visitBadge, { backgroundColor: withAlpha(colors.teal[600], 0.1) }]}>
                           <Text style={[styles.visitBadgeText, { fontFamily: f600, fontWeight: '600', writingDirection: dir.writingDirection }]}>
                             {item.visitCount} {t('doctor.visits')}
                           </Text>
@@ -181,12 +185,12 @@ export default function ClientsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { flex: 1, paddingHorizontal: sawaaSpacing.lg },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginBottom: sawaaSpacing.lg,
   },
   searchCard: { marginBottom: sawaaSpacing.lg },
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: sawaaType.body.fontSize,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     padding: 0,
   },
   list: { paddingBottom: 100 },
@@ -208,12 +212,12 @@ const styles = StyleSheet.create({
   clientName: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   clientMeta: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   visitBadge: {
     borderRadius: sawaaRadius.pill,
@@ -223,7 +227,7 @@ const styles = StyleSheet.create({
   visitBadgeText: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.teal[700],
+    color: colors.teal[700],
   },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: sawaaSpacing.md },
   skeletonLines: { flex: 1, gap: sawaaSpacing.sm },

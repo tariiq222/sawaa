@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +10,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { useBookGroupSession, useGroupSession } from '@/hooks/queries';
 import { resolveEnrollmentNextStep } from '@/services/client/group-sessions';
 import { useDir } from '@/hooks/useDir';
-import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { ThemedText } from '@/theme/components/ThemedText';
 import { concentricRadius, withAlpha } from '@/theme/sawaa/tokens';
@@ -30,6 +31,8 @@ function formatPrice(price: number, isRTL: boolean, sar: string) {
 }
 
 export default function GroupDetailScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -82,28 +85,28 @@ export default function GroupDetailScreen() {
       >
         <View style={[styles.headerRow, { flexDirection: dir.row }]}> 
           <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-            <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={sawaaColors.ink[900]} strokeWidth={1.5} />
+            <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={colors.ink[900]} strokeWidth={1.5} />
           </Pressable>
           <ThemedText variant="subheading">{t('groups.title')}</ThemedText>
           <View style={styles.backBtn} />
         </View>
 
         {groupQuery.isLoading ? (
-          <View style={styles.centerState}><ActivityIndicator color={sawaaColors.teal[600]} /></View>
+          <View style={styles.centerState}><ActivityIndicator color={colors.teal[600]} /></View>
         ) : groupQuery.isError || !group ? (
           <View style={styles.centerState}><ThemedText variant="bodySm" align="center">{t('groups.bookError')}</ThemedText></View>
         ) : (
           <Glass variant="strong" radius={CARD_RADIUS} style={styles.heroCard}>
             <View style={[styles.heroTop, { flexDirection: dir.row }]}> 
               <View style={styles.iconWrap}>
-                <AppIcon sf="person.3.fill" fallback={Users} size={28} color={sawaaColors.teal[700]} strokeWidth={1.6} />
+                <AppIcon sf="person.3.fill" fallback={Users} size={28} color={colors.teal[700]} strokeWidth={1.6} />
               </View>
               <View style={styles.titleBlock}>
                 <ThemedText variant="heading" style={{ textAlign: dir.textAlign }}>
                   {group.title}
                 </ThemedText>
                 {description ? (
-                  <ThemedText variant="bodySm" color={sawaaColors.ink[700]} style={{ textAlign: dir.textAlign }}>
+                  <ThemedText variant="bodySm" color={colors.ink[700]} style={{ textAlign: dir.textAlign }}>
                     {description}
                   </ThemedText>
                 ) : null}
@@ -142,6 +145,8 @@ export default function GroupDetailScreen() {
 }
 
 function DetailRow({ icon, label, dir }: { icon: 'calendar' | 'duration' | 'price' | 'users'; label: string; dir: ReturnType<typeof useDir> }) {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const config = {
     calendar: { sf: 'calendar' as const, fallback: CalendarDays },
     duration: { sf: 'clock.fill' as const, fallback: Clock3 },
@@ -150,14 +155,16 @@ function DetailRow({ icon, label, dir }: { icon: 'calendar' | 'duration' | 'pric
   }[icon];
   return (
     <View style={[styles.detailRow, { flexDirection: dir.row }]}> 
-      <AppIcon sf={config.sf} fallback={config.fallback} size={16} color={sawaaColors.teal[700]} strokeWidth={1.6} />
+      <AppIcon sf={config.sf} fallback={config.fallback} size={16} color={colors.teal[700]} strokeWidth={1.6} />
       <ThemedText variant="body" style={{ textAlign: dir.textAlign, flex: 1 }}>{label}</ThemedText>
     </View>
   );
 }
 
 function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' }) {
-  const color = tone === 'muted' ? sawaaColors.ink[500] : sawaaColors.teal[700];
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const color = tone === 'muted' ? colors.ink[500] : colors.teal[700];
   return (
     <View style={[styles.badge, { borderColor: color, backgroundColor: withAlpha(color, 0.12) }]}> 
       <ThemedText variant="label" color={color}>{label}</ThemedText>
@@ -165,7 +172,7 @@ function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' }) 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 24, gap: 14 },
   headerRow: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -176,7 +183,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING),
-    backgroundColor: sawaaColors.glass.bgStrong,
+    backgroundColor: colors.glass.bgStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -188,7 +195,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: sawaaRadius.md,
-    backgroundColor: sawaaColors.glass.bgSoft,
+    backgroundColor: colors.glass.bgSoft,
   },
   badgeRow: { flexWrap: 'wrap', gap: 8 },
   badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: sawaaRadius.pill, borderWidth: 0.5 },

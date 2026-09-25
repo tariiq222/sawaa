@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,22 +9,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Building2, ChevronLeft, ChevronRight, Heart, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 
-const SPECIALTIES = [
-  { ar: 'القلق', en: 'Anxiety', color: sawaaColors.teal[600] },
-  { ar: 'الاكتئاب', en: 'Depression', color: sawaaColors.accent.violet },
-  { ar: 'العلاقات', en: 'Relationships', color: sawaaColors.accent.rose },
-  { ar: 'الصدمات', en: 'Trauma', color: sawaaColors.accent.amber },
-  { ar: 'اضطرابات النوم', en: 'Sleep', color: sawaaColors.accent.sky },
+const createSpecialties = (colors: ReturnType<typeof useSawaaColors>) => [
+  { ar: 'القلق', en: 'Anxiety', color: colors.teal[600] },
+  { ar: 'الاكتئاب', en: 'Depression', color: colors.accent.violet },
+  { ar: 'العلاقات', en: 'Relationships', color: colors.accent.rose },
+  { ar: 'الصدمات', en: 'Trauma', color: colors.accent.amber },
+  { ar: 'اضطرابات النوم', en: 'Sleep', color: colors.accent.sky },
 ];
 
 const HERO_HEIGHT = 200;
 
 export default function ClinicDetailScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
+  const specialties = useMemo(() => createSpecialties(colors), [colors]);
   const { id: _id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
@@ -52,13 +58,13 @@ export default function ClinicDetailScreen() {
     <AquaBackground>
       {/* Hero region with glass overlay (name + city + rating) */}
       <LinearGradient
-        colors={[sawaaColors.teal[300], sawaaColors.teal[600], sawaaColors.teal[900]]}
+        colors={[colors.teal[300], colors.teal[600], colors.teal[900]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.hero}
       >
         <View style={styles.heroIcon}>
-          <Building2 size={160} color="rgba(255,255,255,0.28)" strokeWidth={1} />
+          <Building2 size={160} color={theme.colors.primaryForeground} opacity={0.28} strokeWidth={1} />
         </View>
       </LinearGradient>
 
@@ -69,7 +75,7 @@ export default function ClinicDetailScreen() {
         {/* Back button over hero */}
         <Animated.View entering={FadeInDown.duration(500)}>
           <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
+            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
 
@@ -90,7 +96,7 @@ export default function ClinicDetailScreen() {
               </View>
               <Glass variant="regular" radius={14} style={styles.ratingChip}>
                 <View style={[styles.ratingRow, { flexDirection: dir.row }]}>
-                  <Star size={12} color={sawaaColors.accent.amber} strokeWidth={2} fill={sawaaColors.accent.amber} />
+                  <Star size={12} color={colors.accent.amber} strokeWidth={2} fill={colors.accent.amber} />
                   <Text style={[styles.ratingText, { fontFamily: f700 }]}>4.7</Text>
                   <Text style={[styles.ratingCount, { fontFamily: f400, fontWeight: '400' }]}>
                     {dir.isRTL ? '(٢٨٤)' : '(284)'}
@@ -142,7 +148,7 @@ export default function ClinicDetailScreen() {
             {dir.isRTL ? 'التخصصات' : 'Specialties'}
           </Text>
           <View style={[styles.tagRow, { flexDirection: dir.row }]}>
-            {SPECIALTIES.map((s) => (
+            {specialties.map((s) => (
               <View
                 key={s.en}
                 style={[
@@ -167,7 +173,7 @@ export default function ClinicDetailScreen() {
         <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaPill}>
           <View style={[styles.ctaRow, { flexDirection: dir.row }]}>
             <Pressable style={styles.favBtn} accessibilityRole="button" accessibilityLabel={dir.isRTL ? 'إضافة للمفضلة' : 'Favorite'}>
-              <Heart size={18} color={sawaaColors.teal[700]} strokeWidth={1.75} />
+              <Heart size={18} color={colors.teal[700]} strokeWidth={1.75} />
             </Pressable>
             <Pressable
               onPress={() => router.push('/(client)/therapists')}
@@ -175,7 +181,7 @@ export default function ClinicDetailScreen() {
               accessibilityRole="button"
             >
               <LinearGradient
-                colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+                colors={theme.colors.primaryGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.ctaBtn}
@@ -183,7 +189,7 @@ export default function ClinicDetailScreen() {
                 <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
                   {dir.isRTL ? 'اختاري معالجاً' : 'Choose therapist'}
                 </Text>
-                <GoIcon size={14} color="#fff" strokeWidth={2} />
+                <GoIcon size={14} color={theme.colors.primaryForeground} strokeWidth={2} />
               </LinearGradient>
             </Pressable>
           </View>
@@ -193,7 +199,7 @@ export default function ClinicDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   hero: { position: 'absolute', top: 0, left: 0, right: 0, height: HERO_HEIGHT, overflow: 'hidden' },
   heroIcon: { position: 'absolute', bottom: -20, left: 0, right: 0, alignItems: 'center' },
   scroll: { paddingHorizontal: 16, gap: 16 },
@@ -201,19 +207,19 @@ const styles = StyleSheet.create({
   infoCard: { padding: 16 },
   infoTop: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   infoName: { flex: 1 },
-  clinicName: { fontSize: 20, color: sawaaColors.ink[900] },
-  clinicMeta: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 3 },
+  clinicName: { fontSize: 20, color: colors.ink[900] },
+  clinicMeta: { fontSize: 12, color: colors.ink[500], marginTop: 3 },
   ratingChip: { paddingHorizontal: 12, paddingVertical: 6 },
   ratingRow: { alignItems: 'center', gap: 4 },
-  ratingText: { fontSize: 12, color: sawaaColors.ink[900] },
-  ratingCount: { fontSize: 10.5, color: sawaaColors.ink[500] },
+  ratingText: { fontSize: 12, color: colors.ink[900] },
+  ratingCount: { fontSize: 10.5, color: colors.ink[500] },
   statsRow: { gap: 8 },
   statBox: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  statN: { fontSize: 18, color: sawaaColors.teal[700] },
-  statL: { fontSize: 10.5, color: sawaaColors.ink[500], marginTop: 2 },
-  sectionTitle: { fontSize: 15, color: sawaaColors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
-  aboutText: { fontSize: 12.5, color: sawaaColors.ink[700], lineHeight: 22, paddingHorizontal: 4 },
-  readMore: { fontSize: 12, color: sawaaColors.teal[700], marginTop: 6, paddingHorizontal: 4 },
+  statN: { fontSize: 18, color: colors.teal[700] },
+  statL: { fontSize: 10.5, color: colors.ink[500], marginTop: 2 },
+  sectionTitle: { fontSize: 15, color: colors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
+  aboutText: { fontSize: 12.5, color: colors.ink[700], lineHeight: 22, paddingHorizontal: 4 },
+  readMore: { fontSize: 12, color: colors.teal[700], marginTop: 6, paddingHorizontal: 4 },
   tagRow: { flexWrap: 'wrap', gap: 6 },
   tag: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14, borderWidth: 0.5 },
   tagText: { fontSize: 11.5 },
@@ -222,14 +228,14 @@ const styles = StyleSheet.create({
   ctaRow: { alignItems: 'center', gap: 6, height: 46 },
   favBtn: {
     width: 46, height: 46, borderRadius: 23,
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: colors.glass.bgStrong,
     alignItems: 'center', justifyContent: 'center',
   },
   ctaBtnPress: { flex: 1, height: 46 },
   ctaBtn: {
     flex: 1, borderRadius: 999, height: 46,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 },
+    shadowColor: colors.teal[600], shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 },
   },
-  ctaBtnText: { color: '#fff', fontSize: 13 },
+  ctaBtnText: { color: themeColors.primaryForeground, fontSize: 13 },
 });

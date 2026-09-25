@@ -2,7 +2,9 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import type { PackagePaymentState } from '@/lib/package-utils';
 
 interface Props {
@@ -17,6 +19,10 @@ interface Props {
 }
 
 export function PackagePaymentStatus({ state, error = false, onBack, onRetry, dir, f400, f600, f700 }: Props) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
   const { t } = useTranslation();
   const pending = state === 'pending';
   const success = state === 'success';
@@ -42,13 +48,13 @@ export function PackagePaymentStatus({ state, error = false, onBack, onRetry, di
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   content: { alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.lg },
   title: { color: sawaaColors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   description: { color: sawaaColors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   note: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
-  cta: { backgroundColor: sawaaColors.teal[600], borderRadius: sawaaRadius.md, paddingHorizontal: sawaaSpacing['2xl'], paddingVertical: sawaaSpacing.lg, marginTop: sawaaSpacing.md },
-  ctaText: { color: sawaaColors.glass.bgStrong, fontSize: sawaaType.body.fontSize },
+  cta: { backgroundColor: action.fill, borderRadius: sawaaRadius.md, paddingHorizontal: sawaaSpacing['2xl'], paddingVertical: sawaaSpacing.lg, marginTop: sawaaSpacing.md },
+  ctaText: { color: action.foreground, fontSize: sawaaType.body.fontSize },
   retry: { paddingHorizontal: sawaaSpacing.lg, paddingVertical: sawaaSpacing.sm },
   retryText: { color: sawaaColors.teal[700], fontSize: sawaaType.body.fontSize },
 });

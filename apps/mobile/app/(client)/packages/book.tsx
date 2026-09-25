@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { AquaBackground, sawaaColors, sawaaSemantic, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { AquaBackground, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useBookPackageCredit, useSlots } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
@@ -21,6 +22,8 @@ function dateOnly(value: Date): string {
 }
 
 export default function PackageBookScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{
     creditId?: string;
     serviceId?: string;
@@ -102,8 +105,8 @@ export default function PackageBookScreen() {
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg, paddingBottom: 140 }]}>
         <View style={[styles.header, { flexDirection: dir.row }]}>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-            <Text style={[styles.back, { fontFamily: f700 }]}>{dir.isRTL ? '‹' : '›'}</Text>
+          <Pressable style={styles.backButton} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
+            <Text style={[styles.back, { fontFamily: f700 }]}>{dir.isRTL ? '›' : '‹'}</Text>
           </Pressable>
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.bookTitle')}</Text>
         </View>
@@ -145,12 +148,13 @@ export default function PackageBookScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
   header: { alignItems: 'center', gap: sawaaSpacing.md },
-  back: { color: sawaaColors.teal[700], fontSize: 34, lineHeight: 34 },
-  title: { flex: 1, color: sawaaColors.ink[900], fontSize: sawaaType.heading.fontSize },
-  subtitle: { color: sawaaColors.ink[500], fontSize: sawaaType.body.fontSize },
-  section: { color: sawaaColors.ink[900], fontSize: sawaaType.subheading.fontSize, marginTop: sawaaSpacing.md },
-  warning: { color: sawaaSemantic.warning, fontSize: sawaaType.body.fontSize },
+  backButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  back: { color: colors.teal[700], fontSize: 34, lineHeight: 34 },
+  title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize },
+  subtitle: { color: colors.ink[500], fontSize: sawaaType.body.fontSize },
+  section: { color: colors.ink[900], fontSize: sawaaType.subheading.fontSize, marginTop: sawaaSpacing.md },
+  warning: { color: colors.accent.amber, fontSize: sawaaType.body.fontSize },
 });

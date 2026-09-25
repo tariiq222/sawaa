@@ -8,17 +8,8 @@ import { NotificationItem } from '../../components/features/NotificationItem';
 jest.mock('../useTheme', () => ({
   useTheme: () => ({
     language: 'en',
-    theme: {
-      typography: { fontFamily: { english: 'System', arabic: 'System' } },
-      colors: {
-        white: '#FFFFFF',
-        textPrimary: '#191C1E',
-        textSecondary: '#64748B',
-        primary: '#55CCB0',
-        error: '#DC2626',
-      },
-      shadows: { none: {}, sm: {}, md: {}, lg: {} },
-    },
+    scheme: 'light',
+    theme: require('../tokens').buildTheme(),
   }),
 }));
 

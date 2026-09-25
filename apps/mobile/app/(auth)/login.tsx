@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,13 +18,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { Glass } from '@/theme';
-import { sawaaTokens, sawaaColors } from '@/theme/sawaa/tokens';
+import { sawaaTokens } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useRequestLoginOtp } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 
 export default function LoginScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -136,8 +139,8 @@ export default function LoginScreen() {
                     onFocus={() => setInputFocused(true)}
                     onBlur={() => setInputFocused(false)}
                     autoCorrect={false}
-                    selectionColor={sawaaColors.teal[600]}
-                    placeholderTextColor={sawaaColors.ink[500]}
+                    selectionColor={colors.teal[600]}
+                    placeholderTextColor={colors.ink[500]}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
@@ -173,10 +176,11 @@ export default function LoginScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   router.push('/(auth)/forgot-password');
                 }}
-                style={{ alignSelf: 'center', marginTop: 4 }}
+                accessibilityRole="link"
+                style={[styles.linkTarget, { alignSelf: 'center', marginTop: 4 }]}
               >
                 <Text style={[styles.forgotLink, { fontFamily: f600, fontWeight: '600' }]}>
-                  نسيت كلمة المرور؟
+                  {t('auth.forgotPassword.linkLabel')}
                 </Text>
               </Pressable>
 
@@ -187,6 +191,8 @@ export default function LoginScreen() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push('/(auth)/register');
                   }}
+                  accessibilityRole="link"
+                  style={styles.linkTarget}
                 >
                   <Text style={[styles.registerLink, { fontFamily: f700 }]}>{t('auth.createAccount')}</Text>
                 </Pressable>
@@ -200,26 +206,27 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   scroll: { paddingHorizontal: 24 },
   logoContainer: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  logo: { width: 144, height: 144, tintColor: sawaaColors.teal[700] },
-  title: { fontSize: 32, color: sawaaColors.teal[700], lineHeight: 42, marginBottom: 8, alignSelf: 'stretch' },
-  subtitle: { fontSize: 14, color: sawaaColors.ink[500], lineHeight: 20, marginBottom: 32, alignSelf: 'stretch' },
+  logo: { width: 144, height: 144, tintColor: colors.teal[700] },
+  title: { fontSize: 32, color: colors.teal[700], lineHeight: 42, marginBottom: 8, alignSelf: 'stretch' },
+  subtitle: { fontSize: 14, color: colors.ink[500], lineHeight: 20, marginBottom: 32, alignSelf: 'stretch' },
   form: { padding: 24 },
   formInner: { gap: 20 },
   field: { gap: 10 },
-  label: { fontSize: 14, color: sawaaColors.teal[700] },
-  input: { minHeight: 56, paddingHorizontal: 16, borderRadius: sawaaTokens.radius.md, borderWidth: 1, borderColor: sawaaColors.teal[200], backgroundColor: sawaaColors.glass.opaqueBg, flexDirection: 'row', alignItems: 'center' },
-  inputFocused: { borderColor: sawaaColors.teal[600], backgroundColor: sawaaColors.glass.opaqueBg },
-  inputError: { borderColor: sawaaColors.accent.coral },
+  label: { fontSize: 14, color: colors.teal[700] },
+  input: { minHeight: 56, paddingHorizontal: 16, borderRadius: sawaaTokens.radius.md, borderWidth: 1, borderColor: colors.teal[200], backgroundColor: colors.glass.opaqueBg, flexDirection: 'row', alignItems: 'center' },
+  inputFocused: { borderColor: colors.teal[600], backgroundColor: colors.glass.opaqueBg },
+  inputError: { borderColor: colors.accent.coral },
   inputRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', width: '100%' },
-  inputText: { flex: 1, minHeight: 56, paddingVertical: 12, fontSize: 16, color: sawaaColors.ink[900] },
-  error: { fontSize: 12, color: sawaaColors.accent.coral },
-  forgotLink: { fontSize: 13, color: sawaaColors.teal[600] },
+  inputText: { flex: 1, minHeight: 56, paddingVertical: 12, fontSize: 16, color: colors.ink[900] },
+  error: { fontSize: 12, color: colors.accent.coral },
+  linkTarget: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
+  forgotLink: { fontSize: 13, color: colors.teal[600] },
   registerRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
-  registerText: { fontSize: 14, color: sawaaColors.ink[500] },
-  registerLink: { fontSize: 14, color: sawaaColors.teal[700] },
+  registerText: { fontSize: 14, color: colors.ink[500] },
+  registerLink: { fontSize: 14, color: colors.teal[700] },
 });

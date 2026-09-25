@@ -3,7 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { GlassSurface } from '@/theme/sawaa/GlassSurface';
 import type { DirState } from '@/hooks/useDir';
 
@@ -28,6 +30,10 @@ interface DaySelectorProps {
 }
 
 export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySelectorProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const selectedDay = days[dayIdx];
   const monthLabel = dir.isRTL
     ? `${MONTHS_AR[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`
@@ -68,7 +74,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
             >
               {isActive ? (
                 <LinearGradient
-                  colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+                  colors={action.gradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
@@ -80,7 +86,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
                   {
                     fontFamily: f500,
                     fontWeight: '500',
-                    color: isActive ? withAlpha(sawaaColors.teal[50], 0.9) : sawaaColors.ink[700],
+                    color: isActive ? action.foreground : sawaaColors.ink[700],
                   },
                 ]}
               >
@@ -89,7 +95,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
               <Text
                 style={[
                   styles.dayNum,
-                  { fontFamily: f700, color: isActive ? sawaaColors.teal[50] : sawaaColors.ink[900] },
+                  { fontFamily: f700, color: isActive ? action.foreground : sawaaColors.ink[900] },
                 ]}
               >
                 {dir.isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate()}
@@ -102,7 +108,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   monthHead: {
     justifyContent: 'space-between',
     alignItems: 'center',

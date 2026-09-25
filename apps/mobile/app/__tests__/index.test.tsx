@@ -20,6 +20,10 @@ import { render, waitFor } from '@testing-library/react-native';
 
 // ── mocks (must be hoisted before any import that uses them) ─────────────────
 
+jest.mock('@/theme/useTheme', () => ({
+  useTheme: () => ({ theme: jest.requireActual('@/theme/tokens').buildTheme() }),
+}));
+
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),

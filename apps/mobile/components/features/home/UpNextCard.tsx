@@ -4,7 +4,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight, Video } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
-import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 import type { PortalBookingRow } from '@/services/client/portal';
@@ -34,6 +36,10 @@ interface UpNextCardProps {
 }
 
 export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
   const router = useRouter();
   const ArrowIcon = dir.isRTL ? ChevronLeft : ChevronRight;
 
@@ -73,12 +79,12 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
         style={[styles.sessionRow, { flexDirection: dir.row }]}
       >
         <LinearGradient
-          colors={[sawaaColors.teal[400], sawaaColors.teal[600]]}
+          colors={action.gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.sessionIcon}
         >
-          <Video size={22} color="#fff" strokeWidth={1.75} />
+          <Video size={22} color={action.foreground} strokeWidth={1.75} />
         </LinearGradient>
         <View style={styles.sessionMid}>
           <Text style={[styles.sessionTime, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
@@ -95,14 +101,14 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
           </Text>
         </View>
         <View style={styles.sessionGo}>
-          <ArrowIcon size={14} color="#fff" strokeWidth={2} />
+          <ArrowIcon size={14} color={action.foreground} strokeWidth={2} />
         </View>
       </Pressable>
     </Glass>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   sessionCard: { padding: 14 },
   sessionLoading: { alignItems: 'center', justifyContent: 'center', minHeight: 76 },
   emptySession: { padding: 18, alignItems: 'center', gap: 8 },
@@ -117,7 +123,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: sawaaColors.teal[700],
+    backgroundColor: action.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },

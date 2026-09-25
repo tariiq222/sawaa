@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Linking, View, ScrollView, Pressable, Alert, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -17,9 +18,7 @@ import * as Haptics from 'expo-haptics';
 import {
   AquaBackground,
   GlassSurface,
-  sawaaColors,
   sawaaRadius,
-  sawaaSemantic,
   sawaaSpacing,
   sawaaType,
   withAlpha,
@@ -43,10 +42,12 @@ interface MenuEntry {
 }
 
 function MenuRow({ icon: Icon, label, value, danger, onPress }: MenuEntry) {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const dir = useDir();
   const f400 = getFontName(dir.locale, '400');
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
-  const tint = danger ? sawaaSemantic.danger : sawaaColors.teal[600];
+  const tint = danger ? colors.accent.coral : colors.teal[600];
 
   return (
     <Pressable
@@ -62,7 +63,7 @@ function MenuRow({ icon: Icon, label, value, danger, onPress }: MenuEntry) {
         <Text
           style={[
             styles.menuLabel,
-            { fontFamily: f400, fontWeight: '400', color: danger ? sawaaSemantic.danger : sawaaColors.ink[900], writingDirection: dir.writingDirection },
+            { fontFamily: f400, fontWeight: '400', color: danger ? colors.accent.coral : colors.ink[900], writingDirection: dir.writingDirection },
           ]}
         >
           {label}
@@ -74,13 +75,15 @@ function MenuRow({ icon: Icon, label, value, danger, onPress }: MenuEntry) {
             {value}
           </Text>
         ) : null}
-        {!danger && <Chevron size={16} strokeWidth={1.5} color={sawaaColors.ink[400]} />}
+        {!danger && <Chevron size={16} strokeWidth={1.5} color={colors.ink[400]} />}
       </View>
     </Pressable>
   );
 }
 
 function MenuGroup({ entries }: { entries: MenuEntry[] }) {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <GlassSurface variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.xs}>
       {entries.map((entry, i) => (
@@ -94,6 +97,8 @@ function MenuGroup({ entries }: { entries: MenuEntry[] }) {
 }
 
 export default function EmployeeProfileScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -158,7 +163,7 @@ export default function EmployeeProfileScreen() {
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
           <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
-              <Avatar size={64} name={fullName} imageUrl={user?.avatarUrl} color={sawaaColors.teal[600]} />
+              <Avatar size={64} name={fullName} imageUrl={user?.avatarUrl} color={colors.teal[600]} />
               <View style={styles.profileMid}>
                 <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                   {fullName}
@@ -198,12 +203,12 @@ export default function EmployeeProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 140 },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginBottom: sawaaSpacing.xl,
   },
   profileCard: { marginBottom: sawaaSpacing['2xl'] },
@@ -212,12 +217,12 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   profileEmail: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   group: { marginBottom: sawaaSpacing.xl },
   menuRow: {
@@ -241,17 +246,17 @@ const styles = StyleSheet.create({
   menuValue: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: withAlpha(sawaaColors.ink[900], 0.08),
+    backgroundColor: withAlpha(colors.ink[900], 0.08),
     marginHorizontal: sawaaSpacing.md,
   },
   version: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[400],
+    color: colors.ink[400],
     textAlign: 'center',
     marginTop: sawaaSpacing.lg,
   },

@@ -1,10 +1,15 @@
-import { View, Text, Pressable, StyleSheet, ImageBackground } from 'react-native';
+import { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { AquaBackground } from '@/theme/sawaa';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { authService } from '@/services/auth';
 
 export default function SuspendedScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
@@ -15,11 +20,7 @@ export default function SuspendedScreen() {
   }
 
   return (
-    <ImageBackground
-      source={require('@/assets/bg.jpg')}
-      style={styles.bg}
-      resizeMode="cover"
-    >
+    <AquaBackground>
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.card}>
           <Text style={styles.title}>{t('suspended.title')}</Text>
@@ -29,11 +30,11 @@ export default function SuspendedScreen() {
           </Pressable>
         </View>
       </View>
-    </ImageBackground>
+    </AquaBackground>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   bg: { flex: 1 },
   container: {
     flex: 1,
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: colors.glass.bgStrong,
     borderRadius: 20,
     padding: 32,
     alignItems: 'center',
@@ -53,24 +54,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.ink[900],
     textAlign: 'center',
   },
   body: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.ink[700],
     textAlign: 'center',
     lineHeight: 24,
   },
   button: {
     marginTop: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.glass.bg,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
   },
   buttonText: {
-    color: '#ffffff',
+    color: colors.ink[900],
     fontSize: 16,
     fontWeight: '600',
   },

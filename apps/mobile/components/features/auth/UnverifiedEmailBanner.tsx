@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useTheme } from '@/theme/useTheme';
+import { withAlpha } from '@/theme/sawaa/tokens';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { Mail, Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +12,8 @@ import { useRequestEmailVerification } from '@/hooks/queries';
 
 export function UnverifiedEmailBanner() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const user = useAppSelector((s) => s.auth.user);
   const [sent, setSent] = useState(false);
 
@@ -30,7 +34,7 @@ export function UnverifiedEmailBanner() {
   if (sent) {
     return (
       <View style={[styles.banner, styles.bannerSuccess]}>
-        <Check size={18} strokeWidth={1.5} color="#16A34A" />
+        <Check size={18} strokeWidth={1.5} color={theme.colors.success} />
         <View style={styles.textWrap}>
           <ThemedText variant="bodySm" style={{ fontWeight: '500' }}>
             {t('settings.verificationSent')}
@@ -42,7 +46,7 @@ export function UnverifiedEmailBanner() {
 
   return (
     <View style={[styles.banner, styles.bannerWarning]}>
-      <Mail size={18} strokeWidth={1.5} color="#F59E0B" />
+      <Mail size={18} strokeWidth={1.5} color={theme.colors.warning} />
       <View style={styles.textWrap}>
         <ThemedText variant="bodySm" style={{ fontWeight: '500' }}>
           {t('settings.unverifiedEmail')}
@@ -50,7 +54,7 @@ export function UnverifiedEmailBanner() {
         <Pressable onPress={handleSend} disabled={requestVerification.isPending}>
           <ThemedText
             variant="caption"
-            color="#1D4ED8"
+            color={theme.colors.info}
             style={{ fontWeight: '600' }}
           >
             {requestVerification.isPending ? t('common.loading') : t('settings.sendVerification')}
@@ -61,7 +65,7 @@ export function UnverifiedEmailBanner() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -72,10 +76,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   bannerWarning: {
-    backgroundColor: '#F59E0B14',
+    backgroundColor: withAlpha(colors.warning, 0.08),
   },
   bannerSuccess: {
-    backgroundColor: '#16A34A14',
+    backgroundColor: withAlpha(colors.success, 0.08),
   },
   textWrap: { flex: 1, gap: 2 },
 });
