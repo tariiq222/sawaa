@@ -3570,6 +3570,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/client/payments/bank-transfer/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get client-visible bank transfer settings and accounts */
+        get: operations["MobileClientPaymentsController_getBankTransferSettings_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/client/payments/init": {
         parameters: {
             query?: never;
@@ -5223,6 +5240,33 @@ export interface components {
              * @example 09:00
              */
             startTime: string;
+        };
+        BankTransferAccountSettingsDto: {
+            /**
+             * @description Bank name
+             * @example Saudi National Bank
+             */
+            bankName: string;
+            /**
+             * @description Account beneficiary name
+             * @example Sawaa Family Counseling Center
+             */
+            beneficiaryName: string;
+            /**
+             * @description Saudi IBAN (spaces accepted)
+             * @example SA0380000000608010167519
+             */
+            iban: string;
+            /**
+             * @description Stable account id used by the client app
+             * @example main-account
+             */
+            id: string;
+            /**
+             * @description Account label shown to clients
+             * @example Main account
+             */
+            label: string;
         };
         BookFromCreditDto: {
             /**
@@ -11704,6 +11748,8 @@ export interface components {
              * @example Riyadh, Saudi Arabia
              */
             address?: string;
+            /** @description Bank accounts shown to clients for bank transfers */
+            bankTransferAccounts?: components["schemas"]["BankTransferAccountSettingsDto"][];
             /**
              * @description Booking flow order
              * @example service_first
@@ -11829,6 +11875,11 @@ export interface components {
              * @example true
              */
             paymentAtClinicEnabled?: boolean;
+            /**
+             * @description Enable client bank transfer at booking checkout
+             * @example false
+             */
+            paymentBankTransferEnabled?: boolean;
             /**
              * @description Enable Moyasar online payment
              * @example true
@@ -30205,6 +30256,71 @@ export interface operations {
             };
         };
     };
+    MobileClientPaymentsController_getBankTransferSettings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bank transfer availability and configured recipient accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        accounts: {
+                            bankName: string;
+                            beneficiaryName: string;
+                            iban: string;
+                            id: string;
+                            label: string;
+                        }[];
+                        enabled: boolean;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientPaymentsController_initPaymentEndpoint_v1: {
         parameters: {
             query?: never;
@@ -30416,7 +30532,10 @@ export interface operations {
                     "application/json": {
                         /** Format: date-time */
                         lastVisit?: string | null;
-                        /** @example 250 */
+                        /**
+                         * @description Outstanding balance across all client invoices, in halalas
+                         * @example 25000
+                         */
                         outstandingBalance?: number;
                         /** @example 8 */
                         totalBookings?: number;

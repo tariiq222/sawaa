@@ -14,8 +14,9 @@ import {
 } from "@/hooks/use-moyasar-config"
 import type { UpsertMoyasarConfigPayload } from "@/lib/api/moyasar-config"
 import { toastApiError } from "@/lib/mutation-helpers"
+import { BankTransferAccountsPanel } from "./bank-transfer-accounts-panel"
 
-type TabId = "moyasar" | "atclinic"
+type TabId = "moyasar" | "atclinic" | "bankTransfer"
 
 export function SettingsPaymentTab() {
   const { t } = useLocale()
@@ -125,6 +126,14 @@ export function SettingsPaymentTab() {
       alwaysAvailable: true,
       toggleHint: t("settings.payment.atClinicToggleHint"),
     },
+    {
+      id: "bankTransfer",
+      label: t("settings.payment.bankTransfer.title"),
+      desc: t("settings.payment.bankTransfer.description"),
+      enabled: true,
+      onToggle: () => undefined,
+      alwaysAvailable: true,
+    },
   ]
 
   const activeTabDef = tabs.find((tab) => tab.id === activeTab)!
@@ -141,7 +150,7 @@ export function SettingsPaymentTab() {
             id: tab.id,
             label: tab.label,
             desc: tab.desc,
-            extra: (
+            extra: tab.id === "bankTransfer" ? null : (
               <Switch
                 checked={tab.enabled}
                 onCheckedChange={tab.onToggle}
@@ -177,6 +186,8 @@ export function SettingsPaymentTab() {
             </div>
           ) : (
             <>
+              {activeTab === "bankTransfer" && <BankTransferAccountsPanel />}
+
               {activeTab === "moyasar" && (
                 <div className="flex h-full flex-col gap-3">
                   <div className="grid grid-cols-2 gap-3">

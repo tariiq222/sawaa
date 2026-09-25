@@ -3,6 +3,7 @@
  */
 
 import { api } from "@/lib/api"
+import type { BankTransferAccount } from "@sawaa/shared"
 import type {
   OrganizationSettings,
   UpdateOrganizationSettingsPayload,
@@ -49,6 +50,8 @@ export interface PaymentSettings {
   payMethodBankEnabled: boolean
   payMethodMadaEnabled: boolean
   payMethodTabbyEnabled: boolean
+  paymentBankTransferEnabled?: boolean
+  bankTransferAccounts?: BankTransferAccount[]
 }
 
 function pickPaymentSettings(res: PaymentSettings): PaymentSettings {
@@ -59,6 +62,8 @@ function pickPaymentSettings(res: PaymentSettings): PaymentSettings {
     payMethodBankEnabled: res.payMethodBankEnabled,
     payMethodMadaEnabled: res.payMethodMadaEnabled,
     payMethodTabbyEnabled: res.payMethodTabbyEnabled,
+    paymentBankTransferEnabled: res.paymentBankTransferEnabled ?? false,
+    bankTransferAccounts: res.bankTransferAccounts ?? [],
   }
 }
 

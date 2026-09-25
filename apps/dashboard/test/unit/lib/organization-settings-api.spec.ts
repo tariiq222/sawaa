@@ -50,9 +50,17 @@ describe("organization-settings api", () => {
   })
 
   it("fetchPaymentSettings calls /dashboard/organization/settings", async () => {
-    getMock.mockResolvedValueOnce({ paymentMoyasarEnabled: true, paymentAtClinicEnabled: false })
-    await fetchPaymentSettings()
+    const accounts = [{ id: "bank-1", label: "Main", bankName: "Bank", beneficiaryName: "Sawa", iban: "SA0380000000608010167519" }]
+    getMock.mockResolvedValueOnce({
+      paymentMoyasarEnabled: true,
+      paymentAtClinicEnabled: false,
+      paymentBankTransferEnabled: true,
+      bankTransferAccounts: accounts,
+    })
+    const result = await fetchPaymentSettings()
     expect(getMock).toHaveBeenCalledWith("/dashboard/organization/settings")
+    expect(result.paymentBankTransferEnabled).toBe(true)
+    expect(result.bankTransferAccounts).toEqual(accounts)
   })
 
   it("updatePaymentSettings patches /dashboard/organization/settings", async () => {
