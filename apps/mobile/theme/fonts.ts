@@ -1,5 +1,3 @@
-import type { TextStyle } from 'react-native';
-
 // Bundled locally; rendering waits for these assets in RootLayout.
 export const fontAssets = {
   IBMPlexSansArabic_300Light: require('@expo-google-fonts/ibm-plex-sans-arabic/300Light/IBMPlexSansArabic_300Light.ttf'),
@@ -27,11 +25,6 @@ export function getFontName(_language: string, weight: string = '400'): string {
 
 export function getHeadingFont(weight: '600' | '700' | '900' = '700'): string {
   return getFontName('ar', weight);
-}
-
-// Each registered font family already encodes its weight.
-export function fontWeightFor(_weight: string): TextStyle['fontWeight'] | undefined {
-  return undefined;
 }
 
 export const f300 = (locale = 'ar'): string => getFontName(locale, '300');

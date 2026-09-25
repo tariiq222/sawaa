@@ -9,7 +9,6 @@ import {
   Text,
   View,
   ViewToken,
-  I18nManager,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -19,6 +18,7 @@ import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { getFontName } from '@/theme/fonts';
+import { useDir } from '@/hooks/useDir';
 import { markOnboardingSeen } from '@/lib/onboarding';
 
 type Slide = {
@@ -52,12 +52,13 @@ const SLIDES: Slide[] = [
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 function ArrowIcon({ size = 14, color = '#fff' }: { size?: number; color?: string }) {
-  // RTL: visual "next" arrow points to the start side (left in RTL)
-  const flip = I18nManager.isRTL ? 1 : -1;
+  // RTL: visual "next" arrow points to the start side (left in RTL).
+  // Locale-derived, not I18nManager: the native layout basis is pinned LTR.
+  const { isRTL } = useDir();
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d={flip === 1 ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'}
+        d={isRTL ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'}
         stroke={color}
         strokeWidth={2}
         strokeLinecap="round"

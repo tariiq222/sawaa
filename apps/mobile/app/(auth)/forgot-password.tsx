@@ -58,7 +58,7 @@ export default function ForgotPasswordScreen() {
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('error.generic'));
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     } finally {
       setLoading(false);
     }

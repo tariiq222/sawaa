@@ -59,7 +59,7 @@ export default function LoginScreen() {
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('error.generic'));
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     }
   }, [identifier, requestOtp, router, t]);
 

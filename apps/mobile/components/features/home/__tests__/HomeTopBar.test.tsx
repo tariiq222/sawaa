@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
 
@@ -14,15 +14,6 @@ jest.mock('@/hooks/useUnreadCount', () => ({ useUnreadCount: () => ({ count: 0 }
 jest.mock('@/hooks/useDir', () => ({
   useDir: () => ({ locale: 'en', isRTL: false }),
 }));
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => ({
-      'home.searchTherapists': 'Search therapists',
-      'nav.notifications': 'Notifications',
-      'nav.profile': 'Profile',
-    })[key] ?? key,
-  }),
-}));
 jest.mock('@/components/ui/AppIcon', () => ({ AppIcon: () => null }));
 jest.mock('@/theme/sawaa', () => ({
   sawaaColors: { teal: { 700: '#123456' }, accent: { rose: '#654321' } },
@@ -32,18 +23,26 @@ jest.mock('@/theme/components/Glass', () => ({
   Glass: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Deliberately NOT mocking react-i18next: these labels must come from the real
+// locale files, so a key that exists only in a test double fails here instead of
+// silently shipping as a raw "some.key" accessibility label.
+import i18n from '@/i18n';
 import { HomeTopBar } from '../HomeTopBar';
 
 describe('HomeTopBar', () => {
   beforeEach(() => mockPush.mockClear());
 
-  it('opens the therapist directory from the search button', () => {
+  it.each([
+    ['en', 'Search therapists', 'Notifications', 'Profile'],
+    ['ar', 'البحث عن معالجين', 'الإشعارات', 'الملف الشخصي'],
+  ])('labels its buttons from the real %s locale', async (language, search, notifications, profile) => {
+    await act(async () => { await i18n.changeLanguage(language as string); });
     const { getByRole } = render(<HomeTopBar f600="System" />);
 
-    fireEvent.press(getByRole('button', { name: 'Search therapists' }));
+    fireEvent.press(getByRole('button', { name: search as string }));
 
     expect(mockPush).toHaveBeenCalledWith('/(client)/therapists');
-    expect(getByRole('button', { name: 'Notifications' })).toBeTruthy();
-    expect(getByRole('button', { name: 'Profile' })).toBeTruthy();
+    expect(getByRole('button', { name: notifications as string })).toBeTruthy();
+    expect(getByRole('button', { name: profile as string })).toBeTruthy();
   });
 });
