@@ -12,9 +12,11 @@ import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { useRateBooking } from '@/hooks/queries';
+import { useBooking, useRateBooking } from '@/hooks/queries';
 
 const QUICK_TAGS = [
   { ar: 'مهنية', en: 'Professional' },
@@ -42,6 +44,26 @@ export default function RateScreen() {
   const [note, setNote] = useState('');
   const rateMutation = useRateBooking();
   const submitting = rateMutation.isPending;
+  const { data: booking, isLoading, isError, refetch } = useBooking(bookingId);
+
+  // The therapist identity comes from the rated booking — never a placeholder.
+  const therapistName = booking
+    ? (dir.isRTL
+        ? booking.employee?.nameAr ?? booking.employee?.nameEn ?? booking.employeeNameAr ?? booking.employeeName
+        : booking.employee?.nameEn ?? booking.employee?.nameAr ?? booking.employeeName ?? booking.employeeNameAr)
+    : undefined;
+  const displayName = therapistName ?? t('therapists.unknownName');
+  const sessionWhen = booking?.scheduledAt
+    ? new Date(booking.scheduledAt).toLocaleString(dir.isRTL ? 'ar-SA' : 'en-US', {
+        weekday: 'long', hour: 'numeric', minute: '2-digit',
+      })
+    : null;
+
+  // Rating is only allowed against a booking we actually loaded: while the
+  // request is in flight, or after it failed, there is no verified subject to
+  // rate — the user gets the retry action instead of a blind submission.
+  const bookingReady = Boolean(booking) && !isLoading && !isError;
+  const submitDisabled = rating === 0 || submitting || !bookingReady;
 
   const toggleTag = (i: number) => {
     Haptics.selectionAsync();
@@ -52,7 +74,7 @@ export default function RateScreen() {
   };
 
   const submit = () => {
-    if (rating === 0 || !bookingId || submitting) return;
+    if (rating === 0 || !bookingId || submitting || !bookingReady) return;
     const tagLabels = [...tags]
       .map((i) => (dir.isRTL ? QUICK_TAGS[i].ar : QUICK_TAGS[i].en))
       .join(', ');
@@ -101,28 +123,44 @@ export default function RateScreen() {
           </Text>
         </Animated.View>
 
-        {/* Therapist */}
+        {/* Therapist — real booking data, or a retryable load error */}
         <Animated.View entering={FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.therapistCard}>
-            <View style={[styles.therapistRow, { flexDirection: dir.row }]}>
-              <LinearGradient
-                colors={theme.colors.primaryGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}
-              >
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>ف</Text>
-              </LinearGradient>
-              <View style={styles.therapistMid}>
-                <Text style={[styles.therapistName, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? 'د. فاطمة العمران' : 'Dr. Fatima Al-Omran'}
-                </Text>
-                <Text style={[styles.therapistMeta, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? 'جلسة اليوم · ٤:٠٠ م' : "Today's session · 4:00 PM"}
-                </Text>
+          {isLoading ? (
+            <Skeleton height={76} radius={sawaaRadius.xl} />
+          ) : isError ? (
+            <EmptyState
+              icon="alert-circle-outline"
+              title={t('common.error')}
+              actionLabel={t('common.retry')}
+              onAction={() => { void refetch(); }}
+              tone="danger"
+            />
+          ) : (
+            <Glass variant="strong" radius={sawaaRadius.xl} style={styles.therapistCard}>
+              <View style={[styles.therapistRow, { flexDirection: dir.row }]}>
+                <LinearGradient
+                  colors={theme.colors.primaryGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatar}
+                >
+                  <Text style={[styles.avatarText, { fontFamily: f700 }]}>
+                    {displayName.trim().charAt(0)}
+                  </Text>
+                </LinearGradient>
+                <View style={styles.therapistMid}>
+                  <Text style={[styles.therapistName, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                    {displayName}
+                  </Text>
+                  {sessionWhen ? (
+                    <Text style={[styles.therapistMeta, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
+                      {sessionWhen}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
-            </View>
-          </Glass>
+            </Glass>
+          )}
         </Animated.View>
 
         {/* Stars */}
@@ -138,6 +176,8 @@ export default function RateScreen() {
                 }}
                 style={styles.starBtn}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11y.rateStars', { count: n })}
               >
                 <Star
                   size={40}
@@ -156,7 +196,7 @@ export default function RateScreen() {
             {dir.isRTL ? 'ما الذي أعجبكِ؟' : 'What did you like?'}
           </Text>
           <View style={[styles.tagRow, { flexDirection: dir.row }]}>
-            {QUICK_TAGS.map((t, i) => {
+            {QUICK_TAGS.map((tag, i) => {
               const isActive = tags.has(i);
               return (
                 <Pressable key={`tag-${i}`} onPress={() => toggleTag(i)}>
@@ -172,7 +212,7 @@ export default function RateScreen() {
                       styles.tagText,
                       { fontFamily: f600, fontWeight: '600', color: isActive ? colors.teal[700] : colors.ink[700] },
                     ]}>
-                      {dir.isRTL ? t.ar : t.en}
+                      {dir.isRTL ? tag.ar : tag.en}
                     </Text>
                   </Glass>
                 </Pressable>
@@ -207,12 +247,17 @@ export default function RateScreen() {
         entering={FadeInDown.delay(500).duration(800).easing(Easing.out(Easing.cubic))}
         style={[styles.ctaWrap, { bottom: insets.bottom + 20 }]}
       >
-        <Pressable disabled={rating === 0 || submitting} onPress={submit}>
+        <Pressable
+          disabled={submitDisabled}
+          onPress={submit}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: submitDisabled, busy: submitting }}
+        >
           <LinearGradient
             colors={theme.colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.ctaBtn, (rating === 0 || submitting) && { opacity: 0.55 }]}
+            style={[styles.ctaBtn, submitDisabled && { opacity: 0.55 }]}
           >
             <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
               {submitting

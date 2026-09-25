@@ -57,14 +57,19 @@ export default function TodayScreen() {
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       const res = await bookingsService.getTodayBookings();
       if (res.data) setBookings(res.data.items);
+      setLoadFailed(false);
     } catch {
+      // A failed load is not an empty day: keep the error visible and retryable
+      // instead of rendering the "no appointments today" empty state.
       setBookings([]);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -162,7 +167,7 @@ export default function TodayScreen() {
               <Skeleton width={36} height={24} radius={sawaaRadius.xs} style={styles.statSkeleton} />
             ) : (
               <Text style={[styles.statValue, { fontFamily: f700, color: s.color }]}>
-                {dir.isRTL ? s.value.toLocaleString('ar-SA') : s.value}
+                {loadFailed ? '—' : dir.isRTL ? s.value.toLocaleString('ar-SA') : s.value}
               </Text>
             )}
             <Text style={[styles.statLabel, { fontFamily: f600, fontWeight: '600', writingDirection: dir.writingDirection }]}>
@@ -186,13 +191,20 @@ export default function TodayScreen() {
         <Skeleton key={i} height={76} radius={sawaaRadius.xl} />
       ))}
     </View>
+  ) : loadFailed ? (
+    <EmptyState
+      icon="alert-circle-outline"
+      title={t('common.error')}
+      description={t('doctor.scheduleLoadFailed')}
+      actionLabel={t('common.retry')}
+      onAction={() => { void loadData(); }}
+      tone="danger"
+    />
   ) : (
     <EmptyState
       icon="calendar-outline"
       title={t('doctor.noAppointmentsToday')}
-      description={dir.isRTL
-        ? 'ستظهر مواعيدك الجديدة هنا عند إضافتها'
-        : 'New appointments will appear here once scheduled'}
+      description={t('doctor.noAppointmentsHint')}
     />
   );
 

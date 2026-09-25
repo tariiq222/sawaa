@@ -152,7 +152,8 @@
     "title": "Clinics",
     "therapistsCount": "{{count}} therapists",
     "servicesCount": "{{count}} services",
-    "empty": "No clinics available right now"
+    "empty": "No clinics available right now",
+    "notFound": "Clinic not found"
   },
   "groups": {
     "title": "Support Groups",
@@ -279,6 +280,8 @@
     "completedToday": "Completed",
     "cancelledToday": "Cancelled",
     "noAppointmentsToday": "No appointments today",
+    "noAppointmentsHint": "New appointments will appear here once scheduled",
+    "scheduleLoadFailed": "Could not load today's appointments. Check your connection and try again.",
     "startMeeting": "Start Meeting",
     "callClient": "Call Client",
     "markCompleted": "Mark Completed",
@@ -610,6 +613,14 @@
     "profileSettings": "Settings",
     "profileLogout": "Logout button",
     "filterOpen": "Open filters",
-    "sortOpen": "Open sort options"
+    "sortOpen": "Open sort options",
+    "rateStars": "Rate {{count}} stars"
+  },
+  "welcome": {
+    "brand": "سَواء",
+    "headline": "Your journey to Sawaa starts here",
+    "sub": "Confidential sessions with our specialists,\nwithin moments — wherever you are.",
+    "signIn": "Login",
+    "signUp": "Create Account"
   }
 }

@@ -167,7 +167,7 @@ export default function WelcomeScreen() {
     <AquaBackground>
       <View style={styles.container}>
         <View style={styles.orbsWrap}>
-          <Orbs brandText={t('welcome.brand', 'سَواء')} brandFont={f700} />
+          <Orbs brandText={t('welcome.brand')} brandFont={f700} />
         </View>
 
         <Animated.View
@@ -175,10 +175,10 @@ export default function WelcomeScreen() {
           style={styles.textBlock}
         >
           <Text style={[styles.headline, { fontFamily: f700 }]}>
-            {t('welcome.headline', 'رحلتك للسواء تبدأ هنا')}
+            {t('welcome.headline')}
           </Text>
           <Text style={[styles.sub, { fontFamily: f500, fontWeight: '500' }]}>
-            {t('welcome.sub', 'جلسات سرّية مع أفضل المعالجين النفسيين،\nخلال لحظات — أينما كنتِ.')}
+            {t('welcome.sub')}
           </Text>
           <View style={styles.dots}>
             <View style={[styles.dot, styles.dotActive]} />
@@ -195,7 +195,7 @@ export default function WelcomeScreen() {
           <View style={styles.ctaRow}>
             <Pressable onPress={() => router.push('/(auth)/login')} hitSlop={8} style={styles.ctaSecondary}>
               <Text style={[styles.ctaSecondaryText, { fontFamily: f600, fontWeight: '600' }]}>
-                {t('welcome.signIn', 'تسجيل دخول')}
+                {t('welcome.signIn')}
               </Text>
             </Pressable>
             <Pressable onPress={() => router.push('/(auth)/register')} style={styles.ctaPrimaryPress}>
@@ -215,7 +215,7 @@ export default function WelcomeScreen() {
                 />
                 <View style={styles.ctaTopEdge} pointerEvents="none" />
                 <Text style={[styles.ctaPrimaryText, { fontFamily: f700, color: theme.colors.primaryForeground }]}>
-                  {t('welcome.signUp', 'تسجيل جديد')}
+                  {t('welcome.signUp')}
                 </Text>
                 <ArrowIcon />
               </LinearGradient>

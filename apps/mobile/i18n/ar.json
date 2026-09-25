@@ -152,7 +152,8 @@
     "title": "العيادات",
     "therapistsCount": "{{count}} معالج",
     "servicesCount": "{{count}} خدمة",
-    "empty": "لا توجد عيادات متاحة حالياً"
+    "empty": "لا توجد عيادات متاحة حالياً",
+    "notFound": "لم نعثر على هذه العيادة"
   },
   "groups": {
     "title": "مجموعات الدعم",
@@ -279,6 +280,8 @@
     "completedToday": "مكتملة",
     "cancelledToday": "ملغاة",
     "noAppointmentsToday": "لا توجد مواعيد اليوم",
+    "noAppointmentsHint": "ستظهر مواعيدك الجديدة هنا عند إضافتها",
+    "scheduleLoadFailed": "تعذّر تحميل مواعيد اليوم. تحقق من اتصالك ثم أعد المحاولة",
     "startMeeting": "بدء الاجتماع",
     "callClient": "اتصل بالمريض",
     "markCompleted": "إنهاء الزيارة",
@@ -610,6 +613,14 @@
     "profileSettings": "الإعدادات",
     "profileLogout": "زر تسجيل الخروج",
     "filterOpen": "فتح المرشحات",
-    "sortOpen": "فتح خيارات الفرز"
+    "sortOpen": "فتح خيارات الفرز",
+    "rateStars": "تقييم {{count}} نجوم"
+  },
+  "welcome": {
+    "brand": "سَواء",
+    "headline": "رحلتك للسواء تبدأ هنا",
+    "sub": "جلسات سرّية مع أفضل المعالجين النفسيين،\nخلال لحظات — أينما كنتِ.",
+    "signIn": "تسجيل دخول",
+    "signUp": "تسجيل جديد"
   }
 }
