@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ListClientBookingsHandler } from './list-client-bookings.handler';
+import { ListClientBookingsHandler, ClientBookingsTab } from './list-client-bookings.handler';
 import { PrismaService } from '../../../infrastructure/database';
 
 describe('ListClientBookingsHandler', () => {
@@ -45,6 +45,36 @@ describe('ListClientBookingsHandler', () => {
     }).compile();
 
     handler = module.get<ListClientBookingsHandler>(ListClientBookingsHandler);
+  });
+
+  it.each([ClientBookingsTab.Upcoming, ClientBookingsTab.Past, ClientBookingsTab.Cancelled])('filters %s before pagination and counts only that tab', async (tab) => {
+    mockPrisma.booking.findMany.mockResolvedValue([]);
+    mockPrisma.booking.count.mockResolvedValue(60);
+    const result = await handler.execute('cl-1', 2, 50, tab);
+    const where = mockPrisma.booking.findMany.mock.calls[0][0].where;
+    expect(where.clientId).toBe('cl-1');
+    expect(where.status).toEqual(tab === ClientBookingsTab.Cancelled ? { in: ['CANCELLED', 'CANCEL_REQUESTED'] } : { notIn: ['CANCELLED', 'CANCEL_REQUESTED'] });
+    if (tab !== ClientBookingsTab.Cancelled) expect(where.scheduledAt).toEqual({ [tab === ClientBookingsTab.Upcoming ? 'gt' : 'lte']: expect.any(Date) });
+    expect(mockPrisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({ where, skip: 50, take: 50 }));
+    expect(mockPrisma.booking.count).toHaveBeenCalledWith({ where });
+    expect(result.total).toBe(60);
+  });
+
+  it('finds the next appointment before paging despite more than 50 historical rows', async () => {
+    const rows = [
+      ...Array.from({ length: 60 }, (_, i) => ({ ...baseBooking, id: `old-${i}`, scheduledAt: new Date(0) })),
+      { ...baseBooking, id: 'next', scheduledAt: new Date(Date.now() + 86400000) },
+      { ...baseBooking, id: 'later', scheduledAt: new Date(Date.now() + 172800000) },
+      { ...baseBooking, id: 'cancelled', status: 'CANCELLED', scheduledAt: new Date(Date.now() + 1000) },
+    ];
+    const select = (where: { clientId: string; status?: { notIn: string[] }; scheduledAt?: { gt: Date } }) => rows.filter((row) => row.clientId === where.clientId && (!where.status || !where.status.notIn.includes(row.status)) && (!where.scheduledAt || row.scheduledAt > where.scheduledAt.gt));
+    mockPrisma.booking.findMany.mockImplementation(async ({ where, skip, take }) => select(where).sort((a, b) => +a.scheduledAt - +b.scheduledAt).slice(skip, skip + take));
+    mockPrisma.booking.count.mockImplementation(async ({ where }) => select(where).length);
+    for (const relation of [mockPrisma.employee, mockPrisma.service, mockPrisma.branch, mockPrisma.invoice]) relation.findMany.mockResolvedValue([]);
+    const result = await handler.execute('cl-1', 1, 1, ClientBookingsTab.Upcoming);
+    expect(result.items.map((row) => row.id)).toEqual(['next']);
+    expect(result.total).toBe(2);
+    expect(mockPrisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({ orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }], take: 1 }));
   });
 
   it('returns empty list when no bookings', async () => {

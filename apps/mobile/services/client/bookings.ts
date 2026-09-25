@@ -212,6 +212,7 @@ interface CreateBookingData {
 }
 
 interface ListParams {
+  tab?: 'upcoming' | 'past' | 'cancelled';
   status?: string | string[];
   page?: number;
   limit?: number;

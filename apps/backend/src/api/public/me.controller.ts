@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Query, Param, Body, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Patch, Query, Param, Body, UseGuards, ParseUUIDPipe, ParseEnumPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
@@ -7,7 +7,7 @@ import { GetMeHandler } from '../../modules/identity/client-auth/get-me.handler'
 import { UpdateClientProfileHandler } from '../../modules/identity/client-auth/update-client-profile.handler';
 import { UpdateClientProfileDto } from '../../modules/identity/client-auth/update-client-profile.dto';
 import { ListClientInvoicesHandler } from '../../modules/finance/list-client-invoices/list-client-invoices.handler';
-import { ListClientBookingsHandler } from '../../modules/bookings/client/list-client-bookings.handler';
+import { ListClientBookingsHandler, ClientBookingsTab } from '../../modules/bookings/client/list-client-bookings.handler';
 import { ClientCancelBookingHandler } from '../../modules/bookings/client/client-cancel-booking.handler';
 import { ClientCancelBookingDto } from '../../modules/bookings/client/client-cancel-booking.dto';
 import { ClientRescheduleBookingHandler } from '../../modules/bookings/client/client-reschedule-booking.handler';
@@ -56,7 +56,17 @@ export class PublicMeController {
   @ApiOperation({ summary: 'List client invoices' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Paginated invoices list' } })
+  @ApiOkResponse({ schema: {
+    type: 'object', description: 'Paginated invoices with the full client outstanding balance',
+    required: ['items', 'total', 'page', 'pageSize', 'outstandingBalance'],
+    properties: {
+      items: { type: 'array', items: { type: 'object' } },
+      total: { type: 'integer', minimum: 0 },
+      page: { type: 'integer', minimum: 1 },
+      pageSize: { type: 'integer', minimum: 1 },
+      outstandingBalance: { type: 'integer', minimum: 0, description: 'Outstanding balance across all client invoices, in halalas' },
+    },
+  } })
   async invoicesEndpoint(
     @ClientSession() session: { id: string },
     @Query('page') page?: string,
@@ -71,6 +81,7 @@ export class PublicMeController {
 
   @Get('bookings')
   @ApiOperation({ summary: 'List client bookings' })
+  @ApiQuery({ name: 'tab', required: false, enum: ClientBookingsTab })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
   @ApiOkResponse({ schema: { type: 'object', description: 'Paginated bookings list' } })
@@ -78,11 +89,13 @@ export class PublicMeController {
     @ClientSession() session: { id: string },
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('tab', new ParseEnumPipe(ClientBookingsTab, { optional: true })) tab?: ClientBookingsTab,
   ) {
     return this.listBookings.execute(
       session.id,
       page ? parseInt(page, 10) : 1,
       pageSize ? parseInt(pageSize, 10) : 10,
+      tab,
     );
   }
 

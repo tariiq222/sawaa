@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import type { ClientInvoiceItem } from '@sawaa/shared';
 import { getMyInvoicesApi, requestRefundApi } from './account.api';
 import { initPayment } from '@/features/booking/booking.api';
@@ -18,9 +18,12 @@ interface InvoicesTabProps {
 }
 
 export function InvoicesTab({ locale }: InvoicesTabProps) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['client', 'invoices'],
-    queryFn: () => getMyInvoicesApi(),
+  const tt = useT();
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useInfiniteQuery({
+    queryKey: ['client', 'invoices', 'infinite'],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => getMyInvoicesApi(pageParam, 50),
+    getNextPageParam: (last) => last.page * last.pageSize < last.total ? last.page + 1 : undefined,
   });
 
   if (isLoading) {
@@ -35,11 +38,11 @@ export function InvoicesTab({ locale }: InvoicesTabProps) {
 
   // A failed/expired fetch must surface a distinct error + retry state instead
   // of collapsing into the "you have nothing" empty state.
-  if (isError) {
+  if (isError && !data) {
     return <AccountLoadError onRetry={() => void refetch()} />;
   }
 
-  const invoices = data?.items ?? [];
+  const invoices = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (invoices.length === 0) {
     return <InvoicesEmpty />;
@@ -50,6 +53,13 @@ export function InvoicesTab({ locale }: InvoicesTabProps) {
       {invoices.map((inv) => (
         <InvoiceCard key={inv.id} invoice={inv} locale={locale} />
       ))}
+      {isFetchNextPageError && <AccountLoadError onRetry={() => void fetchNextPage()} />}
+      {hasNextPage && (
+        <button type="button" disabled={isFetchingNextPage} onClick={() => void fetchNextPage()}
+          className="self-center rounded-full border border-[var(--sw-neutral-200)] px-5 py-2 text-sm font-semibold disabled:opacity-60">
+          {tt(isFetchingNextPage ? 'common.loading' : 'common.loadMore')}
+        </button>
+      )}
     </div>
   );
 }

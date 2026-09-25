@@ -91,8 +91,9 @@ export default function AppointmentsScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const [tab, setTab] = useState<TabKey>('upcoming');
+  const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
-  const { data, isLoading, isError, isRefetching, refetch } = useClientBookings({ limit: 50 });
+  const { data, isLoading, isError, isRefetching, refetch } = useClientBookings({ tab, page, limit: 50 });
   const bookings = data?.items ?? [];
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
@@ -216,7 +217,7 @@ export default function AppointmentsScreen() {
               return (
                 <Pressable
                   key={tabItem.key}
-                  onPress={() => setTab(tabItem.key)}
+                  onPress={() => { setTab(tabItem.key); setPage(1); }}
                   style={[styles.tabBtn, isActive && styles.tabBtnActive]}
                   accessibilityRole="tab"
                   accessibilityLabel={t(tabItem.a11yKey)}
@@ -290,6 +291,16 @@ export default function AppointmentsScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
+        ListFooterComponent={
+          <View style={[styles.tabsRow, { flexDirection: dir.row }]}>
+            {page > 1 && <Pressable accessibilityRole="button" onPress={() => setPage((value) => value - 1)} style={styles.tabBtn}>
+              <Text style={styles.metaText}>{t('common.back')}</Text>
+            </Pressable>}
+            {data?.meta.hasNextPage && <Pressable accessibilityRole="button" onPress={() => setPage((value) => value + 1)} style={styles.tabBtn}>
+              <Text style={styles.metaText}>{t('common.next')}</Text>
+            </Pressable>}
+          </View>
+        }
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}

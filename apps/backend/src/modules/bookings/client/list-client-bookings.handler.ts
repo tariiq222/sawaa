@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { BookingStatus, Prisma } from '@prisma/client';
+
 import { PrismaService } from '../../../infrastructure/database';
+
+export enum ClientBookingsTab { Upcoming = 'upcoming', Past = 'past', Cancelled = 'cancelled' }
 
 interface ClientBookingItem {
   id: string;
@@ -34,21 +38,31 @@ export interface ListClientBookingsResult {
 export class ListClientBookingsHandler {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(clientId: string, page = 1, pageSize = 10): Promise<ListClientBookingsResult> {
+  async execute(clientId: string, page = 1, pageSize = 10, tab?: ClientBookingsTab): Promise<ListClientBookingsResult> {
     // Clamp pagination: this handler is reachable from the public /me endpoint
     // with raw query strings, so guard against huge/negative values here.
     const safePage = Math.max(1, Math.floor(Number(page)) || 1);
     const safePageSize = Math.min(100, Math.max(1, Math.floor(Number(pageSize)) || 10));
     const skip = (safePage - 1) * safePageSize;
 
+    const cancelled = [BookingStatus.CANCELLED, BookingStatus.CANCEL_REQUESTED];
+    const now = new Date();
+    const where: Prisma.BookingWhereInput = {
+      clientId,
+      ...(tab === ClientBookingsTab.Cancelled ? { status: { in: cancelled } }
+        : tab ? {
+          status: { notIn: cancelled },
+          scheduledAt: tab === ClientBookingsTab.Upcoming ? { gt: now } : { lte: now },
+        } : {}),
+    };
     const [bookings, total] = await Promise.all([
       this.prisma.booking.findMany({
-        where: { clientId },
-        orderBy: { scheduledAt: 'desc' },
+        where,
+        orderBy: [{ scheduledAt: tab === ClientBookingsTab.Upcoming ? 'asc' : 'desc' }, { id: 'asc' }],
         skip,
         take: safePageSize,
       }),
-      this.prisma.booking.count({ where: { clientId } }),
+      this.prisma.booking.count({ where }),
     ]);
 
     if (bookings.length === 0) {

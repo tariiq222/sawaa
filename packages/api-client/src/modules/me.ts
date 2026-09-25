@@ -55,9 +55,10 @@ export async function getMyInvoices(
 export async function getMyBookings(
   page = 1,
   pageSize = 10,
+  tab?: 'upcoming' | 'past' | 'cancelled',
 ): Promise<ClientBookingListResponse> {
   return apiRequest<ClientBookingListResponse>(
-    `/public/me/bookings?page=${page}&pageSize=${pageSize}`,
+    `/public/me/bookings?page=${page}&pageSize=${pageSize}${tab ? `&tab=${tab}` : ''}`,
     { credentials: 'include' },
   );
 }

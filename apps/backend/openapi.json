@@ -34235,6 +34235,20 @@
         "operationId": "MobileClientBookingsController_listMyBookings_v1",
         "parameters": [
           {
+            "description": "Filter by appointment tab before pagination",
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "enum": [
+                "upcoming",
+                "past",
+                "cancelled"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "description": "Page number (1-based)",
             "in": "query",
             "name": "page",
@@ -39762,6 +39776,19 @@
             "schema": {
               "type": "number"
             }
+          },
+          {
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "enum": [
+                "upcoming",
+                "past",
+                "cancelled"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -41114,7 +41141,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Paginated invoices list",
+                  "description": "Paginated invoices with the full client outstanding balance",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "outstandingBalance": {
+                      "description": "Outstanding balance across all client invoices, in halalas",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize",
+                    "outstandingBalance"
+                  ],
                   "type": "object"
                 }
               }

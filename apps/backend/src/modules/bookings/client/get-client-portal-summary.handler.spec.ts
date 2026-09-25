@@ -5,7 +5,7 @@ import { GetClientPortalSummaryHandler } from './get-client-portal-summary.handl
 describe('GetClientPortalSummaryHandler', () => {
   const prisma = {
     booking: { count: jest.fn(), findFirst: jest.fn() },
-    invoice: { aggregate: jest.fn() },
+    $queryRaw: jest.fn(),
   };
   const handler = new GetClientPortalSummaryHandler(prisma as unknown as PrismaService);
 
@@ -15,7 +15,7 @@ describe('GetClientPortalSummaryHandler', () => {
     const lastVisit = new Date('2026-05-01T10:00:00Z');
     prisma.booking.count.mockResolvedValue(8);
     prisma.booking.findFirst.mockResolvedValue({ scheduledAt: lastVisit });
-    prisma.invoice.aggregate.mockResolvedValue({ _sum: { total: 250 } });
+    prisma.$queryRaw.mockResolvedValue([{ outstandingBalance: 250 }]);
 
     await expect(handler.execute('client-1')).resolves.toEqual({
       totalBookings: 8,
@@ -34,12 +34,19 @@ describe('GetClientPortalSummaryHandler', () => {
   it('returns null last visit and zero balance when nothing is owed', async () => {
     prisma.booking.count.mockResolvedValue(0);
     prisma.booking.findFirst.mockResolvedValue(null);
-    prisma.invoice.aggregate.mockResolvedValue({ _sum: { total: null } });
+    prisma.$queryRaw.mockResolvedValue([{ outstandingBalance: 0 }]);
 
     await expect(handler.execute('client-1')).resolves.toEqual({
       totalBookings: 0,
       lastVisit: null,
       outstandingBalance: 0,
     });
+  });
+  it('uses the client-wide remaining balance from the database', async () => {
+    prisma.booking.count.mockResolvedValue(0);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    prisma.$queryRaw.mockResolvedValue([{ outstandingBalance: 15000 }]);
+    expect((await handler.execute('client-1')).outstandingBalance).toBe(15000);
+    expect(prisma.$queryRaw.mock.calls[0][0].values).toEqual(['client-1']);
   });
 });

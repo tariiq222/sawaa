@@ -82,6 +82,8 @@ export interface ClientInvoiceItem {
 }
 
 export interface ClientInvoiceListResponse {
+  /** Remaining payable balance across all invoices, in integer halalas. */
+  outstandingBalance: number;
   items: ClientInvoiceItem[];
   total: number;
   page: number;

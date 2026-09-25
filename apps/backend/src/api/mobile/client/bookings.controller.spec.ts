@@ -111,6 +111,16 @@ describe('MobileClientBookingsController (e2e)', () => {
   });
 
   describe('GET /mobile/client/bookings', () => {
+    it('passes a validated tab and pagination with the authenticated client scope', async () => {
+      mockList.execute.mockResolvedValue({ items: [], meta: { total: 0 } });
+      await request(app.getHttpServer()).get('/mobile/client/bookings?tab=upcoming&page=2&limit=50').expect(200);
+      expect(mockList.execute).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'client-1', clientTab: 'upcoming', page: 2, limit: 50 }));
+    });
+    it('rejects invalid tabs and caller-provided client identity', async () => {
+      await request(app.getHttpServer()).get('/mobile/client/bookings?tab=invalid').expect(400);
+      await request(app.getHttpServer()).get('/mobile/client/bookings?tab=past&clientId=other-client').expect(400);
+      expect(mockList.execute).not.toHaveBeenCalled();
+    });
     it('returns 200 with paginated bookings', async () => {
       mockList.execute.mockResolvedValue({ data: [{ id: 'b-1' }], total: 1, page: 1, limit: 20 });
 

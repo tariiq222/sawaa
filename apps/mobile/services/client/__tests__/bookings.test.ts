@@ -56,6 +56,12 @@ beforeEach(() => {
 });
 
 describe('clientBookingsService.list', () => {
+  it('passes the selected tab and next page to the server and retains pagination metadata', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: { items: [sampleRow], meta: { total: 51, page: 2, limit: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true } } });
+    const result = await clientBookingsService.list({ tab: 'upcoming', page: 2, limit: 50 });
+    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', { params: { tab: 'upcoming', page: 2, limit: 50 } });
+    expect(result.meta).toEqual({ total: 51, page: 2, perPage: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true });
+  });
   it('normalizes mapped list rows and canonical limit metadata', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: {
       items: [mappedBookingWire],

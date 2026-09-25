@@ -101,6 +101,11 @@ describe('getMe', () => {
 })
 
 describe('getMyBookings', () => {
+  it('sends the selected booking tab to the server', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ items: [], total: 0, page: 1, pageSize: 50 }))
+    await getMyBookings(1, 50, 'upcoming')
+    expect(vi.mocked(fetch).mock.calls[0]![0]).toBe('http://api.test/api/v1/public/me/bookings?page=1&pageSize=50&tab=upcoming')
+  })
   it('GETs /public/me/bookings with credentials and unwraps the envelope', async () => {
     const fakeBookings = { items: [], page: 2, pageSize: 5 } as unknown as ClientBookingListResponse
     vi.mocked(fetch).mockResolvedValueOnce(

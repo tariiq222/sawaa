@@ -6,6 +6,7 @@ import {
 } from '@/services/client';
 
 interface UseClientBookingsParams {
+  tab?: 'upcoming' | 'past' | 'cancelled';
   status?: string;
   page?: number;
   limit?: number;

@@ -14,7 +14,7 @@ import {
   ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse,
 } from '@nestjs/swagger';
 import { BookingStatus, CancellationReason, DeliveryType } from '@prisma/client';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
@@ -79,6 +79,9 @@ export class MobileCancelBookingDto {
 }
 
 export class MobileListBookingsDto {
+  @ApiPropertyOptional({ description: 'Filter by appointment tab before pagination', enum: ['upcoming', 'past', 'cancelled'] })
+  @IsOptional() @IsIn(['upcoming', 'past', 'cancelled']) tab?: 'upcoming' | 'past' | 'cancelled';
+
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
 
@@ -150,6 +153,7 @@ export class MobileClientBookingsController {
       page: q.page ?? 1,
       limit: q.limit ?? 20,
       status: q.status,
+      clientTab: q.tab,
     });
   }
 
