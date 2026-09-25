@@ -1,3 +1,7 @@
+> VERIFIED: Build 1.0.0 (5) is Ready to Test in Sawaa Internal (1 tester, 1 build). App Store Connect team invitation accepted, tester added, TestFlight invitation status Invited. Phone installation remains unverified. No public App Store submission.
+
+> Upload checkpoint (historical): build 1.0.0 (5) uploaded successfully using local Apple altool; Apple processing became VALID in App Store Connect. The API key stayed private/local and was not shared with Expo. Invitation acceptance, compliance save, and internal-group attachment were still pending at that checkpoint; their later verification is recorded above. Phone installation remains unverified. Evidence: [upload](releases/2026-09-24/evidence/testflight-build5-upload.json). Earlier no-upload/API-pending entries below are historical.
+
 # سجل App Store Connect
 
 الحالة بتاريخ 2026-09-24: مسودة محفوظة، بلا رفع بناء أو إرسال مراجعة مثبت.
