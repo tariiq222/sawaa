@@ -36,6 +36,10 @@ export type BookingType = 'individual' | 'walk_in' | 'group'
  */
 export type DeliveryType = 'IN_PERSON' | 'ONLINE'
 
+/** Values returned by the dashboard booking mapper (distinct from request enums). */
+export type BookingResponseType = 'in_person' | 'walk_in' | 'group'
+export type BookingResponseDeliveryType = 'in_person' | 'online'
+
 /**
  * Origin of a booking — mirrors the backend Prisma `BookingSource` enum.
  * RECEPTION = created by staff at the front desk (dashboard / mobile-employee).
@@ -45,15 +49,13 @@ export type BookingSource = 'RECEPTION' | 'ONLINE'
 
 export interface BookingListItem {
   id: string
-  date: string
-  startTime: string
-  endTime: string
+  date: string | null
+  startTime: string | null
+  endTime: string | null
   status: BookingStatus
-  type: BookingType
-  deliveryType: DeliveryType | null
+  type: BookingResponseType
+  deliveryType: BookingResponseDeliveryType | null
   checkedInAt: string | null
-  isWalkIn: boolean
-  bookedPrice: number | null
   notes: string | null
   adminNotes: string | null
   createdAt: string
@@ -68,17 +70,20 @@ export interface BookingListItem {
     user: { firstName: string; lastName: string }
     specialty: string | null
     specialtyAr: string | null
-  }
-  service: { nameAr: string; nameEn: string; price: number; duration: number }
+  } | null
+  service: { id: string; nameAr: string; nameEn: string; price: number; duration: number } | null
 
   // ─── Snapshot fields (denormalized at booking creation for stable history) ───
   priceSnapshot: number | null
   durationMinutesSnapshot: number | null
   branchNameSnapshot: string | null
-  employeeNameSnapshot: string | null
-  serviceNameSnapshot: string | null
   categoryNameSnapshot: string | null
-  departmentNameSnapshot: string | null
+}
+
+/** Dashboard write endpoints return a Prisma booking row, not mapBookingRow. */
+export interface BookingWriteResult {
+  id: string
+  status: Uppercase<BookingStatus>
 }
 
 export interface BookingStats {

@@ -3,6 +3,20 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { BOOKING_STATUSES } from './booking'
+import type { BookingListItem } from './booking'
+
+// Compile-time fixture for fields produced by mapBookingRow. Request enums are
+// uppercase, while read responses use lowercase values and nullable relations.
+const mappedReadFields = {
+  type: 'in_person',
+  deliveryType: 'online',
+  date: null,
+  startTime: null,
+  endTime: null,
+  employee: null,
+  service: null,
+} satisfies Pick<BookingListItem, 'type' | 'deliveryType' | 'date' | 'startTime' | 'endTime' | 'employee' | 'service'>
+void mappedReadFields
 
 // Enum-drift gate for the hand-written api-client.
 //
