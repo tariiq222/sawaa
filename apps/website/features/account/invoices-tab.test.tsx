@@ -70,8 +70,32 @@ describe('InvoicesTab', () => {
     vi.unstubAllGlobals();
   });
 
+  it('loads invoices beyond the first 50 while preserving earlier cards', async () => {
+    getInvoicesMock.mockResolvedValueOnce({ items: Array.from({ length: 50 }, (_, i) => invoice({ id: `inv-${i}`, number: i })), total: 51, page: 1, outstandingBalance: 0, pageSize: 50 });
+    getInvoicesMock.mockResolvedValueOnce({ items: [invoice({ id: 'inv-51', serviceName: 'Later invoice' })], total: 51, page: 2, outstandingBalance: 0, pageSize: 50 });
+    render(wrap('ar', <InvoicesTab locale="ar" />));
+    fireEvent.click(await screen.findByRole('button', { name: 'عرض المزيد' }));
+    expect(await screen.findByText('Later invoice')).toBeTruthy();
+    expect(getInvoicesMock).toHaveBeenLastCalledWith(2, 50);
+    expect(screen.getAllByText('جلسة إرشاد أسري')).toHaveLength(50);
+    expect(screen.queryByRole('button', { name: 'عرض المزيد' })).toBeNull();
+  });
+
+  it('retains loaded invoices when the next page fails and retries that page', async () => {
+    getInvoicesMock.mockResolvedValueOnce({ items: [invoice()], total: 51, page: 1, outstandingBalance: 0, pageSize: 50 });
+    getInvoicesMock.mockRejectedValueOnce(new Error('next page unavailable'));
+    getInvoicesMock.mockResolvedValueOnce({ items: [invoice({ id: 'last', serviceName: 'Recovered invoice' })], total: 51, page: 2, outstandingBalance: 0, pageSize: 50 });
+    render(wrap('ar', <InvoicesTab locale="ar" />));
+    fireEvent.click(await screen.findByRole('button', { name: 'عرض المزيد' }));
+    const retry = await screen.findByRole('button', { name: /إعادة المحاولة/ });
+    expect(screen.getByText('جلسة إرشاد أسري')).toBeTruthy();
+    fireEvent.click(retry);
+    expect(await screen.findByText('Recovered invoice')).toBeTruthy();
+    expect(getInvoicesMock).toHaveBeenLastCalledWith(2, 50);
+  });
+
   it('renders the empty state when there are no invoices', async () => {
-    getInvoicesMock.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
+    getInvoicesMock.mockResolvedValue({ items: [], total: 0, page: 1, outstandingBalance: 0, pageSize: 50 });
     render(wrap('ar', <InvoicesTab locale="ar" />));
     expect(await screen.findByText('لا توجد فواتير بعد')).toBeTruthy();
   });
@@ -92,7 +116,7 @@ describe('InvoicesTab', () => {
       items: [invoice()],
       total: 1,
       page: 1,
-      pageSize: 50,
+      outstandingBalance: 0, pageSize: 50,
     });
     render(wrap('ar', <InvoicesTab locale="ar" />));
 
@@ -108,7 +132,7 @@ describe('InvoicesTab', () => {
       ],
       total: 2,
       page: 1,
-      pageSize: 50,
+      outstandingBalance: 0, pageSize: 50,
     });
     render(wrap('ar', <InvoicesTab locale="ar" />));
 
@@ -129,7 +153,7 @@ describe('InvoicesTab', () => {
       items: [invoice()],
       total: 1,
       page: 1,
-      pageSize: 50,
+      outstandingBalance: 0, pageSize: 50,
     });
     initPaymentMock.mockResolvedValue({ paymentId: 'pay_1', redirectUrl: 'https://moyasar.test/redirect' });
     render(wrap('ar', <InvoicesTab locale="ar" />));
@@ -145,7 +169,7 @@ describe('InvoicesTab', () => {
       items: [invoice()],
       total: 1,
       page: 1,
-      pageSize: 50,
+      outstandingBalance: 0, pageSize: 50,
     });
     initPaymentMock.mockRejectedValue(new Error('boom'));
     render(wrap('ar', <InvoicesTab locale="ar" />));
@@ -161,7 +185,7 @@ describe('InvoicesTab', () => {
       items: [invoice({ status: 'PAID', paymentStatus: 'COMPLETED' })],
       total: 1,
       page: 1,
-      pageSize: 50,
+      outstandingBalance: 0, pageSize: 50,
     });
     requestRefundMock.mockResolvedValue({ status: 'REQUESTED' });
     render(wrap('ar', <InvoicesTab locale="ar" />));
@@ -181,7 +205,7 @@ describe('InvoicesTab', () => {
       items: [invoice()],
       total: 1,
       page: 1,
-      pageSize: 50,
+      outstandingBalance: 0, pageSize: 50,
     });
     render(wrap('ar', <InvoicesTab locale="ar" />));
 

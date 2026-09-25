@@ -81,8 +81,9 @@ export default function AppointmentsScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const [tab, setTab] = useState<TabKey>('upcoming');
+  const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
-  const { data, isLoading, isError, isRefetching, refetch } = useClientBookings({ limit: 50 });
+  const { data, isLoading, isError, isRefetching, refetch } = useClientBookings({ tab, page, limit: 50 });
   const bookings = data?.items ?? [];
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
@@ -206,7 +207,7 @@ export default function AppointmentsScreen() {
             label: dir.isRTL ? tabItem.ar : tabItem.en,
           }))}
           value={tab}
-          onChange={setTab}
+          onChange={(value) => { setTab(value); setPage(1); }}
         />
       </Animated.View>
     </View>
@@ -257,6 +258,20 @@ export default function AppointmentsScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
+        ListFooterComponent={
+          <View style={[styles.pageControls, { flexDirection: dir.row }]}>
+            {page > 1 && (
+              <Pressable accessibilityRole="button" onPress={() => setPage((value) => value - 1)} style={styles.pageButton}>
+                <Text style={styles.pageButtonText}>{t('common.back')}</Text>
+              </Pressable>
+            )}
+            {data?.meta.hasNextPage && (
+              <Pressable accessibilityRole="button" onPress={() => setPage((value) => value + 1)} style={styles.pageButton}>
+                <Text style={styles.pageButtonText}>{t('common.next')}</Text>
+              </Pressable>
+            )}
+          </View>
+        }
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -287,6 +302,14 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     marginTop: 2,
     paddingHorizontal: sawaaSpacing.xs,
   },
+  pageControls: { justifyContent: 'center', gap: sawaaSpacing.sm },
+  pageButton: {
+    paddingVertical: sawaaSpacing.sm,
+    paddingHorizontal: sawaaSpacing.md,
+    borderRadius: sawaaRadius.pill,
+    backgroundColor: withAlpha(colors.teal[500], 0.12),
+  },
+  pageButtonText: { color: colors.ink[900], fontSize: sawaaType.caption.fontSize },
   skeletonWrap: { gap: sawaaSpacing.md, marginTop: sawaaSpacing.sm },
   card: { padding: 0, marginBottom: sawaaSpacing.lg },
   cardInner: { padding: sawaaSpacing.md, gap: sawaaSpacing.md },

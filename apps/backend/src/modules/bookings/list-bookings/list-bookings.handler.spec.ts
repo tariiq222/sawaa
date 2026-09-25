@@ -3,6 +3,20 @@ import { buildPrisma, mockBooking } from '../testing/booking-test-helpers';
 import { BookingStatus, DeliveryType } from '@prisma/client';
 
 describe('ListBookingsHandler', () => {
+  it.each([
+    ['upcoming', { notIn: ['COMPLETED', 'NO_SHOW', 'CANCELLED', 'CANCEL_REQUESTED', 'EXPIRED'] }],
+    ['past', { in: ['COMPLETED', 'NO_SHOW'] }],
+    ['cancelled', { in: ['CANCELLED', 'CANCEL_REQUESTED', 'EXPIRED'] }],
+  ] as const)('filters the %s tab before pagination and counting', async (tab, status) => {
+    const prisma = buildPrisma();
+    prisma.booking.findMany = jest.fn().mockResolvedValue([]);
+    await new ListBookingsHandler(prisma as never).execute({ clientId: 'client-1', page: 2, limit: 50, clientTab: tab });
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { clientId: 'client-1', AND: [{ status }] }, skip: 50, take: 50,
+    }));
+    expect(prisma.booking.count).toHaveBeenCalledWith({ where: { clientId: 'client-1', AND: [{ status }] } });
+  });
+
   it('returns paginated bookings', async () => {
     const prisma = buildPrisma();
     prisma.booking.findMany = jest.fn().mockResolvedValue([mockBooking]);

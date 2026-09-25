@@ -7,7 +7,6 @@ import { getMyInvoicesApi } from './account.api';
 import { useT } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
 import { halalasToSar } from '@/lib/money';
-import { isInvoicePayable } from './status-labels';
 import { AccountLoadError } from './load-error';
 import { Calendar, Clock, User as UserIcon, Video, AlertCircle, ArrowRight, CalendarCheck, CalendarRange, Wallet } from 'lucide-react';
 
@@ -25,8 +24,17 @@ export function OverviewTab({ locale, onGoToInvoices }: OverviewTabProps) {
     isError: bookingsError,
     refetch: refetchBookings,
   } = useQuery({
-    queryKey: ['client', 'bookings'],
-    queryFn: () => getMyBookingsApi(1, 50),
+    queryKey: ['client', 'bookings', 'upcoming', 'overview'],
+    queryFn: () => getMyBookingsApi(1, 1, 'upcoming'),
+  });
+  const {
+    data: allBookingsData,
+    isLoading: allBookingsLoading,
+    isError: allBookingsError,
+    refetch: refetchAllBookings,
+  } = useQuery({
+    queryKey: ['client', 'bookings', 'total', 'overview'],
+    queryFn: () => getMyBookingsApi(1, 1),
   });
   const {
     data: invoicesData,
@@ -38,7 +46,7 @@ export function OverviewTab({ locale, onGoToInvoices }: OverviewTabProps) {
     queryFn: () => getMyInvoicesApi(),
   });
 
-  if (bookingsLoading || invoicesLoading) {
+  if (bookingsLoading || allBookingsLoading || invoicesLoading) {
     return (
       <div className="flex flex-col gap-3">
         {[0, 1].map((i) => (
@@ -50,36 +58,27 @@ export function OverviewTab({ locale, onGoToInvoices }: OverviewTabProps) {
 
   // A failed/expired fetch on either query must surface a distinct error +
   // retry state instead of rendering misleading zeros / empty overview tiles.
-  if (bookingsError || invoicesError) {
+  if (bookingsError || allBookingsError || invoicesError) {
     return (
       <AccountLoadError
         onRetry={() => {
           if (bookingsError) void refetchBookings();
+          if (allBookingsError) void refetchAllBookings();
           if (invoicesError) void refetchInvoices();
         }}
       />
     );
   }
 
-  const bookings = bookingsData?.items ?? [];
   const invoices = invoicesData?.items ?? [];
-  const now = new Date();
+  const next = bookingsData?.items[0] ?? null;
 
-  const upcoming = bookings
-    .filter((b) => new Date(b.scheduledAt) > now && b.status !== 'CANCELLED')
-    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
-  const next = upcoming[0] ?? null;
-
-  const unpaidInvoices = invoices.filter((inv) => isInvoicePayable(inv.status));
-  // NOTE (H.7): this sums only the first invoices page (getMyInvoicesApi defaults
-  // to page 1, size 50). The API returns no aggregate unpaid-total field, so for
-  // a client with >50 invoices this is a page-1 figure, not the true grand total.
-  const unpaidTotal = unpaidInvoices.reduce((sum, inv) => sum + inv.total, 0);
-  const currency = unpaidInvoices[0]?.currency ?? invoices[0]?.currency ?? 'SAR';
+  const unpaidTotal = invoicesData?.outstandingBalance ?? 0;
+  const currency = invoices[0]?.currency ?? 'SAR';
 
   return (
     <div className="flex flex-col gap-6">
-      {unpaidInvoices.length > 0 && (
+      {unpaidTotal > 0 && (
         <div
           role="alert"
           className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-sm"
@@ -124,12 +123,12 @@ export function OverviewTab({ locale, onGoToInvoices }: OverviewTabProps) {
         <StatTile
           icon={<CalendarCheck size={16} aria-hidden="true" />}
           label={tt('account.overview.upcomingCount')}
-          value={String(upcoming.length)}
+          value={String(bookingsData?.total ?? 0)}
         />
         <StatTile
           icon={<CalendarRange size={16} aria-hidden="true" />}
           label={tt('account.overview.totalCount')}
-          value={String(bookingsData?.total ?? bookings.length)}
+          value={String(allBookingsData?.total ?? 0)}
         />
         <StatTile
           icon={<Wallet size={16} aria-hidden="true" />}

@@ -38,6 +38,9 @@ export default function BookingPaymentScreen() {
     durationOptionId?: string;
     amount?: string;
     currency?: string;
+    /** Set when this screen is re-entered to resume an existing invoice. */
+    bookingId?: string;
+    invoiceId?: string;
   }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -48,6 +51,19 @@ export default function BookingPaymentScreen() {
   const f700 = getFontName(dir.locale, '700');
   const [method, setMethod] = useState<Method>('card');
   const [submitting, setSubmitting] = useState(false);
+  // The booking row (and its invoice) is created on the first attempt. Holding
+  // it here means a failed payment start or an abandoned gateway resumes THAT
+  // invoice instead of creating a second booking for the same slot. A resume
+  // also arrives through the route params when the success screen sends the
+  // user back to pay the invoice it already holds.
+  const [createdBooking, setCreatedBooking] = useState<{
+    bookingId: string;
+    invoiceId: string | null;
+  } | null>(
+    params.bookingId && params.invoiceId
+      ? { bookingId: params.bookingId, invoiceId: params.invoiceId }
+      : null,
+  );
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
 
@@ -63,30 +79,39 @@ export default function BookingPaymentScreen() {
   ];
 
   const canPay =
-    !!params.serviceId &&
-    !!params.employeeId &&
-    !!params.branchId &&
-    !!params.scheduledAt &&
+    (!!createdBooking ||
+      (!!params.serviceId &&
+        !!params.employeeId &&
+        !!params.branchId &&
+        !!params.scheduledAt)) &&
     !submitting;
 
   const handlePay = async () => {
     if (!canPay) return;
     setSubmitting(true);
     try {
-      const booking = await clientBookingsService.create({
-        branchId: params.branchId!,
-        employeeId: params.employeeId!,
-        serviceId: params.serviceId!,
-        scheduledAt: params.scheduledAt!,
-        durationOptionId: params.durationOptionId,
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Reuse the booking created by a previous attempt on this screen. Only a
+      // first attempt (or one whose create call itself failed) creates a row.
+      let booking = createdBooking;
+      if (!booking) {
+        const created = await clientBookingsService.create({
+          branchId: params.branchId!,
+          employeeId: params.employeeId!,
+          serviceId: params.serviceId!,
+          scheduledAt: params.scheduledAt!,
+          durationOptionId: params.durationOptionId,
+          deliveryType: params.deliveryType,
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        booking = { bookingId: created.id, invoiceId: created.invoiceId ?? null };
+        setCreatedBooking(booking);
+      }
 
       if (method === 'bank_transfer') {
         if (!booking.invoiceId) {
           router.replace({
             pathname: '/(client)/booking/success',
-            params: { bookingId: booking.id },
+            params: { bookingId: booking.bookingId },
           });
           return;
         }
@@ -95,7 +120,7 @@ export default function BookingPaymentScreen() {
           params: {
             invoiceId: booking.invoiceId,
             amount: String(total),
-            bookingId: booking.id,
+            bookingId: booking.bookingId,
           },
         });
         return;
@@ -104,7 +129,7 @@ export default function BookingPaymentScreen() {
       if (!booking.invoiceId) {
         router.replace({
           pathname: '/(client)/booking/success',
-          params: { bookingId: booking.id },
+          params: { bookingId: booking.bookingId },
         });
         return;
       }
@@ -129,9 +154,13 @@ export default function BookingPaymentScreen() {
       router.replace({
         pathname: '/(client)/booking/success',
         params: {
-          bookingId: booking.id,
+          bookingId: booking.bookingId,
           invoiceId: booking.invoiceId,
           paymentId: payment.paymentId,
+          // Carried so the success screen can send the user back to THIS
+          // invoice if the payment did not go through.
+          ...(params.amount ? { amount: String(total) } : {}),
+          ...(params.currency ? { currency: params.currency } : {}),
           // 'success' | 'cancel' | 'dismiss' | 'locked' — the success screen
           // uses this to short-circuit to the failed state when the user aborted
           // the gateway and the backend has not confirmed the payment.

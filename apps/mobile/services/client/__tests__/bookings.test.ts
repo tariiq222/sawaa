@@ -56,6 +56,12 @@ beforeEach(() => {
 });
 
 describe('clientBookingsService.list', () => {
+  it('passes the selected tab and next page to the server and retains pagination metadata', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: { items: [sampleRow], meta: { total: 51, page: 2, limit: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true } } });
+    const result = await clientBookingsService.list({ tab: 'upcoming', page: 2, limit: 50 });
+    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', { params: { tab: 'upcoming', page: 2, limit: 50 } });
+    expect(result.meta).toEqual({ total: 51, page: 2, perPage: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true });
+  });
   it('normalizes mapped list rows and canonical limit metadata', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: {
       items: [mappedBookingWire],
@@ -181,6 +187,40 @@ describe('clientBookingsService.create', () => {
     expect(r).toEqual(sampleRow);
     expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
     expect(mockedApi.post.mock.calls[0][1]).not.toHaveProperty('deliveryType');
+  });
+
+  it('sends the chosen online session as the backend DeliveryType enum value', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
+    await clientBookingsService.create({
+      branchId: 'br1',
+      employeeId: 'e1',
+      serviceId: 's1',
+      scheduledAt: '2026-05-01T10:00:00Z',
+      durationOptionId: 'duration-online',
+      deliveryType: 'online',
+    });
+
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', {
+      branchId: 'br1',
+      employeeId: 'e1',
+      serviceId: 's1',
+      scheduledAt: '2026-05-01T10:00:00Z',
+      durationOptionId: 'duration-online',
+      deliveryType: 'ONLINE',
+    });
+  });
+
+  it('sends an in-person session explicitly rather than relying on the server default', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
+    await clientBookingsService.create({
+      branchId: 'br1',
+      employeeId: 'e1',
+      serviceId: 's1',
+      scheduledAt: '2026-05-01T10:00:00Z',
+      deliveryType: 'in_person',
+    });
+
+    expect(mockedApi.post.mock.calls[0][1]).toMatchObject({ deliveryType: 'IN_PERSON' });
   });
 
   it('rejects when slot conflict (409)', async () => {

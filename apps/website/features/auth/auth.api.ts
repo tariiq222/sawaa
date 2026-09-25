@@ -72,9 +72,10 @@ export async function getMeApi(callerSignal?: AbortSignal): Promise<ClientProfil
 export async function getMyBookingsApi(
   page = 1,
   pageSize = 10,
+  tab?: 'upcoming' | 'past' | 'cancelled',
 ): Promise<ClientBookingListResponse> {
   ensureInitialised()
-  return getMyBookings(page, pageSize)
+  return tab ? getMyBookings(page, pageSize, tab) : getMyBookings(page, pageSize)
 }
 
 export async function getMyBookingApi(bookingId: string): Promise<ClientBookingItem> {

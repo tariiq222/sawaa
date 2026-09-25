@@ -6968,6 +6968,15 @@
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
           },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Session delivery channel. Omitted defaults to IN_PERSON.",
+            "example": "IN_PERSON"
+          },
           "durationOptionId": {
             "description": "Specific duration option to resolve price and duration",
             "example": "00000000-0000-0000-0000-000000000000",
@@ -34344,6 +34353,20 @@
         "operationId": "MobileClientBookingsController_listMyBookings_v1",
         "parameters": [
           {
+            "description": "Filter by appointment tab before pagination",
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "enum": [
+                "upcoming",
+                "past",
+                "cancelled"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "description": "Page number (1-based)",
             "in": "query",
             "name": "page",
@@ -39871,6 +39894,19 @@
             "schema": {
               "type": "number"
             }
+          },
+          {
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "enum": [
+                "upcoming",
+                "past",
+                "cancelled"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -41223,7 +41259,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Paginated invoices list",
+                  "description": "Paginated invoices with the full client outstanding balance",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "outstandingBalance": {
+                      "description": "Outstanding balance across all client invoices, in halalas",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize",
+                    "outstandingBalance"
+                  ],
                   "type": "object"
                 }
               }

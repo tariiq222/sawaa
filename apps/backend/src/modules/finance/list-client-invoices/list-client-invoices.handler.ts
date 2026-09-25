@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { getClientOutstandingBalance } from '../client-outstanding-balance.helper';
 
 export interface ClientInvoiceItem {
   id: string;
@@ -28,6 +29,8 @@ export interface ClientInvoiceItem {
 
 export interface ListClientInvoicesResult {
   items: ClientInvoiceItem[];
+  /** Remaining payable balance in integer halalas across all client invoices. */
+  outstandingBalance: number;
   total: number;
   page: number;
   pageSize: number;
@@ -48,7 +51,7 @@ export class ListClientInvoicesHandler {
     // so a client can see and settle an unpaid booking from /account.
     const where = { clientId };
 
-    const [invoices, total] = await Promise.all([
+    const [invoices, total, outstandingBalance] = await Promise.all([
       this.prisma.invoice.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -56,10 +59,11 @@ export class ListClientInvoicesHandler {
         take: safePageSize,
       }),
       this.prisma.invoice.count({ where }),
+      getClientOutstandingBalance(this.prisma, clientId),
     ]);
 
     if (invoices.length === 0) {
-      return { items: [], total, page: safePage, pageSize: safePageSize };
+      return { items: [], outstandingBalance, total, page: safePage, pageSize: safePageSize };
     }
 
     const bookingIds = [...new Set(invoices.map((i) => i.bookingId).filter((id): id is string => !!id))];
@@ -109,6 +113,6 @@ export class ListClientInvoicesHandler {
       };
     });
 
-    return { items, total, page: safePage, pageSize: safePageSize };
+    return { items, outstandingBalance, total, page: safePage, pageSize: safePageSize };
   }
 }

@@ -79,27 +79,59 @@ describe('ClientBookingsList', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows the cancelled tab and excludes cancelled bookings from upcoming/past', async () => {
-    getBookingsMock.mockResolvedValue({
-      items: [
-        booking(),
-        booking({ id: 'bk_2', status: 'CANCELLED', scheduledAt: FUTURE }),
-        booking({ id: 'bk_3', status: 'CANCEL_REQUESTED', scheduledAt: PAST }),
-      ],
-      total: 3,
-      page: 1,
-      pageSize: 50,
+  it('pages within the selected tab and shows the server total rather than loaded count', async () => {
+    getBookingsMock.mockResolvedValueOnce({ items: Array.from({ length: 50 }, (_, i) => booking({ id: `future-${i}` })), total: 51, page: 1, pageSize: 50 });
+    getBookingsMock.mockResolvedValueOnce({ items: [booking({ id: 'future-51', serviceNameAr: 'جلسة لاحقة' })], total: 51, page: 2, pageSize: 50 });
+    render(wrap('ar', <ClientBookingsList locale="ar" />));
+    expect(await screen.findByRole('tab', { name: /القادمة\s*51/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'عرض المزيد' }));
+    expect(await screen.findByText('جلسة لاحقة')).toBeTruthy();
+    expect(getBookingsMock).toHaveBeenLastCalledWith(2, 50, 'upcoming');
+    expect(screen.queryByRole('button', { name: 'عرض المزيد' })).toBeNull();
+  });
+
+  it('requests server filtering so more than 50 older bookings cannot hide upcoming', async () => {
+    const all = [...Array.from({ length: 60 }, (_, i) => booking({ id: `past-${i}`, scheduledAt: PAST })), booking({ id: 'future', serviceNameAr: 'موعد قادم' })];
+    getBookingsMock.mockImplementation(async (page = 1, pageSize = 50, tab) => {
+      const selected = tab === 'upcoming' ? all.filter((item) => item.scheduledAt === FUTURE) : all.filter((item) => item.scheduledAt === PAST);
+      return { items: selected.slice((page - 1) * pageSize, page * pageSize), total: selected.length, page, pageSize };
     });
     render(wrap('ar', <ClientBookingsList locale="ar" />));
+    expect(await screen.findByText('موعد قادم')).toBeTruthy();
+    expect(getBookingsMock).toHaveBeenCalledWith(1, 50, 'upcoming');
+    fireEvent.click(screen.getByRole('tab', { name: 'السابقة' }));
+    expect(await screen.findByRole('tab', { name: /السابقة\s*60/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'عرض المزيد' }));
+    await waitFor(() => expect(screen.getAllByText('جلسة إرشاد أسري')).toHaveLength(60));
+    expect(getBookingsMock).toHaveBeenLastCalledWith(2, 50, 'past');
+  });
 
+  it('fetches canonical page one rather than trusting SSR rows with an unknown page size', async () => {
+    getBookingsMock.mockResolvedValue({ items: [booking({ serviceNameAr: 'الصفحة الأولى' })], total: 51, page: 1, pageSize: 50 });
+    render(wrap('ar', <ClientBookingsList locale="ar" initialBookings={[booking({ id: 'other-page', serviceNameAr: 'صفحة أخرى' })]} initialTotal={51} />));
+    expect(await screen.findByText('الصفحة الأولى')).toBeTruthy();
+    expect(screen.queryByText('صفحة أخرى')).toBeNull();
+    expect(getBookingsMock).toHaveBeenCalledWith(1, 50, 'upcoming');
+  });
+
+  it('requests the cancelled tab separately and keeps tabs available when a tab is empty', async () => {
+    getBookingsMock.mockImplementation(async (page = 1, pageSize = 50, tab) => ({
+      items: tab === 'cancelled' ? [booking({ status: 'CANCELLED' }), booking({ id: 'requested', status: 'CANCEL_REQUESTED' })] : [],
+      total: tab === 'upcoming' ? 0 : 2, page, pageSize,
+    }));
+    render(wrap('ar', <ClientBookingsList locale="ar" />));
     const tabs = await screen.findAllByRole('tab');
-    expect(tabs.map((el) => el.textContent)).toEqual(['القادمة1', 'السابقة0', 'ملغاة2']);
+    expect(tabs.map((el) => el.textContent)).toEqual(['القادمة0', 'السابقة', 'ملغاة']);
+    fireEvent.click(screen.getByRole('tab', { name: 'ملغاة' }));
+    expect(await screen.findAllByText('جلسة إرشاد أسري')).toHaveLength(2);
+    expect(getBookingsMock).toHaveBeenLastCalledWith(1, 50, 'cancelled');
+  });
 
-    // upcoming tab shows only the non-cancelled booking
-    expect(screen.getAllByText('جلسة إرشاد أسري')).toHaveLength(1);
-
-    fireEvent.click(screen.getByRole('tab', { name: /ملغاة/ }));
-    expect(screen.getAllByText('جلسة إرشاد أسري')).toHaveLength(2);
+  it('preserves the first-booking CTA only when the full account has no bookings', async () => {
+    getBookingsMock.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
+    render(wrap('ar', <ClientBookingsList locale="ar" />));
+    expect(await screen.findByText('ما عندك مواعيد بعد')).toBeTruthy();
+    expect(getBookingsMock).toHaveBeenCalledWith(1, 1);
   });
 
   it('renders the price converted from halalas to SAR, never the raw amount', async () => {

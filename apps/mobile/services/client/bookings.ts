@@ -202,9 +202,17 @@ interface CreateBookingData {
   scheduledAt: string;
   durationOptionId?: string;
   notes?: string;
+  /**
+   * Session channel chosen in the booking flow (the service/duration option
+   * pair is IN_PERSON | ONLINE). Sent UPPERCASE because the backend validates
+   * it against the Prisma `DeliveryType` enum — the same boundary rule as
+   * `status`, see `upperStatus` below.
+   */
+  deliveryType?: DeliveryType;
 }
 
 interface ListParams {
+  tab?: 'upcoming' | 'past' | 'cancelled';
   status?: string | string[];
   page?: number;
   limit?: number;
@@ -261,7 +269,14 @@ export const clientBookingsService = {
   },
 
   async create(data: CreateBookingData) {
-    const response = await api.post<unknown>('/mobile/client/bookings', data);
+    // The app models delivery in lowercase; the backend `MobileCreateBookingDto`
+    // validates the Prisma enum, so convert at the request boundary. Omitting it
+    // entirely would make the server default the session to IN_PERSON and drop
+    // the ONLINE choice the client made.
+    const payload = data.deliveryType === undefined
+      ? data
+      : { ...data, deliveryType: data.deliveryType.toUpperCase() };
+    const response = await api.post<unknown>('/mobile/client/bookings', payload);
     return normalizeClientBooking(response.data);
   },
 

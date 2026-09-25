@@ -18,6 +18,7 @@ export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDa
   toDate?: Date;
   role?: string | null;
   userId?: string;
+  clientTab?: 'upcoming' | 'past' | 'cancelled';
 };
 
 /**
@@ -133,7 +134,14 @@ export class ListBookingsHandler {
       searchClientIds = matched.map((c) => c.id);
     }
 
+    // Mobile tabs classify by lifecycle status, independent of appointment date.
+    const pastStatuses = ['COMPLETED', 'NO_SHOW'];
+    const cancelledStatuses = ['CANCELLED', 'CANCEL_REQUESTED', 'EXPIRED'];
+    const tabStatus = query.clientTab === 'past' ? { in: pastStatuses }
+      : query.clientTab === 'cancelled' ? { in: cancelledStatuses }
+      : { notIn: [...pastStatuses, ...cancelledStatuses] };
     const where: Record<string, unknown> = {
+      ...(query.clientTab ? { AND: [{ status: tabStatus }] } : {}),
       ...sourceClientWhere,
       ...(query.clientId ? { clientId: query.clientId } : {}),
       ...(query.employeeId ? { employeeId: query.employeeId } : {}),
@@ -167,7 +175,7 @@ export class ListBookingsHandler {
         where,
         skip: (query.page - 1) * query.limit,
         take: query.limit,
-        orderBy: { scheduledAt: 'asc' },
+        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
         // See BOOKING_LIST_SELECT — narrow SELECT keeps the dashboard list
         // independent of columns that may not yet exist on every dev DB.
         select: BOOKING_LIST_SELECT,

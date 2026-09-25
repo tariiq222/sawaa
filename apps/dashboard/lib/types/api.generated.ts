@@ -9341,6 +9341,11 @@ export interface components {
              */
             branchId: string;
             /**
+             * @description Session delivery channel. Omitted defaults to IN_PERSON.
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
+            /**
              * @description Specific duration option to resolve price and duration
              * @example 00000000-0000-0000-0000-000000000000
              */
@@ -29131,6 +29136,8 @@ export interface operations {
     MobileClientBookingsController_listMyBookings_v1: {
         parameters: {
             query?: {
+                /** @description Filter by appointment tab before pagination */
+                tab?: "upcoming" | "past" | "cancelled";
                 /** @description Page number (1-based) */
                 page?: number;
                 /** @description Records per page */
@@ -33097,6 +33104,7 @@ export interface operations {
             query?: {
                 page?: number;
                 pageSize?: number;
+                tab?: "upcoming" | "past" | "cancelled";
             };
             header?: never;
             path?: never;
@@ -34096,7 +34104,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        items: Record<string, never>[];
+                        /** @description Outstanding balance across all client invoices, in halalas */
+                        outstandingBalance: number;
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
                 };
             };
             /** @description Validation failed */

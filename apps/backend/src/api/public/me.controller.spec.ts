@@ -158,6 +158,12 @@ describe('PublicMeController (e2e)', () => {
   });
 
   describe('GET /public/me/bookings', () => {
+    it('validates and forwards the selected tab with the authenticated client', async () => {
+      mockListBookings.execute.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
+      await request(app.getHttpServer()).get('/public/me/bookings?pageSize=50&tab=upcoming').expect(200);
+      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 50, 'upcoming');
+      await request(app.getHttpServer()).get('/public/me/bookings?tab=invalid').expect(400);
+    });
     it('returns 200 with paginated bookings', async () => {
       mockListBookings.execute.mockResolvedValue({
         data: [{ id: 'b-1', status: 'CONFIRMED' }],
@@ -172,7 +178,7 @@ describe('PublicMeController (e2e)', () => {
         .expect(200);
 
       expect(res.body.data).toHaveLength(1);
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 10);
+      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 10, undefined);
     });
 
     it('passes page and pageSize query params', async () => {
@@ -183,7 +189,7 @@ describe('PublicMeController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 2, 5);
+      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 2, 5, undefined);
     });
   });
 
