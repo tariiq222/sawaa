@@ -11,7 +11,41 @@ function routeFiles(directory: string): string[] {
 }
 const routes = routeFiles(appRoot);
 
+// Expo Router layout files configure navigation rather than painting a screen;
+// these routes redirect without presenting a screen of their own. The two chat
+// routes only redirect, while settings-profile-section is a nested form component.
+const backgroundExceptions = new Set([
+  '(auth)/_layout.tsx',
+  '(client)/_layout.tsx',
+  '(client)/(tabs)/_layout.tsx',
+  '(client)/settings-profile-section.tsx',
+  '(employee)/_layout.tsx',
+  '(employee)/(tabs)/_layout.tsx',
+  '_layout.tsx',
+  '(client)/chat.tsx',
+  '(client)/(tabs)/chat.tsx',
+]);
+
+function paintsSharedBackground(source: string): boolean {
+  return source.includes('<AquaBackground') ||
+    source.includes('<SettingsScaffold') ||
+    source.includes('<VideoCallScreen');
+}
+
 describe('route color migration safeguards', () => {
+  it('every screen route paints the shared background or is an explicit navigation exception', () => {
+    const uncovered = routes.flatMap((file) => {
+      const route = path.relative(appRoot, file).split(path.sep).join('/');
+      const source = fs.readFileSync(file, 'utf8');
+      if (backgroundExceptions.has(route) || paintsSharedBackground(source)) return [];
+      return [route];
+    });
+
+    expect(uncovered).toEqual([]);
+    for (const exception of backgroundExceptions) {
+      expect(routes.map((file) => path.relative(appRoot, file).split(path.sep).join('/'))).toContain(exception);
+    }
+  });
   it.each(routes.map((file) => [path.relative(appRoot, file), file]))('%s does not import the fixed light palette', (_name, file) => {
     const source = fs.readFileSync(file, 'utf8');
     expect(source).not.toMatch(/import\s*\{[^}]*\bsawaaColors\b[^}]*\}/s);

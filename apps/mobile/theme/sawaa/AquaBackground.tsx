@@ -8,12 +8,12 @@ interface Props extends ViewProps {
   children?: React.ReactNode;
 }
 
-const bgSource = require('../../assets/bg-aqua.png');
+const lightBgSource = require('../../assets/bg-aqua.png');
+const darkBgSource = require('../../assets/bg-aqua-dark.png');
 
 /**
- * Full-screen background matching the `bg-aqua` / `bg-ocean-dark` surfaces from
- * sawaa-design/v2/styles.css. The dark variant overlays a deep teal wash for
- * the live-session screen.
+ * Full-screen background matching the Sawaa aqua surfaces. The dark image
+ * supplies its own palette, so it is not covered by the semantic wash layer.
  */
 export function AquaBackground({ variant = 'aqua', style, children, ...rest }: Props) {
   const { scheme } = useTheme();
@@ -21,13 +21,11 @@ export function AquaBackground({ variant = 'aqua', style, children, ...rest }: P
   const roles = getSawaaRoles(appearance);
   return (
     <View style={[styles.root, { backgroundColor: roles.backdrop.base }, style]} {...rest}>
-      <ImageBackground source={bgSource} resizeMode="cover" style={StyleSheet.absoluteFill} />
-      {appearance === 'dark' && (
-        <View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: roles.backdrop.wash }]}
-        />
-      )}
+      <ImageBackground
+        source={appearance === 'dark' ? darkBgSource : lightBgSource}
+        resizeMode="cover"
+        style={StyleSheet.absoluteFill}
+      />
       <View
         style={[
           styles.content,

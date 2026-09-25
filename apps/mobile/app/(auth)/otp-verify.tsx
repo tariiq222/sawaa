@@ -20,6 +20,7 @@ import { ThemedText } from '@/theme/components/ThemedText';
 import { ThemedButton } from '@/theme/components/ThemedButton';
 import { useTheme } from '@/theme/useTheme';
 import { withAlpha } from '@/theme/sawaa/tokens';
+import { AquaBackground } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
@@ -141,7 +142,8 @@ export default function OtpVerifyScreen() {
   const BackIcon = isRTL ? ChevronRight : ChevronLeft;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <AquaBackground>
+      <View style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -269,7 +271,8 @@ export default function OtpVerifyScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+      </View>
+    </AquaBackground>
   );
 }
 

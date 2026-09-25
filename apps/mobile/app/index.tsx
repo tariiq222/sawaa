@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AquaBackground } from '@/theme/sawaa';
 import { useTheme } from '@/theme/useTheme';
 
 import { useAppSelector, useAppDispatch } from '@/hooks/use-redux';
@@ -105,9 +106,11 @@ export default function IndexScreen() {
 
   if (hydrating) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      <AquaBackground>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </AquaBackground>
     );
   }
 

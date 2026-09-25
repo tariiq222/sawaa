@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
+import { AquaBackground } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,7 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
  */
 export default function PaymentCallbackScreen() {
   const colors = useSawaaColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = createStyles();
   const router = useRouter();
   const { bookingId, invoiceId } = useLocalSearchParams<{
     bookingId?: string;
@@ -34,12 +35,14 @@ export default function PaymentCallbackScreen() {
   }, [bookingId, invoiceId, router]);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator color={colors.teal[600]} />
-    </View>
+    <AquaBackground>
+      <View style={styles.container}>
+        <ActivityIndicator color={colors.teal[600]} />
+      </View>
+    </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.glass.bgStrong },
+const createStyles = () => StyleSheet.create({
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

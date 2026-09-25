@@ -71,6 +71,14 @@ describe('Metro image dimension compatibility', () => {
     ).resolves.toMatchObject({ width: 853, height: 1844 });
   });
 
+  it('reads the dark aqua background dimensions through Metro asset processing', async () => {
+    const imagePath = path.join(projectRoot, 'assets', 'bg-aqua-dark.png');
+
+    await expect(
+      metroAssets.getAssetData(imagePath, 'bg-aqua-dark.png', [], 'ios', '/assets'),
+    ).resolves.toMatchObject({ width: 848, height: 1855 });
+  });
+
   it.each([
     {
       format: 'JXL',

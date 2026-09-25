@@ -14,6 +14,7 @@ import { clientBookingsService, type ClientBookingRow } from '@/services/client/
 import { employeeBookingsService } from '@/services/employee/bookings';
 import type { Booking } from '@/types/models';
 import { hasZoomMeetingAccess } from '@/types/booking-enums';
+import { AquaBackground } from '@/theme/sawaa';
 import { withAlpha } from '@/theme/sawaa/tokens';
 
 interface VideoCallScreenProps {
@@ -139,7 +140,7 @@ export function VideoCallScreen({ role }: VideoCallScreenProps) {
     : '';
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <AquaBackground style={styles.container}>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
@@ -203,7 +204,7 @@ export function VideoCallScreen({ role }: VideoCallScreenProps) {
           </>
         )}
       </ScrollView>
-    </View>
+    </AquaBackground>
   );
 }
 
