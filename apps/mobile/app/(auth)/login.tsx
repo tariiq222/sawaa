@@ -59,7 +59,7 @@ export default function LoginScreen() {
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('error.generic'));
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     }
   }, [identifier, requestOtp, router, t]);
 
@@ -178,6 +178,10 @@ export default function LoginScreen() {
                 <Text style={[styles.forgotLink, { fontFamily: f600, fontWeight: '600' }]}>
                   نسيت كلمة المرور؟
                 </Text>
+              </Pressable>
+
+              <Pressable onPress={() => router.push('/(auth)/review-login')} accessibilityRole="button" style={{ alignSelf: 'center' }}>
+                <Text style={[styles.forgotLink, { fontFamily: f600 }]}>{t('auth.review.link')}</Text>
               </Pressable>
 
               <View style={[styles.registerRow, { flexDirection: dir.row }]}>

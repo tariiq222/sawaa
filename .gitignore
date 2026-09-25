@@ -162,3 +162,6 @@ outputs/
 # Local package cache and agent runtime records
 .pnpm-store/
 .agent-teams/
+
+# Mobile release documentation and approved public screenshots
+!docs/mobile-app/

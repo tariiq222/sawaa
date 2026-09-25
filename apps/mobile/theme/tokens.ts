@@ -1,4 +1,5 @@
 import type { PublicBranding } from '@sawaa/shared';
+import { getFontName } from './fonts';
 import {
   colors,
   typography,
@@ -49,7 +50,10 @@ export function buildTheme(_branding?: PublicBranding | null, scheme: 'light' | 
       background: scheme === 'dark' ? darkColorOverrides.background : FIXED_BACKGROUND,
       ...(scheme === 'dark' ? pickExisting(colors, darkColorOverrides) : {}),
     },
-    typography,
+    typography: {
+      ...typography,
+      fontFamily: { arabic: getFontName('ar'), english: getFontName('en') },
+    },
     spacing,
     radius,
     shadows: rnShadows,

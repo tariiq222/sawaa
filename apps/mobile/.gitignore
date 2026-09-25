@@ -53,3 +53,4 @@ google-services.json
 
 # Local Firebase and APNs configuration, inventory and private keys
 /private-config/
+/credentials.json

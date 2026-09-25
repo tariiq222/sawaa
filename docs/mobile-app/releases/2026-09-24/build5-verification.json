@@ -1,0 +1,16 @@
+{
+  "signatureExit": 0,
+  "bundle": "sa.sawa.app",
+  "name": "سواء للارشاد الاسري | sawaa",
+  "version": "1.0.0",
+  "build": "5",
+  "productionAPI": true,
+  "fixtureURLAbsent": true,
+  "fakeTreatmentNoteAbsent": true,
+  "ibmRequiredFiveFontsMatch": true,
+  "easBuildId": "e017e116-6d82-477b-870e-b4fc3cfdb566",
+  "easStatus": "FINISHED",
+  "completedAt": "2026-09-24T13:23:47Z",
+  "appleUploadVerified": false,
+  "testFlightInstallVerified": false
+}

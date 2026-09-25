@@ -1,3 +1,4 @@
+import { getFontName } from '@/theme/fonts';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -111,7 +112,7 @@ export function SettingsProfileSection() {
 
   return (
     <ThemedCard padding={20} style={{ marginBottom: 16 }}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
         <View style={[styles.iconWrap, { backgroundColor: '#1D4ED814' }]}>
           <UserIcon size={20} strokeWidth={1.5} color="#1D4ED8" />
         </View>
@@ -131,6 +132,7 @@ export function SettingsProfileSection() {
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,
+                { fontFamily: getFontName('ar'), writingDirection: isRTL ? 'rtl' : 'ltr' },
                 {
                   color: theme.colors.textPrimary,
                   borderColor: theme.colors.border,
@@ -156,6 +158,7 @@ export function SettingsProfileSection() {
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,
+                { fontFamily: getFontName('ar'), writingDirection: isRTL ? 'rtl' : 'ltr' },
                 {
                   color: theme.colors.textPrimary,
                   borderColor: theme.colors.border,
@@ -182,6 +185,7 @@ export function SettingsProfileSection() {
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,
+                { fontFamily: getFontName('ar'), writingDirection: isRTL ? 'rtl' : 'ltr' },
                 {
                   color: theme.colors.textPrimary,
                   borderColor: theme.colors.border,

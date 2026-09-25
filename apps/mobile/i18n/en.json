@@ -1,5 +1,12 @@
 {
   "auth": {
+    "review": {
+      "link": "Demo account sign in",
+      "title": "Demo account",
+      "subtitle": "Enter the demo account credentials provided to you.",
+      "submit": "Sign in",
+      "error": "Unable to sign in. Check your credentials or try again later."
+    },
     "login": "Login",
     "register": "Create Account",
     "register.title": "Create Account",
@@ -201,6 +208,16 @@
       "remote": "Remote",
       "under300": "< 300 ﷼"
     }
+  },
+  "employeeProfile": {
+    "about": "About",
+    "services": "Services",
+    "ratingCount": "({{count}} reviews)",
+    "noServices": "No services available",
+    "selectService": "Select a service",
+    "unavailable": "Booking unavailable",
+    "priceAtNextStep": "Price shown in next step",
+    "bookNow": "Book now"
   },
   "appointments": {
     "title": "My Appointments",

@@ -44,7 +44,7 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
             onPress={() => router.push('/(client)/notifications')}
             style={styles.iconBtnInner}
             accessibilityRole="button"
-            accessibilityLabel={t('nav.notifications')}
+            accessibilityLabel={t('a11y.tabNotifications')}
           >
             <AppIcon sf="bell.fill" fallback={Bell} size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
             {unreadCount > 0 ? (
@@ -67,7 +67,7 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
           onPress={() => router.push('/(client)/profile')}
           style={styles.avatarInner}
           accessibilityRole="button"
-          accessibilityLabel={t('nav.profile')}
+          accessibilityLabel={t('a11y.tabProfile')}
         >
           <Text style={[styles.avatarText, { fontFamily: f600, fontWeight: '600' }]}>{initial}</Text>
         </Pressable>

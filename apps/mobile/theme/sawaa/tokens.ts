@@ -70,8 +70,8 @@ export const sawaaBlur = {
 
 /**
  * Official typography scale. `weight` is an RN `fontWeight` string —
- * pair with `getFontName(locale, weight)` so heading weights resolve to
- * the Handicrafts brand typeface and body weights to the system font.
+ * pair with `getFontName(locale, weight)` for the matching IBM Plex Sans
+ * Arabic weight bundled with the mobile app.
  */
 export const sawaaType = {
   display: { fontSize: 32, lineHeight: 42, weight: '700' },

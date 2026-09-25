@@ -5,11 +5,13 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/theme/components/ThemedText';
+import { useTheme } from '@/theme';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useRequestEmailVerification } from '@/hooks/queries';
 
 export function UnverifiedEmailBanner() {
   const { t } = useTranslation();
+  const { isRTL } = useTheme();
   const user = useAppSelector((s) => s.auth.user);
   const [sent, setSent] = useState(false);
 
@@ -29,7 +31,7 @@ export function UnverifiedEmailBanner() {
 
   if (sent) {
     return (
-      <View style={[styles.banner, styles.bannerSuccess]}>
+      <View style={[styles.banner, styles.bannerSuccess, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
         <Check size={18} strokeWidth={1.5} color="#16A34A" />
         <View style={styles.textWrap}>
           <ThemedText variant="bodySm" style={{ fontWeight: '500' }}>
@@ -41,7 +43,7 @@ export function UnverifiedEmailBanner() {
   }
 
   return (
-    <View style={[styles.banner, styles.bannerWarning]}>
+    <View style={[styles.banner, styles.bannerWarning, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
       <Mail size={18} strokeWidth={1.5} color="#F59E0B" />
       <View style={styles.textWrap}>
         <ThemedText variant="bodySm" style={{ fontWeight: '500' }}>

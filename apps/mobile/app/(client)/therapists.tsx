@@ -1,5 +1,6 @@
+import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import React, { useMemo, useState, useCallback } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -131,7 +132,7 @@ export default function TherapistsListScreen() {
   const ListHeader = useMemo(() => (
     <View style={styles.header}>
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500)}>
-        <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
+        <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
           <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
         </Glass>
       </Animated.View>
@@ -166,8 +167,8 @@ export default function TherapistsListScreen() {
       </Animated.View>
 
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(220).duration(600).easing(Easing.out(Easing.cubic))}>
-        <ScrollView
-          horizontal
+        <LocalizedHorizontalScroll
+          dir={dir}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={[styles.chipsRow, { flexDirection: dir.row }]}
         >
@@ -196,7 +197,7 @@ export default function TherapistsListScreen() {
               </Pressable>
             );
           })}
-        </ScrollView>
+        </LocalizedHorizontalScroll>
       </Animated.View>
     </View>
   ), [BackIcon, activeChip, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t]);

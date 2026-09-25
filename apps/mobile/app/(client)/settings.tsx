@@ -1,3 +1,4 @@
+import { useDir } from '@/hooks/useDir';
 import { useCallback } from 'react';
 import {
   View,
@@ -35,6 +36,7 @@ import { LANGUAGE_KEY } from '@/hooks/language-preference';
 
 
 export default function SettingsScreen() {
+  const dir = useDir();
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -94,7 +96,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, { flexDirection: dir.row }]}>
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -140,7 +142,7 @@ export default function SettingsScreen() {
           >
             {t('settings.pushNotificationsDesc')}
           </ThemedText>
-          <View style={styles.switchRow}>
+          <View style={[styles.switchRow, { flexDirection: dir.row }]}>
             <ThemedText variant="body">{t('settings.pushNotifications')}</ThemedText>
             <Switch
               value={pushEnabled}
@@ -150,7 +152,7 @@ export default function SettingsScreen() {
               thumbColor={pushEnabled ? '#1D4ED8' : '#CBD5E1'}
             />
           </View>
-          <View style={[styles.switchRow, { marginTop: 12 }]}>
+          <View style={[styles.switchRow, { marginTop: 12, flexDirection: dir.row }]}>
             <ThemedText variant="body">{t('settings.darkMode')}</ThemedText>
             <Switch
               value={scheme === 'dark'}
@@ -180,8 +182,9 @@ export default function SettingsScreen() {
 }
 
 function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  const dir = useDir();
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, { flexDirection: dir.row }]}>
       <View style={[styles.sectionIcon, { backgroundColor: '#1D4ED814' }]}>
         <Icon size={20} strokeWidth={1.5} color="#1D4ED8" />
       </View>
@@ -199,11 +202,13 @@ function LanguageOption({
   selected: boolean;
   onPress: () => void;
 }) {
+  const dir = useDir();
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.langRow,
+        { flexDirection: dir.row },
         {
           backgroundColor: selected ? '#1D4ED808' : 'transparent',
           opacity: pressed ? 0.7 : 1,
@@ -217,9 +222,10 @@ function LanguageOption({
 }
 
 function AboutRow({ label, value }: { label: string; value: string }) {
+  const dir = useDir();
   const { theme } = useTheme();
   return (
-    <View style={styles.aboutRow}>
+    <View style={[styles.aboutRow, { flexDirection: dir.row }]}>
       <ThemedText variant="bodySm" color={theme.colors.textSecondary}>
         {label}
       </ThemedText>
@@ -229,7 +235,7 @@ function AboutRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, direction: 'ltr' },
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
   headerRow: {
     flexDirection: 'row',

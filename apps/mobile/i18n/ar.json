@@ -1,5 +1,12 @@
 {
   "auth": {
+    "review": {
+      "link": "دخول الحساب التجريبي",
+      "title": "الحساب التجريبي",
+      "subtitle": "أدخل بيانات الحساب التجريبي المخصصة لك.",
+      "submit": "تسجيل الدخول",
+      "error": "تعذر الدخول. تحقق من البيانات أو حاول لاحقًا."
+    },
     "login": "تسجيل الدخول",
     "register": "إنشاء حساب",
     "register.title": "إنشاء حساب",
@@ -201,6 +208,16 @@
       "remote": "عن بُعد",
       "under300": "< ٣٠٠ ﷼"
     }
+  },
+  "employeeProfile": {
+    "about": "نبذة",
+    "services": "الخدمات",
+    "ratingCount": "({{count}} تقييم)",
+    "noServices": "لا توجد خدمات متاحة",
+    "selectService": "اختر الخدمة",
+    "unavailable": "الحجز غير متاح",
+    "priceAtNextStep": "يظهر السعر في الخطوة التالية",
+    "bookNow": "احجز جلسة"
   },
   "appointments": {
     "title": "مواعيدي",

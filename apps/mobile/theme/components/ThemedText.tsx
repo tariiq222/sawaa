@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, TextStyle } from 'react-native';
 import { useTheme } from '../useTheme';
-import { getHeadingFont, SYSTEM_FONT } from '../fonts';
+import { getFontName } from '../fonts';
 
 type TextVariant =
   | 'display'
@@ -43,21 +43,22 @@ export function ThemedText({
   style,
   numberOfLines,
 }: ThemedTextProps) {
-  const { theme, isRTL } = useTheme();
+  const { theme, isRTL, language } = useTheme();
 
   const HEADING_VARIANTS: ReadonlySet<TextVariant> = new Set(['display', 'displaySm', 'heading', 'subheading']);
 
-  const fontFamily = HEADING_VARIANTS.has(variant)
-    ? getHeadingFont(variant === 'heading' || variant === 'subheading' ? '600' : '700')
-    : SYSTEM_FONT;
+  const weight = style?.fontWeight ?? (HEADING_VARIANTS.has(variant)
+    ? (variant === 'heading' || variant === 'subheading' ? '600' : '700')
+    : variant === 'label' ? '600' : '400');
+  const fontFamily = getFontName(language, String(weight));
 
   const variantStyles: Record<TextVariant, TextStyle> = {
-    // Heading variants: brand font encodes weight via family name — no fontWeight needed.
+    // IBM font aliases encode each heading weight.
     display: { fontSize: 36, lineHeight: 45 },
     displaySm: { fontSize: 28, lineHeight: 35 },
     heading: { fontSize: 20, lineHeight: 26 },
     subheading: { fontSize: 16, lineHeight: 22 },
-    // Body variants: system font uses fontWeight to select weight cut.
+    // Preserve the typography scale while using the bundled IBM family.
     body: { fontSize: 14, fontWeight: '400', lineHeight: 21 },
     bodySm: {
       fontSize: 13,
@@ -83,6 +84,7 @@ export function ThemedText({
         {
           fontFamily,
           textAlign: align ?? (isRTL ? 'right' : 'left'),
+          writingDirection: isRTL ? 'rtl' : 'ltr',
           color: color ?? theme.colors.textPrimary,
         },
         variantStyles[variant],

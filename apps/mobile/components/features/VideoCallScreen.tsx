@@ -147,7 +147,7 @@ export function VideoCallScreen({ role }: VideoCallScreenProps) {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, { flexDirection: dir.row }]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <BackIcon size={24} strokeWidth={1.5} color={theme.colors.textPrimary} />
           </Pressable>
@@ -219,8 +219,9 @@ function InfoRow({
   value: string;
 }) {
   const { theme } = useTheme();
+  const dir = useDir();
   return (
-    <View style={styles.infoRow}>
+    <View style={[styles.infoRow, { flexDirection: dir.row }]}>
       <View style={[styles.iconCircle, { backgroundColor: withAlpha(color, 0.1) }]}>
         <Icon size={20} strokeWidth={1.5} color={color} />
       </View>
@@ -235,7 +236,7 @@ function InfoRow({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, direction: 'ltr' },
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
   headerRow: {
     flexDirection: 'row',

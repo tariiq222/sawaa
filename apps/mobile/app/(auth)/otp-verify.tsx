@@ -157,7 +157,7 @@ export default function OtpVerifyScreen() {
       setCountdown(RESEND_COOLDOWN);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('error.generic'));
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     } finally {
       setResendLoading(false);
     }
@@ -219,7 +219,7 @@ export default function OtpVerifyScreen() {
             </LinearGradient>
 
             <ThemedText variant="displaySm" align="center">
-              {t('otp.title')}
+              {t('auth.otp.title')}
             </ThemedText>
             <ThemedText
               variant="bodySm"
@@ -227,7 +227,7 @@ export default function OtpVerifyScreen() {
               color={theme.colors.textSecondary}
               style={styles.sub}
             >
-              {t('otp.sentTo')} {maskedIdentifier}
+              {t('auth.otp.sentTo')} {maskedIdentifier}
             </ThemedText>
           </View>
 
@@ -273,7 +273,7 @@ export default function OtpVerifyScreen() {
               loading={loading}
               disabled={!isComplete || loading}
             >
-              {loading ? t('otp.submitting') : t('otp.submit')}
+              {loading ? t('auth.otp.submitting') : t('auth.otp.submit')}
             </ThemedButton>
 
             <View style={styles.resendRow}>
@@ -284,7 +284,7 @@ export default function OtpVerifyScreen() {
                     color={theme.colors.textMuted}
                     align="center"
                   >
-                    {t('otp.resendIn', { seconds: countdown })}
+                    {t('auth.otp.resendIn', { seconds: countdown })}
                   </ThemedText>
                 ) : (
                   <Pressable onPress={handleResend} disabled={resendLoading}>
@@ -294,7 +294,7 @@ export default function OtpVerifyScreen() {
                       align="center"
                       style={styles.link}
                     >
-                      {resendLoading ? t('common.loading') : t('otp.resend')}
+                      {resendLoading ? t('common.loading') : t('auth.otp.resend')}
                     </ThemedText>
                   </Pressable>
                 )
@@ -304,7 +304,7 @@ export default function OtpVerifyScreen() {
                   color={theme.colors.textMuted}
                   align="center"
                 >
-                  {t('otp.registerNoResend') ?? 'Tap back and re-submit if you didn\'t receive the code.'}
+                  {t('auth.otp.registerNoResend')}
                 </ThemedText>
               )}
             </View>

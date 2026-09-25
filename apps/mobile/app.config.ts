@@ -10,8 +10,14 @@ resolveApiUrl({
 });
 
 const config: ExpoConfig = {
-  name: 'سواء للإرشاد الأسري',
+  name: 'سواء للارشاد الاسري | sawaa',
   slug: 'sawa',
+  owner: 'tariq222',
+  extra: {
+    eas: {
+      projectId: 'f6349cef-8426-442c-b249-118a9b512cf1',
+    },
+  },
   version: '1.0.0',
   scheme: 'sawa',
   orientation: 'portrait',
@@ -23,6 +29,7 @@ const config: ExpoConfig = {
     backgroundColor: '#ffffff',
   },
   ios: {
+    appleTeamId: '569M49FYA6',
     supportsTablet: true,
     bundleIdentifier: 'sa.sawa.app',
     ...(process.env.FIREBASE_IOS_GOOGLE_SERVICES_FILE

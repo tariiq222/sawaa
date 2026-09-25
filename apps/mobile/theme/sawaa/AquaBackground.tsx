@@ -1,5 +1,5 @@
 import React from 'react';
-import { I18nManager, ImageBackground, StyleSheet, View, ViewProps } from 'react-native';
+import { ImageBackground, StyleSheet, View, ViewProps } from 'react-native';
 
 interface Props extends ViewProps {
   variant?: 'aqua' | 'dark';
@@ -26,7 +26,8 @@ export function AquaBackground({ variant = 'aqua', style, children, ...rest }: P
       <View
         style={[
           styles.content,
-          { direction: I18nManager.isRTL ? 'rtl' : 'ltr' },
+          // useDir owns mirroring; native RTL would reverse it a second time.
+          { direction: 'ltr' },
         ]}
       >
         {children}

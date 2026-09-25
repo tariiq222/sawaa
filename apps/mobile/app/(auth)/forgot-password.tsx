@@ -58,7 +58,7 @@ export default function ForgotPasswordScreen() {
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('error.generic'));
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     } finally {
       setLoading(false);
     }
@@ -93,7 +93,7 @@ export default function ForgotPasswordScreen() {
             }}
             interactive
             accessibilityLabel={t('a11y.buttonBack')}
-            style={styles.backBtn}
+            style={[styles.backBtn, { alignSelf: dir.alignStart }]}
           >
             {dir.isRTL ? (
               <ChevronRight size={22} color={sawaaColors.teal[700]} strokeWidth={1.75} />

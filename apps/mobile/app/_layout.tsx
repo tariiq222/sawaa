@@ -2,6 +2,15 @@ import * as Sentry from '@sentry/react-native';
 import { useEffect } from 'react';
 import { I18nManager } from 'react-native';
 import { Slot } from 'expo-router';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { fontAssets } from '@/theme/fonts';
+
+// Localized screens own row order and physical text alignment. Keep the native
+// layout basis stable rather than applying RTL twice on Arabic devices.
+I18nManager.allowRTL(false);
+I18nManager.forceRTL(false);
+void SplashScreen.preventAutoHideAsync();
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -36,7 +45,7 @@ function RootContent() {
   const { scheme } = useTheme();
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider style={{ flex: 1, direction: 'ltr' }}>
       <Slot />
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </SafeAreaProvider>
@@ -44,15 +53,15 @@ function RootContent() {
 }
 
 function RootLayout() {
-  useEffect(() => {
-    if (!I18nManager.isRTL) {
-      I18nManager.allowRTL(true);
-    }
-  }, []);
-
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
   const { language, ready } = useLanguagePreference();
 
-  if (!ready) return null;
+  useEffect(() => {
+    if (fontError) throw fontError;
+    if (fontsLoaded && ready) void SplashScreen.hideAsync();
+  }, [fontsLoaded, fontError, ready]);
+
+  if (!ready || !fontsLoaded) return null;
 
   const dirState = buildDirState(language);
 

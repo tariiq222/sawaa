@@ -1,0 +1,9 @@
+{
+  "environment": "staging",
+  "created": true,
+  "clientId": "97e32394-5ec7-441c-a090-af4ffb187fb8",
+  "clientCountBefore": 2190,
+  "clientCountAfter": 2191,
+  "messagesSent": 0,
+  "otherRecordsModified": false
+}

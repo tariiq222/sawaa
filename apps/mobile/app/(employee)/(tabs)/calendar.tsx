@@ -56,30 +56,34 @@ export default function CalendarScreen() {
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
           <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.sm} style={styles.calCard}>
-            <RNCalendar
-              onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
-              markedDates={{
-                [selectedDate]: {
-                  selected: true,
-                  selectedColor: sawaaColors.teal[600],
-                },
-              }}
-              theme={{
-                calendarBackground: 'transparent',
-                todayTextColor: sawaaColors.teal[700],
-                arrowColor: sawaaColors.teal[600],
-                monthTextColor: sawaaColors.ink[900],
-                dayTextColor: sawaaColors.ink[700],
-                textSectionTitleColor: sawaaColors.ink[500],
-                textDisabledColor: sawaaColors.ink[400],
-                textDayFontFamily: f400,
-                textMonthFontFamily: f700,
-                textDayHeaderFontFamily: f600,
-                textDayFontSize: sawaaType.body.fontSize,
-                textMonthFontSize: sawaaType.subheading.fontSize,
-                textDayHeaderFontSize: sawaaType.caption.fontSize,
-              }}
-            />
+            {/* react-native-calendars mirrors its grid from Yoga's direction, so the
+                locale direction has to be restored locally on the pinned-LTR basis. */}
+            <View style={{ direction: dir.isRTL ? 'rtl' : 'ltr' }}>
+              <RNCalendar
+                onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
+                markedDates={{
+                  [selectedDate]: {
+                    selected: true,
+                    selectedColor: sawaaColors.teal[600],
+                  },
+                }}
+                theme={{
+                  calendarBackground: 'transparent',
+                  todayTextColor: sawaaColors.teal[700],
+                  arrowColor: sawaaColors.teal[600],
+                  monthTextColor: sawaaColors.ink[900],
+                  dayTextColor: sawaaColors.ink[700],
+                  textSectionTitleColor: sawaaColors.ink[500],
+                  textDisabledColor: sawaaColors.ink[400],
+                  textDayFontFamily: f400,
+                  textMonthFontFamily: f700,
+                  textDayHeaderFontFamily: f600,
+                  textDayFontSize: sawaaType.body.fontSize,
+                  textMonthFontSize: sawaaType.subheading.fontSize,
+                  textDayHeaderFontSize: sawaaType.caption.fontSize,
+                }}
+              />
+            </View>
           </GlassSurface>
         </Animated.View>
 

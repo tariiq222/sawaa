@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
@@ -30,8 +31,8 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
   }
 
   return (
-    <ScrollView
-      horizontal
+    <LocalizedHorizontalScroll
+      dir={dir}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.hScrollContent, { flexDirection: dir.row }]}
     >
@@ -69,7 +70,7 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
           </Glass>
         );
       })}
-    </ScrollView>
+    </LocalizedHorizontalScroll>
   );
 }
 

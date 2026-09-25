@@ -118,7 +118,7 @@ export default function AppointmentDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
+          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
             <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
@@ -177,20 +177,6 @@ export default function AppointmentDetailScreen() {
                 </View>
               </View>
             ))}
-          </Glass>
-        </Animated.View>
-
-        {/* Notes */}
-        <Animated.View entering={FadeInDown.delay(240).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'ملاحظات' : 'Notes'}
-          </Text>
-          <Glass variant="regular" radius={sawaaRadius.xl} style={styles.notesCard}>
-            <Text style={[styles.notesText, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-              {dir.isRTL
-                ? 'سنتناول تقنيات الاسترخاء التدريجي. يُرجى تحضير مفكرة الأفكار التلقائية.'
-                : 'We will cover progressive relaxation. Please bring your thought log.'}
-            </Text>
           </Glass>
         </Animated.View>
 
@@ -276,8 +262,6 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 11, color: sawaaColors.ink[500] },
   rowValue: { fontSize: 13.5, color: sawaaColors.ink[900], marginTop: 2 },
   sectionTitle: { fontSize: 14, color: sawaaColors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
-  notesCard: { padding: 14 },
-  notesText: { fontSize: 12.5, color: sawaaColors.ink[700], lineHeight: 22 },
   ctaWrap: { position: 'absolute', left: 16, right: 16, gap: 10, alignItems: 'stretch' },
   secondaryBtn: { flex: 1 },
   secondaryGlass: {

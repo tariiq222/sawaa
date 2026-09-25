@@ -1,0 +1,54 @@
+name: Start pinned MinIO from source
+description: Build the official source release because upstream no longer distributes container images.
+runs:
+  using: composite
+  steps:
+    - name: Cache pinned MinIO binary
+      id: binary
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/sawaa-minio-bin
+        key: minio-source-v1-${{ runner.os }}-${{ runner.arch }}-go1.24.13-9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a
+    - name: Set up Go
+      if: steps.binary.outputs.cache-hit != 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.13'
+        cache: false
+    - name: Build official pinned release
+      if: steps.binary.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GOBIN: ${{ runner.temp }}/sawaa-minio-bin
+        CGO_ENABLED: '0'
+        GOTOOLCHAIN: local
+      run: |
+        # RELEASE.2025-10-15T17-29-55Z; modules verified by the Go checksum database.
+        go install github.com/minio/minio@9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a
+    - name: Start and verify MinIO
+      shell: bash
+      env:
+        MINIO_ROOT_USER: minioadmin
+        MINIO_ROOT_PASSWORD: minioadmin123
+      run: |
+        set -euo pipefail
+        data_dir=$(mktemp -d "$RUNNER_TEMP/sawaa-minio-data.XXXXXX")
+        log_file="$RUNNER_TEMP/sawaa-minio.log"
+        nohup "$RUNNER_TEMP/sawaa-minio-bin/minio" server "$data_dir" \
+          --address 127.0.0.1:9000 --console-address 127.0.0.1:9001 \
+          >"$log_file" 2>&1 &
+        minio_pid=$!
+        for i in $(seq 1 60); do
+          if ! kill -0 "$minio_pid" 2>/dev/null; then
+            cat "$log_file" >&2
+            exit 1
+          fi
+          if curl --fail --silent --max-time 2 http://127.0.0.1:9000/minio/health/live >/dev/null; then
+            exit 0
+          fi
+          sleep 1
+        done
+        cat "$log_file" >&2
+        kill "$minio_pid" || true
+        echo 'MinIO did not become healthy after 60 seconds' >&2
+        exit 1

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Building2, Star } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -30,8 +31,8 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
   if (clinicsQuery.isLoading || clinics.length === 0) return null;
 
   return (
-    <ScrollView
-      horizontal
+    <LocalizedHorizontalScroll
+      dir={dir}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.hScrollContent, { flexDirection: dir.row }]}
     >
@@ -68,7 +69,7 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
         </Glass>
         );
       })}
-    </ScrollView>
+    </LocalizedHorizontalScroll>
   );
 }
 
