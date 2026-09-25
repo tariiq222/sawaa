@@ -8,6 +8,8 @@ const FIXED_VARS: Record<string, string> = {
   '--primary': '#55CCB0',
   '--primary-light': '#7CD8C2',
   '--primary-dark': '#0E4B43',
+  '--on-primary': '#0A2A2A',
+  '--primary-foreground': '#0A2A2A',
   '--accent': '#E7DBC4',
   '--accent-dark': '#CAAF7B',
   '--bg': '#EAF8F4',

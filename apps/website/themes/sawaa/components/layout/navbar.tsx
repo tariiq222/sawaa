@@ -140,7 +140,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/booking"
-            className="sw-home-nav-cta inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all text-white hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="sw-home-nav-cta inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all text-[var(--on-primary)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-500)',
               boxShadow: 'var(--sw-shadow-primary)',
@@ -204,7 +204,7 @@ export function Navbar() {
           <Link
             href="/booking"
             onClick={() => setMobileOpen(false)}
-            className="sw-home-nav-cta mt-5 inline-flex items-center gap-2 font-bold px-9 py-4 rounded-full text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="sw-home-nav-cta mt-5 inline-flex items-center gap-2 font-bold px-9 py-4 rounded-full text-[var(--on-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-500)',
               boxShadow: 'var(--sw-shadow-primary)',

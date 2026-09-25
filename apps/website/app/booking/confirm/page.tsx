@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { publicFetch } from '@/lib/public-fetch';
 import { useT } from '@/features/locale/locale-provider';
+import { SawaaLayout } from '@/themes/sawaa/layout/layout';
 
 interface BookingStatus {
   bookingId: string;
@@ -110,7 +111,7 @@ function ConfirmContent() {
         <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.confirmedDesc')}</p>
         <Link
           href="/booking"
-          style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
+          style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'var(--on-primary)', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
         >
           {t('booking.bookAnother')}
         </Link>
@@ -132,7 +133,7 @@ function ConfirmContent() {
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link
             href="/account/bookings"
-            style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
+            style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'var(--on-primary)', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
           >
             {t('booking.viewBookings')}
           </Link>
@@ -170,7 +171,7 @@ function ConfirmContent() {
               setState({ phase: 'loading' });
               setRetryNonce((n) => n + 1);
             }}
-            style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+            style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'var(--on-primary)', borderRadius: 'var(--radius)', fontWeight: 600, border: 'none', cursor: 'pointer' }}
           >
             {t('booking.checkAgain')}
           </button>
@@ -197,7 +198,7 @@ function ConfirmContent() {
       <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.paymentFailedDesc')}</p>
       <Link
         href="/booking"
-        style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
+        style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'var(--on-primary)', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
       >
         {t('booking.tryAgain')}
       </Link>
@@ -207,8 +208,10 @@ function ConfirmContent() {
 
 export default function BookingConfirmPage() {
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>جارٍ التحميل...</div>}>
-      <ConfirmContent />
-    </Suspense>
+    <SawaaLayout>
+      <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>جارٍ التحميل...</div>}>
+        <ConfirmContent />
+      </Suspense>
+    </SawaaLayout>
   );
 }

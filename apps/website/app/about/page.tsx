@@ -23,7 +23,7 @@ export default async function AboutRoute() {
 
   return (
     <Layout>
-      <main dir={dir} className="sw-section-cream relative pt-[140px] sm:pt-[160px] pb-20">
+      <section dir={dir} className="sw-section-cream relative pt-[140px] sm:pt-[160px] pb-20">
         <div className="relative max-w-[920px] mx-auto px-5 sm:px-6 md:px-8">
           <header className="mb-10">
             <h1
@@ -176,7 +176,7 @@ export default async function AboutRoute() {
             </p>
           </section>
         </div>
-      </main>
+      </section>
     </Layout>
   );
 }

@@ -176,7 +176,7 @@ function NextBookingCard({ booking, locale }: { booking: ClientBookingItem; loca
           href={booking.zoomJoinUrl!}
           target="_blank"
           rel="noopener noreferrer"
-          className="self-start inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
+          className="self-start inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
         >
           <Video size={15} aria-hidden="true" />
           {tt('account.joinSession')}

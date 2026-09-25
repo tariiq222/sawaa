@@ -37,7 +37,7 @@ export function PackageCatalogFeature({ families }: { families: PackageFamily[] 
             </p>
             <Link
               href={`/packages/${encodeURIComponent(family.id)}`}
-              className="mt-5 inline-flex rounded-full bg-[var(--sw-primary-500)] px-5 py-3 text-sm font-bold text-white"
+              className="mt-5 inline-flex rounded-full bg-[var(--sw-primary-500)] px-5 py-3 text-sm font-bold text-[var(--on-primary)]"
             >
               {t('packages.view')}
             </Link>

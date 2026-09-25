@@ -80,7 +80,7 @@ export function JoinGroupButton({ sessionId, categoryId, isFull }: Props) {
         <Link
           href="/contact"
           className="inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3 text-[0.875rem] font-bold transition-all hover:-translate-y-[2px]"
-          style={{ background: 'var(--sw-secondary-700)', color: '#fff', boxShadow: 'var(--sw-shadow-md)' }}
+          style={{ background: 'var(--sw-secondary-700)', color: 'var(--sw-secondary-700-foreground)', boxShadow: 'var(--sw-shadow-md)' }}
         >
           <Phone className="w-4 h-4" />
           {t('supportGroups.detail.contactUs')}
@@ -104,7 +104,7 @@ export function JoinGroupButton({ sessionId, categoryId, isFull }: Props) {
         onClick={handleClick}
         disabled={disabled}
         className="inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3 text-[0.875rem] font-bold transition-all hover:-translate-y-[2px] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
-        style={{ background: 'var(--sw-primary-500)', color: '#fff', boxShadow: 'var(--sw-shadow-primary)' }}
+        style={{ background: 'var(--sw-primary-500)', color: 'var(--on-primary)', boxShadow: 'var(--sw-shadow-primary)' }}
       >
         {!client ? <LogIn className="w-4 h-4" /> : <Users className="w-4 h-4" />}
         {label}

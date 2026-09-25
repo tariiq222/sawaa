@@ -243,7 +243,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
                 type="button"
                 onClick={handlePayNow}
                 disabled={paying}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
               >
                 <CreditCard size={14} aria-hidden="true" />
                 {paying ? tt('account.paying') : tt('account.payNow')}
@@ -287,7 +287,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
           </button>
           <button
             onClick={() => setShowReschedule(true)}
-            className="flex-1 px-5 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
+            className="flex-1 px-5 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
           >
             {t(locale, 'booking.reschedule')}
           </button>
@@ -591,7 +591,7 @@ function RescheduleModal({
         <button
           onClick={handleConfirm}
           disabled={isLoading || !newDate || !newTime}
-          className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+          className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
         >
           {isLoading ? tt('booking.detail.rescheduling') : tt('booking.detail.confirm')}
         </button>

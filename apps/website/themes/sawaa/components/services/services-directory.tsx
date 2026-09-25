@@ -82,7 +82,7 @@ function FilterButton({
       className="shrink-0 rounded-full px-4 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
       style={{
         background: active ? 'var(--sw-primary-700)' : '#fff',
-        color: active ? '#fff' : 'var(--sw-secondary-700)',
+        color: active ? 'var(--sw-primary-700-foreground)' : 'var(--sw-secondary-700)',
         border: active ? '1px solid var(--sw-primary-700)' : '1px solid var(--sw-neutral-200)',
       }}
     >

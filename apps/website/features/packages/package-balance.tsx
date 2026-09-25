@@ -404,7 +404,7 @@ export function PackageBalanceFeature({
                           </div>
                         </fieldset>
                       )}
-                      <button type="button" disabled={!selectedSlots[credit.id] || bookingCreditId === credit.id} onClick={() => void book(credit.id)} className="mt-4 rounded-full bg-[var(--sw-primary-500)] px-5 py-3 font-bold text-white disabled:opacity-50">{bookingCreditId === credit.id ? t('packages.bookingPending') : `${t('packages.book')} ${name}`}</button>
+                      <button type="button" disabled={!selectedSlots[credit.id] || bookingCreditId === credit.id} onClick={() => void book(credit.id)} className="mt-4 rounded-full bg-[var(--sw-primary-500)] px-5 py-3 font-bold text-[var(--on-primary)] disabled:opacity-50">{bookingCreditId === credit.id ? t('packages.bookingPending') : `${t('packages.book')} ${name}`}</button>
                     </>
                   )}
                 </div>

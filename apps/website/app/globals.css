@@ -24,3 +24,14 @@ body {
   margin: 0;
   overflow-x: hidden;
 }
+
+@media (prefers-color-scheme: dark) {
+  html:root {
+    color-scheme: dark;
+    --bg: #0A1F1E;
+  }
+
+  body {
+    color: #E8F4F2;
+  }
+}

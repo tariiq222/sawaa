@@ -179,7 +179,7 @@ export function ServiceCard({ item, vatRate = 0, className = '' }: ServiceCardPr
           href={`/booking?serviceId=${encodeURIComponent(service.id)}`}
           aria-label={`${t('services.bookAria')} ${name}`}
           className="mt-auto inline-flex items-center justify-between rounded-full px-4 py-2.5 text-[0.78rem] font-extrabold transition-all hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
-          style={{ background: 'var(--sw-primary-700)', color: '#fff' }}
+          style={{ background: 'var(--sw-primary-700)', color: 'var(--sw-primary-700-foreground)' }}
         >
           {t('services.bookCta')}
           <ArrowLeft aria-hidden className="h-3.5 w-3.5 rtl:rotate-180" />

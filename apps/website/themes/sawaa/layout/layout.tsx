@@ -4,7 +4,7 @@ import { Navbar } from '../components/layout/navbar';
 import { SkipLink } from '../components/ui/skip-link';
 import '../theme.css';
 
-export async function SawaaLayout({ children }: ThemeLayoutProps) {
+export function SawaaLayout({ children }: ThemeLayoutProps) {
   return (
     <div className="theme-sawaa">
       <SkipLink />

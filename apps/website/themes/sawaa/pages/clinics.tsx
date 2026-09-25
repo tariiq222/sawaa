@@ -118,7 +118,7 @@ function ClinicsHero({ locale, t, total, totalTherapists }: HeroProps) {
         background:
           'radial-gradient(ellipse 800px 480px at 88% 12%, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 60%),' +
           'radial-gradient(ellipse 720px 420px at 8% 90%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 60%),' +
-          'linear-gradient(180deg, #FBF7F2 0%, #FDFAF6 100%)',
+          'var(--sw-warm-gradient)',
       }}
     >
       <span

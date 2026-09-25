@@ -26,7 +26,7 @@ const ICON =
 const LABEL = 'text-sm font-medium text-[var(--sw-secondary-700)]';
 
 const PRIMARY_BTN =
-  'mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0';
+  'mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--on-primary)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0';
 
 const GHOST_LINK =
   'text-[var(--sw-primary-600)] text-sm font-semibold bg-transparent border-0 cursor-pointer hover:underline disabled:opacity-50';
@@ -284,9 +284,9 @@ function Stepper({ current }: { current: Step }) {
             <span
               className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-colors ${
                 done
-                  ? 'bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)]'
+                  ? 'bg-[var(--sw-primary-500)] text-[var(--on-primary)]'
                   : active
-                  ? 'bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)]'
+                  ? 'bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)]'
                   : 'bg-[var(--sw-neutral-100)] text-[var(--sw-neutral-500)]'
               }`}
               aria-current={active ? 'step' : undefined}

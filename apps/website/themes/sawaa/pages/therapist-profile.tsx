@@ -41,7 +41,7 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
           background:
             'radial-gradient(ellipse 720px 420px at 92% 8%, color-mix(in srgb, var(--accent) 7%, transparent) 0%, transparent 60%),' +
             'radial-gradient(ellipse 640px 380px at 5% 95%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 60%),' +
-            'linear-gradient(180deg, #FBF7F2 0%, #FDFAF6 100%)',
+            'var(--sw-warm-gradient)',
         }}
       >
         <div className="max-w-[1180px] mx-auto px-5 sm:px-6 md:px-8">

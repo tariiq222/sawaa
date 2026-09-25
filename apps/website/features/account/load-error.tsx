@@ -35,7 +35,7 @@ export function AccountLoadError({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
       >
         <RotateCcw size={14} aria-hidden="true" />
         {tt('account.retry')}

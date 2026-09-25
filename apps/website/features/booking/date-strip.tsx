@@ -234,7 +234,7 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
                 isSelected
                   ? {
                       background: 'var(--primary)',
-                      color: '#FFFFFF',
+                      color: 'var(--on-primary)',
                       border: '1.5px solid var(--primary)',
                       boxShadow: 'var(--sw-shadow-primary)',
                     }

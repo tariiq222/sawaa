@@ -163,7 +163,7 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
                     isSelected
                       ? {
                           background: 'var(--primary)',
-                          color: '#FFFFFF',
+                          color: 'var(--on-primary)',
                           border: '1.5px solid var(--primary)',
                           fontWeight: 700,
                           boxShadow: 'var(--sw-shadow-primary)',

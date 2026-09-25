@@ -7,6 +7,7 @@ import { Suspense } from "react"
 import { getApiBase } from "@/lib/api-base"
 import { useLocale } from "@/features/locale/locale-provider"
 import { t, type MessageKey } from "@/features/locale/dictionary"
+import { SawaaLayout } from '@/themes/sawaa/layout/layout'
 
 /** Sentinel for a rejected verification — the backend message is English and
  * must never leak into the UI, so we only carry the fact that it failed. */
@@ -68,19 +69,19 @@ function VerifyEmailContent() {
 
   if (result.status === "verifying") {
     return (
-      <main style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '1rem' }}>
+      <div style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '1rem' }}>
         <div role="status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
           <div aria-hidden="true" style={{ width: '2rem', height: '2rem', border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
           <p style={{ opacity: 0.6 }}>{t(locale, 'verifyEmail.verifying')}</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </main>
+      </div>
     )
   }
 
   if (result.status === "ok") {
     return (
-      <main style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '1rem' }}>
+      <div style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '1rem' }}>
         <div aria-hidden="true" style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'color-mix(in srgb, var(--success, #22c55e) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="32" height="32" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="var(--success, #22c55e)">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -98,12 +99,12 @@ function VerifyEmailContent() {
             {t(locale, 'verifyEmail.home')}
           </Link>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '1rem' }}>
+    <div style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '1rem' }}>
       <div aria-hidden="true" style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'color-mix(in srgb, var(--destructive, #ef4444) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <svg width="32" height="32" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="var(--destructive, #ef4444)">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
@@ -118,15 +119,17 @@ function VerifyEmailContent() {
       <Link href="/" style={{ padding: '0.625rem 1.25rem', borderRadius: '0.5rem', background: 'var(--primary)', color: 'var(--on-primary, #fff)', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none' }}>
         {t(locale, 'verifyEmail.home')}
       </Link>
-    </main>
+    </div>
   )
 }
 
 export default function VerifyEmailPage() {
   const locale = useLocale()
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>{t(locale, 'common.loading')}</div>}>
-      <VerifyEmailContent />
-    </Suspense>
+    <SawaaLayout>
+      <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>{t(locale, 'common.loading')}</div>}>
+        <VerifyEmailContent />
+      </Suspense>
+    </SawaaLayout>
   )
 }

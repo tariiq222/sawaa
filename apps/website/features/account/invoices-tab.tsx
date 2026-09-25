@@ -196,7 +196,7 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
             type="button"
             onClick={handlePayNow}
             disabled={paying}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
           >
             <CreditCard size={12} aria-hidden="true" />
             {paying ? tt('account.paying') : tt('account.payNow')}
@@ -239,7 +239,7 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
             type="button"
             onClick={handleRefundSubmit}
             disabled={refundSending}
-            className="self-start px-4 py-2 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] hover:opacity-90 transition-opacity disabled:opacity-60"
+            className="self-start px-4 py-2 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] hover:opacity-90 transition-opacity disabled:opacity-60"
           >
             {refundSending ? tt('account.invoices.refundSending') : tt('account.invoices.refundSubmit')}
           </button>

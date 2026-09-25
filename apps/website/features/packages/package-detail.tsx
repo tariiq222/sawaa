@@ -62,7 +62,7 @@ export function PackageDetailFeature({ family }: { family: PackageFamily }) {
       </fieldset>
       <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
         <p className="text-lg font-black text-[var(--sw-secondary-700)]">{money}</p>
-        <Link href={purchaseHref} className="rounded-full bg-[var(--sw-primary-500)] px-6 py-3 font-bold text-white">
+        <Link href={purchaseHref} className="rounded-full bg-[var(--sw-primary-500)] px-6 py-3 font-bold text-[var(--on-primary)]">
           {t('packages.continue')}
         </Link>
       </div>

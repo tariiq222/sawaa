@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import '@/themes/sawaa/theme.css';
 
 export default function Error({
   error,
@@ -15,7 +16,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '6rem 1rem' }}>
+    <div className="theme-sawaa" style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '6rem 1rem' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', textAlign: 'center' }}>
         <div
           style={{

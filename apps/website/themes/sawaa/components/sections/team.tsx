@@ -152,7 +152,7 @@ export async function Team({ therapists, intro, totalCount }: Props) {
             >
               <span
                 className="w-7 h-7 rounded-full flex items-center justify-center transition-transform group-hover:scale-110"
-                style={{ background: 'var(--sw-primary-500)', color: '#fff' }}
+                style={{ background: 'var(--sw-primary-500)', color: 'var(--on-primary)' }}
               >
                 <ChevronDown className="w-4 h-4" strokeWidth={2.5} />
               </span>

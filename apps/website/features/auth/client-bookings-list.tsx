@@ -174,7 +174,7 @@ function BookingsEmpty({ locale }: { locale: Locale }) {
       </p>
       <Link
         href="/booking"
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
       >
         {t(locale, 'account.empty.cta')}
         <ChevronRight size={14} className="rtl:rotate-180" aria-hidden="true" />
@@ -299,7 +299,7 @@ function BookingCard({
               type="button"
               onClick={handlePayNow}
               disabled={paying}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
             >
               <CreditCard size={12} aria-hidden="true" />
               {paying ? tt('account.paying') : tt('account.payNow')}

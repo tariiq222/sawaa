@@ -80,7 +80,7 @@ export function Services({ services, intro, vatRate = 0 }: ServicesProps) {
             <p className="mb-5 text-sm leading-relaxed" style={{ color: 'var(--sw-neutral-500)' }}>
               {t('services.empty')}
             </p>
-            <Link href="/contact" className="inline-flex rounded-full px-5 py-2.5 text-sm font-bold" style={{ background: 'var(--sw-primary-700)', color: '#fff' }}>
+            <Link href="/contact" className="inline-flex rounded-full px-5 py-2.5 text-sm font-bold" style={{ background: 'var(--sw-primary-700)', color: 'var(--sw-primary-700-foreground)' }}>
               {t('services.contact')}
             </Link>
           </div>
@@ -104,7 +104,7 @@ export function Services({ services, intro, vatRate = 0 }: ServicesProps) {
               <Link
                 href="/services"
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[0.8125rem] font-bold transition-all hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
-                style={{ background: 'var(--sw-primary-700)', color: '#fff', boxShadow: 'var(--sw-shadow-sm)' }}
+                style={{ background: 'var(--sw-primary-700)', color: 'var(--sw-primary-700-foreground)', boxShadow: 'var(--sw-shadow-sm)' }}
               >
                 {t('services.viewAll')}
                 <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />

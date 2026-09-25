@@ -93,7 +93,7 @@ export async function SawaaServicesPage() {
               <Link
                 href="/contact"
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold"
-                style={{ background: 'var(--sw-primary-700)', color: '#fff' }}
+                style={{ background: 'var(--sw-primary-700)', color: 'var(--sw-primary-700-foreground)' }}
               >
                 {t(locale, 'services.contact')}
                 <ArrowLeft aria-hidden className="h-4 w-4 rtl:rotate-180" />

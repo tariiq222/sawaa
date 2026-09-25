@@ -59,7 +59,7 @@ function GroupsHero({ t, total, totalSeats }: HeroProps) {
         background:
           'radial-gradient(ellipse 800px 480px at 88% 12%, color-mix(in srgb, var(--primary) 9%, transparent) 0%, transparent 60%),' +
           'radial-gradient(ellipse 720px 420px at 8% 90%, color-mix(in srgb, var(--sw-secondary-700) 5%, transparent) 0%, transparent 60%),' +
-          'linear-gradient(180deg, #F1FBF9 0%, #F7FDFB 100%)',
+          'var(--sw-mint-gradient)',
       }}
     >
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">

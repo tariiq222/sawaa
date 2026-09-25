@@ -217,7 +217,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                 authMode === 'signin'
                   ? {
                       background: 'var(--primary)',
-                      color: '#FFFFFF',
+                      color: 'var(--on-primary)',
                       boxShadow: 'var(--sw-shadow-xs)',
                     }
                   : {
@@ -238,7 +238,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                 authMode === 'register'
                   ? {
                       background: 'var(--primary)',
-                      color: '#FFFFFF',
+                      color: 'var(--on-primary)',
                       boxShadow: 'var(--sw-shadow-xs)',
                     }
                   : {
@@ -341,7 +341,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                 className="self-stretch inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99] enabled:cursor-pointer"
                 style={{
                   background: 'var(--primary)',
-                  color: '#FFFFFF',
+                  color: 'var(--on-primary)',
                   boxShadow: 'var(--sw-shadow-primary)',
                 }}
               >
@@ -523,7 +523,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               className="mt-1 inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99]"
               style={{
                 background: 'var(--primary)',
-                color: '#FFFFFF',
+                color: 'var(--on-primary)',
                 boxShadow: isSubmitting ? 'none' : 'var(--sw-shadow-primary)',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
               }}

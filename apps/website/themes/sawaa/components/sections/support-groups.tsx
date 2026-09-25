@@ -74,7 +74,7 @@ export async function SupportGroups({ intro, items, loadFailed = false }: Props)
               <Link
                 href="/support-groups"
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-extrabold transition hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
-                style={{ background: 'var(--sw-primary-700)', color: '#fff' }}
+                style={{ background: 'var(--sw-primary-700)', color: 'var(--sw-primary-700-foreground)' }}
               >
                 {t('supportGroups.viewAll')}
                 <ArrowLeft aria-hidden className="h-4 w-4 rtl:rotate-180" />

@@ -164,7 +164,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className="mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
+        className="mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--on-primary)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
       >
         {isLoading ? t('auth.signingIn') : t('auth.signIn')}
       </button>

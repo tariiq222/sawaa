@@ -301,7 +301,7 @@ function TherapistEmptyState({ isAr }: { isAr: boolean }) {
         className="mt-1 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold transition-all hover:scale-[1.02] active:scale-[0.99]"
         style={{
           background: 'var(--primary)',
-          color: '#FFFFFF',
+          color: 'var(--on-primary)',
           boxShadow: 'var(--sw-shadow-primary)',
         }}
       >

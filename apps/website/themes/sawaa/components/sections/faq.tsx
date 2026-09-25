@@ -62,7 +62,7 @@ export function FAQ({ intro, items }: Props) {
                       className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300"
                       style={{
                         background: isOpen ? 'var(--sw-primary-500)' : 'var(--sw-primary-50)',
-                        color: isOpen ? '#fff' : 'var(--sw-primary-600)',
+                        color: isOpen ? 'var(--sw-primary-700-foreground)' : 'var(--sw-primary-600)',
                         transform: isOpen ? 'rotate(45deg)' : 'rotate(0deg)',
                       }}
                     >

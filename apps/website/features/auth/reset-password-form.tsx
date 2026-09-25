@@ -24,7 +24,7 @@ const ICON =
   'absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--sw-neutral-400)] flex items-center pointer-events-none';
 const LABEL = 'text-sm font-medium text-[var(--sw-secondary-700)]';
 const PRIMARY_BTN =
-  'mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0';
+  'mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--on-primary)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0';
 
 export function ResetPasswordForm({ initialIdentifier, onSuccess }: ResetPasswordFormProps) {
   const t = useT();

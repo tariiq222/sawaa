@@ -68,7 +68,7 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
         style={{
           padding: '0.875rem',
           background: 'var(--primary)',
-          color: 'white',
+          color: 'var(--on-primary)',
           border: 'none',
           borderRadius: 'var(--radius)',
           fontWeight: 600,

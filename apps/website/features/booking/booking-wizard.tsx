@@ -354,7 +354,7 @@ function BookingWizardInner() {
                       className="mt-2 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.99]"
                       style={{
                         background: 'var(--primary)',
-                        color: '#FFFFFF',
+                        color: 'var(--on-primary)',
                         boxShadow: 'var(--sw-shadow-primary)',
                       }}
                     >
@@ -502,7 +502,7 @@ function BookingWizardInner() {
                       className="mt-2 inline-flex items-center justify-center px-7 py-3 rounded-full text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.99] cursor-pointer"
                       style={{
                         background: 'var(--primary)',
-                        color: '#FFFFFF',
+                        color: 'var(--on-primary)',
                         boxShadow: 'var(--sw-shadow-primary)',
                       }}
                     >
