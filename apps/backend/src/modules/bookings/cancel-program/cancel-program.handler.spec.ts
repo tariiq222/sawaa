@@ -2,19 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { BookingStatus, ProgramStatus, CancellationReason, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { EventBusService } from '../../../infrastructure/events';
+import { stableEventId } from '../../../common/events';
 import { CancelProgramHandler } from './cancel-program.handler';
 
 /**
  * CancelProgram cascades the cancellation to every enrollment booking under
  * the program. It does NOT issue refunds — that's a manual per-invoice flow
  * handled by the refund-payment handler.
+ *
+ * Cascade events are staged in the transactional outbox (never published from
+ * inside the transaction), so a rolled-back cascade cannot leave cancellation
+ * notifications queued for bookings that stayed active.
  */
 describe('CancelProgramHandler', () => {
   let handler: CancelProgramHandler;
   let prisma: any;
   let rls: { withTransaction: jest.Mock };
-  let eventBus: { publish: jest.Mock };
 
   const tx = () => prisma;
 
@@ -25,9 +28,9 @@ describe('CancelProgramHandler', () => {
       programEnrollment: { findMany: jest.fn().mockResolvedValue([]) },
       booking: { update: jest.fn().mockResolvedValue({}) },
       bookingStatusLog: { create: jest.fn().mockResolvedValue({}) },
+      outboxEvent: { create: jest.fn().mockResolvedValue({}) },
     };
     rls = { withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx())) };
-    eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
   };
 
   beforeEach(async () => {
@@ -37,7 +40,6 @@ describe('CancelProgramHandler', () => {
         CancelProgramHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: RlsTransactionService, useValue: rls },
-        { provide: EventBusService, useValue: eventBus },
       ],
     }).compile();
 
@@ -158,7 +160,7 @@ describe('CancelProgramHandler', () => {
     );
   });
 
-  it('publishes a BookingCancelledEvent for every cascaded booking', async () => {
+  it('stages a BookingCancelledEvent in the transactional outbox for every cascaded booking', async () => {
     prisma.program.findUnique.mockResolvedValue({
       id: 'prog-1',
       status: ProgramStatus.OPEN,
@@ -179,24 +181,63 @@ describe('CancelProgramHandler', () => {
 
     await handler.execute('prog-1', { reason: 'low enrollment' });
 
-    expect(eventBus.publish).toHaveBeenCalledTimes(1);
-    expect(eventBus.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancelled',
-      expect.objectContaining({
+    expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        // Deterministic identity per (booking, program) so a replayed cancel
+        // maps onto the same outbox row instead of a duplicate notification.
+        id: stableEventId('booking:book-1:program-cancel:prog-1'),
+        aggregateId: 'book-1',
+        eventType: 'bookings.booking.cancelled',
         payload: expect.objectContaining({
-          bookingId: 'book-1',
-          bookingNumber: 101,
-          clientId: 'client-1',
-          employeeId: 'emp-1',
-          reason: CancellationReason.SYSTEM_EXPIRED,
-          cancelNotes: 'Program cancelled: low enrollment',
-          refundType: RefundType.NONE,
-          paymentId: null,
+          payload: expect.objectContaining({
+            bookingId: 'book-1',
+            bookingNumber: 101,
+            clientId: 'client-1',
+            employeeId: 'emp-1',
+            reason: CancellationReason.SYSTEM_EXPIRED,
+            cancelNotes: 'Program cancelled: low enrollment',
+            refundType: RefundType.NONE,
+            paymentId: null,
+          }),
+          source: 'bookings',
+          version: 1,
         }),
-        source: 'bookings',
-        version: 1,
       }),
-    );
+    });
+  });
+
+  it('stages the event on the transaction client, so a rollback cannot emit a cancellation', async () => {
+    prisma.program.findUnique.mockResolvedValue({
+      id: 'prog-1',
+      status: ProgramStatus.OPEN,
+    });
+    prisma.programEnrollment.findMany.mockResolvedValue([
+      { bookingId: 'book-1', booking: { id: 'book-1', status: BookingStatus.CONFIRMED, clientId: 'c1', employeeId: 'e1', scheduledAt: new Date(), bookingNumber: 1 } },
+    ]);
+
+    let openTransactions = 0;
+    let stagedInsideTransaction: boolean | null = null;
+    rls.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      openTransactions += 1;
+      try {
+        return await fn(tx());
+      } finally {
+        openTransactions -= 1;
+      }
+    });
+    prisma.outboxEvent.create.mockImplementation(async () => {
+      stagedInsideTransaction = openTransactions > 0;
+      return {};
+    });
+
+    await handler.execute('prog-1', { reason: 'rollback safety' });
+
+    // Staged through the transaction client while the transaction is open: if
+    // this transaction rolls back, the outbox row rolls back with it and the
+    // publisher cron never sees a cancellation for a booking that stayed active.
+    expect(stagedInsideTransaction).toBe(true);
+    expect(openTransactions).toBe(0);
   });
 
   it('does not re-write history for already-terminal enrollment bookings', async () => {
@@ -220,7 +261,7 @@ describe('CancelProgramHandler', () => {
       expect.objectContaining({ where: { id: 'book-4' } }),
     );
     expect(prisma.bookingStatusLog.create).toHaveBeenCalledTimes(1);
-    expect(eventBus.publish).toHaveBeenCalledTimes(1);
+    expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
     expect(result.cancelledEnrollments).toBe(4);
   });
 

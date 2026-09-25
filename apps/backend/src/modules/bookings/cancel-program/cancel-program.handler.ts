@@ -1,15 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, CancellationReason, Prisma, RefundType } from '@prisma/client';
 import {
   PrismaService,
   RlsTransactionService,
 } from '../../../infrastructure/database';
-import { EventBusService } from '../../../infrastructure/events';
+import { stableEventId } from '../../../common/events';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertProgramTransition } from '../program/program-state-machine';
 import { CancelProgramDto } from '../enroll-in-program/enroll-in-program.dto';
-import { CancellationReason, RefundType } from '@prisma/client';
 
 /**
  * Cancels a program and cascades the cancellation to every active enrollment
@@ -21,7 +20,6 @@ export class CancelProgramHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
   ) {}
 
   async execute(programId: string, dto: CancelProgramDto) {
@@ -112,8 +110,25 @@ export class CancelProgramHandler {
           cancelNotes: `Program cancelled: ${dto.reason}`,
           refundType: RefundType.NONE,
           paymentId: null,
+        }, stableEventId(`booking:${booking.id}:program-cancel:${programId}`));
+
+        // P1: stage the event in the transactional outbox INSIDE this
+        // transaction instead of awaiting eventBus.publish() here. Publishing
+        // from inside the transaction pushed BullMQ jobs (and therefore
+        // cancellation notifications) to Redis before the transaction
+        // committed: a later failure in this cascade — or in the commit
+        // itself — rolled the bookings back while their notifications were
+        // already queued and undeliverable-in-reverse. The OutboxPublisherCron
+        // only publishes rows whose transaction committed, and retries with
+        // at-least-once delivery (mirrors cancel-booking / moyasar-webhook).
+        await tx.outboxEvent.create({
+          data: {
+            id: event.eventId,
+            aggregateId: booking.id,
+            eventType: event.eventName,
+            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+          },
         });
-        await this.eventBus.publish(event.eventName, event.toEnvelope());
       }
 
       return {
