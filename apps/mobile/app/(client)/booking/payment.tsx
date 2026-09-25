@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,7 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { Apple, Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AquaBackground, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
@@ -23,6 +25,9 @@ import type { DeliveryType } from '@/types/booking-enums';
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
 
 export default function BookingPaymentScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
   const { t } = useTranslation();
   const params = useLocalSearchParams<{
     serviceId?: string;
@@ -52,9 +57,9 @@ export default function BookingPaymentScreen() {
     `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
 
   const methods: Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }> = [
-    { key: 'card', icon: <CreditCard size={20} color={sawaaColors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: sawaaColors.teal[600] },
-    { key: 'apple_pay', icon: <Apple size={20} color={sawaaColors.ink[900]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: sawaaColors.ink[900] },
-    { key: 'bank_transfer', icon: <Banknote size={20} color={sawaaColors.accent.amber} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: sawaaColors.accent.amber },
+    { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: colors.teal[600] },
+    { key: 'apple_pay', icon: <Apple size={20} color={colors.ink[900]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.ink[900] },
+    { key: 'bank_transfer', icon: <Banknote size={20} color={colors.accent.amber} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: colors.accent.amber },
   ];
 
   const canPay =
@@ -151,7 +156,7 @@ export default function BookingPaymentScreen() {
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
+            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
 
@@ -195,8 +200,8 @@ export default function BookingPaymentScreen() {
                     </Text>
                   </View>
                   {isSelected && (
-                    <View style={[styles.checkCircle, { backgroundColor: m.color }]}>
-                      <Check size={14} color={sawaaColors.teal[50]} strokeWidth={3} />
+                    <View style={[styles.checkCircle, { backgroundColor: theme.colors.primaryFill }]}>
+                      <Check size={14} color={theme.colors.primaryForeground} strokeWidth={3} />
                     </View>
                   )}
                 </View>
@@ -212,19 +217,19 @@ export default function BookingPaymentScreen() {
       >
         <Pressable onPress={handlePay} disabled={!canPay}>
           <LinearGradient
-            colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+            colors={theme.colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.ctaBtn, !canPay && { opacity: 0.6 }]}
           >
             {submitting ? (
-              <ActivityIndicator color={sawaaColors.teal[50]} />
+              <ActivityIndicator color={theme.colors.primaryForeground} />
             ) : (
               <>
                 <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
                   {dir.isRTL ? `ادفع ${formatMoney(total)}` : `Pay ${formatMoney(total)}`}
                 </Text>
-                <GoIcon size={16} color={sawaaColors.teal[50]} strokeWidth={2} />
+                <GoIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />
               </>
             )}
           </LinearGradient>
@@ -234,20 +239,20 @@ export default function BookingPaymentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginTop: sawaaSpacing.sm,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
     paddingHorizontal: sawaaSpacing.xs,
   },
@@ -264,12 +269,12 @@ const styles = StyleSheet.create({
   methodLabel: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   methodSub: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
   },
   checkCircle: {
@@ -287,13 +292,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: sawaaSpacing.sm,
-    shadowColor: sawaaColors.teal[600],
+    shadowColor: colors.teal[600],
     shadowOpacity: 0.35,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
   },
   ctaBtnText: {
-    color: sawaaColors.teal[50],
+    color: themeColors.primaryForeground,
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
   },

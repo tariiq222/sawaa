@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -6,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
-import { AquaBackground, sawaaColors, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { AquaBackground, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -26,6 +27,8 @@ function toLocalDateOnly(d: Date): string {
 }
 
 export default function BookingScheduleScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{
     serviceId?: string;
     employeeId?: string;
@@ -250,19 +253,19 @@ export default function BookingScheduleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginTop: sawaaSpacing.sm,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
     paddingHorizontal: sawaaSpacing.xs,
   },
@@ -270,11 +273,11 @@ const styles = StyleSheet.create({
   slotsTitle: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   tz: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
 });

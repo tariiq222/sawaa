@@ -3,7 +3,8 @@ import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video } from 'lucide-react-native';
 
-import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { sawaaRadius } from '@/theme/sawaa';
+import { useTheme } from '@/theme/useTheme';
 import { getFontName } from '@/theme/fonts';
 import { FEATURE_FLAGS } from '@/constants/feature-flags';
 
@@ -28,6 +29,7 @@ export function JoinVideoCallButton({
   isRTL,
   variant,
 }: Props) {
+  const { theme } = useTheme();
   // Hooks must run unconditionally — feature-flag gating happens after.
   const f600 = getFontName(isRTL ? 'ar' : 'en', '600');
   const f700 = getFontName(isRTL ? 'ar' : 'en', '700');
@@ -72,14 +74,14 @@ export function JoinVideoCallButton({
     <Pressable onPress={onPress} disabled={!withinWindow} style={styles.btn}>
       <LinearGradient
         colors={withinWindow
-          ? [sawaaColors.teal[500], sawaaColors.teal[700]]
-          : ['#cbd5da', '#a3b0b8']}
+          ? theme.colors.primaryGradient
+          : [theme.colors.surfaceHigh, theme.colors.surfaceLow]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.gradient, { borderRadius: sawaaRadius.pill }]}
       >
-        <Video size={18} color="#fff" strokeWidth={1.75} />
-        <Text style={[styles.text, { fontFamily: withinWindow ? f700 : f600, fontWeight: withinWindow ? undefined : '600' }]}>
+        <Video size={18} color={withinWindow ? theme.colors.primaryForeground : theme.colors.textMuted} strokeWidth={1.75} />
+        <Text style={[styles.text, { color: withinWindow ? theme.colors.primaryForeground : theme.colors.textMuted, fontFamily: withinWindow ? f700 : f600, fontWeight: withinWindow ? undefined : '600' }]}>
           {label}
         </Text>
       </LinearGradient>
@@ -93,5 +95,5 @@ const styles = StyleSheet.create({
     height: 52,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  text: { color: '#fff', fontSize: 13.5 },
+  text: { fontSize: 13.5 },
 });

@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AquaBackground,
-  sawaaColors,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -50,6 +51,9 @@ function formatDate(d: Date, isRTL: boolean): string {
 }
 
 export default function BookingConfirmScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { serviceId, employeeId, branchId, deliveryType, scheduledAt, durationOptionId, chargedPrice, currency } = useLocalSearchParams<{
     serviceId?: string;
     employeeId?: string;
@@ -130,28 +134,28 @@ export default function BookingConfirmScreen() {
 
   const rows = [
     {
-      icon: <Video size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />,
+      icon: <Video size={18} color={colors.accent.violet} strokeWidth={1.75} />,
       labelAr: 'نوع الزيارة',
       labelEn: 'Visit type',
       valueAr: kindAr,
       valueEn: kindEn,
-      color: sawaaColors.accent.violet,
+      color: colors.accent.violet,
     },
     {
-      icon: <Calendar size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />,
+      icon: <Calendar size={18} color={colors.teal[600]} strokeWidth={1.75} />,
       labelAr: 'التاريخ',
       labelEn: 'Date',
       valueAr: scheduledDate ? formatDate(scheduledDate, true) : '—',
       valueEn: scheduledDate ? formatDate(scheduledDate, false) : '—',
-      color: sawaaColors.teal[600],
+      color: colors.teal[600],
     },
     {
-      icon: <Clock size={18} color={sawaaColors.accent.amber} strokeWidth={1.75} />,
+      icon: <Clock size={18} color={colors.accent.amber} strokeWidth={1.75} />,
       labelAr: 'الوقت',
       labelEn: 'Time',
       valueAr: scheduledDate ? formatTime(scheduledDate, true) : '—',
       valueEn: scheduledDate ? formatTime(scheduledDate, false) : '—',
-      color: sawaaColors.accent.amber,
+      color: colors.accent.amber,
     },
   ];
 
@@ -274,7 +278,7 @@ export default function BookingConfirmScreen() {
               onPress={handleConfirm}
               disabled={!canContinue}
               fontFamily={f700}
-              icon={<GoIcon size={16} color={sawaaColors.teal[50]} strokeWidth={2} />}
+              icon={<GoIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />}
             />
           </View>
         </FloatingActionBar>
@@ -283,26 +287,26 @@ export default function BookingConfirmScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginTop: sawaaSpacing.sm,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
     paddingHorizontal: sawaaSpacing.xs,
   },
   row: { alignItems: 'center', gap: sawaaSpacing.lg, padding: sawaaSpacing.lg },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: withAlpha(sawaaColors.ink[900], 0.06),
+    borderBottomColor: withAlpha(colors.ink[900], 0.06),
   },
   rowIcon: {
     width: 38,
@@ -315,12 +319,12 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   rowValue: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginTop: sawaaSpacing.xs,
   },
   priceRow: {
@@ -332,28 +336,28 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[700],
+    color: colors.ink[700],
   },
   priceLabelBold: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   priceValue: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     fontVariant: ['tabular-nums'],
   },
   priceTotal: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
-    color: sawaaColors.teal[700],
+    color: colors.teal[700],
     fontVariant: ['tabular-nums'],
   },
   priceDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: withAlpha(sawaaColors.ink[900], 0.06),
+    backgroundColor: withAlpha(colors.ink[900], 0.06),
     marginHorizontal: sawaaSpacing.lg,
   },
   skeletonBlock: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },

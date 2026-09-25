@@ -1,4 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -18,15 +20,14 @@ import {
 
 import {
   AquaBackground,
-  sawaaColors,
   sawaaRadius,
-  sawaaSemantic,
   sawaaSpacing,
   sawaaType,
   withAlpha,
 } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -37,25 +38,11 @@ import { resolveDeliveryType } from '@/types/booking-enums';
 
 type TabKey = 'upcoming' | 'past' | 'cancelled';
 
-const TABS: { key: TabKey; ar: string; en: string; a11yKey: string }[] = [
-  { key: 'upcoming', ar: 'قادمة', en: 'Upcoming', a11yKey: 'a11y.tabUpcoming' },
-  { key: 'past', ar: 'منتهية', en: 'Completed', a11yKey: 'a11y.tabCompleted' },
-  { key: 'cancelled', ar: 'ملغاة', en: 'Cancelled', a11yKey: 'a11y.tabCancelled' },
+const TABS: { key: TabKey; ar: string; en: string }[] = [
+  { key: 'upcoming', ar: 'قادمة', en: 'Upcoming' },
+  { key: 'past', ar: 'منتهية', en: 'Completed' },
+  { key: 'cancelled', ar: 'ملغاة', en: 'Cancelled' },
 ];
-
-const GRADIENTS: Array<readonly [string, string]> = [
-  [withAlpha(sawaaColors.accent.coral, 0.45), sawaaColors.accent.coral],
-  [withAlpha(sawaaColors.accent.sky, 0.45), sawaaColors.accent.sky],
-  [withAlpha(sawaaColors.accent.violet, 0.45), sawaaColors.accent.violet],
-  [withAlpha(sawaaColors.accent.amber, 0.45), sawaaColors.accent.amber],
-  [sawaaColors.teal[200], sawaaColors.teal[500]],
-];
-
-function hashGradient(id: string) {
-  let h = 0;
-  for (const ch of id) h = (h + ch.charCodeAt(0)) % GRADIENTS.length;
-  return GRADIENTS[h];
-}
 
 function tabOf(status: ClientBookingStatus): TabKey {
   if (status === 'cancelled' || status === 'cancel_requested' || status === 'expired') {
@@ -81,6 +68,9 @@ function formatTime(iso: string, isRTL: boolean) {
 }
 
 export default function AppointmentsScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -107,14 +97,14 @@ export default function AppointmentsScreen() {
   };
 
   const statusConfig: Record<TabKey, { icon: React.ReactNode; color: string }> = {
-    upcoming: { icon: <Clock size={12} color={sawaaSemantic.info} strokeWidth={2} />, color: sawaaSemantic.info },
-    past: { icon: <CheckCircle2 size={12} color={sawaaSemantic.success} strokeWidth={2} />, color: sawaaSemantic.success },
-    cancelled: { icon: <XCircle size={12} color={sawaaSemantic.danger} strokeWidth={2} />, color: sawaaSemantic.danger },
+    upcoming: { icon: <Clock size={12} color={colors.accent.sky} strokeWidth={2} />, color: colors.accent.sky },
+    past: { icon: <CheckCircle2 size={12} color={colors.teal[500]} strokeWidth={2} />, color: colors.teal[500] },
+    cancelled: { icon: <XCircle size={12} color={colors.accent.coral} strokeWidth={2} />, color: colors.accent.coral },
   };
 
   const renderItem = useCallback(({ item: b, index: i }: { item: typeof bookings[0]; index: number }) => {
     const status: TabKey = tabOf(b.status);
-    const gradient = hashGradient(b.id);
+    const gradient = theme.colors.primaryGradient;
     const therapistName = (dir.isRTL
       ? b.employee?.nameAr ?? b.employee?.nameEn
       : b.employee?.nameEn ?? b.employee?.nameAr) ?? '—';
@@ -144,7 +134,7 @@ export default function AppointmentsScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.avatar}
               >
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>{initial}</Text>
+                <Text style={[styles.avatarText, { fontFamily: f700, color: theme.colors.primaryForeground }]}>{initial}</Text>
               </LinearGradient>
               <View style={styles.cardMid}>
                 <Text style={[styles.therapist, { fontFamily: f700, textAlign: dir.textAlign }]}>
@@ -152,14 +142,14 @@ export default function AppointmentsScreen() {
                 </Text>
                 <View style={[styles.metaRow, { flexDirection: dir.row }]}>
                   {isVideo ? (
-                    <Video size={12} color={sawaaColors.teal[600]} strokeWidth={2} />
+                    <Video size={12} color={colors.teal[600]} strokeWidth={2} />
                   ) : (
-                    <MapPin size={12} color={sawaaColors.accent.violet} strokeWidth={2} />
+                    <MapPin size={12} color={colors.accent.violet} strokeWidth={2} />
                   )}
                   <Text style={[styles.metaText, { fontFamily: f500, fontWeight: '500' }]}>{location}</Text>
                 </View>
               </View>
-              <Chevron size={16} color={sawaaColors.ink[400]} strokeWidth={2} />
+              <Chevron size={16} color={colors.ink[400]} strokeWidth={2} />
             </View>
 
             <View style={styles.divider} />
@@ -195,7 +185,7 @@ export default function AppointmentsScreen() {
         </Glass>
       </Animated.View>
     );
-  }, [dir, f400, f500, f600, f700, reduceMotion, router, statusConfig, t]);
+  }, [Chevron, colors, styles, theme, dir, f400, f500, f600, f700, reduceMotion, router, statusConfig, t]);
 
   const ListHeader = useMemo(() => (
     <View style={styles.header}>
@@ -209,41 +199,18 @@ export default function AppointmentsScreen() {
       </Animated.View>
 
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-        <Glass variant="regular" radius={sawaaRadius.pill} style={styles.tabsWrap}>
-          <View style={[styles.tabsRow, { flexDirection: dir.row }]}>
-            {TABS.map((tabItem) => {
-              const isActive = tabItem.key === tab;
-              return (
-                <Pressable
-                  key={tabItem.key}
-                  onPress={() => setTab(tabItem.key)}
-                  style={[styles.tabBtn, isActive && styles.tabBtnActive]}
-                  accessibilityRole="tab"
-                  accessibilityLabel={t(tabItem.a11yKey)}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  {isActive ? (
-                    <LinearGradient
-                      colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={StyleSheet.absoluteFill}
-                    />
-                  ) : null}
-                  <Text style={[
-                    styles.tabBtnText,
-                    { fontFamily: f600, fontWeight: '600', color: isActive ? sawaaColors.teal[50] : sawaaColors.ink[700] },
-                  ]}>
-                    {dir.isRTL ? tabItem.ar : tabItem.en}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </Glass>
+        <GlassSegmented
+          size="sm"
+          options={TABS.map((tabItem) => ({
+            value: tabItem.key,
+            label: dir.isRTL ? tabItem.ar : tabItem.en,
+          }))}
+          value={tab}
+          onChange={setTab}
+        />
       </Animated.View>
     </View>
-  ), [dir, f500, f600, f700, reduceMotion, t, tab]);
+  ), [styles, dir, f500, f700, reduceMotion, tab]);
 
   const ListEmpty = useMemo(() => {
     if (isLoading) {
@@ -278,7 +245,7 @@ export default function AppointmentsScreen() {
         />
       </Animated.View>
     );
-  }, [dir.isRTL, isError, isLoading, reduceMotion, refetch, t]);
+  }, [styles, dir.isRTL, isError, isLoading, reduceMotion, refetch, t]);
 
   return (
     <AquaBackground>
@@ -294,7 +261,7 @@ export default function AppointmentsScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={onRefresh}
-            tintColor={sawaaColors.teal[600]}
+            tintColor={colors.teal[600]}
             accessibilityLabel={t('a11y.refreshAppointments')}
           />
         }
@@ -304,33 +271,22 @@ export default function AppointmentsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg },
   header: { gap: sawaaSpacing.lg, marginBottom: sawaaSpacing.lg },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: 2,
     paddingHorizontal: sawaaSpacing.xs,
   },
-  tabsWrap: { padding: sawaaSpacing.xs },
-  tabsRow: { gap: sawaaSpacing.xs },
-  tabBtn: {
-    flex: 1, paddingVertical: sawaaSpacing.sm, paddingHorizontal: sawaaSpacing.md,
-    borderRadius: sawaaRadius.pill, alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  tabBtnActive: {
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
-  },
-  tabBtnText: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight },
   skeletonWrap: { gap: sawaaSpacing.md, marginTop: sawaaSpacing.sm },
   card: { padding: 0, marginBottom: sawaaSpacing.lg },
   cardInner: { padding: sawaaSpacing.md, gap: sawaaSpacing.md },
@@ -342,32 +298,32 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
-    color: sawaaColors.teal[50],
+    color: colors.ink[900],
   },
   cardMid: { flex: 1 },
   therapist: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   metaRow: { alignItems: 'center', gap: sawaaSpacing.xs, marginTop: 2 },
   metaText: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: withAlpha(sawaaColors.ink[900], 0.1) },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: withAlpha(colors.ink[900], 0.1) },
   cardBottom: { alignItems: 'center', justifyContent: 'space-between', gap: sawaaSpacing.sm },
   dateCol: { gap: 2 },
   dateLabel: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[400],
+    color: colors.ink[400],
   },
   dateValue: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   statusChip: {
     flexDirection: 'row', alignItems: 'center', gap: sawaaSpacing.xs,

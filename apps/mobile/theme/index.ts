@@ -4,3 +4,4 @@ export * from './components';
 export type { AppTheme } from './tokens';
 
 export { Glass } from './components/Glass';
+export { useSawaaColors } from './sawaa/useSawaaColors';

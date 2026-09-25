@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { ThemedText } from '@/theme/components/ThemedText';
-import { sawaaColors, sawaaTokens } from '@/theme/sawaa/tokens';
+import { sawaaTokens } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { getFontName } from '@/theme/fonts';
 import { useDir } from '@/hooks/useDir';
 import { useAppDispatch } from '@/hooks/use-redux';
@@ -15,6 +16,8 @@ import { clearSessionAtEpoch, isSessionCurrent } from '@/services/native-session
 
 export default function ReviewLoginScreen() {
   const { t } = useTranslation();
+  const colors = useSawaaColors();
+  const styles = createStyles(colors);
   const dir = useDir();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -72,9 +75,9 @@ export default function ReviewLoginScreen() {
     </AquaBackground>
   );
 }
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   flex: { flex: 1, direction: 'ltr' },
   content: { paddingHorizontal: 24, gap: 24 },
   field: { gap: 8 },
-  input: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: sawaaColors.teal[200], borderRadius: sawaaTokens.radius.md, backgroundColor: sawaaColors.glass.opaqueBg, color: sawaaColors.ink[900], fontFamily: getFontName('ar', '400'), fontSize: 16, textAlign: 'left', writingDirection: 'ltr' },
+  input: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: colors.teal[200], borderRadius: sawaaTokens.radius.md, backgroundColor: colors.glass.opaqueBg, color: colors.ink[900], fontFamily: getFontName('ar', '400'), fontSize: 16, textAlign: 'left', writingDirection: 'ltr' },
 });

@@ -2,7 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface Props {
   enabled: boolean;
@@ -12,6 +13,9 @@ interface Props {
 }
 
 export function PackageBookingAction({ enabled, pending, onPress, fontFamily }: Props) {
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(action), [action]);
   const { t } = useTranslation();
   return (
     <Pressable
@@ -25,8 +29,8 @@ export function PackageBookingAction({ enabled, pending, onPress, fontFamily }: 
   );
 }
 
-const styles = StyleSheet.create({
-  cta: { backgroundColor: sawaaColors.teal[600], borderRadius: sawaaRadius.md, alignItems: 'center', padding: sawaaSpacing.lg, marginTop: sawaaSpacing.lg },
+const createStyles = (action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
+  cta: { backgroundColor: action.fill, borderRadius: sawaaRadius.md, alignItems: 'center', padding: sawaaSpacing.lg, marginTop: sawaaSpacing.lg },
   disabled: { opacity: 0.5 },
-  text: { color: sawaaColors.glass.bgStrong, fontSize: sawaaType.body.fontSize },
+  text: { color: action.foreground, fontSize: sawaaType.body.fontSize },
 });

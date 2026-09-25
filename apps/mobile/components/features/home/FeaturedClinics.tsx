@@ -7,7 +7,9 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { AppIcon } from '@/components/ui/AppIcon';
-import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { concentricRadius } from '@/theme/sawaa/tokens';
 import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
@@ -23,6 +25,10 @@ interface FeaturedClinicsProps {
 }
 
 export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const router = useRouter();
   const { t } = useTranslation();
   const clinicsQuery = useClinics();
@@ -47,12 +53,12 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
             accessibilityLabel={name}
           >
             <LinearGradient
-              colors={[sawaaColors.teal[300], sawaaColors.teal[500]]}
+              colors={action.gradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.clinicIcon}
             >
-              <AppIcon sf="building.2.fill" fallback={Building2} size={36} color={sawaaColors.teal[50]} strokeWidth={1.5} />
+              <AppIcon sf="building.2.fill" fallback={Building2} size={36} color={action.foreground} strokeWidth={1.5} />
             </LinearGradient>
             <Text style={[styles.clinicName, { fontFamily: f700, textAlign: dir.textAlign }]}> 
               {name}
@@ -73,7 +79,7 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   hScrollContent: { gap: 10, paddingHorizontal: 2 },
   clinicCard: { width: 170 },
   clinicInner: { padding: CARD_PADDING, gap: 10 },

@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import {
   Pressable,
   RefreshControl,
@@ -19,7 +21,7 @@ import {
   Video,
 } from 'lucide-react-native';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -28,20 +30,6 @@ import {
   type ClientBookingRow,
 } from '@/services/client';
 import { resolveDeliveryType } from '@/types/booking-enums';
-
-const GRADIENTS: Array<readonly [string, string]> = [
-  ['#f7cbb7', '#e88f6c'],
-  ['#c9e4ff', '#7aa8e0'],
-  ['#d4c8f0', '#8c78d0'],
-  ['#ffd5a8', '#e09b5a'],
-  ['#b8e4d6', '#5aa893'],
-];
-
-function hashGradient(id: string) {
-  let h = 0;
-  for (const ch of id) h = (h + ch.charCodeAt(0)) % GRADIENTS.length;
-  return GRADIENTS[h];
-}
 
 function formatDate(iso: string, isRTL: boolean) {
   return new Date(iso).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
@@ -59,6 +47,9 @@ function formatTime(iso: string, isRTL: boolean) {
 }
 
 export default function RecordsScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const router = useRouter();
@@ -117,7 +108,7 @@ export default function RecordsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={sawaaColors.teal[600]}
+            tintColor={colors.teal[600]}
           />
         }
       >
@@ -143,7 +134,7 @@ export default function RecordsScreen() {
           </View>
         ) : error ? (
           <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.empty}>
-            <ClipboardList size={40} color={sawaaColors.accent.coral} strokeWidth={1.5} />
+            <ClipboardList size={40} color={colors.accent.coral} strokeWidth={1.5} />
             <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>{error}</Text>
             <Pressable onPress={onRefresh} style={styles.retryBtn}>
               <Text style={[styles.retryText, { fontFamily: f600, fontWeight: '600' }]}>
@@ -153,7 +144,7 @@ export default function RecordsScreen() {
           </Animated.View>
         ) : items.length === 0 ? (
           <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.empty}>
-            <CalendarCheck size={40} color={sawaaColors.ink[400]} strokeWidth={1.5} />
+            <CalendarCheck size={40} color={colors.ink[400]} strokeWidth={1.5} />
             <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>
               {dir.isRTL ? 'لا توجد جلسات سابقة بعد' : 'No past sessions yet'}
             </Text>
@@ -165,7 +156,7 @@ export default function RecordsScreen() {
           </Animated.View>
         ) : (
           items.map((b, i) => {
-            const gradient = hashGradient(b.id);
+            const gradient = theme.colors.primaryGradient;
             const therapistName = (dir.isRTL
               ? b.employee?.nameAr ?? b.employee?.nameEn
               : b.employee?.nameEn ?? b.employee?.nameAr) ?? '—';
@@ -194,7 +185,7 @@ export default function RecordsScreen() {
                         end={{ x: 1, y: 1 }}
                         style={styles.avatar}
                       >
-                        <Text style={[styles.avatarText, { fontFamily: f700 }]}>
+                        <Text style={[styles.avatarText, { fontFamily: f700, color: theme.colors.primaryForeground }]}>
                           {initial}
                         </Text>
                       </LinearGradient>
@@ -219,7 +210,7 @@ export default function RecordsScreen() {
                           </Text>
                         ) : null}
                       </View>
-                      <Chevron size={16} color={sawaaColors.ink[400]} strokeWidth={2} />
+                      <Chevron size={16} color={colors.ink[400]} strokeWidth={2} />
                     </View>
 
                     <View style={styles.divider} />
@@ -255,18 +246,18 @@ export default function RecordsScreen() {
                         <View
                           style={[
                             styles.tag,
-                            { backgroundColor: `${sawaaColors.teal[600]}1e` },
+                            { backgroundColor: `${colors.teal[600]}1e` },
                           ]}
                         >
                           <Video
                             size={11}
-                            color={sawaaColors.teal[700]}
+                            color={colors.teal[700]}
                             strokeWidth={2}
                           />
                           <Text
                             style={[
                               styles.tagText,
-                              { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] },
+                              { fontFamily: f600, fontWeight: '600', color: colors.teal[700] },
                             ]}
                           >
                             {dir.isRTL ? 'فيديو' : 'Video'}
@@ -285,28 +276,28 @@ export default function RecordsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 14 },
-  title: { fontSize: 26, color: sawaaColors.ink[900], paddingHorizontal: 4 },
+  title: { fontSize: 26, color: colors.ink[900], paddingHorizontal: 4 },
   subtitle: {
     fontSize: 12.5,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: 2,
     paddingHorizontal: 4,
   },
   skeletonWrap: { gap: 12, marginTop: 8 },
   skeletonCard: { height: 110, opacity: 0.55 },
   empty: { alignItems: 'center', paddingVertical: 64, gap: 10 },
-  emptyText: { fontSize: 14, color: sawaaColors.ink[700] },
-  emptyHint: { fontSize: 12, color: sawaaColors.ink[500] },
+  emptyText: { fontSize: 14, color: colors.ink[700] },
+  emptyHint: { fontSize: 12, color: colors.ink[500] },
   retryBtn: {
     marginTop: 8,
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: `${sawaaColors.teal[600]}26`,
+    backgroundColor: `${colors.teal[600]}26`,
   },
-  retryText: { fontSize: 12.5, color: sawaaColors.teal[700] },
+  retryText: { fontSize: 12.5, color: colors.teal[700] },
   card: { padding: 0 },
   cardInner: { padding: 14, gap: 12 },
   cardTop: { alignItems: 'center', gap: 12 },
@@ -317,15 +308,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 18, color: 'rgba(255,255,255,0.95)' },
+  avatarText: { fontSize: 18, color: colors.ink[900] },
   cardMid: { flex: 1 },
-  therapist: { fontSize: 14, color: sawaaColors.ink[900] },
-  service: { fontSize: 11.5, color: sawaaColors.ink[500], marginTop: 3 },
-  divider: { height: 0.5, backgroundColor: 'rgba(10,60,60,0.1)' },
+  therapist: { fontSize: 14, color: colors.ink[900] },
+  service: { fontSize: 11.5, color: colors.ink[500], marginTop: 3 },
+  divider: { height: 0.5, backgroundColor: withAlpha(colors.ink[900], 0.1) },
   cardBottom: { alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   dateCol: { gap: 2 },
-  dateLabel: { fontSize: 10.5, color: sawaaColors.ink[400] },
-  dateValue: { fontSize: 12.5, color: sawaaColors.ink[900] },
+  dateLabel: { fontSize: 10.5, color: colors.ink[400] },
+  dateValue: { fontSize: 12.5, color: colors.ink[900] },
   tag: {
     flexDirection: 'row',
     alignItems: 'center',

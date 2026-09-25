@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, Switch, StyleSheet, Alert, Pressable, Text } from 'react-native';
+import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { View, ScrollView, StyleSheet, Alert, Pressable, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
@@ -10,7 +11,6 @@ import {
   AquaBackground,
   GlassSurface,
   PrimaryButton,
-  sawaaColors,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -18,6 +18,7 @@ import {
 } from '@/theme/sawaa';
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { GlassSwitch } from '@/components/ui/GlassSwitch';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -42,6 +43,8 @@ function groupSchedule(windows: DaySchedule[]): DayScheduleGroup[] {
 }
 
 export default function AvailabilityScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -105,7 +108,7 @@ export default function AvailabilityScreen() {
         >
           <GlassSurface variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
             <View style={styles.backInner}>
-              <BackIcon size={22} strokeWidth={1.5} color={sawaaColors.ink[900]} />
+              <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
             </View>
           </GlassSurface>
         </Pressable>
@@ -138,17 +141,16 @@ export default function AvailabilityScreen() {
                     </Text>
                     <View style={styles.timeChips}>
                       {day.windows.filter((window) => window.isActive !== false).map((window) => (
-                        <View key={`${window.startTime}-${window.endTime}`} style={[styles.timeChip, { backgroundColor: withAlpha(sawaaColors.teal[600], 0.1) }]}>
+                        <View key={`${window.startTime}-${window.endTime}`} style={[styles.timeChip, { backgroundColor: withAlpha(colors.teal[600], 0.1) }]}>
                           <Text style={[styles.timeChipText, { fontFamily: f600, fontWeight: '600' }]}>
                             {window.startTime} - {window.endTime}
                           </Text>
                         </View>
                       ))}
                     </View>
-                    <Switch
+                    <GlassSwitch
                       value={day.windows.some((window) => window.isActive !== false)}
                       onValueChange={() => toggleDay(day.dayOfWeek)}
-                      trackColor={{ true: sawaaColors.teal[500] }}
                       accessibilityLabel={t(`days.${day.dayOfWeek}`)}
                     />
                   </View>
@@ -174,7 +176,7 @@ export default function AvailabilityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg },
   backBtn: { alignSelf: 'flex-start', marginBottom: sawaaSpacing.sm },
   backCircle: { width: 44, height: 44 },
@@ -182,7 +184,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginBottom: sawaaSpacing.xl,
   },
   skeletonList: { gap: sawaaSpacing.sm },
@@ -193,7 +195,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   timeChip: {
     borderRadius: sawaaRadius.pill,
@@ -203,7 +205,7 @@ const styles = StyleSheet.create({
   timeChipText: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.teal[700],
+    color: colors.teal[700],
   },
   saveBtn: { flex: 1 },
 });

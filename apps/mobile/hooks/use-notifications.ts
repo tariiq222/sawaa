@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { notificationsService } from '@/services/notifications';
 import { groupByDate, type DateGroup } from '@/utils/date-groups';
@@ -16,18 +16,31 @@ export function useNotifications() {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [failedPage, setFailedPage] = useState<number | null>(null);
+  const loadMoreInFlight = useRef(false);
+  const requestGeneration = useRef(0);
 
-  const fetchPage = useCallback(async (pageNum: number, replace: boolean) => {
+  const fetchPage = useCallback(async (pageNum: number, replace: boolean, generation: number) => {
     try {
       const res = await notificationsService.getAll({
         page: pageNum,
         perPage: PER_PAGE,
       });
+      if (generation !== requestGeneration.current) return false;
       const items = res.items;
       setNotifications((prev) => (replace ? items : [...prev, ...items]));
       setHasMore(pageNum < res.meta.totalPages);
+      setLoadError(false);
+      setFailedPage(null);
+      return true;
     } catch {
-      // Silent fail — user can pull to refresh
+      if (generation === requestGeneration.current) {
+        setLoadError(true);
+        setFailedPage(pageNum);
+      }
+      return false;
     }
   }, []);
 
@@ -43,7 +56,8 @@ export function useNotifications() {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchPage(1, true), fetchUnread()]);
+      const generation = requestGeneration.current;
+      await Promise.all([fetchPage(1, true, generation), fetchUnread()]);
       setLoading(false);
     };
     init();
@@ -51,17 +65,30 @@ export function useNotifications() {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
+    requestGeneration.current += 1;
+    const generation = requestGeneration.current;
     setPage(1);
-    await Promise.all([fetchPage(1, true), fetchUnread()]);
-    setRefreshing(false);
+    loadMoreInFlight.current = false;
+    setLoadingMore(false);
+    setLoadError(false);
+    setFailedPage(null);
+    await Promise.all([fetchPage(1, true, generation), fetchUnread()]);
+    if (generation === requestGeneration.current) setRefreshing(false);
   }, [fetchPage, fetchUnread]);
 
   const loadMore = useCallback(async () => {
-    if (!hasMore || loading || refreshing) return;
-    const nextPage = page + 1;
-    setPage(nextPage);
-    await fetchPage(nextPage, false);
-  }, [hasMore, loading, refreshing, page, fetchPage]);
+    if ((!hasMore && failedPage === null) || loading || refreshing || loadMoreInFlight.current) return;
+    loadMoreInFlight.current = true;
+    setLoadingMore(true);
+    const nextPage = failedPage ?? page + 1;
+    const generation = requestGeneration.current;
+    const succeeded = await fetchPage(nextPage, nextPage === 1, generation);
+    if (generation === requestGeneration.current) {
+      if (succeeded) setPage(nextPage);
+      loadMoreInFlight.current = false;
+      setLoadingMore(false);
+    }
+  }, [hasMore, loading, refreshing, page, failedPage, fetchPage]);
 
   const markAsRead = useCallback(async (id: string) => {
     try {
@@ -100,6 +127,9 @@ export function useNotifications() {
     refreshing,
     refresh,
     loadMore,
+    hasMore,
+    loadingMore,
+    loadError,
     markAsRead,
     markAllAsRead,
   };

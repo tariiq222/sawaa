@@ -52,7 +52,14 @@
     "phonePlaceholder": "05xxxxxxxx",
     "loginWithOtp": "الدخول برمز التحقق",
     "loginWithPassword": "الدخول بكلمة المرور",
-    "forgotPassword": "نسيت كلمة المرور؟",
+    "forgotPassword": {
+      "title": "نسيت كلمة المرور",
+      "subtitle": "أدخل بريدك الإلكتروني وسنرسل لك رمز التحقق",
+      "emailLabel": "البريد الإلكتروني",
+      "submit": "إرسال الرمز",
+      "back": "العودة لتسجيل الدخول",
+      "linkLabel": "نسيت كلمة المرور؟"
+    },
     "noAccount": "ليس لديك حساب؟",
     "hasAccount": "لديك حساب بالفعل؟",
     "createAccount": "أنشئ حساباً",
@@ -87,14 +94,6 @@
     "otpError": "الرمز غير صحيح. حاول مجدداً",
     "otpSent": "تم إرسال رمز التحقق بنجاح",
     "employeeNote": "الأطباء والموظفون يُسجَّلون من لوحة الإدارة",
-    "forgotPassword": {
-      "title": "نسيت كلمة المرور",
-      "subtitle": "أدخل بريدك الإلكتروني وسنرسل لك رمز التحقق",
-      "emailLabel": "البريد الإلكتروني",
-      "submit": "إرسال الرمز",
-      "back": "العودة لتسجيل الدخول",
-      "linkLabel": "نسيت كلمة المرور؟"
-    },
     "resetPassword": {
       "title": "إعادة تعيين كلمة المرور",
       "otpStepSubtitle": "أدخل الرمز المكوّن من 6 أرقام المرسل إلى {{email}}",
@@ -119,6 +118,10 @@
     "clients": "المرضى",
     "notifications": "الإشعارات",
     "records": "سجلاتي"
+  },
+  "nav": {
+    "notifications": "الإشعارات",
+    "profile": "حسابي"
   },
   "home": {
     "greeting": "مرحباً",
@@ -202,6 +205,9 @@
     "loading": "جاري التحميل…",
     "empty": "لا يوجد معالجون بعد",
     "unknownName": "معالج",
+    "bookingService": "{{service}}",
+    "bookingServiceTitle": "اختاري خدمة للموعد",
+    "noBookableServices": "لا توجد خدمات متاحة للموعد حالياً.",
     "filters": {
       "available": "متاح الآن",
       "women": "النساء",
@@ -396,6 +402,7 @@
     "arabic": "العربية",
     "english": "English",
     "pushNotifications": "إشعارات الجوال",
+    "enablePush": "تفعيل الإشعارات",
     "pushNotificationsDesc": "تلقي تذكيرات المواعيد والتحديثات",
     "pushUpdateError": "تعذّر تحديث الإشعارات. تحقق من إذن الإشعارات والاتصال ثم حاول مجددًا.",
     "about": "عن التطبيق",
@@ -440,10 +447,15 @@
         "EMPLOYEE": "موظف",
         "CLIENT": "عميل"
       }
-    }
+    },
+    "privacySecurity": "الخصوصية والأمان",
+    "appearance": "المظهر"
   },
   "notifications": {
     "title": "الإشعارات",
+    "loadMore": "عرض المزيد",
+    "loadingMore": "جارٍ تحميل المزيد…",
+    "loadError": "تعذّر تحميل الإشعارات. حاول مرة أخرى.",
     "read": "مقروء",
     "unread": "غير مقروء",
     "markAllRead": "تحديد الكل كمقروء",
@@ -559,8 +571,17 @@
     "paymentFailedDescription": "لم يتم تفعيل الدفع. يمكنك العودة إلى الكتالوج والمحاولة مجدداً.",
     "paymentError": "تعذّر التحقق من حالة الدفع",
     "paymentErrorDescription": "تعذّر التحقق من هذا الدفع. عودي إلى رصيدك أو أعيدي التحقق.",
-    "status": { "pending": "الدفع قيد الانتظار", "active": "نشطة", "completed": "مكتملة", "refunded": "مستردة" },
-    "locked": { "depleted": "لا توجد جلسات متبقية", "unavailable": "هذه الجلسة غير متاحة مؤقتاً", "support": "تواصلي مع المركز لحجز هذا الرصيد المرن" }
+    "status": {
+      "pending": "الدفع قيد الانتظار",
+      "active": "نشطة",
+      "completed": "مكتملة",
+      "refunded": "مستردة"
+    },
+    "locked": {
+      "depleted": "لا توجد جلسات متبقية",
+      "unavailable": "هذه الجلسة غير متاحة مؤقتاً",
+      "support": "تواصلي مع المركز لحجز هذا الرصيد المرن"
+    }
   },
   "availability": {
     "title": "إدارة التوفر",
@@ -579,12 +600,6 @@
   },
   "a11y": {
     "buttonBack": "زر العودة",
-    "tabUpcoming": "المواعيد القادمة",
-    "tabCompleted": "المواعيد المنتهية",
-    "tabCancelled": "المواعيد الملغاة",
-    "tabNotifications": "الإشعارات",
-    "tabProfile": "الملف الشخصي",
-    "tabChat": "الدردشة",
     "cardOpenAppointment": "فتح تفاصيل الموعد",
     "refreshAppointments": "تحديث المواعيد",
     "messageInput": "حقل إدخال الرسالة",

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useMemo } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -15,7 +15,9 @@ import { router } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { Glass } from '@/theme/components/Glass';
 import { getFontName } from '@/theme/fonts';
 import { useDir } from '@/hooks/useDir';
@@ -69,6 +71,8 @@ function ArrowIcon({ size = 14, color = '#fff' }: { size?: number; color?: strin
 }
 
 function SlideView({ slide, fontHeading, fontBody }: { slide: Slide; fontHeading: string; fontBody: string }) {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
       <Animated.View entering={FadeIn.duration(500)} style={styles.illustration}>
@@ -86,6 +90,9 @@ function SlideView({ slide, fontHeading, fontBody }: { slide: Slide; fontHeading
 }
 
 export default function OnboardingScreen() {
+  const { theme } = useTheme();
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const f700 = getFontName('ar', '700');
   const f500 = getFontName('ar', '500');
   const f600 = getFontName('ar', '600');
@@ -168,12 +175,12 @@ export default function OnboardingScreen() {
         <View style={styles.ctaBar}>
           <Pressable onPress={handleNext} style={styles.ctaPress} accessibilityRole="button">
             <LinearGradient
-              colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+              colors={theme.colors.primaryGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.cta}
             >
-              <Text style={[styles.ctaText, { fontFamily: f700 }]}>
+              <Text style={[styles.ctaText, { fontFamily: f700, color: theme.colors.primaryForeground }]}>
                 {isLast ? 'ابدأ' : 'التالي'}
               </Text>
               <ArrowIcon />
@@ -186,7 +193,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { flex: 1 },
   skipRow: {
     position: 'absolute',
@@ -194,7 +201,7 @@ const styles = StyleSheet.create({
     insetInlineEnd: 20,
     zIndex: 10,
   },
-  skipText: { fontSize: 13, color: sawaaColors.ink[500] },
+  skipText: { fontSize: 13, color: colors.ink[500] },
   list: { flex: 1, marginTop: 100 },
   slide: {
     flex: 1,
@@ -222,13 +229,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     lineHeight: 36,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     textAlign: 'center',
   },
   body: {
     fontSize: 14,
     lineHeight: 22,
-    color: sawaaColors.ink[700],
+    color: colors.ink[700],
     textAlign: 'center',
     marginTop: 12,
   },
@@ -242,11 +249,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(10,60,60,0.2)',
+    backgroundColor: withAlpha(colors.ink[900], 0.2),
   },
   dotActive: {
     width: 22,
-    backgroundColor: sawaaColors.teal[600],
+    backgroundColor: colors.teal[600],
   },
   ctaBar: {
     paddingHorizontal: 24,
@@ -262,11 +269,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: sawaaColors.teal[600],
+    shadowColor: colors.teal[600],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
   },
-  ctaText: { color: '#fff', fontSize: 14 },
-  hint: { fontSize: 11, color: sawaaColors.ink[500] },
+  ctaText: { fontSize: 14 },
+  hint: { fontSize: 11, color: colors.ink[500] },
 });

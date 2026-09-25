@@ -4,7 +4,9 @@ import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { GlassSurface } from '@/theme/sawaa/GlassSurface';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -52,6 +54,10 @@ export function TimeSlotsGrid({
   reduceMotion = false,
   onRetry,
 }: TimeSlotsGridProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
   if (loading) {
     return (
       <View style={[styles.slotsGrid, { flexDirection: dir.row }]}>
@@ -108,7 +114,7 @@ export function TimeSlotsGrid({
             <GlassSurface variant={isSelected ? 'strong' : 'base'} radius={sawaaRadius.md} style={styles.slot}>
               {isSelected ? (
                 <LinearGradient
-                  colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+                  colors={action.gradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
@@ -118,10 +124,10 @@ export function TimeSlotsGrid({
                 <Text
                   style={[
                     styles.slotText,
+                    isSelected && styles.slotTextSelected,
                     {
                       fontFamily: f600,
                       fontWeight: '600',
-                      color: isSelected ? sawaaColors.teal[50] : sawaaColors.ink[900],
                     },
                   ]}
                 >
@@ -136,12 +142,14 @@ export function TimeSlotsGrid({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   slotsGrid: { flexWrap: 'wrap', gap: sawaaSpacing.sm },
   slotWrap: { width: '48.5%' },
   slot: { overflow: 'hidden' },
   slotInner: { paddingVertical: sawaaSpacing.lg, alignItems: 'center' },
+  slotTextSelected: { color: action.foreground },
   slotText: {
+    color: sawaaColors.ink[900],
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
   },

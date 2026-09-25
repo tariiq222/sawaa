@@ -3,11 +3,12 @@ import { Alert, Pressable, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { authService } from '@/services/auth';
-import { sawaaColors } from '@/theme/sawaa';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ThemedText } from '@/theme/components/ThemedText';
 
 export function DeleteAccountButton() {
   const { t } = useTranslation();
+  const colors = useSawaaColors();
   const pending = useRef(false);
   const [busy, setBusy] = useState(false);
 
@@ -38,7 +39,7 @@ export function DeleteAccountButton() {
       }}
       style={styles.button}
     >
-      <ThemedText variant="body" style={styles.text}>
+      <ThemedText variant="body" style={{ color: colors.accent.coral }}>
         {t('profile.deleteAccount')}
       </ThemedText>
     </Pressable>
@@ -47,5 +48,4 @@ export function DeleteAccountButton() {
 
 const styles = StyleSheet.create({
   button: { alignItems: 'center', paddingVertical: 14 },
-  text: { color: sawaaColors.accent.coral },
 });

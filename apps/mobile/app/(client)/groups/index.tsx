@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +10,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { useGroupSessions } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import type { GroupSession } from '@/services/client/group-sessions';
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { ThemedText } from '@/theme/components/ThemedText';
 import { concentricRadius, withAlpha } from '@/theme/sawaa/tokens';
@@ -30,6 +31,8 @@ function formatPrice(price: number, isRTL: boolean, sar: string) {
 }
 
 export default function GroupsScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -56,7 +59,7 @@ export default function GroupsScreen() {
         <View style={styles.cardBody}>
           <View style={[styles.cardHeader, { flexDirection: dir.row }]}> 
             <View style={styles.iconWrap}>
-              <AppIcon sf="person.3.fill" fallback={Users} size={22} color={sawaaColors.teal[700]} strokeWidth={1.6} />
+              <AppIcon sf="person.3.fill" fallback={Users} size={22} color={colors.teal[700]} strokeWidth={1.6} />
             </View>
             <View style={styles.titleBlock}>
               <ThemedText variant="subheading" style={{ textAlign: dir.textAlign }} numberOfLines={2}>
@@ -73,20 +76,20 @@ export default function GroupsScreen() {
 
           <View style={[styles.footerRow, { flexDirection: dir.row }]}>
             <StateBadge label={stateLabel} tone={isClosed ? 'muted' : 'open'} />
-            <ThemedText variant="label" color={isClosed ? sawaaColors.ink[400] : sawaaColors.teal[700]}>
+            <ThemedText variant="label" color={isClosed ? colors.ink[400] : colors.teal[700]}>
               {isClosed ? t('groups.contactUs') : t('groups.join')}
             </ThemedText>
           </View>
         </View>
       </Glass>
     );
-  }, [dir, router, t]);
+  }, [colors, dir, router, styles, t]);
 
   const emptyState = useMemo(() => {
-    if (groupsQuery.isLoading) return <ActivityIndicator color={sawaaColors.teal[600]} />;
+    if (groupsQuery.isLoading) return <ActivityIndicator color={colors.teal[600]} />;
     if (groupsQuery.isError) return <ThemedText variant="bodySm" align="center">{t('groups.bookError')}</ThemedText>;
-    return <ThemedText variant="bodySm" color={sawaaColors.ink[500]} align="center">{t('groups.empty')}</ThemedText>;
-  }, [groupsQuery.isError, groupsQuery.isLoading, t]);
+    return <ThemedText variant="bodySm" color={colors.ink[500]} align="center">{t('groups.empty')}</ThemedText>;
+  }, [colors, groupsQuery.isError, groupsQuery.isLoading, t]);
 
   return (
     <AquaBackground>
@@ -99,7 +102,7 @@ export default function GroupsScreen() {
         ListHeaderComponent={(
           <View style={[styles.headerRow, { flexDirection: dir.row }]}> 
             <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-              <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={sawaaColors.ink[900]} strokeWidth={1.5} />
+              <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={colors.ink[900]} strokeWidth={1.5} />
             </Pressable>
             <ThemedText variant="subheading">{t('groups.title')}</ThemedText>
             <View style={styles.backBtn} />
@@ -112,6 +115,8 @@ export default function GroupsScreen() {
 }
 
 function MetaLine({ icon, text, dir }: { icon: 'calendar' | 'price' | 'users'; text: string; dir: ReturnType<typeof useDir> }) {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const config = {
     calendar: { sf: 'calendar' as const, fallback: CalendarDays },
     price: { sf: 'banknote.fill' as const, fallback: CircleDollarSign },
@@ -119,8 +124,8 @@ function MetaLine({ icon, text, dir }: { icon: 'calendar' | 'price' | 'users'; t
   }[icon];
   return (
     <View style={[styles.metaLine, { flexDirection: dir.row }]}> 
-      <AppIcon sf={config.sf} fallback={config.fallback} size={14} color={sawaaColors.ink[500]} strokeWidth={1.6} />
-      <ThemedText variant="caption" color={sawaaColors.ink[500]} style={{ textAlign: dir.textAlign }} numberOfLines={1}>
+      <AppIcon sf={config.sf} fallback={config.fallback} size={14} color={colors.ink[500]} strokeWidth={1.6} />
+      <ThemedText variant="caption" color={colors.ink[500]} style={{ textAlign: dir.textAlign }} numberOfLines={1}>
         {text}
       </ThemedText>
     </View>
@@ -128,7 +133,9 @@ function MetaLine({ icon, text, dir }: { icon: 'calendar' | 'price' | 'users'; t
 }
 
 function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' }) {
-  const color = tone === 'muted' ? sawaaColors.ink[500] : sawaaColors.teal[700];
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const color = tone === 'muted' ? colors.ink[500] : colors.teal[700];
   return (
     <View style={[styles.badge, { borderColor: color, backgroundColor: withAlpha(color, 0.12) }]}> 
       <ThemedText variant="label" color={color}>{label}</ThemedText>
@@ -136,7 +143,7 @@ function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' }) 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   list: { flexGrow: 1, paddingHorizontal: 24, gap: 12 },
   headerRow: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -147,7 +154,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING),
-    backgroundColor: sawaaColors.glass.bgStrong,
+    backgroundColor: colors.glass.bgStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },

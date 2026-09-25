@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { Alert, AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Glass } from '@/theme/components/Glass';
-import { AquaBackground, sawaaColors, sawaaRadius, sawaaSemantic, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useInitPackagePurchase, usePackageFamily } from '@/hooks/queries';
@@ -18,6 +21,9 @@ import { formatHalalas } from '@/lib/package-utils';
 import { PackageBranchPicker } from '@/components/features/packages/PackageBranchPicker';
 
 export default function PackageFamilyDetailScreen() {
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -124,13 +130,18 @@ export default function PackageFamilyDetailScreen() {
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
         <View style={[styles.header, { flexDirection: dir.row }]}>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-            <Text style={[styles.back, { fontFamily: f700 }]}>{dir.isRTL ? '‹' : '›'}</Text>
+          <Pressable style={styles.backButton} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
+            <Text style={[styles.back, { fontFamily: f700 }]}>{dir.isRTL ? '›' : '‹'}</Text>
           </Pressable>
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.details')}</Text>
         </View>
         {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
-        {query.isError || !query.data ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.error')}</Text> : null}
+        {!query.isLoading && (query.isError || !query.data) ? (
+          <>
+            <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.error')}</Text>
+            <PrimaryButton label={t('common.retry')} fontFamily={f600} disabled={query.isFetching} onPress={() => { void query.refetch(); }} />
+          </>
+        ) : null}
         {query.data ? (
           <>
             {query.data.imageUrl ? <Image source={{ uri: query.data.imageUrl }} style={styles.image} /> : null}
@@ -214,27 +225,28 @@ export default function PackageFamilyDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 120, gap: sawaaSpacing.md },
   header: { alignItems: 'center', gap: sawaaSpacing.md },
-  back: { color: sawaaColors.teal[700], fontSize: 34, lineHeight: 34 },
-  title: { flex: 1, color: sawaaColors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  message: { color: sawaaColors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
+  backButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  back: { color: colors.teal[700], fontSize: 34, lineHeight: 34 },
+  title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
+  message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   image: { width: '100%', height: 160, borderRadius: sawaaRadius.lg },
-  familyName: { color: sawaaColors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  description: { color: sawaaColors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
-  sectionTitle: { color: sawaaColors.ink[900], fontSize: sawaaType.subheading.fontSize, marginTop: sawaaSpacing.md },
+  familyName: { color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
+  description: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  sectionTitle: { color: colors.ink[900], fontSize: sawaaType.subheading.fontSize, marginTop: sawaaSpacing.md },
   option: { padding: sawaaSpacing.lg, minHeight: 80 },
-  optionSelected: { borderWidth: 1, borderColor: sawaaColors.teal[500] },
+  optionSelected: { borderWidth: 1, borderColor: colors.teal[500] },
   optionRow: { justifyContent: 'space-between', alignItems: 'center' },
-  optionName: { color: sawaaColors.ink[900], fontSize: sawaaType.body.fontSize },
-  optionPrice: { color: sawaaColors.teal[700], fontSize: sawaaType.body.fontSize },
-  optionCount: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize, marginTop: sawaaSpacing.xs },
-  groupDetail: { borderTopWidth: 1, borderTopColor: sawaaColors.glass.borderSoft, marginTop: sawaaSpacing.sm, paddingTop: sawaaSpacing.sm, gap: sawaaSpacing.xs },
-  groupLabel: { color: sawaaColors.ink[700], fontSize: sawaaType.caption.fontSize },
-  groupMeta: { color: sawaaColors.ink[500], fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
-  warning: { color: sawaaSemantic.warning, fontSize: sawaaType.caption.fontSize },
-  cta: { alignItems: 'center', backgroundColor: sawaaColors.teal[600], borderRadius: sawaaRadius.md, padding: sawaaSpacing.lg, marginTop: sawaaSpacing.md },
+  optionName: { color: colors.ink[900], fontSize: sawaaType.body.fontSize },
+  optionPrice: { color: colors.teal[700], fontSize: sawaaType.body.fontSize },
+  optionCount: { color: colors.ink[500], fontSize: sawaaType.caption.fontSize, marginTop: sawaaSpacing.xs },
+  groupDetail: { borderTopWidth: 1, borderTopColor: colors.glass.borderSoft, marginTop: sawaaSpacing.sm, paddingTop: sawaaSpacing.sm, gap: sawaaSpacing.xs },
+  groupLabel: { color: colors.ink[700], fontSize: sawaaType.caption.fontSize },
+  groupMeta: { color: colors.ink[500], fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
+  warning: { color: colors.accent.amber, fontSize: sawaaType.caption.fontSize },
+  cta: { alignItems: 'center', backgroundColor: themeColors.primaryFill, borderRadius: sawaaRadius.md, padding: sawaaSpacing.lg, marginTop: sawaaSpacing.md },
   ctaDisabled: { opacity: 0.55 },
-  ctaText: { color: sawaaColors.glass.bgStrong, fontSize: sawaaType.body.fontSize },
+  ctaText: { color: themeColors.primaryForeground, fontSize: sawaaType.body.fontSize },
 });

@@ -7,12 +7,13 @@ import { Users } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
 import { useGroupSessions } from '@/hooks/queries';
-import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { concentricRadius, withAlpha } from '@/theme/sawaa/tokens';
 import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 
-const ACCENTS = [sawaaColors.accent.violet, sawaaColors.accent.rose, sawaaColors.teal[500]];
 const CARD_RADIUS = sawaaRadius.xl;
 const CARD_PADDING = 12;
 
@@ -23,6 +24,11 @@ interface SupportSessionsProps {
 }
 
 export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
+  const ACCENTS = [sawaaColors.accent.violet, sawaaColors.accent.rose, sawaaColors.teal[500]];
   const router = useRouter();
   const { t } = useTranslation();
   const groupsQuery = useGroupSessions();
@@ -78,7 +84,7 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   hScrollContent: { gap: 10, paddingHorizontal: 2 },
   supportCard: { width: 280 },
   supportInner: { padding: 12, gap: 10, alignItems: 'center' },
@@ -90,9 +96,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: sawaaColors.teal[600],
+    backgroundColor: action.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  supportCtaText: { color: sawaaColors.teal[50], fontSize: 12 },
+  supportCtaText: { color: action.foreground, fontSize: 12 },
 });

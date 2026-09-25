@@ -8,7 +8,8 @@ import { ChevronLeft, ChevronRight, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -18,6 +19,8 @@ import { publicCatalogService } from '@/services/client/catalog';
 export default function EmployeeProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
+  const colors = useSawaaColors();
+  const styles = createStyles(colors);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -69,14 +72,14 @@ export default function EmployeeProfileScreen() {
         <Animated.View entering={FadeInDown.duration(500)}>
           <Glass variant="strong" radius={22} onPress={() => router.back()} interactive
             accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
+            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(80).duration(700).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.xl} style={styles.heroCard}>
             <View style={[styles.heroRow, { flexDirection: dir.row }]}>
-              <LinearGradient colors={[sawaaColors.teal[100], sawaaColors.teal[300]]}
+              <LinearGradient colors={[colors.teal[100], colors.teal[300]]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatar}>
                 <Text style={[styles.avatarText, { fontFamily: f700 }]}>{employeeName.charAt(0)}</Text>
               </LinearGradient>
@@ -87,7 +90,7 @@ export default function EmployeeProfileScreen() {
                 ) : null}
                 {typeof rating === 'number' && ratingCount > 0 ? (
                   <View style={[styles.rating, { flexDirection: dir.row }]}>
-                    <Star size={11} color={sawaaColors.accent.amber} strokeWidth={2} fill={sawaaColors.accent.amber} />
+                    <Star size={11} color={colors.accent.amber} strokeWidth={2} fill={colors.accent.amber} />
                     <Text style={[styles.ratingVal, { fontFamily: f700 }]}>{rating.toLocaleString(numberLocale, { maximumFractionDigits: 1 })}</Text>
                     <Text style={[styles.ratingCount, { fontFamily: f400 }]}>
                       {t('employeeProfile.ratingCount', { count: ratingCount })}
@@ -141,10 +144,10 @@ export default function EmployeeProfileScreen() {
             </Text>
             <Pressable onPress={book} disabled={!canBook} accessibilityRole="button"
               accessibilityState={{ disabled: !canBook }} style={[styles.ctaBtnPress, !canBook && styles.ctaDisabled]}>
-              <LinearGradient colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+              <LinearGradient colors={[colors.teal[500], colors.teal[700]]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ctaBtn}>
                 <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>{t('employeeProfile.bookNow')}</Text>
-                <GoIcon size={14} color={sawaaColors.teal[50]} strokeWidth={2} />
+                <GoIcon size={14} color={colors.teal[50]} strokeWidth={2} />
               </LinearGradient>
             </Pressable>
           </View>
@@ -154,32 +157,32 @@ export default function EmployeeProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 18 },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   heroCard: { padding: 18 },
   heroRow: { alignItems: 'center', gap: 14 },
   avatar: { width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 32, color: sawaaColors.teal[50] },
+  avatarText: { fontSize: 32, color: colors.teal[50] },
   heroMid: { flex: 1 },
-  heroName: { fontSize: 17, color: sawaaColors.ink[900] },
-  heroSpec: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 2 },
+  heroName: { fontSize: 17, color: colors.ink[900] },
+  heroSpec: { fontSize: 12, color: colors.ink[500], marginTop: 2 },
   rating: { alignItems: 'center', gap: 4, marginTop: 6 },
-  ratingVal: { fontSize: 11, color: sawaaColors.ink[900] },
-  ratingCount: { fontSize: 11, color: sawaaColors.ink[500] },
-  sectionTitle: { fontSize: 14, color: sawaaColors.ink[900], marginBottom: 8 },
-  aboutText: { fontSize: 12.5, color: sawaaColors.ink[700], lineHeight: 22 },
+  ratingVal: { fontSize: 11, color: colors.ink[900] },
+  ratingCount: { fontSize: 11, color: colors.ink[500] },
+  sectionTitle: { fontSize: 14, color: colors.ink[900], marginBottom: 8 },
+  aboutText: { fontSize: 12.5, color: colors.ink[700], lineHeight: 22 },
   services: { gap: 8 },
-  serviceOption: { borderRadius: 14, borderWidth: 1, borderColor: sawaaColors.ink[400], padding: 12 },
-  serviceSelected: { borderColor: sawaaColors.teal[600], backgroundColor: sawaaColors.teal[50] },
-  serviceName: { fontSize: 13, color: sawaaColors.ink[900] },
-  emptyText: { fontSize: 12, color: sawaaColors.ink[500] },
+  serviceOption: { borderRadius: 14, borderWidth: 1, borderColor: colors.ink[400], padding: 12 },
+  serviceSelected: { borderColor: colors.teal[600], backgroundColor: colors.teal[50] },
+  serviceName: { fontSize: 13, color: colors.ink[900] },
+  emptyText: { fontSize: 12, color: colors.ink[500] },
   ctaWrap: { position: 'absolute', left: 16, right: 16 },
   ctaPill: { padding: 6 },
   ctaRow: { alignItems: 'center', gap: 8, minHeight: 46 },
-  ctaHint: { flex: 1, paddingHorizontal: 12, fontSize: 10, color: sawaaColors.ink[500] },
+  ctaHint: { flex: 1, paddingHorizontal: 12, fontSize: 10, color: colors.ink[500] },
   ctaBtnPress: { height: 46 },
   ctaDisabled: { opacity: 0.45 },
   ctaBtn: { paddingHorizontal: 20, borderRadius: 999, height: 46, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ctaBtnText: { color: sawaaColors.teal[50], fontSize: 13 },
+  ctaBtnText: { color: colors.teal[50], fontSize: 13 },
 });

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { AquaBackground, sawaaColors } from '@/theme/sawaa';
+import { AquaBackground } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
@@ -19,6 +20,8 @@ import { TherapistsRow } from '@/components/features/home/TherapistsRow';
 import { useReduceMotion } from '@/hooks/useA11y';
 
 export default function HomeScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -70,7 +73,7 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={sawaaColors.teal[600]}
+            tintColor={colors.teal[600]}
           />
         }
       >
@@ -99,7 +102,7 @@ export default function HomeScreen() {
               </Text>
               {unreadCount > 0 ? (
                 <Pressable onPress={() => router.push('/(client)/notifications')}>
-                  <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}>
+                  <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: colors.teal[700] }]}>
                     {dir.isRTL
                       ? `${unreadCount.toLocaleString('ar-SA')} تنبيه جديد`
                       : `${unreadCount} new alert${unreadCount === 1 ? '' : 's'}`}
@@ -122,7 +125,7 @@ export default function HomeScreen() {
             {t('clinics.title')}
           </Text>
           <Pressable onPress={() => router.push('/(client)/clinics')} accessibilityRole="button">
-            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}>
+            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: colors.teal[700] }]}>
               {t('home.seeAll')}
             </Text>
           </Pressable>
@@ -146,7 +149,7 @@ export default function HomeScreen() {
             {t('groups.title')}
           </Text>
           <Pressable onPress={() => router.push('/(client)/groups')} accessibilityRole="button">
-            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}>
+            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: colors.teal[700] }]}>
               {t('groups.seeAll')}
             </Text>
           </Pressable>
@@ -171,20 +174,20 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 16 },
   greetingBlock: { paddingHorizontal: 4, marginTop: 4 },
-  dateLabel: { fontSize: 12, color: sawaaColors.teal[700], opacity: 0.75 },
-  greeting: { fontSize: 26, lineHeight: 34, color: sawaaColors.ink[900], marginTop: 2 },
+  dateLabel: { fontSize: 12, color: colors.teal[700], opacity: 0.75 },
+  greeting: { fontSize: 26, lineHeight: 34, color: colors.ink[900], marginTop: 2 },
   sectionHead: {
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 4,
     marginTop: 4,
   },
-  sectionTitle: { fontSize: 16, color: sawaaColors.ink[900] },
+  sectionTitle: { fontSize: 16, color: colors.ink[900] },
   sectionMeta: { fontSize: 12 },
   packageEntry: { alignItems: 'center', justifyContent: 'space-between', padding: 18 },
-  packageEntryTitle: { flex: 1, color: sawaaColors.ink[900], fontSize: 16 },
-  packageEntryAction: { color: sawaaColors.teal[700], fontSize: 12 },
+  packageEntryTitle: { flex: 1, color: colors.ink[900], fontSize: 16 },
+  packageEntryAction: { color: colors.teal[700], fontSize: 12 },
 });

@@ -44,6 +44,9 @@ jest.mock('@/theme/sawaa', () => {
     sawaaRadius: { pill: 999, xl: 24 },
   };
 });
+jest.mock('@/theme/sawaa/useSawaaColors', () => ({
+  useSawaaColors: () => require('@/theme/sawaa').sawaaColors,
+}));
 jest.mock('@/theme/components/Glass', () => ({
   Glass: ({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) => {
     const { Pressable } = require('react-native') as typeof import('react-native');

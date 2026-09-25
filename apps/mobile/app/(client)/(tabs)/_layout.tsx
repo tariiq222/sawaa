@@ -4,9 +4,12 @@ import { getFontName } from '@/theme/fonts';
 import { useTranslation } from 'react-i18next';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+
 export default function ClientTabsLayout() {
   const { t } = useTranslation();
   const dir = useDir();
+  const colors = useSawaaColors();
 
   const tabs = [
     <NativeTabs.Trigger key="home" name="home">
@@ -24,7 +27,7 @@ export default function ClientTabsLayout() {
   ];
 
   return (
-    <NativeTabs labelStyle={{ fontFamily: getFontName(dir.locale, '500') }} minimizeBehavior="onScrollDown">
+    <NativeTabs labelStyle={{ fontFamily: getFontName(dir.locale, '500') }} minimizeBehavior="onScrollDown" tintColor={colors.teal[600]}>
       {dir.isRTL ? [...tabs].reverse() : tabs}
     </NativeTabs>
   );

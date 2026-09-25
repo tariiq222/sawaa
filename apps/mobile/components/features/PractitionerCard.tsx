@@ -59,10 +59,10 @@ export function EmployeeCard({
         </View>
         <View style={styles.compactFooter}>
           <View style={styles.ratingRow}>
-            <Star size={12} fill="#F59E0B" color="#F59E0B" />
+            <Star size={12} fill={theme.colors.warning} color={theme.colors.warning} />
             <ThemedText variant="caption">{employee.averageRating}</ThemedText>
           </View>
-          <ThemedText variant="caption" color="#1D4ED8" style={{ fontWeight: '700' }}>
+          <ThemedText variant="caption" color={theme.colors.info} style={{ fontWeight: '700' }}>
             {t('home.from')} {formatHalalas(employee.clinicPrice ?? 0, { locale: isRTL ? 'ar-SA' : 'en-US' })} {t('home.sar')}
           </ThemedText>
         </View>
@@ -95,7 +95,7 @@ export function EmployeeCard({
             {specialtyName}
           </ThemedText>
           <View style={styles.ratingRow}>
-            <Star size={13} fill="#F59E0B" color="#F59E0B" />
+            <Star size={13} fill={theme.colors.warning} color={theme.colors.warning} />
             <ThemedText variant="bodySm">
               {employee.averageRating}
             </ThemedText>
@@ -107,7 +107,7 @@ export function EmployeeCard({
       </View>
 
       <View style={styles.priceRow}>
-        <ThemedText variant="subheading" color="#1D4ED8">
+        <ThemedText variant="subheading" color={theme.colors.info}>
           {formatHalalas(employee.clinicPrice ?? 0, { locale: isRTL ? 'ar-SA' : 'en-US' })} {t('home.sar')}
         </ThemedText>
         <StatusPill

@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
+import { AquaBackground } from '@/theme/sawaa';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-
-import { sawaaColors } from '@/theme/sawaa';
 
 /**
  * The website callback only transports booking and invoice identity back into
@@ -10,6 +10,7 @@ import { sawaaColors } from '@/theme/sawaa';
  * records from the authenticated API.
  */
 export default function PaymentCallbackScreen() {
+  const colors = useSawaaColors();
   const router = useRouter();
   const { bookingId, invoiceId } = useLocalSearchParams<{
     bookingId?: string;
@@ -31,12 +32,14 @@ export default function PaymentCallbackScreen() {
   }, [bookingId, invoiceId, router]);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator color={sawaaColors.teal[600]} />
-    </View>
+    <AquaBackground>
+      <View style={styles.container}>
+        <ActivityIndicator color={colors.teal[600]} />
+      </View>
+    </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: sawaaColors.glass.bgStrong },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

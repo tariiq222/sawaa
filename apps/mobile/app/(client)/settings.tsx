@@ -1,50 +1,26 @@
-import { useDir } from '@/hooks/useDir';
 import { useCallback } from 'react';
-import {
-  View,
-  ScrollView,
-  Pressable,
-  Switch,
-  Alert,
-  StyleSheet,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Alert, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Globe,
-  Bell,
-  Check,
-  Info,
-} from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
+import { Globe, Info, Moon } from 'lucide-react-native';
 import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 import { ThemedText } from '@/theme/components/ThemedText';
-import { ThemedCard } from '@/theme/components/ThemedCard';
+import { sawaaRadius } from '@/theme/sawaa';
+import { Glass } from '@/theme/components/Glass';
 import { useTheme } from '@/theme/useTheme';
-import { UnverifiedEmailBanner } from '@/components/features/auth/UnverifiedEmailBanner';
-import { SettingsProfileSection } from './settings-profile-section';
-import { clientProfileService } from '@/services/client/profile';
-import { usePushPreference } from '@/hooks/queries/usePushPreference';
+import { SettingsScaffold, SettingsSectionHeader } from '@/components/features/settings/SettingsScaffold';
+import { GlassSegmented } from '@/components/ui/GlassSegmented';
+import { GlassSwitch } from '@/components/ui/GlassSwitch';
 import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
+import { clientProfileService } from '@/services/client/profile';
 import { LANGUAGE_KEY } from '@/hooks/language-preference';
 
-
+/** Purpose-built route: app-wide preferences — language, appearance, about. */
 export default function SettingsScreen() {
-  const dir = useDir();
   const { t, i18n } = useTranslation();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { theme, isRTL, language, scheme, setThemeMode } = useTheme();
-
-  const { query: pushPreference, mutation: pushMutation } = usePushPreference();
-  const pushEnabled = pushPreference.data?.enabled === true && pushPreference.data?.permitted === true;
-  const BackIcon = isRTL ? ChevronRight : ChevronLeft;
+  const { language, scheme, setThemeMode } = useTheme();
 
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const buildNumber =
@@ -55,7 +31,6 @@ export default function SettingsScreen() {
   const handleLanguageSelect = useCallback(
     async (lang: 'ar' | 'en') => {
       if (lang === language) return;
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await i18n.changeLanguage(lang);
       await AsyncStorage.setItem(LANGUAGE_KEY, lang);
       clientProfileService
@@ -74,158 +49,56 @@ export default function SettingsScreen() {
     [language, i18n, t],
   );
 
-  const handleTogglePush = useCallback(
-    async (val: boolean) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      try {
-        await pushMutation.mutateAsync(val);
-      } catch {
-        Alert.alert(t('settings.pushNotifications'), t('settings.pushUpdateError'));
-      }
-    },
-    [pushMutation, t],
-  );
-
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={[styles.headerRow, { flexDirection: dir.row }]}>
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
-            }}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.buttonBack')}
-          >
-            <BackIcon size={24} strokeWidth={1.5} color={theme.colors.textPrimary} />
-          </Pressable>
-          <ThemedText variant="subheading">{t('settings.title')}</ThemedText>
-          <View style={styles.backBtn} />
+    <SettingsScaffold title={t('settings.title')}>
+      {/* Language Section (local-only) */}
+      <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
+        <SettingsSectionHeader icon={Globe} label={t('settings.language')} />
+
+        <GlassSegmented
+          options={[
+            { value: 'ar', label: t('settings.arabic') },
+            { value: 'en', label: t('settings.english') },
+          ]}
+          value={language === 'en' ? 'en' : 'ar'}
+          onChange={handleLanguageSelect}
+        />
+      </Glass>
+
+      {/* Appearance */}
+      <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
+        <SettingsSectionHeader icon={Moon} label={t('settings.appearance')} />
+        <View style={styles.switchRow}>
+          <ThemedText variant="body">{t('settings.darkMode')}</ThemedText>
+          <GlassSwitch
+            value={scheme === 'dark'}
+            onValueChange={(v) => setThemeMode(v ? 'dark' : 'light')}
+            accessibilityLabel={t('settings.darkMode')}
+          />
         </View>
+      </Glass>
 
-        {/* Profile Section (server-backed) */}
-        <UnverifiedEmailBanner />
-        <SettingsProfileSection />
+      <DeleteAccountButton />
 
-        {/* Language Section (local-only) */}
-        <ThemedCard padding={20} style={{ marginBottom: 16 }}>
-          <SectionHeader icon={Globe} label={t('settings.language')} />
+      {/* About Section */}
+      <Glass variant="strong" radius={sawaaRadius.xl} style={styles.cardLast}>
+        <SettingsSectionHeader icon={Info} label={t('settings.about')} />
 
-          <LanguageOption
-            label={t('settings.arabic')}
-            selected={language === 'ar'}
-            onPress={() => handleLanguageSelect('ar')}
-          />
-          <LanguageOption
-            label={t('settings.english')}
-            selected={language === 'en'}
-            onPress={() => handleLanguageSelect('en')}
-          />
-        </ThemedCard>
+        <ThemedText variant="heading" style={styles.brand}>
+          سواء
+        </ThemedText>
 
-        {/* Notifications + Appearance */}
-        <ThemedCard padding={20} style={{ marginBottom: 16 }}>
-          <SectionHeader icon={Bell} label={t('settings.pushNotifications')} />
-          <ThemedText
-            variant="bodySm"
-            color={theme.colors.textSecondary}
-            style={{ marginBottom: 12 }}
-          >
-            {t('settings.pushNotificationsDesc')}
-          </ThemedText>
-          <View style={[styles.switchRow, { flexDirection: dir.row }]}>
-            <ThemedText variant="body">{t('settings.pushNotifications')}</ThemedText>
-            <Switch
-              value={pushEnabled}
-              disabled={pushPreference.isPending || pushPreference.isError || pushMutation.isPending}
-              onValueChange={handleTogglePush}
-              trackColor={{ false: '#E2E8F0', true: '#1D4ED880' }}
-              thumbColor={pushEnabled ? '#1D4ED8' : '#CBD5E1'}
-            />
-          </View>
-          <View style={[styles.switchRow, { marginTop: 12, flexDirection: dir.row }]}>
-            <ThemedText variant="body">{t('settings.darkMode')}</ThemedText>
-            <Switch
-              value={scheme === 'dark'}
-              onValueChange={(v) => setThemeMode(v ? 'dark' : 'light')}
-              trackColor={{ false: '#E2E8F0', true: '#1D4ED880' }}
-              thumbColor={scheme === 'dark' ? '#1D4ED8' : '#CBD5E1'}
-            />
-          </View>
-        </ThemedCard>
-
-        <DeleteAccountButton />
-
-        {/* About Section */}
-        <ThemedCard padding={20}>
-          <SectionHeader icon={Info} label={t('settings.about')} />
-
-          <ThemedText variant="heading" style={{ marginBottom: 8 }}>
-            سواء
-          </ThemedText>
-
-          <AboutRow label={t('settings.version')} value={version} />
-          <AboutRow label={t('settings.buildNumber')} value={buildNumber} />
-        </ThemedCard>
-      </ScrollView>
-    </View>
-  );
-}
-
-function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
-  const dir = useDir();
-  return (
-    <View style={[styles.sectionHeader, { flexDirection: dir.row }]}>
-      <View style={[styles.sectionIcon, { backgroundColor: '#1D4ED814' }]}>
-        <Icon size={20} strokeWidth={1.5} color="#1D4ED8" />
-      </View>
-      <ThemedText variant="subheading">{label}</ThemedText>
-    </View>
-  );
-}
-
-function LanguageOption({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const dir = useDir();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.langRow,
-        { flexDirection: dir.row },
-        {
-          backgroundColor: selected ? '#1D4ED808' : 'transparent',
-          opacity: pressed ? 0.7 : 1,
-        },
-      ]}
-    >
-      <ThemedText variant="body">{label}</ThemedText>
-      {selected && <Check size={20} strokeWidth={2} color="#1D4ED8" />}
-    </Pressable>
+        <AboutRow label={t('settings.version')} value={version} />
+        <AboutRow label={t('settings.buildNumber')} value={buildNumber} />
+      </Glass>
+    </SettingsScaffold>
   );
 }
 
 function AboutRow({ label, value }: { label: string; value: string }) {
-  const dir = useDir();
   const { theme } = useTheme();
   return (
-    <View style={[styles.aboutRow, { flexDirection: dir.row }]}>
+    <View style={styles.aboutRow}>
       <ThemedText variant="bodySm" color={theme.colors.textSecondary}>
         {label}
       </ThemedText>
@@ -235,42 +108,9 @@ function AboutRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, direction: 'ltr' },
-  scroll: { flexGrow: 1, paddingHorizontal: 24 },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
-  sectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  langRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
+  card: { padding: 20, marginBottom: 16 },
+  cardLast: { padding: 20 },
+  brand: { marginBottom: 8 },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

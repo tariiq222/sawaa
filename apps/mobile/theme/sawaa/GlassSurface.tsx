@@ -5,7 +5,7 @@ import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'ex
 import { LinearGradient } from 'expo-linear-gradient';
 import { useReducedTransparency, useIncreasedContrast } from '../../hooks/useA11y';
 import { useTheme } from '../useTheme';
-import { sawaaBlur, sawaaColors, sawaaRadius } from './tokens';
+import { sawaaBlur, getSawaaColors, getSawaaRoles, sawaaRadius } from './tokens';
 
 type Variant = 'base' | 'strong' | 'soft' | 'dark';
 
@@ -30,19 +30,19 @@ const tintMap: Record<Variant, 'light' | 'dark' | 'default'> = {
   dark: 'dark',
 };
 
-const fillMap: Record<Variant, string> = {
+const makeFillMap = (sawaaColors: ReturnType<typeof getSawaaColors>): Record<Variant, string> => ({
   base: sawaaColors.glass.bg,
   strong: sawaaColors.glass.bgStrong,
   soft: sawaaColors.glass.bgSoft,
   dark: sawaaColors.glass.darkBg,
-};
+});
 
-const borderMap: Record<Variant, string> = {
+const makeBorderMap = (sawaaColors: ReturnType<typeof getSawaaColors>): Record<Variant, string> => ({
   base: sawaaColors.glass.border,
   strong: sawaaColors.glass.border,
   soft: sawaaColors.glass.borderSoft,
   dark: sawaaColors.glass.darkBorder,
-};
+});
 
 /**
  * Liquid glass surface — mirrors `.lg` / `.lg-strong` / `.lg-soft` / `.lg-dark`
@@ -63,11 +63,14 @@ export function GlassSurface({
   const { theme, scheme } = useTheme();
   const glassScheme = isDark || scheme === 'dark' ? 'dark' : 'light';
   const isDarkAppearance = glassScheme === 'dark';
+  const sawaaColors = getSawaaColors(glassScheme);
+  const fillMap = makeFillMap(sawaaColors);
+  const borderMap = makeBorderMap(sawaaColors);
   const opaqueSurface = isDark
     ? sawaaColors.glass.opaqueDarkBg
     : theme.colors.surface ?? sawaaColors.glass.opaqueBg;
-  const fallbackFill = isDarkAppearance ? sawaaColors.glass.darkBg : fillMap[variant];
-  const fallbackBorder = isDarkAppearance ? sawaaColors.glass.darkBorder : borderMap[variant];
+  const fallbackFill = fillMap[variant];
+  const fallbackBorder = borderMap[variant];
   const nativeGlass =
     Platform.OS === 'ios' &&
     !reduceTransparency &&
@@ -89,9 +92,7 @@ export function GlassSurface({
         : 'transparent',
   };
 
-  const highlightColors = isDarkAppearance
-    ? (['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.10)'] as const)
-    : (['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.25)'] as const);
+  const highlightColors = getSawaaRoles(glassScheme).highlight;
 
   return (
     <View

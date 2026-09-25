@@ -1,12 +1,15 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Bell, Calendar, Check, CheckCheck, FileText, MessageCircle, Star, Video, type LucideIcon } from 'lucide-react-native';
+import { Bell, Calendar, Check, CheckCheck, ChevronLeft, ChevronRight, FileText, MessageCircle, Star, Video, type LucideIcon } from 'lucide-react-native';
 
-import { AquaBackground, sawaaColors, sawaaRadius, withAlpha } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
+import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -18,21 +21,21 @@ interface IconConfig {
   color: string;
 }
 
-function iconForType(type: Notification['type']): IconConfig {
+function iconForType(type: Notification['type'], colors: ReturnType<typeof useSawaaColors>): IconConfig {
   switch (type) {
     case 'booking_confirmed':
     case 'booking_completed':
-      return { Icon: Check, color: sawaaColors.teal[600] };
+      return { Icon: Check, color: colors.teal[600] };
     case 'booking_reminder':
     case 'booking_reminder_urgent':
     case 'reminder':
-      return { Icon: Video, color: sawaaColors.teal[600] };
+      return { Icon: Video, color: colors.teal[600] };
     case 'booking_rescheduled':
-      return { Icon: Calendar, color: sawaaColors.accent.violet };
+      return { Icon: Calendar, color: colors.accent.violet };
     case 'new_rating':
-      return { Icon: Star, color: sawaaColors.accent.amber };
+      return { Icon: Star, color: colors.accent.amber };
     case 'payment_received':
-      return { Icon: FileText, color: sawaaColors.accent.amber };
+      return { Icon: FileText, color: colors.accent.amber };
     case 'cancellation_requested':
     case 'cancellation_rejected':
     case 'booking_cancellation_rejected':
@@ -42,9 +45,9 @@ function iconForType(type: Notification['type']): IconConfig {
     case 'no_show_review':
     case 'client_arrived':
     case 'receipt_rejected':
-      return { Icon: MessageCircle, color: sawaaColors.accent.rose };
+      return { Icon: MessageCircle, color: colors.accent.rose };
     default:
-      return { Icon: Bell, color: sawaaColors.teal[600] };
+      return { Icon: Bell, color: colors.teal[600] };
   }
 }
 
@@ -72,6 +75,9 @@ const FILTERS = [
 type FilterKey = typeof FILTERS[number]['key'];
 
 export default function NotificationsScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const router = useRouter();
@@ -79,12 +85,18 @@ export default function NotificationsScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const [active, setActive] = useState<FilterKey>('all');
+  // This screen sits outside the tab group, so it must own its way back.
+  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   const {
     notifications,
     unreadCount,
     refreshing,
     refresh,
+    loadMore,
+    hasMore,
+    loadingMore,
+    loadError,
     markAsRead,
     markAllAsRead,
   } = useNotifications();
@@ -115,11 +127,21 @@ export default function NotificationsScreen() {
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: 140 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={sawaaColors.teal[600]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.teal[600]} />}
       >
         {/* Header */}
         <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <View style={[styles.headerRow, { flexDirection: dir.row }]}>
+            <Glass
+              variant="regular"
+              radius={21}
+              onPress={() => router.back()}
+              interactive
+              accessibilityLabel={t('a11y.buttonBack')}
+              style={styles.backBtn}
+            >
+              <BackIcon size={20} color={colors.ink[700]} strokeWidth={1.75} />
+            </Glass>
             <View style={styles.headerText}>
               <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
                 {dir.isRTL ? 'الإشعارات' : 'Notifications'}
@@ -135,7 +157,7 @@ export default function NotificationsScreen() {
             {unreadCount > 0 ? (
               <Glass variant="regular" radius={20} onPress={markAllAsRead} interactive style={styles.markAllBtn}>
                 <View style={[styles.markAllInner, { flexDirection: dir.row }]}>
-                  <CheckCheck size={14} color={sawaaColors.teal[700]} strokeWidth={2} />
+                  <CheckCheck size={14} color={colors.teal[700]} strokeWidth={2} />
                   <Text style={[styles.markAllText, { fontFamily: f600, fontWeight: '600' }]}>
                     {dir.isRTL ? 'تعليم الكل' : 'Mark all'}
                   </Text>
@@ -147,53 +169,23 @@ export default function NotificationsScreen() {
 
         {/* Filter chips */}
         <Animated.View entering={FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.filterRow, { flexDirection: dir.row }]}
-          >
-            {FILTERS.map((f) => {
-              const isActive = f.key === active;
-              const count = f.key === 'unread' ? unreadCount : notifications.length;
-              return (
-                <Glass
-                  key={f.key}
-                  variant={isActive ? 'strong' : 'regular'}
-                  radius={16}
-                  onPress={() => setActive(f.key)}
-                  interactive
-                  style={styles.chip}
-                >
-                  <View style={[styles.chipInner, { flexDirection: dir.row }]}>
-                    <Text style={[
-                      styles.chipLabel,
-                      { fontFamily: f600, fontWeight: '600', color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700] },
-                    ]}>
-                      {dir.isRTL ? f.ar : f.en}
-                    </Text>
-                    <View style={[
-                      styles.chipBadge,
-                      { backgroundColor: isActive ? sawaaColors.teal[600] : 'rgba(10,40,40,0.1)' },
-                    ]}>
-                      <Text style={[
-                        styles.chipBadgeText,
-                        { fontFamily: f600, fontWeight: '600', color: isActive ? '#fff' : sawaaColors.ink[500] },
-                      ]}>
-                        {count}
-                      </Text>
-                    </View>
-                  </View>
-                </Glass>
-              );
-            })}
-          </ScrollView>
+          <GlassSegmented
+            size="sm"
+            options={FILTERS.map((f) => ({
+              value: f.key,
+              label: dir.isRTL ? f.ar : f.en,
+              badge: String(f.key === 'unread' ? unreadCount : notifications.length),
+            }))}
+            value={active}
+            onChange={setActive}
+          />
         </Animated.View>
 
         {/* List */}
         {visible.length === 0 ? (
           <Animated.View entering={FadeInDown.delay(150).duration(600).easing(Easing.out(Easing.cubic))}>
             <Glass variant="regular" radius={sawaaRadius.xl} style={styles.empty}>
-              <Bell size={20} color={sawaaColors.ink[400]} strokeWidth={1.75} />
+              <Bell size={20} color={colors.ink[400]} strokeWidth={1.75} />
               <Text style={[styles.emptyText, { fontFamily: f400, fontWeight: '400' }]}>
                 {dir.isRTL ? 'لا توجد إشعارات لعرضها' : 'No notifications yet'}
               </Text>
@@ -201,7 +193,7 @@ export default function NotificationsScreen() {
           </Animated.View>
         ) : (
           visible.map((n, i) => {
-            const { Icon, color } = iconForType(n.type);
+            const { Icon, color } = iconForType(n.type, colors);
             const title = dir.isRTL ? n.titleAr : n.titleEn;
             const body = dir.isRTL ? n.bodyAr : n.bodyEn;
             const when = relativeWhen(n.createdAt, dir.isRTL);
@@ -239,26 +231,47 @@ export default function NotificationsScreen() {
             );
           })
         )}
+
+        {loadError ? (
+          <View style={styles.paginationStatus}>
+            <Text style={[styles.paginationError, { fontFamily: f400 }]}>{t('notifications.loadError')}</Text>
+            <Pressable accessibilityRole="button" onPress={loadMore} disabled={loadingMore}>
+              <Text style={[styles.paginationAction, { fontFamily: f600 }]}>{t('common.retry')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {hasMore && !loadError ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={loadMore}
+            disabled={loadingMore}
+            style={styles.paginationButton}
+          >
+            {loadingMore ? (
+              <View style={[styles.loadingMore, { flexDirection: dir.row }]}>
+                <ActivityIndicator color={colors.teal[600]} />
+                <Text style={[styles.paginationAction, { fontFamily: f400 }]}>{t('notifications.loadingMore')}</Text>
+              </View>
+            ) : (
+              <Text style={[styles.paginationAction, { fontFamily: f600 }]}>{t('notifications.loadMore')}</Text>
+            )}
+          </Pressable>
+        ) : null}
       </ScrollView>
     </AquaBackground>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 12 },
   headerRow: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, paddingHorizontal: 4 },
+  backBtn: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   headerText: { flex: 1 },
-  title: { fontSize: 28, color: sawaaColors.ink[900] },
-  subtitle: { fontSize: 12.5, color: sawaaColors.ink[500], marginTop: 2 },
+  title: { fontSize: 28, color: colors.ink[900] },
+  subtitle: { fontSize: 12.5, color: colors.ink[500], marginTop: 2 },
   markAllBtn: { marginTop: 6 },
   markAllInner: { alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8 },
-  markAllText: { fontSize: 12, color: sawaaColors.teal[700] },
-  filterRow: { gap: 8, paddingHorizontal: 4, paddingVertical: 4 },
-  chip: { minWidth: 70 },
-  chipInner: { alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8 },
-  chipLabel: { fontSize: 12 },
-  chipBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 },
-  chipBadgeText: { fontSize: 10 },
+  markAllText: { fontSize: 12, color: colors.teal[700] },
   card: { padding: 14 },
   row: { gap: 12, alignItems: 'flex-start' },
   iconBox: {
@@ -267,10 +280,15 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1 },
   bodyHead: { justifyContent: 'space-between', alignItems: 'baseline', gap: 8 },
-  itemTitle: { fontSize: 13.5, color: sawaaColors.ink[900] },
-  when: { fontSize: 10.5, color: sawaaColors.ink[400] },
-  itemBody: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 3, lineHeight: 18 },
-  unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: sawaaColors.teal[500], marginTop: 6 },
+  itemTitle: { fontSize: 13.5, color: colors.ink[900] },
+  when: { fontSize: 10.5, color: colors.ink[400] },
+  itemBody: { fontSize: 12, color: colors.ink[500], marginTop: 3, lineHeight: 18 },
+  unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.teal[500], marginTop: 6 },
   empty: { padding: 28, alignItems: 'center', gap: 10 },
-  emptyText: { fontSize: 12.5, color: sawaaColors.ink[500] },
+  emptyText: { fontSize: 12.5, color: colors.ink[500] },
+  paginationButton: { alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 12 },
+  paginationStatus: { alignItems: 'center', gap: 8, paddingVertical: 12 },
+  loadingMore: { alignItems: 'center', gap: 8 },
+  paginationError: { fontSize: 12, color: colors.accent.rose },
+  paginationAction: { fontSize: 13, color: colors.teal[700] },
 });

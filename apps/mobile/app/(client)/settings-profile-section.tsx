@@ -1,4 +1,3 @@
-import { getFontName } from '@/theme/fonts';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,9 +12,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as Haptics from 'expo-haptics';
-import { User as UserIcon } from 'lucide-react-native';
 
-import { ThemedCard } from '@/theme/components/ThemedCard';
+import { sawaaRadius } from '@/theme/sawaa';
+import { Glass } from '@/theme/components/Glass';
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
 import { useAppDispatch, useAppSelector } from '@/hooks/use-redux';
@@ -111,14 +110,7 @@ export function SettingsProfileSection() {
   const errorText = (key?: string) => (key ? t(`settings.errors.${key}`) : '');
 
   return (
-    <ThemedCard padding={20} style={{ marginBottom: 16 }}>
-      <View style={[styles.headerRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-        <View style={[styles.iconWrap, { backgroundColor: '#1D4ED814' }]}>
-          <UserIcon size={20} strokeWidth={1.5} color="#1D4ED8" />
-        </View>
-        <ThemedText variant="subheading">{t('settings.profile')}</ThemedText>
-      </View>
-
+    <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
       <Field label={t('settings.fullName')} error={errorText(errors.name?.message)}>
         <Controller
           control={control}
@@ -132,7 +124,6 @@ export function SettingsProfileSection() {
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,
-                { fontFamily: getFontName('ar'), writingDirection: isRTL ? 'rtl' : 'ltr' },
                 {
                   color: theme.colors.textPrimary,
                   borderColor: theme.colors.border,
@@ -158,7 +149,6 @@ export function SettingsProfileSection() {
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,
-                { fontFamily: getFontName('ar'), writingDirection: isRTL ? 'rtl' : 'ltr' },
                 {
                   color: theme.colors.textPrimary,
                   borderColor: theme.colors.border,
@@ -185,7 +175,6 @@ export function SettingsProfileSection() {
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,
-                { fontFamily: getFontName('ar'), writingDirection: isRTL ? 'rtl' : 'ltr' },
                 {
                   color: theme.colors.textPrimary,
                   borderColor: theme.colors.border,
@@ -203,20 +192,20 @@ export function SettingsProfileSection() {
         style={({ pressed }) => [
           styles.saveBtn,
           {
-            backgroundColor: '#1D4ED8',
+            backgroundColor: theme.colors.primaryFill,
             opacity: !isDirty || saving ? 0.5 : pressed ? 0.85 : 1,
           },
         ]}
       >
         {saving ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={theme.colors.primaryForeground} />
         ) : (
-          <ThemedText variant="body" color="#fff" style={{ fontWeight: '600' }}>
+          <ThemedText variant="body" color={theme.colors.primaryForeground} style={{ fontWeight: '600' }}>
             {t('settings.saveProfile')}
           </ThemedText>
         )}
       </Pressable>
-    </ThemedCard>
+    </Glass>
   );
 }
 
@@ -250,19 +239,7 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  card: { padding: 20, marginBottom: 16 },
   input: {
     borderWidth: 1,
     borderRadius: 10,

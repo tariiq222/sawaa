@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AquaBackground,
-  sawaaColors,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -30,6 +30,8 @@ import {
 } from './booking-options';
 
 export default function BookingTypeScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { serviceId, employeeId } = useLocalSearchParams<{ serviceId: string; employeeId?: string }>();
   const { t } = useTranslation();
   const router = useRouter();
@@ -95,7 +97,7 @@ export default function BookingTypeScreen() {
   const iconFor = (deliveryType: 'IN_PERSON' | 'ONLINE') =>
     deliveryType === 'ONLINE' ? Video : Building2;
   const colorFor = (deliveryType: 'IN_PERSON' | 'ONLINE') =>
-    deliveryType === 'ONLINE' ? sawaaColors.accent.violet : sawaaColors.teal[600];
+    deliveryType === 'ONLINE' ? colors.accent.violet : colors.teal[600];
 
   const labelFor = (opt: PractitionerBookingOption) => {
     if (opt.label) return opt.label;
@@ -209,7 +211,7 @@ export default function BookingTypeScreen() {
                       >
                         {formatMoney(opt.price)}
                       </Text>
-                      <GoIcon size={16} color={sawaaColors.ink[400]} strokeWidth={2} />
+                      <GoIcon size={16} color={colors.ink[400]} strokeWidth={2} />
                     </View>
                   </View>
                 </Glass>
@@ -222,19 +224,19 @@ export default function BookingTypeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginVertical: sawaaSpacing.sm,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: -sawaaSpacing.xs,
     paddingHorizontal: sawaaSpacing.xs,
   },
@@ -253,18 +255,18 @@ const styles = StyleSheet.create({
   typeLabel: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   typeDesc: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
   },
   typePrice: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.teal[700],
+    color: colors.teal[700],
     fontVariant: ['tabular-nums'],
   },
 });

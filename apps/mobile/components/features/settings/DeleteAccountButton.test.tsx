@@ -7,7 +7,7 @@ import { DeleteAccountButton } from './DeleteAccountButton';
 
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/services/auth', () => ({ authService: { requestAccountDeletion: jest.fn() } }));
-jest.mock('@/theme/sawaa', () => ({ sawaaColors: { accent: { coral: '#f00' } } }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: true, language: 'ar' }) }));
 jest.mock('@/theme/components/ThemedText', () => ({ ThemedText: require('react-native').Text }));
 
 const requestClosure = authService.requestAccountDeletion as jest.Mock;

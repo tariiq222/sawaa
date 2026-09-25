@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { colors } from '@sawaa/shared/tokens';
+import { useTheme } from '@/theme/useTheme';
+import { withAlpha } from '@/theme/sawaa/tokens';
 
-const STATUS_COLOR: Record<string, string> = {
+const statusColors = (colors: ReturnType<typeof useTheme>['theme']['colors']): Record<string, string> => ({
   pending: colors.status.pending,
   confirmed: colors.status.confirmed,
   completed: colors.status.completed,
@@ -12,9 +13,7 @@ const STATUS_COLOR: Record<string, string> = {
   paid: colors.payment.paid,
   refunded: colors.payment.refunded,
   failed: colors.payment.failed,
-};
-
-const TINT_ALPHA = '1A';
+});
 
 interface StatusPillProps {
   status: string;
@@ -22,12 +21,14 @@ interface StatusPillProps {
 }
 
 export function StatusPill({ status, label }: StatusPillProps) {
-  const color = STATUS_COLOR[status] ?? STATUS_COLOR.pending;
+  const { theme } = useTheme();
+  const palette = statusColors(theme.colors);
+  const color = palette[status] ?? palette.pending;
 
   return (
     <View
       style={{
-        backgroundColor: `${color}${TINT_ALPHA}`,
+        backgroundColor: withAlpha(color, 0.1),
         borderRadius: 999,
         paddingHorizontal: 12,
         paddingVertical: 4,

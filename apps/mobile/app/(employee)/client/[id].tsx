@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { View, ScrollView, Pressable, Linking, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,7 +10,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AquaBackground,
   GlassSurface,
-  sawaaColors,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -25,6 +25,8 @@ import { clientsService, type ClientRecord, type EmployeeClientVisit } from '@/s
 import { getStatusLabel } from '@/lib/status-helpers';
 
 export default function DoctorClientRecordScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
@@ -104,7 +106,7 @@ export default function DoctorClientRecordScreen() {
         >
           <GlassSurface variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
             <View style={styles.backInner}>
-              <BackIcon size={22} strokeWidth={1.5} color={sawaaColors.ink[900]} />
+              <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
             </View>
           </GlassSurface>
         </Pressable>
@@ -118,7 +120,7 @@ export default function DoctorClientRecordScreen() {
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
           <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
-              <Avatar size={56} name={fullName} imageUrl={client.avatarUrl} color={sawaaColors.teal[600]} />
+              <Avatar size={56} name={fullName} imageUrl={client.avatarUrl} color={colors.teal[600]} />
               <View style={styles.profileMid}>
                 <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                   {fullName}
@@ -129,7 +131,7 @@ export default function DoctorClientRecordScreen() {
                     accessibilityRole="button"
                     style={[styles.contactRow, { flexDirection: dir.row }]}
                   >
-                    <Phone size={14} strokeWidth={1.5} color={sawaaColors.teal[700]} />
+                    <Phone size={14} strokeWidth={1.5} color={colors.teal[700]} />
                     <Text style={[styles.contactText, { fontFamily: f400, fontWeight: '400' }]}>
                       {client.phone}
                     </Text>
@@ -141,7 +143,7 @@ export default function DoctorClientRecordScreen() {
                     accessibilityRole="button"
                     style={[styles.contactRow, { flexDirection: dir.row }]}
                   >
-                    <Mail size={14} strokeWidth={1.5} color={sawaaColors.teal[700]} />
+                    <Mail size={14} strokeWidth={1.5} color={colors.teal[700]} />
                     <Text style={[styles.contactText, { fontFamily: f400, fontWeight: '400' }]}>
                       {client.email}
                     </Text>
@@ -199,7 +201,7 @@ export default function DoctorClientRecordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: sawaaSpacing.xl },
   centered: { flex: 1, justifyContent: 'center' },
   loaderBlock: { marginBottom: sawaaSpacing.md },
@@ -210,7 +212,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginBottom: sawaaSpacing.lg,
   },
   profileCard: { marginBottom: sawaaSpacing['2xl'] },
@@ -219,18 +221,18 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   contactRow: { alignItems: 'center', gap: sawaaSpacing.xs },
   contactText: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.teal[700],
+    color: colors.teal[700],
   },
   sectionTitle: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginBottom: sawaaSpacing.md,
   },
   visitList: { gap: sawaaSpacing.sm },
@@ -239,11 +241,11 @@ const styles = StyleSheet.create({
   visitType: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   visitDate: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
 });

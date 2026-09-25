@@ -1,6 +1,7 @@
 import React, { Component, type ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Sentry from '@sentry/react-native';
+import { useTheme } from '@/theme/useTheme';
 
 interface Props {
   children: ReactNode;
@@ -37,51 +38,55 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
-      return (
-        <View style={styles.container}>
-          <Text style={styles.title}>حدث خطأ غير متوقع</Text>
-          <Text style={styles.message}>
-            {this.state.error?.message ?? 'نعتذر، حدث خطأ في التطبيق.'}
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={this.handleRetry}>
-            <Text style={styles.buttonText}>إعادة المحاولة</Text>
-          </TouchableOpacity>
-        </View>
-      );
+      return <ErrorFallback error={this.state.error} onRetry={this.handleRetry} />;
     }
 
     return this.props.children;
   }
 }
 
-const styles = StyleSheet.create({
+function ErrorFallback({ error, onRetry }: { error?: Error; onRetry: () => void }) {
+  const { theme } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme.colors), [theme.colors]);
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>حدث خطأ غير متوقع</Text>
+      <Text style={styles.message}>{error?.message ?? 'نعتذر، حدث خطأ في التطبيق.'}</Text>
+      <TouchableOpacity style={styles.button} onPress={onRetry}>
+        <Text style={styles.buttonText}>إعادة المحاولة</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const createStyles = (colors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   message: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 24,
   },
   button: {
-    backgroundColor: '#0D9488',
+    backgroundColor: colors.primaryFill,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.primaryForeground,
     fontSize: 14,
     fontWeight: '600',
   },

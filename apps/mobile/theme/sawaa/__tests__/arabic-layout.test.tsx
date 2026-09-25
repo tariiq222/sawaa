@@ -1,3 +1,5 @@
+jest.mock('../../useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
+
 import React from 'react';
 import { I18nManager, Platform, StyleSheet, Text, View } from 'react-native';
 import { render, screen } from '@testing-library/react-native';

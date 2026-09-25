@@ -8,7 +8,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { useDir } from '@/hooks/useDir';
-import { sawaaColors, sawaaRadius, withAlpha } from '@/theme/sawaa/tokens';
+import { sawaaRadius, withAlpha } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 interface ProgressBarProps {
   /** Fraction of completion, clamped to 0..1. */
@@ -16,7 +17,6 @@ interface ProgressBarProps {
   height?: number;
 }
 
-const TRACK_FILL = withAlpha(sawaaColors.teal[700], 0.12);
 const ANIMATION_MS = 350;
 
 /**
@@ -25,6 +25,8 @@ const ANIMATION_MS = 350;
  * jumps instantly when reduce-motion is on.
  */
 export function ProgressBar({ progress, height = 4 }: ProgressBarProps) {
+  const sawaaColors = useSawaaColors();
+  const trackFill = withAlpha(sawaaColors.teal[700], 0.12);
   const { alignStart } = useDir();
   const reduceMotion = useReduceMotion();
   const clamped = Math.min(1, Math.max(0, progress));
@@ -47,12 +49,13 @@ export function ProgressBar({ progress, height = 4 }: ProgressBarProps) {
 
   return (
     <View
+      accessible
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max: 1, now: clamped }}
       style={{
         height,
         borderRadius: sawaaRadius.pill,
-        backgroundColor: TRACK_FILL,
+        backgroundColor: trackFill,
         overflow: 'hidden',
       }}
     >

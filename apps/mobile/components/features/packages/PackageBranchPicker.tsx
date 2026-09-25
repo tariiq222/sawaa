@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { PublicBranchSummary } from '@/services/client';
 import { Glass } from '@/theme/components/Glass';
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import type { DirState } from '@/hooks/useDir';
 
 interface Props {
@@ -21,6 +22,8 @@ interface Props {
 }
 
 export function PackageBranchPicker({ branches, branchId, loading, error, onSelect, onRetry, dir, f400, f600, f700 }: Props) {
+  const sawaaColors = useSawaaColors();
+  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const { t } = useTranslation();
   return (
     <View style={styles.container}>
@@ -50,7 +53,7 @@ export function PackageBranchPicker({ branches, branchId, loading, error, onSele
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { gap: sawaaSpacing.sm },
   title: { color: sawaaColors.ink[900], fontSize: sawaaType.subheading.fontSize },
   message: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },

@@ -14,6 +14,10 @@ jest.mock('@/hooks/queries', () => ({
   useBranding: () => ({ data: { contactPhone: null } }),
 }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
+let mockScheme: 'light' | 'dark' = 'light';
+jest.mock('@/theme/sawaa/useSawaaColors', () => ({
+  useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors(mockScheme),
+}));
 jest.mock('@/lib/money', () => ({ formatHalalas: (amount: number) => String(amount) }));
 jest.mock('@/services/client/payments', () => ({ clientPaymentsService: { initPayment: jest.fn() } }));
 jest.mock('../use-existing-booking-checkout', () => {
@@ -48,7 +52,6 @@ jest.mock('@/theme/sawaa', () => {
     AquaBackground: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
     PrimaryButton: ({ label, onPress, disabled }: { label: string; onPress?: () => void; disabled?: boolean }) =>
       mockReact.createElement('mock-primary-button', { testID: 'primary', onPress, disabled }, label),
-    sawaaColors: { ink: { 700: '#000', 900: '#000', 500: '#555' }, teal: { 600: '#000', 700: '#000' }, glass: { bgStrong: '#fff' } },
     sawaaRadius: { pill: 999, xl: 24 },
     sawaaSpacing: { lg: 16 },
     sawaaType: { heading: { fontSize: 24, lineHeight: 30 }, body: { fontSize: 14, lineHeight: 20 }, micro: { fontSize: 11, lineHeight: 14 }, caption: { fontSize: 12, lineHeight: 16 } },
@@ -69,9 +72,20 @@ const mockInvoice = require('../use-existing-booking-checkout').__mockInvoice as
 describe('ExistingBookingCheckoutScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockScheme = 'light';
     mockInvoice.total = 10000;
     mockInvoice.payments = [];
     mockInitPayment.mockResolvedValue({ paymentId: 'payment-1', redirectUrl: '' });
+  });
+
+  it('updates visible text colors when the appearance changes without remounting', () => {
+    const { StyleSheet } = require('react-native') as typeof import('react-native');
+    const { getSawaaColors } = jest.requireActual('@/theme/sawaa/tokens') as typeof import('@/theme/sawaa/tokens');
+    const screen = render(<ExistingBookingCheckoutScreen />);
+    expect(StyleSheet.flatten(screen.getByText('checkout.title').props.style).color).toBe(getSawaaColors('light').ink[900]);
+    mockScheme = 'dark';
+    screen.rerender(<ExistingBookingCheckoutScreen />);
+    expect(StyleSheet.flatten(screen.getByText('checkout.title').props.style).color).toBe(getSawaaColors('dark').ink[900]);
   });
 
   it('shows the remaining amount after a completed partial payment', () => {

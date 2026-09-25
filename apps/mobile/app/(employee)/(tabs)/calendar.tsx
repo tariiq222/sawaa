@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { View, FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +12,6 @@ import { router } from 'expo-router';
 import {
   AquaBackground,
   GlassSurface,
-  sawaaColors,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -25,6 +26,8 @@ import { useEmployeeDayBookings } from '@/hooks/queries/useEmployeeDayBookings';
 import { getStatusLabel } from '@/lib/status-helpers';
 
 export default function CalendarScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -37,7 +40,7 @@ export default function CalendarScreen() {
     new Date().toISOString().split('T')[0],
   );
 
-  const { data: dayBookings = [], isLoading } = useEmployeeDayBookings(selectedDate);
+  const { data: dayBookings = [], isLoading, isError, refetch } = useEmployeeDayBookings(selectedDate);
 
   const dayTitle = new Date(selectedDate).toLocaleDateString(dir.isRTL ? 'ar-SA' : 'en-US', {
     weekday: 'long',
@@ -64,17 +67,17 @@ export default function CalendarScreen() {
                 markedDates={{
                   [selectedDate]: {
                     selected: true,
-                    selectedColor: sawaaColors.teal[600],
+                    selectedColor: colors.teal[600],
                   },
                 }}
                 theme={{
                   calendarBackground: 'transparent',
-                  todayTextColor: sawaaColors.teal[700],
-                  arrowColor: sawaaColors.teal[600],
-                  monthTextColor: sawaaColors.ink[900],
-                  dayTextColor: sawaaColors.ink[700],
-                  textSectionTitleColor: sawaaColors.ink[500],
-                  textDisabledColor: sawaaColors.ink[400],
+                  todayTextColor: colors.teal[700],
+                  arrowColor: colors.teal[600],
+                  monthTextColor: colors.ink[900],
+                  dayTextColor: colors.ink[700],
+                  textSectionTitleColor: colors.ink[500],
+                  textDisabledColor: colors.ink[400],
                   textDayFontFamily: f400,
                   textMonthFontFamily: f700,
                   textDayHeaderFontFamily: f600,
@@ -94,7 +97,7 @@ export default function CalendarScreen() {
         </Animated.View>
 
         <FlatList
-          data={isLoading ? [] : dayBookings}
+          data={isLoading || isError ? [] : dayBookings}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
@@ -106,7 +109,7 @@ export default function CalendarScreen() {
               <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.md}>
                 <View style={[styles.apptRow, { flexDirection: dir.row }]}>
                   <View style={[styles.timeCol, { flexDirection: dir.row }]}>
-                    <Clock size={14} strokeWidth={1.5} color={sawaaColors.ink[400]} />
+                    <Clock size={14} strokeWidth={1.5} color={colors.ink[400]} />
                     <Text style={[styles.timeText, { writingDirection: dir.writingDirection }]}>
                       {item.startTime}
                     </Text>
@@ -131,10 +134,18 @@ export default function CalendarScreen() {
                   <Skeleton key={i} height={56} radius={sawaaRadius.lg} />
                 ))}
               </View>
+            ) : isError ? (
+              <EmptyState
+                icon="alert-circle-outline"
+                title={t('common.error')}
+                actionLabel={t('common.retry')}
+                onAction={() => { void refetch(); }}
+                tone="danger"
+              />
             ) : (
               <EmptyState
                 icon="calendar-clear-outline"
-                title={t('doctor.noAppointmentsToday')}
+                title={t('common.noResults')}
               />
             )
           }
@@ -157,19 +168,19 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { flex: 1, paddingHorizontal: sawaaSpacing.lg },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginBottom: sawaaSpacing.lg,
   },
   calCard: { marginBottom: sawaaSpacing.lg },
   dayTitle: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
     marginBottom: sawaaSpacing.md,
   },
   list: { paddingBottom: sawaaSpacing.xl },
@@ -178,20 +189,20 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
   },
   apptMid: { flex: 1 },
   apptName: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   skeletonList: { gap: sawaaSpacing.sm },
   ctaWrap: { paddingVertical: sawaaSpacing.md, paddingBottom: 100 },
   ctaText: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.teal[700],
+    color: colors.teal[700],
     textAlign: 'center',
   },
 });
