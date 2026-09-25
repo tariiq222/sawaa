@@ -8,9 +8,14 @@ args = [
 command = "npx"
 
 [mcp_servers.postgres]
+enabled = false
 args = [
     "-y",
     "@modelcontextprotocol/server-postgres",
     "postgresql://deqah:deqah_dev_password@localhost:5999/deqah_dev",
 ]
 command = "npx"
+
+[features]
+apps = false
+remote_plugin = false
