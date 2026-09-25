@@ -397,6 +397,43 @@
         ],
         "type": "object"
       },
+      "BankTransferAccountSettingsDto": {
+        "properties": {
+          "bankName": {
+            "description": "Bank name",
+            "example": "Saudi National Bank",
+            "type": "string"
+          },
+          "beneficiaryName": {
+            "description": "Account beneficiary name",
+            "example": "Sawaa Family Counseling Center",
+            "type": "string"
+          },
+          "iban": {
+            "description": "Saudi IBAN (spaces accepted)",
+            "example": "SA0380000000608010167519",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable account id used by the client app",
+            "example": "main-account",
+            "type": "string"
+          },
+          "label": {
+            "description": "Account label shown to clients",
+            "example": "Main account",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "bankName",
+          "beneficiaryName",
+          "iban"
+        ],
+        "type": "object"
+      },
       "BookFromCreditDto": {
         "properties": {
           "branchId": {
@@ -10696,6 +10733,13 @@
             "example": "Riyadh, Saudi Arabia",
             "type": "string"
           },
+          "bankTransferAccounts": {
+            "description": "Bank accounts shown to clients for bank transfers",
+            "items": {
+              "$ref": "#/components/schemas/BankTransferAccountSettingsDto"
+            },
+            "type": "array"
+          },
           "bookingFlowOrder": {
             "description": "Booking flow order",
             "enum": [
@@ -10827,6 +10871,11 @@
           "paymentAtClinicEnabled": {
             "description": "Enable pay-at-clinic option",
             "example": true,
+            "type": "boolean"
+          },
+          "paymentBankTransferEnabled": {
+            "description": "Enable client bank transfer at booking checkout",
+            "example": false,
             "type": "boolean"
           },
           "paymentMoyasarEnabled": {
@@ -35751,6 +35800,112 @@
           }
         ],
         "summary": "Upload a bank-transfer receipt for an invoice (client)",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/payments/bank-transfer/settings": {
+      "get": {
+        "operationId": "MobileClientPaymentsController_getBankTransferSettings_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "accounts": {
+                      "items": {
+                        "properties": {
+                          "bankName": {
+                            "type": "string"
+                          },
+                          "beneficiaryName": {
+                            "type": "string"
+                          },
+                          "iban": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "bankName",
+                          "beneficiaryName",
+                          "iban"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "accounts"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Bank transfer availability and configured recipient accounts"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get client-visible bank transfer settings and accounts",
         "tags": [
           "Mobile Client / Payments"
         ]

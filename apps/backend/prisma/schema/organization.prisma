@@ -418,6 +418,8 @@ model OrganizationSettings {
   bookingFlowOrder       String    @default("service_first")
   paymentMoyasarEnabled  Boolean   @default(true)
   paymentAtClinicEnabled Boolean   @default(true)
+  paymentBankTransferEnabled Boolean @default(false)
+  bankTransferAccounts   Json      @default("[]")
   // Manual payment-recording methods shown in the bookings "record payment"
   // dialog. Cash is on by default; the rest are opt-in from settings.
   payMethodCashEnabled   Boolean   @default(true)

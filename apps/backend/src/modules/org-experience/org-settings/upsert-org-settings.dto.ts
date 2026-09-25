@@ -1,9 +1,28 @@
 import {
-  IsOptional, IsString, IsBoolean, IsNumber, IsInt,
+  IsOptional, IsString, IsBoolean, IsNumber, IsInt, IsArray,
+  IsNotEmpty, Matches, ValidateNested, ArrayUnique,
   Min, Max, IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class BankTransferAccountSettingsDto {
+  @ApiProperty({ description: 'Stable account id used by the client app', example: 'main-account' })
+  @IsString() @IsNotEmpty() id!: string;
+
+  @ApiProperty({ description: 'Account label shown to clients', example: 'Main account' })
+  @IsString() @IsNotEmpty() label!: string;
+
+  @ApiProperty({ description: 'Bank name', example: 'Saudi National Bank' })
+  @IsString() @IsNotEmpty() bankName!: string;
+
+  @ApiProperty({ description: 'Account beneficiary name', example: 'Sawaa Family Counseling Center' })
+  @IsString() @IsNotEmpty() beneficiaryName!: string;
+
+  @ApiProperty({ description: 'Saudi IBAN (spaces accepted)', example: 'SA0380000000608010167519' })
+  @IsString() @IsNotEmpty() @Matches(/^SA(?:\s?\d){22}$/i)
+  iban!: string;
+}
 
 export class UpsertOrgSettingsDto {
   @ApiPropertyOptional({ description: 'Company name in Arabic', example: 'عيادة الرعاية' })
@@ -128,6 +147,14 @@ export class UpsertOrgSettingsDto {
 
   @ApiPropertyOptional({ description: 'Enable pay-at-clinic option', example: true })
   @IsOptional() @IsBoolean() paymentAtClinicEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Enable client bank transfer at booking checkout', example: false })
+  @IsOptional() @IsBoolean() paymentBankTransferEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Bank accounts shown to clients for bank transfers', type: [BankTransferAccountSettingsDto] })
+  @IsOptional() @IsArray() @ArrayUnique((account: BankTransferAccountSettingsDto) => account.id)
+  @ValidateNested({ each: true }) @Type(() => BankTransferAccountSettingsDto)
+  bankTransferAccounts?: BankTransferAccountSettingsDto[];
 
   @ApiPropertyOptional({ description: 'Show "Cash" in the record-payment dialog', example: true })
   @IsOptional() @IsBoolean() payMethodCashEnabled?: boolean;

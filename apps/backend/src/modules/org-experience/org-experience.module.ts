@@ -36,6 +36,7 @@ import { ListPublicTestimonialsHandler } from './ratings/list-public-testimonial
 import { UpdateRatingVisibilityHandler } from './ratings/update-rating-visibility.handler';
 import { GetOrgSettingsHandler } from './org-settings/get-org-settings.handler';
 import { UpsertOrgSettingsHandler } from './org-settings/upsert-org-settings.handler';
+import { GetClientBankTransferSettingsHandler } from './org-settings/get-client-bank-transfer-settings.handler';
 import { GetBookingSettingsHandler } from '../bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../bookings/upsert-booking-settings/upsert-booking-settings.handler';
 import { DashboardDiscountReasonsController } from '../../api/dashboard/discount-reasons.controller';
@@ -114,7 +115,7 @@ const packageFamilyHandlers = [
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
     SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
-    GetOrgSettingsHandler, UpsertOrgSettingsHandler,
+    GetOrgSettingsHandler, UpsertOrgSettingsHandler, GetClientBankTransferSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,
   ],
   exports: [
@@ -129,7 +130,7 @@ const packageFamilyHandlers = [
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
     SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
-    GetOrgSettingsHandler, UpsertOrgSettingsHandler,
+    GetOrgSettingsHandler, UpsertOrgSettingsHandler, GetClientBankTransferSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,
   ],
 })

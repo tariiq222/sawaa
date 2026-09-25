@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
 import { TENANT_CLS_KEY } from '../../../common/constants';
@@ -64,5 +64,41 @@ describe('UpsertOrgSettingsHandler', () => {
 
     await handler.execute({ timezone: 'Asia/Riyadh' });
     expect(prisma.organizationSettings.create).toHaveBeenCalledWith({ data: { timezone: 'Asia/Riyadh' } });
+  });
+
+  it('rejects enabling client bank transfer without a valid account', async () => {
+    prisma.organizationSettings.findFirst.mockResolvedValue({
+      id: 's1',
+      paymentBankTransferEnabled: false,
+      bankTransferAccounts: [],
+    });
+
+    await expect(handler.execute({ paymentBankTransferEnabled: true })).rejects.toThrow(BadRequestException);
+    expect(prisma.organizationSettings.update).not.toHaveBeenCalled();
+  });
+
+  it('allows enabling client bank transfer when at least one account is configured', async () => {
+    prisma.organizationSettings.findFirst.mockResolvedValue({
+      id: 's1',
+      paymentBankTransferEnabled: false,
+      bankTransferAccounts: [],
+    });
+    prisma.organizationSettings.update.mockResolvedValue({ id: 's1', paymentBankTransferEnabled: true });
+
+    await handler.execute({
+      paymentBankTransferEnabled: true,
+      bankTransferAccounts: [{
+        id: 'main-account',
+        label: 'Main',
+        bankName: 'Sawa Bank',
+        beneficiaryName: 'Sawa Center',
+        iban: 'SA0380000000608010167519',
+      }],
+    });
+
+    expect(prisma.organizationSettings.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 's1' },
+      data: expect.objectContaining({ paymentBankTransferEnabled: true }),
+    }));
   });
 });

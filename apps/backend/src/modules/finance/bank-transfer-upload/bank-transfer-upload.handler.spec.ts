@@ -60,6 +60,18 @@ const buildPrisma = (invoiceOverrides = {}) => {
     service: {
       findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
     },
+    organizationSettings: {
+      findFirst: jest.fn().mockResolvedValue({
+        paymentBankTransferEnabled: true,
+        bankTransferAccounts: [{
+          id: 'bank-1',
+          label: 'Main',
+          bankName: 'Sawa Bank',
+          beneficiaryName: 'Sawa Center',
+          iban: 'SA0380000000608010167519',
+        }],
+      }),
+    },
     payment: {
       aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
       create: jest.fn().mockResolvedValue(mockPayment),
@@ -93,6 +105,30 @@ const baseCmd = {
 };
 
 describe('BankTransferUploadHandler', () => {
+  it('rejects client receipt uploads when bank transfer is disabled', async () => {
+    const prisma = buildPrisma();
+    prisma.organizationSettings.findFirst.mockResolvedValue({
+      paymentBankTransferEnabled: false,
+      bankTransferAccounts: [{
+        id: 'bank-1',
+        label: 'Main',
+        bankName: 'Sawa Bank',
+        beneficiaryName: 'Sawa Center',
+        iban: 'SA0380000000608010167519',
+      }],
+    });
+    const storage = buildStorage();
+    const handler = buildHandler(prisma, storage);
+
+    await expect(handler.execute({
+      ...baseCmd,
+      fileBuffer: JPEG_BUFFER,
+      mimetype: 'image/jpeg',
+      filename: 'receipt.jpg',
+    })).rejects.toThrow(BadRequestException);
+    expect(storage.uploadFile).not.toHaveBeenCalled();
+  });
+
   describe('valid uploads', () => {
     it('uploads JPEG receipt and creates PENDING_VERIFICATION payment', async () => {
       const prisma = buildPrisma();

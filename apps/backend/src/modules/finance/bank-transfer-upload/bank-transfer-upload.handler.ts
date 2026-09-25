@@ -8,6 +8,7 @@ import { validateMagicBytes } from '../../../common/security/magic-byte-validato
 import { resolveInvoiceDeposit } from '../deposit.helper';
 import { decimalToHalalas } from '../money.helper';
 import { assertBookingAcceptsPayment } from '../booking-payment-eligibility.helper';
+import { isClientBankTransferEnabled } from '../../org-experience/org-settings/bank-transfer-settings';
 
 const RECEIPTS_BUCKET = 'finance-receipts';
 export const MAX_BANK_TRANSFER_RECEIPT_BYTES = 10 * 1024 * 1024;
@@ -57,6 +58,19 @@ export class BankTransferUploadHandler {
       throw new BadRequestException(
         `Receipt content validation failed: ${check.reason ?? 'content does not match declared type'}`,
       );
+    }
+
+    // The mobile/website clients can only submit a transfer while the center
+    // has enabled the method and configured a valid recipient account. Staff
+    // initiated uploads remain governed by their dashboard permissions.
+    if (cmd.clientId) {
+      const settings = await this.prisma.organizationSettings.findFirst({
+        select: { paymentBankTransferEnabled: true, bankTransferAccounts: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!isClientBankTransferEnabled(settings)) {
+        throw new BadRequestException('Bank transfer is not currently available');
+      }
     }
 
     const invoice = await this.prisma.invoice.findFirst({

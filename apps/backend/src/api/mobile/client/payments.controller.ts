@@ -35,6 +35,7 @@ import {
 import { InitClientPaymentHandler } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { InitClientPaymentDto } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
 import { Public } from '../../../common/guards/jwt.guard';
+import { GetClientBankTransferSettingsHandler } from '../../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
 
 export class MobileListPaymentsQuery {
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -64,6 +65,7 @@ export class MobileClientPaymentsController {
     private readonly getInvoice: GetInvoiceHandler,
     private readonly bankTransferUpload: BankTransferUploadHandler,
     private readonly initClientPayment: InitClientPaymentHandler,
+    private readonly getClientBankTransferSettings: GetClientBankTransferSettingsHandler,
   ) {}
 
   @Get()
@@ -78,6 +80,36 @@ export class MobileClientPaymentsController {
       page: q.page ?? 1,
       limit: q.limit ?? 20,
     });
+  }
+
+  @Get('bank-transfer/settings')
+  @ApiOperation({ summary: 'Get client-visible bank transfer settings and accounts' })
+  @ApiOkResponse({
+    description: 'Bank transfer availability and configured recipient accounts',
+    schema: {
+      type: 'object',
+      required: ['enabled', 'accounts'],
+      properties: {
+        enabled: { type: 'boolean' },
+        accounts: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'label', 'bankName', 'beneficiaryName', 'iban'],
+            properties: {
+              id: { type: 'string' },
+              label: { type: 'string' },
+              bankName: { type: 'string' },
+              beneficiaryName: { type: 'string' },
+              iban: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  getBankTransferSettings() {
+    return this.getClientBankTransferSettings.execute();
   }
 
   @Get('invoices/:id')

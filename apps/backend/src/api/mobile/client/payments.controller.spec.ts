@@ -7,6 +7,7 @@ import { GetInvoiceHandler } from '../../../modules/finance/get-invoice/get-invo
 import { BankTransferUploadHandler } from '../../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { InitClientPaymentHandler } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
+import { GetClientBankTransferSettingsHandler } from '../../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
 
 describe('MobileClientPaymentsController (e2e)', () => {
   let app: INestApplication;
@@ -15,6 +16,7 @@ describe('MobileClientPaymentsController (e2e)', () => {
   const mockGetInvoice = { execute: jest.fn() };
   const mockBankTransfer = { execute: jest.fn() };
   const mockInitPayment = { execute: jest.fn() };
+  const mockGetBankTransferSettings = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -24,6 +26,7 @@ describe('MobileClientPaymentsController (e2e)', () => {
         { provide: GetInvoiceHandler, useValue: mockGetInvoice },
         { provide: BankTransferUploadHandler, useValue: mockBankTransfer },
         { provide: InitClientPaymentHandler, useValue: mockInitPayment },
+        { provide: GetClientBankTransferSettingsHandler, useValue: mockGetBankTransferSettings },
       ],
     })
       .overrideGuard(ClientSessionGuard)
@@ -79,6 +82,23 @@ describe('MobileClientPaymentsController (e2e)', () => {
       expect(mockListPayments.execute).toHaveBeenCalledWith(
         expect.objectContaining({ clientId: 'client-1', page: 2, limit: 10 }),
       );
+    });
+  });
+
+  describe('GET /mobile/client/payments/bank-transfer/settings', () => {
+    it('returns the enabled state and accounts configured by the center', async () => {
+      mockGetBankTransferSettings.execute.mockResolvedValue({
+        enabled: true,
+        accounts: [{ id: 'bank-1', label: 'Main', bankName: 'Bank', beneficiaryName: 'Sawa', iban: 'SA0380000000608010167519' }],
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/mobile/client/payments/bank-transfer/settings')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(response.body).toEqual(expect.objectContaining({ enabled: true, accounts: [expect.objectContaining({ id: 'bank-1' })] }));
+      expect(mockGetBankTransferSettings.execute).toHaveBeenCalledTimes(1);
     });
   });
 
