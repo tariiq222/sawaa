@@ -18,7 +18,8 @@ const make = (overrides: Partial<PublicEmployeeItem> = {}): PublicEmployeeItem =
   isBookable: true,
   ratingAverage: null,
   ratingCount: 0,
-  minServicePrice: 400,
+  // Prices are integer halalas (1 SAR = 100 halalas) — 40000 halalas = 400 SAR.
+  minServicePrice: 40000,
   isAvailableToday: false,
   ...overrides,
 });
@@ -79,15 +80,20 @@ describe('applyTherapistFilters', () => {
   });
 
   describe('chip: under300', () => {
-    it('shows employees with min service price under 300', () => {
+    it('compares halalas against the 300 SAR ceiling, not against 300 halalas', () => {
       const list = [
-        make({ minServicePrice: 200 }),
-        make({ id: 'e2', minServicePrice: 350 }),
+        make({ minServicePrice: 20000 }), // 200 SAR — under
+        make({ id: 'e2', minServicePrice: 35000 }), // 350 SAR — over
         make({ id: 'e3', minServicePrice: null }),
       ];
       const result = applyTherapistFilters(list, '', 'under300');
       expect(result).toHaveLength(1);
-      expect(result[0].minServicePrice).toBe(200);
+      expect(result[0].minServicePrice).toBe(20000);
+    });
+
+    it('excludes an employee priced exactly at 300 SAR (exclusive ceiling)', () => {
+      const list = [make({ minServicePrice: 30000 })];
+      expect(applyTherapistFilters(list, '', 'under300')).toHaveLength(0);
     });
   });
 

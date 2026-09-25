@@ -55,7 +55,7 @@ export interface PortalHomeResponse {
 export interface PortalSummary {
   totalBookings: number;
   lastVisit: string | null;        // ISO datetime
-  outstandingBalance: number;      // SAR (not halalat)
+  outstandingBalance: number;      // integer halalas (1 SAR = 100 halalas)
 }
 
 export const clientPortalService = {

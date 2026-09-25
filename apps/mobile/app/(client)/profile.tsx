@@ -26,6 +26,7 @@ import { useAppSelector } from '@/hooks/use-redux';
 import { authService } from '@/services/auth';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useSummary } from '@/hooks/queries';
+import { formatHalalas } from '@/lib/money';
 import { PRIVACY_POLICY_URL } from '@/constants/config';
 import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
 
@@ -53,6 +54,7 @@ export default function ProfileScreen() {
   const f700 = getFontName(dir.locale, '700');
   const { t } = useTranslation();
   const darkMode = scheme === 'dark';
+  const moneyLocale = dir.isRTL ? 'ar-SA' : 'en-US';
   const summaryQuery = useSummary();
   const summary = summaryQuery.data ?? null;
   const brandingQuery = useBranding();
@@ -91,9 +93,8 @@ export default function ProfileScreen() {
       en: 'Last visit',
     },
     {
-      value: summary
-        ? `${summary.outstandingBalance.toLocaleString(dir.isRTL ? 'ar-SA' : 'en-US')} ⃁`
-        : '—',
+      // outstandingBalance is integer halalas; formatHalalas renders it as SAR.
+      value: summary ? `${formatHalalas(summary.outstandingBalance, { locale: moneyLocale })} ⃁` : '—',
       ar: 'مبلغ مستحق',
       en: 'Outstanding',
     },

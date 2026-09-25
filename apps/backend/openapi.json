@@ -36035,12 +36035,15 @@
                       "type": "string"
                     },
                     "outstandingBalance": {
-                      "example": 250,
-                      "type": "number"
+                      "description": "Outstanding balance across all client invoices, in halalas",
+                      "example": 25000,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "totalBookings": {
                       "example": 8,
-                      "type": "number"
+                      "minimum": 0,
+                      "type": "integer"
                     }
                   },
                   "type": "object"

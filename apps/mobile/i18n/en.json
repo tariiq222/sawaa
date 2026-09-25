@@ -243,7 +243,6 @@
     "type": "Visit Type",
     "status": "Status",
     "amount": "Amount",
-    "vat": "VAT (15%)",
     "total": "Total",
     "joinZoom": "Join Meeting",
     "requestCancel": "Request Cancellation",
@@ -393,7 +392,6 @@
     "paymentError": "Payment failed. Please try again.",
     "summary": "Payment Summary",
     "amount": "Amount",
-    "vat": "VAT (15%)",
     "total": "Total"
   },
   "settings": {
