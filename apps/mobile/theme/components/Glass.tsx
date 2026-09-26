@@ -102,6 +102,14 @@ export const Glass = ({
     ...(flat.alignItems != null ? { alignItems: flat.alignItems } : {}),
     ...(flat.justifyContent != null ? { justifyContent: flat.justifyContent } : {}),
   };
+  // A square surface rounded to (at least) its own half-width is a circle, and
+  // the straight lower rim below would cut across its arc — the button then
+  // reads as a square with a flattened bottom.
+  const isCircular =
+    typeof flat.width === 'number' &&
+    typeof flat.height === 'number' &&
+    Math.abs(flat.width - flat.height) <= 1 &&
+    radius >= flat.width / 2;
 
   const pressTransform: ViewStyle | undefined =
     usePressable && pressed && !reduceMotion
@@ -195,7 +203,7 @@ export const Glass = ({
         <GlassWebLayers cfg={cfg} radius={radius} tint={tint} pressed={pressed} isDark={isDarkAppearance} reduceMotion={reduceMotion} />
       ) : null}
 
-      {!reduceTransparency && Platform.OS === 'ios' ? (
+      {!reduceTransparency && Platform.OS === 'ios' && !isCircular ? (
         <View pointerEvents="none" style={{ position: 'absolute', start: 10, end: 10, bottom: 0, height: 2, borderRadius: radius, backgroundColor: appearance.lowerRim }} />
       ) : null}
 
