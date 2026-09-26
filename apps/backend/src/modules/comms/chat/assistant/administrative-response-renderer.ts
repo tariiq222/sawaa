@@ -501,10 +501,10 @@ export class AdministrativeResponseRenderer {
       .normalize('NFKD')
       .replace(/[\u064B-\u065F\u0670]/g, '')
       .replace(/[\u0622\u0623\u0625]/g, 'ا')
-      .replace(/ؤ/g, 'و')
-      .replace(/ئ/g, 'ي')
-      .replace(/ة/g, 'ه')
-      .replace(/ى/g, 'ي')
+      .replaceAll('ؤ', 'و')
+      .replaceAll('ئ', 'ي')
+      .replaceAll('ة', 'ه')
+      .replaceAll('ى', 'ي')
       .toLowerCase();
   }
 

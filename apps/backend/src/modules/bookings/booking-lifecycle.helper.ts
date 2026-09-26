@@ -10,7 +10,7 @@ import { PrismaService } from '../../infrastructure/database';
 export function hashToInt32(s: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
+    h ^= s.codePointAt(i) ?? 0;
     h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
   }
   return h > 0x7fffffff ? h - 0x100000000 : h;

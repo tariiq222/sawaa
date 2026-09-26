@@ -37,7 +37,7 @@ const AVATAR_PAIRS: [string, string][] = [
 function hashCode(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) {
-    h = Math.trunc(Math.imul(31, h) + s.charCodeAt(i))
+    h = Math.trunc(Math.imul(31, h) + (s.codePointAt(i) ?? 0))
   }
   return h
 }

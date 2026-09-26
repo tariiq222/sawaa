@@ -20,8 +20,8 @@ function hexToRgbParts(hex: string): string {
 }
 
 function derivedTokens(theme: BrandingConfig): DerivedTokens {
-  const pr = hexToRgbParts(theme.colorPrimary).replace(/ /g, ',')
-  const ac = hexToRgbParts(theme.colorAccent).replace(/ /g, ',')
+  const pr = hexToRgbParts(theme.colorPrimary).replaceAll(' ', ',')
+  const ac = hexToRgbParts(theme.colorAccent).replaceAll(' ', ',')
   return {
     colorPrimaryGlow:  `rgba(${pr},0.35)`,
     colorPrimaryUltra: `rgba(${pr},0.08)`,

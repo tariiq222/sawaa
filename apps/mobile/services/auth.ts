@@ -312,12 +312,12 @@ async function assertStaffSession(action: string): Promise<void> {
 
 function decodeBase64Url(value: string): string {
   if (!value) return '';
-  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const normalized = value.replaceAll('-', '+').replaceAll('_', '/');
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
   if (typeof globalThis.atob === 'function') {
     const binary = globalThis.atob(padded);
     try {
-      return decodeURIComponent(Array.from(binary, (char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`).join(''));
+      return decodeURIComponent(Array.from(binary, (char) => `%${(char.codePointAt(0) ?? 0).toString(16).padStart(2, '0')}`).join(''));
     } catch {
       return binary;
     }

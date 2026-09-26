@@ -39,7 +39,7 @@ const avatarGradients = [
 
 function getGradient(name: string): string {
   let hash = 0
-  for (const ch of name) hash = ch.charCodeAt(0) + ((hash << 5) - hash)
+  for (const ch of name) hash = (ch.codePointAt(0) ?? 0) + ((hash << 5) - hash)
   return avatarGradients[Math.abs(hash) % avatarGradients.length]
 }
 

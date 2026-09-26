@@ -61,7 +61,7 @@ describeRealE2e('grouped package purchase snapshots (real DB)', () => {
     );
     activatePackagePurchase = app.get(ActivatePackagePurchaseHandler);
     await prisma.branch.create({ data: { id: ids.branchId, nameAr: `group-purchase-${ids.branchId}`, isActive: true } });
-    await prisma.client.create({ data: { id: ids.clientId, name: `group-purchase-${ids.clientId}`, phone: `05${ids.clientId.replace(/-/g, '').slice(0, 8)}` } });
+    await prisma.client.create({ data: { id: ids.clientId, name: `group-purchase-${ids.clientId}`, phone: `05${ids.clientId.replaceAll('-', '').slice(0, 8)}` } });
     await prisma.employee.createMany({ data: [
       { id: ids.firstEmployeeId, name: `group-purchase-${ids.firstEmployeeId}`, isActive: true },
       { id: ids.secondEmployeeId, name: `group-purchase-${ids.secondEmployeeId}`, isActive: true },
@@ -199,7 +199,7 @@ describeRealE2e('grouped package purchase snapshots (real DB)', () => {
   it.each(['full-discount', 'zero-prices'])('issues zero-value rights without a fake payment: %s', async (variant) => {
     const zeroClientId = randomUUID();
     zeroClientIds.push(zeroClientId);
-    await prisma.client.create({ data: { id: zeroClientId, name: `group-purchase-zero-${zeroClientId}`, phone: `05${zeroClientId.replace(/-/g, '').slice(0, 8)}` } });
+    await prisma.client.create({ data: { id: zeroClientId, name: `group-purchase-zero-${zeroClientId}`, phone: `05${zeroClientId.replaceAll('-', '').slice(0, 8)}` } });
     const zeroPackage = await createPackage.execute({
       nameAr: `group-purchase-zero-${randomUUID()}`,
       modelVersion: 'GROUPED_V2',
