@@ -60,7 +60,7 @@ describe('UpdateServiceHandler', () => {
 
   it('accepts unchanged identity fields for an internal service', async () => {
     prisma.service.findFirst.mockResolvedValue(createService({
-      categoryId: 'direct', isHidden: true, nameAr: 'عيادة', nameEn: 'Clinic',
+      categoryId: 'direct', category: { bookingMode: 'DIRECT' }, isHidden: true, nameAr: 'عيادة', nameEn: 'Clinic',
     }));
     prisma.service.update.mockResolvedValue({ id: 's1', category: null });
     await expect(handler.execute({
@@ -70,11 +70,28 @@ describe('UpdateServiceHandler', () => {
 
   it('rejects changing the internal service name through the service editor', async () => {
     prisma.service.findFirst.mockResolvedValue(createService({
-      categoryId: 'direct', isHidden: true, nameAr: 'عيادة', nameEn: 'Clinic',
+      categoryId: 'direct', category: { bookingMode: 'DIRECT' }, isHidden: true, nameAr: 'عيادة', nameEn: 'Clinic',
     }));
     await expect(handler.execute({ serviceId: 's1', nameAr: 'اسم مختلف' } as any))
       .rejects.toMatchObject({ status: 400 });
     expect(prisma.service.update).not.toHaveBeenCalled();
+  });
+
+  it('allows name and visibility edits for an ordinary hidden service in SERVICES mode', async () => {
+    prisma.service.findFirst
+      .mockResolvedValueOnce(createService({
+      categoryId: 'services-category', category: { bookingMode: 'SERVICES' },
+      isHidden: true, nameAr: 'اسم سابق',
+      }))
+      .mockResolvedValueOnce(null);
+    prisma.service.update.mockResolvedValue({ id: 's1', nameAr: 'اسم جديد', category: null });
+
+    await expect(handler.execute({ serviceId: 's1', nameAr: 'اسم جديد', isHidden: false } as any))
+      .resolves.toMatchObject({ id: 's1' });
+    expect(prisma.service.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 's1' },
+      data: expect.objectContaining({ nameAr: 'اسم جديد', isHidden: false }),
+    }));
   });
 
   it('should throw when depositAmount > price', async () => {

@@ -140,7 +140,7 @@ export function ServicesTabContent() {
         service={detailTarget}
         open={!!detailTarget}
         onOpenChange={(open) => { if (!open) setDetailTarget(null) }}
-        onEdit={(s) => { setDetailTarget(null); handleEdit(s) }}
+        onEdit={canDo("service", "update") ? (s) => { setDetailTarget(null); handleEdit(s) } : undefined}
       />
     </>
   )

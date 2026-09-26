@@ -29,10 +29,11 @@ export class UpdateServiceHandler {
   async execute(dto: UpdateServiceCommand) {
     const service = await this.prisma.service.findFirst({
       where: { id: dto.serviceId, archivedAt: null },
+      include: { category: { select: { bookingMode: true } } },
     });
     if (!service) throw new NotFoundException('Service not found');
 
-    if (service.isHidden && (
+    if (service.isHidden && service.category?.bookingMode === 'DIRECT' && (
       (dto.categoryId !== undefined && dto.categoryId !== service.categoryId) ||
       (dto.isHidden !== undefined && dto.isHidden !== service.isHidden) ||
       (dto.nameAr !== undefined && dto.nameAr !== service.nameAr) ||

@@ -53,7 +53,7 @@ export function CategoryServicesTab({ categoryId }: Props) {
         <Button
           type="button"
           className="gap-2 rounded-lg px-5"
-          onClick={() => router.push("/services/create")}
+          onClick={() => router.push(`/services/create?categoryId=${encodeURIComponent(categoryId)}`)}
         >
           <HugeiconsIcon icon={Add01Icon} size={16} />
           {t("services.categories.services.addService")}

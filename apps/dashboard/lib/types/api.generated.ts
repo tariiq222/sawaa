@@ -24192,6 +24192,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Clinic booking services and services referenced by packages cannot be deleted or archived */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Unhandled server error */
             500: {
                 headers: {

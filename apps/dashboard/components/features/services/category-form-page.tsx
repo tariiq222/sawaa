@@ -305,6 +305,9 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                       </Select>
                     )}
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("services.categories.create.departmentHint")}
+                  </p>
                 </FormField>
                 <FormField label={t("services.categories.create.sortOrder")}><Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder", { valueAsNumber: true })} placeholder="0" /></FormField>
               </div>

@@ -27535,6 +27535,9 @@
           "404": {
             "description": "Service not found"
           },
+          "409": {
+            "description": "Clinic booking services and services referenced by packages cannot be deleted or archived"
+          },
           "500": {
             "content": {
               "application/json": {
