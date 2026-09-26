@@ -84,12 +84,12 @@ export function RefundPackageForm({
   // to integer SAR before the halalas conversion.
   const refundAmountSar = useMemo(() => {
     const n = Number(refundSar.replace(/[\s,_]/g, ""))
-    return Number.isFinite(n) ? n : NaN
+    return Number.isFinite(n) ? n : Number.NaN
   }, [refundSar])
 
   const refundAmountHalalas = useMemo(() => {
-    if (!Number.isFinite(refundAmountSar)) return NaN
-    if (refundAmountSar < 0) return NaN
+    if (!Number.isFinite(refundAmountSar)) return Number.NaN
+    if (refundAmountSar < 0) return Number.NaN
     return sarToHalalas(refundAmountSar)
   }, [refundAmountSar])
 

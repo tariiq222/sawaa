@@ -37,7 +37,7 @@ const AVATAR_PAIRS: [string, string][] = [
 function hashCode(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) {
-    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
+    h = Math.trunc(Math.imul(31, h) + s.charCodeAt(i))
   }
   return h
 }
@@ -74,7 +74,7 @@ export type TimeFormat = "24h" | "12h"
  */
 export function formatClinicDate(date: Date | string, format: DateFormat = "Y-m-d"): string {
   const d = new Date(date)
-  if (isNaN(d.getTime())) return ""
+  if (Number.isNaN(d.getTime())) return ""
 
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, "0")
@@ -98,10 +98,10 @@ export function formatClinicDate(date: Date | string, format: DateFormat = "Y-m-
 export function formatClinicTime(time: string, format: TimeFormat = "24h"): string {
   if (!time) return ""
   const [hourStr, minuteStr] = time.split(":")
-  const hour = parseInt(hourStr, 10)
+  const hour = Number.parseInt(hourStr, 10)
   const minute = minuteStr?.padStart(2, "0") ?? "00"
 
-  if (isNaN(hour)) return time
+  if (Number.isNaN(hour)) return time
 
   if (format === "12h") {
     const period = hour >= 12 ? "م" : "ص"
@@ -161,7 +161,7 @@ export function utcTimeToRiyadhHHMM(dateISO: string, timeUtc: string): string {
 export function isoToClinicParts(iso: string): { date: string; time: string } {
   if (!iso) return { date: "", time: "" }
   const d = new Date(iso)
-  if (isNaN(d.getTime())) return { date: "", time: "" }
+  if (Number.isNaN(d.getTime())) return { date: "", time: "" }
   return {
     date: formatInTimeZone(d, BUSINESS_TZ, "yyyy-MM-dd"),
     time: formatInTimeZone(d, BUSINESS_TZ, "HH:mm"),
@@ -244,7 +244,7 @@ export function clinicMonthRange(now: Date = new Date()): { dateFrom: string; da
 /** Convert a Date/ISO timestamp to the HH:mm input expected by formatClinicTime. */
 export function toCanonicalTime(date: Date | string): string {
   const d = new Date(date)
-  if (isNaN(d.getTime())) return ""
+  if (Number.isNaN(d.getTime())) return ""
 
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }

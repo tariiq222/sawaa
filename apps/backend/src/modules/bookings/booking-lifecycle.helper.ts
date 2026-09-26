@@ -13,7 +13,7 @@ export function hashToInt32(s: string): number {
     h ^= s.charCodeAt(i);
     h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
   }
-  return h | 0;
+  return h > 0x7fffffff ? h - 0x100000000 : h;
 }
 
 export async function fetchBookingOrFail(

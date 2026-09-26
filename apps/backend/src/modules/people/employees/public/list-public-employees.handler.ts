@@ -107,7 +107,7 @@ export class ListPublicEmployeesHandler {
           })
         : [];
     const activeServiceIds = new Set(services.map((s) => s.id));
-    const priceByServiceId = new Map(services.map((s) => [s.id, parseFloat(String(s.price))]));
+    const priceByServiceId = new Map(services.map((s) => [s.id, Number.parseFloat(String(s.price))]));
 
     const linkedBranchIds = [...new Set(employeeBranchLinks.map((l) => l.branchId))];
     const activeBranches =

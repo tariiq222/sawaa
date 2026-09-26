@@ -45,7 +45,7 @@ export function ConfigTab() {
       systemPromptEn: systemPromptEn || undefined,
       greetingAr: greetingAr || undefined,
       greetingEn: greetingEn || undefined,
-      escalateToHumanAt: escalateToHumanAt ? parseInt(escalateToHumanAt, 10) : undefined,
+      escalateToHumanAt: escalateToHumanAt ? Number.parseInt(escalateToHumanAt, 10) : undefined,
     }
     try {
       await updateConfigMut.mutateAsync(payload)

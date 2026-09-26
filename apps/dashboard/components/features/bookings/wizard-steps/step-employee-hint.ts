@@ -90,7 +90,7 @@ export function getDeliveryTypeMeta(
 export function formatLocalizedDate(dateISO: string, locale: "ar" | "en"): string {
   // Anchor at noon to avoid TZ drift on the day boundary.
   const d = new Date(`${dateISO}T12:00:00Z`)
-  if (isNaN(d.getTime())) return dateISO
+  if (Number.isNaN(d.getTime())) return dateISO
   return new Intl.DateTimeFormat(
     locale === "ar" ? "ar-SA" : "en-US",
     { day: "numeric", month: "short" },
