@@ -31,6 +31,86 @@
         ],
         "type": "object"
       },
+      "AdminMobileHomeCardDto": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "enum": [
+              "CLINICS",
+              "SERVICES",
+              "SPECIALISTS",
+              "PACKAGES",
+              "PROGRAMS"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "imageAltAr": {
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltEn": {
+            "nullable": true,
+            "type": "string"
+          },
+          "imageFileId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "imageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "titleAr",
+          "titleEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageFileId",
+          "imageUrl",
+          "imageAltAr",
+          "imageAltEn",
+          "destination",
+          "sortOrder",
+          "isPublished",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "AiProviderConfigResponseDto": {
         "properties": {
           "connectionStatus": {
@@ -3928,6 +4008,70 @@
           "clientId",
           "employeeId",
           "subtotal"
+        ],
+        "type": "object"
+      },
+      "CreateMobileHomeCardDto": {
+        "properties": {
+          "descriptionAr": {
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "enum": [
+              "CLINICS",
+              "SERVICES",
+              "SPECIALISTS",
+              "PACKAGES",
+              "PROGRAMS"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltAr": {
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltEn": {
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "imageFileId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "isPublished": {
+            "default": false,
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "default": 0,
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "number"
+          },
+          "titleAr": {
+            "example": "مواعيد مرنة تناسب يومك",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "titleEn": {
+            "maxLength": 100,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "titleAr"
         ],
         "type": "object"
       },
@@ -8474,6 +8618,63 @@
         ],
         "type": "object"
       },
+      "PublicMobileHomeCardDto": {
+        "properties": {
+          "descriptionAr": {
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "enum": [
+              "CLINICS",
+              "SERVICES",
+              "SPECIALISTS",
+              "PACKAGES",
+              "PROGRAMS"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "imageAltAr": {
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltEn": {
+            "nullable": true,
+            "type": "string"
+          },
+          "imageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "titleAr",
+          "titleEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "imageAltAr",
+          "imageAltEn",
+          "destination"
+        ],
+        "type": "object"
+      },
       "RefreshTokenDto": {
         "properties": {
           "refreshToken": {
@@ -8611,6 +8812,37 @@
         },
         "required": [
           "rejectReason"
+        ],
+        "type": "object"
+      },
+      "ReorderMobileHomeCardItemDto": {
+        "properties": {
+          "expectedUpdatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "expectedUpdatedAt"
+        ],
+        "type": "object"
+      },
+      "ReorderMobileHomeCardsDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReorderMobileHomeCardItemDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
         ],
         "type": "object"
       },
@@ -10108,6 +10340,71 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UpdateMobileHomeCardDto": {
+        "properties": {
+          "descriptionAr": {
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "enum": [
+              "CLINICS",
+              "SERVICES",
+              "SPECIALISTS",
+              "PACKAGES",
+              "PROGRAMS"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "expectedUpdatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "imageAltAr": {
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltEn": {
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "imageFileId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "number"
+          },
+          "titleAr": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "titleEn": {
+            "maxLength": 100,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedUpdatedAt"
+        ],
         "type": "object"
       },
       "UpdatePackageFamilyDto": {
@@ -23046,6 +23343,318 @@
         "summary": "Upload a file to object storage",
         "tags": [
           "Dashboard / Media"
+        ]
+      }
+    },
+    "/api/v1/dashboard/mobile-home-cards": {
+      "get": {
+        "operationId": "DashboardMobileHomeCardsController_listEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminMobileHomeCardDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List staff-managed mobile home cards",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardMobileHomeCardsController_createEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMobileHomeCardDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMobileHomeCardDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft mobile home card",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/mobile-home-cards/{id}": {
+      "patch": {
+        "operationId": "DashboardMobileHomeCardsController_updateEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMobileHomeCardDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMobileHomeCardDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a mobile home card with optimistic concurrency",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/mobile-home-cards/reorder": {
+      "put": {
+        "operationId": "DashboardMobileHomeCardsController_reorderEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderMobileHomeCardsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminMobileHomeCardDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Atomically reorder the full mobile home card list",
+        "tags": [
+          "Dashboard / Org Experience"
         ]
       }
     },
@@ -41815,6 +42424,51 @@
         "summary": "Read an authenticated client package purchase status",
         "tags": [
           "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/public/mobile-home-cards": {
+      "get": {
+        "operationId": "PublicMobileHomeCardsController_listEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicMobileHomeCardDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "List published mobile home cards",
+        "tags": [
+          "Public / Catalog"
         ]
       }
     },

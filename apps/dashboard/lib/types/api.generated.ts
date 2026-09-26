@@ -1803,6 +1803,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/mobile-home-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List staff-managed mobile home cards */
+        get: operations["DashboardMobileHomeCardsController_listEndpoint_v1"];
+        put?: never;
+        /** Create a draft mobile home card */
+        post: operations["DashboardMobileHomeCardsController_createEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/mobile-home-cards/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a mobile home card with optimistic concurrency */
+        patch: operations["DashboardMobileHomeCardsController_updateEndpoint_v1"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/mobile-home-cards/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Atomically reorder the full mobile home card list */
+        put: operations["DashboardMobileHomeCardsController_reorderEndpoint_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/ops/activity": {
         parameters: {
             query?: never;
@@ -4716,6 +4768,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/mobile-home-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List published mobile home cards */
+        get: operations["PublicMobileHomeCardsController_listEndpoint_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/otp/request": {
         parameters: {
             query?: never;
@@ -5064,6 +5133,25 @@ export interface components {
              * @example National Day
              */
             nameEn?: string;
+        };
+        AdminMobileHomeCardDto: {
+            /** Format: date-time */
+            createdAt: string;
+            descriptionAr: string | null;
+            descriptionEn: string | null;
+            /** @enum {string|null} */
+            destination: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            id: string;
+            imageAltAr: string | null;
+            imageAltEn: string | null;
+            imageFileId: string | null;
+            imageUrl: string | null;
+            isPublished: boolean;
+            sortOrder: number;
+            titleAr: string;
+            titleEn: string | null;
+            /** Format: date-time */
+            updatedAt: string;
         };
         AiProviderConfigResponseDto: {
             connectionStatus: string;
@@ -7520,6 +7608,23 @@ export interface components {
              * @example 0
              */
             vatRate?: number;
+        };
+        CreateMobileHomeCardDto: {
+            descriptionAr?: string | null;
+            descriptionEn?: string | null;
+            /** @enum {string|null} */
+            destination?: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            imageAltAr?: string | null;
+            imageAltEn?: string | null;
+            /** Format: uuid */
+            imageFileId?: string | null;
+            /** @default false */
+            isPublished: boolean;
+            /** @default 0 */
+            sortOrder: number;
+            /** @example مواعيد مرنة تناسب يومك */
+            titleAr: string;
+            titleEn?: string | null;
         };
         CreatePackageFamilyDto: {
             /** @description Arabic family description */
@@ -10290,6 +10395,18 @@ export interface components {
              */
             title?: Record<string, never> | null;
         };
+        PublicMobileHomeCardDto: {
+            descriptionAr: string | null;
+            descriptionEn: string | null;
+            /** @enum {string|null} */
+            destination: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            id: string;
+            imageAltAr: string | null;
+            imageAltEn: string | null;
+            imageUrl: string | null;
+            titleAr: string;
+            titleEn: string | null;
+        };
         RefreshTokenDto: {
             /**
              * @description Client refresh token (optional when sent as httpOnly cookie)
@@ -10379,6 +10496,15 @@ export interface components {
              * @example Outside cancellation window
              */
             rejectReason: string;
+        };
+        ReorderMobileHomeCardItemDto: {
+            /** Format: date-time */
+            expectedUpdatedAt: string;
+            /** Format: uuid */
+            id: string;
+        };
+        ReorderMobileHomeCardsDto: {
+            items: components["schemas"]["ReorderMobileHomeCardItemDto"][];
         };
         RequestDashboardOtpDto: {
             /**
@@ -11341,6 +11467,22 @@ export interface components {
              * @enum {string}
              */
             type?: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
+        };
+        UpdateMobileHomeCardDto: {
+            descriptionAr?: string | null;
+            descriptionEn?: string | null;
+            /** @enum {string|null} */
+            destination?: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            /** Format: date-time */
+            expectedUpdatedAt: string;
+            imageAltAr?: string | null;
+            imageAltEn?: string | null;
+            /** Format: uuid */
+            imageFileId?: string | null;
+            isPublished?: boolean;
+            sortOrder?: number;
+            titleAr?: string;
+            titleEn?: string | null;
         };
         UpdatePackageFamilyDto: {
             /** @description Arabic family description */
@@ -20703,6 +20845,240 @@ export interface operations {
                         /** @enum {string} */
                         visibility?: "PUBLIC" | "PRIVATE";
                     };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMobileHomeCardsController_listEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMobileHomeCardDto"][];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMobileHomeCardsController_createEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMobileHomeCardDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMobileHomeCardDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMobileHomeCardsController_updateEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMobileHomeCardDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMobileHomeCardDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMobileHomeCardsController_reorderEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderMobileHomeCardsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMobileHomeCardDto"][];
                 };
             };
             /** @description Validation failed */
@@ -34496,6 +34872,43 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicMobileHomeCardsController_listEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMobileHomeCardDto"][];
+                };
+            };
+            /** @description Validation failed */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

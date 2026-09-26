@@ -10,9 +10,10 @@ import { AquaBackground } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { getFontName } from '@/theme/fonts';
-import { useHome, usePublicCatalog, useTherapists } from '@/hooks/queries';
+import { useHome, useMobileHomeCards, usePublicCatalog, useTherapists } from '@/hooks/queries';
 import { HomeAssessmentServices } from '@/components/features/home/HomeAssessmentServices';
 import { HomeDiscoveryCards } from '@/components/features/home/HomeDiscoveryCards';
+import { HomeCardsCarousel } from '@/components/features/home/HomeCardsCarousel';
 import { HomeTopBar } from '@/components/features/home/HomeTopBar';
 import { TherapistsRow } from '@/components/features/home/TherapistsRow';
 import { UpNextCard } from '@/components/features/home/UpNextCard';
@@ -42,6 +43,7 @@ export default function HomeScreen() {
       : hour >= 17 && hour <= 23 ? t('home.greetingEvening') : t('home.greetingNight');
 
   const homeQuery = useHome(isClient);
+  const mobileHomeCardsQuery = useMobileHomeCards();
   const catalogQuery = usePublicCatalog();
   const therapistsQuery = useTherapists();
   const [refreshing, setRefreshing] = useState(false);
@@ -52,7 +54,12 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([catalogQuery.refetch(), therapistsQuery.refetch(), ...(isClient ? [homeQuery.refetch()] : [])]);
+      await Promise.all([
+        catalogQuery.refetch(),
+        therapistsQuery.refetch(),
+        mobileHomeCardsQuery.refetch(),
+        ...(isClient ? [homeQuery.refetch()] : []),
+      ]);
     } finally {
       setRefreshing(false);
     }
@@ -66,6 +73,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal[600]} />}
       >
         <HomeTopBar f600={f600} isClient={isClient} />
+        <HomeCardsCarousel cards={mobileHomeCardsQuery.data ?? []} signedIn={isClient} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))} style={styles.hero}>
           <Text style={[styles.dateLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>{today}</Text>

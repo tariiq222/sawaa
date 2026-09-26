@@ -298,6 +298,32 @@ enum IntakeFormScope {
   BRANCH
 }
 
+enum MobileHomeCardDestination {
+  CLINICS
+  SERVICES
+  SPECIALISTS
+  PACKAGES
+  PROGRAMS
+}
+
+model MobileHomeCard {
+  id            String                    @id @default(uuid())
+  titleAr       String
+  titleEn       String?
+  descriptionAr String?
+  descriptionEn String?
+  imageFileId   String?
+  imageAltAr    String?
+  imageAltEn    String?
+  destination   MobileHomeCardDestination?
+  sortOrder     Int                       @default(0)
+  isPublished   Boolean                   @default(false)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  @@index([isPublished, sortOrder, id])
+}
+
 model IntakeForm {
   id        String          @id @default(uuid())
   ref       Int             @unique @default(autoincrement())

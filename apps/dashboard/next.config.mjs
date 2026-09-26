@@ -8,6 +8,12 @@ const shouldUploadSentryArtifacts =
   process.env.CI === "true" && Boolean(process.env.SENTRY_AUTH_TOKEN)
 
 const isProduction = process.env.NODE_ENV === "production"
+const imgSrc = [
+  "img-src 'self' data: blob: https:",
+  isProduction ? "" : "http://localhost:* http://127.0.0.1:*",
+]
+  .filter(Boolean)
+  .join(" ")
 
 // 'unsafe-eval' is only needed by Next.js dev HMR. The dashboard ships no code
 // that evals (verified: no eval/new Function/wasm in source or deps), so drop it
@@ -28,7 +34,7 @@ const securityHeaders = [
       "default-src 'self'",
       scriptSrc,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https:",
+      imgSrc,
       "font-src 'self' data: https://fonts.gstatic.com",
       "connect-src 'self' https://*.sawaa.sa https://api.sawaa.sa https://*.moyasar.com https://errors.webvue.pro",
       "frame-src https://*.moyasar.com",
@@ -59,7 +65,7 @@ const frontmanCsp = [
   "default-src 'self'",
   `${scriptSrc} https://app.frontman.sh`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://app.frontman.sh",
-  "img-src 'self' data: blob: https:",
+  imgSrc,
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://*.sawaa.sa https://api.sawaa.sa https://*.moyasar.com https://errors.webvue.pro https://api.frontman.sh wss://api.frontman.sh",
   "frame-src https://*.moyasar.com 'self'",

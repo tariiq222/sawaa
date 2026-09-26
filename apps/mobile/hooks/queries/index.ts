@@ -18,6 +18,7 @@ export {
 export { useCatalogDepartments, usePublicCatalog, catalogKeys } from './useCatalogDepartments';
 export { useBranding, brandingKeys } from './useBranding';
 export { useHome, useSummary, useUpcoming, portalKeys } from './usePortal';
+export { useMobileHomeCards, mobileHomeCardsQueryKey } from './useMobileHomeCards';
 export { useRegister, useRequestLoginOtp, useVerifyOtp, useRequestEmailVerification } from './useMobileAuth';
 export { useMe } from './useMe';
 export { useBankTransferSettings, bankTransferSettingsKeys } from './useBankTransferSettings';
