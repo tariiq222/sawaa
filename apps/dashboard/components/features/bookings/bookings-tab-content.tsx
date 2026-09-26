@@ -1,4 +1,4 @@
-// EXCEPTION: 322 lines — mutation handlers (handleStatusAction, handleDelete, handleHardDelete) share local dialog state and cannot be split without a dedicated hook. Approved 2026-06-19; size +9 added 2026-08-26 for clinic-local tab date helpers (todayClinicYmd / clinicWeekRange / clinicMonthRange); +7 for the payment-hold delete guard (handleDelete skips the admin cancel dialog for holds).
+// EXCEPTION: 315 lines — mutation handlers (handleStatusAction, handleDelete, handleHardDelete) share local dialog state and cannot be split without a dedicated hook. Approved 2026-06-19; size +9 added 2026-08-26 for clinic-local tab date helpers (todayClinicYmd / clinicWeekRange / clinicMonthRange).
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
@@ -11,7 +11,6 @@ import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { getBookingColumns } from "@/components/features/bookings/booking-columns"
 import type { QuickStatusActionType } from "@/components/features/bookings/booking-column-cells"
-import { PAYMENT_HOLD_STATUSES } from "@/lib/booking-statuses"
 import { AdminCancelDialog } from "@/components/features/bookings/cancel-dialogs"
 import { DeleteBookingDialog } from "@/components/features/bookings/delete-booking-dialog"
 import { useBookings, useBookingMutations } from "@/hooks/use-bookings"
@@ -110,13 +109,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const handleDelete = (booking: Booking) => {
     if (booking.isHistoricalImport) return
     if (TERMINAL_STATUSES.has(booking.status)) setHardDeleteTarget(booking)
-    else if (PAYMENT_HOLD_STATUSES.has(booking.status)) {
-      // A payment hold cannot be cancelled by staff: DIRECT_CANCEL does not
-      // accept awaiting_payment / pending_group_fill, and the expiry cron
-      // releases the slot. Explain the way out instead of opening a dialog
-      // whose request can only fail.
-      toast.info(t("bookings.col.holdLockedHint"))
-    } else setDeleteTarget(booking)
+    else setDeleteTarget(booking)
   }
 
   const handleHardDelete = async () => {

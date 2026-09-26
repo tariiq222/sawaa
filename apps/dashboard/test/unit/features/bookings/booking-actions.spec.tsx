@@ -367,22 +367,25 @@ describe("BookingActions", () => {
     })
   })
 
-  // ─── Payment holds expose no staff action ──────────────────────────────────
-  // awaiting_payment / pending_group_fill are unconfirmed holds: the backend
-  // state machine accepts no staff transition out of them (CONFIRM is
-  // PENDING-only; DIRECT_CANCEL and RESCHEDULE exclude both), so the menu is
-  // not rendered. The hold is released by the expiry cron, or confirmed by
-  // recording the payment (CollectAction, rendered whenever money is owed).
+  // ─── Payment holds are cancellable, never confirmable ──────────────────────
+  // awaiting_payment / pending_group_fill reserve the slot while an online
+  // payment is pending. Reception releases them through the admin cancel dialog
+  // (backed by DIRECT_CANCEL, penalty-free); CONFIRM is PENDING-only, so it is
+  // never offered — a hold is settled by recording the payment instead.
   it.each([
     { status: "pending_group_fill" as const },
     { status: "awaiting_payment" as const },
-  ])("renders no actions for $status status", ({ status }) => {
+  ])("offers cancel (and not confirm) for $status status", ({ status }) => {
     mockMutations()
-    const { container } = render(<BookingActions booking={makeBooking(status)} onAction={vi.fn()} />)
-    expect(container.firstChild).toBeNull()
+    render(<BookingActions booking={makeBooking(status)} onAction={vi.fn()} />)
+    fireEvent.click(screen.getByTestId("dropdown-trigger"))
+    const items = screen.getByTestId("dropdown-content").querySelectorAll("[data-testid='dropdown-item']")
+    expect(items).toHaveLength(1)
+    expect(items[0].textContent).toContain("cancel")
+    expect(items[0].textContent).not.toContain("confirm")
   })
 
-  it("awaiting_payment booking that still owes money offers only the collect action", () => {
+  it("awaiting_payment booking that still owes money offers cancel + collect", () => {
     mockMutations()
     const booking = makeBooking("awaiting_payment", {
       clientId: "cli-1",
@@ -393,8 +396,9 @@ describe("BookingActions", () => {
     render(<BookingActions booking={booking} onAction={vi.fn()} />)
     fireEvent.click(screen.getByTestId("dropdown-trigger"))
     const items = screen.getByTestId("dropdown-content").querySelectorAll("[data-testid='dropdown-item']")
-    expect(items).toHaveLength(1)
-    expect(items[0].textContent).toContain("bookings.col.recordPayment")
+    expect(items).toHaveLength(2)
+    expect(items[0].textContent).toContain("cancel")
+    expect(items[1].textContent).toContain("bookings.col.recordPayment")
   })
 
   it("cancel_requested status shows cancel_requested label and two action items", () => {

@@ -45,15 +45,15 @@ interface BookingActionsProps {
 }
 
 /* ── Transition map: status → available actions ──
- * Mirrors the backend booking-state-machine. Holds (awaiting_payment /
- * pending_group_fill) get none — no staff transition accepts them; they are
- * confirmed by recording the payment, or released by the expiry cron.
- * deposit_paid is cancellable but not confirmable.
+ * Mirrors the backend booking-state-machine. Never advertise an action it
+ * rejects: holds (awaiting_payment / pending_group_fill) are cancellable and
+ * confirmed by recording the payment, but CONFIRM is PENDING-only and they are
+ * not reschedulable; deposit_paid is cancellable but not confirmable.
  */
 const statusActions = {
   pending: ["confirm", "cancel"] as const,
-  pending_group_fill: [] as const,
-  awaiting_payment: [] as const,
+  pending_group_fill: ["cancel"] as const,
+  awaiting_payment: ["cancel"] as const,
   deposit_paid: ["cancel"] as const,
   confirmed: ["checkin", "complete", "noshow", "cancel"] as const,
   cancel_requested: ["approve_cancel", "reject_cancel"] as const,

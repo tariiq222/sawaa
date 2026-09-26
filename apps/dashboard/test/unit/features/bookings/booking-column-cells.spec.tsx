@@ -167,13 +167,12 @@ test("pending status does not show the extra check-in button", () => {
 })
 
 /* ─── Payment holds ───────────────────────────────────────────────────────────
- * awaiting_payment / pending_group_fill have no staff transition out of them:
- * the backend's DIRECT_CANCEL rejects both, so the row must not advertise a
- * cancel action (it used to show one because the API folded the status into
- * "pending"). The slot is released by the expiry cron or by recording payment.
+ * awaiting_payment / pending_group_fill reserve the slot while an online
+ * payment is pending. DIRECT_CANCEL accepts both, so the row offers the cancel
+ * action — but never "confirm" (CONFIRM is PENDING-only).
  */
 
-test("awaiting_payment row offers no quick cancel action", () => {
+test("awaiting_payment row offers the quick cancel action", () => {
   render(
     <StatusCell
       booking={makeBooking({ status: "awaiting_payment", checkedInAt: null })}
@@ -181,10 +180,10 @@ test("awaiting_payment row offers no quick cancel action", () => {
       onDelete={vi.fn()}
     />,
   )
-  expect(screen.queryByText("bookings.col.quickAction.cancel")).not.toBeInTheDocument()
+  expect(screen.getByText("bookings.col.quickAction.cancel")).toBeInTheDocument()
 })
 
-test("pending_group_fill row offers no quick cancel action", () => {
+test("pending_group_fill row offers the quick cancel action", () => {
   render(
     <StatusCell
       booking={makeBooking({ status: "pending_group_fill", checkedInAt: null })}
@@ -192,10 +191,10 @@ test("pending_group_fill row offers no quick cancel action", () => {
       onDelete={vi.fn()}
     />,
   )
-  expect(screen.queryByText("bookings.col.quickAction.cancel")).not.toBeInTheDocument()
+  expect(screen.getByText("bookings.col.quickAction.cancel")).toBeInTheDocument()
 })
 
-test("awaiting_payment row renders its own badge instead of a dropdown", () => {
+test("awaiting_payment row still shows its own status badge", () => {
   render(
     <StatusCell
       booking={makeBooking({ status: "awaiting_payment", checkedInAt: null })}

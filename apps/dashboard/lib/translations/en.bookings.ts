@@ -81,7 +81,6 @@ export const enBookings: Record<string, string> = {
   "bookings.col.edit": "Reschedule",
   "bookings.col.invoice": "Download invoice",
   "bookings.col.delete": "Delete booking",
-  "bookings.col.holdLockedHint": "This booking is awaiting payment. The slot is released automatically when the payment window ends, or once the payment is recorded.",
   "bookings.col.deleteTitle": "Delete Booking",
   "bookings.col.deleteDesc": "Are you sure you want to delete this booking? This action cannot be undone.",
   "bookings.delete.title": "Permanently delete booking",

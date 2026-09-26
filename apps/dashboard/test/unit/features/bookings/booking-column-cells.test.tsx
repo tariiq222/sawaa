@@ -310,14 +310,13 @@ test("ActionsCell starts bounded booking polling after approving a transfer", ()
   expect(startBookingPaymentPolling).toHaveBeenCalledWith("booking-awaiting")
 })
 
-/* ─── Payment holds — delete is disabled with an explanation ──────────────────
- * The backend's DIRECT_CANCEL does not accept awaiting_payment /
- * pending_group_fill, so opening the admin cancel dialog for one used to end in
- * "Cannot apply transition 'DIRECT_CANCEL'". The slot is released by the
- * expiry cron or by recording the payment.
+/* ─── Payment holds — delete is available ─────────────────────────────────────
+ * DIRECT_CANCEL accepts awaiting_payment / pending_group_fill, so reception can
+ * release a slot held for an online payment that never arrived instead of
+ * waiting for the expiry cron. The cancel dialog handles the money rule.
  */
 
-test("ActionsCell disables delete for a payment hold and explains why", () => {
+test("ActionsCell keeps delete enabled for a payment hold", () => {
   mockUseAuth.mockReturnValue(authWith())
   render(
     <ActionsCell
@@ -329,8 +328,8 @@ test("ActionsCell disables delete for a payment hold and explains why", () => {
   )
 
   const deleteButton = screen.getByRole("button", { name: "bookings.col.delete" })
-  expect(deleteButton).toBeDisabled()
-  expect(deleteButton).toHaveAttribute("title", "bookings.col.holdLockedHint")
+  expect(deleteButton).toBeEnabled()
+  expect(deleteButton).not.toHaveAttribute("title")
 })
 
 test("ActionsCell keeps delete enabled for a cancellable status", () => {

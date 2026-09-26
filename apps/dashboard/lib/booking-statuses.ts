@@ -1,24 +1,24 @@
 /**
  * Booking status sets shared by the bookings feature.
  *
- * These mirror the backend state machine
+ * They mirror the backend state machine
  * (`apps/backend/src/modules/bookings/booking-state-machine.ts`) so the UI can
  * never advertise an action the API rejects.
- *
- * Payment holds are unconfirmed bookings: the slot is reserved for a bounded
- * payment window (15 min individual / 30 min program). No staff transition
- * accepts them — CONFIRM is PENDING-only, DIRECT_CANCEL and RESCHEDULE both
- * exclude them — so the only exits are a completed payment (record it from the
- * booking row) or the booking-expiry cron releasing the slot.
  */
-export const PAYMENT_HOLD_STATUSES: ReadonlySet<string> = new Set([
-  "awaiting_payment",
-  "pending_group_fill",
-])
 
-/** Statuses DIRECT_CANCEL accepts — the admin cancel dialog's contract. */
+/**
+ * Statuses DIRECT_CANCEL accepts — the admin cancel dialog's contract.
+ *
+ * `awaiting_payment` and `pending_group_fill` are unconfirmed payment holds:
+ * the slot is reserved for a bounded payment window (15 min individual / 30 min
+ * program) while an online payment is pending. Staff cancellation is allowed so
+ * reception can release the slot immediately instead of waiting for the expiry
+ * cron, and it is penalty-free — see `cancel-booking.handler.ts`.
+ */
 export const CANCELLABLE_BOOKING_STATUSES: ReadonlySet<string> = new Set([
   "pending",
+  "pending_group_fill",
+  "awaiting_payment",
   "confirmed",
   "cancel_requested",
 ])

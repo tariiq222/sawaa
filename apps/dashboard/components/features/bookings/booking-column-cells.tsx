@@ -38,7 +38,6 @@ import { BookingRefundDialog } from "@/components/features/bookings/booking-refu
 import { canCollectBooking } from "@/components/features/bookings/booking-collect-action"
 import {
   CANCELLABLE_BOOKING_STATUSES as CANCELLABLE_STATUSES,
-  PAYMENT_HOLD_STATUSES,
 } from "@/lib/booking-statuses"
 import type { Booking } from "@/lib/types/booking"
 
@@ -63,8 +62,9 @@ const rescheduleAction: QuickStatusAction = {
   icon: Calendar03Icon,
 }
 
-/* Quick status actions per status. Mirrors the backend state machine — a hold
- * (awaiting_payment / pending_group_fill) has no staff transition, so none. */
+/* Quick status actions per status. Mirrors the backend state machine: a hold
+ * (awaiting_payment / pending_group_fill) is released through the cancel action,
+ * not "confirm" — CONFIRM is PENDING-only. */
 const quickStatusActions: Record<string, QuickStatusAction[]> = {
   pending:            [confirmAction, rescheduleAction],
   confirmed: [
@@ -128,8 +128,6 @@ export function ActionsCell({
 
   const payment = booking.payment
   const isHistorical = booking.isHistoricalImport
-  // A hold has no staff cancel: DIRECT_CANCEL rejects it, the cron releases it.
-  const isPaymentHold = PAYMENT_HOLD_STATUSES.has(booking.status)
   const canVerify = payment?.status === "awaiting"
   const isPending = verifyMut.isPending
   // Terminal bookings are over: no editing. Invoice stays reachable for review.
@@ -230,12 +228,8 @@ export function ActionsCell({
       )}
       {!isHistorical && (
         <button
-          className={`${intentIconBtn.danger} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:border-transparent`}
+          className={intentIconBtn.danger}
           aria-label={t("bookings.col.delete")}
-          // Keep the control visible but explain the way out instead of
-          // opening a dialog whose request the backend can only reject.
-          title={isPaymentHold ? t("bookings.col.holdLockedHint") : undefined}
-          disabled={isPaymentHold}
           onClick={onDelete}
         >
           <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2.2} />

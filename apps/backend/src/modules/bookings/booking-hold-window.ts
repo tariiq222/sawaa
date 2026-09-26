@@ -48,6 +48,27 @@ export function isUnconfirmedHoldStatus(status: BookingStatus): boolean {
   return UNCONFIRMED_HOLD_STATUSES.includes(status);
 }
 
+/**
+ * The subset of holds whose *staff cancellation* is penalty-free.
+ *
+ * These are the automated holds: the slot is reserved only while an online
+ * payment is pending, no human confirmation happened, and the client never got
+ * a confirmed appointment. Releasing one must never charge a late-cancellation
+ * penalty, and anything actually captured (a deposit, or a card payment whose
+ * webhook was lost) is refunded in FULL — mirroring `expire-booking`.
+ *
+ * PENDING is deliberately excluded: it is the human-confirmation pipeline, and
+ * the configured cancellation policy applies to it as before.
+ */
+export const CANCELLATION_HOLD_STATUSES: readonly BookingStatus[] = [
+  BookingStatus.PENDING_GROUP_FILL,
+  BookingStatus.AWAITING_PAYMENT,
+];
+
+export function isCancellationHoldStatus(status: BookingStatus): boolean {
+  return CANCELLATION_HOLD_STATUSES.includes(status);
+}
+
 /** Next expiry timestamp for a (re-armed) unconfirmed hold. */
 export function nextHoldExpiry(from: Date = new Date()): Date {
   return new Date(from.getTime() + UNCONFIRMED_HOLD_MS);
