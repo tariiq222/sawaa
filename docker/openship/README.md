@@ -3,7 +3,11 @@
 This directory is the isolated OpenShip Compose contract for the Sawaa source
 checkout. It exposes backend 5100, dashboard 5103, and website 5105 through
 the pre-provisioned Docker network. It publishes no host ports; ingress or a
-tunnel is configured by the coordinator in OpenShip.
+tunnel is configured by the coordinator in OpenShip. For this internal network,
+configure each OpenShip ingress route with `routeStrategy=container-ip`; the
+ingress then targets the service's private container IP and refreshes it after
+redeploys. Keep the isolated internal network in place and do not add an
+egress bridge to make the ingress route work.
 
 The Compose files deliberately omit `network_mode`. They attach services to an
 external default network named by `RUNTIME_NETWORK` (default:
@@ -114,6 +118,15 @@ The website receives the public `NEXT_PUBLIC_API_URL` at build time and
 `INTERNAL_API_URL=http://backend:5100/api/v1` at runtime for SSR. Keep the
 public value reachable from the browser and do not use Docker service names in
 it.
+
+When staging has no public API hostname, set the website build values to
+`NEXT_PUBLIC_API_URL=https://staging.sawaa.sa/api/v1` and
+`WEBSITE_API_PROXY_URL=http://backend:5100/api/v1`. The optional target adds a
+same-origin rewrite only for `/api/v1/*`; it is empty by default and should
+remain empty when browsers can reach the public API directly. The proxy target
+is fixed at build time, must be an absolute HTTP(S) URL on the private service
+network, and does not accept a destination from the request. Keep the website
+origin in `CORS_ORIGINS` for other approved API clients.
 
 ## Side effects and OpenShip settings
 
