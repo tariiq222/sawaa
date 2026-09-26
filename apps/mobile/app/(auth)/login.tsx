@@ -28,7 +28,7 @@ import { getFontName } from '@/theme/fonts';
 import { goBackOrHome } from '@/lib/navigation';
 
 export default function LoginScreen() {
-  const { booking } = useLocalSearchParams<{ booking?: string }>();
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
@@ -62,13 +62,14 @@ export default function LoginScreen() {
           identifier: identifier.trim(),
           maskedIdentifier: result.maskedIdentifier,
           ...(booking ? { booking } : {}),
+          ...(redirect ? { redirect } : {}),
         },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.error.generic'));
     }
-  }, [identifier, requestOtp, router, t, booking]);
+  }, [identifier, requestOtp, router, t, booking, redirect]);
 
   return (
     <AquaBackground>
@@ -197,7 +198,8 @@ export default function LoginScreen() {
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/(auth)/forgot-password');
+                  if (redirect) router.push({ pathname: '/(auth)/forgot-password', params: { redirect } });
+                  else router.push('/(auth)/forgot-password');
                 }}
                 accessibilityRole="link"
                 style={[styles.linkTarget, { alignSelf: 'center', marginTop: 4 }]}
@@ -216,8 +218,17 @@ export default function LoginScreen() {
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    if (booking) router.push({ pathname: '/(auth)/register', params: { booking } });
-                    else router.push('/(auth)/register');
+                    if (booking || redirect) {
+                      router.push({
+                        pathname: '/(auth)/register',
+                        params: {
+                          ...(booking ? { booking } : {}),
+                          ...(redirect ? { redirect } : {}),
+                        },
+                      });
+                    } else {
+                      router.push('/(auth)/register');
+                    }
                   }}
                   accessibilityRole="link"
                   style={styles.linkTarget}

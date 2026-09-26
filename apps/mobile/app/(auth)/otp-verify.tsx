@@ -28,6 +28,7 @@ import { useVerifyOtp, useRequestLoginOtp } from '@/hooks/queries';
 import { authService, SessionSupersededError } from '@/services/auth';
 import { isSessionCurrent } from '@/services/native-session-state';
 import { decodeBookingReturn } from '@/features/booking/guest-booking-flow';
+import { decodeRedirect } from '@/lib/navigation';
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN = 60;
@@ -40,6 +41,7 @@ export default function OtpVerifyScreen() {
     purpose: 'register' | 'login';
     maskedIdentifier: string;
     booking?: string;
+    redirect?: string;
   }>();
   const { identifier = '', purpose = 'register', maskedIdentifier = '' } = params;
   const insets = useSafeAreaInsets();
@@ -107,7 +109,10 @@ export default function OtpVerifyScreen() {
       const destination = result.sessionKind === 'staff'
         ? '/(employee)/(tabs)/today'
         : '/(client)/(tabs)/home';
-      router.replace(destination);
+      // A guard that intercepted a protected deep link or notification route
+      // hands the intended path here, so signing in resumes that exact screen.
+      const redirect = decodeRedirect(params.redirect);
+      router.replace(redirect ?? destination);
     } catch (error) {
       if (error instanceof SessionSupersededError ||
         (verificationEpoch !== null && !isSessionCurrent(verificationEpoch))) {
@@ -121,7 +126,7 @@ export default function OtpVerifyScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t, params.booking]);
+  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t, params.booking, params.redirect]);
 
   const handleResend = useCallback(async () => {
     if (purpose !== 'login') return;

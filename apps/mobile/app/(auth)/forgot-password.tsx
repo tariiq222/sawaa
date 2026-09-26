@@ -9,7 +9,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -30,6 +30,7 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const { redirect } = useLocalSearchParams<{ redirect?: string }>();
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -56,7 +57,7 @@ export default function ForgotPasswordScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/reset-password',
-        params: { email: email.trim() },
+        params: { email: email.trim(), ...(redirect ? { redirect } : {}) },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -64,7 +65,7 @@ export default function ForgotPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [email, validate, router, t]);
+  }, [email, validate, router, t, redirect]);
 
   return (
     <AquaBackground>

@@ -643,11 +643,9 @@
     "loadError": "Could not load this information. Please try later.",
     "empty": "No services are available right now."
   },
-  "welcome": {
-    "brand": "سَواء",
-    "headline": "Your journey to Sawaa starts here",
-    "sub": "Confidential sessions with our specialists,\nwithin moments — wherever you are.",
-    "signIn": "Login",
-    "signUp": "Create Account"
+  "notFound": {
+    "title": "Page not available",
+    "message": "The link you opened no longer exists or is incorrect.",
+    "back": "Go back"
   }
 }

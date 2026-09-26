@@ -30,7 +30,7 @@ export default function ResetPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
-  const { email } = useLocalSearchParams<{ email: string }>();
+  const { email, redirect } = useLocalSearchParams<{ email: string; redirect?: string }>();
 
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -94,7 +94,7 @@ export default function ResetPasswordScreen() {
       await authService.resetClientPassword(sessionToken, newPassword);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('تم', 'تم تغيير كلمة المرور بنجاح', [
-        { text: 'تسجيل الدخول', onPress: () => router.replace('/(auth)/login') },
+        { text: 'تسجيل الدخول', onPress: () => router.replace({ pathname: '/(auth)/login', params: redirect ? { redirect } : {} }) },
       ]);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -102,7 +102,7 @@ export default function ResetPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [sessionToken, newPassword, validateReset, router, t]);
+  }, [sessionToken, newPassword, validateReset, router, t, redirect]);
 
   return (
     <AquaBackground>
@@ -219,7 +219,7 @@ export default function ResetPasswordScreen() {
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.replace('/(auth)/login');
+                    router.replace({ pathname: '/(auth)/login', params: redirect ? { redirect } : {} });
                   }}
                 >
                   <Text style={styles.loginLink}>تسجيل الدخول</Text>
