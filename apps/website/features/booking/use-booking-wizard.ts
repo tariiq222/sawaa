@@ -519,13 +519,21 @@ export function useBookingWizard() {
   }, [branchScopedEmployees]);
 
   const filteredServices = useMemo(() => {
-    const base = services.filter((s) => !s.isHidden && bookableServiceIds.has(s.id));
+    const directClinicIds = new Set(categories
+      .filter((category) => category.bookingMode === 'DIRECT')
+      .map((category) => category.id));
+    // Direct clinics use their public clinic name, while retaining the internal
+    // service ID needed by the existing practitioner and booking endpoints.
+    const base = services.filter((s) =>
+      (!s.isHidden || (s.categoryId != null && directClinicIds.has(s.categoryId))) &&
+      bookableServiceIds.has(s.id),
+    );
     if (lockedEmployee?.serviceIds && lockedEmployee.serviceIds.length > 0) {
       const allowed = new Set(lockedEmployee.serviceIds);
       return base.filter((s) => allowed.has(s.id));
     }
     return base;
-  }, [services, bookableServiceIds, lockedEmployee]);
+  }, [services, categories, bookableServiceIds, lockedEmployee]);
 
   const filteredTherapists = useMemo(() => {
     if (!service) return branchScopedEmployees;
@@ -650,7 +658,7 @@ export function useBookingWizard() {
         handleClose();
         break;
       case WizardStep.THERAPIST:
-        if ((service as (Service & { isHidden?: boolean }) | null)?.isHidden) {
+        if ((service as (Service & { isHidden?: boolean }) | null)?.isHidden && preselectServiceId === service?.id) {
           handleClose();
           break;
         }
