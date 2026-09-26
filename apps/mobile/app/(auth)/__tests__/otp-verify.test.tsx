@@ -249,6 +249,44 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home'));
   });
 
+  it('resumes the protected route a guard handed to login', async () => {
+    mockRedirect = '/(client)/video-call?bookingId=booking-9';
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/(client)/video-call',
+      params: { bookingId: 'booking-9' },
+    }));
+  });
+
+  it('ignores a redirect target that leaves the app or re-enters auth', async () => {
+    mockRedirect = 'https://evil.example/steal';
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home'));
+  });
+
+  it('keeps an in-progress booking ahead of the guarded redirect', async () => {
+    mockRedirect = '/(client)/(tabs)/appointments';
+    mockBooking = JSON.stringify({
+      serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
+      deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
+      durationOptionId: 'duration-1', amount: '45000', currency: 'SAR',
+    });
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/(client)/booking/payment' }),
+    ));
+  });
+
   it('filters non-digits and never submits an incomplete code', async () => {
     const { getByLabelText } = render(<OtpVerifyScreen />);
     const input = getByLabelText('auth.otp.code');

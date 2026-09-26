@@ -62,6 +62,7 @@ const config: ExpoConfig = {
     'expo-image-picker',
     './plugins/with-ios-pod-deployment-target',
     './plugins/with-ios-splash-background',
+    './plugins/with-ios-scene-lifecycle',
     [
       '@sentry/react-native/expo',
       {

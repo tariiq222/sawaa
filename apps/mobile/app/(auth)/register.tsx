@@ -26,10 +26,10 @@ import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function RegisterScreen() {
   const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
+  const router = useRouter();
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
 

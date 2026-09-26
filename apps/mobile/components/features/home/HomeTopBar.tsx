@@ -51,6 +51,7 @@ export function HomeTopBar({ f600, isClient = true }: HomeTopBarProps) {
   const action = getSawaaRoles(scheme).action;
   const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
   const router = useRouter();
+  const dir = useDir();
   const { t } = useTranslation();
   const user = useAppSelector((s) => s.auth.user);
   const initial = (user?.firstName ?? 'س').charAt(0);
@@ -78,11 +79,23 @@ export function HomeTopBar({ f600, isClient = true }: HomeTopBarProps) {
         </Glass>
       ) : null}
       </View>
-      <View style={styles.brand}>
-        <Image source={require('@/assets/sawa/logo.png')} resizeMode="contain" accessible={false}
-          style={[styles.brandLogo, { tintColor: sawaaColors.teal[700] }]} />
-        <Text style={[styles.brandName, { fontFamily: f600, color: sawaaColors.ink[900] }]}>{t('home.centerName')}</Text>
-      </View>
+      {isClient ? (
+        <View style={styles.brand}>
+          <Image source={require('@/assets/sawa/logo.png')} resizeMode="contain" accessible={false}
+            style={[styles.brandLogo, { tintColor: sawaaColors.teal[700] }]} />
+          <Text style={[styles.brandName, { fontFamily: f600, color: sawaaColors.ink[900] }]}>{t('home.centerName')}</Text>
+        </View>
+      ) : (
+        <View style={styles.guestBrand}>
+          <Text numberOfLines={2} style={[styles.guestBrandText, {
+            fontFamily: getFontName(dir.locale, '700'),
+            color: sawaaColors.teal[900],
+            textAlign: dir.textAlign,
+          }]}>{t('home.brandTitle')}</Text>
+          <Image source={require('@/assets/sawa/logo.png')} resizeMode="contain" accessible={false}
+            style={[styles.guestBrandLogo, { tintColor: sawaaColors.teal[700] }]} />
+        </View>
+      )}
     </View>
   );
 }
@@ -127,4 +140,7 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: Re
   },
   avatarInner: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 15, color: sawaaColors.teal[700] },
+  guestBrand: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  guestBrandText: { fontSize: 12, lineHeight: 17, flexShrink: 1 },
+  guestBrandLogo: { width: 32, height: 38 },
 });

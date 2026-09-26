@@ -606,9 +606,9 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   {payAtClinic || !isPaidBooking
                     ? t('booking.confirmBooking')
                     : t('booking.confirmAndPay')}
-                  <svg viewBox="0 0 16 16" className="h-4 w-4 -scale-x-100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M6 4l4 4-4 4" />
-                    <path d="M2 8h12" />
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="16" rx="2" />
+                    <path d="M7 3v4M17 3v4M3 10h18m-12 6 2 2 4-4" />
                   </svg>
                 </>
               )}

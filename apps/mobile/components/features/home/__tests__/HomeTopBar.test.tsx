@@ -48,8 +48,9 @@ describe('HomeTopBar', () => {
 
   it('keeps only discovery controls for guests', async () => {
     await act(async () => { await i18n.changeLanguage('ar'); });
-    const { getByRole, queryByRole } = render(<HomeTopBar f600="System" isClient={false} />);
+    const { getByRole, getByText, queryByRole } = render(<HomeTopBar f600="System" isClient={false} />);
     expect(getByRole('button', { name: 'استكشف' })).toBeTruthy();
+    expect(getByText('مركز سواء للإرشاد الأسري')).toBeTruthy();
     expect(queryByRole('button', { name: 'تسجيل الدخول' })).toBeNull();
   });
 });
