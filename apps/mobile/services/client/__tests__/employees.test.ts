@@ -60,3 +60,13 @@ describe('publicEmployeesService.getSlots', () => {
     });
   });
 });
+
+describe('publicEmployeesService discovery', () => {
+  it('includes direct clinic assignments in list and detail requests', async () => {
+    mockedApi.get.mockResolvedValue({ data: [] });
+    await publicEmployeesService.list();
+    await publicEmployeesService.getByKey('therapist');
+    expect(mockedApi.get).toHaveBeenCalledWith('/public/employees', { params: { includeDirectClinics: true } });
+    expect(mockedApi.get).toHaveBeenCalledWith('/public/employees/therapist', { params: { includeDirectClinics: true } });
+  });
+});

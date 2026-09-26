@@ -63,6 +63,9 @@ const buildPrisma = () => {
       findMany: jest.fn().mockResolvedValue([mockService]),
       count: jest.fn().mockResolvedValue(1),
     },
+    serviceCategory: {
+      findFirst: jest.fn().mockResolvedValue({ bookingMode: 'SERVICES' }),
+    },
     booking: {
       count: jest.fn().mockResolvedValue(0),
     },

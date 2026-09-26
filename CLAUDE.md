@@ -185,3 +185,10 @@ Each app has its own CLAUDE.md with stack-specific rules:
 - [apps/dashboard/CLAUDE.md](apps/dashboard/CLAUDE.md)
 - [apps/mobile/CLAUDE.md](apps/mobile/CLAUDE.md)
 - [packages/ui/CLAUDE.md](packages/ui/CLAUDE.md)
+
+
+## Clinic and service booking contract
+
+[Canonical clinic/service contract](docs/architecture/clinic-service-booking-contract.md)
+
+Read the canonical contract before changing clinic/service data or booking discovery. It governs category kind, immutable booking mode, hidden internal services, public API opt-in, shared selectors, and cross-app verification.

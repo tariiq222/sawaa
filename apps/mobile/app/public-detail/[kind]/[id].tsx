@@ -12,11 +12,12 @@ import { AquaBackground } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { formatHalalas } from '@/lib/package-utils';
 import { goBackOrHome } from '@/lib/navigation';
+import { getProfileBookingServices } from '@/lib/clinic-profile';
 
 type PublicKind = 'service' | 'package' | 'program' | 'therapist';
 
 export default function PublicDetailScreen() {
-  const { kind, id } = useLocalSearchParams<{ kind?: string; id?: string }>();
+  const { kind, id, clinicId } = useLocalSearchParams<{ kind?: string; id?: string; clinicId?: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const dir = useDir();
@@ -33,7 +34,7 @@ export default function PublicDetailScreen() {
   const family = usePackageFamily(type === 'package' ? id : undefined);
   const program = useGroupSession(type === 'program' ? id : undefined);
   const therapist = useTherapist(type === 'therapist' ? id : undefined);
-  const service = catalog.data?.services.find((item) => item.id === id);
+  const service = catalog.data?.services.find((item) => item.id === id && item.isHidden !== true && item.isActive !== false && item.archivedAt == null);
   const item = type === 'service' ? service : type === 'package' ? family.data : type === 'program' ? program.data : therapist.data;
   const loading = type === 'service' ? catalog.isLoading : type === 'package' ? family.isLoading : type === 'program' ? program.isLoading : therapist.isLoading;
   const name = item ? (dir.isRTL ? item.nameAr : item.nameEn ?? item.nameAr) : null;
@@ -48,7 +49,7 @@ export default function PublicDetailScreen() {
     ? (therapists.data ?? []).filter((person) => person.serviceIds.includes(service.id))
     : [];
   const matchingServices = type === 'therapist' && therapist.data
-    ? (catalog.data?.services ?? []).filter((entry) => therapist.data?.serviceIds.includes(entry.id))
+    ? (catalog.data ? getProfileBookingServices(catalog.data, therapist.data.serviceIds, clinicId) : [])
     : [];
   const startBooking = (serviceId: string, employeeId: string) => router.push({
     pathname: signedIn ? '/(client)/booking/[serviceId]' : '/public-booking/[serviceId]',
@@ -93,7 +94,12 @@ export default function PublicDetailScreen() {
             <Text style={[styles.body, { fontFamily: bold, textAlign: dir.textAlign }]}>{t('guest.chooseService')}</Text>
             {matchingServices.map((entry) => (
               <Pressable key={entry.id} accessibilityRole="button" onPress={() => startBooking(entry.id, therapist.data!.id)} style={styles.login}>
-                <Text style={[styles.loginText, { fontFamily: bold }]}>{dir.isRTL ? entry.nameAr : entry.nameEn ?? entry.nameAr}</Text>
+                <Text style={[styles.loginText, { fontFamily: bold }]}>{(() => {
+                  const category = catalog.data?.categories.find((item) => item.id === entry.categoryId);
+                  return category?.bookingMode === 'DIRECT'
+                    ? (dir.isRTL ? category.nameAr : category.nameEn ?? category.nameAr)
+                    : (dir.isRTL ? entry.nameAr : entry.nameEn ?? entry.nameAr);
+                })()}</Text>
               </Pressable>
             ))}
             {!catalog.isLoading && matchingServices.length === 0 ? <Text style={styles.body}>{t('guest.empty')}</Text> : null}

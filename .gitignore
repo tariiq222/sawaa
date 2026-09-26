@@ -165,3 +165,8 @@ outputs/
 
 # Mobile release documentation and approved public screenshots
 !docs/mobile-app/
+
+# Canonical clinic/service developer contract
+!docs/architecture/
+docs/architecture/*
+!docs/architecture/clinic-service-booking-contract.md

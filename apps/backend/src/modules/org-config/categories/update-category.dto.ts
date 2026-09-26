@@ -1,6 +1,7 @@
 import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateIf } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CategoryBookingMode } from '@prisma/client';
+import { CATEGORY_KINDS, type CategoryKindInput } from './create-category.dto';
 
 export class UpdateCategoryDto {
   @ApiPropertyOptional({ description: 'Category name in Arabic', example: 'طب الأسنان' })
@@ -24,6 +25,9 @@ export class UpdateCategoryDto {
     example: CategoryBookingMode.SERVICES,
   })
   @IsOptional() @IsEnum(CategoryBookingMode) bookingMode?: CategoryBookingMode;
+
+  @ApiPropertyOptional({ description: 'Category kind, independent of its department or name', enum: CATEGORY_KINDS, example: 'CLINIC' })
+  @IsOptional() @IsEnum(CATEGORY_KINDS) kind?: CategoryKindInput;
 
   @ApiPropertyOptional({ description: 'Category image URL or stored object key', type: String, example: 'https://example.com/logo.png', nullable: true })
   @IsOptional() @IsString() imageUrl?: string | null;

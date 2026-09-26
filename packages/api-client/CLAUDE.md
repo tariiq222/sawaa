@@ -31,3 +31,10 @@ The package is consumed from source (`exports` → `src/index.ts`) — no build 
 - `client.ts` owns the fetch + auth-refresh flow; `refresh-mutex.ts` ensures a single in-flight refresh. Don't duplicate refresh logic in a module.
 - Depends only on `@sawaa/shared` (for shared types). No React, no Next.
 - It's `private: true` but still exported to the workspace via `package.json` `exports`.
+
+
+## Clinic catalog API contract
+
+[Canonical clinic/service contract](../../docs/architecture/clinic-service-booking-contract.md)
+
+When adding catalog or practitioner consumers, preserve the includeDirectClinics option and category kind/mode fields. This client is hand-written; OpenAPI generation does not update it. Do not turn internal direct-clinic services into standalone customer services.

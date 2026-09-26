@@ -61,7 +61,9 @@ export default function HomeScreen() {
   const nextBooking = homeQuery.data?.upcomingBookings?.[0] ?? null;
   const unreadCount = homeQuery.data?.unreadNotifications?.length ?? 0;
   const therapists = (therapistsQuery.data ?? []).slice(0, 6);
-  const services = (catalogQuery.data?.services ?? []).slice(0, 6);
+  const services = (catalogQuery.data?.services ?? [])
+    .filter((service) => service.isHidden !== true && service.isActive !== false && service.archivedAt == null)
+    .slice(0, 6);
   const hasUpcomingGroups = (groupsQuery.data ?? []).some((group) => group.scheduledAt && new Date(group.scheduledAt).getTime() >= Date.now());
   const loading = homeQuery.isLoading;
 

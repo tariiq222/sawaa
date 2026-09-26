@@ -7,7 +7,7 @@ import { normalizePublicImageUrl } from './public-image-url';
 export class GetPublicEmployeeHandler {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(key: string): Promise<PublicEmployeeItem> {
+  async execute(key: string, options: { includeDirectClinics?: boolean } = {}): Promise<PublicEmployeeItem> {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
     const row = await this.prisma.employee.findFirst({
       where: {
@@ -62,13 +62,23 @@ export class GetPublicEmployeeHandler {
     const services =
       linkedServiceIds.length > 0
         ? await this.prisma.service.findMany({
-            where: { id: { in: linkedServiceIds }, isActive: true, isHidden: false, archivedAt: null },
-            select: { id: true, price: true },
+            // See docs/architecture/clinic-service-booking-contract.md: opt in only to
+            // the hidden booking link of an active DIRECT clinic.
+            where: options.includeDirectClinics
+              ? {
+                  id: { in: linkedServiceIds }, isActive: true, archivedAt: null,
+                  OR: [
+                    { isHidden: false, category: { isActive: true } },
+                    { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
+                  ],
+                }
+              : { id: { in: linkedServiceIds }, isActive: true, isHidden: false, archivedAt: null, category: { isActive: true } },
+            select: { id: true, price: true, isHidden: true },
           })
         : [];
     const activeServiceIds = new Set(services.map((s) => s.id));
     const serviceIds = links.map((l) => l.serviceId).filter((serviceId) => activeServiceIds.has(serviceId));
-    const prices = services.map((s) => parseFloat(String(s.price)));
+    const prices = services.filter((s) => !s.isHidden).map((s) => parseFloat(String(s.price)));
 
     const activeBranches =
       linkedBranchIds.length > 0

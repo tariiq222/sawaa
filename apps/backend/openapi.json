@@ -1177,6 +1177,15 @@
             "nullable": true,
             "type": "object"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "example": "استشارات",
             "type": "string"
@@ -1198,7 +1207,8 @@
           "nameEn",
           "imageUrl",
           "sortOrder",
-          "bookingMode"
+          "bookingMode",
+          "kind"
         ],
         "type": "object"
       },
@@ -1508,6 +1518,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic category name",
             "example": "الإرشاد الأسري",
@@ -1544,6 +1563,7 @@
           "sortOrder",
           "isActive",
           "bookingMode",
+          "kind",
           "imageUrl",
           "iconName",
           "iconBgColor",
@@ -1645,6 +1665,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic category name",
             "example": "الإرشاد الأسري",
@@ -1681,6 +1710,7 @@
           "sortOrder",
           "isActive",
           "bookingMode",
+          "kind",
           "imageUrl",
           "iconName",
           "iconBgColor",
@@ -2837,6 +2867,15 @@
             "description": "Category image URL or stored object key",
             "example": "https://example.com/logo.png",
             "nullable": true,
+            "type": "string"
+          },
+          "kind": {
+            "description": "Category kind, independent of its department or name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
             "type": "string"
           },
           "nameAr": {
@@ -4642,6 +4681,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic category name",
             "example": "الإرشاد الأسري",
@@ -4678,6 +4726,7 @@
           "sortOrder",
           "isActive",
           "bookingMode",
+          "kind",
           "imageUrl",
           "iconName",
           "iconBgColor",
@@ -4772,6 +4821,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic category name",
             "example": "الإرشاد الأسري",
@@ -4808,6 +4866,7 @@
           "sortOrder",
           "isActive",
           "bookingMode",
+          "kind",
           "imageUrl",
           "iconName",
           "iconBgColor",
@@ -9425,6 +9484,15 @@
             "description": "Whether the category is active",
             "example": true,
             "type": "boolean"
+          },
+          "kind": {
+            "description": "Category kind, independent of its department or name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
           },
           "nameAr": {
             "description": "Category name in Arabic",
@@ -39671,6 +39739,15 @@
             "schema": {
               "example": "dr-ahmed",
               "type": "string"
+            }
+          },
+          {
+            "description": "Include hidden booking links for direct clinics",
+            "in": "query",
+            "name": "includeDirectClinics",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],

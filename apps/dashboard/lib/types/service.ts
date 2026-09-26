@@ -14,7 +14,9 @@ export interface ServiceCategory {
   sortOrder: number
   isActive: boolean
   departmentId: string | null
-  bookingMode: "DIRECT" | "SERVICES"
+  bookingMode?: "DIRECT" | "SERVICES"
+  /** Legacy category responses omit kind; those categories are clinics. */
+  kind?: "CLINIC" | "SERVICE_GROUP"
   department?: { id: string; nameEn: string | null; nameAr: string } | null
   iconName: string | null
   iconBgColor: string | null

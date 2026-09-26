@@ -90,9 +90,9 @@ export default function ClinicDetailScreen() {
               <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500' }]}>
                 {t('clinics.therapistsCount', { count: clinic.therapistCount })}
               </Text>
-              <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500' }]}>
+              {clinic.serviceCount > 0 ? <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500' }]}>
                 {t('clinics.servicesCount', { count: clinic.serviceCount })}
-              </Text>
+              </Text> : null}
             </View>
           </Glass>
         </Animated.View>

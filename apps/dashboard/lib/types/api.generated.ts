@@ -5792,6 +5792,12 @@ export interface components {
             id: string;
             /** @description Short-lived presigned image URL (signed per response), or null */
             imageUrl: Record<string, never> | null;
+            /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
             /** @example استشارات */
             nameAr: string;
             /** @example Consultations */
@@ -5949,6 +5955,12 @@ export interface components {
              */
             isActive: boolean;
             /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
+            /**
              * @description Arabic category name
              * @example الإرشاد الأسري
              */
@@ -6042,6 +6054,12 @@ export interface components {
              * @example true
              */
             isActive: boolean;
+            /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
             /**
              * @description Arabic category name
              * @example الإرشاد الأسري
@@ -6737,6 +6755,12 @@ export interface components {
              * @example https://example.com/logo.png
              */
             imageUrl?: string | null;
+            /**
+             * @description Category kind, independent of its department or name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind?: "CLINIC" | "SERVICE_GROUP";
             /**
              * @description Category name in Arabic
              * @example طب الأسنان
@@ -8005,6 +8029,12 @@ export interface components {
              */
             isActive: boolean;
             /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
+            /**
              * @description Arabic category name
              * @example الإرشاد الأسري
              */
@@ -8084,6 +8114,12 @@ export interface components {
              * @example true
              */
             isActive: boolean;
+            /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
             /**
              * @description Arabic category name
              * @example الإرشاد الأسري
@@ -10828,6 +10864,12 @@ export interface components {
              * @example true
              */
             isActive?: boolean;
+            /**
+             * @description Category kind, independent of its department or name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind?: "CLINIC" | "SERVICE_GROUP";
             /**
              * @description Category name in Arabic
              * @example طب الأسنان
@@ -32958,7 +33000,10 @@ export interface operations {
     };
     PublicEmployeesController_getOne_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include hidden booking links for direct clinics */
+                includeDirectClinics?: boolean;
+            };
             header?: never;
             path: {
                 /** @description Public slug or employee UUID */

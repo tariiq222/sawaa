@@ -55,10 +55,11 @@ export default function TherapistsListScreen() {
     [selectedClinic],
   );
   const list = useMemo(() => {
-    if (!clinicServiceIds) return rawList;
+    if (!clinicId) return rawList;
+    if (!clinicServiceIds) return [];
     return rawList.filter((therapist) => therapist.serviceIds.some((serviceId) => clinicServiceIds.has(serviceId)));
-  }, [clinicServiceIds, rawList]);
-  const loading = isLoading;
+  }, [clinicId, clinicServiceIds, rawList]);
+  const loading = isLoading || (Boolean(clinicId) && clinicsQuery.isLoading);
 
   const filtered = useMemo(
     () => applyTherapistFilters(list, query, activeChip),
@@ -78,7 +79,7 @@ export default function TherapistsListScreen() {
       >
         <Glass variant="strong" radius={sawaaRadius.xl} style={styles.therapistCard}>
           <Pressable
-            onPress={() => router.push(`/(client)/employee/${navKey}`)}
+            onPress={() => router.push({ pathname: '/(client)/employee/[id]', params: { id: navKey, ...(clinicId ? { clinicId } : {}) } })}
             style={[styles.therapistRow, { flexDirection: dir.row }]}
             accessibilityRole="button"
             accessibilityLabel={`${name}, ${spec}`}
@@ -114,7 +115,7 @@ export default function TherapistsListScreen() {
         </Glass>
       </Animated.View>
     );
-  }, [colors, styles, theme, dir, f400, f500, f700, reduceMotion, router, t]);
+  }, [colors, styles, theme, dir, f400, f500, f700, reduceMotion, router, t, clinicId]);
 
   const screenTitle = selectedClinic
     ? (dir.isRTL ? selectedClinic.nameAr : (selectedClinic.nameEn ?? selectedClinic.nameAr))

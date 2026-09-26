@@ -10,6 +10,7 @@ export interface CreateCategoryPayload {
   sortOrder?: number
   departmentId?: string | null
   bookingMode?: "DIRECT" | "SERVICES"
+  kind?: "CLINIC" | "SERVICE_GROUP"
   iconName?: string | null
   iconBgColor?: string | null
   imageUrl?: string | null
@@ -22,6 +23,7 @@ export interface UpdateCategoryPayload {
   isActive?: boolean
   departmentId?: string | null
   bookingMode?: "DIRECT" | "SERVICES"
+  kind?: "CLINIC" | "SERVICE_GROUP"
   iconName?: string | null
   iconBgColor?: string | null
   imageUrl?: string | null

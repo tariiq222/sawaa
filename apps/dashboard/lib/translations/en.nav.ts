@@ -24,7 +24,7 @@ export const enNav: Record<string, string> = {
   "nav.tools": "Tools",
   "nav.admin": "Admin",
   "nav.services": "Services",
-  "nav.categories": "Clinics",
+  "nav.categories": "Clinics & service groups",
   "nav.departments": "Departments",
   "nav.payments": "Payments",
   "nav.invoices": "Invoices",

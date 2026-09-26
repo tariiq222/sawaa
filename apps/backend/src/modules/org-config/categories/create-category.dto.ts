@@ -2,6 +2,9 @@ import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'cla
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CategoryBookingMode } from '@prisma/client';
 
+export const CATEGORY_KINDS = ['CLINIC', 'SERVICE_GROUP'] as const;
+export type CategoryKindInput = (typeof CATEGORY_KINDS)[number];
+
 export class CreateCategoryDto {
   @ApiProperty({ description: 'Category name in Arabic', example: 'طب الأسنان' })
   @IsString() @MaxLength(200) nameAr!: string;
@@ -21,6 +24,9 @@ export class CreateCategoryDto {
     example: CategoryBookingMode.SERVICES,
   })
   @IsOptional() @IsEnum(CategoryBookingMode) bookingMode?: CategoryBookingMode;
+
+  @ApiPropertyOptional({ description: 'Category kind, independent of its department or name', enum: CATEGORY_KINDS, example: 'CLINIC' })
+  @IsOptional() @IsEnum(CATEGORY_KINDS) kind?: CategoryKindInput;
 
   @ApiPropertyOptional({ description: 'Category image URL or stored object key', type: String, example: 'https://example.com/logo.png', nullable: true })
   @IsOptional() @IsString() imageUrl?: string | null;

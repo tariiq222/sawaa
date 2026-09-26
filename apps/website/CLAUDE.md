@@ -65,3 +65,10 @@ Custom AR/EN — **not** next-intl. `features/locale/`: `getLocale()` reads the 
 - New API calls go in a `features/<feature>/<feature>.api.ts`, not inline in components.
 - Tests are Vitest + Testing Library (jsdom). No Playwright e2e here.
 - `output: 'standalone'` + `outputFileTracingRoot` set for Docker; workspace packages are transpiled.
+
+
+## Clinic and service discovery
+
+[Canonical clinic/service contract](../../docs/architecture/clinic-service-booking-contract.md)
+
+Keep /clinics and /services as distinct discovery paths. Use @sawaa/shared/catalog, request direct-clinic links consistently, and show clinic names for internal booking services. Do not restore the superseded clinics-to-services redirect.

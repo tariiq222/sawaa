@@ -32,7 +32,7 @@ export default function PublicListScreen() {
   const families = usePackageFamilies();
   const selectedClinic = clinics.data?.find((clinic) => clinic.id === clinicId);
   const visibleTherapists = therapists.data?.filter((person) =>
-    !selectedClinic || person.serviceIds.some((id) => selectedClinic.serviceIds.includes(id))) ?? [];
+    !clinicId || (selectedClinic != null && person.serviceIds.some((id) => selectedClinic.serviceIds.includes(id)))) ?? [];
   const entries = kind === 'clinics' ? (clinics.data ?? []).map((item) => ({ id: item.id, kind: 'clinic', nameAr: item.nameAr, nameEn: item.nameEn ?? null }))
     : kind === 'therapists' ? visibleTherapists.map((item) => ({ id: item.slug ?? item.id, kind: 'therapist', nameAr: item.nameAr, nameEn: item.nameEn ?? null }))
       : kind === 'packages' ? (families.data ?? []).map((item) => ({ id: item.id, kind: 'package', nameAr: item.nameAr, nameEn: item.nameEn ?? null }))
@@ -64,7 +64,7 @@ export default function PublicListScreen() {
           <Glass variant="strong" radius={20} style={styles.card}
             onPress={() => item.kind === 'clinic'
               ? router.push({ pathname: '/public-list/[kind]', params: { kind: 'therapists', clinicId: item.id } })
-              : router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: item.kind, id: item.id } })}
+              : router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: item.kind, id: item.id, ...(item.kind === 'therapist' && clinicId ? { clinicId } : {}) } })}
             accessibilityLabel={dir.isRTL ? item.nameAr ?? '' : item.nameEn ?? item.nameAr ?? ''} interactive>
             <Text style={[styles.cardText, { fontFamily: bold, textAlign: dir.textAlign }]}>
               {dir.isRTL ? item.nameAr : item.nameEn ?? item.nameAr}

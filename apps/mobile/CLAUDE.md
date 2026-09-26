@@ -120,3 +120,10 @@ npm run ios           # iOS simulator
 npm run android       # Android emulator
 npm run test          # Jest + jest-expo
 ```
+
+
+## Clinic discovery and booking context
+
+[Canonical clinic/service contract](../../docs/architecture/clinic-service-booking-contract.md)
+
+Use @sawaa/shared/catalog for clinic selection, opt in to direct clinics for catalog/list/detail reads, and preserve clinicId/serviceId through practitioner navigation. Missing scoped data must not silently broaden the service list. Never infer clinics from department names.

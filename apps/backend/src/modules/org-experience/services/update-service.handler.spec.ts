@@ -50,6 +50,33 @@ describe('UpdateServiceHandler', () => {
     await expect(handler.execute({ serviceId: 's1' } as any)).rejects.toThrow(NotFoundException);
   });
 
+  it('rejects moving a visible service into a DIRECT clinic', async () => {
+    prisma.service.findFirst.mockResolvedValue(createService({ categoryId: 'old', isHidden: false }));
+    prisma.serviceCategory = { findFirst: jest.fn().mockResolvedValue({ bookingMode: 'DIRECT' }) };
+    await expect(handler.execute({ serviceId: 's1', categoryId: 'direct' } as any))
+      .rejects.toMatchObject({ status: 400 });
+    expect(prisma.service.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts unchanged identity fields for an internal service', async () => {
+    prisma.service.findFirst.mockResolvedValue(createService({
+      categoryId: 'direct', isHidden: true, nameAr: 'عيادة', nameEn: 'Clinic',
+    }));
+    prisma.service.update.mockResolvedValue({ id: 's1', category: null });
+    await expect(handler.execute({
+      serviceId: 's1', categoryId: 'direct', isHidden: true, nameAr: 'عيادة', nameEn: 'Clinic',
+    } as any)).resolves.toMatchObject({ id: 's1' });
+  });
+
+  it('rejects changing the internal service name through the service editor', async () => {
+    prisma.service.findFirst.mockResolvedValue(createService({
+      categoryId: 'direct', isHidden: true, nameAr: 'عيادة', nameEn: 'Clinic',
+    }));
+    await expect(handler.execute({ serviceId: 's1', nameAr: 'اسم مختلف' } as any))
+      .rejects.toMatchObject({ status: 400 });
+    expect(prisma.service.update).not.toHaveBeenCalled();
+  });
+
   it('should throw when depositAmount > price', async () => {
     prisma.service.findFirst.mockResolvedValue(createService());
     await expect(handler.execute({ serviceId: 's1', depositEnabled: true, depositAmount: 150, price: 100 } as any)).rejects.toThrow(BadRequestException);

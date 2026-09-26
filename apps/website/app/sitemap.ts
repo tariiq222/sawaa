@@ -47,7 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  const therapists = await listPublicEmployees().catch(() => []);
+  const therapists = await listPublicEmployees(true).catch(() => []);
   for (const therapist of therapists) {
     if (!therapist.slug) continue;
     const url = `${BASE_URL}/therapists/${encodeURIComponent(therapist.slug)}`;

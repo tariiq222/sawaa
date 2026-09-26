@@ -94,7 +94,7 @@ describe('GetPublicCatalogHandler', () => {
       orderBy: { sortOrder: 'asc' },
     });
     expect(prisma.service.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { isActive: true, isHidden: false, archivedAt: null },
+      where: { isActive: true, isHidden: false, archivedAt: null, category: { isActive: true } },
       orderBy: { nameAr: 'asc' },
     }));
   });
@@ -108,7 +108,7 @@ describe('GetPublicCatalogHandler', () => {
         isActive: true,
         archivedAt: null,
         OR: [
-          { isHidden: false },
+          { isHidden: false, category: { isActive: true } },
           { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
         ],
       },

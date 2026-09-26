@@ -162,7 +162,7 @@ export function getServiceColumns(
         const cat = locale === "ar" ? (row.category?.nameAr ?? "") : (row.category?.nameEn ?? "")
         return `${dept} ${cat}`.trim()
       },
-      header: label("services.col.category", "Clinic"),
+      header: label("services.col.category", "Category"),
       enableSorting: true,
       sortingFn: (a, b) => {
         const nameA = locale === "ar" ? (a.original.category?.nameAr ?? "") : (a.original.category?.nameEn ?? "")
@@ -180,7 +180,9 @@ export function getServiceColumns(
         const catName = locale === "ar" ? cat.nameAr : (cat.nameEn ?? cat.nameAr)
 
         return (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground">
+            <span className="text-foreground">{t?.(cat.kind === "SERVICE_GROUP" ? "services.categories.kind.group" : "services.categories.kind.clinic") ?? (cat.kind === "SERVICE_GROUP" ? "Service group" : "Clinic")}</span>
+            <span className="flex items-center gap-1">
             {deptName && (
               <>
                 <span>{deptName}</span>
@@ -192,6 +194,7 @@ export function getServiceColumns(
               </>
             )}
             <span className="text-foreground">{catName}</span>
+            </span>
           </div>
         )
       },

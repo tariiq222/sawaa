@@ -27,7 +27,7 @@ export async function SawaaServicesPage() {
       services: [],
       vatRate: 0,
     }),
-    safeFetch(() => listPublicEmployees(), []),
+    safeFetch(() => listPublicEmployees(true), []),
   ]);
   const intro = resolveSectionIntros(locale).services;
   const services = selectBookableClinicServices(catalog, employees);

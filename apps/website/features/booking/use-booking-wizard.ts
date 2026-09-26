@@ -16,7 +16,7 @@ import {
   type PublicBranch,
 } from '@/features/booking/booking.api';
 import { resolveBookingSubmitOutcome } from '@/features/booking/booking-submit-outcome';
-import { presentDirectClinicServices } from '@/features/booking/booking-catalog';
+import { presentDirectClinicServices, selectAvailableBookingServices } from '@/features/booking/booking-catalog';
 import { usePaymentMethods } from '@/features/payment/use-payment-methods';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import type { SummaryScreen } from '@/features/booking/summary-rail';
@@ -525,13 +525,8 @@ export function useBookingWizard() {
   }, [branchScopedEmployees]);
 
   const filteredServices = useMemo(() => {
-    const base = services.filter((s) => !s.isHidden && bookableServiceIds.has(s.id));
-    if (lockedEmployee?.serviceIds && lockedEmployee.serviceIds.length > 0) {
-      const allowed = new Set(lockedEmployee.serviceIds);
-      return base.filter((s) => allowed.has(s.id));
-    }
-    return base;
-  }, [services, bookableServiceIds, lockedEmployee]);
+    return selectAvailableBookingServices(services, categories, bookableServiceIds, lockedEmployee?.serviceIds);
+  }, [services, categories, bookableServiceIds, lockedEmployee]);
 
   const filteredTherapists = useMemo(() => {
     if (!service) return branchScopedEmployees;

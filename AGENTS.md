@@ -106,3 +106,10 @@ When changing backend endpoints or DTOs:
 ## Per-app conventions
 
 Read the affected app or package `CLAUDE.md` before changing it; links are in [the command and test reference](docs/operations/agent-command-reference.md).
+
+
+## Clinic and service booking contract
+
+[Canonical clinic/service contract](docs/architecture/clinic-service-booking-contract.md)
+
+Before changing clinics, categories, services, discovery, or booking entry, read this contract. Category kind and booking mode are separate. DIRECT uses one backend-owned hidden service; use shared catalog selectors and never infer clinics from department names. Preserve the same behavior across dashboard, mobile, and website.

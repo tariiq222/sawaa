@@ -16,7 +16,8 @@ describe('CreateServiceHandler', () => {
       providers: [
         CreateServiceHandler,
     { provide: PrismaService, useValue: {
-    service: { findFirst: jest.fn(), create: jest.fn() }
+    service: { findFirst: jest.fn(), create: jest.fn() },
+    serviceCategory: { findFirst: jest.fn().mockResolvedValue({ bookingMode: 'SERVICES' }) }
     } },
     { provide: EventBusService, useValue: { publish: jest.fn().mockResolvedValue(undefined) } },
     { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
@@ -85,5 +86,12 @@ describe('CreateServiceHandler', () => {
         depositAmount: 0,
       } as any),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects a visible service under a DIRECT clinic', async () => {
+    (prisma as any).serviceCategory = { findFirst: jest.fn().mockResolvedValue({ bookingMode: 'DIRECT' }) };
+    await expect(handler.execute({ nameAr: 'خدمة', nameEn: 'Service', categoryId: 'cat-1', price: 100, durationMins: 30 } as any))
+      .rejects.toMatchObject({ status: 400 });
+    expect((prisma as any).service.create).not.toHaveBeenCalled();
   });
 });
