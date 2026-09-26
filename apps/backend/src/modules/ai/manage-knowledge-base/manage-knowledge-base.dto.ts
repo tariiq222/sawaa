@@ -73,7 +73,7 @@ function ipv6ToBigInt(hostname: string): bigint | undefined {
 	if (halves.length === 2 && groups.length >= 8) return undefined;
 	const full = halves.length === 2 ? [...left.flatMap(expand), ...Array(8 - groups.length).fill('0'), ...right.flatMap(expand)] : groups;
 	if (full.length !== 8 || full.some((group) => !/^[0-9a-f]{1,4}$/.test(group))) return undefined;
-	return full.reduce((value, group) => (value << 16n) | BigInt(parseInt(group, 16)), 0n);
+	return full.reduce((value, group) => (value << 16n) | BigInt(Number.parseInt(group, 16)), 0n);
 }
 
 function hasIpv6Prefix(value: bigint, prefix: string, length: number): boolean {

@@ -287,7 +287,7 @@ export async function pickCreditBookDateCell(
     ({ y, m, d }) => {
       const buttons = Array.from(document.querySelectorAll("button[data-day]"))
       // Strip the U+200F RTL marks the ar-SA locale formatter inserts between digits and slashes so data-day matches a plain Western-digit pattern.
-      const strip = (s: string) => s.replace(/\u200f/g, "")
+      const strip = (s: string) => s.replaceAll('\u200f', "")
       const wantMonth = String(m).padStart(1, "0")
       const wantDay = String(d)
       for (let i = 0; i < buttons.length; i++) {

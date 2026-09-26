@@ -74,8 +74,8 @@ export class PublicMeController {
   ) {
     return this.listClientInvoices.execute(
       session.id,
-      page ? parseInt(page, 10) : 1,
-      pageSize ? parseInt(pageSize, 10) : 20,
+      page ? Number.parseInt(page, 10) : 1,
+      pageSize ? Number.parseInt(pageSize, 10) : 20,
     );
   }
 
@@ -93,8 +93,8 @@ export class PublicMeController {
   ) {
     return this.listBookings.execute(
       session.id,
-      page ? parseInt(page, 10) : 1,
-      pageSize ? parseInt(pageSize, 10) : 10,
+      page ? Number.parseInt(page, 10) : 1,
+      pageSize ? Number.parseInt(pageSize, 10) : 10,
       tab,
     );
   }

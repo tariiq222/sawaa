@@ -74,7 +74,7 @@ export function DatePicker({
     // Already "YYYY-MM-DD" — append noon to avoid timezone-shift to previous day
     const normalized = /^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T12:00:00` : v
     const d = new Date(normalized)
-    return isNaN(d.getTime()) ? undefined : d
+    return Number.isNaN(d.getTime()) ? undefined : d
   }
 
   const dateValue = parseDateSafe(value ?? "")

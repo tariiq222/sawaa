@@ -31,7 +31,7 @@ async function main() {
     const employees = employeesRes.rows;
     const services = servicesRes.rows;
     const branch = branchRes.rows[0];
-    let nextBookingNumber = parseInt(maxBookingRes.rows[0].max) + 1;
+    let nextBookingNumber = Number.parseInt(maxBookingRes.rows[0].max, 10) + 1;
 
     if (!clients.length || !employees.length || !services.length || !branch) {
       console.error('Missing seed data: clients/employees/services/branch');
@@ -60,7 +60,7 @@ async function main() {
       scheduledAt.setDate(scheduledAt.getDate() + dayOffset);
       scheduledAt.setUTCHours(hourUtc, 0, 0, 0);
 
-      const durationMins = parseInt(svc.durationmins) || 60;
+      const durationMins = Number.parseInt(svc.durationmins, 10) || 60;
       const endsAt = new Date(scheduledAt.getTime() + durationMins * 60 * 1000);
 
       // createdAt: قبل scheduledAt بأيام مختلفة

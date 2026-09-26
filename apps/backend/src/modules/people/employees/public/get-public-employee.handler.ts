@@ -78,7 +78,7 @@ export class GetPublicEmployeeHandler {
         : [];
     const activeServiceIds = new Set(services.map((s) => s.id));
     const serviceIds = links.map((l) => l.serviceId).filter((serviceId) => activeServiceIds.has(serviceId));
-    const prices = services.filter((s) => !s.isHidden).map((s) => parseFloat(String(s.price)));
+    const prices = services.filter((s) => !s.isHidden).map((s) => Number.parseFloat(String(s.price)));
 
     const activeBranches =
       linkedBranchIds.length > 0

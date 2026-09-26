@@ -47,7 +47,7 @@ export class MoyasarWebhookPaymentFieldsDto {
   status?: MoyasarPaymentStatus;
 
   @ApiPropertyOptional({ description: 'Amount in the smallest currency unit (halalas)', example: 10000 })
-  @IsOptional() @IsInt() @Min(1) @Transform(({ value }) => (typeof value === 'string' ? parseInt(value, 10) : value))
+  @IsOptional() @IsInt() @Min(1) @Transform(({ value }) => (typeof value === 'string' ? Number.parseInt(value, 10) : value))
   amount?: number;
 
   @ApiPropertyOptional({ description: 'Estimated payment fee in the smallest currency unit', example: 250 })

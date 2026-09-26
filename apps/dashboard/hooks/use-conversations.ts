@@ -36,9 +36,11 @@ export function useConversation(conversationId: string | null) {
   })
 }
 
+const DEFAULT_CONVERSATION_MESSAGE_FILTERS: ConversationMessageFilters = Object.freeze({ limit: 100 });
+
 export function useConversationMessages(
   conversationId: string | null,
-  filters: ConversationMessageFilters = { limit: 100 },
+  filters: ConversationMessageFilters = DEFAULT_CONVERSATION_MESSAGE_FILTERS,
 ) {
   return useInfiniteQuery({
     queryKey: queryKeys.conversations.messages(conversationId ?? "", filters),

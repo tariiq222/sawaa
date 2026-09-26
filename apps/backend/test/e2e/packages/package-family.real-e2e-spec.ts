@@ -43,7 +43,7 @@ describeRealE2e('package families (real DB)', () => {
     createPackage = app.get(CreateSessionPackageHandler);
     purchasePackage = app.get(CreatePackagePurchaseHandler);
     await prisma.branch.create({ data: { id: ids.branchId, nameAr: `family-${ids.branchId}`, isActive: true } });
-    await prisma.client.create({ data: { id: ids.clientId, name: `family-${ids.clientId}`, phone: `05${ids.clientId.replace(/-/g, '').slice(0, 8)}` } });
+    await prisma.client.create({ data: { id: ids.clientId, name: `family-${ids.clientId}`, phone: `05${ids.clientId.replaceAll('-', '').slice(0, 8)}` } });
     await prisma.employee.create({ data: { id: ids.employeeId, name: `family-${ids.employeeId}`, isActive: true } });
     await prisma.service.create({ data: { id: ids.serviceId, nameAr: `family-${ids.serviceId}`, durationMins: 60, price: 10_000, currency: 'SAR', isActive: true } });
     await prisma.serviceBookingConfig.create({ data: { serviceId: ids.serviceId, deliveryType: 'IN_PERSON', isActive: true } });

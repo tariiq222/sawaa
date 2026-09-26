@@ -120,7 +120,7 @@ if (missing.length > 0) {
 // apiRequest(...) call, normalize its method+path, and require a manifest entry.
 function normalizeClientPath(raw) {
   let p = raw;
-  p = p.replace(/\$\{qs\}/g, '');        // appended query-string builder var
+  p = p.replaceAll('${qs}', '');        // appended query-string builder var
   p = p.split('?')[0];                       // strip a literal query string
   p = p.replace(/\$\{[^}]*\}/g, '{}');    // path params → {}
   if (!p.startsWith('/api/v1')) p = '/api/v1' + p;

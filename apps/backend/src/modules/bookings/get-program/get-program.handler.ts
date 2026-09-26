@@ -15,7 +15,7 @@ export class GetProgramHandler {
 
     const program = await this.prisma.program.findFirst({
       where: isNumeric
-        ? { ref: parseInt(programIdOrRef, 10) }
+        ? { ref: Number.parseInt(programIdOrRef, 10) }
         : { id: programIdOrRef },
       include: {
         supervisors: { select: { employeeId: true } },

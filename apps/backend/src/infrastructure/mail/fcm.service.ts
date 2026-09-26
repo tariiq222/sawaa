@@ -65,7 +65,7 @@ export class FcmService implements IFcmService, OnModuleInit {
         ]);
         if (dbProjectId) projectId = dbProjectId;
         if (dbClientEmail) clientEmail = dbClientEmail;
-        if (dbServerKey) privateKey = dbServerKey.replace(/\\n/g, '\n');
+        if (dbServerKey) privateKey = dbServerKey.replaceAll('\\n', '\n');
       } catch (err) {
         this.logger.warn('Could not read FCM credentials from DB, falling back to env vars', err);
       }
@@ -76,7 +76,7 @@ export class FcmService implements IFcmService, OnModuleInit {
     if (!clientEmail) clientEmail = this.config.get<string>('FCM_CLIENT_EMAIL');
     if (!privateKey) {
       const envKey = this.config.get<string>('FCM_PRIVATE_KEY');
-      if (envKey) privateKey = envKey.replace(/\\n/g, '\n');
+      if (envKey) privateKey = envKey.replaceAll('\\n', '\n');
     }
 
     if (!projectId) {
