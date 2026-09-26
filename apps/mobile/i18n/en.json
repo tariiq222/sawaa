@@ -126,7 +126,14 @@
     "notifications": "Notifications",
     "profile": "Profile"
   },
+  "explore": {
+    "all": "All",
+    "searchPlaceholder": "Search clinics, services, and specialists"
+  },
   "home": {
+    "assessmentServices": "Assessment and evaluation services",
+    "assessmentServicesEmpty": "Assessment and evaluation services are currently unavailable.",
+    "centerName": "Sawa Center",
     "greeting": "Hello",
     "greetingMorning": "Good morning",
     "greetingAfternoon": "Good afternoon",
@@ -257,6 +264,9 @@
     "completed": "Completed",
     "cancelledStatus": "Cancelled",
     "pendingCancellation": "Pending Cancellation",
+    "cancellationRequestedTitle": "Cancellation requested",
+    "cancellationRequestedMessage": "Your appointment remains active until the center reviews and confirms the request.",
+    "ratingAlreadySubmitted": "You have already rated this appointment",
     "checkedIn": "Checked In",
     "inProgress": "In Progress",
     "noShow": "No Show",
@@ -623,6 +633,7 @@
     "rateStars": "Rate {{count}} stars"
   },
   "guest": {
+    "chooseClinicOrService": "Choose a clinic or service",
     "visitorAccount": "Guest space",
     "accountIntro": "Explore clinics, specialists, and packages without signing in.",
     "accountAppointmentsHint": "If you have booked before, sign in to see your appointments.",
@@ -649,5 +660,10 @@
     "sub": "Confidential sessions with our specialists,\nwithin moments — wherever you are.",
     "signIn": "Login",
     "signUp": "Create Account"
+  },
+  "notFound": {
+    "title": "Page not available",
+    "message": "The link you opened no longer exists or is incorrect.",
+    "back": "Go back"
   }
 }

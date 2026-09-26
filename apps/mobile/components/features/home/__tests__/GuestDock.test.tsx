@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
-import { ImageBackground, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
@@ -25,7 +25,7 @@ jest.mock('@/theme/components/Glass', () => ({
   },
 }));
 
-import { GuestDock, GuestDiscoveryGrid } from '../GuestDock';
+import { GuestDock } from '../GuestDock';
 
 describe('GuestDock', () => {
   beforeEach(() => { mockReplace.mockClear(); mockPush.mockClear(); mockScheme = 'dark'; mockReduceMotion = false; });
@@ -34,12 +34,13 @@ describe('GuestDock', () => {
     const screen = render(<GuestDock active="home" />);
     expect(screen.getAllByRole('tab')).toHaveLength(4);
     expect(screen.getByRole('tab', { name: 'tabs.home' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'clinics.title' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'guest.therapists' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'tabs.appointments' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'tabs.explore' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'tabs.profile' })).toBeTruthy();
-    expect(screen.queryByRole('tab', { name: 'guest.packages' })).toBeNull();
-    fireEvent.press(screen.getByRole('tab', { name: 'guest.therapists' }));
-    expect(mockReplace).toHaveBeenCalledWith('/public-list/therapists');
+    fireEvent.press(screen.getByRole('tab', { name: 'tabs.explore' }));
+    expect(mockReplace).toHaveBeenCalledWith('/explore');
+    fireEvent.press(screen.getByRole('tab', { name: 'tabs.appointments' }));
+    expect(mockReplace).toHaveBeenCalledWith('/appointments');
     fireEvent.press(screen.getByRole('tab', { name: 'tabs.profile' }));
     expect(mockReplace).toHaveBeenCalledWith('/guest-account');
   });
@@ -50,10 +51,11 @@ describe('GuestDock', () => {
     expect(mockReplace).toHaveBeenCalledWith('/home');
   });
 
-  it('reselects the current list to clear any route filter', () => {
+  it('routes a legacy directory page back to Explore', () => {
     const screen = render(<GuestDock active="therapists" />);
-    fireEvent.press(screen.getByRole('tab', { name: 'guest.therapists' }));
-    expect(mockReplace).toHaveBeenCalledWith('/public-list/therapists');
+    expect(screen.getByRole('tab', { name: 'tabs.explore' }).props.accessibilityState).toEqual({ selected: true });
+    fireEvent.press(screen.getByRole('tab', { name: 'tabs.explore' }));
+    expect(mockReplace).toHaveBeenCalledWith('/explore');
   });
 
   it('uses a separate glass lens for the selected light-mode tab', () => {
@@ -72,24 +74,8 @@ describe('GuestDock', () => {
       const value = StyleSheet.flatten(screen.getByTestId('dock-glass-lens').props.style).transform[0].translateX;
       return typeof value === 'number' ? value : value.__getValue();
     };
-    expect(lensPosition()).toBe(8);
+    expect(lensPosition()).toBe(1);
     fireEvent(tabs[0], 'layout', { nativeEvent: { layout: { x: 50, width: 70 } } });
-    expect(lensPosition()).toBe(58);
-  });
-
-  it('offers icon-led public destinations on the home screen', () => {
-    const screen = render(<GuestDiscoveryGrid />);
-    fireEvent.press(screen.getByRole('button', { name: 'clinics.title' }));
-    expect(mockPush).toHaveBeenCalledWith('/public-list/clinics');
-    expect(screen.getByRole('button', { name: 'guest.programs' })).toBeTruthy();
-  });
-
-  it('shows four image-backed discovery cards with a short description for each section', () => {
-    const screen = render(<GuestDiscoveryGrid />);
-    expect(screen.UNSAFE_getAllByType(ImageBackground)).toHaveLength(4);
-    expect(screen.getByText('guest.clinicsDescription')).toBeTruthy();
-    expect(screen.getByText('guest.therapistsDescription')).toBeTruthy();
-    expect(screen.getByText('guest.packagesDescription')).toBeTruthy();
-    expect(screen.getByText('guest.programsDescription')).toBeTruthy();
+    expect(lensPosition()).toBe(51);
   });
 });

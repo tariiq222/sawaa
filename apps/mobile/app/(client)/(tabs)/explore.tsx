@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { GuestDiscoveryGrid } from '@/components/features/home/GuestDock';
+import { ExploreDirectory } from '@/components/features/explore/ExploreDirectory';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { AquaBackground } from '@/theme/sawaa';
@@ -21,7 +21,7 @@ export default function ExploreScreen() {
         <Text accessibilityRole="header" style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}>
           {t('tabs.explore')}
         </Text>
-        <GuestDiscoveryGrid />
+        <ExploreDirectory />
       </ScrollView>
     </AquaBackground>
   );

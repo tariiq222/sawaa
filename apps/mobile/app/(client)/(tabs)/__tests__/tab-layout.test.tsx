@@ -3,6 +3,7 @@ import { render } from '@testing-library/react-native';
 
 const mockNativeTabsProps = jest.fn();
 const mockTriggerNames: string[] = [];
+const mockLabels: Array<{ text: string; hidden?: boolean }> = [];
 const mockTriggerProps: Array<{ name: string; unstable_nativeProps?: { tabBarItemAccessibilityLabel?: string } }> = [];
 jest.mock('expo-router/unstable-native-tabs', () => {
   const Tabs = ({ children, ...props }: { children: React.ReactNode }) => {
@@ -17,7 +18,10 @@ jest.mock('expo-router/unstable-native-tabs', () => {
     },
     {
       Icon: () => null,
-      Label: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+      Label: ({ children, hidden }: { children: string; hidden?: boolean }) => {
+        mockLabels.push({ text: children, hidden });
+        return <>{children}</>;
+      },
     },
   );
   Tabs.Trigger = Trigger;
@@ -37,19 +41,26 @@ describe('client tab navigation', () => {
   beforeEach(() => {
     mockNativeTabsProps.mockClear();
     mockTriggerNames.length = 0;
+    mockLabels.length = 0;
     mockTriggerProps.length = 0;
     mockScheme = 'light';
   });
 
   it('offers home, explore, my appointments, and account as the only client tabs', () => {
     render(<ClientTabsLayout />);
-    expect([...mockTriggerNames].reverse()).toEqual(['home', 'explore', 'appointments', 'account']);
+    expect([...mockTriggerNames].reverse()).toEqual(['home', 'appointments', 'explore', 'account']);
   });
 
-  it('keeps an accessible name for each icon-only native tab', () => {
+  it('shows the four tab labels and keeps an accessible name for each', () => {
     render(<ClientTabsLayout />);
     expect([...mockTriggerProps].reverse().map((props) => props.unstable_nativeProps?.tabBarItemAccessibilityLabel))
-      .toEqual(['tabs.home', 'tabs.explore', 'tabs.myAppointments', 'tabs.profile']);
+      .toEqual(['tabs.home', 'tabs.myAppointments', 'tabs.explore', 'tabs.profile']);
+    expect([...mockLabels].reverse()).toEqual([
+      { text: 'tabs.home', hidden: undefined },
+      { text: 'tabs.myAppointments', hidden: undefined },
+      { text: 'tabs.explore', hidden: undefined },
+      { text: 'tabs.profile', hidden: undefined },
+    ]);
   });
 
   it('uses brand teal instead of the default blue selection', () => {

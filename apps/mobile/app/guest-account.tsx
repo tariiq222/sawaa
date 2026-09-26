@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays, CircleUserRound } from 'lucide-react-native';
 
+import { Glass } from '@/theme/components/Glass';
 import { GuestDock } from '@/components/features/home/GuestDock';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { useDir } from '@/hooks/useDir';
@@ -27,7 +28,7 @@ export default function GuestAccountScreen() {
         <Text accessibilityRole="header" style={[styles.title, { color: colors.ink[900], fontFamily: bold, textAlign: dir.textAlign }]}>
           {t('tabs.profile')}
         </Text>
-        <View style={[styles.card, { backgroundColor: colors.glass.opaqueBg }]}>
+        <Glass variant="strong" style={styles.card}>
           <View style={[styles.heading, { flexDirection: dir.row }]}>
             <AppIcon sf="person.crop.circle" fallback={CircleUserRound} size={27} color={colors.teal[700]} />
             <Text style={[styles.cardTitle, { color: colors.ink[900], fontFamily: bold, textAlign: dir.textAlign }]}>
@@ -37,8 +38,8 @@ export default function GuestAccountScreen() {
           <Text style={[styles.body, { color: colors.ink[700], fontFamily: regular, textAlign: dir.textAlign }]}>
             {t('guest.accountIntro')}
           </Text>
-        </View>
-        <View style={[styles.card, { backgroundColor: colors.glass.opaqueBg }]}>
+        </Glass>
+        <Glass variant="strong" style={styles.card}>
           <View style={[styles.heading, { flexDirection: dir.row }]}>
             <AppIcon sf="calendar" fallback={CalendarDays} size={25} color={colors.teal[700]} />
             <Text style={[styles.cardTitle, { color: colors.ink[900], fontFamily: bold, textAlign: dir.textAlign }]}>
@@ -55,7 +56,7 @@ export default function GuestAccountScreen() {
               {t('guest.signInForAppointments')}
             </Text>
           </Pressable>
-        </View>
+        </Glass>
       </ScrollView>
       <GuestDock active="account" />
     </AquaBackground>

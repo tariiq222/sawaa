@@ -194,14 +194,14 @@ describe('Glass unified renderer accessibility fallback', () => {
     expect(UNSAFE_getAllByType(View).some((view) => StyleSheet.flatten(view.props.style)?.padding === 12)).toBe(true);
   });
 
-  it('keeps native interactivity and maps soft to the clear glass treatment', () => {
+  it('keeps native interactivity while sharing the same material across surface variants', () => {
     mockReduceTransparency = false;
     mockIncreasedContrast = false;
     mockGlassApiAvailable = true;
     mockScheme = 'light';
     const { getByTestId } = render(<Glass variant="soft" interactive onPress={() => {}} testID="soft-action" />);
 
-    expect(getByTestId('native-glass').props.glassEffectStyle).toBe('clear');
+    expect(getByTestId('native-glass').props.glassEffectStyle).toBe('regular');
     expect(getByTestId('native-glass').props.isInteractive).toBe(true);
   });
 

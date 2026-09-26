@@ -16,7 +16,7 @@ import {
   Moon,
   Phone as PhoneIcon,
   Settings,
-  Ticket,
+  Ticket, UsersRound, ClipboardList,
 } from 'lucide-react-native';
 
 import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
@@ -104,6 +104,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
     icon: React.ReactNode;
     label: { ar: string; en: string };
     color: string;
+    group: 'care' | 'preferences' | 'support';
     meta?: { ar: string; en: string };
     toggle?: boolean;
     onToggle?: () => void;
@@ -111,12 +112,21 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   };
 
   const settingsItems: SettingItem[] = [
-    { icon: <Ticket size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.balance'), en: t('packages.balance') }, color: colors.teal[600], onPress: () => router.push('/(client)/packages/purchases') },
-    { icon: <Lock size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.privacySecurity'), en: t('settings.privacySecurity') }, color: colors.teal[600], onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
-    { icon: <Bell size={18} color={colors.accent.violet} strokeWidth={1.75} />, label: { ar: t('settings.pushNotifications'), en: t('settings.pushNotifications') }, color: colors.accent.violet, onPress: () => router.push('/(client)/settings-notifications') },
-    { icon: <Moon size={18} color={colors.ink[700]} strokeWidth={1.75} />, label: { ar: t('settings.darkMode'), en: t('settings.darkMode') }, color: colors.ink[700], toggle: darkMode, onToggle: () => setThemeMode(darkMode ? 'light' : 'dark') },
-    { icon: <Settings size={18} color={colors.ink[500]} strokeWidth={1.75} />, label: { ar: t('settings.title'), en: t('settings.title') }, color: colors.ink[500], onPress: () => router.push('/(client)/settings') },
+    { group: 'care', icon: <Ticket size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.title'), en: t('packages.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/packages') },
+    { group: 'care', icon: <UsersRound size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('groups.title'), en: t('groups.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/groups') },
+    { group: 'care', icon: <ClipboardList size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('tabs.records'), en: t('tabs.records') }, color: colors.teal[600], onPress: () => router.push('/(client)/(tabs)/records') },
+    { group: 'care', icon: <Ticket size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.balance'), en: t('packages.balance') }, color: colors.teal[600], onPress: () => router.push('/(client)/packages/purchases') },
+    { group: 'support', icon: <Lock size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.privacySecurity'), en: t('settings.privacySecurity') }, color: colors.teal[600], onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
+    { group: 'preferences', icon: <Bell size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.pushNotifications'), en: t('settings.pushNotifications') }, color: colors.teal[600], onPress: () => router.push('/(client)/settings-notifications') },
+    { group: 'preferences', icon: <Moon size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.darkMode'), en: t('settings.darkMode') }, color: colors.teal[600], toggle: darkMode, onToggle: () => setThemeMode(darkMode ? 'light' : 'dark') },
+    { group: 'preferences', icon: <Settings size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.title'), en: t('settings.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/settings') },
   ];
+
+  const settingGroups = [
+    { key: 'care', title: dir.isRTL ? 'الرعاية والسجلات' : 'Care and records' },
+    { key: 'preferences', title: dir.isRTL ? 'التفضيلات' : 'Preferences' },
+    { key: 'support', title: dir.isRTL ? 'المساعدة والسياسات' : 'Help and policies' },
+  ] as const;
 
   return (
     <AquaBackground>
@@ -145,6 +155,9 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
           </View>
         </Animated.View>
 
+        <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+          {dir.isRTL ? 'البيانات الشخصية' : 'Personal details'}
+        </Text>
         <Animated.View entering={FadeInDown.delay(100).duration(700).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.xl} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
@@ -196,48 +209,60 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
           </Glass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(220).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.settingsCard}>
-            {settingsItems.map((it, i) => (
-              <Pressable
-                key={it.label.en}
-                onPress={it.onToggle ?? it.onPress}
-                accessibilityRole={it.toggle !== undefined ? 'switch' : 'button'}
-                accessibilityState={it.toggle !== undefined ? { checked: it.toggle } : undefined}
-                style={[
-                  styles.settingRow,
-                  { flexDirection: dir.row },
-                  i < settingsItems.length - 1 && styles.settingDivider,
-                ]}
-              >
-                <View style={[styles.settingIcon, { backgroundColor: `${it.color}1e` }]}>
-                  {it.icon}
-                </View>
-                <Text style={[styles.settingLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? it.label.ar : it.label.en}
-                </Text>
-                {it.meta && (
-                  <Text style={[styles.settingMeta, { fontFamily: f400, fontWeight: '400' }]}>
-                    {dir.isRTL ? it.meta.ar : it.meta.en}
-                  </Text>
-                )}
-                {it.toggle !== undefined ? (
-                  <View style={[
-                    styles.toggle,
-                    { backgroundColor: it.toggle ? colors.teal[500] : withAlpha(colors.ink[900], 0.15) },
-                  ]}>
-                    <View style={[
-                      styles.toggleKnob,
-                      it.toggle ? styles.toggleKnobOn : styles.toggleKnobOff,
-                    ]} />
-                  </View>
-                ) : (
-                  <Chevron size={14} color={colors.ink[400]} strokeWidth={2} />
-                )}
-              </Pressable>
-            ))}
-          </Glass>
-        </Animated.View>
+        {settingGroups.map((group, groupIndex) => {
+          const groupItems = settingsItems.filter((item) => item.group === group.key);
+          if (!groupItems.length) return null;
+          return (
+            <Animated.View
+              key={group.key}
+              entering={FadeInDown.delay(220 + groupIndex * 80).duration(700).easing(Easing.out(Easing.cubic))}
+            >
+              <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                {group.title}
+              </Text>
+              <Glass variant="strong" radius={sawaaRadius.xl} style={styles.settingsCard}>
+                {groupItems.map((it, i) => (
+                  <Pressable
+                    key={it.label.en}
+                    onPress={it.onToggle ?? it.onPress}
+                    accessibilityRole={it.toggle !== undefined ? 'switch' : 'button'}
+                    accessibilityState={it.toggle !== undefined ? { checked: it.toggle } : undefined}
+                    style={[
+                      styles.settingRow,
+                      { flexDirection: dir.row },
+                      i < groupItems.length - 1 && styles.settingDivider,
+                    ]}
+                  >
+                    <View style={[styles.settingIcon, { backgroundColor: `${it.color}1e` }]}>
+                      {it.icon}
+                    </View>
+                    <Text style={[styles.settingLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
+                      {dir.isRTL ? it.label.ar : it.label.en}
+                    </Text>
+                    {it.meta && (
+                      <Text style={[styles.settingMeta, { fontFamily: f400, fontWeight: '400' }]}>
+                        {dir.isRTL ? it.meta.ar : it.meta.en}
+                      </Text>
+                    )}
+                    {it.toggle !== undefined ? (
+                      <View style={[
+                        styles.toggle,
+                        { backgroundColor: it.toggle ? colors.teal[500] : withAlpha(colors.ink[900], 0.15) },
+                      ]}>
+                        <View style={[
+                          styles.toggleKnob,
+                          it.toggle ? styles.toggleKnobOn : styles.toggleKnobOff,
+                        ]} />
+                      </View>
+                    ) : (
+                      <Chevron size={14} color={colors.ink[400]} strokeWidth={2} />
+                    )}
+                  </Pressable>
+                ))}
+              </Glass>
+            </Animated.View>
+          );
+        })}
 
         {contactPhone ? (
           <Animated.View entering={FadeInDown.delay(340).duration(700).easing(Easing.out(Easing.cubic))}>
@@ -280,7 +305,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
-  scroll: { paddingHorizontal: 16, gap: 14 },
+  scroll: { paddingHorizontal: 18, gap: 16 },
   titleRow: { alignItems: 'center', gap: 10, paddingHorizontal: 4 },
   backBtn: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   pageTitle: { fontSize: 22, color: colors.ink[900], paddingHorizontal: 4 },
@@ -318,6 +343,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnTy
   statN: { fontSize: 18, color: colors.teal[700] },
   statL: { fontSize: 10.5, color: colors.ink[500], marginTop: 2 },
   settingsCard: { padding: 0 },
+  sectionTitle: { fontSize: 14, color: colors.ink[700], marginBottom: 8, paddingHorizontal: 4 },
   settingRow: { alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14 },
   settingDivider: { borderBottomWidth: 0.5, borderBottomColor: colors.glass.border },
   settingIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

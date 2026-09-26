@@ -106,7 +106,12 @@ export default function CalendarScreen() {
               entering={reduceMotion ? undefined : FadeInDown.delay(240 + index * 70).duration(600).easing(Easing.out(Easing.cubic))}
             >
               <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.md}>
-                <View style={[styles.apptRow, { flexDirection: dir.row }]}>
+                <Pressable
+                  onPress={() => router.push(`/(employee)/appointment/${item.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${dayTitle} ${item.client ? `${item.client.firstName} ${item.client.lastName}` : t('doctor.clientRecord')} ${item.startTime} ${t(getStatusLabel(item.status))}`}
+                  style={({ pressed }) => [styles.apptRow, { flexDirection: dir.row, opacity: pressed ? 0.7 : 1 }]}
+                >
                   <View style={[styles.timeCol, { flexDirection: dir.row }]}>
                     <Clock size={14} strokeWidth={1.5} color={colors.ink[400]} />
                     <Text style={[styles.timeText, { writingDirection: dir.writingDirection }]}>
@@ -122,7 +127,7 @@ export default function CalendarScreen() {
                     </Text>
                   </View>
                   <StatusPill status={item.status} label={t(getStatusLabel(item.status))} />
-                </View>
+                </Pressable>
               </Glass>
             </Animated.View>
           )}

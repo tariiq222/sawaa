@@ -33,6 +33,7 @@ export default function BookingScheduleScreen() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{
+    clinicId?: string;
     serviceId?: string;
     employeeId?: string;
     branchId?: string;
@@ -148,6 +149,7 @@ export default function BookingScheduleScreen() {
     router.push({
       pathname: bookingStepPath('confirm', signedIn),
       params: {
+        clinicId: params.clinicId,
         serviceId: params.serviceId,
         employeeId: params.employeeId ?? '',
         branchId,
@@ -258,19 +260,19 @@ export default function BookingScheduleScreen() {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
-    marginTop: sawaaSpacing.sm,
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
     color: colors.ink[500],
-    marginTop: sawaaSpacing.xs,
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
   slotsHead: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },

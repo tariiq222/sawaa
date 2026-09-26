@@ -6,10 +6,12 @@ import en from '../../i18n/en.json';
 import ar from '../../i18n/ar.json';
 
 let mockLocale: 'en' | 'ar' = 'en';
+let mockLoginBooking: string | undefined;
+let mockLoginRedirect: string | undefined;
 const mockPush = jest.fn();
 const mockRefetch = jest.fn();
 const mockBookings = jest.fn();
-jest.mock('expo-router', () => ({ router: { push: mockPush }, useRouter: () => ({ push: mockPush }), useLocalSearchParams: () => ({}) }));
+jest.mock('expo-router', () => ({ router: { push: mockPush }, useRouter: () => ({ push: mockPush }), useLocalSearchParams: () => ({ booking: mockLoginBooking, redirect: mockLoginRedirect }) }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key.split('.').reduce<unknown>((value, part) =>
     (value as Record<string, unknown>)?.[part], mockLocale === 'ar' ? require('../../i18n/ar.json') : require('../../i18n/en.json')) ?? key }),
@@ -49,6 +51,8 @@ import LoginScreen from '../../app/(auth)/login';
 beforeEach(() => {
   jest.clearAllMocks();
   mockLocale = 'en';
+  mockLoginBooking = undefined;
+  mockLoginRedirect = undefined;
   mockBookings.mockReturnValue({ data: [], isLoading: false, isError: false, refetch: mockRefetch });
 });
 
@@ -104,6 +108,25 @@ describe('login navigation copy and touch targets', () => {
     const screen = render(<LoginScreen />);
     fireEvent.press(screen.getByText(copy.auth.forgotPassword.linkLabel));
     expect(mockPush).toHaveBeenCalledWith('/(auth)/forgot-password');
+  });
+
+  it('carries booking and redirect context through forgot-password and registration', () => {
+    mockLoginBooking = '{"serviceId":"service-1"}';
+    mockLoginRedirect = '/(client)/booking/confirm?serviceId=service-1';
+    const screen = render(<LoginScreen />);
+
+    fireEvent.press(screen.getByText(en.auth.forgotPassword.linkLabel));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/(auth)/forgot-password',
+      params: { booking: mockLoginBooking, redirect: mockLoginRedirect },
+    });
+    mockPush.mockClear();
+
+    fireEvent.press(screen.getByRole('link', { name: en.auth.createAccount }));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/(auth)/register',
+      params: { booking: mockLoginBooking, redirect: mockLoginRedirect },
+    });
   });
 
   it('provides at least 44-point targets for both navigation links', () => {

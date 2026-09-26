@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -10,7 +10,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Apple, Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
@@ -23,9 +22,15 @@ import { formatHalalas } from '@/lib/money';
 import type { DeliveryType } from '@/types/booking-enums';
 import { useBankTransferSettings } from '@/hooks/queries';
 import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
-
+import { useAppSelector } from '@/hooks/use-redux';
+import {
+  bookingPaymentDraft,
+  clearPendingBookingCheckout,
+  resolvePendingBookingResume,
+  savePendingBookingCheckout,
+  type BookingPaymentDraft,
+} from '@/features/booking/payment-resume-state';
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
-
 export default function BookingPaymentScreen() {
   const colors = useSawaaColors();
   const { theme } = useTheme();
@@ -53,66 +58,81 @@ export default function BookingPaymentScreen() {
   const f700 = getFontName(dir.locale, '700');
   const [method, setMethod] = useState<Method>('card');
   const [submitting, setSubmitting] = useState(false);
-  // The booking row (and its invoice) is created on the first attempt. Holding
-  // it here means a failed payment start or an abandoned gateway resumes THAT
-  // invoice instead of creating a second booking for the same slot. A resume
-  // also arrives through the route params when the success screen sends the
-  // user back to pay the invoice it already holds.
-  const [createdBooking, setCreatedBooking] = useState<{
-    bookingId: string;
-    invoiceId: string | null;
-  } | null>(
-    params.bookingId && params.invoiceId
-      ? { bookingId: params.bookingId, invoiceId: params.invoiceId }
-      : null,
-  );
+  const userId = useAppSelector((state) => state.auth.user?.id ?? null);
+  const draft = useMemo<BookingPaymentDraft | null>(() => bookingPaymentDraft({ branchId: params.branchId, employeeId: params.employeeId, serviceId: params.serviceId, scheduledAt: params.scheduledAt, durationOptionId: params.durationOptionId, deliveryType: params.deliveryType }), [params.branchId, params.employeeId, params.serviceId, params.scheduledAt, params.durationOptionId, params.deliveryType]);
+  const [createdBooking, setCreatedBooking] = useState<{ bookingId: string; invoiceId: string | null } | null>(null);
+  const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
-
-  // params.amount is integer halalas (set by confirm.tsx from service.price).
   const total = params.amount ? Number(params.amount) : 0;
   const formatMoney = (halalas: number) =>
     `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
-
   const methods: Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }> = [
     { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: colors.teal[600] },
-    { key: 'apple_pay', icon: <Apple size={20} color={colors.ink[900]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.ink[900] },
-    { key: 'bank_transfer', icon: <Banknote size={20} color={colors.accent.amber} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: colors.accent.amber },
+    { key: 'apple_pay', icon: <Apple size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.teal[600] },
+    { key: 'bank_transfer', icon: <Banknote size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: colors.teal[600] },
   ];
   const availableMethods = methods.filter(
     (paymentMethod) => paymentMethod.key !== 'bank_transfer' ||
       isClientBankTransferAvailable(bankTransferSettings),
   );
-
+  useEffect(() => {
+    let active = true;
+    setResumeState('loading');
+    setCreatedBooking(null);
+    if (!userId || (!draft && !params.bookingId)) { setResumeState('invalid'); return () => { active = false; }; }
+    void resolvePendingBookingResume(userId, draft, params.bookingId
+      ? { bookingId: params.bookingId, ...(params.invoiceId ? { invoiceId: params.invoiceId } : {}) } : undefined)
+      .then((result) => {
+        if (!active) return;
+        if (result.kind === 'invalid' || (result.kind === 'missing' && !!params.bookingId)) {
+          setResumeState('invalid');
+        } else if (result.kind === 'missing') {
+          setResumeState('ready');
+        } else if (result.kind === 'complete') {
+          if (result.checkout.draft) void clearPendingBookingCheckout(userId, result.checkout.draft).catch(() => undefined);
+          router.replace({ pathname: '/(client)/booking/success', params: {
+            bookingId: result.booking.id, ...(result.booking.invoiceId ? { invoiceId: result.booking.invoiceId } : {}),
+          } });
+        } else if (result.kind === 'ready') {
+          setCreatedBooking({ bookingId: result.checkout.bookingId, invoiceId: result.checkout.invoiceId });
+          setResumeState('ready');
+        }
+      })
+      .catch(() => { if (active) setResumeState('invalid'); });
+    return () => { active = false; };
+  }, [draft, params.bookingId, params.invoiceId, router, userId]);
   const canPay =
-    (!!createdBooking ||
-      (!!params.serviceId &&
-        !!params.employeeId &&
-        !!params.branchId &&
-        !!params.scheduledAt)) &&
+    resumeState === 'ready' &&
+    (!!createdBooking || !!draft) &&
     !submitting;
-
   const handlePay = async () => {
     if (!canPay) return;
     setSubmitting(true);
+    let resumeSafe = Boolean(createdBooking);
     try {
-      // Reuse the booking created by a previous attempt on this screen. Only a
-      // first attempt (or one whose create call itself failed) creates a row.
       let booking = createdBooking;
       if (!booking) {
-        const created = await clientBookingsService.create({
-          branchId: params.branchId!,
-          employeeId: params.employeeId!,
-          serviceId: params.serviceId!,
-          scheduledAt: params.scheduledAt!,
-          durationOptionId: params.durationOptionId,
-          deliveryType: params.deliveryType,
-        });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        booking = { bookingId: created.id, invoiceId: created.invoiceId ?? null };
+        if (!userId || !draft) throw new Error('Booking details are unavailable');
+        try {
+          const created = await clientBookingsService.create({
+            branchId: params.branchId!,
+            employeeId: params.employeeId!,
+            serviceId: params.serviceId!,
+            scheduledAt: params.scheduledAt!,
+            durationOptionId: params.durationOptionId,
+            deliveryType: params.deliveryType,
+          });
+          booking = { bookingId: created.id, invoiceId: created.invoiceId ?? null };
+          await savePendingBookingCheckout(userId, draft, booking);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          resumeSafe = true;
+        } catch (error) {
+          setResumeState('invalid');
+          throw error;
+        }
         setCreatedBooking(booking);
       }
-
       if (method === 'bank_transfer') {
         if (!booking.invoiceId) {
           router.replace({
@@ -131,7 +151,6 @@ export default function BookingPaymentScreen() {
         });
         return;
       }
-
       if (!booking.invoiceId) {
         router.replace({
           pathname: '/(client)/booking/success',
@@ -139,16 +158,10 @@ export default function BookingPaymentScreen() {
         });
         return;
       }
-
       const payment = await clientPaymentsService.initPayment(
         booking.invoiceId,
         method === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
       );
-
-      // Track whether the user explicitly dismissed/cancelled the gateway
-      // browser. The backend (polled on the success screen) is the source of
-      // truth for the payment state, but if the user backed out without
-      // completing the redirect we must NOT optimistically claim success.
       let webResult: WebBrowser.WebBrowserAuthSessionResult | null = null;
       if (payment.redirectUrl) {
         webResult = await WebBrowser.openAuthSessionAsync(
@@ -163,17 +176,13 @@ export default function BookingPaymentScreen() {
           bookingId: booking.bookingId,
           invoiceId: booking.invoiceId,
           paymentId: payment.paymentId,
-          // Carried so the success screen can send the user back to THIS
-          // invoice if the payment did not go through.
           ...(params.amount ? { amount: String(total) } : {}),
           ...(params.currency ? { currency: params.currency } : {}),
-          // 'success' | 'cancel' | 'dismiss' | 'locked' — the success screen
-          // uses this to short-circuit to the failed state when the user aborted
-          // the gateway and the backend has not confirmed the payment.
           webResult: webResult?.type ?? 'success',
         },
       });
     } catch (err) {
+      if (!resumeSafe) setResumeState('invalid');
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         (dir.isRTL ? 'تعذّر إكمال الدفع. حاولي مرة أخرى.' : 'Could not continue payment. Try again.');
@@ -250,7 +259,7 @@ export default function BookingPaymentScreen() {
         entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
         style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
       >
-        <Pressable onPress={handlePay} disabled={!canPay}>
+        <Pressable testID="booking-payment-submit" onPress={handlePay} disabled={!canPay}>
           <LinearGradient
             colors={theme.colors.primaryGradient}
             start={{ x: 0, y: 0 }}
@@ -275,24 +284,24 @@ export default function BookingPaymentScreen() {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
-    marginTop: sawaaSpacing.sm,
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
     color: colors.ink[500],
-    marginTop: sawaaSpacing.xs,
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
-  methodCard: { padding: sawaaSpacing.lg },
-  methodRow: { alignItems: 'center', gap: sawaaSpacing.lg },
+  methodCard: { padding: sawaaSpacing.md },
+  methodRow: { alignItems: 'center', gap: sawaaSpacing.md },
   methodIcon: {
     width: 44,
     height: 44,

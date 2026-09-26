@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Bell, Search } from 'lucide-react-native';
 
@@ -60,16 +60,15 @@ export function HomeTopBar({ f600, isClient = true }: HomeTopBarProps) {
       <View style={styles.topBarLeft}>
         <Glass variant="regular" radius={21} style={styles.iconBtn}>
           <Pressable
-            onPress={() => router.push(isClient ? '/(client)/therapists' : '/public-list/therapists')}
+            onPress={() => router.push(isClient ? '/(client)/(tabs)/explore' : '/explore')}
             style={styles.iconBtnInner}
             accessibilityRole="button"
-            accessibilityLabel={t('home.searchTherapists')}
+            accessibilityLabel={t('tabs.explore')}
           >
             <AppIcon sf="magnifyingglass" fallback={Search} size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
           </Pressable>
         </Glass>
         {isClient ? <NotificationButton /> : null}
-      </View>
       {isClient ? (
         <Glass variant="regular" radius={21} style={styles.avatarBtn}>
           <Pressable onPress={() => router.push('/(client)/profile')} style={styles.avatarInner}
@@ -78,6 +77,12 @@ export function HomeTopBar({ f600, isClient = true }: HomeTopBarProps) {
           </Pressable>
         </Glass>
       ) : null}
+      </View>
+      <View style={styles.brand}>
+        <Image source={require('@/assets/sawa/logo.png')} resizeMode="contain" accessible={false}
+          style={[styles.brandLogo, { tintColor: sawaaColors.teal[700] }]} />
+        <Text style={[styles.brandName, { fontFamily: f600, color: sawaaColors.ink[900] }]}>{t('home.centerName')}</Text>
+      </View>
     </View>
   );
 }
@@ -90,6 +95,9 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: Re
     paddingHorizontal: 4,
   },
   topBarLeft: { flexDirection: 'row', gap: 8 },
+  brand: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
+  brandLogo: { width: 38, height: 46 },
+  brandName: { fontSize: 16, lineHeight: 24 },
   iconBtn: { width: 42, height: 42 },
   iconBtnInner: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   avatarBtn: { width: 42, height: 42 },

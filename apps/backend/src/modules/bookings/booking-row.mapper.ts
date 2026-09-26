@@ -74,6 +74,12 @@ export interface MapBookingRowOptions {
    * already verified the caller is the meeting host.
    */
   includeHostUrls?: boolean;
+  /**
+   * Client-only rating state. This is loaded by the mobile detail path after
+   * ownership has been checked; keep it optional so dashboard reads do not
+   * pay for a rating query or expose client-specific state.
+   */
+  hasRated?: boolean;
 }
 
 export function mapBookingRow(b: Booking, relations: BookingRelations, opts: MapBookingRowOptions = {}) {
@@ -193,6 +199,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
       : null,
     intakeFormId: null,
     intakeFormAlreadySubmitted: false,
+    ...(opts.hasRated !== undefined ? { hasRated: opts.hasRated } : {}),
   };
 }
 

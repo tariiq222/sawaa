@@ -26,9 +26,10 @@ import { useDir } from '@/hooks/useDir';
 import { useRequestLoginOtp } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { goBackOrHome } from '@/lib/navigation';
+import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function LoginScreen() {
-  const { booking } = useLocalSearchParams<{ booking?: string }>();
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
@@ -44,6 +45,13 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | undefined>();
 
   const requestOtp = useRequestLoginOtp();
+  const continuation = authContinuationParams(booking, redirect);
+  const forgotPasswordHref = booking || redirect
+    ? { pathname: '/(auth)/forgot-password' as const, params: continuation }
+    : '/(auth)/forgot-password';
+  const registerHref = booking || redirect
+    ? { pathname: '/(auth)/register' as const, params: continuation }
+    : '/(auth)/register';
 
   const handleLogin = useCallback(async () => {
     if (!identifier.trim()) {
@@ -61,14 +69,14 @@ export default function LoginScreen() {
           purpose: 'login',
           identifier: identifier.trim(),
           maskedIdentifier: result.maskedIdentifier,
-          ...(booking ? { booking } : {}),
+          ...authContinuationParams(booking, redirect),
         },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.error.generic'));
     }
-  }, [identifier, requestOtp, router, t, booking]);
+  }, [identifier, requestOtp, router, t, booking, redirect]);
 
   return (
     <AquaBackground>
@@ -197,7 +205,7 @@ export default function LoginScreen() {
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/(auth)/forgot-password');
+                  router.push(forgotPasswordHref);
                 }}
                 accessibilityRole="link"
                 style={[styles.linkTarget, { alignSelf: 'center', marginTop: 4 }]}
@@ -207,7 +215,9 @@ export default function LoginScreen() {
                 </Text>
               </Pressable>
 
-              <Pressable onPress={() => router.push('/(auth)/review-login')} accessibilityRole="button" style={{ alignSelf: 'center' }}>
+              <Pressable onPress={() => {
+                router.push({ pathname: '/(auth)/review-login', params: authContinuationParams(booking, redirect) });
+              }} accessibilityRole="button" style={{ alignSelf: 'center' }}>
                 <Text style={[styles.forgotLink, { fontFamily: f600 }]}>{t('auth.review.link')}</Text>
               </Pressable>
 
@@ -216,8 +226,7 @@ export default function LoginScreen() {
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    if (booking) router.push({ pathname: '/(auth)/register', params: { booking } });
-                    else router.push('/(auth)/register');
+                    router.push(registerHref);
                   }}
                   accessibilityRole="link"
                   style={styles.linkTarget}

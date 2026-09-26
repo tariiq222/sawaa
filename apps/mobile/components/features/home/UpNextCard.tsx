@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight, Video } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
+import { Glass } from '@/theme/components/Glass';
 import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -44,15 +45,15 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
 
   if (loading) {
     return (
-      <View style={[styles.sessionCard, styles.sessionLoading]}>
+      <Glass variant="strong" style={[styles.sessionCard, styles.sessionLoading]}>
         <ActivityIndicator color={sawaaColors.teal[600]} />
-      </View>
+      </Glass>
     );
   }
 
   if (!booking) {
     return (
-      <View style={[styles.sessionCard, styles.emptySession]}>
+      <Glass variant="strong" style={[styles.sessionCard, styles.emptySession]}>
         <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'لا توجد جلسات قادمة' : 'No upcoming sessions'}
         </Text>
@@ -61,7 +62,7 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
             {dir.isRTL ? 'احجزي الآن' : 'Book now'}
           </Text>
         </Pressable>
-      </View>
+      </Glass>
     );
   }
 
@@ -72,7 +73,7 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
     : null;
 
   return (
-    <View style={styles.sessionCard}>
+    <Glass variant="strong" style={styles.sessionCard}>
       <Pressable
         onPress={() => router.push(`/(client)/appointment/${booking.id}`)}
         style={[styles.sessionRow, { flexDirection: dir.row }]}
@@ -103,12 +104,12 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
           <ArrowIcon size={14} color={action.foreground} strokeWidth={2} />
         </View>
       </Pressable>
-    </View>
+    </Glass>
   );
 }
 
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
-  sessionCard: { padding: 14, backgroundColor: sawaaColors.glass.opaqueBg, borderRadius: sawaaRadius.xl },
+  sessionCard: { padding: 14, borderRadius: sawaaRadius.xl },
   sessionLoading: { alignItems: 'center', justifyContent: 'center', minHeight: 76 },
   emptySession: { padding: 18, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 13, color: sawaaColors.ink[700] },

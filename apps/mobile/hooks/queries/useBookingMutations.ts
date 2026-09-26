@@ -38,5 +38,8 @@ export function useRateBooking() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: clientBookingsKeys.detail(vars.id) });
     },
+    onError: (_error, vars) => {
+      qc.invalidateQueries({ queryKey: clientBookingsKeys.detail(vars.id) });
+    },
   });
 }

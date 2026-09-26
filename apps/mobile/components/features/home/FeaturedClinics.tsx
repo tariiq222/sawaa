@@ -1,93 +1,43 @@
 import React from 'react';
-import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Building2, Star } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-
-import { AppIcon } from '@/components/ui/AppIcon';
-import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { Glass } from '@/theme/components/Glass';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/ThemeProvider';
-import { concentricRadius } from '@/theme/sawaa/tokens';
 import type { DirState } from '@/hooks/useDir';
 import { useClinics } from '@/hooks/queries';
+import { useAppSelector } from '@/hooks/use-redux';
 
-const CARD_RADIUS = sawaaRadius.xl;
-const CARD_PADDING = 12;
+interface FeaturedClinicsProps { dir: DirState; f600: string; f700: string }
 
-interface FeaturedClinicsProps {
-  dir: DirState;
-  f600: string;
-  f700: string;
-  isClient?: boolean;
-}
-
-export function FeaturedClinics({ dir, f600, f700, isClient = true }: FeaturedClinicsProps) {
-  const sawaaColors = useSawaaColors();
-  const { scheme } = useTheme();
-  const action = getSawaaRoles(scheme).action;
-  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
+export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
+  const colors = useSawaaColors();
   const router = useRouter();
   const { t } = useTranslation();
+  const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const clinicsQuery = useClinics();
   const clinics = (clinicsQuery.data ?? []).slice(0, 6);
-
   if (clinicsQuery.isLoading || clinics.length === 0) return null;
-
   return (
-    <LocalizedHorizontalScroll
-      dir={dir}
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[styles.hScrollContent, { flexDirection: dir.row }]}
-    >
-      {clinics.map((c) => {
-        const name = dir.isRTL ? c.nameAr : (c.nameEn ?? c.nameAr);
+    <View style={styles.list}>
+      {clinics.map((clinic) => {
+        const name = dir.isRTL ? clinic.nameAr : clinic.nameEn ?? clinic.nameAr;
         return (
-        <View key={c.id} style={styles.clinicCard}>
-          <Pressable
-            onPress={() => router.push(isClient
-              ? { pathname: '/(client)/therapists', params: { clinicId: c.id } }
-              : { pathname: '/public-list/therapists', params: { clinicId: c.id } })}
-            style={styles.clinicInner}
-            accessibilityRole="button"
-            accessibilityLabel={name}
-          >
-            <LinearGradient
-              colors={action.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.clinicIcon}
-            >
-              <AppIcon sf="building.2.fill" fallback={Building2} size={36} color={action.foreground} strokeWidth={1.5} />
-            </LinearGradient>
-            <Text style={[styles.clinicName, { fontFamily: f700, textAlign: dir.textAlign }]}> 
-              {name}
+          <Glass key={clinic.id} variant="strong" radius={20} padding={16}
+            onPress={() => router.push({ pathname: signedIn ? '/(client)/clinic/[id]' : '/public-clinic/[id]', params: { id: clinic.id } })}
+            accessibilityLabel={name} interactive>
+            <Text style={[styles.name, { fontFamily: f700, color: colors.ink[900], textAlign: dir.textAlign }]}>{name}</Text>
+            <Text style={[styles.meta, { fontFamily: f600, color: colors.ink[500], textAlign: dir.textAlign }]}>
+              {t('clinics.therapistsCount', { count: clinic.therapistCount })} · {t('clinics.servicesCount', { count: clinic.serviceCount })}
             </Text>
-            <View style={[styles.clinicMeta, { flexDirection: dir.row }]}> 
-              <View style={[styles.clinicRating, { flexDirection: dir.row }]}> 
-                <Text style={[styles.clinicRatingText, { fontFamily: f600, fontWeight: '600' }]}> 
-                  {t('clinics.therapistsCount', { count: c.therapistCount })}
-                </Text>
-                <AppIcon sf="star.fill" fallback={Star} size={11} color={sawaaColors.accent.amber} strokeWidth={2} />
-              </View>
-            </View>
-          </Pressable>
-        </View>
+          </Glass>
         );
       })}
-    </LocalizedHorizontalScroll>
+    </View>
   );
 }
-
-const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  hScrollContent: { gap: 10, paddingHorizontal: 2 },
-  clinicCard: { width: 170, backgroundColor: sawaaColors.glass.opaqueBg, borderRadius: CARD_RADIUS, overflow: 'hidden' },
-  clinicInner: { padding: CARD_PADDING, gap: 10 },
-  clinicIcon: { height: 88, borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING), alignItems: 'center', justifyContent: 'center' },
-  clinicName: { fontSize: 13.5, color: sawaaColors.ink[900], marginTop: 2 },
-  clinicMeta: { justifyContent: 'space-between', alignItems: 'center' },
-  clinicRating: { alignItems: 'center', gap: 3 },
-  clinicRatingText: { fontSize: 11.5, color: sawaaColors.ink[900] },
+const styles = StyleSheet.create({
+  list: { gap: 10 },
+  name: { fontSize: 15, lineHeight: 23 },
+  meta: { fontSize: 11, lineHeight: 17, marginTop: 2 },
 });

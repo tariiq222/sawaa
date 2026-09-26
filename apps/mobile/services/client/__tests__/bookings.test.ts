@@ -8,7 +8,7 @@ jest.mock('../../api', () => ({
 }));
 
 import api from '../../api';
-import { clientBookingsService, type BookingsListResponse, type ClientBookingRow } from '../bookings';
+import { clientBookingsService, wasRatedInCurrentSession, type BookingsListResponse, type ClientBookingRow } from '../bookings';
 
 const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock; patch: jest.Mock };
 
@@ -134,8 +134,17 @@ describe('clientBookingsService.getById', () => {
   it('GETs the right detail URL', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: sampleRow });
     const r = await clientBookingsService.getById('b1');
-    expect(r).toEqual(sampleRow);
+    expect(r).toEqual({ ...sampleRow, ratingSubmittedLocally: false });
     expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings/b1');
+  });
+
+  it('preserves the backend booking type and server rating state in the detail response', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: { ...sampleRow, bookingType: 'GROUP', hasRated: true } });
+
+    await expect(clientBookingsService.getById('b1')).resolves.toMatchObject({
+      bookingType: 'group',
+      hasRated: true,
+    });
   });
 
   it('rejects on 401', async () => {
@@ -151,6 +160,7 @@ describe('clientBookingsService.getById', () => {
       invoiceId: 'inv-program',
       invoiceStatus: 'DRAFT',
       paymentStatus: 'pending',
+      type: 'group',
       status: 'pending',
       scheduledAt: '2026-09-25T15:00:00+03:00',
       branchName: 'Main branch',
@@ -263,6 +273,22 @@ describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => 
       '/mobile/client/bookings/b1/rate',
       { score: 5, comment: 'great', isPublic: true },
     );
+  });
+
+  it('marks a booking as rated in this app session only after a successful response', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: { id: 'b-rated-session' } });
+    await clientBookingsService.rate('b-rated-session', { score: 5 });
+    mockedApi.get.mockResolvedValueOnce({ data: { ...sampleRow, id: 'b-rated-session' } });
+
+    expect(wasRatedInCurrentSession('b-rated-session')).toBe(true);
+    await expect(clientBookingsService.getById('b-rated-session')).resolves.toMatchObject({ ratingSubmittedLocally: true });
+  });
+
+  it('recognizes the backend duplicate-rating conflict as already rated in this session', async () => {
+    mockedApi.post.mockRejectedValueOnce({ response: { data: { message: 'Rating already submitted for this booking' } } });
+
+    await expect(clientBookingsService.rate('b-duplicate-session', { score: 5 })).rejects.toBeDefined();
+    expect(wasRatedInCurrentSession('b-duplicate-session')).toBe(true);
   });
 
   it('getJoinUrl returns the zoom join payload', async () => {

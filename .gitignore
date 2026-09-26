@@ -170,3 +170,4 @@ outputs/
 !docs/architecture/
 docs/architecture/*
 !docs/architecture/clinic-service-booking-contract.md
+!docs/architecture/mobile-client-flow.md

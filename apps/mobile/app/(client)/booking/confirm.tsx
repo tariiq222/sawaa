@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/useTheme';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +16,6 @@ import {
   withAlpha,
 } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
-import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
@@ -26,35 +24,19 @@ import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { encodeBookingReturn } from '@/features/booking/guest-booking-flow';
 import { useReduceMotion } from '@/hooks/useA11y';
-import { useCatalogDepartments } from '@/hooks/queries';
+import { useCatalogDepartments, usePublicCatalog } from '@/hooks/queries';
+import { resolveConfirmCatalogSelection, resolveConfirmPrice } from '@/features/booking/confirm-catalog';
+import { formatConfirmDate, formatConfirmTime } from '@/features/booking/confirm-format';
 import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/money';
 import { goBackOrHome } from '@/lib/navigation';
 import type { DeliveryType } from '@/types/booking-enums';
 
-const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-function formatTime(d: Date, isRTL: boolean): string {
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const suffix = h < 12 ? (isRTL ? 'ص' : 'AM') : (isRTL ? 'م' : 'PM');
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
-}
-
-function formatDate(d: Date, isRTL: boolean): string {
-  const month = isRTL ? MONTHS_AR[d.getMonth()] : MONTHS_EN[d.getMonth()];
-  const day = isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate();
-  const year = isRTL ? d.getFullYear().toLocaleString('ar-SA') : d.getFullYear();
-  return isRTL ? `${day} ${month} ${year}` : `${month} ${day}, ${year}`;
-}
-
 export default function BookingConfirmScreen() {
   const colors = useSawaaColors();
-  const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { serviceId, employeeId, branchId, deliveryType, scheduledAt, durationOptionId, chargedPrice, currency } = useLocalSearchParams<{
+  const { clinicId, serviceId, employeeId, branchId, deliveryType, scheduledAt, durationOptionId, chargedPrice, currency } = useLocalSearchParams<{
+    clinicId?: string;
     serviceId?: string;
     employeeId?: string;
     branchId?: string;
@@ -76,14 +58,20 @@ export default function BookingConfirmScreen() {
   const f700 = getFontName(dir.locale, '700');
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
 
-  const catalogQuery = useCatalogDepartments(Boolean(serviceId));
-  const service = catalogQuery.data
-    ?.flatMap((department) => department.services)
-    .find((item) => item.id === serviceId) ?? null;
-  const loading = catalogQuery.isLoading;
-  const error = catalogQuery.isError
+  const catalogQuery = usePublicCatalog(Boolean(serviceId));
+  const departmentsQuery = useCatalogDepartments(Boolean(!clinicId && serviceId));
+  const resolved = useMemo(() => resolveConfirmCatalogSelection(
+    catalogQuery.data,
+    departmentsQuery.data,
+    clinicId,
+    serviceId,
+  ), [catalogQuery.data, departmentsQuery.data, clinicId, serviceId]);
+  const { service, directClinic } = resolved;
+  const activeCatalogQuery = clinicId ? catalogQuery : departmentsQuery;
+  const loading = activeCatalogQuery.isLoading;
+  const error = activeCatalogQuery.isError
     ? (dir.isRTL ? 'تعذّر تحميل الخدمة' : 'Failed to load service')
-    : catalogQuery.data && !service
+    : activeCatalogQuery.data && !service
       ? (dir.isRTL ? 'الخدمة غير متوفرة' : 'Service unavailable')
       : null;
 
@@ -99,54 +87,48 @@ export default function BookingConfirmScreen() {
 
   // Prefer the practitioner's charged price (integer halalas) selected in the
   // duration/delivery step — this is the price the backend will actually
-  // invoice. Fall back to the service base price only when no option was
-  // carried (P1-22: previously always showed the base price). VAT/total are
-  // computed server-side on the invoice — not derived client-side here.
-  const carriedPrice = chargedPrice != null && chargedPrice !== '' ? Number(chargedPrice) : null;
-  const subtotal =
-    carriedPrice != null && Number.isFinite(carriedPrice)
-      ? carriedPrice
-      : service
-        ? Number(service.price)
-        : 0;
-  const total = subtotal;
+  // invoice. Ordinary services may fall back to their base price, while a
+  // DIRECT clinic requires the carried practitioner price because the hidden
+  // catalog row is not the user's price. VAT is computed server-side.
+  const { subtotal, total } = resolveConfirmPrice(service, directClinic, chargedPrice);
   const formatMoney = (halalas: number) =>
     `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
 
   const rows = [
     {
-      icon: <Video size={18} color={colors.accent.violet} strokeWidth={1.75} />,
+      icon: <Video size={18} color={colors.teal[600]} strokeWidth={1.75} />,
       labelAr: 'نوع الزيارة',
       labelEn: 'Visit type',
       valueAr: kindAr,
       valueEn: kindEn,
-      color: colors.accent.violet,
+      color: colors.teal[600],
     },
     {
       icon: <Calendar size={18} color={colors.teal[600]} strokeWidth={1.75} />,
       labelAr: 'التاريخ',
       labelEn: 'Date',
-      valueAr: scheduledDate ? formatDate(scheduledDate, true) : '—',
-      valueEn: scheduledDate ? formatDate(scheduledDate, false) : '—',
+      valueAr: scheduledDate ? formatConfirmDate(scheduledDate, true) : '—',
+      valueEn: scheduledDate ? formatConfirmDate(scheduledDate, false) : '—',
       color: colors.teal[600],
     },
     {
-      icon: <Clock size={18} color={colors.accent.amber} strokeWidth={1.75} />,
+      icon: <Clock size={18} color={colors.teal[600]} strokeWidth={1.75} />,
       labelAr: 'الوقت',
       labelEn: 'Time',
-      valueAr: scheduledDate ? formatTime(scheduledDate, true) : '—',
-      valueEn: scheduledDate ? formatTime(scheduledDate, false) : '—',
-      color: colors.accent.amber,
+      valueAr: scheduledDate ? formatConfirmTime(scheduledDate, true) : '—',
+      valueEn: scheduledDate ? formatConfirmTime(scheduledDate, false) : '—',
+      color: colors.teal[600],
     },
   ];
 
   const handleConfirm = () => {
-    if (!service || !scheduledAt || !branchId || !employeeId || !serviceId) return;
+    if (!service || subtotal == null || !scheduledAt || !branchId || !employeeId || !serviceId) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (!signedIn) {
       router.push({
         pathname: '/(auth)/login',
         params: { booking: encodeBookingReturn({
+          clinicId,
           serviceId, employeeId, branchId, deliveryType: selectedDeliveryType,
           scheduledAt, durationOptionId, amount: String(total),
           currency: currency ?? service.currency,
@@ -157,6 +139,7 @@ export default function BookingConfirmScreen() {
     router.push({
       pathname: '/(client)/booking/payment',
       params: {
+        clinicId,
         serviceId,
         employeeId,
         branchId,
@@ -169,7 +152,7 @@ export default function BookingConfirmScreen() {
     });
   };
 
-  const canContinue = service != null && scheduledDate != null && !!branchId;
+  const canContinue = service != null && subtotal != null && scheduledDate != null && !!branchId;
   const localizedText = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
 
   return (
@@ -232,16 +215,18 @@ export default function BookingConfirmScreen() {
                 tone="danger"
                 title={error}
                 actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'}
-                onAction={() => { void catalogQuery.refetch(); }}
+                onAction={() => { void activeCatalogQuery.refetch(); }}
               />
             ) : service ? (
               <>
                 <View style={[styles.priceRow, { flexDirection: dir.row }]}>
                   <Text style={[styles.priceLabel, { fontFamily: f500, fontWeight: '500' }, localizedText]}>
-                    {dir.isRTL ? service.nameAr : (service.nameEn ?? service.nameAr)}
+                    {directClinic
+                      ? (dir.isRTL ? directClinic.nameAr : (directClinic.nameEn ?? directClinic.nameAr))
+                      : (dir.isRTL ? service.nameAr : (service.nameEn ?? service.nameAr))}
                   </Text>
                   <Text style={[styles.priceValue, { fontFamily: f600, fontWeight: '600' }]}>
-                    {formatMoney(subtotal)}
+                    {subtotal == null ? '—' : formatMoney(subtotal)}
                   </Text>
                 </View>
                 {/* TODO(price-units): VAT/total must come from server invoice */}
@@ -250,7 +235,9 @@ export default function BookingConfirmScreen() {
                   <Text style={[styles.priceLabelBold, { fontFamily: f700 }, localizedText]}>
                     {dir.isRTL ? 'الإجمالي' : 'Total'}
                   </Text>
-                  <Text style={[styles.priceTotal, { fontFamily: f700 }]}>{formatMoney(total)}</Text>
+                  <Text style={[styles.priceTotal, { fontFamily: f700 }]}>
+                    {subtotal == null ? '—' : formatMoney(total)}
+                  </Text>
                 </View>
               </>
             ) : null}
@@ -265,13 +252,22 @@ export default function BookingConfirmScreen() {
       >
         <FloatingActionBar>
           <View style={styles.ctaFlex}>
-            <PrimaryButton
-              label={signedIn ? (dir.isRTL ? 'متابعة الدفع' : 'Continue to payment') : (dir.isRTL ? 'الدخول أو التسجيل للمتابعة' : 'Sign in or register to continue')}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canContinue }}
               onPress={handleConfirm}
               disabled={!canContinue}
-              fontFamily={f700}
-              icon={<GoIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />}
-            />
+              style={{ opacity: canContinue ? 1 : 0.45 }}
+            >
+              <Glass radius={26}>
+                <View style={[styles.continueButton, { flexDirection: dir.row }]}>
+                  <Text style={[styles.continueLabel, { fontFamily: f700 }]}>
+                    {signedIn ? (dir.isRTL ? 'متابعة الدفع' : 'Continue to payment') : (dir.isRTL ? 'الدخول أو التسجيل للمتابعة' : 'Sign in or register to continue')}
+                  </Text>
+                  <GoIcon size={18} color={colors.ink[900]} strokeWidth={2} />
+                </View>
+              </Glass>
+            </Pressable>
           </View>
         </FloatingActionBar>
       </Animated.View>
@@ -280,22 +276,24 @@ export default function BookingConfirmScreen() {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  continueButton: { minHeight: 52, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  continueLabel: { flexShrink: 1, fontSize: 15, lineHeight: 23, color: colors.ink[900], textAlign: 'center' },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
-    marginTop: sawaaSpacing.sm,
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
     color: colors.ink[500],
-    marginTop: sawaaSpacing.xs,
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
-  row: { alignItems: 'center', gap: sawaaSpacing.lg, padding: sawaaSpacing.lg },
+  row: { alignItems: 'center', gap: sawaaSpacing.md, padding: sawaaSpacing.md },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: withAlpha(colors.ink[900], 0.06),

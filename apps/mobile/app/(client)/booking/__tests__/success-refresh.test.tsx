@@ -3,12 +3,14 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockRefetchBooking = jest.fn();
 const mockCheckAgain = jest.fn();
+const mockReplace = jest.fn();
 let mockBooking: { id: string; status: string } | undefined;
 let mockBookingError = false;
+let mockPhase: 'confirmed' | 'failed' = 'confirmed';
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ bookingId: 'booking-1', invoiceId: 'invoice-1' }),
-  useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ replace: mockReplace, back: jest.fn() }),
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-native-reanimated', () => {
@@ -60,7 +62,7 @@ jest.mock('@/hooks/queries', () => ({
 }));
 jest.mock('@/features/booking/use-payment-status', () => {
   const actual = jest.requireActual('@/features/booking/use-payment-status') as typeof import('@/features/booking/use-payment-status');
-  return { ...actual, usePaymentStatus: () => ({ phase: 'confirmed', checkAgain: mockCheckAgain }) };
+  return { ...actual, usePaymentStatus: () => ({ phase: mockPhase, checkAgain: mockCheckAgain }) };
 });
 
 import BookingSuccessScreen from '../success';
@@ -70,6 +72,7 @@ describe('booking success verification', () => {
     jest.clearAllMocks();
     mockBooking = { id: 'booking-1', status: 'PENDING' };
     mockBookingError = false;
+    mockPhase = 'confirmed';
     mockRefetchBooking.mockResolvedValue({ data: mockBooking });
   });
 
@@ -98,5 +101,16 @@ describe('booking success verification', () => {
     });
     await act(async () => { fireEvent.press(screen.getByText('Check again')); });
     await waitFor(() => expect(screen.getByText('Appointment confirmed')).toBeTruthy());
+  });
+
+  it('retries payment against the existing booking and invoice', () => {
+    mockPhase = 'failed';
+    const screen = render(<BookingSuccessScreen />);
+    fireEvent.press(screen.getByText('Try again'));
+
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/payment',
+      params: { bookingId: 'booking-1', invoiceId: 'invoice-1' },
+    });
   });
 });

@@ -28,6 +28,7 @@ const backgroundExceptions = new Set([
   'public-booking/[serviceId].tsx',
   'public-booking/schedule.tsx',
   'public-booking/confirm.tsx',
+  'public-clinic/[id].tsx',
 ]);
 
 function paintsSharedBackground(source: string): boolean {

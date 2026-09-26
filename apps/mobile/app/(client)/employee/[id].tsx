@@ -57,7 +57,7 @@ export default function EmployeeProfileScreen() {
     if (!employee?.isBookable || !selectedServiceId) return;
     router.push({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: selectedServiceId, employeeId: employee.id },
+      params: { serviceId: selectedServiceId, employeeId: employee.id, ...(clinicId ? { clinicId } : {}) },
     });
   };
 

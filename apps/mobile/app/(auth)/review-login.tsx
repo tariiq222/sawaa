@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
@@ -13,8 +13,11 @@ import { useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
 import { authService, loginReviewAccount, SessionSupersededError } from '@/services/auth';
 import { clearSessionAtEpoch, isSessionCurrent } from '@/services/native-session-state';
+import { decodeBookingReturn } from '@/features/booking/guest-booking-flow';
+import { decodeRedirect } from '@/lib/navigation';
 
 export default function ReviewLoginScreen() {
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
   const { t } = useTranslation();
   const colors = useSawaaColors();
   const styles = createStyles(colors);
@@ -41,6 +44,16 @@ export default function ReviewLoginScreen() {
       if (!profile.success || !profile.data || profile.data.role !== 'CLIENT') throw new Error('Client profile unavailable');
       dispatch(setCredentials({ ...result.tokens, user: profile.data }));
       setPassword('');
+      const bookingReturn = decodeBookingReturn(booking);
+      if (bookingReturn) {
+        router.replace({ pathname: '/(client)/booking/payment', params: { ...bookingReturn } });
+        return;
+      }
+      const redirectReturn = decodeRedirect(redirect);
+      if (redirectReturn) {
+        router.replace(redirectReturn);
+        return;
+      }
       router.replace('/(client)/(tabs)/home');
     } catch (error) {
       if (error instanceof SessionSupersededError || (epoch !== undefined && !isSessionCurrent(epoch))) return;

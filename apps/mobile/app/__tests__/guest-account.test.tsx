@@ -12,6 +12,8 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => require
 jest.mock('@/components/features/home/GuestDock', () => ({ GuestDock: () => null }));
 jest.mock('@/components/ui/AppIcon', () => ({ AppIcon: () => null }));
 
+jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
+
 import GuestAccountScreen from '../guest-account';
 
 it('keeps the guest in account until they explicitly ask to sign in for appointments', () => {

@@ -28,9 +28,22 @@ import { useVerifyOtp, useRequestLoginOtp } from '@/hooks/queries';
 import { authService, SessionSupersededError } from '@/services/auth';
 import { isSessionCurrent } from '@/services/native-session-state';
 import { decodeBookingReturn } from '@/features/booking/guest-booking-flow';
+import { decodeRedirect } from '@/lib/navigation';
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN = 60;
+
+function redirectMatchesSession(
+  value: string | string[] | undefined,
+  sessionKind: 'client' | 'staff',
+): boolean {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  const pathname = candidate?.split(/[?#]/, 1)[0] ?? '';
+  const routeGroup = pathname.split('/')[1];
+  return sessionKind === 'staff'
+    ? routeGroup === '(employee)'
+    : routeGroup !== '(employee)';
+}
 
 export default function OtpVerifyScreen() {
   const { t } = useTranslation();
@@ -40,6 +53,7 @@ export default function OtpVerifyScreen() {
     purpose: 'register' | 'login';
     maskedIdentifier: string;
     booking?: string;
+    redirect?: string;
   }>();
   const { identifier = '', purpose = 'register', maskedIdentifier = '' } = params;
   const insets = useSafeAreaInsets();
@@ -83,6 +97,9 @@ export default function OtpVerifyScreen() {
       const result = await verifyOtp.mutateAsync({ identifier, code, purpose });
       verificationEpoch = result.sessionEpoch;
       if (!isSessionCurrent(verificationEpoch)) return;
+      // Older clients may omit sessionKind; those sessions have always used
+      // the client landing path, so keep that fallback explicit for routing.
+      const sessionKind = result.sessionKind ?? 'client';
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Fetch the profile directly after verifyMobileOtp persisted the new
@@ -99,12 +116,19 @@ export default function OtpVerifyScreen() {
         user: profile,
       }));
 
-      const bookingReturn = result.sessionKind === 'client' ? decodeBookingReturn(params.booking) : null;
+      const bookingReturn = sessionKind === 'client' ? decodeBookingReturn(params.booking) : null;
       if (bookingReturn) {
         router.replace({ pathname: '/(client)/booking/payment', params: { ...bookingReturn } });
         return;
       }
-      const destination = result.sessionKind === 'staff'
+      if (redirectMatchesSession(params.redirect, sessionKind)) {
+        const redirect = decodeRedirect(params.redirect);
+        if (redirect) {
+          router.replace(redirect);
+          return;
+        }
+      }
+      const destination = sessionKind === 'staff'
         ? '/(employee)/(tabs)/today'
         : '/(client)/(tabs)/home';
       router.replace(destination);
@@ -121,7 +145,7 @@ export default function OtpVerifyScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t, params.booking]);
+  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t, params.booking, params.redirect]);
 
   const handleResend = useCallback(async () => {
     if (purpose !== 'login') return;

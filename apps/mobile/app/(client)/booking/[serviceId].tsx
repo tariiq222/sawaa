@@ -35,7 +35,7 @@ import { bookingStepPath } from '@/features/booking/guest-booking-flow';
 export default function BookingTypeScreen() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { serviceId, employeeId } = useLocalSearchParams<{ serviceId: string; employeeId?: string }>();
+  const { clinicId, serviceId, employeeId } = useLocalSearchParams<{ clinicId?: string; serviceId: string; employeeId?: string }>();
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -85,6 +85,7 @@ export default function BookingTypeScreen() {
     router.push({
       pathname: bookingStepPath('schedule', signedIn),
       params: {
+        clinicId,
         serviceId,
         employeeId: employeeId ?? '',
         deliveryType: toMobileDeliveryType(opt.deliveryType),
@@ -100,8 +101,7 @@ export default function BookingTypeScreen() {
 
   const iconFor = (deliveryType: 'IN_PERSON' | 'ONLINE') =>
     deliveryType === 'ONLINE' ? Video : Building2;
-  const colorFor = (deliveryType: 'IN_PERSON' | 'ONLINE') =>
-    deliveryType === 'ONLINE' ? colors.accent.violet : colors.teal[600];
+  const colorFor = (_deliveryType: 'IN_PERSON' | 'ONLINE') => colors.teal[600];
 
   const labelFor = (opt: PractitionerBookingOption) => {
     if (opt.label) return opt.label;
@@ -229,12 +229,12 @@ export default function BookingTypeScreen() {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
-    marginVertical: sawaaSpacing.sm,
+    marginVertical: sawaaSpacing.xs,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
@@ -245,8 +245,8 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     paddingHorizontal: sawaaSpacing.xs,
   },
   skeletonBlock: { gap: sawaaSpacing.lg },
-  typeCard: { padding: sawaaSpacing.lg },
-  typeRow: { alignItems: 'center', gap: sawaaSpacing.lg },
+  typeCard: { padding: sawaaSpacing.md },
+  typeRow: { alignItems: 'center', gap: sawaaSpacing.md },
   typeIcon: {
     width: 44,
     height: 44,

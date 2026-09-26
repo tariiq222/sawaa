@@ -33,15 +33,15 @@ describe('HomeTopBar', () => {
   beforeEach(() => mockPush.mockClear());
 
   it.each([
-    ['en', 'Search therapists', 'Notifications', 'Profile'],
-    ['ar', 'البحث عن معالجين', 'الإشعارات', 'الملف الشخصي'],
+    ['en', 'Explore', 'Notifications', 'Profile'],
+    ['ar', 'استكشف', 'الإشعارات', 'الملف الشخصي'],
   ])('labels its buttons from the real %s locale', async (language, search, notifications, profile) => {
     await act(async () => { await i18n.changeLanguage(language as string); });
     const { getByRole } = render(<HomeTopBar f600="System" />);
 
     fireEvent.press(getByRole('button', { name: search as string }));
 
-    expect(mockPush).toHaveBeenCalledWith('/(client)/therapists');
+    expect(mockPush).toHaveBeenCalledWith('/(client)/(tabs)/explore');
     expect(getByRole('button', { name: notifications as string })).toBeTruthy();
     expect(getByRole('button', { name: profile as string })).toBeTruthy();
   });
@@ -49,7 +49,7 @@ describe('HomeTopBar', () => {
   it('keeps only discovery controls for guests', async () => {
     await act(async () => { await i18n.changeLanguage('ar'); });
     const { getByRole, queryByRole } = render(<HomeTopBar f600="System" isClient={false} />);
-    expect(getByRole('button', { name: 'البحث عن معالجين' })).toBeTruthy();
+    expect(getByRole('button', { name: 'استكشف' })).toBeTruthy();
     expect(queryByRole('button', { name: 'تسجيل الدخول' })).toBeNull();
   });
 });

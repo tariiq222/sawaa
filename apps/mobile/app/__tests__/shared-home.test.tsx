@@ -26,6 +26,8 @@ jest.mock('@/hooks/queries', () => ({
   useClinics: () => ({ data: [], refetch: jest.fn() }),
   useGroupSessions: () => ({ data: [], refetch: jest.fn() }),
 }));
+jest.mock('@/components/features/home/HomeAssessmentServices', () => ({ HomeAssessmentServices: () => null }));
+jest.mock('@/components/features/home/HomeDiscoveryCards', () => ({ HomeDiscoveryCards: () => null }));
 jest.mock('@/components/features/home/HomeTopBar', () => ({ HomeTopBar: () => null }));
 jest.mock('@/components/features/home/UpNextCard', () => ({ UpNextCard: () => null }));
 jest.mock('@/components/features/home/FeaturedClinics', () => ({ FeaturedClinics: () => null }));
@@ -33,7 +35,6 @@ jest.mock('@/components/features/home/SupportSessions', () => ({ SupportSessions
 jest.mock('@/components/features/home/TherapistsRow', () => ({ TherapistsRow: () => null }));
 jest.mock('@/components/features/home/GuestDock', () => ({
   GuestDock: () => { const { Text } = require('react-native'); return <Text>guest-dock</Text>; },
-  GuestDiscoveryGrid: () => { const { Text } = require('react-native'); return <Text>guest-grid</Text>; },
 }));
 jest.mock('@/components/features/home/HomeSectionHeading', () => ({ HomeSectionHeading: () => null }));
 
@@ -44,7 +45,6 @@ describe('shared home', () => {
 
   it('renders public sections without a standalone login action or private portal request', () => {
     const screen = render(<HomeScreen />);
-    expect(screen.getByText('guest-grid')).toBeTruthy();
     expect(screen.getByText('guest-dock')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
     expect(mockHome).toHaveBeenCalledWith(false);
@@ -55,7 +55,7 @@ describe('shared home', () => {
     mockHome.mockReturnValue({ data: { upcomingBookings: [], unreadNotifications: [] }, isLoading: true, refetch: jest.fn() });
     const screen = render(<HomeScreen />);
     expect(mockHome).toHaveBeenCalled();
-    expect(screen.getByText('القادم')).toBeTruthy();
+    expect(screen.getByText('home.upcomingAppointment')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
     expect(screen.queryByText('guest-dock')).toBeNull();
   });

@@ -40,8 +40,13 @@ type TabKey = 'upcoming' | 'past' | 'cancelled';
 const TABS: { key: TabKey; ar: string; en: string }[] = [
   { key: 'upcoming', ar: 'قادمة', en: 'Upcoming' },
   { key: 'past', ar: 'منتهية', en: 'Completed' },
-  { key: 'cancelled', ar: 'ملغاة', en: 'Cancelled' },
+  { key: 'cancelled', ar: 'الإلغاءات', en: 'Cancellations' },
 ];
+
+export function getAppointmentTabLabel(tab: TabKey, isRTL: boolean): string {
+  const option = TABS.find((candidate) => candidate.key === tab);
+  return option ? (isRTL ? option.ar : option.en) : '';
+}
 
 function tabOf(status: ClientBookingStatus): TabKey {
   if (status === 'cancelled' || status === 'cancel_requested' || status === 'expired') {
@@ -104,6 +109,10 @@ export default function AppointmentsScreen() {
 
   const renderItem = useCallback(({ item: b, index: i }: { item: typeof bookings[0]; index: number }) => {
     const status: TabKey = tabOf(b.status);
+    const cancellationPending = b.status === 'cancel_requested';
+    const displayedStatus = cancellationPending
+      ? { icon: <Clock size={12} color={colors.accent.amber} strokeWidth={2} />, color: colors.accent.amber }
+      : statusConfig[status];
     const gradient = theme.colors.primaryGradient;
     const therapistName = (dir.isRTL
       ? b.employee?.nameAr ?? b.employee?.nameEn
@@ -113,6 +122,9 @@ export default function AppointmentsScreen() {
     const location = isVideo
       ? (dir.isRTL ? 'جلسة عن بُعد' : 'Remote session')
       : (dir.isRTL ? b.branch?.nameAr ?? b.branch?.nameEn ?? '' : b.branch?.nameEn ?? b.branch?.nameAr ?? '');
+    const statusLabel = cancellationPending
+      ? t('appointments.pendingCancellation')
+      : dir.isRTL ? TABS.find((t) => t.key === status)!.ar : TABS.find((t) => t.key === status)!.en;
 
     return (
       <Animated.View
@@ -123,7 +135,9 @@ export default function AppointmentsScreen() {
             onPress={() => router.push(`/(client)/appointment/${b.id}`)}
             style={styles.cardInner}
             accessibilityRole="button"
-            accessibilityLabel={`${dir.isRTL ? 'موعد مع' : 'Appointment with'} ${therapistName} ${dir.isRTL ? 'في' : 'on'} ${formatDate(b.scheduledAt, dir.isRTL)}`}
+            accessibilityLabel={dir.isRTL
+              ? `موعد مع ${therapistName}، ${formatDate(b.scheduledAt, dir.isRTL)}، ${formatTime(b.scheduledAt, dir.isRTL)}، ${statusLabel}`
+              : `Appointment with ${therapistName}, ${formatDate(b.scheduledAt, dir.isRTL)}, ${formatTime(b.scheduledAt, dir.isRTL)}, ${statusLabel}`}
             accessibilityHint={t('a11y.cardOpenAppointment')}
             testID={`appt-${b.id}`}
           >
@@ -140,16 +154,28 @@ export default function AppointmentsScreen() {
                 <Text style={[styles.therapist, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {therapistName}
                 </Text>
-                <View style={[styles.metaRow, { flexDirection: dir.row }]}>
-                  {isVideo ? (
-                    <Video size={12} color={colors.teal[600]} strokeWidth={2} />
-                  ) : (
-                    <MapPin size={12} color={colors.accent.violet} strokeWidth={2} />
-                  )}
-                  <Text style={[styles.metaText, { fontFamily: f500, fontWeight: '500' }]}>{location}</Text>
-                </View>
               </View>
               <Chevron size={16} color={colors.ink[400]} strokeWidth={2} />
+            </View>
+
+            <View style={[styles.cardMeta, { flexDirection: dir.row }]}>
+              <View style={[styles.metaRow, { flexDirection: dir.row, flex: 1 }]}>
+                {isVideo ? (
+                  <Video size={14} color={colors.teal[600]} strokeWidth={2} />
+                ) : (
+                  <MapPin size={14} color={colors.teal[600]} strokeWidth={2} />
+                )}
+                <Text numberOfLines={1} style={[styles.metaText, { fontFamily: f500, fontWeight: '500' }]}>{location}</Text>
+              </View>
+              <View style={[styles.statusChip, { backgroundColor: withAlpha(displayedStatus.color, 0.12) }]}>
+                {displayedStatus.icon}
+                <Text
+                  numberOfLines={1}
+                  style={[styles.statusChipText, { fontFamily: f600, fontWeight: '600', color: displayedStatus.color }]}
+                >
+                  {statusLabel}
+                </Text>
+              </View>
             </View>
 
             <View style={styles.divider} />
@@ -169,15 +195,6 @@ export default function AppointmentsScreen() {
                 </Text>
                 <Text style={[styles.dateValue, { fontFamily: f600, fontWeight: '600' }]}>
                   {formatTime(b.scheduledAt, dir.isRTL)}
-                </Text>
-              </View>
-              <View style={[styles.statusChip, { backgroundColor: withAlpha(statusConfig[status].color, 0.12) }]}>
-                {statusConfig[status].icon}
-                <Text style={[
-                  styles.statusChipText,
-                  { fontFamily: f600, fontWeight: '600', color: statusConfig[status].color },
-                ]}>
-                  {dir.isRTL ? TABS.find((t) => t.key === status)!.ar : TABS.find((t) => t.key === status)!.en}
                 </Text>
               </View>
             </View>
@@ -203,7 +220,7 @@ export default function AppointmentsScreen() {
           size="sm"
           options={TABS.map((tabItem) => ({
             value: tabItem.key,
-            label: dir.isRTL ? tabItem.ar : tabItem.en,
+            label: getAppointmentTabLabel(tabItem.key, dir.isRTL),
           }))}
           value={tab}
           onChange={(value) => { setTab(value); setPage(1); }}

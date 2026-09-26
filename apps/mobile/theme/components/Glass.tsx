@@ -52,12 +52,6 @@ export type GlassProps = Omit<PressableProps, 'style' | 'children' | 'onPress'> 
   onPress?: PressableProps['onPress'];
 };
 
-function toLegacyVariant(variant: GlassVariant): LegacyVariant {
-  if (variant === 'clear' || variant === 'soft') return 'clear';
-  if (variant === 'strong') return 'strong';
-  return 'regular';
-}
-
 export const Glass = ({
   variant = "regular",
   tint,
@@ -85,8 +79,8 @@ export const Glass = ({
   const sawaaColors = getSawaaColors(glassScheme);
   const roles = getSawaaRoles(glassScheme);
   const appearance = getSawaaGlassAppearance(glassScheme);
-  const cfgVariant = toLegacyVariant(variant);
-  const cfg = applyA11y(GLASS_CFG[cfgVariant], reduceTransparency, increaseContrast);
+  // Surface names are kept for compatibility; all cards share one optical recipe.
+  const cfg = applyA11y(GLASS_CFG.strong, reduceTransparency, increaseContrast);
   const usePressable = Boolean(interactive || onPress || onPressIn || onPressOut || onLongPress);
   const useNativeGlass =
     Platform.OS === 'ios' &&
@@ -99,9 +93,19 @@ export const Glass = ({
 
   const flat = StyleSheet.flatten(style) ?? {};
   const contentCenter = {
+    ...(flat.gap != null ? { gap: flat.gap } : {}),
+    ...(flat.flexDirection != null ? { flexDirection: flat.flexDirection } : {}),
     ...(flat.alignItems != null ? { alignItems: flat.alignItems } : {}),
     ...(flat.justifyContent != null ? { justifyContent: flat.justifyContent } : {}),
   };
+  // A square surface rounded to (at least) its own half-width is a circle, and
+  // the straight lower rim below would cut across its arc — the button then
+  // reads as a square with a flattened bottom.
+  const isCircular =
+    typeof flat.width === 'number' &&
+    typeof flat.height === 'number' &&
+    Math.abs(flat.width - flat.height) <= 1 &&
+    radius >= flat.width / 2;
 
   const pressTransform: ViewStyle | undefined =
     usePressable && pressed && !reduceMotion
@@ -119,7 +123,7 @@ export const Glass = ({
 
   const fallbackFill = appearance.fallbackFill;
   const opaqueSurface = forceDark ? sawaaColors.glass.opaqueDarkBg : theme.colors.surface ?? sawaaColors.glass.opaqueBg;
-  const glassEffectStyle = variant === 'clear' || variant === 'soft' ? 'clear' : 'regular';
+  const glassEffectStyle = 'regular';
   const containerStyle: ViewStyle = {
     borderRadius: radius,
     position: 'relative',
@@ -195,7 +199,7 @@ export const Glass = ({
         <GlassWebLayers cfg={cfg} radius={radius} tint={tint} pressed={pressed} isDark={isDarkAppearance} reduceMotion={reduceMotion} />
       ) : null}
 
-      {!reduceTransparency && Platform.OS === 'ios' ? (
+      {!reduceTransparency && Platform.OS === 'ios' && !isCircular ? (
         <View pointerEvents="none" style={{ position: 'absolute', start: 10, end: 10, bottom: 0, height: 2, borderRadius: radius, backgroundColor: appearance.lowerRim }} />
       ) : null}
 

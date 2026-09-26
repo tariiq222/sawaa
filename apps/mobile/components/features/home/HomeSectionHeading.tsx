@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react-native';
+import { Glass } from '@/theme/components/Glass';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { useDir } from '@/hooks/useDir';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
@@ -21,9 +22,9 @@ export function HomeSectionHeading({ title, symbol, icon, onSeeAll }: HomeSectio
   const bold = getFontName(dir.locale, '700');
   return (
     <View style={[styles.row, { flexDirection: dir.row }]}>
-      <View style={[styles.icon, { backgroundColor: colors.glass.opaqueBg }]}>
+      <Glass variant="strong" radius={16} style={styles.icon}>
         <AppIcon sf={symbol} fallback={icon} size={21} color={colors.teal[700]} />
-      </View>
+      </Glass>
       <Text accessibilityRole="header" style={[styles.title, { fontFamily: bold, color: colors.ink[900], textAlign: dir.textAlign }]}>{title}</Text>
       {onSeeAll ? (
         <Pressable onPress={onSeeAll} accessibilityRole="button" accessibilityLabel={`${title} — ${t('home.seeAll')}`} style={styles.more}>

@@ -31,7 +31,7 @@ export default function TherapistsListScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
-  const { clinicId } = useLocalSearchParams<{ clinicId?: string }>();
+  const { clinicId, serviceId } = useLocalSearchParams<{ clinicId?: string; serviceId?: string }>();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -41,10 +41,14 @@ export default function TherapistsListScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
-  const [activeChip, setActiveChip] = useState<TherapistChip>('available');
+  // A specialist with future openings is still a valid result for the clinic
+  // or service the client selected. Today's availability is an opt-in filter.
+  const [activeChip, setActiveChip] = useState<TherapistChip>(null);
   const [query, setQuery] = useState('');
-  const { data, isLoading } = useTherapists();
+  const therapistsQuery = useTherapists();
+  const { data, isLoading: therapistsLoading, isError: therapistDirectoryFailed, refetch: refetchTherapists } = therapistsQuery;
   const clinicsQuery = useClinics();
+  const { isLoading: clinicsLoading, isError: clinicsFailed, refetch: refetchClinics } = clinicsQuery;
   const rawList = useMemo(() => data ?? [], [data]);
   const selectedClinic = useMemo(
     () => (clinicId ? (clinicsQuery.data ?? []).find((clinic) => clinic.id === clinicId) : undefined),
@@ -55,11 +59,15 @@ export default function TherapistsListScreen() {
     [selectedClinic],
   );
   const list = useMemo(() => {
-    if (!clinicId) return rawList;
+    if (!clinicId) return serviceId ? rawList.filter((therapist) => therapist.serviceIds.includes(serviceId)) : rawList;
     if (!clinicServiceIds) return [];
-    return rawList.filter((therapist) => therapist.serviceIds.some((serviceId) => clinicServiceIds.has(serviceId)));
-  }, [clinicId, clinicServiceIds, rawList]);
-  const loading = isLoading || (Boolean(clinicId) && clinicsQuery.isLoading);
+    if (serviceId && !clinicServiceIds.has(serviceId)) return [];
+    return rawList.filter((therapist) => therapist.serviceIds.some((id) => clinicServiceIds.has(id) && (!serviceId || id === serviceId)));
+  }, [clinicId, clinicServiceIds, rawList, serviceId]);
+  const clinicDirectoryRequired = Boolean(clinicId);
+  const loading = therapistsLoading || (clinicDirectoryRequired && clinicsLoading);
+  const clinicDirectoryFailed = clinicDirectoryRequired && clinicsFailed;
+  const directoryFailed = therapistDirectoryFailed || clinicDirectoryFailed;
 
   const filtered = useMemo(
     () => applyTherapistFilters(list, query, activeChip),
@@ -79,7 +87,7 @@ export default function TherapistsListScreen() {
       >
         <Glass variant="strong" radius={sawaaRadius.xl} style={styles.therapistCard}>
           <Pressable
-            onPress={() => router.push({ pathname: '/(client)/employee/[id]', params: { id: navKey, ...(clinicId ? { clinicId } : {}) } })}
+            onPress={() => router.push({ pathname: '/(client)/employee/[id]', params: { id: navKey, ...(clinicId ? { clinicId } : {}), ...(serviceId ? { serviceId } : {}) } })}
             style={[styles.therapistRow, { flexDirection: dir.row }]}
             accessibilityRole="button"
             accessibilityLabel={`${name}, ${spec}`}
@@ -115,7 +123,7 @@ export default function TherapistsListScreen() {
         </Glass>
       </Animated.View>
     );
-  }, [colors, styles, theme, dir, f400, f500, f700, reduceMotion, router, t, clinicId]);
+  }, [colors, styles, theme, dir, f400, f500, f700, reduceMotion, router, t, clinicId, serviceId]);
 
   const screenTitle = selectedClinic
     ? (dir.isRTL ? selectedClinic.nameAr : (selectedClinic.nameEn ?? selectedClinic.nameAr))
@@ -133,9 +141,11 @@ export default function TherapistsListScreen() {
         <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}> 
           {screenTitle}
         </Text>
-        <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}> 
-          {t('therapists.availableCount', { count: list.length })}
-        </Text>
+        {!loading && !directoryFailed ? (
+          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
+            {t('therapists.availableCount', { count: list.length })}
+          </Text>
+        ) : null}
       </Animated.View>
 
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
@@ -191,8 +201,29 @@ export default function TherapistsListScreen() {
           })}
         </LocalizedHorizontalScroll>
       </Animated.View>
+
+      {directoryFailed ? (
+        <View style={styles.errorList}>
+          {therapistDirectoryFailed ? (
+            <View style={styles.errorBlock}>
+              <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }]}>{t('guest.loadError')}</Text>
+              <Pressable onPress={() => { void refetchTherapists(); }} accessibilityRole="button" testID="therapist-directory-retry">
+                <Text style={[styles.retryText, { fontFamily: f600 }]}>{t('common.retry')}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {clinicDirectoryFailed ? (
+            <View style={styles.errorBlock}>
+              <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }]}>{t('guest.loadError')}</Text>
+              <Pressable onPress={() => { void refetchClinics(); }} accessibilityRole="button" testID="clinic-directory-retry">
+                <Text style={[styles.retryText, { fontFamily: f600 }]}>{t('common.retry')}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
-  ), [colors, styles, theme, BackIcon, activeChip, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t]);
+  ), [colors, styles, theme, BackIcon, activeChip, clinicDirectoryFailed, directoryFailed, loading, refetchClinics, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t, therapistDirectoryFailed, refetchTherapists]);
 
   const ListEmpty = useMemo(() => {
     if (loading) {
@@ -202,12 +233,13 @@ export default function TherapistsListScreen() {
         </Text>
       );
     }
+    if (directoryFailed) return null;
     return (
       <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', paddingHorizontal: 4 }]}> 
         {t('therapists.empty')}
       </Text>
     );
-  }, [styles, f400, loading, t]);
+  }, [styles, f400, loading, directoryFailed, t]);
 
   return (
     <AquaBackground>
@@ -231,6 +263,9 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   title: { fontSize: 22, color: colors.ink[900], paddingHorizontal: 4 },
   subtitle: { fontSize: 12, color: colors.ink[500], marginTop: 2, paddingHorizontal: 4 },
+  errorBlock: { gap: 4 },
+  errorList: { gap: 8, paddingHorizontal: 4 },
+  retryText: { fontSize: 13, color: colors.ink[700], paddingVertical: 4, textDecorationLine: 'underline' },
   searchCard: { padding: 0 },
   searchRow: { alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   searchInput: { flex: 1, fontSize: 13, height: 22 },
