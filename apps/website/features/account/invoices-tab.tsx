@@ -6,6 +6,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import type { ClientInvoiceItem } from '@sawaa/shared';
 import { getMyInvoicesApi, requestRefundApi } from './account.api';
 import { initPayment } from '@/features/booking/booking.api';
+import { usePaymentMethods } from '@/features/payment/use-payment-methods';
+import { paymentFailureMessage } from '@/features/payment/payment-error';
 import { useT } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
 import { halalasToSar } from '@/lib/money';
@@ -107,6 +109,15 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
   const statusColor = INVOICE_STATUS_TOKEN[invoice.status] ?? 'var(--sw-neutral-400)';
   const payable = isInvoicePayable(invoice.status);
   const refundable = invoice.status === 'PAID';
+  // Never offer a checkout the backend will reject: when online payment is off
+  // (or Moyasar is unconfigured) the client gets a note instead of a button that
+  // fails after the click.
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
+  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  // While the lookup is in flight show nothing (a flash of "unavailable" would
+  // be wrong); once it settles without an enabled gateway the client gets a note
+  // instead of a button that fails after the click.
+  const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
 
   const dateStr = invoice.scheduledAt
     ? new Date(invoice.scheduledAt).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
@@ -122,8 +133,8 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
     try {
       const { redirectUrl } = await initPayment(invoice.id);
       window.location.assign(redirectUrl);
-    } catch {
-      setPayError(tt('account.payError'));
+    } catch (err) {
+      setPayError(paymentFailureMessage(err, tt('account.payError')));
       setPaying(false);
     }
   }
@@ -191,7 +202,7 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
             <ArrowRight size={12} className="rtl:rotate-180" aria-hidden="true" />
           </Link>
         )}
-        {payable && (
+        {payable && canPayOnline && (
           <button
             type="button"
             onClick={handlePayNow}
@@ -213,6 +224,12 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
           </button>
         )}
       </div>
+
+      {showPayUnavailable && (
+        <p className="px-3 py-2 rounded-lg text-xs bg-[var(--sw-neutral-50)] border border-[var(--sw-neutral-100)] text-[var(--sw-body)]">
+          {tt('account.payUnavailable')}
+        </p>
+      )}
 
       {payError && (
         <div className="px-3 py-2 rounded-lg text-sm bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border border-[color-mix(in_srgb,var(--error)_25%,transparent)] text-[var(--error)]">

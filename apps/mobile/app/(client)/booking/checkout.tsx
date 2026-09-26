@@ -20,7 +20,7 @@ import {
   canResumeHostedPayment,
   canStartHostedPayment,
   type ExistingBookingCheckoutPhase,
-} from './use-existing-booking-checkout';
+} from '@/features/booking/use-existing-booking-checkout';
 
 function phaseCopy(phase: ExistingBookingCheckoutPhase, t: (key: string) => string) {
   switch (phase) {

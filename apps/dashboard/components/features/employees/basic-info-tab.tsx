@@ -72,6 +72,9 @@ export function BasicInfoTab({ form, showEmail = false, emailRequired = false, e
         {/* Avatar + switch in same row */}
         <AvatarUpload
           value={form.watch("avatarUrl") || undefined}
+          uploadAriaLabel={t("employees.avatar.change")}
+          addAriaLabel={t("employees.avatar.add")}
+          clearAriaLabel={t("employees.avatar.remove")}
           onChange={(file, previewUrl) => {
             form.setValue("avatarFile", file)
             form.setValue("avatarUrl", previewUrl)

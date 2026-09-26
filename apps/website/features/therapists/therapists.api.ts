@@ -37,7 +37,7 @@ export async function listPublicEmployees(includeDirectClinics = false): Promise
 
 export async function getPublicEmployee(slug: string): Promise<PublicEmployee> {
   const json = await publicFetch<unknown>(
-    `/public/employees/${encodeURIComponent(slug)}`,
+    `/public/employees/${encodeURIComponent(slug)}?includeDirectClinics=true`,
     { next: { revalidate: 60 } },
   );
   return unwrap<PublicEmployee>(json);

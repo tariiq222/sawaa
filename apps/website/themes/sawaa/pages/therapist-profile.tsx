@@ -22,7 +22,7 @@ function initials(name: string | null): string {
 
 export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
   const therapist = await getPublicEmployee(slug);
-  const all = await listPublicEmployees().catch(() => [] as PublicEmployee[]);
+  const all = await listPublicEmployees(true).catch(() => [] as PublicEmployee[]);
 
   const t = (key: MessageKey) => translate(locale, key);
 

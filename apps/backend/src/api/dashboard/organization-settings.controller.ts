@@ -152,6 +152,7 @@ export class DashboardOrganizationSettingsController {
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Service archived' })
   @ApiResponse({ status: 404, description: 'Service not found' })
+  @ApiResponse({ status: 409, description: 'Clinic booking services and services referenced by packages cannot be deleted or archived' })
   archiveServiceEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
     return this.archiveService.execute({ serviceId });
   }

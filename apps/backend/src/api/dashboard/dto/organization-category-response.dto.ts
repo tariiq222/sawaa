@@ -26,6 +26,9 @@ export class CategoryResponseDto {
   @ApiProperty({ description: 'Category booking mode', enum: CategoryBookingMode, example: CategoryBookingMode.SERVICES })
   bookingMode!: CategoryBookingMode;
 
+  @ApiProperty({ description: 'Category kind, independent of department and name', enum: ['CLINIC', 'SERVICE_GROUP'], example: 'CLINIC' })
+  kind!: 'CLINIC' | 'SERVICE_GROUP';
+
   @ApiProperty({ description: 'Displayable category image URL; stored keys are signed at read/create/update response time', type: String, nullable: true })
   imageUrl!: string | null;
 

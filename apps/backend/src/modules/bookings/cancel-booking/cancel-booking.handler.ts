@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { Prisma, RefundType } from '@prisma/client';
+import { BookingStatus, Prisma, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
@@ -10,6 +10,7 @@ import { ZoomMeetingService } from '../zoom-meeting.service';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
+import { isCancellationHoldStatus } from '../booking-hold-window';
 import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { ProgramCapacityService } from '../program/program-capacity.service';
 import { assertBookingIsMutable, updateBookingAtomically } from '../booking-lifecycle.helper';
@@ -25,7 +26,15 @@ export type CancelBookingCommand = CancelBookingDto & {
 };
 
 // Allowed source statuses are defined by the DIRECT_CANCEL transition in booking-state-machine.ts
-// PENDING | CONFIRMED | CANCEL_REQUESTED → CANCELLED
+// PENDING | PENDING_GROUP_FILL | AWAITING_PAYMENT | CONFIRMED | CANCEL_REQUESTED | DEPOSIT_PAID → CANCELLED
+//
+// User-facing messages are Arabic for the same reason as delete-booking.handler:
+// HttpExceptionFilter passes the exception message through to the operator as-is,
+// so a raw English state-machine assertion must never be the last word.
+const CANCEL_BOOKING_MESSAGES = {
+  notCancellable:
+    'لا يمكن إلغاء هذا الحجز في حالته الحالية. حدّث الصفحة ثم أعد المحاولة.',
+} as const;
 
 @Injectable()
 export class CancelBookingHandler {
@@ -52,7 +61,19 @@ export class CancelBookingHandler {
     if (cmd.source === 'client' && cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');
     }
-    const nextStatus = assertTransition(booking.status, 'DIRECT_CANCEL');
+    // The state machine stays the single source of truth for what may be
+    // cancelled. Anything it rejects is a status the UI never offers a cancel
+    // for (terminal, or changed concurrently), so answer in Arabic instead of
+    // leaking the developer assertion to the operator.
+    let nextStatus: BookingStatus;
+    try {
+      nextStatus = assertTransition(booking.status, 'DIRECT_CANCEL');
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw new BadRequestException(CANCEL_BOOKING_MESSAGES.notCancellable);
+      }
+      throw error;
+    }
 
     const settings = await this.settingsHandler.execute({
       branchId: booking.branchId,
@@ -69,12 +90,21 @@ export class CancelBookingHandler {
       }
     }
 
-    const { refundType, refundPercent } = computeRefundType({
-      scheduledAt: booking.scheduledAt,
-      freeCancelBeforeHours: settings.freeCancelBeforeHours,
-      freeCancelRefundType: settings.freeCancelRefundType,
-      lateCancelRefundPercent: settings.lateCancelRefundPercent,
-    });
+    // A payment hold (AWAITING_PAYMENT / PENDING_GROUP_FILL) is not a settled
+    // appointment: it reserves the slot only while an online payment is pending.
+    // Releasing it is not a late cancellation and must never charge a penalty —
+    // any amount actually captured (a deposit, or a card payment whose webhook
+    // was lost) is refunded in FULL, mirroring expire-booking. PENDING keeps the
+    // configured policy: that is the human-confirmation pipeline, not a hold.
+    const isPaymentHold = isCancellationHoldStatus(booking.status);
+    const { refundType, refundPercent } = isPaymentHold
+      ? { refundType: RefundType.FULL, refundPercent: 100 }
+      : computeRefundType({
+          scheduledAt: booking.scheduledAt,
+          freeCancelBeforeHours: settings.freeCancelBeforeHours,
+          freeCancelRefundType: settings.freeCancelRefundType,
+          lateCancelRefundPercent: settings.lateCancelRefundPercent,
+        });
 
     // Read only after the guarded booking mutation inside the transaction. A
     // payment callback can commit while cancellation is waiting on that row.

@@ -8,12 +8,12 @@ import { queryClient } from '@/services/query-client';
 import {
   resolveExistingBookingCheckout,
   type ExistingBookingCheckoutPhase,
-} from './existing-booking-checkout-state';
+} from '@/features/booking/existing-booking-checkout-state';
 
-export { resolveExistingBookingCheckout } from './existing-booking-checkout-state';
-export { canResumeHostedPayment } from './existing-booking-checkout-state';
-export { canStartHostedPayment } from './existing-booking-checkout-state';
-export type { ExistingBookingCheckoutInput, ExistingBookingCheckoutPhase } from './existing-booking-checkout-state';
+export { resolveExistingBookingCheckout } from '@/features/booking/existing-booking-checkout-state';
+export { canResumeHostedPayment } from '@/features/booking/existing-booking-checkout-state';
+export { canStartHostedPayment } from '@/features/booking/existing-booking-checkout-state';
+export type { ExistingBookingCheckoutInput, ExistingBookingCheckoutPhase } from '@/features/booking/existing-booking-checkout-state';
 
 export interface ExistingBookingCheckoutSnapshot {
   booking: ClientBookingRow | null;

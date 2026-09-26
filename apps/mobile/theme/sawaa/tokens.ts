@@ -159,6 +159,30 @@ export function getSawaaRoles(scheme: 'light' | 'dark') {
   return scheme === 'dark' ? darkRoles : lightRoles;
 }
 
+/** Shared aqua optical treatment for every iOS glass surface. */
+const glassAppearance = {
+  light: {
+    nativeTint: 'rgba(180, 231, 244, 0.26)',
+    fallbackFill: 'rgba(180, 231, 244, 0.18)',
+    fallbackBlur: 'rgba(180, 231, 244, 0.06)',
+    rim: 'rgba(241, 253, 255, 0.9)',
+    sheen: ['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.04)', 'rgba(255, 255, 255, 0)'] as const,
+    lowerRim: 'rgba(255, 255, 255, 0.7)',
+  },
+  dark: {
+    nativeTint: 'rgba(77, 171, 183, 0.16)',
+    fallbackFill: 'rgba(30, 89, 96, 0.25)',
+    fallbackBlur: 'rgba(13, 48, 53, 0.1)',
+    rim: 'rgba(180, 230, 235, 0.46)',
+    sheen: ['rgba(255, 255, 255, 0.14)', 'rgba(255, 255, 255, 0.03)', 'rgba(255, 255, 255, 0)'] as const,
+    lowerRim: 'rgba(180, 230, 235, 0.38)',
+  },
+} as const;
+
+export function getSawaaGlassAppearance(scheme: 'light' | 'dark') {
+  return glassAppearance[scheme];
+}
+
 /** Glass renderer effects live with the palette, never inside screen styles. */
 export function getGlassEffects(isDark: boolean) {
   return {

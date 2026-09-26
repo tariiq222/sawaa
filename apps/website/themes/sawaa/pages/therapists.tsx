@@ -11,7 +11,7 @@ interface SawaaTherapistsPageProps {
 
 export async function SawaaTherapistsPage({ initialSpecialty = null }: SawaaTherapistsPageProps = {}) {
   const locale = await getLocale();
-  const therapists = await listPublicEmployees();
+  const therapists = await listPublicEmployees(true);
   const t = (key: MessageKey) => translate(locale, key);
 
   const total = therapists.length;

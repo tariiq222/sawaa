@@ -18,7 +18,7 @@ const DASHBOARD_PAGES = [
   { path: "/employees", name: "Employees", heading: /الممارسون|Employees/i },
   { path: "/users", name: "Users", heading: /المستخدمون|Users/i },
   { path: "/services", name: "Services", heading: /الخدمات|Services/i },
-  { path: "/categories", name: "Categories", heading: /العيادات|Categories/i },
+  { path: "/categories", name: "Categories", heading: /العيادات ومجموعات الخدمات|Clinics & service groups/i },
   {
     path: "/departments",
     name: "Departments",

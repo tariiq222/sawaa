@@ -1,6 +1,7 @@
 import React from 'react';
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: false, language: 'en' }) }));
 import { fireEvent, render } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
@@ -8,12 +9,15 @@ jest.mock('react-native-reanimated', () => {
 });
 const mockRefetch = jest.fn();
 const mockQuery = jest.fn();
-jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: 'a1' }), useRouter: () => ({ back: jest.fn(), push: jest.fn() }) }));
+const mockPush = jest.fn();
+const mockBack = jest.fn();
+const mockCancel = jest.fn();
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: 'a1' }), useRouter: () => ({ back: mockBack, push: mockPush }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
-jest.mock('@/hooks/queries', () => ({ useBooking: () => mockQuery(), useCancelBooking: () => ({ isPending: false, mutate: jest.fn() }) }));
+jest.mock('@/hooks/queries', () => ({ useBooking: () => mockQuery(), useCancelBooking: () => ({ isPending: false, mutate: mockCancel }) }));
 jest.mock('@/theme/sawaa', () => {
   const { View, Text, Pressable } = require('react-native');
   return { ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: View,
@@ -54,5 +58,83 @@ describe('appointment detail truthful states', () => {
     const screen = render(<AppointmentDetail />);
     expect(screen.getByText('common.noResults')).toBeTruthy();
     expect(screen.queryByText('Cancel booking')).toBeNull();
+  });
+
+  it('offers a rating route for completed appointments', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'completed' }, isLoading: false, isError: false, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+
+    fireEvent.press(screen.getByText('appointments.rate'));
+
+    expect(mockPush).toHaveBeenCalledWith('/(client)/rate/a1');
+  });
+
+  it('does not offer rating or cancellation for a cancelled appointment', () => {
+    const screen = render(<AppointmentDetail />);
+
+    expect(screen.queryByText('appointments.rate')).toBeNull();
+    expect(screen.queryByText('Cancel booking')).toBeNull();
+  });
+
+  it('keeps cancellation available for a confirmed appointment', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+
+    expect(screen.getByText('Cancel booking')).toBeTruthy();
+    expect(screen.queryByText('appointments.rate')).toBeNull();
+  });
+
+  it('does not offer client cancellation while a group appointment awaits enough participants', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, type: 'group', status: 'pending_group_fill' }, isLoading: false, isError: false, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+
+    expect(screen.queryByText('Cancel booking')).toBeNull();
+  });
+
+  it('does not offer cancellation for an active group booking', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, bookingType: 'GROUP', status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+
+    expect(screen.queryByText('Cancel booking')).toBeNull();
+  });
+
+  it('shows a pending cancellation label for a cancellation request', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'cancel_requested' }, isLoading: false, isError: false, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+
+    expect(screen.getByText('appointments.pendingCancellation')).toBeTruthy();
+    expect(screen.queryByText('Cancel booking')).toBeNull();
+  });
+
+  it('does not offer the rating CTA when this session has submitted a rating', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'completed', ratingSubmittedLocally: true }, isLoading: false, isError: false, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+
+    expect(screen.queryByText('appointments.rate')).toBeNull();
+  });
+
+  it('does not offer the rating CTA when the detail API says a rating already exists', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'completed', hasRated: true }, isLoading: false, isError: false, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+
+    expect(screen.queryByText('appointments.rate')).toBeNull();
+  });
+
+  it('explains that a cancellation is awaiting approval and keeps the detail open', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
+    mockCancel.mockImplementation((_vars, callbacks) => callbacks.onSuccess({ status: 'cancel_requested' }));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation((title, _message, buttons) => {
+      if (title === 'Cancel booking') buttons?.[1]?.onPress?.();
+    });
+    render(<AppointmentDetail />);
+
+    fireEvent.press(require('@testing-library/react-native').screen.getByText('Cancel booking'));
+
+    expect(alert).toHaveBeenCalledWith(
+      'appointments.cancellationRequestedTitle',
+      'appointments.cancellationRequestedMessage',
+    );
+    expect(mockBack).not.toHaveBeenCalled();
+    alert.mockRestore();
   });
 });

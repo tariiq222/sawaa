@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { View, FlatList, Pressable, RefreshControl, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -7,9 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { Building2, Video, Clock } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Glass } from '@/theme/components/Glass';
 import {
   AquaBackground,
-  GlassSurface,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -22,7 +22,7 @@ import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { useAppSelector } from '@/hooks/use-redux';
-import { employeeBookingsService as bookingsService } from '@/services/employee/bookings';
+import { useEmployeeTodayBookings } from '@/hooks/queries';
 import { getStatusLabel } from '@/lib/status-helpers';
 import type { Booking } from '@/types/models';
 
@@ -55,33 +55,12 @@ export default function TodayScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadData = useCallback(async () => {
-    try {
-      const res = await bookingsService.getTodayBookings();
-      if (res.data) setBookings(res.data.items);
-      setLoadFailed(false);
-    } catch {
-      // A failed load is not an empty day: keep the error visible and retryable
-      // instead of rendering the "no appointments today" empty state.
-      setBookings([]);
-      setLoadFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
+  const todayQuery = useEmployeeTodayBookings();
+  const refetchToday = todayQuery.refetch;
+  const bookings = todayQuery.data?.items ?? [];
+  const loading = todayQuery.isLoading;
+  const loadFailed = todayQuery.isError;
+  const onRefresh = useCallback(() => { void refetchToday(); }, [refetchToday]);
 
   const confirmed = bookings.filter((b) => b.status === 'confirmed').length;
   const completed = bookings.filter((b) => b.status === 'completed').length;
@@ -112,7 +91,7 @@ export default function TodayScreen() {
       <Animated.View
         entering={reduceMotion ? undefined : FadeInDown.delay(240 + index * 70).duration(600).easing(Easing.out(Easing.cubic))}
       >
-        <GlassSurface variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.lg}>
+        <Glass variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.lg}>
           <Pressable
             onPress={() => router.push(`/(employee)/appointment/${item.id}`)}
             accessibilityRole="button"
@@ -138,7 +117,7 @@ export default function TodayScreen() {
             </View>
             <StatusPill status={item.status} label={t(getStatusLabel(item.status))} />
           </Pressable>
-        </GlassSurface>
+        </Glass>
       </Animated.View>
     );
   };
@@ -162,7 +141,7 @@ export default function TodayScreen() {
         style={[styles.statsRow, { flexDirection: dir.row }]}
       >
         {stats.map((s) => (
-          <GlassSurface key={s.label} variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.md} style={styles.statCard}>
+          <Glass key={s.label} variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.md} style={styles.statCard}>
             {loading ? (
               <Skeleton width={36} height={24} radius={sawaaRadius.xs} style={styles.statSkeleton} />
             ) : (
@@ -173,7 +152,7 @@ export default function TodayScreen() {
             <Text style={[styles.statLabel, { fontFamily: f600, fontWeight: '600', writingDirection: dir.writingDirection }]}>
               {s.label}
             </Text>
-          </GlassSurface>
+          </Glass>
         ))}
       </Animated.View>
 
@@ -197,7 +176,7 @@ export default function TodayScreen() {
       title={t('common.error')}
       description={t('doctor.scheduleLoadFailed')}
       actionLabel={t('common.retry')}
-      onAction={() => { void loadData(); }}
+      onAction={onRefresh}
       tone="danger"
     />
   ) : (
@@ -215,7 +194,7 @@ export default function TodayScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal[600]} />
+          <RefreshControl refreshing={todayQuery.isRefetching} onRefresh={onRefresh} tintColor={colors.teal[600]} />
         }
         contentContainerStyle={[styles.list, { paddingTop: insets.top + sawaaSpacing.sm }]}
         showsVerticalScrollIndicator={false}

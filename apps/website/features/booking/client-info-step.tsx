@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useState, useId, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AvailableSlot, Service, EmployeeWithUser } from '@sawaa/shared';
+import type { PublicPaymentMethods } from '@/features/booking/booking.api';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
 import { normalizeSaudiPhone } from '@/features/auth/auth.schema';
@@ -30,6 +31,15 @@ interface ClientInfoStepProps {
   selectedPriceHalalas?: number;
   /** @deprecated back is handled by the wizard header — kept for compatibility */
   onBack?: () => void;
+  /**
+   * Payment capabilities for this deployment. `undefined` while the lookup is
+   * still in flight or after it failed: a paid booking is never submitted on a
+   * guess, because the backend rejects a disabled method outright (400) and the
+   * whole booking is lost.
+   */
+  paymentMethods: PublicPaymentMethods | undefined;
+  /** True only while the capability lookup is in flight (drives the copy). */
+  paymentMethodsLoading: boolean;
   /** Confirm the booking using the selected collection path. */
   onSubmitInfo: (payAtClinic: boolean) => void;
   isSubmitting: boolean;
@@ -67,7 +77,7 @@ function FieldIcon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedPriceHalalas, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
+export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedPriceHalalas, onSubmitInfo, isSubmitting, paymentMethods, paymentMethodsLoading }: ClientInfoStepProps) {
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
@@ -78,7 +88,10 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<WebsitePaymentMethod>('ONLINE');
+  // Only the methods the backend can actually accept are offered: the dashboard
+  // can disable online payment (or the center can disable pay-at-clinic), and
+  // submitting a disabled one makes the backend reject the whole booking.
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<WebsitePaymentMethod | null>(null);
   // Inline registration: keep the user inside the booking wizard instead of
   // navigating to /register (which would unmount the wizard and lose the
   // selected service / therapist / slot). The RegisterForm handles its own
@@ -153,7 +166,43 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   }).format(halalasToSarNumber(grossWithVat(effectivePrice, vatRate)));
   const vatPercent = Math.round(vatRate * 100);
   const isPaidBooking = effectivePrice > 0;
+  const enabledPaymentMethods = useMemo<WebsitePaymentMethod[]>(() => {
+    const methods: WebsitePaymentMethod[] = [];
+    if (paymentMethods?.moyasarEnabled) methods.push('ONLINE');
+    if (paymentMethods?.atClinicEnabled) methods.push('AT_CENTER');
+    return methods;
+  }, [paymentMethods]);
+  // The choices rendered are exactly the enabled ones — never a method the
+  // backend would reject.
+  const paymentMethodOptions = useMemo(
+    () =>
+      [
+        {
+          value: 'ONLINE' as const,
+          label: t('booking.paymentMethod.online'),
+          description: t('booking.paymentMethod.onlineDesc'),
+        },
+        {
+          value: 'AT_CENTER' as const,
+          label: t('booking.paymentMethod.atCenter'),
+          description: t('booking.paymentMethod.atCenterDesc'),
+        },
+      ].filter((option) => enabledPaymentMethods.includes(option.value)),
+    [enabledPaymentMethods, t],
+  );
+  // Online stays the default when it is available (unchanged behaviour for a
+  // fully-enabled center); otherwise the first enabled method wins. A selection
+  // that is no longer enabled (settings changed mid-session) is dropped instead
+  // of being submitted.
+  const paymentMethod: WebsitePaymentMethod | null =
+    selectedPaymentMethod && enabledPaymentMethods.includes(selectedPaymentMethod)
+      ? selectedPaymentMethod
+      : enabledPaymentMethods[0] ?? null;
   const payAtClinic = isPaidBooking && paymentMethod === 'AT_CENTER';
+  // A paid booking with no enabled method cannot be confirmed at all — the
+  // backend would reject it (and earlier it rejected it *after* the customer
+  // believed the booking went through).
+  const noPaymentMethodAvailable = isPaidBooking && enabledPaymentMethods.length === 0;
 
   const isAuthed = client !== null;
 
@@ -468,7 +517,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               </span>
             </div>
 
-            {isPaidBooking && (
+            {isPaidBooking && paymentMethodOptions.length > 0 && (
               <fieldset className="flex flex-col gap-2.5 pt-1">
                 <legend
                   className="mb-2 text-xs font-extrabold"
@@ -477,20 +526,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   {t('booking.paymentMethod.title')}
                 </legend>
 
-                {(
-                  [
-                    {
-                      value: 'ONLINE' as const,
-                      label: t('booking.paymentMethod.online'),
-                      description: t('booking.paymentMethod.onlineDesc'),
-                    },
-                    {
-                      value: 'AT_CENTER' as const,
-                      label: t('booking.paymentMethod.atCenter'),
-                      description: t('booking.paymentMethod.atCenterDesc'),
-                    },
-                  ]
-                ).map((option) => {
+                {paymentMethodOptions.map((option) => {
                   const selected = paymentMethod === option.value;
                   return (
                     <label
@@ -508,7 +544,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                         name="booking-payment-method"
                         value={option.value}
                         checked={selected}
-                        onChange={() => setPaymentMethod(option.value)}
+                        onChange={() => setSelectedPaymentMethod(option.value)}
                         disabled={isSubmitting}
                         className="h-4 w-4 shrink-0 accent-[var(--primary)]"
                       />
@@ -526,16 +562,31 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               </fieldset>
             )}
 
+            {noPaymentMethodAvailable && (
+              <p
+                role="status"
+                className="rounded-xl px-3.5 py-3 text-xs font-medium leading-relaxed"
+                style={{
+                  background: 'color-mix(in srgb, var(--error) 8%, transparent)',
+                  color: 'var(--error)',
+                }}
+              >
+                {paymentMethodsLoading
+                  ? t('booking.paymentMethod.checking')
+                  : t('booking.paymentMethod.unavailable')}
+              </p>
+            )}
+
             <button
               type="button"
               onClick={() => onSubmitInfo(payAtClinic)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || noPaymentMethodAvailable}
               className="mt-1 inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99]"
               style={{
                 background: 'var(--primary)',
                 color: 'var(--on-primary)',
-                boxShadow: isSubmitting ? 'none' : 'var(--sw-shadow-primary)',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                boxShadow: isSubmitting || noPaymentMethodAvailable ? 'none' : 'var(--sw-shadow-primary)',
+                cursor: isSubmitting || noPaymentMethodAvailable ? 'not-allowed' : 'pointer',
               }}
             >
               {isSubmitting ? (
@@ -563,7 +614,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               )}
             </button>
 
-            {!payAtClinic && isPaidBooking && (
+            {!noPaymentMethodAvailable && !payAtClinic && isPaidBooking && (
               <p
                 className="flex items-center justify-center gap-1.5 text-[0.6875rem] font-medium"
                 style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 48%, transparent)' }}

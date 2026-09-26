@@ -3,7 +3,7 @@ import {
   canStartHostedPayment,
   resolveExistingBookingCheckout,
   type ExistingBookingCheckoutInput,
-} from '../existing-booking-checkout-state';
+} from '@/features/booking/existing-booking-checkout-state';
 
 const baseBooking = {
   id: 'booking-1',

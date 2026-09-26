@@ -56,6 +56,11 @@ describe('UpdateCategoryDto', () => {
     expect(errors.some((e) => e.property === 'bookingMode')).toBe(true);
   });
 
+  it('rejects an unknown category kind', async () => {
+    const errors = await validateDto({ kind: 'UNKNOWN' });
+    expect(errors.some((e) => e.property === 'kind')).toBe(true);
+  });
+
   it('rejects a non-boolean isActive', async () => {
     const errors = await validateDto({ isActive: 'true' });
     expect(errors.some((e) => e.property === 'isActive')).toBe(true);

@@ -15,6 +15,7 @@ vi.mock('@/features/auth/auth.api', () => ({
 }));
 
 vi.mock('@/features/booking/booking.api', () => ({
+  getPublicPaymentMethods: vi.fn().mockResolvedValue({ moyasarEnabled: true, atClinicEnabled: true }),
   initPayment: vi.fn(),
 }));
 

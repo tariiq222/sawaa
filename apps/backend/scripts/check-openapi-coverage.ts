@@ -62,7 +62,7 @@ for (const [schemaName, schema] of Object.entries(spec.components?.schemas ?? {}
   }
 }
 
-problems.sort();
+problems.sort((a, b) => a.localeCompare(b));
 
 if (process.argv.includes('--write-baseline')) {
   writeFileSync(baselinePath, `${JSON.stringify(problems, null, 2)}\n`);
@@ -76,7 +76,7 @@ try {
   if (!Array.isArray(parsed) || parsed.some((problem) => typeof problem !== 'string')) {
     throw new Error('baseline must be a JSON array of strings');
   }
-  baseline = [...new Set(parsed)].sort();
+  baseline = [...new Set(parsed)].sort((a, b) => a.localeCompare(b));
 } catch (error) {
   console.error(
     `✗ OpenAPI coverage baseline is missing or invalid at ${baselinePath}: ${error instanceof Error ? error.message : String(error)}`,

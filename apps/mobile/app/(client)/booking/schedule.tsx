@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,8 @@ import * as Haptics from 'expo-haptics';
 import { AquaBackground, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { useDir } from '@/hooks/useDir';
+import { useAppSelector } from '@/hooks/use-redux';
+import { bookingStepPath } from '@/features/booking/guest-booking-flow';
 import { getFontName } from '@/theme/fonts';
 import { publicEmployeesService } from '@/services/client/employees';
 import { branchesService } from '@/services/branches';
@@ -17,6 +19,7 @@ import { DaySelector } from '@/components/features/booking/DaySelector';
 import { TimeSlotsGrid, type Slot } from '@/components/features/booking/TimeSlotsGrid';
 import { BookingCta } from '@/components/features/booking/BookingCta';
 import { useReduceMotion } from '@/hooks/useA11y';
+import { goBackOrHome } from '@/lib/navigation';
 import type { DeliveryType } from '@/types/booking-enums';
 
 function toLocalDateOnly(d: Date): string {
@@ -30,6 +33,7 @@ export default function BookingScheduleScreen() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{
+    clinicId?: string;
     serviceId?: string;
     employeeId?: string;
     branchId?: string;
@@ -44,6 +48,7 @@ export default function BookingScheduleScreen() {
   const dir = useDir();
   const { t } = useTranslation();
   const reduceMotion = useReduceMotion();
+  const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
   const f500 = getFontName(dir.locale, '500');
   const f600 = getFontName(dir.locale, '600');
@@ -142,8 +147,9 @@ export default function BookingScheduleScreen() {
     if (!selectedSlot || !branchId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
-      pathname: '/(client)/booking/confirm',
+      pathname: bookingStepPath('confirm', signedIn),
       params: {
+        clinicId: params.clinicId,
         serviceId: params.serviceId,
         employeeId: params.employeeId ?? '',
         branchId,
@@ -168,7 +174,7 @@ export default function BookingScheduleScreen() {
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
           <BookingStepHeader
             step={2}
-            onBack={() => router.back()}
+            onBack={() => goBackOrHome(router)}
             backAccessibilityLabel={t('a11y.buttonBack')}
           />
         </Animated.View>
@@ -254,19 +260,19 @@ export default function BookingScheduleScreen() {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
-    marginTop: sawaaSpacing.sm,
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
     color: colors.ink[500],
-    marginTop: sawaaSpacing.xs,
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
   slotsHead: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },

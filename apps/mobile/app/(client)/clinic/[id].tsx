@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,17 +15,20 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { useClinics } from '@/hooks/queries';
+import { useClinics, usePublicCatalog, useTherapists } from '@/hooks/queries';
+import { getCategoryBookingServices } from '@sawaa/shared/catalog';
+import { useAppSelector } from '@/hooks/use-redux';
 
 const HERO_HEIGHT = 200;
 
 export default function ClinicDetailScreen() {
   const colors = useSawaaColors();
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
+  const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const f500 = getFontName(dir.locale, '500');
@@ -36,6 +39,8 @@ export default function ClinicDetailScreen() {
   // The clinic directory is derived from the public catalog + bookable
   // therapists; this route renders one entry of that same list.
   const clinicsQuery = useClinics();
+  const catalogQuery = usePublicCatalog();
+  const therapistsQuery = useTherapists();
   const clinic = useMemo(
     () => (clinicsQuery.data ?? []).find((entry) => entry.id === id),
     [clinicsQuery.data, id],
@@ -44,6 +49,34 @@ export default function ClinicDetailScreen() {
   const clinicName = clinic
     ? (dir.isRTL ? clinic.nameAr : (clinic.nameEn ?? clinic.nameAr))
     : '';
+  const services = useMemo(() => {
+    if (!clinic || clinic.bookingMode !== 'SERVICES' || !catalogQuery.data) return [];
+    const category = catalogQuery.data.categories.find((item) => item.id === clinic.id);
+    if (!category) return [];
+    const allowedIds = new Set(clinic.serviceIds);
+    return getCategoryBookingServices(category, catalogQuery.data.services).filter((service) => allowedIds.has(service.id));
+  }, [catalogQuery.data, clinic]);
+  const therapists = useMemo(() => {
+    if (!clinic) return [];
+    const serviceIds = new Set(clinic.serviceIds);
+    return (therapistsQuery.data ?? []).filter((employee) => employee.serviceIds.some((serviceId) => serviceIds.has(serviceId)));
+  }, [clinic, therapistsQuery.data]);
+  const requestState = (loading: boolean, failed: boolean, emptyLabel: string, retry: () => unknown) => {
+    if (loading) {
+      return <View style={[styles.requestState, { flexDirection: dir.row }]}><ActivityIndicator color={colors.teal[700]} /><Text style={styles.clinicMeta}>{t('common.loading')}</Text></View>;
+    }
+    if (failed) {
+      return (
+        <View style={styles.requestState}>
+          <Text style={[styles.clinicMeta, { textAlign: dir.textAlign }]}>{t('guest.loadError')}</Text>
+          <Pressable onPress={() => { void retry(); }} accessibilityRole="button" style={styles.retryButton}>
+            <Text style={[styles.retryText, { fontFamily: f500 }]}>{t('common.retry')}</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return <Text style={[styles.clinicMeta, { textAlign: dir.textAlign }]}>{emptyLabel}</Text>;
+  };
 
   const renderBody = () => {
     if (clinicsQuery.isLoading) {
@@ -73,7 +106,7 @@ export default function ClinicDetailScreen() {
           icon="information-circle-outline"
           title={t('clinics.notFound')}
           actionLabel={t('clinics.title')}
-          onAction={() => router.replace('/(client)/clinics')}
+          onAction={() => router.replace(signedIn ? '/(client)/clinics' : '/public-list/clinics')}
         />
       );
     }
@@ -90,12 +123,86 @@ export default function ClinicDetailScreen() {
               <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500' }]}>
                 {t('clinics.therapistsCount', { count: clinic.therapistCount })}
               </Text>
-              <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500' }]}>
+              {clinic.serviceCount > 0 ? <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500' }]}>
                 {t('clinics.servicesCount', { count: clinic.serviceCount })}
-              </Text>
+              </Text> : null}
             </View>
           </Glass>
         </Animated.View>
+        {services.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+              {t('guest.services')}
+            </Text>
+            {services.map((service) => {
+              const serviceName = dir.isRTL ? service.nameAr : service.nameEn ?? service.nameAr;
+              return (
+                <Glass
+                  key={service.id}
+                  variant="strong"
+                  radius={sawaaRadius.lg}
+                  style={styles.serviceCard}
+                  onPress={() => router.push({
+                    pathname: signedIn ? '/(client)/therapists' : '/public-list/[kind]',
+                    params: { ...(!signedIn ? { kind: 'therapists' } : {}), clinicId: clinic.id, serviceId: service.id },
+                  })}
+                  interactive
+                  accessibilityLabel={serviceName}
+                >
+                  <View style={[styles.catalogRow, { flexDirection: dir.row }]}>
+                    <Text style={[styles.serviceName, { fontFamily: f500, textAlign: dir.textAlign, flex: 1 }]}>
+                      {serviceName}
+                    </Text>
+                    <GoIcon size={16} color={colors.ink[500]} strokeWidth={1.75} />
+                  </View>
+                </Glass>
+              );
+            })}
+          </View>
+        ) : null}
+        {clinic.bookingMode === 'SERVICES' && services.length === 0 ? requestState(
+          catalogQuery.isLoading,
+          catalogQuery.isError,
+          t('guest.empty'),
+          catalogQuery.refetch,
+        ) : null}
+        {therapists.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+              {t('therapists.title')}
+            </Text>
+            {therapists.map((therapist) => {
+              const name = (dir.isRTL ? therapist.nameAr : therapist.nameEn) ?? therapist.nameEn ?? therapist.nameAr ?? t('therapists.unknownName');
+              return (
+                <Glass
+                  key={therapist.id}
+                  variant="strong"
+                  radius={sawaaRadius.lg}
+                  style={styles.serviceCard}
+                  onPress={() => router.push({
+                    pathname: signedIn ? '/(client)/employee/[id]' : '/public-detail/[kind]/[id]',
+                    params: signedIn
+                      ? { id: therapist.slug ?? therapist.id, clinicId: clinic.id }
+                      : { kind: 'therapist', id: therapist.slug ?? therapist.id, clinicId: clinic.id },
+                  })}
+                  interactive
+                  accessibilityLabel={name}
+                >
+                  <View style={[styles.catalogRow, { flexDirection: dir.row }]}>
+                    <Text style={[styles.serviceName, { fontFamily: f500, textAlign: dir.textAlign, flex: 1 }]}>{name}</Text>
+                    <GoIcon size={16} color={colors.ink[500]} strokeWidth={1.75} />
+                  </View>
+                </Glass>
+              );
+            })}
+          </View>
+        ) : null}
+        {therapists.length === 0 ? requestState(
+          therapistsQuery.isLoading,
+          therapistsQuery.isError,
+          t('therapists.empty'),
+          therapistsQuery.refetch,
+        ) : null}
       </>
     );
   };
@@ -131,37 +238,11 @@ export default function ClinicDetailScreen() {
         {renderBody()}
       </ScrollView>
 
-      {clinic ? (
-        <Animated.View
-          entering={FadeInDown.delay(360).duration(800).easing(Easing.out(Easing.cubic))}
-          style={[styles.ctaWrap, { bottom: insets.bottom + 20 }]}
-        >
-          <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaPill}>
-            <Pressable
-              onPress={() => router.push({ pathname: '/(client)/therapists', params: { clinicId: clinic.id } })}
-              style={styles.ctaBtnPress}
-              accessibilityRole="button"
-            >
-              <LinearGradient
-                colors={theme.colors.primaryGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.ctaBtn}
-              >
-                <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
-                  {t('therapists.title')}
-                </Text>
-                <GoIcon size={14} color={theme.colors.primaryForeground} strokeWidth={2} />
-              </LinearGradient>
-            </Pressable>
-          </Glass>
-        </Animated.View>
-      ) : null}
     </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   hero: { position: 'absolute', top: 0, left: 0, right: 0, height: HERO_HEIGHT, overflow: 'hidden' },
   heroIcon: { position: 'absolute', bottom: -20, left: 0, right: 0, alignItems: 'center' },
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
@@ -171,13 +252,12 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: Re
   clinicName: { fontSize: 20, color: colors.ink[900] },
   metaRow: { flexWrap: 'wrap', gap: sawaaSpacing.md, alignItems: 'center' },
   clinicMeta: { fontSize: sawaaType.caption.fontSize, color: colors.ink[500] },
-  ctaWrap: { position: 'absolute', left: sawaaSpacing.lg, right: sawaaSpacing.lg },
-  ctaPill: { padding: 6 },
-  ctaBtnPress: { height: 46 },
-  ctaBtn: {
-    flex: 1, borderRadius: 999, height: 46,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    shadowColor: colors.teal[600], shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 },
-  },
-  ctaBtnText: { color: themeColors.primaryForeground, fontSize: 13 },
+  section: { gap: sawaaSpacing.sm },
+  sectionTitle: { fontSize: 16, color: colors.ink[900] },
+  serviceCard: { paddingVertical: sawaaSpacing.md, paddingHorizontal: sawaaSpacing.lg },
+  catalogRow: { alignItems: 'center', gap: sawaaSpacing.md },
+  serviceName: { color: colors.ink[900], fontSize: 15 },
+  requestState: { alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.sm, padding: sawaaSpacing.md, backgroundColor: colors.glass.opaqueBg, borderRadius: sawaaRadius.lg },
+  retryButton: { minHeight: 40, paddingHorizontal: sawaaSpacing.md, borderRadius: sawaaRadius.pill, backgroundColor: colors.teal[700], alignItems: 'center', justifyContent: 'center' },
+  retryText: { color: colors.glass.opaqueBg, fontSize: 13 },
 });

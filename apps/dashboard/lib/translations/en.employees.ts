@@ -375,6 +375,9 @@ export const enEmployees: Record<string, string> = {
   "employees.form.stepErrorVacation": "vacation",
   "employees.form.stepErrorServices": "services",
   "employees.form.stepErrorAvatar": "avatar",
+  "employees.avatar.change": "Change profile photo",
+  "employees.avatar.add": "Add profile photo",
+  "employees.avatar.remove": "Remove profile photo",
   "employees.form.createPartialSuccess": "Employee created, but failed to save: {steps}",
   "employees.form.partialFailure": "Some parts could not be saved: {list}",
 

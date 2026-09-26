@@ -106,11 +106,11 @@ export class ListPublicEmployeesHandler {
               ? {
                   id: { in: serviceIds }, isActive: true, archivedAt: null,
                   OR: [
-                    { isHidden: false },
+                    { isHidden: false, category: { isActive: true } },
                     { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
                   ],
                 }
-              : { id: { in: serviceIds }, isActive: true, isHidden: false, archivedAt: null },
+              : { id: { in: serviceIds }, isActive: true, isHidden: false, archivedAt: null, category: { isActive: true } },
             select: { id: true, price: true, isHidden: true },
           })
         : [];

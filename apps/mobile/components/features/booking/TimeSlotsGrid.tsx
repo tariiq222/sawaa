@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/ThemeProvider';
-import { GlassSurface } from '@/theme/sawaa/GlassSurface';
+import { Glass } from '@/theme/components/Glass';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { DirState } from '@/hooks/useDir';
@@ -111,7 +111,7 @@ export function TimeSlotsGrid({
             accessibilityLabel={`${dir.isRTL ? 'وقت' : 'Time'} ${formatTime(s.startTime, dir.isRTL)}`}
             accessibilityState={{ selected: isSelected }}
           >
-            <GlassSurface variant={isSelected ? 'strong' : 'base'} radius={sawaaRadius.md} style={styles.slot}>
+            <Glass variant={isSelected ? 'strong' : 'base'} radius={sawaaRadius.md} style={styles.slot}>
               {isSelected ? (
                 <LinearGradient
                   colors={action.gradient}
@@ -134,7 +134,7 @@ export function TimeSlotsGrid({
                   {formatTime(s.startTime, dir.isRTL)}
                 </Text>
               </View>
-            </GlassSurface>
+            </Glass>
           </Pressable>
         );
       })}

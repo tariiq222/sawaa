@@ -14,7 +14,7 @@
  *   - `@import "tailwindcss"` and plugin imports
  *   - `@theme inline { ... }` mapping CSS vars to Tailwind utility names
  *   - `@layer base { ... }` global resets (body, html, dir)
- *   - App utilities (`.glass`, `.login-grid-pattern`, `.flip-icon`, etc.)
+ *   - App utilities (`.glass`, `.login-grid-pattern`, etc.)
  *
  * Consumed by:
  *   - apps/dashboard/app/globals.css (Tailwind v4 bridge)

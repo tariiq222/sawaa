@@ -165,3 +165,42 @@ test("pending status does not show the extra check-in button", () => {
   )
   expect(screen.queryByRole("button", { name: CHECKIN_LABEL })).not.toBeInTheDocument()
 })
+
+/* ─── Payment holds ───────────────────────────────────────────────────────────
+ * awaiting_payment / pending_group_fill reserve the slot while an online
+ * payment is pending. DIRECT_CANCEL accepts both, so the row offers the cancel
+ * action — but never "confirm" (CONFIRM is PENDING-only).
+ */
+
+test("awaiting_payment row offers the quick cancel action", () => {
+  render(
+    <StatusCell
+      booking={makeBooking({ status: "awaiting_payment", checkedInAt: null })}
+      onStatusAction={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  )
+  expect(screen.getByText("bookings.col.quickAction.cancel")).toBeInTheDocument()
+})
+
+test("pending_group_fill row offers the quick cancel action", () => {
+  render(
+    <StatusCell
+      booking={makeBooking({ status: "pending_group_fill", checkedInAt: null })}
+      onStatusAction={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  )
+  expect(screen.getByText("bookings.col.quickAction.cancel")).toBeInTheDocument()
+})
+
+test("awaiting_payment row still shows its own status badge", () => {
+  render(
+    <StatusCell
+      booking={makeBooking({ status: "awaiting_payment", checkedInAt: null })}
+      onStatusAction={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  )
+  expect(screen.getByText("status-badge")).toBeInTheDocument()
+})

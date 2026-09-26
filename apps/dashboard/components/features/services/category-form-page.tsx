@@ -17,12 +17,12 @@ import { FormSection, FormField } from "@/components/features/shared/form-sectio
 import {
   Button, Skeleton, Tabs, TabsContent,
   Input, Switch, Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue, RadioGroup, RadioGroupItem, Label,
+  SelectTrigger, SelectValue, Label,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import {
   createCategorySchema, editCategorySchema,
-  type CreateCategoryFormData, type EditCategoryFormData,
+  type EditCategoryFormData,
 } from "@/lib/schemas/service.schema"
 import type { ServiceCategory } from "@/lib/types/service"
 import { formatRef } from "@/lib/utils"
@@ -33,6 +33,8 @@ import { CategoryEmployeesTab } from "./category-employees-tab"
 import { ServiceAvatarPicker } from "@/components/features/shared/service-avatar-picker"
 import { CategoryWizardNav } from "./category-wizard-nav"
 import { CategoryWizardStepper } from "./category-wizard-stepper"
+import { CategoryKindBookingFields, resolveEffectiveCategoryKind } from "./category-kind-booking-fields"
+import { buildCategoryCreatePayload, buildCategoryUpdatePayload } from "./category-create-payload"
 
 interface CategoryFormPageProps {
   mode: "create" | "edit"
@@ -64,11 +66,13 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     resolver: zodResolver(
       (mode === "edit" ? editCategorySchema : createCategorySchema) as typeof editCategorySchema,
     ) as Resolver<EditCategoryFormData>,
-    defaultValues: { nameAr: "", nameEn: "", sortOrder: undefined, isActive: true, departmentId: "", bookingMode: "DIRECT" as const, iconName: undefined, iconBgColor: undefined, imageUrl: undefined },
+    defaultValues: { nameAr: "", nameEn: "", sortOrder: undefined, isActive: true, departmentId: "", kind: "CLINIC" as const, bookingMode: "DIRECT" as const, iconName: undefined, iconBgColor: undefined, imageUrl: undefined },
   })
   const { register, handleSubmit, control, reset, formState: { errors } } = form
   const watchedMode = form.watch("bookingMode")
-  const effectiveMode = mode === "edit" ? (category?.bookingMode ?? watchedMode ?? "DIRECT") : (watchedMode ?? "DIRECT")
+  const watchedKind = form.watch("kind")
+  const effectiveKind = resolveEffectiveCategoryKind(mode, watchedKind, category?.kind)
+  const effectiveMode = mode === "edit" ? (category?.bookingMode ?? "SERVICES") : (watchedMode ?? "DIRECT")
   const tabs = effectiveMode === "SERVICES" ? ["info", "services"] : ["info", "settings", "employees"]
   const tabIndex = tabs.indexOf(activeTab)
   const isFirst = tabIndex === 0
@@ -93,7 +97,8 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
       sortOrder: category.sortOrder,
       isActive: category.isActive,
       departmentId: category.departmentId ?? "",
-      bookingMode: category.bookingMode ?? "DIRECT",
+      kind: category.kind ?? "CLINIC",
+      bookingMode: category.bookingMode ?? "SERVICES",
       iconName: category.iconName ?? undefined,
       iconBgColor: category.iconBgColor ?? undefined,
       imageUrl: category.imageUrl ?? undefined,
@@ -109,17 +114,11 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     return () => window.removeEventListener("beforeunload", handler)
   }, [mode, form.formState.isDirty])
 
-  const buildCreatePayload = (data: EditCategoryFormData): CreateCategoryFormData => {
-    const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
-    // imageUrl is NOT included in create payload — uploaded separately after entity creation
-    return { nameAr: data.nameAr!, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, departmentId: deptId, bookingMode: data.bookingMode ?? "DIRECT", iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined }
-  }
-
   const saveAndGoToTab = async (target: string) => {
     if (!(await form.trigger())) return
     setIsSubmitting(true)
     try {
-      const created = await createMut.mutateAsync(buildCreatePayload(form.getValues()))
+      const created = await createMut.mutateAsync(buildCategoryCreatePayload(form.getValues()))
 
       if (pendingAvatarFile.current) {
         await uploadCategoryImage(created.id, pendingAvatarFile.current)
@@ -138,7 +137,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     setIsSubmitting(true)
     try {
       if (mode === "create") {
-        const created = await createMut.mutateAsync(buildCreatePayload(data))
+        const created = await createMut.mutateAsync(buildCategoryCreatePayload(data))
 
         if (pendingAvatarFile.current) {
           await uploadCategoryImage(created.id, pendingAvatarFile.current)
@@ -147,14 +146,14 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         }
 
         toast.success(t("services.categories.create.success"))
-        const secondTab = (data.bookingMode ?? "DIRECT") === "SERVICES" ? "services" : "settings"
+        const secondTab = ((data.kind === "SERVICE_GROUP" ? "SERVICES" : data.bookingMode) ?? "DIRECT") === "SERVICES" ? "services" : "settings"
         router.push(`/categories/${formatRef("CAT", created.ref)}/edit?tab=${secondTab}`)
       } else {
         const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
         // imageUrl in payload only when set from the server (not a pending file upload)
         const imageUrlValue = pendingAvatarFile.current ? undefined : (data.imageUrl ?? undefined)
         const resolvedId = category?.id ?? categoryId!
-        await updateMut.mutateAsync({ id: resolvedId, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode, iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: imageUrlValue })
+        await updateMut.mutateAsync(buildCategoryUpdatePayload(resolvedId, data, imageUrlValue, deptId ?? null))
 
         if (pendingAvatarFile.current) {
           await uploadCategoryImage(resolvedId, pendingAvatarFile.current)
@@ -306,37 +305,21 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                       </Select>
                     )}
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("services.categories.create.departmentHint")}
+                  </p>
                 </FormField>
                 <FormField label={t("services.categories.create.sortOrder")}><Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder", { valueAsNumber: true })} placeholder="0" /></FormField>
               </div>
             </FormSection>
 
-            <FormSection title={t("services.categories.bookingMode.label")}>
-              <Controller
-                control={control}
-                name="bookingMode"
-                render={({ field }) => (
-                  <RadioGroup
-                    value={field.value ?? "DIRECT"}
-                    onValueChange={field.onChange}
-                    className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                  >
-                    {(["DIRECT", "SERVICES"] as const).map((bm) => (
-                      <label key={bm} htmlFor={`page-mode-${bm.toLowerCase()}`} className="flex cursor-pointer items-start gap-3 rounded-sm border border-border bg-surface p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-surface-muted/40">
-                        <RadioGroupItem value={bm} id={`page-mode-${bm.toLowerCase()}`} className="mt-0.5" />
-                        <span className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-foreground">{t(`services.categories.bookingMode.${bm === "DIRECT" ? "direct" : "services"}`)}</span>
-                          <span className="text-xs text-muted-foreground">{t(`services.categories.bookingMode.${bm === "DIRECT" ? "directDesc" : "servicesDesc"}`)}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </RadioGroup>
-                )}
-              />
-              {mode === "edit" && (
-                <p className="mt-3 text-xs text-muted-foreground">{t("services.categories.bookingMode.editHint")}</p>
-              )}
-            </FormSection>
+            <CategoryKindBookingFields
+              kind={effectiveKind}
+              bookingMode={effectiveMode}
+              mode={mode}
+              onKindChange={(value) => form.setValue("kind", value, { shouldDirty: true })}
+              onBookingModeChange={(value) => form.setValue("bookingMode", value, { shouldDirty: true })}
+            />
 
             {mode === "edit" && (
               <FormSection>
@@ -364,7 +347,6 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                 <CategorySettingsTab
                   categoryId={category?.id}
                   mode={mode}
-                  categoryNameAr={category?.nameAr ?? ""}
                   bookingMode={effectiveMode}
                 />
               </TabsContent>

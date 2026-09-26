@@ -26,6 +26,7 @@
     "login.submit": "Login",
     "login.submitting": "Logging in...",
     "login.identifierError": "Please enter your phone or email",
+    "login.continueAsGuest": "Continue as guest",
     "otp.title": "Verification Code",
     "otp.code": "Enter the code",
     "otp.resend": "Resend Code",
@@ -109,6 +110,8 @@
   },
   "tabs": {
     "home": "Home",
+    "explore": "Explore",
+    "myAppointments": "My Appointments",
     "appointments": "Appointments",
     "sessions": "My Sessions",
     "chat": "Chat",
@@ -123,7 +126,14 @@
     "notifications": "Notifications",
     "profile": "Profile"
   },
+  "explore": {
+    "all": "All",
+    "searchPlaceholder": "Search clinics, services, and specialists"
+  },
   "home": {
+    "assessmentServices": "Assessment and evaluation services",
+    "assessmentServicesEmpty": "Assessment and evaluation services are currently unavailable.",
+    "centerName": "Sawa Center",
     "greeting": "Hello",
     "greetingMorning": "Good morning",
     "greetingAfternoon": "Good afternoon",
@@ -254,6 +264,9 @@
     "completed": "Completed",
     "cancelledStatus": "Cancelled",
     "pendingCancellation": "Pending Cancellation",
+    "cancellationRequestedTitle": "Cancellation requested",
+    "cancellationRequestedMessage": "Your appointment remains active until the center reviews and confirms the request.",
+    "ratingAlreadySubmitted": "You have already rated this appointment",
     "checkedIn": "Checked In",
     "inProgress": "In Progress",
     "noShow": "No Show",
@@ -344,7 +357,8 @@
   "suspended": {
     "title": "Account Suspended",
     "message": "Your account has been temporarily suspended. Please contact administration for inquiries.",
-    "contactAdmin": "Contact Administration"
+    "contactAdmin": "Contact Administration",
+    "continueAsGuest": "Continue as guest"
   },
   "client": {
     "home": "Home",
@@ -618,11 +632,38 @@
     "sortOpen": "Open sort options",
     "rateStars": "Rate {{count}} stars"
   },
+  "guest": {
+    "chooseClinicOrService": "Choose a clinic or service",
+    "visitorAccount": "Guest space",
+    "accountIntro": "Explore clinics, specialists, and packages without signing in.",
+    "accountAppointmentsHint": "If you have booked before, sign in to see your appointments.",
+    "signInForAppointments": "Sign in to view appointments",
+    "title": "Sawaa Family Counseling",
+    "subtitle": "Explore services, programs, and specialists without signing in.",
+    "services": "Services",
+    "packages": "Packages",
+    "programs": "Programs",
+    "therapists": "Specialists",
+    "clinicsDescription": "Explore Sawaa clinics and available areas of care.",
+    "therapistsDescription": "Find a specialist and explore their services.",
+    "packagesDescription": "A series of sessions for continued support.",
+    "programsDescription": "Programs and support groups in a safe space.",
+    "chooseTherapist": "Choose a specialist to continue booking",
+    "chooseService": "Choose a service to continue booking",
+    "signInToBook": "Sign in or create an account to schedule an appointment.",
+    "loadError": "Could not load this information. Please try later.",
+    "empty": "No services are available right now."
+  },
   "welcome": {
     "brand": "سَواء",
     "headline": "Your journey to Sawaa starts here",
     "sub": "Confidential sessions with our specialists,\nwithin moments — wherever you are.",
     "signIn": "Login",
     "signUp": "Create Account"
+  },
+  "notFound": {
+    "title": "Page not available",
+    "message": "The link you opened no longer exists or is incorrect.",
+    "back": "Go back"
   }
 }

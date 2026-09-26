@@ -5,7 +5,7 @@ import { PractitionerBookingAction } from '../PractitionerBookingAction';
 import { getBookableServices, practitionerBookingRoute } from '../practitionerBooking';
 import type { PublicService } from '@/services/client/catalog';
 
-const service = (id: string, nameAr: string, nameEn = nameAr): PublicService => ({ id, nameAr, nameEn, categoryId: null, price: 100, currency: 'SAR' });
+const service = (id: string, nameAr: string, nameEn = nameAr): PublicService => ({ id, nameAr, nameEn, categoryId: null, price: 100, currency: 'SAR', imageUrl: null });
 const catalog = [service('canonical-service-id', 'جلسة استشارية', 'Counseling session'), service('other-service', 'جلسة أسرية', 'Family session')];
 const t = (key: string, options?: Record<string, string>) => ({ 'therapists.noBookableServices': 'لا توجد خدمات متاحة للموعد حالياً.', 'therapists.bookingServiceTitle': 'اختاري خدمة للموعد', 'therapists.bookingService': options?.service ?? key, 'common.cancel': 'إلغاء' }[key] ?? key);
 

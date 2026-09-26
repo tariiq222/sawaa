@@ -1,0 +1,62 @@
+import React from 'react';
+import { render } from '@testing-library/react-native';
+
+const mockPush = jest.fn();
+const mockHome = jest.fn();
+let mockSignedIn = false;
+
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ isRTL: true, locale: 'ar', textAlign: 'right', row: 'row', writingDirection: 'rtl' }) }));
+jest.mock('@/hooks/use-redux', () => ({ useAppSelector: (selector: (state: unknown) => unknown) => selector({ auth: { token: mockSignedIn ? 'token' : null, user: mockSignedIn ? { firstName: 'أمل' } : null } }) }));
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
+jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
+jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ teal: { 600: 'teal', 700: 'teal' }, ink: { 900: 'black' }, glass: { opaqueBg: 'white' } }) }));
+jest.mock('@/theme/sawaa', () => ({ AquaBackground: ({ children }: { children: React.ReactNode }) => children }));
+jest.mock('@/theme/components/Glass', () => ({ Glass: ({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) => onPress ? <>{children}</> : <>{children}</> }));
+jest.mock('react-native-reanimated', () => {
+  const { View } = require('react-native');
+  return { __esModule: true, default: { View }, Easing: { out: () => null, cubic: () => null }, FadeInDown: { duration: () => ({ easing: () => null, delay: () => ({ duration: () => ({ easing: () => null }) }) }), delay: () => ({ duration: () => ({ easing: () => null }) }) } };
+});
+jest.mock('@/hooks/queries', () => ({
+  useHome: (enabled: boolean) => mockHome(enabled),
+  useTherapists: () => ({ data: [], refetch: jest.fn() }),
+  usePublicCatalog: () => ({ data: { services: [] }, refetch: jest.fn() }),
+  useClinics: () => ({ data: [], refetch: jest.fn() }),
+  useGroupSessions: () => ({ data: [], refetch: jest.fn() }),
+}));
+jest.mock('@/components/features/home/HomeAssessmentServices', () => ({ HomeAssessmentServices: () => null }));
+jest.mock('@/components/features/home/HomeDiscoveryCards', () => ({ HomeDiscoveryCards: () => null }));
+jest.mock('@/components/features/home/HomeTopBar', () => ({ HomeTopBar: () => null }));
+jest.mock('@/components/features/home/UpNextCard', () => ({ UpNextCard: () => null }));
+jest.mock('@/components/features/home/FeaturedClinics', () => ({ FeaturedClinics: () => null }));
+jest.mock('@/components/features/home/SupportSessions', () => ({ SupportSessions: () => null }));
+jest.mock('@/components/features/home/TherapistsRow', () => ({ TherapistsRow: () => null }));
+jest.mock('@/components/features/home/GuestDock', () => ({
+  GuestDock: () => { const { Text } = require('react-native'); return <Text>guest-dock</Text>; },
+}));
+jest.mock('@/components/features/home/HomeSectionHeading', () => ({ HomeSectionHeading: () => null }));
+
+import HomeScreen from '../(client)/(tabs)/home';
+
+describe('shared home', () => {
+  beforeEach(() => { mockSignedIn = false; mockHome.mockReset(); mockHome.mockReturnValue({ data: undefined, isLoading: false, refetch: jest.fn() }); mockPush.mockClear(); });
+
+  it('renders public sections without a standalone login action or private portal request', () => {
+    const screen = render(<HomeScreen />);
+    expect(screen.getByText('guest-dock')).toBeTruthy();
+    expect(screen.queryByText('auth.login')).toBeNull();
+    expect(mockHome).toHaveBeenCalledWith(false);
+  });
+
+  it('shows private upcoming data for signed-in clients', () => {
+    mockSignedIn = true;
+    mockHome.mockReturnValue({ data: { upcomingBookings: [], unreadNotifications: [] }, isLoading: true, refetch: jest.fn() });
+    const screen = render(<HomeScreen />);
+    expect(mockHome).toHaveBeenCalled();
+    expect(screen.getByText('home.upcomingAppointment')).toBeTruthy();
+    expect(screen.queryByText('auth.login')).toBeNull();
+    expect(screen.queryByText('guest-dock')).toBeNull();
+  });
+});

@@ -27,6 +27,7 @@ describe('GetBookingHandler', () => {
       },
       packagePurchase: { findUnique: jest.fn().mockResolvedValue(null) },
       sessionPackage: { findFirst: jest.fn().mockResolvedValue(null) },
+      rating: { findUnique: jest.fn().mockResolvedValue(null) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -64,6 +65,42 @@ describe('GetBookingHandler', () => {
 
     const result = await handler.execute({ bookingId: 'b1', clientId: 'c1' });
     expect(result.id).toBe('mapped-booking');
+  });
+
+  it.each([
+    ['rated', { id: 'rating-1' }, true],
+    ['unrated', null, false],
+  ])('passes %s state to the client-scoped mapper', async (_label, rating, hasRated) => {
+    prisma.booking.findFirst.mockResolvedValue({ id: 'b1', clientId: 'c1', employeeId: 'e1', serviceId: 's1' });
+    prisma.client.findFirst.mockResolvedValue(null);
+    prisma.employee.findFirst.mockResolvedValue(null);
+    prisma.service.findFirst.mockResolvedValue(null);
+    prisma.rating.findUnique.mockResolvedValue(rating);
+    (mapBookingRow as jest.Mock).mockClear();
+
+    await handler.execute({ bookingId: 'b1', clientId: 'c1' });
+
+    expect(prisma.rating.findUnique).toHaveBeenCalledWith({
+      where: { bookingId: 'b1' },
+      select: { id: true },
+    });
+    expect(mapBookingRow).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'b1' }),
+      expect.any(Object),
+      { hasRated },
+    );
+  });
+
+  it('does not query rating state for dashboard reads', async () => {
+    prisma.booking.findFirst.mockResolvedValue({ id: 'b1', clientId: 'c1', employeeId: 'e1', serviceId: 's1' });
+    prisma.client.findFirst.mockResolvedValue(null);
+    prisma.employee.findFirst.mockResolvedValue(null);
+    prisma.service.findFirst.mockResolvedValue(null);
+
+    await handler.execute({ bookingId: 'b1' });
+
+    expect(prisma.rating.findUnique).not.toHaveBeenCalled();
+    expect(mapBookingRow).toHaveBeenCalledWith(expect.any(Object), expect.any(Object), undefined);
   });
 
   // AUTHZ-005: EMPLOYEE may only read bookings assigned to them.

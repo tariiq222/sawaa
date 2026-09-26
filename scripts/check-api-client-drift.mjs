@@ -155,7 +155,7 @@ if (fs.existsSync(MODULES_DIR)) {
 if (undeclared.length > 0) {
   fail(
     `${undeclared.length} endpoint(s) CALLED by packages/api-client/src/modules are not declared in ` +
-    `endpoints.manifest.json:\n${[...new Set(undeclared)].sort().join('\n')}\n` +
+    `endpoints.manifest.json:\n${[...new Set(undeclared)].sort((a, b) => a.localeCompare(b)).join('\n')}\n` +
     `Add each to packages/api-client/endpoints.manifest.json (full /api/v1 path, {param} placeholders) ` +
     `in the same commit so the drift gate keeps covering it.`,
   );

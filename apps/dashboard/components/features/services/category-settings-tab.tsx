@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
+import { Button } from "@sawaa/ui"
+import { getDirectClinicService } from "@sawaa/shared/catalog"
 
 import { useLocale } from "@/components/locale-provider"
-import { useServiceMutations } from "@/hooks/use-services"
 import { fetchServices } from "@/lib/api/services"
 import { queryKeys } from "@/lib/query-keys"
 import { BookingTypesEditor } from "./booking-types-editor"
@@ -13,14 +12,12 @@ import { BookingTypesEditor } from "./booking-types-editor"
 interface CategorySettingsTabProps {
   categoryId: string | undefined
   mode: "create" | "edit"
-  categoryNameAr: string
   bookingMode?: "DIRECT" | "SERVICES"
 }
 
 export function CategorySettingsTab({
   categoryId,
   mode,
-  categoryNameAr,
   bookingMode,
 }: CategorySettingsTabProps) {
   const { t } = useLocale()
@@ -36,7 +33,6 @@ export function CategorySettingsTab({
   return (
     <CategorySettingsTabEdit
       categoryId={categoryId}
-      categoryNameAr={categoryNameAr}
       useClinicTerminology={bookingMode === "DIRECT"}
     />
   )
@@ -44,77 +40,44 @@ export function CategorySettingsTab({
 
 function CategorySettingsTabEdit({
   categoryId,
-  categoryNameAr,
   useClinicTerminology,
 }: {
   categoryId: string
-  categoryNameAr: string
   useClinicTerminology: boolean
 }) {
   const { t } = useLocale()
-  const queryClient = useQueryClient()
-  const { createMut } = useServiceMutations()
-  const createdRef = useRef(false)
-  const [createdServiceId, setCreatedServiceId] = useState<string | null>(null)
-
   const listFilters = { categoryId, limit: 100, includeHidden: true }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: queryKeys.services.list(listFilters),
     queryFn: () => fetchServices(listFilters),
     staleTime: 5 * 60 * 1000,
   })
 
   const services = data?.items ?? []
+  // DIRECT clinic settings must resolve the hidden row explicitly; a visible first row is never a substitute.
+  // See docs/architecture/clinic-service-booking-contract.md.
+  const directService = getDirectClinicService(services)
 
-  // Auto-create the hidden internal service when 0 services exist
-  useEffect(() => {
-    if (isLoading) return
-    if (services.length > 0) return
-    if (createdRef.current) return
-    if (createMut.isPending) return
-
-    createdRef.current = true
-    createMut
-      .mutateAsync({
-        nameAr: categoryNameAr || "خدمة",
-        nameEn: categoryNameAr || "Service",
-        categoryId,
-        durationMins: 30,
-        price: 0,
-        isHidden: true,
-      })
-      .then((created) => {
-        setCreatedServiceId(created.id)
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.services.list(listFilters),
-        })
-      })
-      .catch(() => {
-        // allow retry on next render
-        createdRef.current = false
-        toast.error(t("services.categories.settings.createServiceFailed"))
-      })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, services.length])
-
-  if (isLoading || createMut.isPending) {
+  if (isLoading) {
     return (
       <p className="text-sm text-muted-foreground">
-        {t("services.categories.settings.creatingService")}
+        {t("services.categories.settings.loadingService")}
       </p>
     )
   }
 
-  const serviceId = services[0]?.id ?? createdServiceId
-
-  if (!serviceId) {
+  if (error || !directService) {
     return (
-      <p className="text-sm text-muted-foreground">
-        {t("services.categories.settings.creatingService")}
-      </p>
+      <div className="flex flex-col items-start gap-3 rounded-md border border-border p-4">
+        <p className="text-sm font-medium text-foreground">{t("services.categories.settings.internalServiceMissing.title")}</p>
+        <p className="text-sm text-muted-foreground">{t("services.categories.settings.internalServiceMissing.desc")}</p>
+        <Button type="button" variant="outline" onClick={() => void refetch()} disabled={isFetching}>
+          {t("services.categories.settings.internalServiceMissing.retry")}
+        </Button>
+      </div>
     )
   }
 
-  return <BookingTypesEditor serviceId={serviceId} useClinicTerminology={useClinicTerminology} />
+  return <BookingTypesEditor serviceId={directService.id} useClinicTerminology={useClinicTerminology} />
 }

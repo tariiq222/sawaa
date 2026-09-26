@@ -26,6 +26,7 @@
     "login.submit": "الدخول",
     "login.submitting": "جارٍ...",
     "login.identifierError": "الرجاء إدخال رقم الجوال أو البريد الإلكتروني",
+    "login.continueAsGuest": "متابعة كزائر",
     "otp.title": "رمز التحقق",
     "otp.code": "أدخل الرمز",
     "otp.resend": "إعادة إرسال الرمز",
@@ -109,6 +110,8 @@
   },
   "tabs": {
     "home": "الرئيسية",
+    "explore": "استكشف",
+    "myAppointments": "مواعيدي",
     "appointments": "المواعيد",
     "sessions": "جلساتي",
     "chat": "المحادثة",
@@ -123,7 +126,14 @@
     "notifications": "الإشعارات",
     "profile": "حسابي"
   },
+  "explore": {
+    "all": "الكل",
+    "searchPlaceholder": "ابحث عن عيادة أو خدمة أو مختص"
+  },
   "home": {
+    "assessmentServices": "خدمات القياس والتقويم",
+    "assessmentServicesEmpty": "لا تتوفر خدمات القياس والتقويم حاليًا.",
+    "centerName": "مركز سواء",
     "greeting": "مرحباً",
     "greetingMorning": "صباح الخير",
     "greetingAfternoon": "مساء الخير",
@@ -254,6 +264,9 @@
     "completed": "مكتمل",
     "cancelledStatus": "ملغي",
     "pendingCancellation": "قيد الإلغاء",
+    "cancellationRequestedTitle": "تم إرسال طلب الإلغاء",
+    "cancellationRequestedMessage": "موعدك لا يزال قائمًا حتى يراجع المركز طلب الإلغاء ويؤكده.",
+    "ratingAlreadySubmitted": "سبق إرسال تقييم لهذا الموعد",
     "checkedIn": "وصل",
     "inProgress": "جارٍ",
     "noShow": "لم يحضر",
@@ -344,7 +357,8 @@
   "suspended": {
     "title": "الحساب معلَّق",
     "message": "تم تعليق حسابك مؤقتاً. للاستفسار يرجى التواصل مع الإدارة.",
-    "contactAdmin": "تواصل مع الإدارة"
+    "contactAdmin": "تواصل مع الإدارة",
+    "continueAsGuest": "متابعة كزائر"
   },
   "client": {
     "home": "الصفحة الرئيسية",
@@ -618,11 +632,38 @@
     "sortOpen": "فتح خيارات الفرز",
     "rateStars": "تقييم {{count}} نجوم"
   },
+  "guest": {
+    "chooseClinicOrService": "اختر العيادة أو الخدمة",
+    "visitorAccount": "مساحة الزائر",
+    "accountIntro": "يمكنك تصفح العيادات والمختصين والباقات دون تسجيل الدخول.",
+    "accountAppointmentsHint": "إذا سبق لك الحجز، ادخل إلى حسابك للاطلاع على مواعيدك.",
+    "signInForAppointments": "الدخول لعرض مواعيدي",
+    "title": "سواء للإرشاد الأسري",
+    "subtitle": "تعرّف على الخدمات والبرامج والمختصين دون تسجيل الدخول.",
+    "services": "الخدمات",
+    "packages": "الباقات",
+    "programs": "البرامج",
+    "therapists": "المختصون",
+    "clinicsDescription": "تعرّف على عيادات سواء ومجالات الرعاية المتاحة.",
+    "therapistsDescription": "اختر المختص المناسب لك واطّلع على خدماته.",
+    "packagesDescription": "جلسات متتابعة تمنحك مساحة للاستمرار.",
+    "programsDescription": "برامج ومجموعات دعم في بيئة آمنة.",
+    "chooseTherapist": "اختر المختص لإكمال الحجز",
+    "chooseService": "اختر الخدمة لإكمال الحجز",
+    "signInToBook": "لتحديد موعد، سجّل الدخول أو أنشئ حسابًا.",
+    "loadError": "تعذّر تحميل المعلومات حاليًا. حاول لاحقًا.",
+    "empty": "لا توجد خدمات متاحة حاليًا."
+  },
   "welcome": {
     "brand": "سَواء",
     "headline": "رحلتك للسواء تبدأ هنا",
     "sub": "جلسات سرّية مع أفضل المعالجين النفسيين،\nخلال لحظات — أينما كنتِ.",
     "signIn": "تسجيل دخول",
     "signUp": "تسجيل جديد"
+  },
+  "notFound": {
+    "title": "الصفحة غير متاحة",
+    "message": "الرابط الذي فتحته لم يعد موجودًا أو أنه غير صحيح.",
+    "back": "العودة"
   }
 }

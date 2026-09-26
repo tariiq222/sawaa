@@ -24,6 +24,10 @@ export interface ClientBookingRow {
   scheduledAt: string;
   durationMins: number;
   status: BookingStatus;
+  /** Server-backed rating existence for this booking. */
+  hasRated?: boolean;
+  /** True only after this running app session confirmed a rating submission. */
+  ratingSubmittedLocally?: boolean;
   /** Appointment/category type. Legacy payloads may still send delivery here. */
   bookingType?: LegacyBookingType;
   /** Legacy alias used by dashboard mapper shapes. */
@@ -53,6 +57,12 @@ export interface ClientBookingRow {
   zoomStartUrl: string | null;
   zoomLink?: string | null;
   zoomMeetingStatus: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null;
+}
+
+const ratedBookingIdsThisSession = new Set<string>();
+
+export function wasRatedInCurrentSession(bookingId: string): boolean {
+  return ratedBookingIdsThisSession.has(bookingId);
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -107,11 +117,18 @@ function normalizeMeetingStatus(value: unknown): ClientBookingRow['zoomMeetingSt
  */
 export function normalizeClientBooking(raw: unknown): ClientBookingRow {
   const row = asRecord(raw) ?? {};
-  // Older mobile endpoints already returned the app's canonical row. Keep
-  // that object shape and identity untouched while adapting mapper rows below.
+  // Older mobile endpoints already returned a flat row. Preserve its fields
+  // while normalizing enum casing and retaining the server rating flag.
   if (stringValue(row.scheduledAt) && !stringValue(row.scheduledAt)?.startsWith('2999-')
     && !('date' in row) && !('invoice' in row) && !('payment' in row)) {
-    return raw as ClientBookingRow;
+    const bookingType = stringValue(row.bookingType);
+    const type = stringValue(row.type);
+    return {
+      ...(raw as ClientBookingRow),
+      ...(bookingType ? { bookingType: bookingType.toLowerCase() as LegacyBookingType } : {}),
+      ...(type ? { type: type.toLowerCase() as LegacyBookingType } : {}),
+      ...(typeof row.hasRated === 'boolean' ? { hasRated: row.hasRated } : {}),
+    };
   }
   const invoice = asRecord(row.invoice);
   const payment = asRecord(row.payment);
@@ -151,8 +168,9 @@ export function normalizeClientBooking(raw: unknown): ClientBookingRow {
     scheduledAt: normalizeScheduledAt(row),
     durationMins,
     status: normalizeStatus(row.status),
-    bookingType: stringValue(row.bookingType) as LegacyBookingType | undefined,
-    type: stringValue(row.type) as LegacyBookingType | undefined,
+    bookingType: stringValue(row.bookingType)?.toLowerCase() as LegacyBookingType | undefined,
+    type: stringValue(row.type)?.toLowerCase() as LegacyBookingType | undefined,
+    hasRated: row.hasRated === true,
     deliveryType: stringValue(row.deliveryType) as DeliveryType | null | undefined,
     employeeId: stringValue(row.employeeId) ?? stringValue(employee?.id) ?? '',
     employee: employee
@@ -265,7 +283,10 @@ export const clientBookingsService = {
 
   async getById(id: string) {
     const response = await api.get<unknown>(`/mobile/client/bookings/${id}`);
-    return normalizeClientBooking(response.data);
+    return {
+      ...normalizeClientBooking(response.data),
+      ratingSubmittedLocally: wasRatedInCurrentSession(id),
+    };
   },
 
   async create(data: CreateBookingData) {
@@ -300,11 +321,23 @@ export const clientBookingsService = {
   },
 
   async rate(id: string, data: RateData) {
-    const response = await api.post(
-      `/mobile/client/bookings/${id}/rate`,
-      data,
-    );
-    return response.data;
+    try {
+      const response = await api.post(
+        `/mobile/client/bookings/${id}/rate`,
+        data,
+      );
+      ratedBookingIdsThisSession.add(id);
+      return response.data;
+    } catch (error) {
+      const responseData = (error as { response?: { data?: { message?: unknown } } })?.response?.data;
+      const message = Array.isArray(responseData?.message)
+        ? responseData.message.join(' ')
+        : responseData?.message;
+      if (typeof message === 'string' && message.toLowerCase().includes('rating already submitted')) {
+        ratedBookingIdsThisSession.add(id);
+      }
+      throw error;
+    }
   },
 
   async getJoinUrl(id: string) {

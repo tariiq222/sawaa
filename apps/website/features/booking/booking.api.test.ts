@@ -15,6 +15,7 @@ import {
   getPublicAvailability,
   createBooking,
   initPayment,
+  getPublicPaymentMethods,
   getPractitionerBookingOptions,
   createGuestBooking,
   initGuestPayment,
@@ -227,6 +228,27 @@ describe('booking.api', () => {
         new Response(JSON.stringify({ message: 'Invoice not found' }), { status: 404 }),
       );
       await expect(initPayment('missing')).rejects.toMatchObject({ status: 404 });
+    });
+  });
+
+  describe('getPublicPaymentMethods', () => {
+    it('GETs /public/payments/methods with no-store cache and reads the flags', async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({ moyasarEnabled: false, atClinicEnabled: true }),
+      );
+      const result = await getPublicPaymentMethods();
+      expect(result).toEqual({ moyasarEnabled: false, atClinicEnabled: true });
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe('http://api.local/api/v1/public/payments/methods');
+      expect(init.cache).toBe('no-store');
+    });
+
+    it('normalizes a malformed payload to "nothing available" rather than offering a method', async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse({}));
+      await expect(getPublicPaymentMethods()).resolves.toEqual({
+        moyasarEnabled: false,
+        atClinicEnabled: false,
+      });
     });
   });
 

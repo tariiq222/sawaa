@@ -43,6 +43,7 @@ const catalog = {
     },
     {
       id: 'category-groups',
+      kind: 'SERVICE_GROUP',
       departmentId: 'dept-groups',
       nameAr: 'العلاج بالفن',
       nameEn: 'Art Therapy',
@@ -161,7 +162,7 @@ describe('selectBookableClinicServices', () => {
       departments: catalog.departments.filter((department) => department.id !== 'dept-clinics'),
     };
 
-    expect(selectBookableClinicServices(withoutClinics, employees).map((item) => item.service.id)).toEqual(['service-group']);
+    expect(selectBookableClinicServices(withoutClinics, employees).map((item) => item.service.id)).toEqual(['service-mental-status', 'service-group']);
   });
 
   it('keeps direct clinics bookable without listing their internal service', () => {
@@ -198,5 +199,17 @@ describe('selectBookableClinicServices', () => {
     };
 
     expect(selectBookableClinics(directCatalog, employees)).toEqual([]);
+  });
+
+  it('does not mutate inputs and excludes disabled or archived services', () => {
+    const scoped = { ...catalog, categories: [...catalog.categories].reverse(), services: [
+      ...catalog.services,
+      { ...catalog.services[0], id: 'disabled', isActive: false },
+      { ...catalog.services[0], id: 'archived', archivedAt: '2026-09-01' },
+    ] };
+    const before = JSON.stringify(scoped);
+    expect(selectBookableClinics(scoped, employees).map((clinic) => clinic.id)).toEqual(['category-assessment']);
+    expect(selectBookableClinicServices(scoped, employees).map((item) => item.service.id)).toEqual(['service-mental-status', 'service-group']);
+    expect(JSON.stringify(scoped)).toBe(before);
   });
 });

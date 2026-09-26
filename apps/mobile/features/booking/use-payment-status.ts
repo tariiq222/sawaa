@@ -41,6 +41,29 @@ function hasPendingPayment(inv: ClientInvoice): boolean {
   );
 }
 
+const CONFIRMED_BOOKING_STATUSES = new Set(['CONFIRMED', 'COMPLETED']);
+
+/**
+ * A paid invoice is NOT enough to call an appointment confirmed: the booking
+ * itself must have reached CONFIRMED/COMPLETED (settlement lag or a deposit can
+ * leave it pending). Mirrors the existing-checkout flow.
+ *
+ * An invoiced appointment is not confirmed until its booking can be read and
+ * has a confirmed status. A failed read must never become a success message.
+ */
+export function resolveConfirmedPhase(
+  paymentPhase: PaymentPhase,
+  hasInvoice: boolean,
+  bookingLoaded: boolean,
+  bookingStatus: string | null | undefined,
+): PaymentPhase {
+  if (paymentPhase !== 'confirmed' || !hasInvoice) {
+    return paymentPhase;
+  }
+  const status = bookingStatus?.trim().toUpperCase() ?? '';
+  return bookingLoaded && CONFIRMED_BOOKING_STATUSES.has(status) ? 'confirmed' : 'pending';
+}
+
 /**
  * `webResult` is the `expo-web-browser` auth-session result type
  * ('success' | 'cancel' | 'dismiss' | 'locked'). When the user explicitly
@@ -73,13 +96,15 @@ export function usePaymentStatus(invoiceId?: string, webResult?: string) {
           setPhase('confirmed');
           return;
         }
-        if (isFailedInvoice(inv)) {
-          setPhase('failed');
-          return;
-        }
-        // Bank-transfer style verification is a legitimate non-failed state.
+        // A pending payment attempt (including a retry after a prior failure)
+        // takes precedence over historical FAILED rows so the user sees the
+        // correct settling state instead of a false negative.
         if (hasPendingPayment(inv)) {
           setPhase('pending');
+          return;
+        }
+        if (isFailedInvoice(inv)) {
+          setPhase('failed');
           return;
         }
 

@@ -45,15 +45,16 @@ interface BookingActionsProps {
 }
 
 /* ── Transition map: status → available actions ──
- * Aligned with DB BookingStatus. `pending_group_fill` and
- * `awaiting_payment` reuse the `pending` action set since the dashboard
- * collapses them to `pending` for display via mapStatusForUi.
+ * Mirrors the backend booking-state-machine. Never advertise an action it
+ * rejects: holds (awaiting_payment / pending_group_fill) are cancellable and
+ * confirmed by recording the payment, but CONFIRM is PENDING-only and they are
+ * not reschedulable; deposit_paid is cancellable but not confirmable.
  */
 const statusActions = {
   pending: ["confirm", "cancel"] as const,
-  pending_group_fill: ["confirm", "cancel"] as const,
-  awaiting_payment: ["confirm", "cancel"] as const,
-  deposit_paid: ["confirm", "cancel"] as const,
+  pending_group_fill: ["cancel"] as const,
+  awaiting_payment: ["cancel"] as const,
+  deposit_paid: ["cancel"] as const,
   confirmed: ["checkin", "complete", "noshow", "cancel"] as const,
   cancel_requested: ["approve_cancel", "reject_cancel"] as const,
   completed: [] as const,

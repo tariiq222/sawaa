@@ -5,6 +5,7 @@ import { Slot } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { fontAssets } from '@/theme/fonts';
+import { BrandLaunch } from '@/components/BrandLaunch';
 
 // Localized screens own row order and physical text alignment. Keep the native
 // layout basis stable rather than applying RTL twice on Arabic devices.
@@ -47,6 +48,7 @@ function RootContent() {
   return (
     <SafeAreaProvider style={{ flex: 1, direction: 'ltr' }}>
       <Slot />
+      <BrandLaunch />
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </SafeAreaProvider>
   );
@@ -58,8 +60,16 @@ function RootLayout() {
 
   useEffect(() => {
     if (fontError) throw fontError;
-    if (fontsLoaded && ready) void SplashScreen.hideAsync();
-  }, [fontsLoaded, fontError, ready]);
+  }, [fontError]);
+
+  useEffect(() => {
+    if (!fontsLoaded || !ready) return;
+    // BrandLaunch normally hides native splash immediately. If its subtree
+    // fails before mounting, reveal the ErrorBoundary fallback instead of
+    // leaving the native splash over a retry action indefinitely.
+    const fallback = setTimeout(() => { void SplashScreen.hideAsync(); }, 3000);
+    return () => clearTimeout(fallback);
+  }, [fontsLoaded, ready]);
 
   if (!ready || !fontsLoaded) return null;
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 import { View, ScrollView, Pressable, Linking, Alert, StyleSheet, Text } from 'react-native';
@@ -17,9 +17,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
+import { Glass } from '@/theme/components/Glass';
 import {
   AquaBackground,
-  GlassSurface,
   PrimaryButton,
   sawaaRadius,
   sawaaSpacing,
@@ -32,9 +32,13 @@ import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
-import { employeeBookingsService as bookingsService } from '@/services/employee/bookings';
+import {
+  useCancelEmployeeBooking,
+  useEmployeeBooking,
+  useMarkEmployeeBookingCompleted,
+  useStartEmployeeBookingSession,
+} from '@/hooks/queries';
 import { getStatusLabel } from '@/lib/status-helpers';
-import type { Booking } from '@/types/models';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
 import { hasZoomMeetingAccess, resolveBookingType, resolveDeliveryType } from '@/types/booking-enums';
 
@@ -61,16 +65,12 @@ export default function DoctorAppointmentDetailScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) return;
-    bookingsService
-      .getById(id)
-      .then((res) => { if (res.data) setBooking(res.data); })
-      .finally(() => setLoading(false));
-  }, [id]);
+  const bookingQuery = useEmployeeBooking(id);
+  const markCompleted = useMarkEmployeeBookingCompleted();
+  const startSession = useStartEmployeeBookingSession();
+  const cancelBooking = useCancelEmployeeBooking();
+  const booking = bookingQuery.data ?? null;
+  const loading = bookingQuery.isLoading;
 
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
@@ -104,7 +104,7 @@ export default function DoctorAppointmentDetailScreen() {
         text: t('common.confirm'),
         onPress: async () => {
           try {
-            await bookingsService.markCompleted(booking.id);
+            await markCompleted.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             router.back();
           } catch {
@@ -123,12 +123,8 @@ export default function DoctorAppointmentDetailScreen() {
         text: t('common.confirm'),
         onPress: async () => {
           try {
-            await bookingsService.startSession(booking.id);
+            await startSession.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            // Reload booking
-            bookingsService.getById(booking.id).then((res) => {
-              if (res.data) setBooking(res.data);
-            });
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t('common.error'), t('common.error'));
@@ -146,7 +142,7 @@ export default function DoctorAppointmentDetailScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await bookingsService.employeeCancel(booking.id);
+            await cancelBooking.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             router.back();
           } catch {
@@ -193,11 +189,11 @@ export default function DoctorAppointmentDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
-          <GlassSurface variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
+          <Glass variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
             <View style={styles.backInner}>
               <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
             </View>
-          </GlassSurface>
+          </Glass>
         </Pressable>
 
         <Animated.View
@@ -211,7 +207,7 @@ export default function DoctorAppointmentDetailScreen() {
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.infoCard}>
+          <Glass variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.infoCard}>
             <View style={styles.infoList}>
               {infoRows.map((row) => {
                 const RowIcon = row.icon;
@@ -227,7 +223,7 @@ export default function DoctorAppointmentDetailScreen() {
                 );
               })}
             </View>
-          </GlassSurface>
+          </Glass>
         </Animated.View>
 
         {canShowZoom && (booking.zoomMeetingStatus || booking.zoomStartUrl || booking.zoomJoinUrl) && booking.scheduledAt && booking.durationMins ? (
@@ -278,13 +274,13 @@ export default function DoctorAppointmentDetailScreen() {
               accessibilityRole="button"
               style={styles.barAction}
             >
-              <GlassSurface variant="strong" radius={sawaaRadius.pill}>
+              <Glass variant="strong" radius={sawaaRadius.pill}>
                 <View style={styles.cancelInner}>
                   <Text style={[styles.cancelText, { fontFamily: f600, fontWeight: '600', writingDirection: dir.writingDirection }]}>
                     {t('doctor.cancelBooking')}
                   </Text>
                 </View>
-              </GlassSurface>
+              </Glass>
             </Pressable>
           )}
         </FloatingActionBar>

@@ -36,8 +36,9 @@ export default function ClinicsScreen() {
       <Glass
         variant="strong"
         radius={CARD_RADIUS}
-        onPress={() => router.push({ pathname: '/(client)/therapists', params: { clinicId: item.id } })}
-        accessibilityLabel={name}
+        onPress={() => router.push({ pathname: '/(client)/clinic/[id]', params: { id: item.id } })}
+        accessibilityLabel={`${name}, ${t('clinics.therapistsCount', { count: item.therapistCount })}, ${t('clinics.servicesCount', { count: item.serviceCount })}`}
+        interactive
         style={styles.card}
       >
         <View style={[styles.cardBody, { flexDirection: dir.row }]}> 
@@ -52,6 +53,7 @@ export default function ClinicsScreen() {
               {`${t('clinics.therapistsCount', { count: item.therapistCount })} · ${t('clinics.servicesCount', { count: item.serviceCount })}`}
             </ThemedText>
           </View>
+          <AppIcon sf={dir.isRTL ? 'chevron.left' : 'chevron.right'} fallback={dir.isRTL ? ChevronLeft : ChevronRight} size={18} color={colors.ink[500]} strokeWidth={1.6} />
         </View>
       </Glass>
     );

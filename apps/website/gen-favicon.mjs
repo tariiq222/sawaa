@@ -5,14 +5,14 @@
 // Resolve sharp from the workspace root so it works from apps/website too
 const sharp = (await import('/Users/tariq/code/sawaa/node_modules/sharp/lib/index.js')).default;
 
-import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
-import { join } from 'path';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const SOURCE = new URL('app/apple-icon.png', import.meta.url).pathname;
 const WEBSITE_ICO = new URL('app/favicon.ico', import.meta.url).pathname;
 const DASHBOARD_ICO = '/Users/tariq/code/sawaa/apps/dashboard/app/favicon.ico';
-const TMP = '/tmp';
 const SIZES = [256, 64, 48, 32, 16];
 
 // Turquoise #14A89A
@@ -106,6 +106,9 @@ async function main() {
   // Build at 512 first for best quality, then downscale for smaller sizes
   const base512 = await buildComposite(512);
 
+  // Unique, owner-only directory prevents another process replacing temporary PNGs.
+  const tempDir = mkdtempSync(join(tmpdir(), 'sawaa-favicon-'));
+  try {
   const pngPaths = [];
 
   for (const size of SIZES) {
@@ -120,26 +123,28 @@ async function main() {
         .png()
         .toBuffer();
     }
-    const outPath = join(TMP, `fav-${size}.png`);
+    const outPath = join(tempDir, `fav-${size}.png`);
     writeFileSync(outPath, png);
     pngPaths.push(outPath);
     console.log(`  ${size}px → ${outPath} (${png.length} bytes)`);
   }
 
   // Save named check copies
-  writeFileSync('/tmp/fav-check.png', await buildComposite(256));
-  console.log(`  check: /tmp/fav-check.png (256px)`);
+  const checkPath = join(tempDir, 'fav-check.png');
+  writeFileSync(checkPath, await buildComposite(256));
+  console.log(`  check: ${checkPath} (256px)`);
 
   const check32 = await sharp(base512)
     .resize(32, 32, { kernel: 'lanczos3' })
     .png()
     .toBuffer();
-  writeFileSync('/tmp/fav-32-check.png', check32);
-  console.log(`  check: /tmp/fav-32-check.png (32px)`);
+  const check32Path = join(tempDir, 'fav-32-check.png');
+  writeFileSync(check32Path, check32);
+  console.log(`  check: ${check32Path} (32px)`);
 
   console.log('\nCombining into favicon.ico with png-to-ico...');
-  const icoData = execSync(
-    `npx --yes png-to-ico ${pngPaths.join(' ')}`,
+  const icoData = execFileSync(
+    'npx', ['--yes', 'png-to-ico', ...pngPaths],
     { maxBuffer: 10 * 1024 * 1024 }
   );
 
@@ -150,16 +155,11 @@ async function main() {
   console.log(`  ${WEBSITE_ICO}`);
   console.log(`  ${DASHBOARD_ICO}`);
 
-  // Cleanup temp PNGs
-  for (const p of pngPaths) {
-    try { unlinkSync(p); } catch {}
-  }
-
   // --- Pixel verification ---
   console.log('\nPixel verification...');
 
   // Load check PNG for analysis
-  const { data: checkData, info: checkInfo } = await sharp('/tmp/fav-check.png')
+  const { data: checkData, info: checkInfo } = await sharp(checkPath)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -196,6 +196,9 @@ async function main() {
   }
 
   console.log('\nDone.');
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
 }
 
 main().catch(err => {

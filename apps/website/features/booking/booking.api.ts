@@ -157,6 +157,29 @@ export async function initPayment(invoiceId: string): Promise<{ paymentId: strin
   return unwrap<{ paymentId: string; redirectUrl: string }>(json);
 }
 
+/**
+ * Which collection paths the backend can actually accept right now.
+ *
+ * `moyasarEnabled` is false when online payment is disabled in the dashboard OR
+ * the Moyasar gateway is not configured, so a surface that reads this never
+ * offers a method `create-booking` / `payments/init` would reject.
+ */
+export interface PublicPaymentMethods {
+  moyasarEnabled: boolean;
+  atClinicEnabled: boolean;
+}
+
+export async function getPublicPaymentMethods(): Promise<PublicPaymentMethods> {
+  const json = await publicFetch<unknown>('/public/payments/methods', { cache: 'no-store' });
+  const payload = unwrap<{ moyasarEnabled?: unknown; atClinicEnabled?: unknown }>(json);
+  // Strict `=== true`: an unreadable payload must not resurface as an offered
+  // method the backend would reject.
+  return {
+    moyasarEnabled: payload?.moyasarEnabled === true,
+    atClinicEnabled: payload?.atClinicEnabled === true,
+  };
+}
+
 // Backwards-compatible aliases for existing call sites (payment.api.ts re-export).
 export { createBooking as createGuestBooking, initPayment as initGuestPayment };
 

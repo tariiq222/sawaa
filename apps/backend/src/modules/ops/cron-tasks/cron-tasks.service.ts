@@ -76,9 +76,14 @@ export class CronTasksService implements OnModuleInit {
     // The previous deployment used a minute cron pattern. BullMQ derives the
     // repeat key from the repeat options, so changing it to `every: 5000`
     // would otherwise leave the old scheduler active in Redis. Remove only
-    // that exact legacy entry and wait for completion before registering the
-    // stable 5-second schedule. If Redis rejects the cleanup, fail closed for
-    // this startup pass instead of creating a duplicate publisher.
+    // that exact legacy entry before registering the stable 5-second schedule.
+    //
+    // Fail closed for the outbox ONLY: if the legacy entry cannot be removed,
+    // registering the 5-second schedule as well would run two publishers. Every
+    // other cron is independent of that entry and must still be registered —
+    // this used to `return` and silently register ZERO schedules, so one failed
+    // Redis cleanup stopped booking expiry, no-shows and reminders.
+    let legacyOutboxCleanupFailed = false;
     try {
       await queue.removeRepeatable(
         CRON_JOBS.OUTBOX_PUBLISHER,
@@ -86,8 +91,11 @@ export class CronTasksService implements OnModuleInit {
         `repeat:${CRON_JOBS.OUTBOX_PUBLISHER}`,
       );
     } catch (err) {
-      this.logger.error('Failed to remove legacy outbox publisher schedule; skipping schedule registration', err);
-      return;
+      legacyOutboxCleanupFailed = true;
+      this.logger.error(
+        'Failed to remove legacy outbox publisher schedule; skipping the outbox publisher schedule for this startup pass',
+        err,
+      );
     }
 
     const jobs: Array<{ name: string; cron: string }> = [
@@ -110,7 +118,17 @@ export class CronTasksService implements OnModuleInit {
       { name: CRON_JOBS.AUTHENTICA_BALANCE_CHECK, cron: '0 8 * * *' }, // daily at 08:00 AST
     ];
 
+    let scheduled = 0;
     for (const { name, cron } of jobs) {
+      // The outbox publisher is the one schedule whose legacy entry we must be
+      // sure is gone before adding a second one (see above). Everything else
+      // registers regardless of that cleanup's outcome.
+      if (name === CRON_JOBS.OUTBOX_PUBLISHER && legacyOutboxCleanupFailed) {
+        this.logger.warn(
+          `Cron ${name} not scheduled this startup pass — its legacy repeatable entry could not be removed`,
+        );
+        continue;
+      }
       const repeat = name === CRON_JOBS.OUTBOX_PUBLISHER
         ? { every: 5_000 }
         : { pattern: cron };
@@ -130,9 +148,10 @@ export class CronTasksService implements OnModuleInit {
         .catch((err: unknown) =>
           this.logger.error(`Failed to schedule ${name}`, err),
         );
+      scheduled += 1;
     }
 
-    this.logger.log(`Scheduled ${jobs.length} cron jobs on queue "${QUEUE_NAME}"`);
+    this.logger.log(`Scheduled ${scheduled} cron jobs on queue "${QUEUE_NAME}"`);
   }
 
   private registerWorker(): void {

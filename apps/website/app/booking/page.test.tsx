@@ -154,6 +154,7 @@ vi.mock('@/features/booking/booking.api', () => ({
   }),
   createBooking: vi.fn(),
   initPayment: vi.fn(),
+  getPublicPaymentMethods: vi.fn().mockResolvedValue({ moyasarEnabled: true, atClinicEnabled: true }),
 }));
 
 vi.mock('@/features/booking/client-info-step', () => ({

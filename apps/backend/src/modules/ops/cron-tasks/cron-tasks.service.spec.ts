@@ -259,12 +259,24 @@ describe('CronTasksService', () => {
       );
     });
 
-    it('does not register any schedule when exact legacy cleanup fails', async () => {
+    it('registers every schedule except the outbox publisher when the exact legacy cleanup fails', async () => {
       mockQueue.removeRepeatable.mockRejectedValueOnce(new Error('redis unavailable'));
 
       await (service as any).registerRepeatingJobs();
 
-      expect(mockQueue.add).not.toHaveBeenCalled();
+      const scheduledNames = mockQueue.add.mock.calls.map((call) => call[0]);
+      // Fail closed for the outbox only: a second publisher must not be added
+      // while the legacy minute-pattern entry may still be active.
+      expect(scheduledNames).not.toContain(CRON_JOBS.OUTBOX_PUBLISHER);
+      // …but one failed Redis cleanup must never take the other crons down with
+      // it (this used to register ZERO schedules, silently stopping booking
+      // expiry, no-shows and reminders).
+      expect(scheduledNames).toContain(CRON_JOBS.BOOKING_EXPIRY);
+      expect(scheduledNames).toContain(CRON_JOBS.BOOKING_NOSHOW);
+      expect(scheduledNames).toContain(CRON_JOBS.RECONCILE_PAYMENTS);
+      expect(mockQueue.add).toHaveBeenCalledTimes(
+        Object.keys(CRON_JOBS).length - 1,
+      );
     });
   });
 

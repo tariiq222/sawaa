@@ -7,6 +7,8 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { initPayment } from '@/features/booking/booking.api';
+import { usePaymentMethods } from '@/features/payment/use-payment-methods';
+import { paymentFailureMessage } from '@/features/payment/payment-error';
 import { paymentStatusKey, PAYMENT_STATUS_TOKEN, isInvoicePayable } from '@/features/account/status-labels';
 import { AccountLoadError } from '@/features/account/load-error';
 import { halalasToSar } from '@/lib/money';
@@ -228,6 +230,11 @@ function BookingCard({
   const payKey = paymentStatusKey(booking.paymentStatus);
   const payColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
   const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus) && !isCancelled(booking);
+  // Never offer a checkout the backend will reject (online payment disabled in
+  // the dashboard, or Moyasar unconfigured): the client gets a note instead.
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
+  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
 
   async function handlePayNow(e: React.MouseEvent) {
     e.stopPropagation();
@@ -236,8 +243,8 @@ function BookingCard({
     try {
       const { redirectUrl } = await initPayment(booking.invoiceId!);
       window.location.assign(redirectUrl);
-    } catch {
-      setPayError(tt('account.payError'));
+    } catch (err) {
+      setPayError(paymentFailureMessage(err, tt('account.payError')));
       setPaying(false);
     }
   }
@@ -293,17 +300,22 @@ function BookingCard({
             </span>
           )}
         </div>
-        {payable && (
+        {(canPayOnline || showPayUnavailable) && (
           <div className="mt-3 flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={handlePayNow}
-              disabled={paying}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
-            >
-              <CreditCard size={12} aria-hidden="true" />
-              {paying ? tt('account.paying') : tt('account.payNow')}
-            </button>
+            {canPayOnline && (
+              <button
+                type="button"
+                onClick={handlePayNow}
+                disabled={paying}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+              >
+                <CreditCard size={12} aria-hidden="true" />
+                {paying ? tt('account.paying') : tt('account.payNow')}
+              </button>
+            )}
+            {showPayUnavailable && (
+              <span className="text-xs text-[var(--sw-body)]">{tt('account.payUnavailable')}</span>
+            )}
             {payError && <span className="text-xs text-[var(--error)]">{payError}</span>}
           </div>
         )}

@@ -26,7 +26,7 @@ const config: ExpoConfig = {
   splash: {
     image: './assets/sawa/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#14a89a',
   },
   ios: {
     appleTeamId: '569M49FYA6',
@@ -61,6 +61,7 @@ const config: ExpoConfig = {
     ['expo-build-properties', { ios: { useFrameworks: 'static', deploymentTarget: '15.1' } }],
     'expo-image-picker',
     './plugins/with-ios-pod-deployment-target',
+    './plugins/with-ios-splash-background',
     [
       '@sentry/react-native/expo',
       {

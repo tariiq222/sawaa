@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,8 +21,6 @@ import {
 import {
   AquaBackground,
   sawaaRadius,
-  sawaaSpacing,
-  sawaaType,
   withAlpha,
 } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -35,14 +33,20 @@ import { useClientBookings, clientBookingsKeys } from '@/hooks/queries';
 import { type ClientBookingStatus } from '@/services/client';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { resolveDeliveryType } from '@/types/booking-enums';
+import { createAppointmentsStyles } from '@/components/features/appointments/appointments.styles';
 
 type TabKey = 'upcoming' | 'past' | 'cancelled';
 
 const TABS: { key: TabKey; ar: string; en: string }[] = [
   { key: 'upcoming', ar: 'قادمة', en: 'Upcoming' },
   { key: 'past', ar: 'منتهية', en: 'Completed' },
-  { key: 'cancelled', ar: 'ملغاة', en: 'Cancelled' },
+  { key: 'cancelled', ar: 'الإلغاءات', en: 'Cancellations' },
 ];
+
+export function getAppointmentTabLabel(tab: TabKey, isRTL: boolean): string {
+  const option = TABS.find((candidate) => candidate.key === tab);
+  return option ? (isRTL ? option.ar : option.en) : '';
+}
 
 function tabOf(status: ClientBookingStatus): TabKey {
   if (status === 'cancelled' || status === 'cancel_requested' || status === 'expired') {
@@ -70,7 +74,7 @@ function formatTime(iso: string, isRTL: boolean) {
 export default function AppointmentsScreen() {
   const colors = useSawaaColors();
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createAppointmentsStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -84,7 +88,7 @@ export default function AppointmentsScreen() {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
   const { data, isLoading, isError, isRefetching, refetch } = useClientBookings({ tab, page, limit: 50 });
-  const bookings = data?.items ?? [];
+  const bookings = useMemo(() => data?.items ?? [], [data?.items]);
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
   const items = useMemo(
@@ -97,14 +101,18 @@ export default function AppointmentsScreen() {
     refetch();
   };
 
-  const statusConfig: Record<TabKey, { icon: React.ReactNode; color: string }> = {
+  const statusConfig = useMemo<Record<TabKey, { icon: React.ReactNode; color: string }>>(() => ({
     upcoming: { icon: <Clock size={12} color={colors.accent.sky} strokeWidth={2} />, color: colors.accent.sky },
     past: { icon: <CheckCircle2 size={12} color={colors.teal[500]} strokeWidth={2} />, color: colors.teal[500] },
     cancelled: { icon: <XCircle size={12} color={colors.accent.coral} strokeWidth={2} />, color: colors.accent.coral },
-  };
+  }), [colors]);
 
   const renderItem = useCallback(({ item: b, index: i }: { item: typeof bookings[0]; index: number }) => {
     const status: TabKey = tabOf(b.status);
+    const cancellationPending = b.status === 'cancel_requested';
+    const displayedStatus = cancellationPending
+      ? { icon: <Clock size={12} color={colors.accent.amber} strokeWidth={2} />, color: colors.accent.amber }
+      : statusConfig[status];
     const gradient = theme.colors.primaryGradient;
     const therapistName = (dir.isRTL
       ? b.employee?.nameAr ?? b.employee?.nameEn
@@ -114,6 +122,9 @@ export default function AppointmentsScreen() {
     const location = isVideo
       ? (dir.isRTL ? 'جلسة عن بُعد' : 'Remote session')
       : (dir.isRTL ? b.branch?.nameAr ?? b.branch?.nameEn ?? '' : b.branch?.nameEn ?? b.branch?.nameAr ?? '');
+    const statusLabel = cancellationPending
+      ? t('appointments.pendingCancellation')
+      : dir.isRTL ? TABS.find((t) => t.key === status)!.ar : TABS.find((t) => t.key === status)!.en;
 
     return (
       <Animated.View
@@ -124,7 +135,9 @@ export default function AppointmentsScreen() {
             onPress={() => router.push(`/(client)/appointment/${b.id}`)}
             style={styles.cardInner}
             accessibilityRole="button"
-            accessibilityLabel={`${dir.isRTL ? 'موعد مع' : 'Appointment with'} ${therapistName} ${dir.isRTL ? 'في' : 'on'} ${formatDate(b.scheduledAt, dir.isRTL)}`}
+            accessibilityLabel={dir.isRTL
+              ? `موعد مع ${therapistName}، ${formatDate(b.scheduledAt, dir.isRTL)}، ${formatTime(b.scheduledAt, dir.isRTL)}، ${statusLabel}`
+              : `Appointment with ${therapistName}, ${formatDate(b.scheduledAt, dir.isRTL)}, ${formatTime(b.scheduledAt, dir.isRTL)}, ${statusLabel}`}
             accessibilityHint={t('a11y.cardOpenAppointment')}
             testID={`appt-${b.id}`}
           >
@@ -141,16 +154,28 @@ export default function AppointmentsScreen() {
                 <Text style={[styles.therapist, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {therapistName}
                 </Text>
-                <View style={[styles.metaRow, { flexDirection: dir.row }]}>
-                  {isVideo ? (
-                    <Video size={12} color={colors.teal[600]} strokeWidth={2} />
-                  ) : (
-                    <MapPin size={12} color={colors.accent.violet} strokeWidth={2} />
-                  )}
-                  <Text style={[styles.metaText, { fontFamily: f500, fontWeight: '500' }]}>{location}</Text>
-                </View>
               </View>
               <Chevron size={16} color={colors.ink[400]} strokeWidth={2} />
+            </View>
+
+            <View style={[styles.cardMeta, { flexDirection: dir.row }]}>
+              <View style={[styles.metaRow, { flexDirection: dir.row, flex: 1 }]}>
+                {isVideo ? (
+                  <Video size={14} color={colors.teal[600]} strokeWidth={2} />
+                ) : (
+                  <MapPin size={14} color={colors.teal[600]} strokeWidth={2} />
+                )}
+                <Text numberOfLines={1} style={[styles.metaText, { fontFamily: f500, fontWeight: '500' }]}>{location}</Text>
+              </View>
+              <View style={[styles.statusChip, { backgroundColor: withAlpha(displayedStatus.color, 0.12) }]}>
+                {displayedStatus.icon}
+                <Text
+                  numberOfLines={1}
+                  style={[styles.statusChipText, { fontFamily: f600, fontWeight: '600', color: displayedStatus.color }]}
+                >
+                  {statusLabel}
+                </Text>
+              </View>
             </View>
 
             <View style={styles.divider} />
@@ -170,15 +195,6 @@ export default function AppointmentsScreen() {
                 </Text>
                 <Text style={[styles.dateValue, { fontFamily: f600, fontWeight: '600' }]}>
                   {formatTime(b.scheduledAt, dir.isRTL)}
-                </Text>
-              </View>
-              <View style={[styles.statusChip, { backgroundColor: withAlpha(statusConfig[status].color, 0.12) }]}>
-                {statusConfig[status].icon}
-                <Text style={[
-                  styles.statusChipText,
-                  { fontFamily: f600, fontWeight: '600', color: statusConfig[status].color },
-                ]}>
-                  {dir.isRTL ? TABS.find((t) => t.key === status)!.ar : TABS.find((t) => t.key === status)!.en}
                 </Text>
               </View>
             </View>
@@ -204,7 +220,7 @@ export default function AppointmentsScreen() {
           size="sm"
           options={TABS.map((tabItem) => ({
             value: tabItem.key,
-            label: dir.isRTL ? tabItem.ar : tabItem.en,
+            label: getAppointmentTabLabel(tabItem.key, dir.isRTL),
           }))}
           value={tab}
           onChange={(value) => { setTab(value); setPage(1); }}
@@ -285,72 +301,3 @@ export default function AppointmentsScreen() {
     </AquaBackground>
   );
 }
-
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg },
-  header: { gap: sawaaSpacing.lg, marginBottom: sawaaSpacing.lg },
-  title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
-    color: colors.ink[900],
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  subtitle: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[500],
-    marginTop: 2,
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  pageControls: { justifyContent: 'center', gap: sawaaSpacing.sm },
-  pageButton: {
-    paddingVertical: sawaaSpacing.sm,
-    paddingHorizontal: sawaaSpacing.md,
-    borderRadius: sawaaRadius.pill,
-    backgroundColor: withAlpha(colors.teal[500], 0.12),
-  },
-  pageButtonText: { color: colors.ink[900], fontSize: sawaaType.caption.fontSize },
-  skeletonWrap: { gap: sawaaSpacing.md, marginTop: sawaaSpacing.sm },
-  card: { padding: 0, marginBottom: sawaaSpacing.lg },
-  cardInner: { padding: sawaaSpacing.md, gap: sawaaSpacing.md },
-  cardTop: { alignItems: 'center', gap: sawaaSpacing.md },
-  avatar: {
-    width: 44, height: 44, borderRadius: sawaaRadius.pill,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: sawaaType.subheading.fontSize,
-    lineHeight: sawaaType.subheading.lineHeight,
-    color: colors.ink[900],
-  },
-  cardMid: { flex: 1 },
-  therapist: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: colors.ink[900],
-  },
-  metaRow: { alignItems: 'center', gap: sawaaSpacing.xs, marginTop: 2 },
-  metaText: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[500],
-  },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: withAlpha(colors.ink[900], 0.1) },
-  cardBottom: { alignItems: 'center', justifyContent: 'space-between', gap: sawaaSpacing.sm },
-  dateCol: { gap: 2 },
-  dateLabel: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[400],
-  },
-  dateValue: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[900],
-  },
-  statusChip: {
-    flexDirection: 'row', alignItems: 'center', gap: sawaaSpacing.xs,
-    paddingHorizontal: sawaaSpacing.sm, paddingVertical: sawaaSpacing.xs, borderRadius: sawaaRadius.sm,
-  },
-  statusChipText: { fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
-});

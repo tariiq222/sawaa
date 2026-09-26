@@ -22,6 +22,7 @@ import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { authService } from '@/services/auth';
+import { authLoginHref } from '@/features/booking/guest-booking-flow';
 
 export default function ResetPasswordScreen() {
   const colors = useSawaaColors();
@@ -30,7 +31,7 @@ export default function ResetPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
-  const { email } = useLocalSearchParams<{ email: string }>();
+  const { email, booking, redirect } = useLocalSearchParams<{ email: string; booking?: string; redirect?: string }>();
 
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -94,7 +95,7 @@ export default function ResetPasswordScreen() {
       await authService.resetClientPassword(sessionToken, newPassword);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('تم', 'تم تغيير كلمة المرور بنجاح', [
-        { text: 'تسجيل الدخول', onPress: () => router.replace('/(auth)/login') },
+        { text: 'تسجيل الدخول', onPress: () => router.replace(authLoginHref(booking, redirect)) },
       ]);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -102,7 +103,7 @@ export default function ResetPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [sessionToken, newPassword, validateReset, router, t]);
+  }, [sessionToken, newPassword, validateReset, router, t, booking, redirect]);
 
   return (
     <AquaBackground>
@@ -219,7 +220,7 @@ export default function ResetPasswordScreen() {
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.replace('/(auth)/login');
+                    router.replace(authLoginHref(booking, redirect));
                   }}
                 >
                   <Text style={styles.loginLink}>تسجيل الدخول</Text>

@@ -172,10 +172,6 @@
     }
 }
 
-@utility flip-icon {
-    [dir="rtl"] & { transform: scaleX(-1); }
-}
-
 @layer components {
     /* ─── Glassmorphism Surface ─── */
     .glass {

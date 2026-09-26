@@ -218,3 +218,10 @@ npm run e2e:ui
 6. **الحركة تخدم الحالة.** ease-out exponential، 150-250ms، عبر `motion` library. لا bounce، لا elastic، لا زينة. احترم `prefers-reduced-motion`.
 
 **Tokens reference**: `tokens.md` + `app/globals.css` + `lib/ds.ts`. كل لون/مسافة/radius من هناك، لا hardcode.
+
+
+## Clinic catalog editing
+
+[Canonical clinic/service contract](../../docs/architecture/clinic-service-booking-contract.md)
+
+Kind (clinic/service group) is separate from booking mode. DIRECT settings and practitioners must resolve the same hidden service with the shared selector. Never select the first visible service or create internal data in render effects. Explain immutable booking mode in the form.

@@ -16,7 +16,8 @@ import {
   type PublicBranch,
 } from '@/features/booking/booking.api';
 import { resolveBookingSubmitOutcome } from '@/features/booking/booking-submit-outcome';
-import { presentDirectClinicServices } from '@/features/booking/booking-catalog';
+import { presentDirectClinicServices, selectAvailableBookingServices } from '@/features/booking/booking-catalog';
+import { usePaymentMethods } from '@/features/payment/use-payment-methods';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import type { SummaryScreen } from '@/features/booking/summary-rail';
 import {
@@ -116,6 +117,11 @@ export function useBookingWizard() {
     queryKey: ['public', 'branches'],
     queryFn: getPublicBranches,
   });
+
+  // Deliberately NOT part of `loadingData`: a free booking needs no payment
+  // method, so a failed lookup must only stop the paid path (the info step owns
+  // that decision) instead of the whole wizard.
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
 
   const loadingData = loadingEmployees || loadingServices || loadingBranches;
   const initialLoadError = employeesError ?? servicesError ?? branchesError;
@@ -519,20 +525,7 @@ export function useBookingWizard() {
   }, [branchScopedEmployees]);
 
   const filteredServices = useMemo(() => {
-    const directClinicIds = new Set(categories
-      .filter((category) => category.bookingMode === 'DIRECT')
-      .map((category) => category.id));
-    // Direct clinics use their public clinic name, while retaining the internal
-    // service ID needed by the existing practitioner and booking endpoints.
-    const base = services.filter((s) =>
-      (!s.isHidden || (s.categoryId != null && directClinicIds.has(s.categoryId))) &&
-      bookableServiceIds.has(s.id),
-    );
-    if (lockedEmployee?.serviceIds && lockedEmployee.serviceIds.length > 0) {
-      const allowed = new Set(lockedEmployee.serviceIds);
-      return base.filter((s) => allowed.has(s.id));
-    }
-    return base;
+    return selectAvailableBookingServices(services, categories, bookableServiceIds, lockedEmployee?.serviceIds);
   }, [services, categories, bookableServiceIds, lockedEmployee]);
 
   const filteredTherapists = useMemo(() => {
@@ -898,6 +891,8 @@ export function useBookingWizard() {
     summaryProps,
     currentScreen,
     loadingData,
+    paymentMethods,
+    paymentMethodsLoading,
     filteredServices,
     categories,
     filteredTherapists,

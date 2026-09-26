@@ -11,7 +11,6 @@ import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/ThemeProvider';
 import { concentricRadius, withAlpha } from '@/theme/sawaa/tokens';
-import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 
 const CARD_RADIUS = sawaaRadius.xl;
@@ -21,9 +20,10 @@ interface SupportSessionsProps {
   dir: DirState;
   f400: string;
   f700: string;
+  isClient?: boolean;
 }
 
-export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
+export function SupportSessions({ dir, f400, f700, isClient = true }: SupportSessionsProps) {
   const sawaaColors = useSawaaColors();
   const { scheme } = useTheme();
   const action = getSawaaRoles(scheme).action;
@@ -54,7 +54,7 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
       {sessions.map((s, i) => {
         const color = ACCENTS[i % ACCENTS.length];
         return (
-        <Glass key={s.id} variant="strong" radius={CARD_RADIUS} style={styles.supportCard}>
+        <View key={s.id} style={styles.supportCard}>
           <View style={[styles.supportInner, { flexDirection: dir.row }]}> 
             <View style={[styles.supportIcon, { backgroundColor: withAlpha(color, 0.13) }]}> 
               <AppIcon sf="person.3.fill" fallback={Users} size={18} color={color} strokeWidth={1.75} />
@@ -71,13 +71,13 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
                 }).format(new Date(s.scheduledAt ?? s.startDate ?? ''))}
               </Text>
             </View>
-            <Pressable onPress={() => router.push(`/(client)/groups/${s.id}`)} style={styles.supportCta} accessibilityRole="button">
+            <Pressable onPress={() => router.push(isClient ? `/(client)/groups/${s.id}` : { pathname: '/public-detail/[kind]/[id]', params: { kind: 'program', id: s.id } })} style={styles.supportCta} accessibilityRole="button">
               <Text style={[styles.supportCtaText, { fontFamily: f700 }]}> 
                 {t('groups.join')}
               </Text>
             </Pressable>
           </View>
-        </Glass>
+        </View>
         );
       })}
     </LocalizedHorizontalScroll>
@@ -86,7 +86,7 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
 
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   hScrollContent: { gap: 10, paddingHorizontal: 2 },
-  supportCard: { width: 280 },
+  supportCard: { width: 280, backgroundColor: sawaaColors.glass.opaqueBg, borderRadius: CARD_RADIUS, overflow: 'hidden' },
   supportInner: { padding: 12, gap: 10, alignItems: 'center' },
   supportIcon: { width: 36, height: 36, borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING), alignItems: 'center', justifyContent: 'center' },
   supportText: { flex: 1, gap: 2 },

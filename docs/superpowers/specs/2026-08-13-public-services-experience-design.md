@@ -1,5 +1,7 @@
 # Public Services Experience Design
 
+> Superseded for clinic/service discovery by [the canonical clinic/service booking contract](../../architecture/clinic-service-booking-contract.md) (2026-09-26). Keep this document as historical context; its clinics-to-services redirect and department-name assumptions are no longer current.
+
 ## Goal
 
 Replace the customer-facing clinics discovery experience with the real, bookable services in the public catalog. Categories remain internal organization/filtering metadata, while customers discover a service first and then enter booking with that service preselected.

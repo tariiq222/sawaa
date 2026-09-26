@@ -40,6 +40,9 @@ export class CatalogCategoryDto {
 
   @ApiProperty({ enum: ['DIRECT', 'SERVICES'], description: 'Whether booking starts at the clinic or with a service selection' })
   bookingMode!: 'DIRECT' | 'SERVICES';
+
+  @ApiProperty({ description: 'Category kind, independent of department and name', enum: ['CLINIC', 'SERVICE_GROUP'], example: 'CLINIC' })
+  kind!: 'CLINIC' | 'SERVICE_GROUP';
 }
 
 export class CatalogServiceDurationOptionDto {

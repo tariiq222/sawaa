@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import '@/themes/sawaa/theme.css';
 
-export default function Error({
+export default function ErrorBoundary({
   error,
   reset,
 }: {

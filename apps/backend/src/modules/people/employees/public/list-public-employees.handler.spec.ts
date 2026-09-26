@@ -92,6 +92,7 @@ describe('ListPublicEmployeesHandler', () => {
         id: { in: ['active-service', 'stale-service'] },
         isActive: true,
         isHidden: false,
+        category: { isActive: true },
         archivedAt: null,
       },
       select: { id: true, price: true, isHidden: true },
@@ -119,7 +120,7 @@ describe('ListPublicEmployeesHandler', () => {
 
     expect(prisma.service.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ OR: [
-        { isHidden: false },
+        { isHidden: false, category: { isActive: true } },
         { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
       ] }),
     }));

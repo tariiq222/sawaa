@@ -3,6 +3,8 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+let mockBooking: string | undefined;
+let mockRedirect: string | undefined;
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     replace: mockReplace,
@@ -12,6 +14,8 @@ jest.mock('expo-router', () => ({
     identifier: 'test@example.com',
     maskedIdentifier: 't***@example.com',
     purpose: 'login',
+    booking: mockBooking,
+    redirect: mockRedirect,
   }),
 }));
 
@@ -118,6 +122,8 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCurrentEpoch = 1;
+    mockBooking = undefined;
+    mockRedirect = undefined;
   });
 
   it('uses one four-character input for native SMS autofill', () => {
@@ -177,6 +183,70 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
     });
+  });
+
+  it('returns a verified client to the selected appointment payment step', async () => {
+    mockRedirect = '/(client)/(tabs)/appointments';
+    mockBooking = JSON.stringify({
+      clinicId: 'clinic-1', serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
+      deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
+      durationOptionId: 'duration-1', amount: '45000', currency: 'SAR',
+    });
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/payment',
+      params: {
+        clinicId: 'clinic-1',
+        serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
+        deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
+        durationOptionId: 'duration-1', amount: '45000', currency: 'SAR',
+      },
+    }));
+  });
+
+  it('resumes a guarded client route after OTP when there is no booking draft', async () => {
+    mockRedirect = '/(client)/booking/confirm?clinicId=clinic-1&serviceId=service-1&employeeId=employee-1';
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/confirm',
+      params: { clinicId: 'clinic-1', serviceId: 'service-1', employeeId: 'employee-1' },
+    }));
+  });
+
+  it('resumes a guarded employee route for a verified staff session', async () => {
+    mockRedirect = '/(employee)/client/client-9';
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'staff-access', refreshToken: 'staff-refresh' },
+      sessionEpoch: 1, sessionKind: 'staff',
+    });
+    mockGetProfile.mockResolvedValueOnce({ success: true, data: { id: 'staff-1', role: 'RECEPTIONIST' } });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(employee)/client/client-9'));
+  });
+
+  it('rejects an employee route redirect for a verified client session', async () => {
+    mockRedirect = '/(employee)/client/client-9';
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home'));
   });
 
   it('filters non-digits and never submits an incomplete code', async () => {

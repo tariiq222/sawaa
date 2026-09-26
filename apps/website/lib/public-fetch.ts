@@ -182,6 +182,25 @@ async function readErrorBody(response: Response): Promise<unknown> {
   return response.json().catch(() => ({}));
 }
 
+/**
+ * The backend's own human-readable reason, when it sent one.
+ *
+ * `PublicFetchError.message` carries only the status (`PublicFetchError: 409`),
+ * so the real explanation the API returned lives in the body: `{ message }` for
+ * a thrown HttpException, `{ message: string[] }` for a validation failure.
+ */
+export function publicErrorMessage(error: unknown): string | null {
+  if (!(error instanceof PublicFetchError)) return null;
+  const body = error.body;
+  if (typeof body !== 'object' || body === null || !('message' in body)) return null;
+  const message = (body as { message?: unknown }).message;
+  if (typeof message === 'string' && message.trim()) return message;
+  if (Array.isArray(message) && typeof message[0] === 'string' && message[0].trim()) {
+    return message[0];
+  }
+  return null;
+}
+
 function isCsrfInvalid(body: unknown): boolean {
   return (
     typeof body === 'object' &&

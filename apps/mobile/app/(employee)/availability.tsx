@@ -7,9 +7,9 @@ import { Stack, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
+import { Glass } from '@/theme/components/Glass';
 import {
   AquaBackground,
-  GlassSurface,
   PrimaryButton,
   sawaaRadius,
   sawaaSpacing,
@@ -106,11 +106,11 @@ export default function AvailabilityScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
-          <GlassSurface variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
+          <Glass variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
             <View style={styles.backInner}>
               <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
             </View>
-          </GlassSurface>
+          </Glass>
         </Pressable>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
@@ -132,7 +132,7 @@ export default function AvailabilityScreen() {
                 key={day.dayOfWeek}
                 entering={reduceMotion ? undefined : FadeInDown.delay(120 + index * 60).duration(600).easing(Easing.out(Easing.cubic))}
               >
-                <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
+                <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
                   <View style={[styles.dayRow, { flexDirection: dir.row }]}>
                     <Text
                       style={[styles.dayLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
@@ -154,7 +154,7 @@ export default function AvailabilityScreen() {
                       accessibilityLabel={t(`days.${day.dayOfWeek}`)}
                     />
                   </View>
-                </GlassSurface>
+                </Glass>
               </Animated.View>
             ))}
           </View>

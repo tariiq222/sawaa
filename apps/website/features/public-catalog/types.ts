@@ -18,6 +18,8 @@ export interface PublicServiceCategory {
   sortOrder: number;
   isActive: boolean;
   bookingMode?: 'DIRECT' | 'SERVICES';
+  kind?: 'CLINIC' | 'SERVICE_GROUP';
+  archivedAt?: string | null;
   imageUrl: string | null;
   iconName: string | null;
   iconBgColor: string | null;
@@ -44,6 +46,8 @@ export interface PublicService {
   id: string;
   categoryId: string | null;
   isHidden?: boolean;
+  isActive?: boolean;
+  archivedAt?: string | null;
   nameAr: string;
   nameEn: string | null;
   descriptionAr: string | null;

@@ -865,7 +865,7 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
         if (r.status === 201 && r.body?.id) ctx.bookingIds.push(r.body.id);
       }
 
-      const statuses = [resA.status, resB.status].sort();
+      const statuses = [resA.status, resB.status].sort((a, b) => a - b);
       const successes = statuses.filter((s) => s === 201);
       const failures = statuses.filter((s) => s !== 201);
 
