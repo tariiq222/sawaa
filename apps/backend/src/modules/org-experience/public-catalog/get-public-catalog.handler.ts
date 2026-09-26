@@ -18,8 +18,10 @@ export class GetPublicCatalogHandler {
     this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
   }
 
-  async execute() {
-    const catalog = await this.cache.getOrSet('ref:public-catalog', async () => {
+  async execute(options: { includeDirectClinics?: boolean } = {}) {
+    const includeDirectClinics = options.includeDirectClinics === true;
+    const cacheKey = includeDirectClinics ? 'ref:public-catalog:direct-clinics' : 'ref:public-catalog';
+    const catalog = await this.cache.getOrSet(cacheKey, async () => {
       const [departments, categories, rawServices, orgSettings] = await Promise.all([
         this.prisma.department.findMany({
           where: { isActive: true, isVisible: true },
@@ -30,10 +32,20 @@ export class GetPublicCatalogHandler {
           orderBy: { sortOrder: 'asc' },
         }),
         this.prisma.service.findMany({
-          where: { isActive: true, isHidden: false, archivedAt: null },
+          where: includeDirectClinics
+            ? {
+                isActive: true,
+                archivedAt: null,
+                OR: [
+                  { isHidden: false },
+                  { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
+                ],
+              }
+            : { isActive: true, isHidden: false, archivedAt: null },
           select: {
             id: true,
             categoryId: true,
+            isHidden: true,
             nameAr: true,
             nameEn: true,
             descriptionAr: true,
@@ -77,8 +89,9 @@ export class GetPublicCatalogHandler {
 
       const vatRate = Number(orgSettings?.vatRate?.toString() ?? '0');
       const services = rawServices.map(
-        ({ hidePriceOnBooking, hideDurationOnBooking, ...service }) => ({
+        ({ isHidden, hidePriceOnBooking, hideDurationOnBooking, ...service }) => ({
           ...service,
+          ...(includeDirectClinics ? { isHidden } : {}),
           showPrice: !hidePriceOnBooking,
           showDuration: !hideDurationOnBooking,
         }),

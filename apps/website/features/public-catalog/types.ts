@@ -17,6 +17,7 @@ export interface PublicServiceCategory {
   nameEn: string | null;
   sortOrder: number;
   isActive: boolean;
+  bookingMode?: 'DIRECT' | 'SERVICES';
   imageUrl: string | null;
   iconName: string | null;
   iconBgColor: string | null;
@@ -42,6 +43,7 @@ export interface PublicServiceBookingConfig {
 export interface PublicService {
   id: string;
   categoryId: string | null;
+  isHidden?: boolean;
   nameAr: string;
   nameEn: string | null;
   descriptionAr: string | null;

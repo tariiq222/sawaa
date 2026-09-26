@@ -120,7 +120,9 @@ function useSummaryRows(sel: SummarySelection) {
   }
   rows.push({
     screen: 'service',
-    label: t('booking.step.service'),
+    label: (sel.service as (Service & { isHidden?: boolean }) | null)?.isHidden
+      ? t('booking.step.clinic')
+      : t('booking.step.service'),
     value: sel.service ? (isAr ? sel.service.nameAr : sel.service.nameEn) : null,
     sub: serviceMeta.length > 0 ? serviceMeta.join(' · ') : null,
   });
@@ -198,7 +200,8 @@ export function SummaryRail(sel: SummarySelection) {
       <dl className="flex flex-col">
         {rows.map((row, i) => {
           const filled = !!row.value;
-          const editable = filled && !!sel.onEdit && row.screen !== sel.activeScreen;
+          const editable = filled && !!sel.onEdit && row.screen !== sel.activeScreen &&
+            !(row.screen === 'service' && (sel.service as (Service & { isHidden?: boolean }) | null)?.isHidden);
           return (
             <div
               key={row.screen}
@@ -328,7 +331,8 @@ export function SummaryChips(sel: SummarySelection) {
   return (
     <div className="flex items-center gap-2 -mx-4 px-4 overflow-x-auto sw-no-scrollbar lg:hidden">
       {filled.map((row) => {
-        const tappable = !!sel.onEdit && row.screen !== sel.activeScreen;
+        const tappable = !!sel.onEdit && row.screen !== sel.activeScreen &&
+          !(row.screen === 'service' && (sel.service as (Service & { isHidden?: boolean }) | null)?.isHidden);
         const Tag = tappable ? 'button' : 'span';
         return (
           <Tag

@@ -1,6 +1,6 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse, ApiQuery } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { PublicEmployeeResponseDto } from '../dashboard/dto/people-response.dto';
@@ -21,8 +21,9 @@ export class PublicEmployeesController {
   @Get()
   @ApiOperation({ summary: 'List public-facing employees' })
   @ApiOkResponse({ type: [PublicEmployeeResponseDto], description: 'Public employees with slug + bio + image' })
-  list() {
-    return this.listHandler.execute();
+  @ApiQuery({ name: 'includeDirectClinics', required: false, type: Boolean, description: 'Include direct clinic booking service links' })
+  list(@Query('includeDirectClinics') includeDirectClinics?: string) {
+    return this.listHandler.execute({ includeDirectClinics: includeDirectClinics === 'true' });
   }
 
   @Public()
