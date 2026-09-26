@@ -136,7 +136,7 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
                   className="group inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
                   style={{
                     background: 'var(--sw-secondary-700)',
-                    color: '#fff',
+                    color: 'var(--sw-secondary-700-foreground)',
                     boxShadow:
                       '0 8px 20px -8px color-mix(in srgb, var(--sw-secondary-900) 35%, transparent)',
                   }}

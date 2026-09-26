@@ -269,7 +269,7 @@ function ClinicsGrid({ clinics, locale, t }: GridProps) {
     return (
       <div className="flex justify-center mt-8">
         <div
-          className="text-center py-14 px-10 bg-white rounded-2xl max-w-md w-full"
+          className="text-center py-14 px-10 bg-[var(--surface)] rounded-2xl max-w-md w-full"
           style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
         >
           <div
@@ -303,7 +303,7 @@ function ClinicsGrid({ clinics, locale, t }: GridProps) {
             key={c.id}
             href={href}
             aria-label={`${t('clinics.bookCta')} — ${name}`}
-            className="group relative block bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="group relative block bg-[var(--surface)] rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               border: '1px solid var(--sw-neutral-100)',
               boxShadow: 'var(--sw-shadow-xs)',
@@ -463,7 +463,7 @@ function NotSureCTA({ t }: { t: (key: MessageKey) => string }) {
             <div className="md:col-span-4 md:flex md:justify-end">
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
                 style={{
                   color: 'var(--sw-secondary-700)',
                   boxShadow: 'var(--sw-shadow-md)',

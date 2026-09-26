@@ -10,8 +10,31 @@
   --font-primary: var(--font-primary);
 }
 
-/* Fallback values are emitted by <BrandingStyle /> from SSR. This file only
-   declares the Tailwind mapping and base body rules. */
+/* BrandingStyle owns the brand variables. These semantic site tokens describe
+   surfaces and text so theme changes never rewrite the configured brand. */
+:root {
+  color-scheme: light;
+  --site-background: #F8FAFC;
+  --site-surface: #FFFFFF;
+  --site-surface-raised: #FFFFFF;
+  --site-text: #102A32;
+  --site-text-muted: #475D66;
+  --site-border: #D5E0E4;
+  --site-muted: #EEF3F5;
+  --site-muted-text: #475D66;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --site-background: #0A1F1E;
+  --site-surface: #102D2B;
+  --site-surface-raised: #153632;
+  --site-text: #E8F4F2;
+  --site-text-muted: #C1D6D2;
+  --site-border: #37645E;
+  --site-muted: #173632;
+  --site-muted-text: #C1D6D2;
+}
 
 html {
   direction: rtl;
@@ -19,19 +42,8 @@ html {
 
 body {
   font-family: var(--font-primary);
-  background: var(--bg);
-  color: #111;
+  background: var(--site-background);
+  color: var(--site-text);
   margin: 0;
   overflow-x: hidden;
-}
-
-@media (prefers-color-scheme: dark) {
-  html:root {
-    color-scheme: dark;
-    --bg: #0A1F1E;
-  }
-
-  body {
-    color: #E8F4F2;
-  }
 }

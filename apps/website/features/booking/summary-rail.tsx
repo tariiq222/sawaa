@@ -178,7 +178,7 @@ export function SummaryRail(sel: SummarySelection) {
       className="sticky top-6 flex flex-col rounded-[1.25rem] p-5"
       style={{
         background:
-          'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, #FFFDF8) 0%, color-mix(in srgb, var(--accent) 14%, #FFFDF8) 100%)',
+          'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 14%, var(--surface)) 100%)',
         border: '1px solid color-mix(in srgb, var(--accent-dark) 28%, transparent)',
         boxShadow: 'var(--sw-shadow-sm)',
       }}
@@ -338,7 +338,7 @@ export function SummaryChips(sel: SummarySelection) {
               : {})}
             className={`sw-row-in shrink-0 inline-flex items-center gap-1.5 ps-2.5 pe-3 py-1.5 rounded-full text-xs font-bold max-w-[60vw] ${tappable ? 'cursor-pointer' : ''}`}
             style={{
-              background: 'color-mix(in srgb, var(--accent) 30%, #FFFDF8)',
+              background: 'color-mix(in srgb, var(--accent) 30%, var(--surface))',
               border: '1px solid color-mix(in srgb, var(--accent-dark) 30%, transparent)',
               color: 'var(--sw-secondary-700)',
             }}

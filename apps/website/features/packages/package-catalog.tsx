@@ -25,7 +25,7 @@ export function PackageCatalogFeature({ families }: { families: PackageFamily[] 
           return value === null ? price : Math.min(value, price);
         }, null);
         return (
-          <article key={family.id} className="rounded-3xl border border-[var(--sw-neutral-200)] bg-white p-6 shadow-[var(--sw-shadow-xs)]">
+          <article key={family.id} className="rounded-3xl border border-[var(--sw-neutral-200)] bg-[var(--surface)] p-6 shadow-[var(--sw-shadow-xs)]">
             <h2 className="text-xl font-extrabold text-[var(--sw-secondary-700)]">
               {localized(family.nameAr, family.nameEn, locale)}
             </h2>

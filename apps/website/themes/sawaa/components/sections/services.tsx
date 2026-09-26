@@ -70,7 +70,7 @@ export function Services({ services, intro, vatRate = 0 }: ServicesProps) {
         </AnimatedSection>
 
         {services.length === 0 ? (
-          <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white px-10 py-14 text-center" style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}>
+          <div className="mx-auto mt-8 max-w-md rounded-2xl bg-[var(--surface)] px-10 py-14 text-center" style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}>
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: 'var(--sw-primary-50)' }}>
               <Sparkles className="h-6 w-6" style={{ color: 'var(--sw-primary-600)' }} />
             </div>
@@ -114,7 +114,7 @@ export function Services({ services, intro, vatRate = 0 }: ServicesProps) {
                 onClick={() => scroll('forward')}
                 disabled={!canScrollForward}
                 aria-label={t('services.scrollNext')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)] transition disabled:cursor-not-allowed disabled:opacity-30"
                 style={{ border: '1px solid var(--sw-neutral-200)' }}
               >
                 <ForwardIcon className="h-4.5 w-4.5" />
@@ -124,7 +124,7 @@ export function Services({ services, intro, vatRate = 0 }: ServicesProps) {
                 onClick={() => scroll('back')}
                 disabled={!canScrollBack}
                 aria-label={t('services.scrollPrevious')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)] transition disabled:cursor-not-allowed disabled:opacity-30"
                 style={{ border: '1px solid var(--sw-neutral-200)' }}
               >
                 <BackIcon className="h-4.5 w-4.5" />

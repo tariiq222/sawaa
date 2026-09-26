@@ -74,7 +74,7 @@ export function Features({ intro, cards }: Props) {
             return (
               <AnimatedSection key={`${card.label}-${i}`} delay={i * 80}>
                 <div
-                  className="sw-home-feature-card h-full bg-white rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 flex flex-col"
+                  className="sw-home-feature-card h-full bg-[var(--surface)] rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 flex flex-col"
                 >
                   <div
                     className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"

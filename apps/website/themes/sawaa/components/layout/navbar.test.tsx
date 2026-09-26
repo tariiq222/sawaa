@@ -11,6 +11,11 @@ vi.mock('@/features/auth/public', () => ({
   isAuthenticated: () => false,
 }));
 
+const { toggleTheme } = vi.hoisted(() => ({ toggleTheme: vi.fn() }));
+vi.mock('@/features/theme/theme-provider', () => ({
+  useTheme: () => ({ theme: 'light', toggleTheme }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
@@ -32,6 +37,23 @@ function openMenu() {
 }
 
 describe('Navbar mobile menu dialog keyboard focus', () => {
+  it('offers an accessible theme toggle on desktop and in the mobile menu', () => {
+    render(wrap('ar', <Navbar />));
+    const toggles = screen.getAllByRole('button', { name: 'التبديل إلى الوضع الداكن' });
+    expect(toggles).toHaveLength(1);
+
+    fireEvent.click(toggles[0]);
+    expect(toggleTheme).toHaveBeenCalledOnce();
+
+    openMenu();
+    const mobileToggle = within(screen.getByRole('dialog')).getByRole('button', {
+      name: 'التبديل إلى الوضع الداكن',
+    });
+    expect(mobileToggle).toBeVisible();
+    fireEvent.click(mobileToggle);
+    expect(toggleTheme).toHaveBeenCalledTimes(2);
+  });
+
   it('links customers to the services directory instead of clinics', () => {
     render(wrap('ar', <Navbar />));
     expect(screen.getByRole('menuitem', { name: 'الخدمات' })).toHaveAttribute(

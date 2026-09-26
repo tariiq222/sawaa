@@ -96,7 +96,7 @@ export async function SawaaContactPage() {
 
           <AnimatedSection delay={100}>
             <div
-              className="rounded-[28px] bg-white p-8 sm:p-10"
+              className="rounded-[28px] bg-[var(--surface)] p-8 sm:p-10"
               style={{
                 border: '1px solid var(--sw-neutral-100)',
                 boxShadow: 'var(--sw-shadow-md)',

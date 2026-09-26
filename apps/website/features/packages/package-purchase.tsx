@@ -83,7 +83,7 @@ export function PackagePurchaseFeature({ family, packageId }: { family: PackageF
 
   if (isLoading) return <p role="status">{t('packages.loading')}</p>;
   if (!client) {
-    return <div className="rounded-3xl bg-white p-8 text-center"><p className="mb-4">{t('packages.signInPrompt')}</p><Link href={loginHref} className="rounded-full bg-[var(--sw-primary-500)] px-6 py-3 font-bold text-[var(--on-primary)]">{t('packages.signIn')}</Link></div>;
+    return <div className="rounded-3xl bg-[var(--surface)] p-8 text-center"><p className="mb-4">{t('packages.signInPrompt')}</p><Link href={loginHref} className="rounded-full bg-[var(--sw-primary-500)] px-6 py-3 font-bold text-[var(--on-primary)]">{t('packages.signIn')}</Link></div>;
   }
   if (!selected) return <p role="alert">{t('packages.optionUnavailable')}</p>;
   const selectedOption = selected;
@@ -104,7 +104,7 @@ export function PackagePurchaseFeature({ family, packageId }: { family: PackageF
   }
 
   return (
-    <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-[var(--sw-shadow-sm)] sm:p-8">
+    <section className="mx-auto max-w-xl rounded-3xl bg-[var(--surface)] p-6 shadow-[var(--sw-shadow-sm)] sm:p-8">
       <h1 className="text-2xl font-black text-[var(--sw-secondary-700)]">{locale === 'ar' ? family.nameAr : family.nameEn || family.nameAr}</h1>
       <p className="mt-2 text-sm text-[var(--sw-body)]">{locale === 'ar' ? selected.nameAr : selected.nameEn || selected.nameAr}</p>
       <p className="mt-5 text-2xl font-black text-[var(--sw-primary-700)]">{halalasToSar(selected.price.finalPrice)} {locale === 'ar' ? 'ر.س' : 'SAR'}</p>
@@ -147,9 +147,9 @@ export function PackagePurchaseStatusFeature({ purchaseId, pollIntervalMs = 3000
   }, [pollIntervalMs, purchaseId, retry]);
 
   if (state.phase === 'loading') return <p role="status">{t('packages.paymentChecking')}</p>;
-  if (state.phase === 'pending') return <section role="status" className="mx-auto max-w-xl rounded-3xl bg-white p-8 text-center"><h1 className="text-2xl font-black">{t('packages.paymentProcessing')}</h1><p className="mt-3">{t('packages.paymentPendingDescription')}</p><button type="button" onClick={() => { setState({ phase: 'loading' }); setRetry((value) => value + 1); }} className="mt-6 rounded-full bg-[var(--sw-primary-500)] px-5 py-3 font-bold text-[var(--on-primary)]">{t('packages.checkStatus')}</button></section>;
-  if (state.phase === 'error') return <section className="mx-auto max-w-xl rounded-3xl bg-white p-8 text-center"><p role="alert">{t('packages.paymentStatusUnavailable')}</p><button type="button" onClick={() => { setState({ phase: 'loading' }); setRetry((value) => value + 1); }} className="mt-5 rounded-full border border-[var(--sw-primary-500)] px-5 py-3 font-bold">{t('packages.tryAgain')}</button></section>;
+  if (state.phase === 'pending') return <section role="status" className="mx-auto max-w-xl rounded-3xl bg-[var(--surface)] p-8 text-center"><h1 className="text-2xl font-black">{t('packages.paymentProcessing')}</h1><p className="mt-3">{t('packages.paymentPendingDescription')}</p><button type="button" onClick={() => { setState({ phase: 'loading' }); setRetry((value) => value + 1); }} className="mt-6 rounded-full bg-[var(--sw-primary-500)] px-5 py-3 font-bold text-[var(--on-primary)]">{t('packages.checkStatus')}</button></section>;
+  if (state.phase === 'error') return <section className="mx-auto max-w-xl rounded-3xl bg-[var(--surface)] p-8 text-center"><p role="alert">{t('packages.paymentStatusUnavailable')}</p><button type="button" onClick={() => { setState({ phase: 'loading' }); setRetry((value) => value + 1); }} className="mt-5 rounded-full border border-[var(--sw-primary-500)] px-5 py-3 font-bold">{t('packages.tryAgain')}</button></section>;
   if (state.phase === 'failed') return <p role="alert">{t('packages.paymentIncomplete')}</p>;
   const title = state.purchase ? (locale === 'ar' ? state.purchase.packageNameAr : state.purchase.packageNameEn || state.purchase.packageNameAr) : '';
-  return <section className="mx-auto max-w-xl rounded-3xl bg-white p-8 text-center"><div role="status"><h1 className="text-2xl font-black">{t('packages.paymentActive')}</h1><p className="mt-3">{title}</p></div><Link href="/account/packages" className="mt-6 inline-flex rounded-full bg-[var(--sw-primary-500)] px-5 py-3 font-bold text-[var(--on-primary)]">{t('packages.viewBalance')}</Link><button type="button" className="ms-3 mt-6 rounded-full border border-[var(--sw-primary-500)] px-5 py-3 font-bold" onClick={() => { setState({ phase: 'loading' }); setRetry((value) => value + 1); }}>{t('packages.checkStatus')}</button></section>;
+  return <section className="mx-auto max-w-xl rounded-3xl bg-[var(--surface)] p-8 text-center"><div role="status"><h1 className="text-2xl font-black">{t('packages.paymentActive')}</h1><p className="mt-3">{title}</p></div><Link href="/account/packages" className="mt-6 inline-flex rounded-full bg-[var(--sw-primary-500)] px-5 py-3 font-bold text-[var(--on-primary)]">{t('packages.viewBalance')}</Link><button type="button" className="ms-3 mt-6 rounded-full border border-[var(--sw-primary-500)] px-5 py-3 font-bold" onClick={() => { setState({ phase: 'loading' }); setRetry((value) => value + 1); }}>{t('packages.checkStatus')}</button></section>;
 }

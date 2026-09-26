@@ -57,7 +57,7 @@ export function TherapistsGrid({ therapists, locale, labels, initialSpecialty = 
     return (
       <div className="flex items-center justify-center py-20">
         <div
-          className="text-center max-w-md mx-auto py-12 px-8 rounded-[24px] bg-white"
+          className="text-center max-w-md mx-auto py-12 px-8 rounded-[24px] bg-[var(--surface)]"
           style={{
             border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
             boxShadow: 'var(--sw-shadow-xs)',

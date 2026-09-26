@@ -337,7 +337,7 @@ export function PackageBalanceFeature({
       {error && <p role="alert">{error}</p>}
       {message && <p role="status">{message}</p>}
       {purchases.map((purchase) => (
-        <article key={purchase.id} className="rounded-3xl bg-white p-6 shadow-[var(--sw-shadow-xs)]">
+        <article key={purchase.id} className="rounded-3xl bg-[var(--surface)] p-6 shadow-[var(--sw-shadow-xs)]">
           <h2 className="text-xl font-extrabold">{locale === 'ar' ? purchase.packageNameAr : purchase.packageNameEn || purchase.packageNameAr}</h2>
           {purchase.offerSnapshot && (
             <p className="mt-1 text-sm text-[var(--sw-body)]">

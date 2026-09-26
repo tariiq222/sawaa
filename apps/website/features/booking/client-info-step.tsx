@@ -42,7 +42,7 @@ const fieldLabelStyle = {
 };
 
 const baseInputClass =
-  'w-full ps-11 pe-3.5 py-3.5 text-[0.9375rem] rounded-xl bg-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 placeholder:opacity-40';
+  'w-full ps-11 pe-3.5 py-3.5 text-[0.9375rem] rounded-xl bg-[var(--surface)] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 placeholder:opacity-40';
 
 function inputStyle(invalid: boolean): React.CSSProperties {
   return {
@@ -254,7 +254,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
           {authMode === 'signin' && (
             <form
               data-testid="inline-signin"
-              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-white"
+              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-[var(--surface)]"
               style={{
                 border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
                 boxShadow: 'var(--sw-shadow-sm)',
@@ -369,7 +369,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
           {authMode === 'register' && (
             <div
               data-testid="inline-register"
-              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-white"
+              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-[var(--surface)]"
               style={{
                 border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
                 boxShadow: 'var(--sw-shadow-sm)',
@@ -386,7 +386,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
         <>
           <section
             aria-label={isAr ? 'بيانات الحساب' : 'Account details'}
-            className="flex flex-col gap-3 p-4 rounded-[1.25rem] bg-white"
+            className="flex flex-col gap-3 p-4 rounded-[1.25rem] bg-[var(--surface)]"
             style={{
               border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
               boxShadow: 'var(--sw-shadow-xs)',
@@ -402,7 +402,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
             className="mt-1 flex flex-col gap-4 p-5 sm:p-6 rounded-[1.25rem]"
             style={{
               background:
-                'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, #FFFDF8) 0%, color-mix(in srgb, var(--accent) 14%, #FFFDF8) 100%)',
+                'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 14%, var(--surface)) 100%)',
               border: '1px solid color-mix(in srgb, var(--accent-dark) 28%, transparent)',
               boxShadow: 'var(--sw-shadow-sm)',
             }}
@@ -485,7 +485,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   return (
                     <label
                       key={option.value}
-                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3.5 transition-all"
+                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-[var(--surface)] p-3.5 transition-all"
                       style={{
                         border: selected
                           ? '1.5px solid var(--primary)'

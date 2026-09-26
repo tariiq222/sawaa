@@ -254,7 +254,7 @@ function NotSureCTA({ t }: { t: (key: MessageKey) => string }) {
             <div className="md:col-span-4 md:flex md:justify-end">
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
                 style={{
                   color: 'var(--sw-secondary-700)',
                   boxShadow: 'var(--sw-shadow-md)',

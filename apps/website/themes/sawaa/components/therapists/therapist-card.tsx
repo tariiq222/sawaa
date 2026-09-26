@@ -43,7 +43,7 @@ export function TherapistCardSawaa({ therapist, locale, labels }: Props) {
     <Link
       href={href}
       aria-label={`${labels.viewProfile} — ${name}`}
-      className="group relative flex flex-col h-full rounded-[16px] bg-white overflow-hidden transition-all duration-300 hover:-translate-y-[2px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sw-cream)]"
+      className="group relative flex flex-col h-full rounded-[16px] bg-[var(--surface)] overflow-hidden transition-all duration-300 hover:-translate-y-[2px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sw-cream)]"
       style={{
         border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
         boxShadow: 'var(--sw-shadow-xs)',

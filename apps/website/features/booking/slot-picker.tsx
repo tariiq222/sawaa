@@ -169,7 +169,7 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
                           boxShadow: 'var(--sw-shadow-primary)',
                         }
                       : {
-                          background: '#FFFFFF',
+                          background: 'var(--surface)',
                           color: 'var(--sw-secondary-700)',
                           border:
                             '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)',
@@ -182,13 +182,13 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
                     e.currentTarget.style.borderColor =
                       'color-mix(in srgb, var(--primary) 60%, transparent)';
                     e.currentTarget.style.background =
-                      'color-mix(in srgb, var(--primary) 7%, #FFFFFF)';
+                      'color-mix(in srgb, var(--primary) 7%, var(--surface))';
                   }}
                   onMouseLeave={(e) => {
                     if (isSelected) return;
                     e.currentTarget.style.borderColor =
                       'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)';
-                    e.currentTarget.style.background = '#FFFFFF';
+                    e.currentTarget.style.background = 'var(--surface)';
                   }}
                 >
                   {timeStr}
@@ -230,7 +230,7 @@ function SlotsEmptyState({ isAr, t }: { isAr: boolean; t: Translate }) {
     <div
       className="flex flex-col items-center text-center gap-3 px-6 py-10 rounded-2xl"
       style={{
-        background: 'color-mix(in srgb, var(--primary) 4%, #FFFFFF)',
+        background: 'color-mix(in srgb, var(--primary) 4%, var(--surface))',
         border: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 16%, transparent)',
       }}
     >

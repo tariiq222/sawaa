@@ -160,7 +160,7 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
               onClick={goToday}
               className="px-3 py-1.5 text-xs font-bold rounded-full transition-colors cursor-pointer"
               style={{
-                background: 'color-mix(in srgb, var(--primary) 9%, #FFFFFF)',
+                background: 'color-mix(in srgb, var(--primary) 9%, var(--surface))',
                 color: 'var(--primary-dark)',
                 border: '1px solid color-mix(in srgb, var(--primary) 28%, transparent)',
               }}
@@ -246,13 +246,13 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
                       }
                     : isPast
                       ? {
-                          background: '#FFFFFF',
+                          background: 'var(--surface)',
                           color: 'var(--sw-secondary-700)',
                           border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)',
                           opacity: 0.4,
                         }
                       : {
-                          background: '#FFFFFF',
+                          background: 'var(--surface)',
                           color: 'var(--sw-secondary-700)',
                           border: `1.5px solid ${isToday ? 'color-mix(in srgb, var(--primary) 70%, transparent)' : 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)'}`,
                           boxShadow: 'var(--sw-shadow-xs)',
@@ -261,14 +261,14 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
               onMouseEnter={(e) => {
                 if (isSelected || isDisabled) return;
                 e.currentTarget.style.borderColor = 'var(--primary)';
-                e.currentTarget.style.background = 'color-mix(in srgb, var(--primary) 8%, #FFFFFF)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--primary) 8%, var(--surface))';
               }}
               onMouseLeave={(e) => {
                 if (isSelected || isDisabled) return;
                 e.currentTarget.style.borderColor = isToday
                   ? 'color-mix(in srgb, var(--primary) 70%, transparent)'
                   : 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)';
-                e.currentTarget.style.background = '#FFFFFF';
+                e.currentTarget.style.background = 'var(--surface)';
               }}
               title={isUnavailable ? (isAr ? 'لا توجد أوقات في هذا اليوم' : 'No availability on this day') : undefined}
             >
@@ -330,7 +330,7 @@ function ArrowButton({
       aria-label={ariaLabel}
       className="grid place-items-center h-8 w-8 rounded-full transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
       style={{
-        background: '#FFFFFF',
+        background: 'var(--surface)',
         color: 'var(--sw-secondary-700)',
         border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)',
         boxShadow: 'var(--sw-shadow-xs)',

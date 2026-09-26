@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { BrandingProvider, BrandingStyle, getPublicBrandingForSsr } from '@/features/branding/public';
 import { QueryProvider } from '@/providers/query-provider';
 import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
+import { ThemeProvider } from '@/features/theme/theme-provider';
 import { AnalyticsLoader } from '@/components/analytics/analytics-loader';
 import { AiChatWidget } from '@/features/chat/ai-chat-widget';
 import { getApiOrigin } from '@/lib/api-base';
@@ -14,6 +16,20 @@ import {
 } from '@/lib/seo/schema';
 
 const SITE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://sawaa.sa';
+
+const themeInitScript = `(() => {
+  const root = document.documentElement;
+  let theme = document.cookie.match(/(?:^|; )sawaa-theme=(light|dark)(?:;|$)/)?.[1];
+  if (!theme) {
+    try {
+      const saved = localStorage.getItem('sawaa-theme');
+      if (saved === 'light' || saved === 'dark') theme = saved;
+    } catch {}
+  }
+  if (!theme) theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  root.dataset.theme = theme;
+  root.style.colorScheme = theme;
+})();`;
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
@@ -63,6 +79,7 @@ export default async function RootLayout({
   const branding = await getPublicBrandingForSsr();
   const locale = await getLocale();
   const dir = localeDir(locale);
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   // The preconnect/dns-prefetch for the API origin is derived once on the
   // server so it lands in the initial HTML (no client-side flicker).
   const apiOrigin = getApiOrigin();
@@ -107,15 +124,12 @@ export default async function RootLayout({
   });
 
   return (
-    <html lang={locale} dir={dir}>
+    <html lang={locale} dir={dir} data-theme="light" suppressHydrationWarning>
       <head>
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <link rel="preconnect" href={apiOrigin} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={apiOrigin} />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: "document.documentElement.classList.add('sw-js')",
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('sw-js')" }} />
         <BrandingStyle branding={branding} />
         <script
           type="application/ld+json"
@@ -127,15 +141,17 @@ export default async function RootLayout({
         />
       </head>
       <body>
-        <QueryProvider>
-          <LocaleProvider locale={locale}>
-            <BrandingProvider branding={branding}>
-              {children}
-              <AnalyticsLoader />
-              {process.env.NEXT_PUBLIC_WEB_CHAT_ENABLED === 'true' && <AiChatWidget />}
-            </BrandingProvider>
-          </LocaleProvider>
-        </QueryProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            <LocaleProvider locale={locale}>
+              <BrandingProvider branding={branding}>
+                {children}
+                <AnalyticsLoader />
+                {process.env.NEXT_PUBLIC_WEB_CHAT_ENABLED === 'true' && <AiChatWidget />}
+              </BrandingProvider>
+            </LocaleProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

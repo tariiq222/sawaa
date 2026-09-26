@@ -40,7 +40,7 @@ export function FAQ({ intro, items }: Props) {
             return (
               <AnimatedSection key={i} delay={i * 40}>
                 <div
-                  className="bg-white rounded-2xl transition-all duration-300"
+                  className="bg-[var(--surface)] rounded-2xl transition-all duration-300"
                   style={{
                     border: `1px solid ${isOpen ? 'var(--sw-primary-200)' : 'var(--sw-neutral-100)'}`,
                     boxShadow: isOpen ? 'var(--sw-shadow-md)' : 'none',

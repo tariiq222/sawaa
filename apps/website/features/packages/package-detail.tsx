@@ -17,7 +17,7 @@ export function PackageDetailFeature({ family }: { family: PackageFamily }) {
   const purchaseHref = `/packages/purchase?packageId=${encodeURIComponent(selected.id)}&packageFamilyId=${encodeURIComponent(family.id)}`;
 
   return (
-    <section className="mx-auto max-w-3xl rounded-3xl bg-white p-6 shadow-[var(--sw-shadow-sm)] sm:p-8">
+    <section className="mx-auto max-w-3xl rounded-3xl bg-[var(--surface)] p-6 shadow-[var(--sw-shadow-sm)] sm:p-8">
       <Link href="/packages" className="text-sm font-bold text-[var(--sw-primary-700)]">{t('packages.all')}</Link>
       <h1 className="mt-4 text-3xl font-black text-[var(--sw-secondary-700)]">
         {locale === 'ar' ? family.nameAr : family.nameEn || family.nameAr}

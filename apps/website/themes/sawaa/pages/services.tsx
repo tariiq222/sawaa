@@ -68,7 +68,7 @@ export async function SawaaServicesPage() {
           </p>
           {services.length > 0 ? (
             <span
-              className="mt-7 inline-flex rounded-full bg-white px-4 py-2 text-sm font-bold tabular-nums"
+              className="mt-7 inline-flex rounded-full bg-[var(--surface)] px-4 py-2 text-sm font-bold tabular-nums"
               style={{ color: 'var(--sw-primary-700)', boxShadow: 'var(--sw-shadow-xs)' }}
             >
               {countLabel}
@@ -77,7 +77,7 @@ export async function SawaaServicesPage() {
         </div>
       </section>
 
-      <section className="bg-white py-14 md:py-20">
+      <section className="bg-[var(--surface)] py-14 md:py-20">
         <div className="mx-auto max-w-[1260px] px-5 sm:px-6 md:px-8">
           {services.length > 0 ? (
             <ServicesDirectory services={services} vatRate={catalog.vatRate ?? 0} />
