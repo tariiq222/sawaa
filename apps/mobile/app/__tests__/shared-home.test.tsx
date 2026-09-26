@@ -1,8 +1,11 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { RefreshControl } from 'react-native';
 
 const mockPush = jest.fn();
 const mockHome = jest.fn();
+const mockCards = jest.fn();
+const mockCardRefetch = jest.fn();
 let mockSignedIn = false;
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -21,6 +24,7 @@ jest.mock('react-native-reanimated', () => {
 });
 jest.mock('@/hooks/queries', () => ({
   useHome: (enabled: boolean) => mockHome(enabled),
+  useMobileHomeCards: () => mockCards(),
   useTherapists: () => ({ data: [], refetch: jest.fn() }),
   usePublicCatalog: () => ({ data: { services: [] }, refetch: jest.fn() }),
   useClinics: () => ({ data: [], refetch: jest.fn() }),
@@ -29,6 +33,10 @@ jest.mock('@/hooks/queries', () => ({
 jest.mock('@/components/features/home/HomeAssessmentServices', () => ({ HomeAssessmentServices: () => null }));
 jest.mock('@/components/features/home/HomeDiscoveryCards', () => ({ HomeDiscoveryCards: () => null }));
 jest.mock('@/components/features/home/HomeTopBar', () => ({ HomeTopBar: () => null }));
+jest.mock('@/components/features/home/HomeCardsCarousel', () => ({ HomeCardsCarousel: ({ signedIn }: { signedIn: boolean }) => {
+  const { Text } = require('react-native');
+  return <Text>{signedIn ? 'cards-client' : 'cards-guest'}</Text>;
+} }));
 jest.mock('@/components/features/home/UpNextCard', () => ({ UpNextCard: () => null }));
 jest.mock('@/components/features/home/FeaturedClinics', () => ({ FeaturedClinics: () => null }));
 jest.mock('@/components/features/home/SupportSessions', () => ({ SupportSessions: () => null }));
@@ -41,13 +49,23 @@ jest.mock('@/components/features/home/HomeSectionHeading', () => ({ HomeSectionH
 import HomeScreen from '../(client)/(tabs)/home';
 
 describe('shared home', () => {
-  beforeEach(() => { mockSignedIn = false; mockHome.mockReset(); mockHome.mockReturnValue({ data: undefined, isLoading: false, refetch: jest.fn() }); mockPush.mockClear(); });
+  beforeEach(() => {
+    mockSignedIn = false;
+    mockHome.mockReset();
+    mockHome.mockReturnValue({ data: undefined, isLoading: false, refetch: jest.fn() });
+    mockCardRefetch.mockReset();
+    mockCards.mockReset();
+    mockCards.mockReturnValue({ data: [], refetch: mockCardRefetch });
+    mockPush.mockClear();
+  });
 
   it('renders public sections without a standalone login action or private portal request', () => {
     const screen = render(<HomeScreen />);
     expect(screen.getByText('guest-dock')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
     expect(mockHome).toHaveBeenCalledWith(false);
+    expect(screen.getByText('cards-guest')).toBeTruthy();
+    expect(mockCards).toHaveBeenCalledTimes(1);
   });
 
   it('shows private upcoming data for signed-in clients', () => {
@@ -58,5 +76,12 @@ describe('shared home', () => {
     expect(screen.getByText('home.upcomingAppointment')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
     expect(screen.queryByText('guest-dock')).toBeNull();
+    expect(screen.getByText('cards-client')).toBeTruthy();
+  });
+
+  it('refetches public home cards when the guest refreshes the home screen', async () => {
+    const screen = render(<HomeScreen />);
+    fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+    await waitFor(() => expect(mockCardRefetch).toHaveBeenCalledTimes(1));
   });
 });
