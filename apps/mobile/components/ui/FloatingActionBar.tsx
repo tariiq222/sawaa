@@ -9,6 +9,7 @@ import { sawaaRadius, sawaaSpacing } from '@/theme/sawaa/tokens';
 interface FloatingActionBarProps {
   children: React.ReactNode;
   variant?: GlassVariant;
+  allowOverflow?: boolean;
 }
 
 /**
@@ -16,7 +17,7 @@ interface FloatingActionBarProps {
  * out in a logical row inside a strong glass surface; callers control each
  * child's flex.
  */
-export function FloatingActionBar({ children, variant = 'strong' }: FloatingActionBarProps) {
+export function FloatingActionBar({ children, variant = 'strong', allowOverflow = false }: FloatingActionBarProps) {
   const insets = useSafeAreaInsets();
   const { row } = useDir();
 
@@ -30,7 +31,8 @@ export function FloatingActionBar({ children, variant = 'strong' }: FloatingActi
         bottom: insets.bottom + sawaaSpacing.lg,
       }}
     >
-      <Glass variant={variant} radius={sawaaRadius.xl} padding={sawaaSpacing.md}>
+      <Glass variant={variant} radius={sawaaRadius.xl} padding={sawaaSpacing.md}
+        style={allowOverflow ? { overflow: 'visible' } : undefined}>
         <View
           style={{
             flexDirection: row,

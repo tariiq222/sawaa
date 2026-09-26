@@ -55,7 +55,15 @@ jest.mock('expo-linear-gradient', () => ({
   },
 }));
 
-describe('Glass unified renderer accessibility fallback', () => {
+describe('GlassSurface shared renderer', () => {
+  beforeEach(() => {
+    mockReduceTransparency = false;
+    mockIncreasedContrast = false;
+    mockGlassApiAvailable = true;
+    mockScheme = 'light';
+    mockReduceMotion = false;
+  });
+
   it('uses an opaque theme surface and avoids native glass when transparency is reduced', () => {
     mockReduceTransparency = true;
     mockIncreasedContrast = true;
@@ -117,7 +125,7 @@ describe('Glass unified renderer accessibility fallback', () => {
     expect(isLiquidGlassAvailable).toHaveBeenCalled();
   });
 
-  it('gives native glass the same aqua tint and luminous rim across variants', () => {
+  it('restores untinted native surfaces with the original variant borders', () => {
     mockReduceTransparency = false;
     mockIncreasedContrast = false;
     mockGlassApiAvailable = true;
@@ -126,12 +134,13 @@ describe('Glass unified renderer accessibility fallback', () => {
     const regular = render(<Glass variant="regular" testID="regular-glass" />);
     const clear = render(<Glass variant="clear" testID="clear-glass" />);
 
-    expect(regular.getByTestId('native-glass').props.tintColor).toBe('rgba(180, 231, 244, 0.26)');
-    expect(clear.getByTestId('native-glass').props.tintColor).toBe('rgba(180, 231, 244, 0.26)');
+    expect(regular.getByTestId('native-glass').props.tintColor).toBeUndefined();
+    expect(clear.getByTestId('native-glass').props.tintColor).toBeUndefined();
+    expect(regular.queryByTestId('fallback-gradient')).toBeNull();
     expect(StyleSheet.flatten(regular.getByTestId('regular-glass').props.style).borderColor)
-      .toBe('rgba(241, 253, 255, 0.9)');
+      .toBe('rgba(255, 255, 255, 0.55)');
     expect(StyleSheet.flatten(clear.getByTestId('clear-glass').props.style).borderColor)
-      .toBe('rgba(241, 253, 255, 0.9)');
+      .toBe('rgba(255, 255, 255, 0.35)');
   });
 
   it('falls back when the GlassEffect API is unavailable at runtime', () => {
@@ -155,10 +164,7 @@ describe('Glass unified renderer accessibility fallback', () => {
     const darkFill = UNSAFE_getAllByType(View).some((view) =>
       StyleSheet.flatten(view.props.style)?.backgroundColor === 'rgba(12, 36, 36, 0.55)',
     );
-    expect(darkFill).toBe(false);
-    expect(UNSAFE_getAllByType(View).some((view) =>
-      StyleSheet.flatten(view.props.style)?.backgroundColor === 'rgba(30, 89, 96, 0.25)',
-    )).toBe(true);
+    expect(darkFill).toBe(true);
     expect(getByTestId('fallback-gradient').props.colors).toEqual([
       'rgba(255,255,255,0.22)',
       'rgba(255,255,255,0.05)',
@@ -175,8 +181,7 @@ describe('Glass unified renderer accessibility fallback', () => {
     const { getByTestId } = render(<Glass><Text>Dark glass</Text></Glass>);
 
     expect(getByTestId('fallback-blur').props.tint).toBe('dark');
-    expect(StyleSheet.flatten(getByTestId('fallback-blur').props.style).backgroundColor)
-      .toBe('rgba(13, 48, 53, 0.1)');
+    expect(getByTestId('fallback-blur').props.intensity).toBe(24);
   });
 
   it('lets Glass render a themed surface with the GlassSurface props', () => {
@@ -215,5 +220,23 @@ describe('Glass unified renderer accessibility fallback', () => {
     fireEvent(getByTestId('motion-safe-action'), 'pressIn');
 
     expect(StyleSheet.flatten(getByTestId('motion-safe-action').props.style)?.transform).toBeUndefined();
+  });
+
+  it('preserves existing Glass actions and disabled behavior through GlassSurface', () => {
+    const onPress = jest.fn();
+    const { getByRole, getByText, rerender } = render(
+      <Glass accessibilityRole="button" accessibilityLabel="Back" onPress={onPress}
+        radius={22} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+        <Text>Back</Text>
+      </Glass>,
+    );
+
+    fireEvent.press(getByRole('button'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(getByText('Back')).toBeTruthy();
+
+    rerender(<GlassSurface accessibilityRole="button" accessibilityLabel="Back" onPress={onPress} disabled />);
+    fireEvent.press(getByRole('button'));
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

@@ -61,6 +61,7 @@ const config: ExpoConfig = {
     ['expo-build-properties', { ios: { useFrameworks: 'static', deploymentTarget: '15.1' } }],
     'expo-image-picker',
     './plugins/with-ios-pod-deployment-target',
+    './plugins/with-ios-scene-lifecycle',
     [
       '@sentry/react-native/expo',
       {
