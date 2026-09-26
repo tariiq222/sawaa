@@ -10,21 +10,22 @@ React Native 0.83, Expo SDK 55, Expo Router (file-based), Redux Toolkit + redux-
 app/
 ├── (auth)/                # Login, registration, OTP
 ├── (client)/              # Client-facing flows
-│   ├── (tabs)/            # Bottom tab navigator (home, bookings, chat, profile)
-│   ├── appointment/       # Appointment detail, history
-│   ├── booking/           # Book appointment flow (slots → invoice → Moyasar)
-│   ├── clinic/            # Clinic info / branches
-│   ├── employee/          # Employee profile (client-side view)
+│   ├── (tabs)/            # home, explore, appointments, account
+│   ├── appointment/       # Client appointment detail
+│   ├── booking/           # Schedule, confirm, invoice, payment callbacks
+│   ├── clinic/            # Clinic info and branches
+│   ├── employee/          # Employee profile as seen by clients
+│   ├── groups/            # Group-session discovery and enrollment
+│   ├── packages/          # Package purchase, balance, and booking
 │   ├── rate/              # Rating flow
-│   ├── chat.tsx           # Chatbot screen
 │   ├── therapists.tsx     # Therapist directory
-│   ├── settings.tsx       # Settings (theme, language, notifications)
-│   ├── settings-profile-section.tsx
-│   └── video-call.tsx     # Zoom join — window [start-15m, end]
+│   ├── chat.tsx           # Client chat surface
+│   ├── settings*.tsx      # Profile, language, theme, notifications
+│   └── video-call.tsx     # Client Zoom join
 └── (employee)/            # Employee-facing flows
-    ├── (tabs)/            # Bottom tab navigator
-    ├── appointment/       # Manage appointments
-    ├── client/            # Client profile view
+    ├── (tabs)/            # today, calendar, clients, profile
+    ├── appointment/       # Manage appointment
+    ├── client/            # Client profile and history
     ├── availability.tsx   # Employee availability scheduler
     └── video-call.tsx     # Zoom host join
 ```
@@ -34,22 +35,22 @@ app/
 - **Routing**: Expo Router file-based — `_layout.tsx` defines navigators; client and employee groups are strictly separated.
 - **State**:
   - **Redux Toolkit is for `auth` only** (token + refreshToken + user, persisted via `redux-persist` to Expo Secure Store). No new slices without explicit discussion.
-  - **All server data → TanStack Query v5** in `hooks/queries/` (one hook per resource, exported through `hooks/queries/index.ts`).
+  - **Server reads → TanStack Query v5** in `hooks/queries/` (one hook per resource, exported through `hooks/queries/index.ts`). Use mutation hooks for writes that update shared server state so cache invalidation stays out of route screens; keep form drafts and transient UI state local.
   - Transient UI state (modals, form drafts, typing indicators) → component-level `useState`/`useReducer`.
 - **API**: Axios services in `services/` — one file per domain; `services/client/` and `services/employee/` hold role-specific endpoints.
 - **i18n**: `i18next` + `react-i18next` — translation files in `i18n/`; keys mirror dashboard/backend tokens.
-- **Theme**: Branding tokens consumed from backend `PublicBranding` via the theme slice; never hardcode brand colors.
+- **Theme**: `ThemeProvider` combines backend `PublicBranding`, the system/user color scheme, and Sawaa design tokens. The selected theme mode is stored in AsyncStorage; theme state is not in Redux. Never hardcode brand colors.
 - **Components**: Reusable in `components/`, feature-specific stay in `app/`.
 
 ## Service Files (`services/`)
 
-Top-level: `api.ts` (base Axios + interceptors), `auth.ts`, `branches.ts`, `chatbot.ts`, `clients.ts`, `employees.ts`, `notifications.ts`, `payments.ts`, `push.ts`, `query-client.ts`.
+Top-level: `api.ts` (base Axios + interceptors), `auth.ts`, `branches.ts`, `clients.ts`, `employees.ts`, `notifications.ts`, `payments.ts`, `push.ts`, `query-client.ts`.
 
 Subdirectories: `services/client/` (client-only endpoints), `services/employee/` (employee-only endpoints).
 
 ## Query Hooks (`hooks/queries/`)
 
-`useBooking`, `useBookingMutations`, `useBranding`, `useChat`, `useClientBookings`, `useEmployeeClients`, `useEmployeeDayBookings`, `useMe`, `useMobileAuth`, `useNotifications`, `usePortal`, `useSlots`, `useTherapist`, `useTherapists`, `useUpcomingBookings` — re-exported via `hooks/queries/index.ts`.
+The query index is the public entry point for resource hooks; inspect `hooks/queries/index.ts` for the live inventory. Route components should consume those hooks rather than call service read methods directly.
 
 ## Deployment Strategy — One App Instance
 
@@ -61,7 +62,7 @@ Subdirectories: `services/client/` (client-only endpoints), `services/employee/`
 - **Request context:** Mobile sends only auth credentials. It must not send a legacy organization-selection header; the backend stamps the fixed single-tenant context from the authenticated session.
 - **No runtime organization switching.** Do not add an organization switcher, multi-org membership UI, or terminology hot-swap to mobile.
 - **Membership/organization-switch scaffolding has been removed.** The memberships service, the org-id (tenant) service, the memberships query hook, and the auth slice's organization/membership fields were deleted in the single-tenant cleanup. The backend has no `/auth/memberships` endpoint. Do not reintroduce them.
-- **Branding** is still fetched at runtime via `PublicBranding` — for this deployment only. `useTerminology()` was deleted along with the endpoint it called (`/public/verticals/:slug/terminology` no longer exists on the backend). Switching organizations is not a user-facing operation.
+- **Branding** is fetched at runtime via `PublicBranding` — for this deployment only. `useTerminology()` was deleted along with the endpoint it called (`/public/verticals/:slug/terminology` no longer exists on the backend). Switching organizations is not a user-facing operation.
 
 ### Adding a New Branded App
 
@@ -78,7 +79,7 @@ Backend, dashboard, and admin do not change.
 ## Branding
 
 - `useBranding` query fetches `PublicBranding` for the Sawa deployment.
-- Theme slice (Redux) consumes the result and exposes tokens to RN components.
+- `ThemeProvider` consumes the result and exposes theme colors and mode to RN components.
 - All colors, logo, and typography flow from this — no hardcoded brand values anywhere.
 
 ## Terminology

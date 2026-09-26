@@ -9,7 +9,7 @@ let mockLocale: 'en' | 'ar' = 'en';
 const mockPush = jest.fn();
 const mockRefetch = jest.fn();
 const mockBookings = jest.fn();
-jest.mock('expo-router', () => ({ router: { push: mockPush }, useRouter: () => ({ push: mockPush }) }));
+jest.mock('expo-router', () => ({ router: { push: mockPush }, useRouter: () => ({ push: mockPush }), useLocalSearchParams: () => ({}) }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key.split('.').reduce<unknown>((value, part) =>
     (value as Record<string, unknown>)?.[part], mockLocale === 'ar' ? require('../../i18n/ar.json') : require('../../i18n/en.json')) ?? key }),
@@ -31,13 +31,12 @@ jest.mock('react-native-calendars', () => ({
   ),
 }));
 jest.mock('@/theme', () => ({ Glass: ({ children }: React.PropsWithChildren) => <>{children}</> }));
+jest.mock('@/theme/components/Glass', () => ({ Glass: ({ children }: React.PropsWithChildren) => <>{children}</> }));
 jest.mock('@/theme/sawaa', () => ({
   ...jest.requireActual('@/theme/sawaa/tokens'),
   AquaBackground: ({ children }: React.PropsWithChildren) => <>{children}</>,
-  GlassSurface: ({ children }: React.PropsWithChildren) => <>{children}</>,
   PrimaryButton: ({ label }: { label: string }) => <MockText>{label}</MockText>,
 }));
-jest.mock('@/theme/sawaa/GlassSurface', () => ({ GlassSurface: ({ children }: React.PropsWithChildren) => <>{children}</> }));
 jest.mock('@/components/ui/StatusPill', () => ({ StatusPill: () => null }));
 jest.mock('@/components/ui/Skeleton', () => ({ Skeleton: () => <MockText>Loading skeleton</MockText> }));
 jest.mock('@/hooks/queries/useEmployeeDayBookings', () => ({ useEmployeeDayBookings: (date: string) => mockBookings(date) }));

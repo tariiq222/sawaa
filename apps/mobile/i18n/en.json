@@ -109,6 +109,8 @@
   },
   "tabs": {
     "home": "Home",
+    "explore": "Explore",
+    "myAppointments": "My Appointments",
     "appointments": "Appointments",
     "sessions": "My Sessions",
     "chat": "Chat",
@@ -617,6 +619,27 @@
     "filterOpen": "Open filters",
     "sortOpen": "Open sort options",
     "rateStars": "Rate {{count}} stars"
+  },
+  "guest": {
+    "visitorAccount": "Guest space",
+    "accountIntro": "Explore clinics, specialists, and packages without signing in.",
+    "accountAppointmentsHint": "If you have booked before, sign in to see your appointments.",
+    "signInForAppointments": "Sign in to view appointments",
+    "title": "Sawaa Family Counseling",
+    "subtitle": "Explore services, programs, and specialists without signing in.",
+    "services": "Services",
+    "packages": "Packages",
+    "programs": "Programs",
+    "therapists": "Specialists",
+    "clinicsDescription": "Explore Sawaa clinics and available areas of care.",
+    "therapistsDescription": "Find a specialist and explore their services.",
+    "packagesDescription": "A series of sessions for continued support.",
+    "programsDescription": "Programs and support groups in a safe space.",
+    "chooseTherapist": "Choose a specialist to continue booking",
+    "chooseService": "Choose a service to continue booking",
+    "signInToBook": "Sign in or create an account to schedule an appointment.",
+    "loadError": "Could not load this information. Please try later.",
+    "empty": "No services are available right now."
   },
   "welcome": {
     "brand": "سَواء",

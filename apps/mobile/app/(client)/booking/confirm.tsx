@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -16,19 +16,18 @@ import {
   sawaaType,
   withAlpha,
 } from '@/theme/sawaa';
-import { GlassSurface } from '@/theme/sawaa/GlassSurface';
+import { Glass } from '@/theme/components/Glass';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
+import { useAppSelector } from '@/hooks/use-redux';
+import { encodeBookingReturn } from '@/features/booking/guest-booking-flow';
 import { useReduceMotion } from '@/hooks/useA11y';
+import { useCatalogDepartments } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
-import {
-  publicCatalogService,
-  type PublicService,
-} from '@/services/client/catalog';
 import { formatHalalas } from '@/lib/money';
 import type { DeliveryType } from '@/types/booking-enums';
 
@@ -69,42 +68,23 @@ export default function BookingConfirmScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
   const f500 = getFontName(dir.locale, '500');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
 
-  const [service, setService] = useState<PublicService | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  useEffect(() => {
-    if (!serviceId) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    (async () => {
-      try {
-        const departments = await publicCatalogService.listDepartments();
-        if (cancelled) return;
-        const found = departments
-          .flatMap((d) => d.services)
-          .find((s) => s.id === serviceId);
-        setService(found ?? null);
-        if (!found) setError(dir.isRTL ? 'الخدمة غير متوفرة' : 'Service unavailable');
-      } catch {
-        if (!cancelled) setError(dir.isRTL ? 'تعذّر تحميل الخدمة' : 'Failed to load service');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [serviceId, dir.isRTL, reloadKey]);
+  const catalogQuery = useCatalogDepartments(Boolean(serviceId));
+  const service = catalogQuery.data
+    ?.flatMap((department) => department.services)
+    .find((item) => item.id === serviceId) ?? null;
+  const loading = catalogQuery.isLoading;
+  const error = catalogQuery.isError
+    ? (dir.isRTL ? 'تعذّر تحميل الخدمة' : 'Failed to load service')
+    : catalogQuery.data && !service
+      ? (dir.isRTL ? 'الخدمة غير متوفرة' : 'Service unavailable')
+      : null;
 
   const scheduledDate = useMemo(
     () => (scheduledAt ? new Date(scheduledAt) : null),
@@ -162,6 +142,17 @@ export default function BookingConfirmScreen() {
   const handleConfirm = () => {
     if (!service || !scheduledAt || !branchId || !employeeId || !serviceId) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (!signedIn) {
+      router.push({
+        pathname: '/(auth)/login',
+        params: { booking: encodeBookingReturn({
+          serviceId, employeeId, branchId, deliveryType: selectedDeliveryType,
+          scheduledAt, durationOptionId, amount: String(total),
+          currency: currency ?? service.currency,
+        }) },
+      });
+      return;
+    }
     router.push({
       pathname: '/(client)/booking/payment',
       params: {
@@ -203,7 +194,7 @@ export default function BookingConfirmScreen() {
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
-          <GlassSurface variant="strong" radius={sawaaRadius.xl}>
+          <Glass variant="strong" radius={sawaaRadius.xl}>
             {rows.map((r, i) => (
               <View
                 key={r.labelEn}
@@ -224,11 +215,11 @@ export default function BookingConfirmScreen() {
                 </View>
               </View>
             ))}
-          </GlassSurface>
+          </Glass>
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(700).easing(Easing.out(Easing.cubic))}>
-          <GlassSurface variant="strong" radius={sawaaRadius.xl}>
+          <Glass variant="strong" radius={sawaaRadius.xl}>
             {loading ? (
               <View style={styles.skeletonBlock}>
                 <Skeleton height={16} width="60%" />
@@ -240,7 +231,7 @@ export default function BookingConfirmScreen() {
                 tone="danger"
                 title={error}
                 actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'}
-                onAction={() => setReloadKey((k) => k + 1)}
+                onAction={() => { void catalogQuery.refetch(); }}
               />
             ) : service ? (
               <>
@@ -262,7 +253,7 @@ export default function BookingConfirmScreen() {
                 </View>
               </>
             ) : null}
-          </GlassSurface>
+          </Glass>
         </Animated.View>
       </ScrollView>
 
@@ -274,7 +265,7 @@ export default function BookingConfirmScreen() {
         <FloatingActionBar>
           <View style={styles.ctaFlex}>
             <PrimaryButton
-              label={dir.isRTL ? 'متابعة الدفع' : 'Continue to payment'}
+              label={signedIn ? (dir.isRTL ? 'متابعة الدفع' : 'Continue to payment') : (dir.isRTL ? 'الدخول أو التسجيل للمتابعة' : 'Sign in or register to continue')}
               onPress={handleConfirm}
               disabled={!canContinue}
               fontFamily={f700}

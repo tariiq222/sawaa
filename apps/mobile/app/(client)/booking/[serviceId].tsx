@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { useDir } from '@/hooks/useDir';
+import { useAppSelector } from '@/hooks/use-redux';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/money';
@@ -27,7 +28,8 @@ import {
   getPractitionerBookingOptions,
   toMobileDeliveryType,
   type PractitionerBookingOption,
-} from './booking-options';
+} from '@/features/booking/booking-options';
+import { bookingStepPath } from '@/features/booking/guest-booking-flow';
 
 export default function BookingTypeScreen() {
   const colors = useSawaaColors();
@@ -38,6 +40,7 @@ export default function BookingTypeScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
@@ -79,7 +82,7 @@ export default function BookingTypeScreen() {
   const handleSelect = (opt: PractitionerBookingOption) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
-      pathname: '/(client)/booking/schedule',
+      pathname: bookingStepPath('schedule', signedIn),
       params: {
         serviceId,
         employeeId: employeeId ?? '',

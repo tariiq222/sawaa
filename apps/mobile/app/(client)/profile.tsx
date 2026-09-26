@@ -34,14 +34,14 @@ const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'ما
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatLastVisit(iso: string | null, isRTL: boolean): string {
-  if (!iso) return isRTL ? '—' : '—';
+  if (!iso) return '—';
   const d = new Date(iso);
   const month = isRTL ? MONTHS_AR[d.getMonth()] : MONTHS_EN[d.getMonth()];
   const day = isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate();
   return `${day} ${month}`;
 }
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   const colors = useSawaaColors();
   const { theme, scheme, setThemeMode } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
@@ -127,16 +127,18 @@ export default function ProfileScreen() {
       >
         <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <View style={[styles.titleRow, { flexDirection: dir.row }]}>
-            <Glass
-              variant="regular"
-              radius={21}
-              onPress={() => router.back()}
-              interactive
-              accessibilityLabel={t('a11y.buttonBack')}
-              style={styles.backBtn}
-            >
-              <BackIcon size={20} color={colors.ink[700]} strokeWidth={1.75} />
-            </Glass>
+            {!asTab ? (
+              <Glass
+                variant="regular"
+                radius={21}
+                onPress={() => router.back()}
+                interactive
+                accessibilityLabel={t('a11y.buttonBack')}
+                style={styles.backBtn}
+              >
+                <BackIcon size={20} color={colors.ink[700]} strokeWidth={1.75} />
+              </Glass>
+            ) : null}
             <Text style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
               {t('profile.title')}
             </Text>
@@ -266,7 +268,7 @@ export default function ProfileScreen() {
 
         <Animated.View entering={FadeInDown.delay(420).duration(700).easing(Easing.out(Easing.cubic))}>
           <DeleteAccountButton />
-          <Glass variant="regular" radius={sawaaRadius.pill} onPress={() => void authService.logout()} interactive style={styles.logoutBtn}>
+          <Glass variant="regular" radius={sawaaRadius.pill} onPress={() => { void authService.logout().then(() => router.replace('/home')); }} interactive style={styles.logoutBtn}>
             <Text style={[styles.logoutText, { fontFamily: f700 }]}>
               {t('profile.signOut')}
             </Text>

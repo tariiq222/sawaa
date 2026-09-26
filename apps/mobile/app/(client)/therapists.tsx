@@ -17,7 +17,7 @@ import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useClinics, useTherapists } from '@/hooks/queries';
 import { useReduceMotion } from '@/hooks/useA11y';
-import { applyTherapistFilters, type TherapistChip } from './therapistsFilter';
+import { applyTherapistFilters, type TherapistChip } from '@/features/therapists/therapistsFilter';
 
 const CHIPS: Array<{ key: Exclude<TherapistChip, null>; labelKey: string }> = [
   { key: 'available', labelKey: 'therapists.filters.available' },

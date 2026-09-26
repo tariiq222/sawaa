@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { GlassSurface } from '../GlassSurface';
 import { Glass } from '../../components/Glass';
@@ -55,7 +55,7 @@ jest.mock('expo-linear-gradient', () => ({
   },
 }));
 
-describe('GlassSurface accessibility fallback', () => {
+describe('Glass unified renderer accessibility fallback', () => {
   it('uses an opaque theme surface and avoids native glass when transparency is reduced', () => {
     mockReduceTransparency = true;
     mockIncreasedContrast = true;
@@ -67,6 +67,17 @@ describe('GlassSurface accessibility fallback', () => {
     expect(queryByTestId('native-glass')).toBeNull();
     expect(style.backgroundColor).toBe('#F7F9FB');
     expect(style.borderWidth).toBeGreaterThanOrEqual(2);
+  });
+
+  it('keeps the reduced-transparency surface opaque over a translucent caller style', () => {
+    mockReduceTransparency = true;
+    mockIncreasedContrast = false;
+    mockScheme = 'light';
+    const { getByTestId } = render(
+      <GlassSurface testID="surface" style={{ backgroundColor: 'rgba(255, 255, 255, 0.18)' }} />,
+    );
+
+    expect(StyleSheet.flatten(getByTestId('surface').props.style).backgroundColor).toBe('#F7F9FB');
   });
 
   it('keeps an explicit dark surface opaque with a light contrast border', () => {
@@ -106,6 +117,23 @@ describe('GlassSurface accessibility fallback', () => {
     expect(isLiquidGlassAvailable).toHaveBeenCalled();
   });
 
+  it('gives native glass the same aqua tint and luminous rim across variants', () => {
+    mockReduceTransparency = false;
+    mockIncreasedContrast = false;
+    mockGlassApiAvailable = true;
+    mockScheme = 'light';
+
+    const regular = render(<Glass variant="regular" testID="regular-glass" />);
+    const clear = render(<Glass variant="clear" testID="clear-glass" />);
+
+    expect(regular.getByTestId('native-glass').props.tintColor).toBe('rgba(180, 231, 244, 0.26)');
+    expect(clear.getByTestId('native-glass').props.tintColor).toBe('rgba(180, 231, 244, 0.26)');
+    expect(StyleSheet.flatten(regular.getByTestId('regular-glass').props.style).borderColor)
+      .toBe('rgba(241, 253, 255, 0.9)');
+    expect(StyleSheet.flatten(clear.getByTestId('clear-glass').props.style).borderColor)
+      .toBe('rgba(241, 253, 255, 0.9)');
+  });
+
   it('falls back when the GlassEffect API is unavailable at runtime', () => {
     mockReduceTransparency = false;
     mockIncreasedContrast = false;
@@ -127,7 +155,10 @@ describe('GlassSurface accessibility fallback', () => {
     const darkFill = UNSAFE_getAllByType(View).some((view) =>
       StyleSheet.flatten(view.props.style)?.backgroundColor === 'rgba(12, 36, 36, 0.55)',
     );
-    expect(darkFill).toBe(true);
+    expect(darkFill).toBe(false);
+    expect(UNSAFE_getAllByType(View).some((view) =>
+      StyleSheet.flatten(view.props.style)?.backgroundColor === 'rgba(30, 89, 96, 0.25)',
+    )).toBe(true);
     expect(getByTestId('fallback-gradient').props.colors).toEqual([
       'rgba(255,255,255,0.22)',
       'rgba(255,255,255,0.05)',
@@ -145,6 +176,44 @@ describe('GlassSurface accessibility fallback', () => {
 
     expect(getByTestId('fallback-blur').props.tint).toBe('dark');
     expect(StyleSheet.flatten(getByTestId('fallback-blur').props.style).backgroundColor)
-      .toBe('rgba(12, 36, 36, 0.55)');
+      .toBe('rgba(13, 48, 53, 0.1)');
+  });
+
+  it('lets Glass render a themed surface with the GlassSurface props', () => {
+    mockReduceTransparency = true;
+    mockIncreasedContrast = false;
+    mockScheme = 'dark';
+    const { getByTestId, getByText, UNSAFE_getAllByType } = render(
+      <Glass variant="base" padding={12} testID="unified-surface">
+        <Text>Unified content</Text>
+      </Glass>,
+    );
+
+    expect(getByTestId('unified-surface')).toBeTruthy();
+    expect(getByText('Unified content')).toBeTruthy();
+    expect(UNSAFE_getAllByType(View).some((view) => StyleSheet.flatten(view.props.style)?.padding === 12)).toBe(true);
+  });
+
+  it('keeps native interactivity and maps soft to the clear glass treatment', () => {
+    mockReduceTransparency = false;
+    mockIncreasedContrast = false;
+    mockGlassApiAvailable = true;
+    mockScheme = 'light';
+    const { getByTestId } = render(<Glass variant="soft" interactive onPress={() => {}} testID="soft-action" />);
+
+    expect(getByTestId('native-glass').props.glassEffectStyle).toBe('clear');
+    expect(getByTestId('native-glass').props.isInteractive).toBe(true);
+  });
+
+  it('does not animate the pressed scale when Reduce Motion is enabled', () => {
+    mockReduceTransparency = false;
+    mockIncreasedContrast = false;
+    mockReduceMotion = true;
+    mockGlassApiAvailable = false;
+    const { getByTestId } = render(<Glass interactive onPress={() => {}} testID="motion-safe-action" />);
+
+    fireEvent(getByTestId('motion-safe-action'), 'pressIn');
+
+    expect(StyleSheet.flatten(getByTestId('motion-safe-action').props.style)?.transform).toBeUndefined();
   });
 });

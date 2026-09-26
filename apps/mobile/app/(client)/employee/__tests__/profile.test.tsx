@@ -32,8 +32,10 @@ jest.mock('expo-linear-gradient', () => {
   return { LinearGradient: View };
 });
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left' }) }));
-jest.mock('@/hooks/queries', () => ({ useTherapist: () => ({ data: mockEmployee, isLoading: false }) }));
-jest.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: mockCatalog, isLoading: false }) }));
+jest.mock('@/hooks/queries', () => ({
+  useTherapist: () => ({ data: mockEmployee, isLoading: false }),
+  usePublicCatalog: () => ({ data: mockCatalog, isLoading: false }),
+}));
 jest.mock('@/services/client/catalog', () => ({ publicCatalogService: { getCatalog: jest.fn() } }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa', () => {

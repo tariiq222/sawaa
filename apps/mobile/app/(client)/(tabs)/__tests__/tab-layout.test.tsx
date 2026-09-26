@@ -2,13 +2,19 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 
 const mockNativeTabsProps = jest.fn();
+const mockTriggerNames: string[] = [];
+const mockTriggerProps: Array<{ name: string; unstable_nativeProps?: { tabBarItemAccessibilityLabel?: string } }> = [];
 jest.mock('expo-router/unstable-native-tabs', () => {
   const Tabs = ({ children, ...props }: { children: React.ReactNode }) => {
     mockNativeTabsProps(props);
     return <>{children}</>;
   };
   const Trigger = Object.assign(
-    ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    ({ children, ...props }: { children: React.ReactNode; name: string; unstable_nativeProps?: { tabBarItemAccessibilityLabel?: string } }) => {
+      mockTriggerNames.push(props.name);
+      mockTriggerProps.push(props);
+      return <>{children}</>;
+    },
     {
       Icon: () => null,
       Label: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -30,7 +36,20 @@ import ClientTabsLayout from '../_layout';
 describe('client tab navigation', () => {
   beforeEach(() => {
     mockNativeTabsProps.mockClear();
+    mockTriggerNames.length = 0;
+    mockTriggerProps.length = 0;
     mockScheme = 'light';
+  });
+
+  it('offers home, explore, my appointments, and account as the only client tabs', () => {
+    render(<ClientTabsLayout />);
+    expect([...mockTriggerNames].reverse()).toEqual(['home', 'explore', 'appointments', 'account']);
+  });
+
+  it('keeps an accessible name for each icon-only native tab', () => {
+    render(<ClientTabsLayout />);
+    expect([...mockTriggerProps].reverse().map((props) => props.unstable_nativeProps?.tabBarItemAccessibilityLabel))
+      .toEqual(['tabs.home', 'tabs.explore', 'tabs.myAppointments', 'tabs.profile']);
   });
 
   it('uses brand teal instead of the default blue selection', () => {

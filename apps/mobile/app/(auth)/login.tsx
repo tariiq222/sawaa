@@ -12,7 +12,7 @@ import {
   Image,
 } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -26,6 +26,7 @@ import { useRequestLoginOtp } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 
 export default function LoginScreen() {
+  const { booking } = useLocalSearchParams<{ booking?: string }>();
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
@@ -58,13 +59,14 @@ export default function LoginScreen() {
           purpose: 'login',
           identifier: identifier.trim(),
           maskedIdentifier: result.maskedIdentifier,
+          ...(booking ? { booking } : {}),
         },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.error.generic'));
     }
-  }, [identifier, requestOtp, router, t]);
+  }, [identifier, requestOtp, router, t, booking]);
 
   return (
     <AquaBackground>
@@ -96,7 +98,7 @@ export default function LoginScreen() {
             entering={FadeInDown.delay(150).duration(700).easing(Easing.out(Easing.cubic))}
             style={[
               styles.title,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f700 }
+              { textAlign: 'center', writingDirection: dir.writingDirection, fontFamily: f700 }
             ]}
           >
             {t('auth.login.title')}
@@ -105,7 +107,7 @@ export default function LoginScreen() {
             entering={FadeInDown.delay(250).duration(700).easing(Easing.out(Easing.cubic))}
             style={[
               styles.subtitle,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
+              { textAlign: 'center', writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
             ]}
           >
             {t('auth.welcomeBackSub')}
@@ -122,7 +124,7 @@ export default function LoginScreen() {
                 <Text
                   style={[
                     styles.label,
-                    { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f600, fontWeight: '600' }
+                    { textAlign: 'center', writingDirection: dir.writingDirection, fontFamily: f600, fontWeight: '600' }
                   ]}
                 >
                   {t('auth.login.identifier')}
@@ -147,7 +149,7 @@ export default function LoginScreen() {
                     textContentType="emailAddress"
                     style={[
                       styles.inputText,
-                      { textAlign: 'left', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }
+                      { textAlign: 'center', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }
                     ]}
                   />
                 </View>
@@ -155,7 +157,7 @@ export default function LoginScreen() {
                   <Text
                     style={[
                       styles.error,
-                      { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
+                      { textAlign: 'center', writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
                     ]}
                   >
                     {error}
@@ -193,7 +195,8 @@ export default function LoginScreen() {
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push('/(auth)/register');
+                    if (booking) router.push({ pathname: '/(auth)/register', params: { booking } });
+                    else router.push('/(auth)/register');
                   }}
                   accessibilityRole="link"
                   style={styles.linkTarget}
@@ -229,8 +232,8 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   inputText: { flex: 1, minHeight: 56, paddingVertical: 12, fontSize: 16, color: colors.ink[900] },
   error: { fontSize: 12, color: colors.accent.coral },
   linkTarget: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
-  forgotLink: { fontSize: 13, color: colors.teal[600] },
+  forgotLink: { fontSize: 13, color: colors.teal[600], textAlign: 'center' },
   registerRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
-  registerText: { fontSize: 14, color: colors.ink[500] },
-  registerLink: { fontSize: 14, color: colors.teal[700] },
+  registerText: { fontSize: 14, color: colors.ink[500], textAlign: 'center' },
+  registerLink: { fontSize: 14, color: colors.teal[700], textAlign: 'center' },
 });

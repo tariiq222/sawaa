@@ -13,17 +13,21 @@ const routes = routeFiles(appRoot);
 
 // Expo Router layout files configure navigation rather than painting a screen;
 // these routes redirect without presenting a screen of their own. The two chat
-// routes only redirect, while settings-profile-section is a nested form component.
+// routes only redirect.
 const backgroundExceptions = new Set([
   '(auth)/_layout.tsx',
   '(client)/_layout.tsx',
   '(client)/(tabs)/_layout.tsx',
-  '(client)/settings-profile-section.tsx',
   '(employee)/_layout.tsx',
   '(employee)/(tabs)/_layout.tsx',
   '_layout.tsx',
   '(client)/chat.tsx',
   '(client)/(tabs)/chat.tsx',
+  'home.tsx',
+  '(client)/(tabs)/account.tsx',
+  'public-booking/[serviceId].tsx',
+  'public-booking/schedule.tsx',
+  'public-booking/confirm.tsx',
 ]);
 
 function paintsSharedBackground(source: string): boolean {
@@ -61,7 +65,7 @@ describe('route color migration safeguards', () => {
   });
 
   it('settings save pairs an action fill with its on-action foreground', () => {
-    const source = fs.readFileSync(path.join(appRoot, '(client)/settings-profile-section.tsx'), 'utf8');
+    const source = fs.readFileSync(path.join(appRoot, '../components/features/settings/SettingsProfileSection.tsx'), 'utf8');
     expect(source).toContain('theme.colors.primaryFill');
     expect(source).toContain('theme.colors.primaryForeground');
     expect(source).not.toMatch(/#1D4ED8/i);
@@ -82,7 +86,8 @@ describe('route color migration safeguards', () => {
   it('memoized client lists update their rendered content when the palette changes', () => {
     for (const name of ['clinics.tsx', 'therapists.tsx', '(tabs)/appointments.tsx']) {
       const source = fs.readFileSync(path.join(appRoot, '(client)', name), 'utf8');
-      expect(source).toContain('useMemo(() => createStyles(colors), [colors])');
+      const styleFactory = name === '(tabs)/appointments.tsx' ? 'createAppointmentsStyles' : 'createStyles';
+      expect(source).toContain(`useMemo(() => ${styleFactory}(colors), [colors])`);
       expect(source).toMatch(/\[.*colors, styles/);
     }
   });

@@ -22,7 +22,7 @@ import { clientPaymentsService } from '@/services/client/payments';
 import { formatHalalas } from '@/lib/money';
 import type { DeliveryType } from '@/types/booking-enums';
 import { useBankTransferSettings } from '@/hooks/queries';
-import { isClientBankTransferAvailable } from './payment-methods';
+import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
 
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
 

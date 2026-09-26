@@ -7,7 +7,6 @@ import { useRouter } from 'expo-router';
 import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/ThemeProvider';
-import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 import type { PortalBookingRow } from '@/services/client/portal';
 
@@ -45,15 +44,15 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
 
   if (loading) {
     return (
-      <Glass variant="strong" radius={sawaaRadius.xl} style={[styles.sessionCard, styles.sessionLoading]}>
+      <View style={[styles.sessionCard, styles.sessionLoading]}>
         <ActivityIndicator color={sawaaColors.teal[600]} />
-      </Glass>
+      </View>
     );
   }
 
   if (!booking) {
     return (
-      <Glass variant="regular" radius={sawaaRadius.xl} style={[styles.sessionCard, styles.emptySession]}>
+      <View style={[styles.sessionCard, styles.emptySession]}>
         <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'لا توجد جلسات قادمة' : 'No upcoming sessions'}
         </Text>
@@ -62,7 +61,7 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
             {dir.isRTL ? 'احجزي الآن' : 'Book now'}
           </Text>
         </Pressable>
-      </Glass>
+      </View>
     );
   }
 
@@ -73,7 +72,7 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
     : null;
 
   return (
-    <Glass variant="strong" radius={sawaaRadius.xl} style={styles.sessionCard}>
+    <View style={styles.sessionCard}>
       <Pressable
         onPress={() => router.push(`/(client)/appointment/${booking.id}`)}
         style={[styles.sessionRow, { flexDirection: dir.row }]}
@@ -104,12 +103,12 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
           <ArrowIcon size={14} color={action.foreground} strokeWidth={2} />
         </View>
       </Pressable>
-    </Glass>
+    </View>
   );
 }
 
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
-  sessionCard: { padding: 14 },
+  sessionCard: { padding: 14, backgroundColor: sawaaColors.glass.opaqueBg, borderRadius: sawaaRadius.xl },
   sessionLoading: { alignItems: 'center', justifyContent: 'center', minHeight: 76 },
   emptySession: { padding: 18, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 13, color: sawaaColors.ink[700] },

@@ -7,6 +7,7 @@ export interface PublicService {
   nameEn: string | null;
   price: number | string;
   currency: string;
+  imageUrl: string | null;
 }
 
 export interface PublicCatalogDepartment {
@@ -36,23 +37,24 @@ export interface PublicCatalogRaw {
   services: PublicService[];
 }
 
+export function mapCatalogDepartments(raw: PublicCatalogRaw): PublicCatalogDepartment[] {
+  const categoryDepartmentIds = new Map(
+    raw.categories.map((category) => [category.id, category.departmentId]),
+  );
+
+  return raw.departments.map((department) => ({
+    ...department,
+    services: raw.services.filter((service) => {
+      if (!service.categoryId) return false;
+      return categoryDepartmentIds.get(service.categoryId) === department.id;
+    }),
+  }));
+}
+
 export const publicCatalogService = {
   async listDepartments(): Promise<PublicCatalogDepartment[]> {
     const response = await api.get<PublicCatalogRaw>('/public/services');
-    const categoryDepartmentIds = new Map(
-      response.data.categories.map((category) => [
-        category.id,
-        category.departmentId,
-      ]),
-    );
-
-    return response.data.departments.map((department) => ({
-      ...department,
-      services: response.data.services.filter((service) => {
-        if (!service.categoryId) return false;
-        return categoryDepartmentIds.get(service.categoryId) === department.id;
-      }),
-    }));
+    return mapCatalogDepartments(response.data);
   },
 
   async getCatalog(): Promise<PublicCatalogRaw> {

@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,8 +21,6 @@ import {
 import {
   AquaBackground,
   sawaaRadius,
-  sawaaSpacing,
-  sawaaType,
   withAlpha,
 } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -35,6 +33,7 @@ import { useClientBookings, clientBookingsKeys } from '@/hooks/queries';
 import { type ClientBookingStatus } from '@/services/client';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { resolveDeliveryType } from '@/types/booking-enums';
+import { createAppointmentsStyles } from '@/components/features/appointments/appointments.styles';
 
 type TabKey = 'upcoming' | 'past' | 'cancelled';
 
@@ -70,7 +69,7 @@ function formatTime(iso: string, isRTL: boolean) {
 export default function AppointmentsScreen() {
   const colors = useSawaaColors();
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createAppointmentsStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -84,7 +83,7 @@ export default function AppointmentsScreen() {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
   const { data, isLoading, isError, isRefetching, refetch } = useClientBookings({ tab, page, limit: 50 });
-  const bookings = data?.items ?? [];
+  const bookings = useMemo(() => data?.items ?? [], [data?.items]);
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
   const items = useMemo(
@@ -97,11 +96,11 @@ export default function AppointmentsScreen() {
     refetch();
   };
 
-  const statusConfig: Record<TabKey, { icon: React.ReactNode; color: string }> = {
+  const statusConfig = useMemo<Record<TabKey, { icon: React.ReactNode; color: string }>>(() => ({
     upcoming: { icon: <Clock size={12} color={colors.accent.sky} strokeWidth={2} />, color: colors.accent.sky },
     past: { icon: <CheckCircle2 size={12} color={colors.teal[500]} strokeWidth={2} />, color: colors.teal[500] },
     cancelled: { icon: <XCircle size={12} color={colors.accent.coral} strokeWidth={2} />, color: colors.accent.coral },
-  };
+  }), [colors]);
 
   const renderItem = useCallback(({ item: b, index: i }: { item: typeof bookings[0]; index: number }) => {
     const status: TabKey = tabOf(b.status);
@@ -285,72 +284,3 @@ export default function AppointmentsScreen() {
     </AquaBackground>
   );
 }
-
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg },
-  header: { gap: sawaaSpacing.lg, marginBottom: sawaaSpacing.lg },
-  title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
-    color: colors.ink[900],
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  subtitle: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[500],
-    marginTop: 2,
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  pageControls: { justifyContent: 'center', gap: sawaaSpacing.sm },
-  pageButton: {
-    paddingVertical: sawaaSpacing.sm,
-    paddingHorizontal: sawaaSpacing.md,
-    borderRadius: sawaaRadius.pill,
-    backgroundColor: withAlpha(colors.teal[500], 0.12),
-  },
-  pageButtonText: { color: colors.ink[900], fontSize: sawaaType.caption.fontSize },
-  skeletonWrap: { gap: sawaaSpacing.md, marginTop: sawaaSpacing.sm },
-  card: { padding: 0, marginBottom: sawaaSpacing.lg },
-  cardInner: { padding: sawaaSpacing.md, gap: sawaaSpacing.md },
-  cardTop: { alignItems: 'center', gap: sawaaSpacing.md },
-  avatar: {
-    width: 44, height: 44, borderRadius: sawaaRadius.pill,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: sawaaType.subheading.fontSize,
-    lineHeight: sawaaType.subheading.lineHeight,
-    color: colors.ink[900],
-  },
-  cardMid: { flex: 1 },
-  therapist: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: colors.ink[900],
-  },
-  metaRow: { alignItems: 'center', gap: sawaaSpacing.xs, marginTop: 2 },
-  metaText: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[500],
-  },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: withAlpha(colors.ink[900], 0.1) },
-  cardBottom: { alignItems: 'center', justifyContent: 'space-between', gap: sawaaSpacing.sm },
-  dateCol: { gap: 2 },
-  dateLabel: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[400],
-  },
-  dateValue: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[900],
-  },
-  statusChip: {
-    flexDirection: 'row', alignItems: 'center', gap: sawaaSpacing.xs,
-    paddingHorizontal: sawaaSpacing.sm, paddingVertical: sawaaSpacing.xs, borderRadius: sawaaRadius.sm,
-  },
-  statusChipText: { fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
-});

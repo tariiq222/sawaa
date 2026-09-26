@@ -9,6 +9,13 @@ export { useNotifications, notificationKeys } from './useNotifications';
 export { useCancelBooking, useRateBooking } from './useBookingMutations';
 export { useEmployeeClients, employeeClientsKeys } from './useEmployeeClients';
 export { useEmployeeDayBookings, employeeDayBookingsKeys } from './useEmployeeDayBookings';
+export { useEmployeeBooking, useEmployeeTodayBookings, employeeBookingKeys } from './useEmployeeBookings';
+export {
+  useCancelEmployeeBooking,
+  useMarkEmployeeBookingCompleted,
+  useStartEmployeeBookingSession,
+} from './useEmployeeBookingMutations';
+export { useCatalogDepartments, usePublicCatalog, catalogKeys } from './useCatalogDepartments';
 export { useBranding, brandingKeys } from './useBranding';
 export { useHome, useSummary, useUpcoming, portalKeys } from './usePortal';
 export { useRegister, useRequestLoginOtp, useVerifyOtp, useRequestEmailVerification } from './useMobileAuth';

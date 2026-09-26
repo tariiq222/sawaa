@@ -1,17 +1,25 @@
 import React from 'react';
 import { FlatList } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const mockGetTodayBookings = jest.fn();
-jest.mock('@/services/employee/bookings', () => ({
-  employeeBookingsService: {
-    getTodayBookings: (...args: unknown[]) => mockGetTodayBookings(...args),
-  },
-}));
+jest.mock('@/hooks/queries', () => {
+  const { useQuery } = require('@tanstack/react-query');
+  return {
+    useEmployeeTodayBookings: () => useQuery({
+      queryKey: ['employee', 'bookings', 'today'],
+      queryFn: async () => {
+        const response = await mockGetTodayBookings();
+        if (!response.data) throw new Error('Today schedule was not returned');
+        return response.data;
+      },
+      retry: false,
+    }),
+  };
+});
 
-jest.mock('@/hooks/use-redux', () => ({
-  useAppSelector: () => ({ firstName: 'Sara' }),
-}));
+jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => ({ firstName: 'Sara' }) }));
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -52,12 +60,14 @@ jest.mock('react-native-reanimated', () => {
 
 jest.mock('@/theme/sawaa', () => {
   const actual = jest.requireActual('@/theme/sawaa');
-  const { View } = require('react-native');
   return {
     ...actual,
     AquaBackground: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-    GlassSurface: ({ children }: { children?: React.ReactNode }) => <View>{children}</View>,
   };
+});
+jest.mock('@/theme/components/Glass', () => {
+  const { View } = require('react-native');
+  return { Glass: ({ children }: { children?: React.ReactNode }) => <View>{children}</View> };
 });
 
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
@@ -78,7 +88,14 @@ async function renderInArabic() {
   await act(async () => {
     await i18n.changeLanguage('ar');
   });
-  return render(<TodayScreen />);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <TodayScreen />
+    </QueryClientProvider>,
+  );
 }
 
 describe('employee today screen load failures', () => {

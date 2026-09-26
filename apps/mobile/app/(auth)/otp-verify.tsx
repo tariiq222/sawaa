@@ -27,6 +27,7 @@ import { setCredentials } from '@/stores/slices/auth-slice';
 import { useVerifyOtp, useRequestLoginOtp } from '@/hooks/queries';
 import { authService, SessionSupersededError } from '@/services/auth';
 import { isSessionCurrent } from '@/services/native-session-state';
+import { decodeBookingReturn } from '@/features/booking/guest-booking-flow';
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN = 60;
@@ -38,6 +39,7 @@ export default function OtpVerifyScreen() {
     identifier: string;
     purpose: 'register' | 'login';
     maskedIdentifier: string;
+    booking?: string;
   }>();
   const { identifier = '', purpose = 'register', maskedIdentifier = '' } = params;
   const insets = useSafeAreaInsets();
@@ -97,6 +99,11 @@ export default function OtpVerifyScreen() {
         user: profile,
       }));
 
+      const bookingReturn = result.sessionKind === 'client' ? decodeBookingReturn(params.booking) : null;
+      if (bookingReturn) {
+        router.replace({ pathname: '/(client)/booking/payment', params: { ...bookingReturn } });
+        return;
+      }
       const destination = result.sessionKind === 'staff'
         ? '/(employee)/(tabs)/today'
         : '/(client)/(tabs)/home';
@@ -114,7 +121,7 @@ export default function OtpVerifyScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t]);
+  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t, params.booking]);
 
   const handleResend = useCallback(async () => {
     if (purpose !== 'login') return;

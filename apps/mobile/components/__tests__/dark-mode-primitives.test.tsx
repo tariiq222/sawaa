@@ -17,7 +17,7 @@ jest.mock('react-native-reanimated', () => ({
 let mockPalette = sawaaColors as typeof mockDark;
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => mockPalette }));
 jest.mock('@/theme', () => ({ Glass: ({ children }: React.PropsWithChildren) => <>{children}</> }));
-jest.mock('@/theme/sawaa/GlassSurface', () => ({ GlassSurface: ({ children }: React.PropsWithChildren) => <>{children}</> }));
+jest.mock('@/theme/components/Glass', () => ({ Glass: ({ children }: React.PropsWithChildren) => <>{children}</> }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', writingDirection: 'ltr' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));

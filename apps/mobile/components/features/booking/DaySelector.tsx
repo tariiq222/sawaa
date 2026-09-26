@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/ThemeProvider';
-import { GlassSurface } from '@/theme/sawaa/GlassSurface';
+import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 
 const DAYS_AR_SHORT = ['أحد', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب'];
@@ -41,7 +41,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
     : `${MONTHS_EN[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`;
 
   return (
-    <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.md}>
+    <Glass variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.md}>
       <View style={[styles.monthHead, { flexDirection: dir.row }]}>
         <View />
         <Text
@@ -105,7 +105,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
           );
         })}
       </LocalizedHorizontalScroll>
-    </GlassSurface>
+    </Glass>
   );
 }
 

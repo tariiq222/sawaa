@@ -1,4 +1,3 @@
-import { useEffect, useState, useCallback } from 'react';
 import { View, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -9,9 +8,9 @@ import { ThemedText } from '@/theme/components/ThemedText';
 import { ThemedCard } from '@/theme/components/ThemedCard';
 import { useTheme } from '@/theme/useTheme';
 import { useDir } from '@/hooks/useDir';
+import { useBooking, useEmployeeBooking } from '@/hooks/queries';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
-import { clientBookingsService, type ClientBookingRow } from '@/services/client/bookings';
-import { employeeBookingsService } from '@/services/employee/bookings';
+import type { ClientBookingRow } from '@/services/client/bookings';
 import type { Booking } from '@/types/models';
 import { hasZoomMeetingAccess } from '@/types/booking-enums';
 import { AquaBackground } from '@/theme/sawaa';
@@ -71,19 +70,6 @@ function adaptEmployee(b: Booking, isRTL: boolean): BookingView {
   };
 }
 
-/**
- * The employee `getById` returns `ApiResponse<Booking>` (`{ data: Booking, ... }`)
- * but some legacy stubs return the bare `Booking`. Narrows safely without an
- * `as unknown as` escape hatch.
- */
-function unwrapEmployeeBooking(
-  res: { data?: Booking } & Partial<Booking>,
-): Booking | null {
-  if (res.data && typeof res.data === 'object') return res.data;
-  if (typeof res.id === 'string') return res as Booking;
-  return null;
-}
-
 export function VideoCallScreen({ role }: VideoCallScreenProps) {
   const { bookingId } = useLocalSearchParams<{ bookingId?: string }>();
   const { t } = useTranslation();
@@ -93,41 +79,14 @@ export function VideoCallScreen({ role }: VideoCallScreenProps) {
   const dir = useDir();
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
-  const [view, setView] = useState<BookingView | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!bookingId) {
-      setNotFound(true);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setNotFound(false);
-    try {
-      if (role === 'client') {
-        const row = await clientBookingsService.getById(bookingId);
-        setView(adaptClient(row, dir.isRTL));
-      } else {
-        const res = await employeeBookingsService.getById(bookingId);
-        const b = unwrapEmployeeBooking(res);
-        if (!b) {
-          setNotFound(true);
-        } else {
-          setView(adaptEmployee(b, dir.isRTL));
-        }
-      }
-    } catch {
-      setNotFound(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [bookingId, dir.isRTL, role]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const clientBookingQuery = useBooking(role === 'client' ? bookingId : undefined);
+  const employeeBookingQuery = useEmployeeBooking(role === 'employee' ? bookingId : undefined);
+  const loading = role === 'client' ? clientBookingQuery.isLoading : employeeBookingQuery.isLoading;
+  const view = role === 'client'
+    ? clientBookingQuery.data ? adaptClient(clientBookingQuery.data, dir.isRTL) : null
+    : employeeBookingQuery.data ? adaptEmployee(employeeBookingQuery.data, dir.isRTL) : null;
+  const queryError = role === 'client' ? clientBookingQuery.isError : employeeBookingQuery.isError;
+  const notFound = !bookingId || (!loading && (queryError || !view));
 
   const formattedTime = view
     ? new Date(view.scheduledAt).toLocaleString(dir.isRTL ? 'ar-SA' : 'en-US', {

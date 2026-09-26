@@ -7,13 +7,20 @@ import { router } from 'expo-router';
 import { isSessionCurrent } from '@/services/native-session-state';
 import { usePushResponses } from './use-push-responses';
 const remove = jest.fn();
-const response = { notification: { request: { identifier: 'notification-1', content: { data: { url: 'https://untrusted.example' } } } } };
+function responseWith(data: Record<string, unknown>, identifier = 'notification-1') {
+  return { notification: { request: { identifier, content: { data } } } };
+}
+const response = responseWith({ url: 'https://untrusted.example' });
+function tapFirst(response: unknown) {
+  const listener = (Notifications.addNotificationResponseReceivedListener as jest.Mock).mock.calls[0][0];
+  return act(async () => { listener(response); });
+}
 beforeEach(() => { jest.clearAllMocks(); (isSessionCurrent as jest.Mock).mockReturnValue(true); (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockReturnValue({ remove }); (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValue(null); });
 it('does not listen for staff or unauthenticated sessions', () => {
   renderHook(() => usePushResponses(null));
   expect(Notifications.addNotificationResponseReceivedListener).not.toHaveBeenCalled();
 });
-it('opens only the authenticated notification list, deduplicates taps and removes listener', async () => {
+it('opens the notification list for a payload with no actionable target, deduplicates taps and removes listener', async () => {
   const { unmount } = renderHook(() => usePushResponses('c1'));
   const listener = (Notifications.addNotificationResponseReceivedListener as jest.Mock).mock.calls[0][0];
   await act(async () => { listener(response); listener(response); });
@@ -21,6 +28,26 @@ it('opens only the authenticated notification list, deduplicates taps and remove
   expect(router.push).toHaveBeenCalledWith('/(client)/notifications');
   unmount();
   expect(remove).toHaveBeenCalledTimes(1);
+});
+it('opens the exact appointment when the payload carries a booking id', async () => {
+  renderHook(() => usePushResponses('c1'));
+  await tapFirst(responseWith({ notificationType: 'BOOKING_REMINDER', bookingId: 'b-7' }));
+  expect(router.push).toHaveBeenCalledWith({ pathname: '/(client)/appointment/[id]', params: { id: 'b-7' } });
+});
+it('opens the appointments tab for a booking type without an id', async () => {
+  renderHook(() => usePushResponses('c1'));
+  await tapFirst(responseWith({ notificationType: 'BOOKING_CANCELLED' }));
+  expect(router.push).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
+});
+it('opens the chat tab for a conversation-scoped payload', async () => {
+  renderHook(() => usePushResponses('c1'));
+  await tapFirst(responseWith({ conversationId: 'c-2' }));
+  expect(router.push).toHaveBeenCalledWith('/(client)/(tabs)/chat');
+});
+it('never navigates to a URL or malformed id supplied by the payload', async () => {
+  renderHook(() => usePushResponses('c1'));
+  await tapFirst(responseWith({ url: 'https://untrusted.example', bookingId: '../evil' }));
+  expect(router.push).toHaveBeenCalledWith('/(client)/notifications');
 });
 it('ignores a late cold-start response after switching sessions', async () => {
   let resolve!: (value: unknown) => void;

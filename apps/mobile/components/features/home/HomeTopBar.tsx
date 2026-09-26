@@ -16,9 +16,10 @@ import { useTranslation } from 'react-i18next';
 
 interface HomeTopBarProps {
   f600: string;
+  isClient?: boolean;
 }
 
-export function HomeTopBar({ f600 }: HomeTopBarProps) {
+function NotificationButton() {
   const sawaaColors = useSawaaColors();
   const { scheme } = useTheme();
   const action = getSawaaRoles(scheme).action;
@@ -27,57 +28,56 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
   const dir = useDir();
   const { t } = useTranslation();
   const fBadge = getFontName(dir.locale, '700');
-  const user = useAppSelector((s) => s.auth.user);
-  const initial = (user?.firstName ?? 'س').charAt(0);
   const { count: unreadCount } = useUnreadCount();
   const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
+  return (
+    <Glass variant="regular" radius={21} style={styles.iconBtn}>
+      <Pressable onPress={() => router.push('/(client)/notifications')} style={styles.iconBtnInner}
+        accessibilityRole="button" accessibilityLabel={t('nav.notifications')}>
+        <AppIcon sf="bell.fill" fallback={Bell} size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
+        {unreadCount > 0 ? (
+          <View style={[styles.bellBadge, badgeLabel.length > 2 ? styles.bellBadgeWide : null]}>
+            <Text style={[styles.bellBadgeText, { fontFamily: fBadge }]}>{badgeLabel}</Text>
+          </View>
+        ) : null}
+      </Pressable>
+    </Glass>
+  );
+}
+
+export function HomeTopBar({ f600, isClient = true }: HomeTopBarProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
+  const router = useRouter();
+  const { t } = useTranslation();
+  const user = useAppSelector((s) => s.auth.user);
+  const initial = (user?.firstName ?? 'س').charAt(0);
 
   return (
     <View style={styles.topBar}>
       <View style={styles.topBarLeft}>
         <Glass variant="regular" radius={21} style={styles.iconBtn}>
           <Pressable
-            onPress={() => router.push('/(client)/therapists')}
+            onPress={() => router.push(isClient ? '/(client)/therapists' : '/public-list/therapists')}
             style={styles.iconBtnInner}
             accessibilityRole="button"
             accessibilityLabel={t('home.searchTherapists')}
           >
-            <Search size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
+            <AppIcon sf="magnifyingglass" fallback={Search} size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
           </Pressable>
         </Glass>
-        <Glass variant="regular" radius={21} style={styles.iconBtn}>
-          <Pressable
-            onPress={() => router.push('/(client)/notifications')}
-            style={styles.iconBtnInner}
-            accessibilityRole="button"
-            accessibilityLabel={t('nav.notifications')}
-          >
-            <AppIcon sf="bell.fill" fallback={Bell} size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            {unreadCount > 0 ? (
-              <View
-                style={[
-                  styles.bellBadge,
-                  badgeLabel.length > 2 ? styles.bellBadgeWide : null,
-                ]}
-              >
-                <Text style={[styles.bellBadgeText, { fontFamily: fBadge }]}>
-                  {badgeLabel}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
-        </Glass>
+        {isClient ? <NotificationButton /> : null}
       </View>
-      <Glass variant="regular" radius={21} style={styles.avatarBtn}>
-        <Pressable
-          onPress={() => router.push('/(client)/profile')}
-          style={styles.avatarInner}
-          accessibilityRole="button"
-          accessibilityLabel={t('client.profile')}
-        >
-          <Text style={[styles.avatarText, { fontFamily: f600, fontWeight: '600' }]}>{initial}</Text>
-        </Pressable>
-      </Glass>
+      {isClient ? (
+        <Glass variant="regular" radius={21} style={styles.avatarBtn}>
+          <Pressable onPress={() => router.push('/(client)/profile')} style={styles.avatarInner}
+            accessibilityRole="button" accessibilityLabel={t('client.profile')}>
+            <Text style={[styles.avatarText, { fontFamily: f600, fontWeight: '600' }]}>{initial}</Text>
+          </Pressable>
+        </Glass>
+      ) : null}
     </View>
   );
 }
@@ -91,7 +91,7 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: Re
   },
   topBarLeft: { flexDirection: 'row', gap: 8 },
   iconBtn: { width: 42, height: 42 },
-  iconBtnInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  iconBtnInner: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   avatarBtn: { width: 42, height: 42 },
   bellBadge: {
     position: 'absolute',
@@ -117,6 +117,6 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: Re
     color: action.foreground,
     textAlign: 'center',
   },
-  avatarInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  avatarInner: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 15, color: sawaaColors.teal[700] },
 });

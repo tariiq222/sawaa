@@ -9,7 +9,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -24,6 +24,7 @@ import { useRegister } from '@/hooks/queries';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 
 export default function RegisterScreen() {
+  const { booking } = useLocalSearchParams<{ booking?: string }>();
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
@@ -69,13 +70,14 @@ export default function RegisterScreen() {
           purpose: 'register',
           identifier: phone,
           maskedIdentifier: result.maskedPhone,
+          ...(booking ? { booking } : {}),
         },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.registerError'));
     }
-  }, [firstName, lastName, phone, email, validate, register, router, t]);
+  }, [firstName, lastName, phone, email, validate, register, router, t, booking]);
 
   return (
     <AquaBackground>

@@ -49,7 +49,7 @@ function sortByBookingTime(a: Booking, b: Booking) {
   return bookingTimestamp(a) - bookingTimestamp(b);
 }
 
-function businessDateToday() {
+export function getEmployeeBusinessDateToday() {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Riyadh',
     year: 'numeric',
@@ -122,7 +122,7 @@ export const employeeBookingsService = {
   },
 
   async getUpcoming() {
-    const fromDate = businessDateToday();
+    const fromDate = getEmployeeBusinessDateToday();
     const now = Date.now();
     const candidates = await Promise.all(
       (['pending', 'confirmed'] as const).map((status) =>

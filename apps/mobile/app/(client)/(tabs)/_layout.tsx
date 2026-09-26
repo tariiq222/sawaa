@@ -12,17 +12,21 @@ export default function ClientTabsLayout() {
   const colors = useSawaaColors();
 
   const tabs = [
-    <NativeTabs.Trigger key="home" name="home">
+    <NativeTabs.Trigger key="home" name="home" unstable_nativeProps={{ tabBarItemAccessibilityLabel: t('tabs.home') }}>
       <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
-      <NativeTabs.Trigger.Label>{t('tabs.home')}</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger.Label hidden>{t('tabs.home')}</NativeTabs.Trigger.Label>
     </NativeTabs.Trigger>,
-    <NativeTabs.Trigger key="records" name="records">
-      <NativeTabs.Trigger.Icon sf={{ default: 'doc.text', selected: 'doc.text.fill' }} md="description" />
-      <NativeTabs.Trigger.Label>{t('tabs.records')}</NativeTabs.Trigger.Label>
+    <NativeTabs.Trigger key="explore" name="explore" unstable_nativeProps={{ tabBarItemAccessibilityLabel: t('tabs.explore') }}>
+      <NativeTabs.Trigger.Icon sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }} md="explore" />
+      <NativeTabs.Trigger.Label hidden>{t('tabs.explore')}</NativeTabs.Trigger.Label>
     </NativeTabs.Trigger>,
-    <NativeTabs.Trigger key="appointments" name="appointments">
-      <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
-      <NativeTabs.Trigger.Label>{t('tabs.sessions')}</NativeTabs.Trigger.Label>
+    <NativeTabs.Trigger key="appointments" name="appointments" unstable_nativeProps={{ tabBarItemAccessibilityLabel: t('tabs.myAppointments') }}>
+      <NativeTabs.Trigger.Icon sf={{ default: 'calendar', selected: 'calendar' }} md="calendar_month" />
+      <NativeTabs.Trigger.Label hidden>{t('tabs.myAppointments')}</NativeTabs.Trigger.Label>
+    </NativeTabs.Trigger>,
+    <NativeTabs.Trigger key="account" name="account" unstable_nativeProps={{ tabBarItemAccessibilityLabel: t('tabs.profile') }}>
+      <NativeTabs.Trigger.Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} md="account_circle" />
+      <NativeTabs.Trigger.Label hidden>{t('tabs.profile')}</NativeTabs.Trigger.Label>
     </NativeTabs.Trigger>,
   ];
 

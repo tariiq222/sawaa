@@ -4,15 +4,24 @@ import {
   Pressable,
   Platform,
   StyleSheet,
+  PressableProps,
   ViewStyle,
   StyleProp,
-  GestureResponderEvent,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
+import { LinearGradient } from "expo-linear-gradient";
+import { GlassWebLayers } from './GlassWebLayers';
 import { useReducedTransparency, useIncreasedContrast, useReduceMotion } from "../../hooks/useA11y";
 import { useTheme } from "../useTheme";
-import { GLASS_CFG, getSawaaColors, getGlassEffects, type GlassCfg as Cfg, type GlassVariant as Variant } from "../sawaa/tokens";
+import {
+  GLASS_CFG,
+  getSawaaColors,
+  getSawaaRoles,
+  getSawaaGlassAppearance,
+  type GlassCfg as Cfg,
+  type GlassVariant as LegacyVariant,
+} from "../sawaa/tokens";
 
 function applyA11y(cfg: Cfg, reduceT: boolean, increaseC: boolean): Cfg {
   let out = { ...cfg };
@@ -29,37 +38,56 @@ function applyA11y(cfg: Cfg, reduceT: boolean, increaseC: boolean): Cfg {
   return out;
 }
 
-type GlassProps = {
-  variant?: Variant;
+export type GlassVariant = LegacyVariant | 'base' | 'soft' | 'dark';
+
+export type GlassProps = Omit<PressableProps, 'style' | 'children' | 'onPress'> & {
+  variant?: GlassVariant;
   tint?: string;
   radius?: number;
+  padding?: number | ViewStyle['padding'];
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
   interactive?: boolean;
-  onPress?: (e: GestureResponderEvent) => void;
   pressed?: boolean;
-  accessibilityLabel?: string;
+  onPress?: PressableProps['onPress'];
 };
+
+function toLegacyVariant(variant: GlassVariant): LegacyVariant {
+  if (variant === 'clear' || variant === 'soft') return 'clear';
+  if (variant === 'strong') return 'strong';
+  return 'regular';
+}
 
 export const Glass = ({
   variant = "regular",
   tint,
   radius = 24,
+  padding,
   style,
   children,
-  interactive,
+  interactive = false,
   onPress,
+  onPressIn,
+  onPressOut,
+  onLongPress,
+  delayLongPress,
+  disabled,
   pressed: pressedOverride,
-  accessibilityLabel,
+  ...viewProps
 }: GlassProps) => {
   const reduceTransparency = useReducedTransparency();
   const increaseContrast = useIncreasedContrast();
   const reduceMotion = useReduceMotion();
   const { theme, scheme } = useTheme();
-  const isDarkAppearance = scheme === 'dark';
-  const sawaaColors = getSawaaColors(scheme);
-  const effects = getGlassEffects(isDarkAppearance);
-  const cfg = applyA11y(GLASS_CFG[variant], reduceTransparency, increaseContrast);
+  const forceDark = variant === 'dark';
+  const glassScheme = forceDark ? 'dark' : scheme;
+  const isDarkAppearance = glassScheme === 'dark';
+  const sawaaColors = getSawaaColors(glassScheme);
+  const roles = getSawaaRoles(glassScheme);
+  const appearance = getSawaaGlassAppearance(glassScheme);
+  const cfgVariant = toLegacyVariant(variant);
+  const cfg = applyA11y(GLASS_CFG[cfgVariant], reduceTransparency, increaseContrast);
+  const usePressable = Boolean(interactive || onPress || onPressIn || onPressOut || onLongPress);
   const useNativeGlass =
     Platform.OS === 'ios' &&
     !reduceTransparency &&
@@ -76,18 +104,36 @@ export const Glass = ({
   };
 
   const pressTransform: ViewStyle | undefined =
-    (interactive || onPress) && pressed && !reduceMotion
+    usePressable && pressed && !reduceMotion
       ? { transform: [{ scale: 0.96 }] }
       : undefined;
 
-  const wrapperTransition: any =
-    Platform.OS === "web" && (interactive || onPress) && !reduceMotion
+  const wrapperTransition =
+    Platform.OS === "web" && usePressable && !reduceMotion
       ? {
           transition:
             "transform 220ms cubic-bezier(0.2,0.9,0.25,1), box-shadow 220ms",
           cursor: "pointer",
-        }
+        } as ViewStyle
       : null;
+
+  const fallbackFill = appearance.fallbackFill;
+  const opaqueSurface = forceDark ? sawaaColors.glass.opaqueDarkBg : theme.colors.surface ?? sawaaColors.glass.opaqueBg;
+  const glassEffectStyle = variant === 'clear' || variant === 'soft' ? 'clear' : 'regular';
+  const containerStyle: ViewStyle = {
+    borderRadius: radius,
+    position: 'relative',
+    overflow: Platform.OS === 'web' ? 'visible' : 'hidden',
+    borderWidth: increaseContrast ? 2 : 1,
+    borderColor: increaseContrast
+      ? forceDark ? sawaaColors.glass.opaqueDarkBorder : theme.colors.textPrimary
+      : appearance.rim,
+    backgroundColor: reduceTransparency
+      ? opaqueSurface
+      : Platform.OS === 'android'
+        ? fallbackFill
+        : 'transparent',
+  };
 
   const body = (
     <>
@@ -95,19 +141,19 @@ export const Glass = ({
         <>
           <GlassView
             style={[StyleSheet.absoluteFillObject, { borderRadius: radius }]}
-            glassEffectStyle={variant === 'clear' ? 'clear' : 'regular'}
-            colorScheme={scheme}
-            isInteractive={Boolean(interactive || onPress)}
+            glassEffectStyle={glassEffectStyle}
+            colorScheme={glassScheme}
+            tintColor={tint ?? appearance.nativeTint}
+            isInteractive={usePressable}
           />
-          {increaseContrast ? (
-            <View
-              pointerEvents="none"
-              style={[
-                StyleSheet.absoluteFillObject,
-                { borderRadius: radius, borderWidth: 2, borderColor: theme.colors.textPrimary },
-              ]}
-            />
-          ) : null}
+          <LinearGradient
+            colors={appearance.sheen}
+            locations={[0, 0.4, 1]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
+          />
         </>
       ) : (
         <>
@@ -118,65 +164,77 @@ export const Glass = ({
               style={[
                 StyleSheet.absoluteFillObject,
                 {
-                  backgroundColor: isDarkAppearance
-                    ? sawaaColors.glass.darkBg
-                    : effects.tint(cfg.mainTintAlpha + 0.15),
+                  backgroundColor: appearance.fallbackBlur,
                 },
               ]}
             />
           ) : null}
-          <View
-            pointerEvents="none"
-            style={[
-              StyleSheet.absoluteFillObject,
-              {
-                borderRadius: radius,
-                borderWidth: increaseContrast ? 2 : 1,
-                borderColor: increaseContrast
-                  ? theme.colors.textPrimary
-                  : isDarkAppearance
-                    ? sawaaColors.glass.darkBorder
-                    : effects.border(cfg.borderAlpha + 0.15),
-              },
-            ]}
-          />
+          {!reduceTransparency ? (
+            <>
+              <View
+                pointerEvents="none"
+                style={[StyleSheet.absoluteFillObject, { backgroundColor: fallbackFill }]}
+              />
+              <LinearGradient
+                colors={roles.highlight}
+                locations={[0, 0.22, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+                pointerEvents="none"
+              />
+            </>
+          ) : null}
           {tint && !reduceTransparency ? (
-            <View
-              pointerEvents="none"
-              style={[StyleSheet.absoluteFillObject, { backgroundColor: tint }]}
-            />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: tint }]} />
           ) : null}
         </>
       )}
 
       {Platform.OS === "web" && !reduceTransparency ? (
-        <WebLayers cfg={cfg} radius={radius} tint={tint} pressed={pressed} isDark={isDarkAppearance} reduceMotion={reduceMotion} />
+        <GlassWebLayers cfg={cfg} radius={radius} tint={tint} pressed={pressed} isDark={isDarkAppearance} reduceMotion={reduceMotion} />
+      ) : null}
+
+      {!reduceTransparency && Platform.OS === 'ios' ? (
+        <View pointerEvents="none" style={{ position: 'absolute', start: 10, end: 10, bottom: 0, height: 2, borderRadius: radius, backgroundColor: appearance.lowerRim }} />
       ) : null}
 
       <View style={[
-        { flex: 1, position: "relative", zIndex: 1 },
+        { position: "relative", zIndex: 1 },
         contentCenter,
+        padding !== undefined && { padding },
       ]}>{children}</View>
     </>
   );
 
   const wrapperStyle = [
-    { borderRadius: radius, position: "relative" as const },
-    Platform.OS !== "web" && { overflow: "hidden" as const },
+    containerStyle,
     style,
-    reduceTransparency && { backgroundColor: theme.colors.surface },
+    reduceTransparency ? { backgroundColor: opaqueSurface } : null,
     pressTransform,
     wrapperTransition,
   ];
 
-  if (onPress) {
+  const handlePressIn: NonNullable<GlassProps['onPressIn']> = (event) => {
+    setPressedInternal(true);
+    onPressIn?.(event);
+  };
+  const handlePressOut: NonNullable<GlassProps['onPressOut']> = (event) => {
+    setPressedInternal(false);
+    onPressOut?.(event);
+  };
+
+  if (usePressable) {
     return (
       <Pressable
+        {...viewProps}
+        disabled={disabled}
         onPress={onPress}
-        onPressIn={() => setPressedInternal(true)}
-        onPressOut={() => setPressedInternal(false)}
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
+        onLongPress={onLongPress}
+        delayLongPress={delayLongPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        accessibilityRole={viewProps.accessibilityRole ?? 'button'}
         style={wrapperStyle}
       >
         {body}
@@ -184,122 +242,5 @@ export const Glass = ({
     );
   }
 
-  return <View style={wrapperStyle}>{body}</View>;
+  return <View {...viewProps} style={wrapperStyle}>{body}</View>;
 };
-
-function WebLayers({
-  cfg,
-  radius,
-  tint,
-  pressed,
-  isDark,
-  reduceMotion,
-}: {
-  cfg: Cfg;
-  radius: number;
-  tint?: string;
-  pressed: boolean;
-  isDark: boolean;
-  reduceMotion: boolean;
-}) {
-  const abs = (extra: any): any => ({
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    pointerEvents: "none",
-    ...extra,
-  });
-
-  const baseAlpha = pressed ? cfg.baseTintAlpha + 0.05 : cfg.baseTintAlpha;
-  const effects = getGlassEffects(isDark);
-  const animatedPress = pressed && !reduceMotion;
-
-  return (
-    <View
-      style={abs({
-        borderRadius: radius,
-        overflow: "hidden",
-        isolation: "isolate",
-      })}
-    >
-      <View style={abs({ backgroundColor: effects.tint(baseAlpha) })} />
-      <View
-        style={abs({
-          backgroundColor: effects.tint(cfg.mainTintAlpha),
-          backdropFilter: `blur(${cfg.mainBlur}px) saturate(180%)`,
-          WebkitBackdropFilter: `blur(${cfg.mainBlur}px) saturate(180%)`,
-        })}
-      />
-      {cfg.bloomAlpha > 0 ? (
-        <View
-          style={abs({
-            left: 5,
-            right: 5,
-            top: 6,
-            bottom: 6,
-            backgroundColor: effects.tint(cfg.bloomAlpha),
-            filter: "blur(3px)",
-            borderRadius: radius,
-          })}
-        />
-      ) : null}
-      <View
-        style={abs({
-          background:
-            effects.pressGlow,
-          opacity: animatedPress ? 1 : 0,
-          transform: `scale(${animatedPress ? 1 : 0.6})`,
-          transition: reduceMotion ? 'none' : "opacity 240ms ease-out, transform 340ms cubic-bezier(0.2,0.9,0.25,1)",
-          mixBlendMode: "plus-lighter",
-          borderRadius: radius,
-        })}
-      />
-      <View
-        style={abs({
-          boxShadow: pressed
-            ? effects.pressedShadow
-            : effects.restingShadow,
-          transition: "box-shadow 220ms ease-out",
-          borderRadius: radius,
-        })}
-      />
-      <View
-        style={abs({
-          top: 0,
-          bottom: "60%",
-          left: 0,
-          right: 0,
-          backgroundColor: effects.sheen,
-          backgroundBlendMode: "overlay",
-          filter: "blur(6px)",
-          borderRadius: radius,
-        })}
-      />
-      <View
-        style={abs({
-          boxShadow: effects.innerShadow,
-          mixBlendMode: "multiply",
-          filter: "blur(4px)",
-        })}
-      />
-      <View
-        style={abs({
-          boxShadow:
-            effects.edgeShadow,
-          mixBlendMode: "plus-lighter",
-          filter: "blur(1.5px)",
-        })}
-      />
-      <View
-        style={abs({
-          border: `1px solid ${effects.border(cfg.borderAlpha)}`,
-          mixBlendMode: "plus-lighter",
-          borderRadius: radius,
-        })}
-      />
-      {tint ? <View style={abs({ backgroundColor: tint })} /> : null}
-    </View>
-  );
-}

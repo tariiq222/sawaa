@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/useTheme';
 import { View, FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -9,9 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar as RNCalendar } from 'react-native-calendars';
 import { router } from 'expo-router';
 
+import { Glass } from '@/theme/components/Glass';
 import {
   AquaBackground,
-  GlassSurface,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -58,7 +57,7 @@ export default function CalendarScreen() {
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.sm} style={styles.calCard}>
+          <Glass variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.sm} style={styles.calCard}>
             {/* react-native-calendars mirrors its grid from Yoga's direction, so the
                 locale direction has to be restored locally on the pinned-LTR basis. */}
             <View style={{ direction: dir.isRTL ? 'rtl' : 'ltr' }}>
@@ -87,7 +86,7 @@ export default function CalendarScreen() {
                 }}
               />
             </View>
-          </GlassSurface>
+          </Glass>
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(180).duration(600).easing(Easing.out(Easing.cubic))}>
@@ -106,7 +105,7 @@ export default function CalendarScreen() {
             <Animated.View
               entering={reduceMotion ? undefined : FadeInDown.delay(240 + index * 70).duration(600).easing(Easing.out(Easing.cubic))}
             >
-              <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.md}>
+              <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.md}>
                 <View style={[styles.apptRow, { flexDirection: dir.row }]}>
                   <View style={[styles.timeCol, { flexDirection: dir.row }]}>
                     <Clock size={14} strokeWidth={1.5} color={colors.ink[400]} />
@@ -124,7 +123,7 @@ export default function CalendarScreen() {
                   </View>
                   <StatusPill status={item.status} label={t(getStatusLabel(item.status))} />
                 </View>
-              </GlassSurface>
+              </Glass>
             </Animated.View>
           )}
           ListEmptyComponent={
@@ -156,11 +155,11 @@ export default function CalendarScreen() {
             onPress={() => router.push('/(employee)/availability')}
             accessibilityRole="button"
           >
-            <GlassSurface variant="strong" radius={sawaaRadius.pill} padding={sawaaSpacing.md}>
+            <Glass variant="strong" radius={sawaaRadius.pill} padding={sawaaSpacing.md}>
               <Text style={[styles.ctaText, { fontFamily: f600, fontWeight: '600', writingDirection: dir.writingDirection }]}>
                 {t('doctor.manageAvailability')}
               </Text>
-            </GlassSurface>
+            </Glass>
           </Pressable>
         </View>
       </View>

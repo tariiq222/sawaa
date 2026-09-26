@@ -11,7 +11,6 @@ import { sawaaRadius, getSawaaRoles } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/ThemeProvider';
 import { concentricRadius } from '@/theme/sawaa/tokens';
-import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 import { useClinics } from '@/hooks/queries';
 
@@ -22,9 +21,10 @@ interface FeaturedClinicsProps {
   dir: DirState;
   f600: string;
   f700: string;
+  isClient?: boolean;
 }
 
-export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
+export function FeaturedClinics({ dir, f600, f700, isClient = true }: FeaturedClinicsProps) {
   const sawaaColors = useSawaaColors();
   const { scheme } = useTheme();
   const action = getSawaaRoles(scheme).action;
@@ -45,9 +45,11 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
       {clinics.map((c) => {
         const name = dir.isRTL ? c.nameAr : (c.nameEn ?? c.nameAr);
         return (
-        <Glass key={c.id} variant="strong" radius={CARD_RADIUS} style={styles.clinicCard}>
+        <View key={c.id} style={styles.clinicCard}>
           <Pressable
-            onPress={() => router.push({ pathname: '/(client)/therapists', params: { clinicId: c.id } })}
+            onPress={() => router.push(isClient
+              ? { pathname: '/(client)/therapists', params: { clinicId: c.id } }
+              : { pathname: '/public-list/therapists', params: { clinicId: c.id } })}
             style={styles.clinicInner}
             accessibilityRole="button"
             accessibilityLabel={name}
@@ -72,7 +74,7 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
               </View>
             </View>
           </Pressable>
-        </Glass>
+        </View>
         );
       })}
     </LocalizedHorizontalScroll>
@@ -81,7 +83,7 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
 
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   hScrollContent: { gap: 10, paddingHorizontal: 2 },
-  clinicCard: { width: 170 },
+  clinicCard: { width: 170, backgroundColor: sawaaColors.glass.opaqueBg, borderRadius: CARD_RADIUS, overflow: 'hidden' },
   clinicInner: { padding: CARD_PADDING, gap: 10 },
   clinicIcon: { height: 88, borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING), alignItems: 'center', justifyContent: 'center' },
   clinicName: { fontSize: 13.5, color: sawaaColors.ink[900], marginTop: 2 },

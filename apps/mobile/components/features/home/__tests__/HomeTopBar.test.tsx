@@ -45,4 +45,11 @@ describe('HomeTopBar', () => {
     expect(getByRole('button', { name: notifications as string })).toBeTruthy();
     expect(getByRole('button', { name: profile as string })).toBeTruthy();
   });
+
+  it('keeps only discovery controls for guests', async () => {
+    await act(async () => { await i18n.changeLanguage('ar'); });
+    const { getByRole, queryByRole } = render(<HomeTopBar f600="System" isClient={false} />);
+    expect(getByRole('button', { name: 'البحث عن معالجين' })).toBeTruthy();
+    expect(queryByRole('button', { name: 'تسجيل الدخول' })).toBeNull();
+  });
 });

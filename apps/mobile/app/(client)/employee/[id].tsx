@@ -6,15 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 
 import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { useTherapist } from '@/hooks/queries';
-import { publicCatalogService } from '@/services/client/catalog';
+import { usePublicCatalog, useTherapist } from '@/hooks/queries';
 
 export default function EmployeeProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,10 +28,7 @@ export default function EmployeeProfileScreen() {
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const { data: employee, isLoading: employeeLoading } = useTherapist(id);
-  const { data: catalog, isLoading: catalogLoading } = useQuery({
-    queryKey: ['public', 'services'],
-    queryFn: () => publicCatalogService.getCatalog(),
-  });
+  const { data: catalog, isLoading: catalogLoading } = usePublicCatalog();
   const [chosenServiceId, setChosenServiceId] = useState<string | null>(null);
 
   const employeeName = employee

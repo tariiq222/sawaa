@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+let mockBooking: string | undefined;
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     replace: mockReplace,
@@ -12,6 +13,7 @@ jest.mock('expo-router', () => ({
     identifier: 'test@example.com',
     maskedIdentifier: 't***@example.com',
     purpose: 'login',
+    booking: mockBooking,
   }),
 }));
 
@@ -118,6 +120,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCurrentEpoch = 1;
+    mockBooking = undefined;
   });
 
   it('uses one four-character input for native SMS autofill', () => {
@@ -177,6 +180,28 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
     });
+  });
+
+  it('returns a verified client to the selected appointment payment step', async () => {
+    mockBooking = JSON.stringify({
+      serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
+      deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
+      durationOptionId: 'duration-1', amount: '45000', currency: 'SAR',
+    });
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/payment',
+      params: {
+        serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
+        deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
+        durationOptionId: 'duration-1', amount: '45000', currency: 'SAR',
+      },
+    }));
   });
 
   it('filters non-digits and never submits an incomplete code', async () => {

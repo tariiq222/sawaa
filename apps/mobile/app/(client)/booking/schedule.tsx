@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,8 @@ import * as Haptics from 'expo-haptics';
 import { AquaBackground, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { useDir } from '@/hooks/useDir';
+import { useAppSelector } from '@/hooks/use-redux';
+import { bookingStepPath } from '@/features/booking/guest-booking-flow';
 import { getFontName } from '@/theme/fonts';
 import { publicEmployeesService } from '@/services/client/employees';
 import { branchesService } from '@/services/branches';
@@ -44,6 +46,7 @@ export default function BookingScheduleScreen() {
   const dir = useDir();
   const { t } = useTranslation();
   const reduceMotion = useReduceMotion();
+  const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
   const f500 = getFontName(dir.locale, '500');
   const f600 = getFontName(dir.locale, '600');
@@ -142,7 +145,7 @@ export default function BookingScheduleScreen() {
     if (!selectedSlot || !branchId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
-      pathname: '/(client)/booking/confirm',
+      pathname: bookingStepPath('confirm', signedIn),
       params: {
         serviceId: params.serviceId,
         employeeId: params.employeeId ?? '',
