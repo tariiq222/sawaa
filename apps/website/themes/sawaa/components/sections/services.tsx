@@ -100,7 +100,7 @@ export function Services({ services, intro, vatRate = 0 }: ServicesProps) {
               ))}
             </div>
 
-            <div className="mt-4 flex items-center justify-center gap-3">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
               <Link
                 href="/services"
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[0.8125rem] font-bold transition-all hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
@@ -109,26 +109,28 @@ export function Services({ services, intro, vatRate = 0 }: ServicesProps) {
                 {t('services.viewAll')}
                 <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
               </Link>
-              <button
-                type="button"
-                onClick={() => scroll('forward')}
-                disabled={!canScrollForward}
-                aria-label={t('services.scrollNext')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition disabled:cursor-not-allowed disabled:opacity-30"
-                style={{ border: '1px solid var(--sw-neutral-200)' }}
-              >
-                <ForwardIcon className="h-4.5 w-4.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scroll('back')}
-                disabled={!canScrollBack}
-                aria-label={t('services.scrollPrevious')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition disabled:cursor-not-allowed disabled:opacity-30"
-                style={{ border: '1px solid var(--sw-neutral-200)' }}
-              >
-                <BackIcon className="h-4.5 w-4.5" />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => scroll('forward')}
+                  disabled={!canScrollForward}
+                  aria-label={t('services.scrollNext')}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition disabled:cursor-not-allowed disabled:opacity-30"
+                  style={{ border: '1px solid var(--sw-neutral-200)' }}
+                >
+                  <ForwardIcon className="h-4.5 w-4.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scroll('back')}
+                  disabled={!canScrollBack}
+                  aria-label={t('services.scrollPrevious')}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition disabled:cursor-not-allowed disabled:opacity-30"
+                  style={{ border: '1px solid var(--sw-neutral-200)' }}
+                >
+                  <BackIcon className="h-4.5 w-4.5" />
+                </button>
+              </div>
             </div>
           </>
         )}
