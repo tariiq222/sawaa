@@ -445,6 +445,8 @@ function BookingWizardInner() {
                     employee={w.employee}
                     vatRate={w.vatRate}
                     selectedPriceHalalas={w.selectedPriceHalalas}
+                    paymentMethods={w.paymentMethods}
+                    paymentMethodsLoading={w.paymentMethodsLoading}
                     onBack={w.handleBackFromInfo}
                     onSubmitInfo={w.handleSubmitInfo}
                     isSubmitting={w.isSubmitting}

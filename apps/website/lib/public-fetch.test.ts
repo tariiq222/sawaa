@@ -11,6 +11,7 @@ vi.mock('@/lib/api-base', () => ({
 const fetchMock = vi.fn();
 let publicFetch: typeof import('./public-fetch').publicFetch;
 let PublicFetchError: typeof import('./public-fetch').PublicFetchError;
+let publicErrorMessage: typeof import('./public-fetch').publicErrorMessage;
 
 const CSRF_TOKEN = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
@@ -30,7 +31,7 @@ describe('publicFetch', () => {
     getApiBaseMock.mockReturnValue('http://api.local/api/v1');
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     vi.resetModules();
-    ({ publicFetch, PublicFetchError } = await import('./public-fetch'));
+    ({ publicFetch, PublicFetchError, publicErrorMessage } = await import('./public-fetch'));
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -500,6 +501,28 @@ describe('publicFetch', () => {
       expect(err.message).toBe('PublicFetchError: 409');
       expect(err).toBeInstanceOf(Error);
       expect(err).toBeInstanceOf(PublicFetchError);
+    });
+  });
+
+  describe('publicErrorMessage', () => {
+    it('returns the backend message from a thrown HttpException body', () => {
+      const err = new PublicFetchError(409, {
+        statusCode: 409,
+        message: 'هناك دفعة قيد التنفيذ لهذه الفاتورة',
+      });
+      expect(publicErrorMessage(err)).toBe('هناك دفعة قيد التنفيذ لهذه الفاتورة');
+    });
+
+    it('returns the first class-validator message from an array body', () => {
+      const err = new PublicFetchError(400, { message: ['invoiceId must be a UUID'] });
+      expect(publicErrorMessage(err)).toBe('invoiceId must be a UUID');
+    });
+
+    it('returns null for a non-fetch error, an empty body or a blank message', () => {
+      expect(publicErrorMessage(new Error('boom'))).toBeNull();
+      expect(publicErrorMessage(new PublicFetchError(500, {}))).toBeNull();
+      expect(publicErrorMessage(new PublicFetchError(500, { message: '   ' }))).toBeNull();
+      expect(publicErrorMessage(undefined)).toBeNull();
     });
   });
 });

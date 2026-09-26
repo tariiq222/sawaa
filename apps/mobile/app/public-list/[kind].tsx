@@ -14,6 +14,7 @@ import { Glass } from '@/theme/components/Glass';
 import { GuestDock, type GuestDockSection } from '@/components/features/home/GuestDock';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { useAppSelector } from '@/hooks/use-redux';
+import { goBackOrHome } from '@/lib/navigation';
 
 export default function PublicListScreen() {
   const { kind, clinicId } = useLocalSearchParams<{ kind?: string; clinicId?: string }>();
@@ -50,7 +51,7 @@ export default function PublicListScreen() {
         ListHeaderComponent={(
           <View style={styles.header}>
             <Glass variant="clear" radius={18} style={[styles.back, { alignSelf: dir.alignStart }]}
-              onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/home'); }}
+              onPress={() => goBackOrHome(router)}
               accessibilityLabel={t('a11y.buttonBack')} interactive>
               <AppIcon sf={dir.isRTL ? 'chevron.right' : 'chevron.left'} fallback={dir.isRTL ? ChevronRight : ChevronLeft} size={21} color={colors.teal[700]} />
             </Glass>

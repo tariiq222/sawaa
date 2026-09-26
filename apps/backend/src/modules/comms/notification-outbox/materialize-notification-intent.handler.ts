@@ -260,8 +260,14 @@ export class MaterializeNotificationIntentHandler {
     const supportsPush = isReminder || content.type === 'BOOKING_CANCELLED';
     if (supportsPush) {
       if (target.pushEnabled && target.tokens.length > 0) {
+        // FCM data values must be strings. Carry the booking routing key so a
+        // tapped push opens the exact appointment instead of only the list.
+        const pushData: Record<string, string> = { notificationType: content.type };
+        if (content.metadata.bookingId != null) {
+          pushData.bookingId = String(content.metadata.bookingId);
+        }
         for (const token of target.tokens) {
-          rows.push({ intentId, recipientType: recipient.type, recipientId: recipient.id, channel: 'PUSH', targetKey: targetKey(token), targetAddress: token, channelPayload: { channel: 'PUSH', title: content.title, body: content.body, data: { notificationType: content.type } } });
+          rows.push({ intentId, recipientType: recipient.type, recipientId: recipient.id, channel: 'PUSH', targetKey: targetKey(token), targetAddress: token, channelPayload: { channel: 'PUSH', title: content.title, body: content.body, data: pushData } });
         }
       } else {
         rows.push(this.skipped(intentId, recipient, 'PUSH', target.pushEnabled ? NOTIFICATION_OUTBOX_OUTCOME_REASONS.MISSING_TARGET : NOTIFICATION_OUTBOX_OUTCOME_REASONS.RECIPIENT_DISABLED));

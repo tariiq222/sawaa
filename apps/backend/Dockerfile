@@ -153,7 +153,9 @@ COPY --chown=1001:1001 --from=app-build /app/apps/backend/prisma.config.ts      
 COPY --chown=1001:1001 --from=app-build /app/apps/backend/prisma                ./apps/backend/prisma
 COPY --chown=1001:1001 --from=app-build /app/apps/backend/dist                  ./apps/backend/dist
 COPY --chown=1001:1001 --from=app-build /app/apps/backend/assets                ./apps/backend/assets
-COPY --chown=1001:1001 docker/openship/start-backend.sh                         ./apps/backend/start-backend.sh
+# Startup script is read by `sh`, not executed directly; keep it root-owned so
+# the application user cannot modify a future launch command.
+COPY --chown=0:0 --chmod=0444 docker/openship/start-backend.sh                  ./apps/backend/start-backend.sh
 
 # Ensure pnpm workspace symlinks resolve at runtime
 RUN mkdir -p /app/node_modules/@sawaa \

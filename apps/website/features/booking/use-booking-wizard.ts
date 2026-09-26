@@ -16,6 +16,8 @@ import {
   type PublicBranch,
 } from '@/features/booking/booking.api';
 import { resolveBookingSubmitOutcome } from '@/features/booking/booking-submit-outcome';
+import { presentDirectClinicServices } from '@/features/booking/booking-catalog';
+import { usePaymentMethods } from '@/features/payment/use-payment-methods';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import type { SummaryScreen } from '@/features/booking/summary-rail';
 import {
@@ -85,7 +87,7 @@ export function useBookingWizard() {
   const { data: employees = [], isLoading: loadingEmployees, error: employeesError } = useQuery({
     queryKey: ['public', 'employees'],
     queryFn: async () => {
-      const json = await publicFetch<{ data?: EmployeeWithUser[] } | EmployeeWithUser[]>('/public/employees');
+      const json = await publicFetch<{ data?: EmployeeWithUser[] } | EmployeeWithUser[]>('/public/employees?includeDirectClinics=true');
       return Array.isArray(json) ? json : (json.data ?? []);
     },
   });
@@ -93,12 +95,12 @@ export function useBookingWizard() {
   const { data: catalog = { services: [], categories: [], vatRate: 0 }, isLoading: loadingServices, error: servicesError } = useQuery({
     queryKey: ['public', 'catalog'],
     queryFn: async () => {
-      type Cat = { id: string; nameAr: string; nameEn: string };
-      type CatalogShape = { services: Service[]; categories: Cat[]; vatRate?: number };
-      const json = await publicFetch<{ data?: CatalogShape } | CatalogShape>('/public/services');
+      type Cat = { id: string; nameAr: string; nameEn: string; bookingMode?: 'DIRECT' | 'SERVICES' };
+      type CatalogShape = { services: (Service & { isHidden?: boolean })[]; categories: Cat[]; vatRate?: number };
+      const json = await publicFetch<{ data?: CatalogShape } | CatalogShape>('/public/services?includeDirectClinics=true');
       const payload = 'data' in json && json.data ? json.data : (json as CatalogShape);
       return {
-        services: payload.services ?? [],
+        services: presentDirectClinicServices(payload.services ?? [], payload.categories ?? []),
         categories: payload.categories ?? [],
         // Tolerate older cached responses that predate the vatRate field.
         vatRate: payload.vatRate ?? 0,
@@ -115,6 +117,11 @@ export function useBookingWizard() {
     queryKey: ['public', 'branches'],
     queryFn: getPublicBranches,
   });
+
+  // Deliberately NOT part of `loadingData`: a free booking needs no payment
+  // method, so a failed lookup must only stop the paid path (the info step owns
+  // that decision) instead of the whole wizard.
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
 
   const loadingData = loadingEmployees || loadingServices || loadingBranches;
   const initialLoadError = employeesError ?? servicesError ?? branchesError;
@@ -245,7 +252,9 @@ export function useBookingWizard() {
     [entryPoint],
   );
   const labelOf: Record<WizardScreen, string> = {
-    service: t('booking.step.service'),
+    service: (service as (Service & { isHidden?: boolean }) | null)?.isHidden
+      ? t('booking.step.clinic')
+      : t('booking.step.service'),
     therapist: t('booking.step.therapist'),
     choice: t('booking.step.choice'),
     branch: t('booking.step.branch'),
@@ -516,7 +525,7 @@ export function useBookingWizard() {
   }, [branchScopedEmployees]);
 
   const filteredServices = useMemo(() => {
-    const base = services.filter((s) => bookableServiceIds.has(s.id));
+    const base = services.filter((s) => !s.isHidden && bookableServiceIds.has(s.id));
     if (lockedEmployee?.serviceIds && lockedEmployee.serviceIds.length > 0) {
       const allowed = new Set(lockedEmployee.serviceIds);
       return base.filter((s) => allowed.has(s.id));
@@ -647,6 +656,10 @@ export function useBookingWizard() {
         handleClose();
         break;
       case WizardStep.THERAPIST:
+        if ((service as (Service & { isHidden?: boolean }) | null)?.isHidden) {
+          handleClose();
+          break;
+        }
         // Back to service picker.
         dispatch({ type: 'RESET' });
         dispatchUi({ type: 'SET_CHOICE', choice: null });
@@ -883,6 +896,8 @@ export function useBookingWizard() {
     summaryProps,
     currentScreen,
     loadingData,
+    paymentMethods,
+    paymentMethodsLoading,
     filteredServices,
     categories,
     filteredTherapists,

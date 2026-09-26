@@ -53,6 +53,12 @@ describe('therapists.api', () => {
     expect(init).toMatchObject({ next: { revalidate: 60 } });
   });
 
+  it('can request direct clinic booking links for clinic listings', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve([sample]) });
+    await listPublicEmployees(true);
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/v1\/public\/employees\?includeDirectClinics=true$/);
+  });
+
   it('listPublicEmployees falls back to an empty list on non-ok response', async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 503, json: () => Promise.resolve({ error: 'service unavailable' }) });
     await expect(listPublicEmployees()).resolves.toEqual([]);

@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { PublicPaymentsController } from './payments.controller';
 import { InitClientPaymentHandler } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
+import { GetPublicPaymentMethodsHandler } from '../../modules/finance/payments/public/get-public-payment-methods/get-public-payment-methods.handler';
 import { InitPackagePurchaseHandler } from '../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 
@@ -11,6 +12,7 @@ describe('PublicPaymentsController (e2e)', () => {
 
   const mockInitPayment = { execute: jest.fn() };
   const mockInitPackagePurchase = { execute: jest.fn() };
+  const mockGetPublicPaymentMethods = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -18,6 +20,7 @@ describe('PublicPaymentsController (e2e)', () => {
       providers: [
         { provide: InitClientPaymentHandler, useValue: mockInitPayment },
         { provide: InitPackagePurchaseHandler, useValue: mockInitPackagePurchase },
+        { provide: GetPublicPaymentMethodsHandler, useValue: mockGetPublicPaymentMethods },
       ],
     })
       .overrideGuard(ClientSessionGuard)
@@ -43,6 +46,22 @@ describe('PublicPaymentsController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('GET /public/payments/methods', () => {
+    it('returns the client-facing payment capabilities without a session', async () => {
+      mockGetPublicPaymentMethods.execute.mockResolvedValue({
+        moyasarEnabled: false,
+        atClinicEnabled: true,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/public/payments/methods')
+        .expect(200);
+
+      expect(res.body).toEqual({ moyasarEnabled: false, atClinicEnabled: true });
+      expect(mockGetPublicPaymentMethods.execute).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('POST /public/payments/init', () => {

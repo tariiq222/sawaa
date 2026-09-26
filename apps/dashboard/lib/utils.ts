@@ -253,9 +253,14 @@ export function parseClinicTimeInput(input: string, format: TimeFormat = "24h"):
   const value = input.trim()
   if (!value) return null
 
-  const suffixMatch = value.match(/\s*(ص|م|am|pm)\s*$/i)
-  const suffix = suffixMatch?.[1]?.toLowerCase()
-  const timeValue = suffixMatch ? value.slice(0, suffixMatch.index ?? value.length).trim() : value
+  const suffixCandidates = ["ص", "م", "am", "pm"] as const
+  const trimmedValue = value.trimEnd()
+  const suffix = suffixCandidates.find((candidate) =>
+    trimmedValue.toLowerCase().endsWith(candidate),
+  )
+  const timeValue = suffix
+    ? trimmedValue.slice(0, -suffix.length).trim()
+    : value
   const match = timeValue.match(/^(\d{1,2}):(\d{2})$/)
   if (!match) return null
 

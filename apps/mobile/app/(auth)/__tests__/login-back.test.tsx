@@ -1,0 +1,100 @@
+import React from 'react';
+import { fireEvent, render } from '@testing-library/react-native';
+
+let mockCanGoBack = true;
+const mockBack = jest.fn();
+const mockReplace = jest.fn();
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    back: mockBack,
+    replace: mockReplace,
+    push: mockPush,
+    canGoBack: () => mockCanGoBack,
+  }),
+  useLocalSearchParams: () => ({}),
+}));
+
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'light' },
+  NotificationFeedbackType: { Success: 'success', Error: 'error' },
+}));
+
+jest.mock('react-native-reanimated', () => {
+  const { View, Text } = require('react-native');
+  const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
+  return {
+    __esModule: true,
+    default: { View, Text },
+    FadeIn: animation,
+    FadeInDown: animation,
+    FadeInUp: animation,
+    Easing: { out: jest.fn(), cubic: jest.fn() },
+  };
+});
+
+jest.mock('@/theme', () => ({ Glass: require('react-native').View }));
+jest.mock('@/theme/sawaa', () => {
+  const { View, Pressable, Text } = require('react-native');
+  return {
+    ...jest.requireActual('@/theme/sawaa/tokens'),
+    AquaBackground: View,
+    PrimaryButton: ({ label, onPress, disabled }: { label: string; onPress?: () => void; disabled?: boolean }) => (
+      <Pressable onPress={onPress} disabled={disabled}>
+        <Text>{label}</Text>
+      </Pressable>
+    ),
+  };
+});
+jest.mock('@/theme/sawaa/useSawaaColors', () => ({
+  useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
+}));
+jest.mock('@/hooks/useDir', () => ({
+  useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', textAlign: 'right', alignStart: 'flex-end', writingDirection: 'rtl' }),
+}));
+jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
+jest.mock('@/hooks/queries', () => ({
+  useRequestLoginOtp: () => ({ mutateAsync: jest.fn(), isPending: false }),
+}));
+
+import LoginScreen from '../login';
+
+describe('login screen escape routes', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCanGoBack = true;
+  });
+
+  it('exposes a back control that returns to the previous screen', () => {
+    const screen = render(<LoginScreen />);
+
+    fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
+
+    expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the public home when login was opened with no history', () => {
+    mockCanGoBack = false;
+    const screen = render(<LoginScreen />);
+
+    fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
+
+    expect(mockReplace).toHaveBeenCalledWith('/home');
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it('lets a guest continue browsing without signing in', () => {
+    const screen = render(<LoginScreen />);
+
+    fireEvent.press(screen.getByText('auth.login.continueAsGuest'));
+
+    expect(mockReplace).toHaveBeenCalledWith('/home');
+  });
+});

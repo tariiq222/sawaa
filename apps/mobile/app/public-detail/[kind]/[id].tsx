@@ -11,6 +11,7 @@ import { getFontName } from '@/theme/fonts';
 import { AquaBackground } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { formatHalalas } from '@/lib/package-utils';
+import { goBackOrHome } from '@/lib/navigation';
 
 type PublicKind = 'service' | 'package' | 'program' | 'therapist';
 
@@ -57,7 +58,7 @@ export default function PublicDetailScreen() {
   return (
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}>
-        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.action}>
+        <Pressable accessibilityRole="button" onPress={() => goBackOrHome(router)} style={styles.action}>
           <Text style={[styles.link, { fontFamily: bold }]}>{t('a11y.buttonBack')}</Text>
         </Pressable>
         {loading ? <ActivityIndicator color={colors.teal[700]} /> : null}

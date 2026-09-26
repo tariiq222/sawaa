@@ -15,7 +15,7 @@ export const getPublicCatalog = cache(async function getPublicCatalog(): Promise
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 1500);
-    const res = await fetch(`${getApiBase()}/public/services`, {
+    const res = await fetch(`${getApiBase()}/public/services?includeDirectClinics=true`, {
       next: { revalidate: 60 },
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));

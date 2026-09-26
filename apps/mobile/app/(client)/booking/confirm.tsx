@@ -29,6 +29,7 @@ import { useReduceMotion } from '@/hooks/useA11y';
 import { useCatalogDepartments } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/money';
+import { goBackOrHome } from '@/lib/navigation';
 import type { DeliveryType } from '@/types/booking-enums';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -181,7 +182,7 @@ export default function BookingConfirmScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={3} onBack={() => router.back()} backAccessibilityLabel={t('a11y.buttonBack')} />
+          <BookingStepHeader step={3} onBack={() => goBackOrHome(router)} backAccessibilityLabel={t('a11y.buttonBack')} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>

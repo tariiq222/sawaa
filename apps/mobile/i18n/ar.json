@@ -26,6 +26,7 @@
     "login.submit": "الدخول",
     "login.submitting": "جارٍ...",
     "login.identifierError": "الرجاء إدخال رقم الجوال أو البريد الإلكتروني",
+    "login.continueAsGuest": "متابعة كزائر",
     "otp.title": "رمز التحقق",
     "otp.code": "أدخل الرمز",
     "otp.resend": "إعادة إرسال الرمز",
@@ -346,7 +347,8 @@
   "suspended": {
     "title": "الحساب معلَّق",
     "message": "تم تعليق حسابك مؤقتاً. للاستفسار يرجى التواصل مع الإدارة.",
-    "contactAdmin": "تواصل مع الإدارة"
+    "contactAdmin": "تواصل مع الإدارة",
+    "continueAsGuest": "متابعة كزائر"
   },
   "client": {
     "home": "الصفحة الرئيسية",

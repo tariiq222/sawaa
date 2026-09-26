@@ -15,6 +15,7 @@ import Animated, { Easing, FadeIn, FadeInDown, FadeInUp } from 'react-native-rea
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { Glass } from '@/theme';
@@ -24,6 +25,7 @@ import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useRequestLoginOtp } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
+import { goBackOrHome } from '@/lib/navigation';
 
 export default function LoginScreen() {
   const { booking } = useLocalSearchParams<{ booking?: string }>();
@@ -77,11 +79,30 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scroll,
-            { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }
+            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <Glass
+            variant="strong"
+            radius={22}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              goBackOrHome(router);
+            }}
+            interactive
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.buttonBack')}
+            style={[styles.backBtn, { alignSelf: dir.alignStart }]}
+          >
+            {dir.isRTL ? (
+              <ChevronRight size={22} color={colors.teal[700]} strokeWidth={1.75} />
+            ) : (
+              <ChevronLeft size={22} color={colors.teal[700]} strokeWidth={1.75} />
+            )}
+          </Glass>
+
           <Animated.View
             entering={FadeIn.duration(700).easing(Easing.out(Easing.cubic))}
             style={styles.logoContainer}
@@ -204,6 +225,19 @@ export default function LoginScreen() {
                   <Text style={[styles.registerLink, { fontFamily: f700 }]}>{t('auth.createAccount')}</Text>
                 </Pressable>
               </View>
+
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.replace('/home');
+                }}
+                accessibilityRole="button"
+                style={[styles.linkTarget, { alignSelf: 'center' }]}
+              >
+                <Text style={[styles.guestLink, { fontFamily: f600, fontWeight: '600' }]}>
+                  {t('auth.login.continueAsGuest')}
+                </Text>
+              </Pressable>
             </View>
           </Glass>
           </Animated.View>
@@ -232,6 +266,8 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   inputText: { flex: 1, minHeight: 56, paddingVertical: 12, fontSize: 16, color: colors.ink[900] },
   error: { fontSize: 12, color: colors.accent.coral },
   linkTarget: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  guestLink: { fontSize: 13, color: colors.ink[500], textAlign: 'center' },
   forgotLink: { fontSize: 13, color: colors.teal[600], textAlign: 'center' },
   registerRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
   registerText: { fontSize: 14, color: colors.ink[500], textAlign: 'center' },

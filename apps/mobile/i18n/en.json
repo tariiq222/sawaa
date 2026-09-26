@@ -26,6 +26,7 @@
     "login.submit": "Login",
     "login.submitting": "Logging in...",
     "login.identifierError": "Please enter your phone or email",
+    "login.continueAsGuest": "Continue as guest",
     "otp.title": "Verification Code",
     "otp.code": "Enter the code",
     "otp.resend": "Resend Code",
@@ -346,7 +347,8 @@
   "suspended": {
     "title": "Account Suspended",
     "message": "Your account has been temporarily suspended. Please contact administration for inquiries.",
-    "contactAdmin": "Contact Administration"
+    "contactAdmin": "Contact Administration",
+    "continueAsGuest": "Continue as guest"
   },
   "client": {
     "home": "Home",

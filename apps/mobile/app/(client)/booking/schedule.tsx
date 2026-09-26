@@ -19,6 +19,7 @@ import { DaySelector } from '@/components/features/booking/DaySelector';
 import { TimeSlotsGrid, type Slot } from '@/components/features/booking/TimeSlotsGrid';
 import { BookingCta } from '@/components/features/booking/BookingCta';
 import { useReduceMotion } from '@/hooks/useA11y';
+import { goBackOrHome } from '@/lib/navigation';
 import type { DeliveryType } from '@/types/booking-enums';
 
 function toLocalDateOnly(d: Date): string {
@@ -171,7 +172,7 @@ export default function BookingScheduleScreen() {
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
           <BookingStepHeader
             step={2}
-            onBack={() => router.back()}
+            onBack={() => goBackOrHome(router)}
             backAccessibilityLabel={t('a11y.buttonBack')}
           />
         </Animated.View>

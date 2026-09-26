@@ -1,19 +1,16 @@
-# Production overrides for Sawa (single-company). Legacy deployment identifiers
-# are intentionally left as env-driven values; do not change live IDs here.
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
-# Requires: .env.prod populated from .env.prod.example with real secrets.
-#
-# Env-var keys here mirror the Joi schema in apps/backend/src/config/env.validation.ts.
-# If a key is renamed in the schema, this file MUST follow — the backend aborts boot
-# on unknown/invalid required vars.
+# ARCHIVED — historical legacy Compose production override; DO NOT DEPLOY.
+# Current production and staging use docker/openship/compose.yml instead.
+# Retained for historical reference only, with its local migration-startup fix.
+# The relative mounts and paths below were written for the former location at
+# docker/docker-compose.prod.yml; this archived file is not a runnable template.
 
 services:
-  # NOTE: No dedicated `migrate` service. Migrations run via the backend image's
-  # runtime CMD (`prisma migrate deploy && node dist/main.js` in apps/backend/Dockerfile),
-  # which is the authoritative prod path used by the Dokploy/Swarm push-to-main deploy.
-  # A separate migrate service here only fired on manual `docker-compose.prod.yml up`
-  # and re-ran the same migrate deploy twice on cold start, so it was removed.
+  # No separate migrate service: override the image CMD with the existing
+  # startup script so migrations use an owner URL and Node retains the restricted
+  # runtime DATABASE_URL. This legacy Compose path requires an owner URL scoped
+  # only to backend; never use the owner URL as the runtime DATABASE_URL.
   backend:
+    command: ["sh", "start-backend.sh"]
     stop_grace_period: 40s
     stop_signal: SIGTERM
     restart: unless-stopped
@@ -29,8 +26,10 @@ services:
       NODE_ENV: production
       PORT: "5200"
 
-      # Database (Prisma) — runtime uses the NOBYPASSRLS app role; migrate uses OWNER
+      # Database (Prisma) — runtime uses the NOBYPASSRLS app role; migrate uses OWNER.
+      # Supply a URL-encoded owner URL explicitly; never fall back to DATABASE_URL.
       DATABASE_URL: postgresql://${APP_DB_USER:-deqah_app}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}?connection_limit=${DB_CONNECTION_LIMIT:-10}&pool_timeout=${DB_POOL_TIMEOUT_S:-20}
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set owner migration URL for legacy Compose backend}
 
       # Redis (BullMQ + cache + token blacklist)
       REDIS_HOST: redis

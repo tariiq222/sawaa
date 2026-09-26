@@ -24,6 +24,7 @@ import { useAppSelector } from '@/hooks/use-redux';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/money';
+import { goBackOrHome } from '@/lib/navigation';
 import {
   getPractitionerBookingOptions,
   toMobileDeliveryType,
@@ -128,7 +129,7 @@ export default function BookingTypeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={1} onBack={() => router.back()} backAccessibilityLabel={t('a11y.buttonBack')} />
+          <BookingStepHeader step={1} onBack={() => goBackOrHome(router)} backAccessibilityLabel={t('a11y.buttonBack')} />
         </Animated.View>
 
         {/* Title */}

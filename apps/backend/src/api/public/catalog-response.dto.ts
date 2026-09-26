@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * Swagger response shapes for GET /public/services.
@@ -37,6 +37,9 @@ export class CatalogCategoryDto {
 
   @ApiProperty({ example: 0, description: 'Display order' })
   sortOrder!: number;
+
+  @ApiProperty({ enum: ['DIRECT', 'SERVICES'], description: 'Whether booking starts at the clinic or with a service selection' })
+  bookingMode!: 'DIRECT' | 'SERVICES';
 }
 
 export class CatalogServiceDurationOptionDto {
@@ -73,6 +76,9 @@ export class CatalogServiceBookingConfigDto {
 export class CatalogServiceDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
+
+  @ApiPropertyOptional({ description: 'Present for includeDirectClinics; internal direct-clinic services are not listed as standalone services' })
+  isHidden?: boolean;
 
   @ApiProperty({ format: 'uuid', description: 'Owning service category' })
   categoryId!: string;

@@ -14,7 +14,7 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key.split('.').reduce<unknown>((value, part) =>
     (value as Record<string, unknown>)?.[part], mockLocale === 'ar' ? require('../../i18n/ar.json') : require('../../i18n/en.json')) ?? key }),
 }));
-jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockLocale, isRTL: mockLocale === 'ar', row: 'row', textAlign: 'left', writingDirection: 'ltr' }) }));
+jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockLocale, isRTL: mockLocale === 'ar', row: 'row', textAlign: 'left', writingDirection: 'ltr', alignStart: 'flex-start' }) }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
@@ -23,7 +23,7 @@ jest.mock('react-native-reanimated', () => {
   const animation = { delay: () => animation, duration: () => animation, easing: () => animation };
   return { __esModule: true, default: { View: native.View, Text: native.Text }, FadeIn: animation, FadeInDown: animation, FadeInUp: animation, Easing: { out: () => undefined, cubic: undefined } };
 });
-jest.mock('lucide-react-native', () => ({ Clock: () => null }));
+jest.mock('lucide-react-native', () => ({ Clock: () => null, ChevronLeft: () => null, ChevronRight: () => null }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('react-native-calendars', () => ({
   Calendar: ({ onDayPress }: { onDayPress: (day: { dateString: string }) => void }) => (

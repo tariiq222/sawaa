@@ -166,7 +166,7 @@ describeRealE2e('legacy package template conversion (real DB)', () => {
             .map((constraint) => ({
               dimension: constraint.dimension,
               mode: constraint.mode,
-              targets: constraint.targets.map((target) => target.targetId).sort(),
+              targets: constraint.targets.map((target) => target.targetId).sort((a, b) => a.localeCompare(b)),
             })),
           usages: credit.usages
             .sort((left, right) => left.id.localeCompare(right.id))
