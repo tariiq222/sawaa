@@ -149,7 +149,13 @@ describe('BookingExpiryCron', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           status: expect.objectContaining({ in: expect.arrayContaining([BookingStatus.PENDING]) }),
-          expiresAt: expect.anything(),
+          // Two ways a hold is overdue: its window elapsed, or it never carried
+          // one (expiresAt NULL never matches `lt`, so those rows need the
+          // age-based fallback or they block their slot forever).
+          OR: expect.arrayContaining([
+            expect.objectContaining({ expiresAt: expect.objectContaining({ lt: expect.any(Date) }) }),
+            expect.objectContaining({ expiresAt: null, createdAt: expect.objectContaining({ lt: expect.any(Date) }) }),
+          ]),
         }),
       }),
     );

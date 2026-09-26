@@ -132,6 +132,40 @@ describe('CancelBookingHandler', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    // A hold cannot be cancelled directly. The state machine must still be the
+    // one that rejects it — but the operator sees an actionable Arabic message
+    // instead of the developer assertion (DIRECT_CANCEL does not list
+    // AWAITING_PAYMENT; see booking-state-machine.ts).
+    it('explains in Arabic when an unconfirmed hold is cancelled directly', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.AWAITING_PAYMENT,
+      });
+
+      await expect(
+        handler.execute({
+          bookingId: 'book-1',
+          reason: CancellationReason.OTHER,
+          changedBy: 'user-1',
+        }),
+      ).rejects.toThrow('لا يمكن إلغاء هذا الحجز مباشرةً لأنه بانتظار الدفع');
+    });
+
+    it('keeps the raw assertion for statuses outside the hold set', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.EXPIRED,
+      });
+
+      await expect(
+        handler.execute({
+          bookingId: 'book-1',
+          reason: CancellationReason.OTHER,
+          changedBy: 'user-1',
+        }),
+      ).rejects.toThrow(/Cannot apply transition 'DIRECT_CANCEL'/);
+    });
+
     it('throws BadRequestException when client source and requireCancelApproval is true', async () => {
       prisma.booking.findFirst.mockResolvedValue(baseBooking);
       settingsHandler.execute.mockResolvedValue({

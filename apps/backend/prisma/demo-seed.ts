@@ -390,10 +390,25 @@ async function main() {
     });
   }
 
+  // ── Holds must carry an expiry window ──────────────────────────────────────
+  // Production stamps one at creation (15 min — see
+  // src/modules/bookings/booking-hold-window.ts). The expiry cron can only
+  // release a hold it can see, and `expiresAt: { lt: now }` never matches NULL:
+  // a seeded PENDING / AWAITING_PAYMENT booking with no window would sit in the
+  // dashboard forever and keep blocking its slot. Demo data uses a long
+  // presentation window so the hold states survive a demo; set this to 15
+  // minutes if you want them to behave exactly like production.
+  const DEMO_HOLD_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+  const stampedHolds = await prisma.booking.updateMany({
+    where: { status: { in: ['PENDING', 'PENDING_GROUP_FILL', 'AWAITING_PAYMENT'] } },
+    data: { expiresAt: new Date(Date.now() + DEMO_HOLD_WINDOW_MS) },
+  });
+
   await prisma.$disconnect();
 
   console.log('─────────────────────────────────────────────');
   console.log(`✔  ${employees.length} employees, ${services.length} services, ${clients.length} clients, ${bookings.length} bookings, ${ratings.length} ratings seeded`);
+  console.log(`✔  ${stampedHolds.count} hold booking(s) stamped with a payment window`);
   console.log('─────────────────────────────────────────────');
 }
 

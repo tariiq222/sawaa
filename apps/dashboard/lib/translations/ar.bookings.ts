@@ -81,6 +81,7 @@ export const arBookings: Record<string, string> = {
   "bookings.col.edit": "تعديل الموعد",
   "bookings.col.invoice": "تحميل الفاتورة",
   "bookings.col.delete": "حذف الحجز",
+  "bookings.col.holdLockedHint": "الحجز بانتظار الدفع. تُحرَّر الفترة تلقائيًا عند انتهاء مهلة الدفع، أو بتسجيل الدفعة لتأكيد الحجز.",
   "bookings.col.deleteTitle": "حذف الحجز",
   "bookings.col.deleteDesc": "هل أنت متأكد من حذف هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.",
   "bookings.delete.title": "حذف الحجز نهائياً",

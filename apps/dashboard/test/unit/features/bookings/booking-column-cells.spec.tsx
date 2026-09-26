@@ -165,3 +165,43 @@ test("pending status does not show the extra check-in button", () => {
   )
   expect(screen.queryByRole("button", { name: CHECKIN_LABEL })).not.toBeInTheDocument()
 })
+
+/* ─── Payment holds ───────────────────────────────────────────────────────────
+ * awaiting_payment / pending_group_fill have no staff transition out of them:
+ * the backend's DIRECT_CANCEL rejects both, so the row must not advertise a
+ * cancel action (it used to show one because the API folded the status into
+ * "pending"). The slot is released by the expiry cron or by recording payment.
+ */
+
+test("awaiting_payment row offers no quick cancel action", () => {
+  render(
+    <StatusCell
+      booking={makeBooking({ status: "awaiting_payment", checkedInAt: null })}
+      onStatusAction={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  )
+  expect(screen.queryByText("bookings.col.quickAction.cancel")).not.toBeInTheDocument()
+})
+
+test("pending_group_fill row offers no quick cancel action", () => {
+  render(
+    <StatusCell
+      booking={makeBooking({ status: "pending_group_fill", checkedInAt: null })}
+      onStatusAction={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  )
+  expect(screen.queryByText("bookings.col.quickAction.cancel")).not.toBeInTheDocument()
+})
+
+test("awaiting_payment row renders its own badge instead of a dropdown", () => {
+  render(
+    <StatusCell
+      booking={makeBooking({ status: "awaiting_payment", checkedInAt: null })}
+      onStatusAction={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  )
+  expect(screen.getByText("status-badge")).toBeInTheDocument()
+})

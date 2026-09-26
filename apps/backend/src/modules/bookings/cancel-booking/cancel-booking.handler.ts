@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { Prisma, RefundType } from '@prisma/client';
+import { BookingStatus, Prisma, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
@@ -10,6 +10,7 @@ import { ZoomMeetingService } from '../zoom-meeting.service';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
+import { isUnconfirmedHoldStatus } from '../booking-hold-window';
 import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { ProgramCapacityService } from '../program/program-capacity.service';
 import { assertBookingIsMutable, updateBookingAtomically } from '../booking-lifecycle.helper';
@@ -26,6 +27,14 @@ export type CancelBookingCommand = CancelBookingDto & {
 
 // Allowed source statuses are defined by the DIRECT_CANCEL transition in booking-state-machine.ts
 // PENDING | CONFIRMED | CANCEL_REQUESTED → CANCELLED
+//
+// User-facing messages are Arabic for the same reason as delete-booking.handler:
+// HttpExceptionFilter passes the exception message through to the operator as-is,
+// so a raw English state-machine assertion must never be the last word.
+const CANCEL_BOOKING_MESSAGES = {
+  unconfirmedHold:
+    'لا يمكن إلغاء هذا الحجز مباشرةً لأنه بانتظار الدفع. الفترة محجوزة بمهلة دفع تُحرَّر تلقائيًا عند انتهائها، ويمكن تأكيد الحجز بتسجيل الدفعة.',
+} as const;
 
 @Injectable()
 export class CancelBookingHandler {
@@ -52,7 +61,18 @@ export class CancelBookingHandler {
     if (cmd.source === 'client' && cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');
     }
-    const nextStatus = assertTransition(booking.status, 'DIRECT_CANCEL');
+    // The state machine stays the single source of truth for what may be
+    // cancelled. When it rejects an unconfirmed hold we translate that into an
+    // actionable Arabic message instead of leaking the developer assertion.
+    let nextStatus: BookingStatus;
+    try {
+      nextStatus = assertTransition(booking.status, 'DIRECT_CANCEL');
+    } catch (error) {
+      if (error instanceof BadRequestException && isUnconfirmedHoldStatus(booking.status)) {
+        throw new BadRequestException(CANCEL_BOOKING_MESSAGES.unconfirmedHold);
+      }
+      throw error;
+    }
 
     const settings = await this.settingsHandler.execute({
       branchId: booking.branchId,

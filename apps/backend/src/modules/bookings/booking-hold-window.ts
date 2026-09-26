@@ -1,0 +1,54 @@
+import { BookingStatus } from '@prisma/client';
+
+/**
+ * Payment-hold windows for unconfirmed bookings.
+ * ===============================================
+ * A booking that has not been confirmed yet (no payment settled, no staff
+ * confirmation) does not own its slot permanently: it holds the practitioner's
+ * time only for a bounded window, and `booking-expiry.cron` releases it when
+ * the window elapses.
+ *
+ * Only two creation paths produce unconfirmed holds today, and each stamps
+ * `expiresAt` at creation:
+ *   - `create-booking.handler.ts`  → AWAITING_PAYMENT, 15 minutes
+ *   - `enroll-in-program.handler.ts` → AWAITING_PAYMENT, 30 minutes
+ *
+ * The 15-minute literal stays inline in `create-booking.handler.ts` on purpose:
+ * that file is an owner-only surface (see the root CLAUDE.md operational safety
+ * rules — no cleanliness refactors without approval). `UNCONFIRMED_HOLD_MS`
+ * below is the same value for every other caller; keep them in sync.
+ */
+export const UNCONFIRMED_HOLD_MS = 15 * 60 * 1000;
+
+/**
+ * Fallback age used by `booking-expiry.cron` for holds whose `expiresAt` was
+ * never stamped (legacy rows, seeded demo data, or rows written by a path that
+ * predates the window).
+ *
+ * `expiresAt: { lt: now }` never matches NULL in SQL, so without an age-based
+ * fallback such a row is immortal: the cron cannot see it, staff cannot cancel
+ * it (DIRECT_CANCEL does not accept every hold status), and it keeps blocking
+ * the practitioner's slot forever. The fallback is deliberately longer than
+ * every real window so the normal path always wins.
+ */
+export const NULL_EXPIRY_FALLBACK_MS = 60 * 60 * 1000;
+
+/**
+ * Statuses that represent an unconfirmed hold — a booking whose slot is
+ * reserved but whose payment/confirmation has not settled. They carry an
+ * expiry window and must never be treated as a settled appointment.
+ */
+export const UNCONFIRMED_HOLD_STATUSES: readonly BookingStatus[] = [
+  BookingStatus.PENDING,
+  BookingStatus.PENDING_GROUP_FILL,
+  BookingStatus.AWAITING_PAYMENT,
+];
+
+export function isUnconfirmedHoldStatus(status: BookingStatus): boolean {
+  return UNCONFIRMED_HOLD_STATUSES.includes(status);
+}
+
+/** Next expiry timestamp for a (re-armed) unconfirmed hold. */
+export function nextHoldExpiry(from: Date = new Date()): Date {
+  return new Date(from.getTime() + UNCONFIRMED_HOLD_MS);
+}
