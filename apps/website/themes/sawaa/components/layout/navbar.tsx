@@ -14,7 +14,7 @@ import { SITE } from '../../lib/constants';
 const navLinks = [
   { key: 'nav.home', href: '/' },
   { key: 'nav.therapists', href: '/therapists' },
-  { key: 'nav.services', href: '/services' },
+  { key: 'nav.clinics', href: '/clinics' },
   { key: 'nav.packages', href: '/packages' },
   { key: 'nav.supportGroups', href: '/support-groups' },
   { key: 'nav.contact', href: '/contact' },

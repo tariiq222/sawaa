@@ -36,6 +36,7 @@ export interface ClinicItem {
   icon: string | null;
   image?: string | null;
   iconBgColor?: string | null;
+  directServiceId?: string | null;
 }
 
 interface Props {
@@ -176,7 +177,9 @@ export function Clinics({ clinics, intro }: Props) {
             {clinics.map((c, i) => {
               const tone = TONE;
               const Icon = resolveIcon(c.icon);
-              const href = `/booking?categoryId=${encodeURIComponent(c.id)}`;
+              const href = c.directServiceId
+                ? `/booking?serviceId=${encodeURIComponent(c.directServiceId)}`
+                : `/booking?categoryId=${encodeURIComponent(c.id)}`;
               const name = clinicName(c);
               const description = clinicDescription(c);
               // Guard against a bare object key reaching next/image (throws).

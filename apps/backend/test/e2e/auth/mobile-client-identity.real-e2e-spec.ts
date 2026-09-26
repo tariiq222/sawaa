@@ -256,6 +256,30 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     expect(after.userId).toBeNull();
   });
 
+  it('verifies the replacement OTP after a second login-code request', async () => {
+    const c = await seedClient({ label: 'replacement-otp' });
+    await requestLoginOtp(c.phone!);
+    const firstOtp = await prisma.otpCode.findFirstOrThrow({
+      where: { identifier: c.phone!, purpose: OtpPurpose.MOBILE_LOGIN },
+      orderBy: { createdAt: 'desc' },
+    });
+    createdOtpIds.add(firstOtp.id);
+
+    const secondCode = await requestLoginOtp(c.phone!);
+    const secondOtp = await prisma.otpCode.findFirstOrThrow({
+      where: { identifier: c.phone!, purpose: OtpPurpose.MOBILE_LOGIN },
+      orderBy: { createdAt: 'desc' },
+    });
+    createdOtpIds.add(secondOtp.id);
+
+    expect(secondOtp.id).not.toBe(firstOtp.id);
+    expect(secondOtp.consumedAt).toBeNull();
+    expect((await prisma.otpCode.findUniqueOrThrow({ where: { id: firstOtp.id } })).consumedAt).toBeInstanceOf(Date);
+    const verified = await verify(c.phone!, secondCode);
+    expect(verified.status).toBe(200);
+    expect(verified.body.sessionKind).toBe('client');
+  });
+
   it('keeps staff OTP in the User namespace and rejects each namespace at the opposite guard', async () => {
     const u = await seedUser({ label: 'staff', role: 'RECEPTIONIST' });
     const code = await requestLoginOtp(u.phone!);

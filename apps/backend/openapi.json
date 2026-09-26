@@ -1160,6 +1160,14 @@
       },
       "CatalogCategoryDto": {
         "properties": {
+          "bookingMode": {
+            "description": "Whether booking starts at the clinic or with a service selection",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "type": "string"
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -1189,7 +1197,8 @@
           "nameAr",
           "nameEn",
           "imageUrl",
-          "sortOrder"
+          "sortOrder",
+          "bookingMode"
         ],
         "type": "object"
       },
@@ -1306,6 +1315,10 @@
             "description": "Short-lived presigned image URL (signed per response), or null",
             "nullable": true,
             "type": "object"
+          },
+          "isHidden": {
+            "description": "Present for includeDirectClinics; internal direct-clinic services are not listed as standalone services",
+            "type": "boolean"
           },
           "nameAr": {
             "example": "جلسة استشارة فردية",
@@ -39366,7 +39379,17 @@
     "/api/v1/public/employees": {
       "get": {
         "operationId": "PublicEmployeesController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Include direct clinic booking service links",
+            "in": "query",
+            "name": "includeDirectClinics",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -42414,7 +42437,17 @@
     "/api/v1/public/services": {
       "get": {
         "operationId": "PublicCatalogController_getCatalog_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Include internal booking services for direct clinics",
+            "in": "query",
+            "name": "includeDirectClinics",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

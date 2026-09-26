@@ -5766,6 +5766,11 @@ export interface components {
          */
         CancellationReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER";
         CatalogCategoryDto: {
+            /**
+             * @description Whether booking starts at the clinic or with a service selection
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
             /** Format: uuid */
             id: string;
             /** @description Short-lived presigned image URL (signed per response), or null */
@@ -5828,6 +5833,8 @@ export interface components {
             id: string;
             /** @description Short-lived presigned image URL (signed per response), or null */
             imageUrl: Record<string, never> | null;
+            /** @description Present for includeDirectClinics; internal direct-clinic services are not listed as standalone services */
+            isHidden?: boolean;
             /** @example جلسة استشارة فردية */
             nameAr: string;
             /** @example Individual Counseling Session */
@@ -32785,7 +32792,10 @@ export interface operations {
     };
     PublicEmployeesController_list_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include direct clinic booking service links */
+                includeDirectClinics?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -35000,7 +35010,10 @@ export interface operations {
     };
     PublicCatalogController_getCatalog_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include internal booking services for direct clinics */
+                includeDirectClinics?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;

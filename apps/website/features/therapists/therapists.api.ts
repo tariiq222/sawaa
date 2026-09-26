@@ -10,11 +10,12 @@ function unwrap<T>(json: unknown): T {
   return json as T;
 }
 
-export async function listPublicEmployees(): Promise<PublicEmployee[]> {
+export async function listPublicEmployees(includeDirectClinics = false): Promise<PublicEmployee[]> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 1500);
-    const json = await publicFetch<unknown>('/public/employees', {
+    const path = includeDirectClinics ? '/public/employees?includeDirectClinics=true' : '/public/employees';
+    const json = await publicFetch<unknown>(path, {
       next: { revalidate: 60 },
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
