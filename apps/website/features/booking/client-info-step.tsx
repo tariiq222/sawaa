@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useId } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { AvailableSlot, Service, EmployeeWithUser } from '@sawaa/shared';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
 import { normalizeSaudiPhone } from '@/features/auth/auth.schema';
-import { setClient as setAuthClient } from '@/features/auth/auth-store';
-import { useCurrentClient } from '@/features/auth/use-current-client';
+import { getAuthGeneration, setClient as setAuthClient } from '@/features/auth/auth-store';
+import { CURRENT_CLIENT_QUERY_KEY, useCurrentClient } from '@/features/auth/use-current-client';
 import { RegisterForm } from '@/features/auth/register-form';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { therapistDisplayName } from './therapist-name';
@@ -70,6 +71,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
+  const queryClient = useQueryClient();
   const { client, isLoading: clientLoading, refetch } = useCurrentClient();
 
   const [loginPhone, setLoginPhone] = useState('');
@@ -87,6 +89,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   const passwordInputId = useId();
 
   const handleInlineLogin = async () => {
+    if (clientLoading || client || loginLoading) return;
     setLoginError(null);
     // Phone-first login — mirrors the standalone /login page. Registration on
     // the website is phone-first, so the inline booking login must accept a
@@ -103,9 +106,11 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
     setLoginLoading(true);
     try {
       await clientLoginApi({ phone: normalizedPhone, password: loginPassword });
+      const generation = getAuthGeneration();
       const me = await getMeApi();
+      if (generation !== getAuthGeneration()) return;
       setAuthClient(me);
-      await refetch();
+      queryClient.setQueryData(CURRENT_CLIENT_QUERY_KEY, me);
     } catch (err) {
       setLoginError(
         err instanceof Error
@@ -175,10 +180,11 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
         </p>
       </header>
 
-      {/* === Loading the session === */}
+      {/* === Checking the session without hiding the sign-in form === */}
       {clientLoading && !isAuthed && (
         <div
-          className="flex items-center justify-center gap-2 py-8 text-sm"
+          role="status"
+          className="flex items-center justify-center gap-2 py-2 text-sm"
           style={{ color: 'var(--sw-body)' }}
         >
           <span
@@ -190,8 +196,9 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
         </div>
       )}
 
-      {/* === NOT LOGGED IN: sign-in invitation + inline login === */}
-      {!clientLoading && !isAuthed && (
+      {/* Keep the sign-in form visible while the session check runs. The
+          submit action stays disabled until we know whether a session exists. */}
+      {!isAuthed && (
         <div className="flex flex-col gap-4">
           {/* Segmented control: switch between inline sign-in and inline
               registration without leaving the booking wizard. The two buttons
@@ -233,6 +240,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               role="tab"
               aria-selected={authMode === 'register'}
               onClick={() => setAuthMode('register')}
+              disabled={clientLoading}
               className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer"
               style={
                 authMode === 'register'
@@ -337,7 +345,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
 
               <button
                 type="submit"
-                disabled={loginLoading}
+                disabled={loginLoading || clientLoading}
                 className="self-stretch inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99] enabled:cursor-pointer"
                 style={{
                   background: 'var(--primary)',
@@ -349,6 +357,8 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   ? isAr
                     ? 'جاري الدخول…'
                     : 'Signing in…'
+                  : clientLoading
+                    ? isAr ? 'جارٍ التحقق من حسابك…' : 'Checking your account…'
                   : isAr
                     ? 'تسجيل الدخول'
                     : 'Sign in'}
@@ -366,7 +376,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
             </form>
           )}
 
-          {authMode === 'register' && (
+          {authMode === 'register' && !clientLoading && (
             <div
               data-testid="inline-register"
               className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-[var(--surface)]"

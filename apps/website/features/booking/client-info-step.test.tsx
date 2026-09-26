@@ -11,11 +11,13 @@ const useCurrentClientMock = vi.fn();
 const clientLoginApiMock = vi.fn();
 const getMeApiMock = vi.fn();
 const setClientMock = vi.fn();
+let authGeneration = 0;
 // Captured so individual tests can fire onSuccess() to exercise the
 // inline-registration completion path without rendering the real 3-step form.
 const registerFormProps: { onSuccess?: () => void } = {};
 
 vi.mock('@/features/auth/use-current-client', () => ({
+  CURRENT_CLIENT_QUERY_KEY: ['client', 'me'],
   useCurrentClient: () => useCurrentClientMock(),
 }));
 vi.mock('@/features/auth/auth.api', () => ({
@@ -23,6 +25,7 @@ vi.mock('@/features/auth/auth.api', () => ({
   getMeApi: (...args: unknown[]) => getMeApiMock(...args),
 }));
 vi.mock('@/features/auth/auth-store', () => ({
+  getAuthGeneration: () => authGeneration,
   setClient: (...args: unknown[]) => setClientMock(...args),
 }));
 vi.mock('@/features/auth/register-form', () => ({
@@ -110,8 +113,7 @@ const employee: EmployeeWithUser = {
   },
 };
 
-function withLocale(children: ReactNode, locale: 'ar' | 'en' = 'en') {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function withLocale(children: ReactNode, locale: 'ar' | 'en' = 'en', qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return (
     <QueryClientProvider client={qc}>
       <LocaleProvider locale={locale}>{children}</LocaleProvider>
@@ -120,6 +122,8 @@ function withLocale(children: ReactNode, locale: 'ar' | 'en' = 'en') {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
+  authGeneration = 0;
   // Clear the captured onSuccess between tests so each new render gets a
   // fresh stub instance and there is no cross-test leakage of the previous
   // booking step's callback.
@@ -145,7 +149,16 @@ describe('ClientInfoStep', () => {
         />,
       ),
     );
-    expect(screen.getByText(/Checking your account/i)).toBeTruthy();
+    expect(screen.getByRole('status')).toHaveTextContent(/Checking your account/i);
+    expect(screen.getByPlaceholderText('05XXXXXXXX')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Checking your account/i })).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.submit(screen.getByTestId('inline-signin'));
+    expect(clientLoginApiMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('tab', { name: /Create an account/i }));
+    expect(screen.queryByTestId('register-form-stub')).not.toBeInTheDocument();
   });
 
   it('shows the inline login form when the client is not signed in', () => {
@@ -259,7 +272,7 @@ describe('ClientInfoStep', () => {
     expect(clientLoginApiMock).not.toHaveBeenCalled();
   });
 
-  it('calls clientLoginApi with a normalized phone then getMeApi then refetch on successful inline login', async () => {
+  it('loads the profile once after login and does not refetch it again', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     useCurrentClientMock.mockReturnValue({
       client: null,
@@ -293,7 +306,63 @@ describe('ClientInfoStep', () => {
     }));
     await waitFor(() => expect(getMeApiMock).toHaveBeenCalled());
     await waitFor(() => expect(setClientMock).toHaveBeenCalledWith(fakeClient));
-    await waitFor(() => expect(refetch).toHaveBeenCalled());
+    expect(getMeApiMock).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('accepts a successful login after an earlier guest auth check failed', async () => {
+    useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: null, refetch: vi.fn() });
+    clientLoginApiMock.mockResolvedValueOnce({ clientId: 'c1' });
+    getMeApiMock.mockResolvedValueOnce(fakeClient);
+    render(withLocale(<ClientInfoStep slot={slot} service={service} employee={employee} onSubmitInfo={vi.fn()} isSubmitting={false} />));
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    await waitFor(() => expect(getMeApiMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(setClientMock).toHaveBeenCalledWith(fakeClient));
+  });
+
+  it('replaces an earlier unauthenticated query result with the verified profile', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(['client', 'me'], null);
+    useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: null, refetch: vi.fn() });
+    clientLoginApiMock.mockResolvedValueOnce({ clientId: 'c1' });
+    getMeApiMock.mockResolvedValueOnce(fakeClient);
+    render(withLocale(<ClientInfoStep slot={slot} service={service} employee={employee} onSubmitInfo={vi.fn()} isSubmitting={false} />, 'en', qc));
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    await waitFor(() => expect(qc.getQueryData(['client', 'me'])).toEqual(fakeClient));
+  });
+
+  it('does not put an outdated profile back into the cache if logout races the login profile read', async () => {
+    let finishProfile!: (value: typeof fakeClient) => void;
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: null, refetch: vi.fn() });
+    clientLoginApiMock.mockResolvedValueOnce({ clientId: 'c1' });
+    getMeApiMock.mockImplementationOnce(() => new Promise((resolve) => { finishProfile = resolve; }));
+    render(withLocale(<ClientInfoStep slot={slot} service={service} employee={employee} onSubmitInfo={vi.fn()} isSubmitting={false} />, 'en', qc));
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    await waitFor(() => expect(getMeApiMock).toHaveBeenCalledTimes(1));
+    authGeneration += 1; // A logout happened before the pending /me response.
+    finishProfile(fakeClient);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Sign in/i })).toBeEnabled());
+    expect(setClientMock).not.toHaveBeenCalled();
+    expect(qc.getQueryData(['client', 'me'])).toBeUndefined();
+  });
+
+  it('keeps profile loading errors visible and does not cache a missing profile', async () => {
+    useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: null, refetch: vi.fn() });
+    clientLoginApiMock.mockResolvedValueOnce({ clientId: 'c1' });
+    getMeApiMock.mockRejectedValueOnce(new Error('Profile unavailable'));
+    render(withLocale(<ClientInfoStep slot={slot} service={service} employee={employee} onSubmitInfo={vi.fn()} isSubmitting={false} />));
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    expect(await screen.findByText('Profile unavailable')).toBeInTheDocument();
+    expect(setClientMock).not.toHaveBeenCalled();
   });
 
   it('surfaces the error message from a failed login', async () => {

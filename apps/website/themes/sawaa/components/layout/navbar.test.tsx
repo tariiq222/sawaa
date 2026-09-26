@@ -54,11 +54,11 @@ describe('Navbar mobile menu dialog keyboard focus', () => {
     expect(toggleTheme).toHaveBeenCalledTimes(2);
   });
 
-  it('links customers to the services directory instead of clinics', () => {
+  it('links customers to the clinics directory', () => {
     render(wrap('ar', <Navbar />));
-    expect(screen.getByRole('menuitem', { name: 'الخدمات' })).toHaveAttribute(
+    expect(screen.getByRole('menuitem', { name: 'العيادات' })).toHaveAttribute(
       'href',
-      '/services',
+      '/clinics',
     );
   });
 

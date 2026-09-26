@@ -2,6 +2,7 @@ import type { Theme } from './types';
 import { SawaaLayout } from './sawaa/layout/layout';
 import { SawaaHomePage } from './sawaa/pages/home';
 import { SawaaTherapistsPage } from './sawaa/pages/therapists';
+import { SawaaClinicsPage } from './sawaa/pages/clinics';
 import { SawaaServicesPage } from './sawaa/pages/services';
 import { SawaaContactPage } from './sawaa/pages/contact';
 import { SawaaBurnoutTestPage } from './sawaa/pages/burnout-test';
@@ -24,6 +25,7 @@ export const theme: Theme = {
   pages: {
     home: SawaaHomePage,
     therapists: SawaaTherapistsPage,
+    clinics: SawaaClinicsPage,
     services: SawaaServicesPage,
     contact: SawaaContactPage,
     burnoutTest: SawaaBurnoutTestPage,

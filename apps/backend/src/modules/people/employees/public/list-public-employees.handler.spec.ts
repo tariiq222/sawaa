@@ -94,7 +94,7 @@ describe('ListPublicEmployeesHandler', () => {
         isHidden: false,
         archivedAt: null,
       },
-      select: { id: true, price: true },
+      select: { id: true, price: true, isHidden: true },
     });
     expect(prisma.branch.findMany).toHaveBeenCalledWith({
       where: { id: { in: ['active-branch', 'inactive-branch'] }, isActive: true },
@@ -104,6 +104,28 @@ describe('ListPublicEmployeesHandler', () => {
     expect(result[0].branchIds).toEqual(['active-branch']);
     expect(result[0].minServicePrice).toBe(150);
     expect(result[0].isBookable).toBe(true);
+  });
+
+  it('exposes direct clinic booking links only when requested without using their internal price', async () => {
+    prisma.employee.findMany.mockResolvedValue([{ id: 'e1', nameAr: 'معالج', employmentType: 'FULL_TIME' }]);
+    prisma.rating.groupBy.mockResolvedValue([]);
+    prisma.employeeService.findMany.mockResolvedValue([{ employeeId: 'e1', serviceId: 'direct-service' }]);
+    prisma.employeeBranch.findMany.mockResolvedValue([{ employeeId: 'e1', branchId: 'branch' }]);
+    prisma.employeeAvailability.findMany.mockResolvedValue([{ employeeId: 'e1', dayOfWeek: 1 }]);
+    prisma.branch.findMany.mockResolvedValue([{ id: 'branch' }]);
+    prisma.service.findMany.mockResolvedValue([{ id: 'direct-service', price: 0, isHidden: true }]);
+
+    const [employee] = await handler.execute({ includeDirectClinics: true });
+
+    expect(prisma.service.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ OR: [
+        { isHidden: false },
+        { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
+      ] }),
+    }));
+    expect(employee.serviceIds).toEqual(['direct-service']);
+    expect(employee.isBookable).toBe(true);
+    expect(employee.minServicePrice).toBeNull();
   });
 
   it('should handle no services for employees', async () => {

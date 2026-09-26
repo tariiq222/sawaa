@@ -99,6 +99,23 @@ describe('GetPublicCatalogHandler', () => {
     }));
   });
 
+  it('includes only hidden services of active direct-booking clinics when requested', async () => {
+    await handler.execute({ includeDirectClinics: true });
+
+    expect(cache.getOrSet).toHaveBeenCalledWith('ref:public-catalog:direct-clinics', expect.any(Function), 300);
+    expect(prisma.service.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        isActive: true,
+        archivedAt: null,
+        OR: [
+          { isHidden: false },
+          { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
+        ],
+      },
+      select: expect.objectContaining({ isHidden: true }),
+    }));
+  });
+
   it('keeps an explicit public-safe service projection and excludes practitioner-owned duration rows', async () => {
     await handler.execute();
 

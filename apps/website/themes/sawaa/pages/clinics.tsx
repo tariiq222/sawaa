@@ -15,7 +15,7 @@ import {
   RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
-import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
+import { getPublicCatalog, selectBookableClinics } from '@/features/public-catalog/public';
 import { listPublicEmployees } from '@/features/therapists/public';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
@@ -47,43 +47,29 @@ interface ClinicEntry {
   iconBgColor: string | null;
   therapistCount: number;
   serviceCount: number;
+  directServiceId: string | null;
 }
 
 export async function SawaaClinicsPage() {
   const locale = await getLocale();
   const [catalog, therapists] = await Promise.all([
     getPublicCatalog().catch(() => ({ departments: [], categories: [], services: [] })),
-    listPublicEmployees().catch(() => []),
+    listPublicEmployees(true).catch(() => []),
   ]);
   const t = (key: MessageKey) => translate(locale, key);
 
-  const clinicsDept = findDepartment(catalog.departments, { ar: ['عيادات'], en: ['clinic'] });
-  const clinics: ClinicEntry[] = clinicsDept
-    ? catalog.categories
-        .filter((c) => c.departmentId === clinicsDept.id)
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((c) => {
-          const categoryServiceIds = new Set(
-            catalog.services.filter((s) => s.categoryId === c.id).map((s) => s.id),
-          );
-          const therapistCount = therapists.filter((th) =>
-            th.serviceIds.some((id) => categoryServiceIds.has(id)),
-          ).length;
-          return {
-            id: c.id,
-            nameAr: c.nameAr,
-            nameEn: c.nameEn,
-            descriptionAr: null,
-            descriptionEn: null,
-            icon: c.iconName ?? null,
-            iconBgColor: c.iconBgColor ?? null,
-            therapistCount,
-            serviceCount: categoryServiceIds.size,
-          };
-        })
-        // Hide clinics with no bookable services/therapists — they'd dead-end on the booking wizard.
-        .filter((c) => c.serviceCount > 0 && c.therapistCount > 0)
-    : [];
+  const clinics: ClinicEntry[] = selectBookableClinics(catalog, therapists).map((clinic) => ({
+    id: clinic.id,
+    nameAr: clinic.nameAr,
+    nameEn: clinic.nameEn,
+    descriptionAr: null,
+    descriptionEn: null,
+    icon: clinic.iconName,
+    iconBgColor: clinic.iconBgColor,
+    therapistCount: clinic.therapistCount,
+    serviceCount: clinic.serviceCount,
+    directServiceId: clinic.directServiceId,
+  }));
 
   const total = clinics.length;
   const totalTherapists = therapists.length;
@@ -296,7 +282,9 @@ function ClinicsGrid({ clinics, locale, t }: GridProps) {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
       {clinics.map((c, i) => {
         const Icon = resolveIcon(c.icon);
-        const href = `/booking?categoryId=${encodeURIComponent(c.id)}`;
+        const href = c.directServiceId
+          ? `/booking?serviceId=${encodeURIComponent(c.directServiceId)}`
+          : `/booking?categoryId=${encodeURIComponent(c.id)}`;
         const name = locale === 'en' && c.nameEn ? c.nameEn : c.nameAr;
         return (
           <Link
@@ -367,15 +355,14 @@ function ClinicsGrid({ clinics, locale, t }: GridProps) {
                 value={c.therapistCount}
                 label={t('clinics.meterTherapists')}
               />
-              <span
-                aria-hidden
-                className="w-px self-stretch"
-                style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }}
-              />
-              <Meter
-                value={c.serviceCount}
-                label={t('clinics.meterServices')}
-              />
+              {c.serviceCount > 0 && <>
+                <span
+                  aria-hidden
+                  className="w-px self-stretch"
+                  style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }}
+                />
+                <Meter value={c.serviceCount} label={t('clinics.meterServices')} />
+              </>}
             </div>
 
             <span
