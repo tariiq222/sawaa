@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Bell, Search } from 'lucide-react-native';
 
@@ -51,6 +51,7 @@ export function HomeTopBar({ f600, isClient = true }: HomeTopBarProps) {
   const action = getSawaaRoles(scheme).action;
   const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
   const router = useRouter();
+  const dir = useDir();
   const { t } = useTranslation();
   const user = useAppSelector((s) => s.auth.user);
   const initial = (user?.firstName ?? 'س').charAt(0);
@@ -77,7 +78,17 @@ export function HomeTopBar({ f600, isClient = true }: HomeTopBarProps) {
             <Text style={[styles.avatarText, { fontFamily: f600, fontWeight: '600' }]}>{initial}</Text>
           </Pressable>
         </Glass>
-      ) : null}
+      ) : (
+        <View style={styles.guestBrand}>
+          <Text numberOfLines={2} style={[styles.guestBrandText, {
+            fontFamily: getFontName(dir.locale, '700'),
+            color: sawaaColors.teal[900],
+            textAlign: dir.textAlign,
+          }]}>{t('home.brandTitle')}</Text>
+          <Image source={require('../../../assets/sawa/logo.png')} resizeMode="contain"
+            style={[styles.guestBrandLogo, { tintColor: sawaaColors.teal[700] }]} />
+        </View>
+      )}
     </View>
   );
 }
@@ -119,4 +130,7 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: Re
   },
   avatarInner: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 15, color: sawaaColors.teal[700] },
+  guestBrand: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  guestBrandText: { fontSize: 12, lineHeight: 17, flexShrink: 1 },
+  guestBrandLogo: { width: 32, height: 38 },
 });

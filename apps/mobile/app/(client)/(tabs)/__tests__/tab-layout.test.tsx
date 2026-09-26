@@ -1,75 +1,67 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 
-const mockNativeTabsProps = jest.fn();
-const mockTriggerNames: string[] = [];
-const mockTriggerProps: Array<{ name: string; unstable_nativeProps?: { tabBarItemAccessibilityLabel?: string } }> = [];
-jest.mock('expo-router/unstable-native-tabs', () => {
-  const Tabs = ({ children, ...props }: { children: React.ReactNode }) => {
-    mockNativeTabsProps(props);
+const mockTabOptions = jest.fn();
+const mockScreenProps: Array<{ name: string; options: Record<string, unknown> }> = [];
+jest.mock('expo-router', () => {
+  const Tabs = ({ children, screenOptions }: { children: React.ReactNode; screenOptions: Record<string, unknown> }) => {
+    mockTabOptions(screenOptions);
     return <>{children}</>;
   };
-  const Trigger = Object.assign(
-    ({ children, ...props }: { children: React.ReactNode; name: string; unstable_nativeProps?: { tabBarItemAccessibilityLabel?: string } }) => {
-      mockTriggerNames.push(props.name);
-      mockTriggerProps.push(props);
-      return <>{children}</>;
-    },
-    {
-      Icon: () => null,
-      Label: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    },
-  );
-  Tabs.Trigger = Trigger;
-  return { NativeTabs: Tabs };
+  Tabs.Screen = ({ name, options }: { name: string; options: Record<string, unknown> }) => {
+    mockScreenProps.push({ name, options });
+    return null;
+  };
+  return { Tabs };
 });
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ bottom: 24 }) }));
+jest.mock('@/components/ui/AppIcon', () => ({ AppIcon: () => null }));
 
-let mockScheme: 'light' | 'dark' = 'light';
-jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
+let mockIsRTL = true;
+jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ isRTL: mockIsRTL, locale: mockIsRTL ? 'ar' : 'en' }) }));
+jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
-  useSawaaColors: () => ({ teal: { 600: mockScheme === 'dark' ? 'dark-mint' : 'light-teal' } }),
+  useSawaaColors: () => ({
+    teal: { 50: 'pale-teal', 100: 'light-teal', 700: 'brand-teal' },
+    ink: { 700: 'dark-ink', 900: 'deep-ink' },
+    glass: { border: 'glass-rim' },
+  }),
 }));
 
 import ClientTabsLayout from '../_layout';
 
 describe('client tab navigation', () => {
   beforeEach(() => {
-    mockNativeTabsProps.mockClear();
-    mockTriggerNames.length = 0;
-    mockTriggerProps.length = 0;
-    mockScheme = 'light';
+    mockTabOptions.mockClear();
+    mockScreenProps.length = 0;
+    mockIsRTL = true;
   });
 
-  it('offers home, explore, my appointments, and account as the only client tabs', () => {
+  it('keeps the four client destinations in Arabic visual order and hides utility routes', () => {
     render(<ClientTabsLayout />);
-    expect([...mockTriggerNames].reverse()).toEqual(['home', 'explore', 'appointments', 'account']);
+    expect(mockScreenProps.map((screen) => screen.name))
+      .toEqual(['account', 'appointments', 'explore', 'home', 'chat', 'records']);
+    expect(mockScreenProps.slice(0, 4).map((screen) => screen.options.tabBarAccessibilityLabel))
+      .toEqual(['tabs.profile', 'tabs.myAppointments', 'tabs.explore', 'tabs.home']);
+    expect(mockScreenProps.slice(4).map((screen) => screen.options.href)).toEqual([null, null]);
   });
 
-  it('keeps an accessible name for each icon-only native tab', () => {
+  it('uses a shorter rounded bar that clears the safe area', () => {
     render(<ClientTabsLayout />);
-    expect([...mockTriggerProps].reverse().map((props) => props.unstable_nativeProps?.tabBarItemAccessibilityLabel))
-      .toEqual(['tabs.home', 'tabs.explore', 'tabs.myAppointments', 'tabs.profile']);
+    expect(mockTabOptions).toHaveBeenCalledWith(expect.objectContaining({
+      headerShown: false,
+      tabBarActiveTintColor: 'brand-teal',
+      tabBarStyle: expect.objectContaining({
+        height: 62, borderRadius: 31, bottom: 32, backgroundColor: 'pale-teal',
+      }),
+    }));
   });
 
-  it('uses brand teal instead of the default blue selection', () => {
+  it('keeps the English visual order', () => {
+    mockIsRTL = false;
     render(<ClientTabsLayout />);
-    expect(mockNativeTabsProps).toHaveBeenCalledWith(expect.objectContaining({ tintColor: 'light-teal' }));
-  });
-
-  it('re-reads the tint when the appearance changes', () => {
-    // The bar's own colours come from the pinned native appearance; this only
-    // guards that the tint we pass follows the scheme.
-    const screen = render(<ClientTabsLayout />);
-    expect(mockNativeTabsProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ tintColor: 'light-teal' }),
-    );
-
-    mockScheme = 'dark';
-    screen.rerender(<ClientTabsLayout />);
-
-    expect(mockNativeTabsProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ tintColor: 'dark-mint' }),
-    );
+    expect(mockScreenProps.slice(0, 4).map((screen) => screen.name))
+      .toEqual(['home', 'explore', 'appointments', 'account']);
   });
 });
