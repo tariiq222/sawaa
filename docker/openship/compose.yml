@@ -194,6 +194,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
         NEXT_PUBLIC_DEFAULT_ORG_ID: ${NEXT_PUBLIC_DEFAULT_ORG_ID:?NEXT_PUBLIC_DEFAULT_ORG_ID is required}
+        WEBSITE_API_PROXY_URL: ${WEBSITE_API_PROXY_URL:-}
         NEXT_PUBLIC_WEB_CHAT_ENABLED: ${NEXT_PUBLIC_WEB_CHAT_ENABLED:-false}
     image: ${WEBSITE_IMAGE:-sawaa-website:staging}
     restart: unless-stopped

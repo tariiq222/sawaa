@@ -72,6 +72,7 @@ RUN node -e "require('lightningcss'); require('@tailwindcss/oxide')"
 # Leaving them empty will fail the build — no silent localhost fallback in production.
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_DEFAULT_ORG_ID
+ARG WEBSITE_API_PROXY_URL=
 # This is compiled into the public browser bundle. Keep the default closed so
 # an omitted deployment build arg cannot expose the web-chat launcher.
 ARG NEXT_PUBLIC_WEB_CHAT_ENABLED=false
@@ -84,6 +85,7 @@ RUN if [ -z "$NEXT_PUBLIC_API_URL" ]; then \
 
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_DEFAULT_ORG_ID=$NEXT_PUBLIC_DEFAULT_ORG_ID
+ENV WEBSITE_API_PROXY_URL=$WEBSITE_API_PROXY_URL
 ENV NEXT_PUBLIC_WEB_CHAT_ENABLED=$NEXT_PUBLIC_WEB_CHAT_ENABLED
 
 RUN pnpm --filter=website run build
