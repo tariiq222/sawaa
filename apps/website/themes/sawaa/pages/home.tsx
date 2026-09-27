@@ -65,7 +65,7 @@ export async function SawaaHomePage() {
 
   const hero: HeroContent = resolveHeroContent(locale);
   const intros: HomeSectionIntros = resolveSectionIntros(locale);
-  const featureCards: FeatureCards = resolveFeatureCards();
+  const featureCards: FeatureCards = resolveFeatureCards(locale);
   const blogPosts: BlogPost[] = resolveBlogPosts();
   const faqItems: FaqItem[] = resolveFaqItems();
   const clinics = selectBookableClinics(catalog, clinicTherapists).map((clinic) => ({

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveHeroContent } from './hero-content';
 import { resolveSectionIntros } from './section-intros';
+import { resolveFeatureCards } from './feature-cards';
 
 describe('resolveHeroContent — locale', () => {
   it('returns the Arabic defaults under the ar locale', () => {
@@ -40,6 +41,22 @@ describe('resolveHeroContent — locale', () => {
     const en = resolveHeroContent('en');
     expect(ar.titlePrefix).not.toBe(en.titlePrefix);
     expect(ar.ctaPrimaryText).not.toBe(en.ctaPrimaryText);
+  });
+});
+
+describe('resolveFeatureCards — locale', () => {
+  it('keeps Arabic cards as the default', () => {
+    expect(resolveFeatureCards()).toEqual(resolveFeatureCards('ar'));
+    expect(resolveFeatureCards('ar')[0].label).toBe('كوادر سعودية');
+  });
+
+  it('returns English copy for every card when English is selected', () => {
+    const cards = resolveFeatureCards('en');
+    expect(cards[0].label).toBe('Saudi specialists');
+    expect(cards).toHaveLength(3);
+    for (const card of cards) {
+      expect(`${card.label} ${card.title} ${card.desc}`).not.toMatch(/[\u0600-\u06ff]/);
+    }
   });
 });
 
