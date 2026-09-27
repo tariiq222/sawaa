@@ -5135,22 +5135,42 @@ export interface components {
             nameEn?: string;
         };
         AdminMobileHomeCardDto: {
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Timestamp when the card was created.
+             */
             createdAt: string;
+            /** @description Card description in Arabic. */
             descriptionAr: string | null;
+            /** @description Card description in English. */
             descriptionEn: string | null;
-            /** @enum {string|null} */
+            /**
+             * @description In-app destination opened when the card is selected.
+             * @enum {string|null}
+             */
             destination: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            /** @description Unique mobile home card identifier. */
             id: string;
+            /** @description Alternative text for the card image in Arabic. */
             imageAltAr: string | null;
+            /** @description Alternative text for the card image in English. */
             imageAltEn: string | null;
+            /** @description Identifier of the uploaded card image. */
             imageFileId: string | null;
+            /** @description URL of the card image. */
             imageUrl: string | null;
+            /** @description Whether the card is published for mobile clients. */
             isPublished: boolean;
+            /** @description Card display order; lower values appear first. */
             sortOrder: number;
+            /** @description Card title in Arabic. */
             titleAr: string;
+            /** @description Card title in English. */
             titleEn: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Timestamp when the card was last updated.
+             */
             updatedAt: string;
         };
         AiProviderConfigResponseDto: {
@@ -7610,20 +7630,40 @@ export interface components {
             vatRate?: number;
         };
         CreateMobileHomeCardDto: {
+            /** @description Card description in Arabic. */
             descriptionAr?: string | null;
+            /** @description Card description in English. */
             descriptionEn?: string | null;
-            /** @enum {string|null} */
+            /**
+             * @description In-app destination opened when the card is selected.
+             * @enum {string|null}
+             */
             destination?: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            /** @description Alternative text for the card image in Arabic. */
             imageAltAr?: string | null;
+            /** @description Alternative text for the card image in English. */
             imageAltEn?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identifier of the uploaded card image.
+             */
             imageFileId?: string | null;
-            /** @default false */
+            /**
+             * @description Whether the card is published for mobile clients.
+             * @default false
+             */
             isPublished: boolean;
-            /** @default 0 */
+            /**
+             * @description Card display order; lower values appear first.
+             * @default 0
+             */
             sortOrder: number;
-            /** @example مواعيد مرنة تناسب يومك */
+            /**
+             * @description Card title in Arabic.
+             * @example مواعيد مرنة تناسب يومك
+             */
             titleAr: string;
+            /** @description Card title in English. */
             titleEn?: string | null;
         };
         CreatePackageFamilyDto: {
@@ -10396,15 +10436,26 @@ export interface components {
             title?: Record<string, never> | null;
         };
         PublicMobileHomeCardDto: {
+            /** @description Card description in Arabic. */
             descriptionAr: string | null;
+            /** @description Card description in English. */
             descriptionEn: string | null;
-            /** @enum {string|null} */
+            /**
+             * @description In-app destination opened when the card is selected.
+             * @enum {string|null}
+             */
             destination: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            /** @description Unique mobile home card identifier. */
             id: string;
+            /** @description Alternative text for the card image in Arabic. */
             imageAltAr: string | null;
+            /** @description Alternative text for the card image in English. */
             imageAltEn: string | null;
+            /** @description URL of the card image. */
             imageUrl: string | null;
+            /** @description Card title in Arabic. */
             titleAr: string;
+            /** @description Card title in English. */
             titleEn: string | null;
         };
         RefreshTokenDto: {
@@ -10498,12 +10549,19 @@ export interface components {
             rejectReason: string;
         };
         ReorderMobileHomeCardItemDto: {
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Last known update timestamp used to detect concurrent changes.
+             */
             expectedUpdatedAt: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Unique mobile home card identifier.
+             */
             id: string;
         };
         ReorderMobileHomeCardsDto: {
+            /** @description Cards in their requested display order, with last known update timestamps. */
             items: components["schemas"]["ReorderMobileHomeCardItemDto"][];
         };
         RequestDashboardOtpDto: {
@@ -11469,19 +11527,36 @@ export interface components {
             type?: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
         };
         UpdateMobileHomeCardDto: {
+            /** @description Card description in Arabic. */
             descriptionAr?: string | null;
+            /** @description Card description in English. */
             descriptionEn?: string | null;
-            /** @enum {string|null} */
+            /**
+             * @description In-app destination opened when the card is selected.
+             * @enum {string|null}
+             */
             destination?: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Last known update timestamp used to detect concurrent changes.
+             */
             expectedUpdatedAt: string;
+            /** @description Alternative text for the card image in Arabic. */
             imageAltAr?: string | null;
+            /** @description Alternative text for the card image in English. */
             imageAltEn?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identifier of the uploaded card image.
+             */
             imageFileId?: string | null;
+            /** @description Whether the card is published for mobile clients. */
             isPublished?: boolean;
+            /** @description Card display order; lower values appear first. */
             sortOrder?: number;
+            /** @description Card title in Arabic. */
             titleAr?: string;
+            /** @description Card title in English. */
             titleEn?: string | null;
         };
         UpdatePackageFamilyDto: {

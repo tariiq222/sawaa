@@ -76,6 +76,13 @@ const buildPrisma = () => {
     serviceDurationOption: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
+    sessionPackageGroup: { findFirst: jest.fn().mockResolvedValue(null) },
+    sessionPackageItem: { findFirst: jest.fn().mockResolvedValue(null) },
+    sessionPackageItemConstraintTarget: { findFirst: jest.fn().mockResolvedValue(null) },
+    packagePurchaseGroup: { findFirst: jest.fn().mockResolvedValue(null) },
+    packageCredit: { findFirst: jest.fn().mockResolvedValue(null) },
+    packageCreditConstraintTarget: { findFirst: jest.fn().mockResolvedValue(null) },
+    packagePurchase: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
@@ -275,8 +282,12 @@ describe('ArchiveServiceHandler', () => {
     expect(prisma.booking.count).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(prisma.employeeService.deleteMany).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
+    expect(prisma.serviceDurationOption.deleteMany).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
     expect(prisma.service.delete).toHaveBeenCalledWith({ where: { id: 'svc-1' } });
     expect(prisma.employeeService.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.service.delete.mock.invocationCallOrder[0],
+    );
+    expect(prisma.serviceDurationOption.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
       prisma.service.delete.mock.invocationCallOrder[0],
     );
     expect(prisma.service.update).not.toHaveBeenCalled();
@@ -297,6 +308,7 @@ describe('ArchiveServiceHandler', () => {
     });
     expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
     expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.serviceDurationOption.deleteMany).not.toHaveBeenCalled();
     expect(prisma.service.delete).not.toHaveBeenCalled();
     expect(result).toEqual(mockService);
   });
@@ -309,6 +321,7 @@ describe('ArchiveServiceHandler', () => {
     expect(prisma.booking.count).not.toHaveBeenCalled();
     expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
     expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.serviceDurationOption.deleteMany).not.toHaveBeenCalled();
     expect(prisma.service.delete).not.toHaveBeenCalled();
     expect(prisma.service.update).not.toHaveBeenCalled();
   });

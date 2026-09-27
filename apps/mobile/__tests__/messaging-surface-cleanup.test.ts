@@ -6,7 +6,7 @@ const mobileRoot = resolve(__dirname, '..');
 describe('retired messaging surface cleanup', () => {
   it('does not expose the retired provider in the client tab or translations', () => {
     const layout = readFileSync(resolve(mobileRoot, 'app/(client)/(tabs)/_layout.tsx'), 'utf8');
-    expect(layout).not.toContain("name=\"chat\"");
+    expect(layout).toContain('<Tabs.Screen name="chat" options={{ href: null }} />');
     expect(layout).not.toContain("tabs.assistant");
 
     for (const locale of ['ar', 'en']) {

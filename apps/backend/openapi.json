@@ -34,18 +34,22 @@
       "AdminMobileHomeCardDto": {
         "properties": {
           "createdAt": {
+            "description": "Timestamp when the card was created.",
             "format": "date-time",
             "type": "string"
           },
           "descriptionAr": {
+            "description": "Card description in Arabic.",
             "nullable": true,
             "type": "string"
           },
           "descriptionEn": {
+            "description": "Card description in English.",
             "nullable": true,
             "type": "string"
           },
           "destination": {
+            "description": "In-app destination opened when the card is selected.",
             "enum": [
               "CLINICS",
               "SERVICES",
@@ -57,38 +61,48 @@
             "type": "string"
           },
           "id": {
+            "description": "Unique mobile home card identifier.",
             "type": "string"
           },
           "imageAltAr": {
+            "description": "Alternative text for the card image in Arabic.",
             "nullable": true,
             "type": "string"
           },
           "imageAltEn": {
+            "description": "Alternative text for the card image in English.",
             "nullable": true,
             "type": "string"
           },
           "imageFileId": {
+            "description": "Identifier of the uploaded card image.",
             "nullable": true,
             "type": "string"
           },
           "imageUrl": {
+            "description": "URL of the card image.",
             "nullable": true,
             "type": "string"
           },
           "isPublished": {
+            "description": "Whether the card is published for mobile clients.",
             "type": "boolean"
           },
           "sortOrder": {
+            "description": "Card display order; lower values appear first.",
             "type": "number"
           },
           "titleAr": {
+            "description": "Card title in Arabic.",
             "type": "string"
           },
           "titleEn": {
+            "description": "Card title in English.",
             "nullable": true,
             "type": "string"
           },
           "updatedAt": {
+            "description": "Timestamp when the card was last updated.",
             "format": "date-time",
             "type": "string"
           }
@@ -4014,16 +4028,19 @@
       "CreateMobileHomeCardDto": {
         "properties": {
           "descriptionAr": {
+            "description": "Card description in Arabic.",
             "maxLength": 240,
             "nullable": true,
             "type": "string"
           },
           "descriptionEn": {
+            "description": "Card description in English.",
             "maxLength": 240,
             "nullable": true,
             "type": "string"
           },
           "destination": {
+            "description": "In-app destination opened when the card is selected.",
             "enum": [
               "CLINICS",
               "SERVICES",
@@ -4035,36 +4052,43 @@
             "type": "string"
           },
           "imageAltAr": {
+            "description": "Alternative text for the card image in Arabic.",
             "maxLength": 240,
             "nullable": true,
             "type": "string"
           },
           "imageAltEn": {
+            "description": "Alternative text for the card image in English.",
             "maxLength": 240,
             "nullable": true,
             "type": "string"
           },
           "imageFileId": {
+            "description": "Identifier of the uploaded card image.",
             "format": "uuid",
             "nullable": true,
             "type": "string"
           },
           "isPublished": {
             "default": false,
+            "description": "Whether the card is published for mobile clients.",
             "type": "boolean"
           },
           "sortOrder": {
             "default": 0,
+            "description": "Card display order; lower values appear first.",
             "maximum": 2147483647,
             "minimum": 0,
             "type": "number"
           },
           "titleAr": {
+            "description": "Card title in Arabic.",
             "example": "مواعيد مرنة تناسب يومك",
             "maxLength": 100,
             "type": "string"
           },
           "titleEn": {
+            "description": "Card title in English.",
             "maxLength": 100,
             "nullable": true,
             "type": "string"
@@ -8621,14 +8645,17 @@
       "PublicMobileHomeCardDto": {
         "properties": {
           "descriptionAr": {
+            "description": "Card description in Arabic.",
             "nullable": true,
             "type": "string"
           },
           "descriptionEn": {
+            "description": "Card description in English.",
             "nullable": true,
             "type": "string"
           },
           "destination": {
+            "description": "In-app destination opened when the card is selected.",
             "enum": [
               "CLINICS",
               "SERVICES",
@@ -8640,24 +8667,30 @@
             "type": "string"
           },
           "id": {
+            "description": "Unique mobile home card identifier.",
             "type": "string"
           },
           "imageAltAr": {
+            "description": "Alternative text for the card image in Arabic.",
             "nullable": true,
             "type": "string"
           },
           "imageAltEn": {
+            "description": "Alternative text for the card image in English.",
             "nullable": true,
             "type": "string"
           },
           "imageUrl": {
+            "description": "URL of the card image.",
             "nullable": true,
             "type": "string"
           },
           "titleAr": {
+            "description": "Card title in Arabic.",
             "type": "string"
           },
           "titleEn": {
+            "description": "Card title in English.",
             "nullable": true,
             "type": "string"
           }
@@ -8818,10 +8851,12 @@
       "ReorderMobileHomeCardItemDto": {
         "properties": {
           "expectedUpdatedAt": {
+            "description": "Last known update timestamp used to detect concurrent changes.",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "Unique mobile home card identifier.",
             "format": "uuid",
             "type": "string"
           }
@@ -8835,6 +8870,7 @@
       "ReorderMobileHomeCardsDto": {
         "properties": {
           "items": {
+            "description": "Cards in their requested display order, with last known update timestamps.",
             "items": {
               "$ref": "#/components/schemas/ReorderMobileHomeCardItemDto"
             },
@@ -10345,16 +10381,19 @@
       "UpdateMobileHomeCardDto": {
         "properties": {
           "descriptionAr": {
+            "description": "Card description in Arabic.",
             "maxLength": 240,
             "nullable": true,
             "type": "string"
           },
           "descriptionEn": {
+            "description": "Card description in English.",
             "maxLength": 240,
             "nullable": true,
             "type": "string"
           },
           "destination": {
+            "description": "In-app destination opened when the card is selected.",
             "enum": [
               "CLINICS",
               "SERVICES",
@@ -10366,37 +10405,45 @@
             "type": "string"
           },
           "expectedUpdatedAt": {
+            "description": "Last known update timestamp used to detect concurrent changes.",
             "format": "date-time",
             "type": "string"
           },
           "imageAltAr": {
+            "description": "Alternative text for the card image in Arabic.",
             "maxLength": 240,
             "nullable": true,
             "type": "string"
           },
           "imageAltEn": {
+            "description": "Alternative text for the card image in English.",
             "maxLength": 240,
             "nullable": true,
             "type": "string"
           },
           "imageFileId": {
+            "description": "Identifier of the uploaded card image.",
             "format": "uuid",
             "nullable": true,
             "type": "string"
           },
           "isPublished": {
+            "description": "Whether the card is published for mobile clients.",
             "type": "boolean"
           },
           "sortOrder": {
+            "description": "Card display order; lower values appear first.",
             "maximum": 2147483647,
             "minimum": 0,
             "type": "number"
           },
           "titleAr": {
+            "description": "Card title in Arabic.",
             "maxLength": 100,
             "type": "string"
           },
           "titleEn": {
+            "description": "Card title in English.",
             "maxLength": 100,
             "nullable": true,
             "type": "string"
