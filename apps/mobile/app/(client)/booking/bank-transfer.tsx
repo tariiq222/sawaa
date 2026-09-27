@@ -18,7 +18,7 @@ import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { clientPaymentsService, type ReceiptUploadAsset } from '@/services/client';
-import { formatHalalas } from '@/lib/money';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import { useBankTransferSettings } from '@/hooks/queries';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -47,7 +47,7 @@ export default function BankTransferScreen() {
   const uploaded = !!receipt;
   // amount is integer halalas (forwarded from payment.tsx).
   const numericAmount = amount ? Number(amount) : 0;
-  const amountLabel = `${formatHalalas(numericAmount, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
+  const amountLabel = formatCurrencyAmount(numericAmount, 'SAR', dir.isRTL);
   const accounts = bankTransferQuery.data?.enabled ? bankTransferQuery.data.accounts : [];
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? accounts[0];
 

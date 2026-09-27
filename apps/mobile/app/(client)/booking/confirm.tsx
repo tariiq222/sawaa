@@ -28,7 +28,7 @@ import { useCatalogDepartments, usePublicCatalog } from '@/hooks/queries';
 import { resolveConfirmCatalogSelection, resolveConfirmPrice } from '@/features/booking/confirm-catalog';
 import { formatConfirmDate, formatConfirmTime } from '@/features/booking/confirm-format';
 import { getFontName } from '@/theme/fonts';
-import { formatHalalas } from '@/lib/money';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import { goBackOrHome } from '@/lib/navigation';
 import type { DeliveryType } from '@/types/booking-enums';
 
@@ -91,8 +91,7 @@ export default function BookingConfirmScreen() {
   // DIRECT clinic requires the carried practitioner price because the hidden
   // catalog row is not the user's price. VAT is computed server-side.
   const { subtotal, total } = resolveConfirmPrice(service, directClinic, chargedPrice);
-  const formatMoney = (halalas: number) =>
-    `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
+  const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, currency ?? service?.currency, dir.isRTL);
 
   const rows = [
     {

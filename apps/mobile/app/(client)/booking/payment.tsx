@@ -18,7 +18,7 @@ import { getFontName } from '@/theme/fonts';
 import { APP_SCHEME } from '@/constants/config';
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
-import { formatHalalas } from '@/lib/money';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import type { DeliveryType } from '@/types/booking-enums';
 import { useBankTransferSettings } from '@/hooks/queries';
 import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
@@ -63,8 +63,7 @@ export default function BookingPaymentScreen() {
   const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const total = params.amount ? Number(params.amount) : 0;
-  const formatMoney = (halalas: number) =>
-    `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
+  const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, params.currency, dir.isRTL);
   const methods: Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }> = [
     { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: colors.teal[600] },
     { key: 'apple_pay', icon: <Apple size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.teal[600] },

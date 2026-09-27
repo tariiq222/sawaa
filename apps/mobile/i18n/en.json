@@ -232,10 +232,12 @@
   },
   "employeeProfile": {
     "about": "About",
+    "clinics": "Clinics",
     "services": "Services",
     "ratingCount": "({{count}} reviews)",
     "noServices": "No services available",
     "selectService": "Select a service",
+    "selectBookingOption": "Select a clinic or service to continue",
     "unavailable": "Booking unavailable",
     "priceAtNextStep": "Price shown in next step",
     "bookNow": "Book now"
@@ -470,6 +472,7 @@
       }
     },
     "privacySecurity": "Privacy & Security",
+    "privacyPolicy": "Privacy Policy",
     "appearance": "Appearance"
   },
   "notifications": {

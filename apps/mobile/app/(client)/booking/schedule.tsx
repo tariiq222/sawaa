@@ -18,6 +18,7 @@ import { branchesService } from '@/services/branches';
 import { DaySelector } from '@/components/features/booking/DaySelector';
 import { TimeSlotsGrid, type Slot } from '@/components/features/booking/TimeSlotsGrid';
 import { BookingCta } from '@/components/features/booking/BookingCta';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { goBackOrHome } from '@/lib/navigation';
 import type { DeliveryType } from '@/types/booking-enums';
@@ -66,8 +67,12 @@ export default function BookingScheduleScreen() {
     return out;
   }, []);
 
-  const [dayIdx, setDayIdx] = useState(0);
+  const [dayIdx, setDayIdx] = useState<number | null>(null);
   const [branchId, setBranchId] = useState<string | null>(params.branchId ?? null);
+  const [availabilityByDate, setAvailabilityByDate] = useState<Record<string, boolean> | null>(null);
+  const [daysLoading, setDaysLoading] = useState(true);
+  const [daysError, setDaysError] = useState<string | null>(null);
+  const [daysReloadKey, setDaysReloadKey] = useState(0);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotIdx, setSlotIdx] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,9 +90,15 @@ export default function BookingScheduleScreen() {
         if (cancelled) return;
         const main = list.find((b) => b.isMain) ?? list[0];
         if (main) setBranchId(main.id);
-        else setError(dir.isRTL ? 'لا توجد فروع متاحة' : 'No branches available');
+        else {
+          setDaysLoading(false);
+          setDaysError(dir.isRTL ? 'لا توجد فروع متاحة' : 'No branches available');
+        }
       } catch {
-        if (!cancelled) setError(dir.isRTL ? 'تعذّر تحميل الفرع' : 'Failed to load branch');
+        if (!cancelled) {
+          setDaysLoading(false);
+          setDaysError(dir.isRTL ? 'تعذّر تحميل الفرع' : 'Failed to load branch');
+        }
       }
     })();
     return () => {
@@ -97,7 +108,48 @@ export default function BookingScheduleScreen() {
 
   useEffect(() => {
     const employeeId = params.employeeId;
-    if (!employeeId || !branchId) return;
+    if (!employeeId) {
+      setDaysLoading(false);
+      setDaysError(dir.isRTL ? 'بيانات الحجز غير مكتملة' : 'Booking details are incomplete');
+      return;
+    }
+    if (!branchId) return;
+    let cancelled = false;
+    setDaysLoading(true);
+    setDaysError(null);
+    setAvailabilityByDate(null);
+    setDayIdx(null);
+    setSlots([]);
+    setSlotIdx(null);
+    (async () => {
+      try {
+        const availableDays = await publicEmployeesService.getAvailableDays({
+          employeeId,
+          branchId,
+          serviceId: params.serviceId,
+          startDate: toLocalDateOnly(days[0]),
+          days: days.length,
+          durationOptionId: params.durationOptionId,
+          durationMins: params.durationMins ? Number(params.durationMins) : undefined,
+          deliveryType: params.deliveryType ?? 'in_person',
+        });
+        if (cancelled) return;
+        const availability = Object.fromEntries(availableDays.map(({ date, hasSlots }) => [date, hasSlots]));
+        setAvailabilityByDate(availability);
+        const firstAvailable = days.findIndex((day) => availability[toLocalDateOnly(day)] === true);
+        setDayIdx(firstAvailable >= 0 ? firstAvailable : null);
+      } catch {
+        if (!cancelled) setDaysError(dir.isRTL ? 'تعذّر التحقق من الأيام المتاحة' : 'Could not check available days');
+      } finally {
+        if (!cancelled) setDaysLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [params.employeeId, params.serviceId, params.durationOptionId, params.durationMins, params.deliveryType, branchId, days, dir.isRTL, daysReloadKey]);
+
+  useEffect(() => {
+    const employeeId = params.employeeId;
+    if (!employeeId || !branchId || dayIdx == null) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -115,7 +167,18 @@ export default function BookingScheduleScreen() {
           deliveryType: selectedDeliveryType,
         });
         if (cancelled) return;
-        setSlots(data ?? []);
+        if (!data?.length) {
+          const date = toLocalDateOnly(days[dayIdx]);
+          setAvailabilityByDate((current) => current ? { ...current, [date]: false } : current);
+          const nextAvailable = days.findIndex((day) => {
+            const candidate = toLocalDateOnly(day);
+            return candidate !== date && availabilityByDate?.[candidate] === true;
+          });
+          setDayIdx(nextAvailable >= 0 ? nextAvailable : null);
+          setSlots([]);
+        } else {
+          setSlots(data);
+        }
       } catch {
         if (!cancelled) setError(dir.isRTL ? 'تعذّر تحميل الأوقات' : 'Failed to load times');
       } finally {
@@ -130,6 +193,7 @@ export default function BookingScheduleScreen() {
     branchId,
     dayIdx,
     days,
+    availabilityByDate,
     params.serviceId,
     params.durationOptionId,
     params.durationMins,
@@ -139,9 +203,15 @@ export default function BookingScheduleScreen() {
   ]);
 
   const selectedSlot = slotIdx != null ? slots[slotIdx] : null;
-  const selectedDay = days[dayIdx];
+  const selectedDay = days[dayIdx ?? 0];
 
   const handleRetry = () => setReloadKey((k) => k + 1);
+  const handleRetryDays = () => {
+    setDaysLoading(true);
+    setDaysError(null);
+    if (!branchId) setReloadKey((k) => k + 1);
+    else setDaysReloadKey((k) => k + 1);
+  };
 
   const handleConfirm = () => {
     if (!selectedSlot || !branchId) return;
@@ -155,7 +225,7 @@ export default function BookingScheduleScreen() {
         branchId,
         deliveryType: params.deliveryType ?? 'in_person',
         scheduledAt: selectedSlot.startTime,
-        durationOptionId: params.durationOptionId,
+        durationOptionId: params.durationOptionId?.trim() || undefined,
         chargedPrice: params.chargedPrice,
         currency: params.currency,
       },
@@ -204,6 +274,7 @@ export default function BookingScheduleScreen() {
           <DaySelector
             days={days}
             dayIdx={dayIdx}
+            availabilityByDate={availabilityByDate}
             onSelect={setDayIdx}
             dir={dir}
             f500={f500}
@@ -211,45 +282,65 @@ export default function BookingScheduleScreen() {
           />
         </Animated.View>
 
-        <Animated.View
-          entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(600).easing(Easing.out(Easing.cubic))}
-          style={[styles.slotsHead, { flexDirection: dir.row }]}
-        >
-          <Text
-            style={[
-              styles.slotsTitle,
-              { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
-            {dir.isRTL ? 'الأوقات المتاحة' : 'Available times'}
+        {daysLoading ? (
+          <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign }]}>
+            {dir.isRTL ? 'جارٍ التحقق من الأيام المتاحة…' : 'Checking available days…'}
           </Text>
-          <Text
-            style={[
-              styles.tz,
-              { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
-            {tzLabel}
-          </Text>
-        </Animated.View>
+        ) : daysError ? (
+          <EmptyState icon="cloud-offline-outline" tone="danger" title={daysError}
+            actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'} onAction={handleRetryDays} />
+        ) : availabilityByDate && !Object.values(availabilityByDate).some(Boolean) ? (
+          <EmptyState icon="calendar-outline"
+            title={dir.isRTL ? 'لا مواعيد متاحة لهذا الحجز خلال ٣٠ يومًا' : 'No openings for this booking in the next 30 days'} />
+        ) : null}
 
-        <TimeSlotsGrid
-          loading={loading}
-          error={error}
-          slots={slots}
-          selectedIdx={slotIdx}
-          onSelect={setSlotIdx}
-          dir={dir}
-          f500={f500}
-          f600={f600}
-          reduceMotion={reduceMotion}
-          onRetry={handleRetry}
-        />
+        {dayIdx != null ? (
+          <>
+            <Animated.View
+              entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(600).easing(Easing.out(Easing.cubic))}
+              style={[styles.slotsHead, { flexDirection: dir.row }]}
+            >
+              <Text
+                style={[
+                  styles.slotsTitle,
+                  { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+                ]}
+              >
+                {dir.isRTL ? 'الأوقات المتاحة' : 'Available times'}
+              </Text>
+              <Text
+                style={[
+                  styles.tz,
+                  { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+                ]}
+              >
+                {tzLabel}
+              </Text>
+            </Animated.View>
+
+            {loading || error || slots.length > 0 ? (
+              <TimeSlotsGrid
+                loading={loading}
+                error={error}
+                slots={slots}
+                selectedIdx={slotIdx}
+                onSelect={setSlotIdx}
+                dir={dir}
+                f500={f500}
+                f600={f600}
+                reduceMotion={reduceMotion}
+                onRetry={handleRetry}
+              />
+            ) : null}
+          </>
+        ) : null}
       </ScrollView>
 
       <BookingCta
         selectedDay={selectedDay}
         selectedSlot={selectedSlot}
+        chargedPrice={params.chargedPrice}
+        currency={params.currency}
         onConfirm={handleConfirm}
         dir={dir}
         f400={f400}

@@ -14,7 +14,7 @@ import { Glass } from '@/theme/components/Glass';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { formatHalalas } from '@/lib/package-utils';
 import { goBackOrHome, loginRedirectHref } from '@/lib/navigation';
-import { getProfileBookingServices } from '@/lib/clinic-profile';
+import { getProfileBookingGroups, getProfileBookingServices } from '@/lib/clinic-profile';
 import { BackButton } from '@/components/ui/BackButton';
 
 type PublicKind = 'service' | 'package' | 'program' | 'therapist';
@@ -56,6 +56,9 @@ export default function PublicDetailScreen() {
   const matchingServices = type === 'therapist' && therapist.data
     ? (catalog.data ? getProfileBookingServices(catalog.data, therapist.data.serviceIds, clinicId, serviceId) : [])
     : [];
+  const { clinics, serviceGroups } = catalog.data
+    ? getProfileBookingGroups(catalog.data, matchingServices)
+    : { clinics: [], serviceGroups: [] };
   const startBooking = (selectedServiceId: string, employeeId: string) => {
     // Resolve the clinic from the chosen service, including direct clinics whose
     // internal service must travel with the draft without exposing its label.
@@ -67,6 +70,17 @@ export default function PublicDetailScreen() {
       params: { serviceId: selectedServiceId, employeeId, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}) },
     });
   };
+
+  const serviceChoice = (entry: typeof matchingServices[number], label?: string) => (
+    <Glass key={entry.id} interactive radius={18} accessibilityRole="button"
+      onPress={() => therapist.data && startBooking(entry.id, therapist.data.id)}
+      style={[styles.serviceChoice, { flexDirection: dir.row }]}>
+      <Text style={[styles.practitionerName, { fontFamily: bold, textAlign: dir.textAlign }]}>
+        {label ?? (dir.isRTL ? entry.nameAr : entry.nameEn ?? entry.nameAr)}
+      </Text>
+      <NextIcon size={18} color={colors.teal[700]} />
+    </Glass>
+  );
 
   return (
     <AquaBackground>
@@ -113,17 +127,37 @@ export default function PublicDetailScreen() {
         {type === 'therapist' && therapist.data ? (
           <View style={styles.choices}>
             <Text style={[styles.body, { fontFamily: bold, textAlign: dir.textAlign }]}>{t('guest.chooseClinicOrService')}</Text>
-            {matchingServices.map((entry) => (
-              <Glass key={entry.id} interactive radius={18} onPress={() => startBooking(entry.id, therapist.data!.id)} style={[styles.serviceChoice, { flexDirection: dir.row }]}>
-                <Text style={[styles.practitionerName, { fontFamily: bold, textAlign: dir.textAlign }]}>{(() => {
-                  const category = catalog.data?.categories.find((item) => item.id === entry.categoryId);
-                  return category?.bookingMode === 'DIRECT'
-                    ? (dir.isRTL ? category.nameAr : category.nameEn ?? category.nameAr)
-                    : (dir.isRTL ? entry.nameAr : entry.nameEn ?? entry.nameAr);
-                })()}</Text>
-                <NextIcon size={18} color={colors.teal[700]} />
-              </Glass>
-            ))}
+            {clinics.length > 0 ? (
+              <View style={styles.choices}>
+                <Text style={[styles.choiceTitle, { fontFamily: bold, textAlign: dir.textAlign }]}>{t('employeeProfile.clinics')}</Text>
+                {clinics.map(({ category, bookingMode, directServiceId, services }) => {
+                  const clinicName = (dir.isRTL ? category.nameAr : category.nameEn) ?? category.nameAr;
+                  if (bookingMode === 'DIRECT') {
+                    const internalService = services.find((entry) => entry.id === directServiceId);
+                    return internalService ? serviceChoice(internalService, clinicName) : null;
+                  }
+                  return (
+                    <Glass key={category.id} testID={`guest-clinic-${category.id}`} variant="regular" radius={sawaaRadius.lg} style={styles.clinicGroup}>
+                      <Text accessibilityRole="header" style={[styles.choiceTitle, { fontFamily: bold, textAlign: dir.textAlign }]}>{clinicName}</Text>
+                      {services.map((entry) => serviceChoice(entry))}
+                    </Glass>
+                  );
+                })}
+              </View>
+            ) : null}
+            {serviceGroups.length > 0 ? (
+              <View style={styles.choices}>
+                <Text style={[styles.choiceTitle, { fontFamily: bold, textAlign: dir.textAlign }]}>{t('employeeProfile.services')}</Text>
+                {serviceGroups.map(({ category, services }) => (
+                  <View key={category?.id ?? 'uncategorized'} style={styles.choices}>
+                    {category ? <Text accessibilityRole="header" style={[styles.choiceTitle, { fontFamily: bold, textAlign: dir.textAlign }]}>
+                      {(dir.isRTL ? category.nameAr : category.nameEn) ?? category.nameAr}
+                    </Text> : null}
+                    {services.map((entry) => serviceChoice(entry))}
+                  </View>
+                ))}
+              </View>
+            ) : null}
             {!catalog.isLoading && matchingServices.length === 0 ? <Text style={styles.body}>{t('guest.empty')}</Text> : null}
           </View>
         ) : null}
@@ -162,5 +196,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   login: { minHeight: 48, borderRadius: sawaaRadius.lg, backgroundColor: colors.teal[700], alignItems: 'center', justifyContent: 'center' },
   loginText: { color: colors.glass.opaqueBg, fontSize: sawaaType.body.fontSize },
   serviceChoice: { minHeight: 54, padding: 14, alignItems: 'center', gap: 10 },
+  clinicGroup: { gap: sawaaSpacing.sm, padding: sawaaSpacing.sm },
   choices: { gap: sawaaSpacing.sm },
 });

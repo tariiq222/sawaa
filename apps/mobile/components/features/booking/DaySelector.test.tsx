@@ -1,13 +1,14 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { DaySelector } from './DaySelector';
-import { getSawaaColors, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { getSawaaColors } from '@/theme/sawaa/tokens';
 import type { DirState } from '@/hooks/useDir';
 
 let mockScheme: 'light' | 'dark' = 'light';
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
 jest.mock('@/theme/components/Glass', () => ({
-  Glass: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Glass: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) =>
+    require('react').createElement(require('react-native').Pressable, props, children),
 }));
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }));
 const dir: DirState = { locale: 'en', isRTL: false, row: 'row', rowReverse: 'row-reverse', alignStart: 'flex-start', alignEnd: 'flex-end', textAlign: 'left', writingDirection: 'ltr', iconScaleX: 1 };
@@ -20,9 +21,30 @@ it('updates unselected day text and surfaces while preserving selected contrast 
   mockScheme = 'dark';
   view.rerender(React.cloneElement(element));
   expect(view.getByText('5')).toHaveStyle({ color: getSawaaColors('dark').ink[900] });
-  expect(view.getByText('4')).toHaveStyle({ color: getSawaaRoles('dark').action.foreground });
+  expect(view.getByText('4')).toHaveStyle({ color: getSawaaColors('dark').teal[700] });
   const buttons = view.getAllByRole('button');
-  expect(buttons[1]).toHaveStyle({ backgroundColor: getSawaaColors('dark').glass.bgStrong });
+  expect(buttons[1]).toHaveProp('variant', 'regular');
+  expect(buttons[0]).toHaveProp('variant', 'strong');
   fireEvent.press(buttons[1]);
   expect(onSelect).toHaveBeenCalledWith(1);
+});
+
+it('does not allow selecting a day with no slots for the chosen booking', () => {
+  const onSelect = jest.fn();
+  const view = render(
+    <DaySelector
+      days={[new Date(2026, 8, 29), new Date(2026, 8, 30)]}
+      dayIdx={0}
+      availabilityByDate={{ '2026-09-29': true, '2026-09-30': false }}
+      onSelect={onSelect}
+      dir={dir}
+      f500="System"
+      f700="System"
+    />,
+  );
+  const buttons = view.getAllByRole('button');
+  expect(buttons[0]).toHaveProp('accessibilityState', { disabled: false, selected: true });
+  expect(buttons[1]).toHaveProp('accessibilityState', { disabled: true, selected: false });
+  fireEvent.press(buttons[1]);
+  expect(onSelect).not.toHaveBeenCalled();
 });

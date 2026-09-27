@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
+import { BackButton } from '@/components/ui/BackButton';
 import { useClinics, useGroupSessions, usePackageFamilies, usePublicCatalog, useTherapists } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -100,20 +101,7 @@ export function ExploreDirectory() {
       </Glass>
 
       {filter !== null ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('a11y.buttonBack')}
-          onPress={() => { setFilter(null); setSearch(''); }}
-          style={[styles.backToCategories, { flexDirection: dir.row, alignSelf: dir.alignStart }]}
-        >
-          <AppIcon
-            sf={dir.isRTL ? 'chevron.right' : 'chevron.left'}
-            fallback={dir.isRTL ? ChevronRight : ChevronLeft}
-            size={18}
-            color={colors.teal[700]}
-          />
-          <Text style={[styles.backText, { fontFamily: bold }]}>{t('a11y.buttonBack')}</Text>
-        </Pressable>
+        <BackButton onPress={() => { setFilter(null); setSearch(''); }} style={{ alignSelf: dir.alignStart }} />
       ) : null}
 
       {isCategoryHome ? (
@@ -193,8 +181,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   category: { minHeight: 64, paddingHorizontal: 16, justifyContent: 'center' },
   categoryRow: { alignItems: 'center', gap: 12 },
   categoryText: { color: colors.ink[900], fontSize: 15 },
-  backToCategories: { minHeight: 40, alignItems: 'center', gap: 6, paddingHorizontal: 2 },
-  backText: { color: colors.teal[700], fontSize: 13 },
   state: { alignItems: 'center', justifyContent: 'center', gap: 10, padding: 16 },
   stateText: { color: colors.ink[500], fontSize: 14 },
   errorState: { alignItems: 'center', gap: 10, padding: 14, borderRadius: 16, backgroundColor: colors.glass.opaqueBg },

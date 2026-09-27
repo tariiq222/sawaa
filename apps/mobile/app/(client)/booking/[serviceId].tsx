@@ -23,7 +23,7 @@ import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
-import { formatHalalas } from '@/lib/money';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import { goBackOrHome } from '@/lib/navigation';
 import {
   getPractitionerBookingOptions,
@@ -77,8 +77,7 @@ export default function BookingTypeScreen() {
     };
   }, [serviceId, employeeId, dir.isRTL, reloadKey]);
 
-  const formatMoney = (halalas: number) =>
-    `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
+  const formatMoney = (halalas: number, currency: string) => formatCurrencyAmount(halalas, currency, dir.isRTL);
 
   const handleSelect = (opt: PractitionerBookingOption) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -213,7 +212,7 @@ export default function BookingTypeScreen() {
                       <Text
                         style={[styles.typePrice, { fontFamily: f600, fontWeight: '600' }]}
                       >
-                        {formatMoney(opt.price)}
+                        {formatMoney(opt.price, opt.currency)}
                       </Text>
                       <GoIcon size={16} color={colors.ink[400]} strokeWidth={2} />
                     </View>

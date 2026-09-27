@@ -10,6 +10,7 @@ import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
 import { useReduceMotion } from '@/hooks/useA11y';
 import type { DirState } from '@/hooks/useDir';
 import { formatTime, type Slot } from './TimeSlotsGrid';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 
 const DAYS_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const DAYS_EN_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -17,6 +18,8 @@ const DAYS_EN_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 interface BookingCtaProps {
   selectedDay: Date;
   selectedSlot: Slot | null;
+  chargedPrice?: string;
+  currency?: string;
   onConfirm: () => void;
   dir: DirState;
   f400: string;
@@ -26,6 +29,8 @@ interface BookingCtaProps {
 export function BookingCta({
   selectedDay,
   selectedSlot,
+  chargedPrice,
+  currency,
   onConfirm,
   dir,
   f400,
@@ -37,6 +42,7 @@ export function BookingCta({
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const dayLabel = dir.isRTL ? DAYS_AR[selectedDay.getDay()] : DAYS_EN_SHORT[selectedDay.getDay()];
   const dayNum = dir.isRTL ? selectedDay.getDate().toLocaleString('ar-SA') : selectedDay.getDate();
+  const price = chargedPrice != null && chargedPrice.trim() !== '' ? Number(chargedPrice) : NaN;
 
   return (
     <Animated.View
@@ -44,7 +50,7 @@ export function BookingCta({
       style={StyleSheet.absoluteFill}
       pointerEvents="box-none"
     >
-      <FloatingActionBar>
+      <FloatingActionBar opaqueBackdrop>
         <View style={styles.summary}>
           <Text
             style={[
@@ -64,7 +70,9 @@ export function BookingCta({
               { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
             ]}
           >
-            {dir.isRTL ? 'تأمين مقبول' : 'Insurance accepted'}
+            {Number.isFinite(price)
+              ? `${dir.isRTL ? 'السعر' : 'Price'} · ${formatCurrencyAmount(price, currency, dir.isRTL)}`
+              : dir.isRTL ? 'يظهر السعر في الخطوة التالية' : 'Price shown at the next step'}
           </Text>
         </View>
         <Glass
