@@ -170,7 +170,7 @@ describe('PublicCatalogController (e2e)', () => {
       );
       expect(mockPrisma.service.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { isActive: true, isHidden: false, archivedAt: null, category: { isActive: true } },
+          where: { isActive: true, isHidden: false, archivedAt: null, OR: [{ categoryId: null }, { category: { isActive: true } }] },
         }),
       );
     });
