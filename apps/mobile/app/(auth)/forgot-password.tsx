@@ -9,7 +9,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -22,12 +22,14 @@ import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { authService } from '@/services/auth';
+import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function ForgotPasswordScreen() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
   const insets = useSafeAreaInsets();
   const dir = useDir();
 
@@ -56,7 +58,7 @@ export default function ForgotPasswordScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/reset-password',
-        params: { email: email.trim() },
+        params: { email: email.trim(), ...authContinuationParams(booking, redirect) },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -64,7 +66,7 @@ export default function ForgotPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [email, validate, router, t]);
+  }, [email, validate, router, t, booking, redirect]);
 
   return (
     <AquaBackground>

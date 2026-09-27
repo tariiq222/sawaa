@@ -65,7 +65,7 @@ export class AuthResponseBuilder {
   private parseTtlSeconds(ttl: string): number {
     const match = /^(\d+)([smhd])$/.exec(ttl);
     if (!match) return 900;
-    const n = parseInt(match[1], 10);
+    const n = Number.parseInt(match[1], 10);
     const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
     return n * multipliers[match[2]];
   }

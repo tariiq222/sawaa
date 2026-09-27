@@ -396,7 +396,7 @@ describe('Notification outbox sources — real PostgreSQL acceptance', () => {
     expect((await prisma.notificationIntent.findUniqueOrThrow({ where: { id: intentId } })).status).toBe('PENDING');
     expect(await prisma.notificationDelivery.count({ where: { intentId } })).toBe(0);
     const after = await prisma.notification.findMany({ where: { recipientId: { in: seededStaffIds } }, select: { id: true } });
-    expect(after.map((row) => row.id).sort()).toEqual(before.map((row) => row.id).sort());
+    expect(after.map((row) => row.id).sort((a, b) => a.localeCompare(b))).toEqual(before.map((row) => row.id).sort((a, b) => a.localeCompare(b)));
   });
 
   it('renders the active legacy welcome template and keeps frozen email content on repeat materialization', async () => {

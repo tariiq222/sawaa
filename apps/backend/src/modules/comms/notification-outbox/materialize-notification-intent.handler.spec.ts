@@ -119,6 +119,15 @@ describe('MaterializeNotificationIntentHandler', () => {
     expect(deliveryRows.filter((row: Record<string, unknown>) => row.channel === 'PUSH')).toHaveLength(2);
     expect(deliveryRows.filter((row: Record<string, unknown>) => row.channel === 'PUSH').map((row: Record<string, unknown>) => row.targetAddress)).toEqual(['token-a', 'token-b']);
     expect(deliveryRows.filter((row: Record<string, unknown>) => row.channel === 'PUSH').every((row: Record<string, unknown>) => row.targetKey !== row.targetAddress)).toBe(true);
+    // The mobile app routes a tapped push from these string-only FCM data keys.
+    expect(
+      deliveryRows
+        .filter((row: Record<string, unknown>) => row.channel === 'PUSH')
+        .map((row: Record<string, unknown>) => (row.channelPayload as { data?: Record<string, string> }).data),
+    ).toEqual([
+      { notificationType: 'BOOKING_CANCELLED', bookingId: 'booking-1' },
+      { notificationType: 'BOOKING_CANCELLED', bookingId: 'booking-1' },
+    ]);
   });
 
   it('rolls back all materialization writes when a delivery write fails', async () => {

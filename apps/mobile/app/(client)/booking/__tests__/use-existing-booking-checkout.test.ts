@@ -16,7 +16,7 @@ jest.mock('@/hooks/queries/useClientBookings', () => ({
 
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
-import { useExistingBookingCheckout } from '../use-existing-booking-checkout';
+import { useExistingBookingCheckout } from '@/features/booking/use-existing-booking-checkout';
 
 const mockedBookings = clientBookingsService as unknown as { getById: jest.Mock };
 const mockedPayments = clientPaymentsService as unknown as { getInvoice: jest.Mock };

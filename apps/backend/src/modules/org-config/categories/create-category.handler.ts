@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -26,6 +26,10 @@ export class CreateCategoryHandler {
   }
 
   async execute(dto: CreateCategoryCommand) {
+    // See docs/architecture/clinic-service-booking-contract.md: groups cannot book directly.
+    if (dto.kind === 'SERVICE_GROUP' && dto.bookingMode === 'DIRECT') {
+      throw new BadRequestException('SERVICE_GROUP requires SERVICES booking mode');
+    }
     const category = await this.rlsTransaction.withTransaction(async (tx) => {
       const cat = await tx.serviceCategory.create({
         data: {
@@ -34,6 +38,7 @@ export class CreateCategoryHandler {
           departmentId: dto.departmentId ?? null,
           sortOrder: dto.sortOrder ?? 0,
           bookingMode: dto.bookingMode ?? 'SERVICES',
+          kind: dto.kind ?? 'CLINIC',
           imageUrl: dto.imageUrl ?? null,
           iconName: dto.iconName ?? null,
           iconBgColor: dto.iconBgColor ?? null,
@@ -59,6 +64,7 @@ export class CreateCategoryHandler {
 
     await this.cache.invalidatePrefix(CATEGORIES_CACHE_PREFIX);
     await this.cache.invalidatePrefix(DEPARTMENTS_CACHE_PREFIX); // departments list embeds active categories
+    await this.cache.invalidatePrefix('ref:public-catalog');
 
     // The persisted `imageUrl` is a bare object key; return a freshly minted
     // presigned URL so the dashboard can render the just-created image.

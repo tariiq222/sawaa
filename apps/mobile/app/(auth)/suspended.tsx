@@ -28,6 +28,14 @@ export default function SuspendedScreen() {
           <Pressable style={styles.button} onPress={handleLogout}>
             <Text style={styles.buttonText}>{t('suspended.contactAdmin')}</Text>
           </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('suspended.continueAsGuest')}
+            style={styles.secondary}
+            onPress={() => router.replace('/home')}
+          >
+            <Text style={styles.secondaryText}>{t('suspended.continueAsGuest')}</Text>
+          </Pressable>
         </View>
       </View>
     </AquaBackground>
@@ -73,6 +81,17 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   buttonText: {
     color: colors.ink[900],
     fontSize: 16,
+    fontWeight: '600',
+  },
+  secondary: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryText: {
+    color: colors.teal[700],
+    fontSize: 14,
     fontWeight: '600',
   },
 });

@@ -30,7 +30,8 @@
  *
  *   Any cancellable state:
  *     PENDING | CONFIRMED | AWAITING_PAYMENT | DEPOSIT_PAID → CLIENT_REQUEST_CANCEL → CANCEL_REQUESTED
- *     PENDING | CONFIRMED | CANCEL_REQUESTED | DEPOSIT_PAID → DIRECT_CANCEL → CANCELLED
+ *     PENDING | PENDING_GROUP_FILL | AWAITING_PAYMENT | CONFIRMED | CANCEL_REQUESTED | DEPOSIT_PAID
+ *       → DIRECT_CANCEL → CANCELLED
  *     PENDING | CONFIRMED | AWAITING_PAYMENT | DEPOSIT_PAID → CLIENT_DIRECT_CANCEL → CANCELLED
  *     CANCEL_REQUESTED                                      → APPROVE_CANCEL → CANCELLED
  *     CANCEL_REQUESTED                                      → REJECT_CANCEL → CONFIRMED
@@ -151,11 +152,21 @@ export const VALID_TRANSITIONS: Record<
 
   /**
    * Admin/staff cancels directly, including a previously requested cancel.
+   *
+   * Accepts the unconfirmed holds too (PENDING_GROUP_FILL / AWAITING_PAYMENT):
+   * reception must be able to release a slot that is only being held for an
+   * online payment that never arrived, without waiting for the expiry cron and
+   * without first confirming a booking nobody paid for. `cancel-booking.handler`
+   * treats those sources as penalty-free and refunds any captured amount in
+   * full, mirroring the expiry path.
+   *
    * Handler: cancel-booking/cancel-booking.handler.ts
    */
   DIRECT_CANCEL: {
     from: [
       BookingStatus.PENDING,
+      BookingStatus.PENDING_GROUP_FILL,
+      BookingStatus.AWAITING_PAYMENT,
       BookingStatus.CONFIRMED,
       BookingStatus.CANCEL_REQUESTED,
       BookingStatus.DEPOSIT_PAID,

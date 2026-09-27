@@ -65,6 +65,14 @@ export default function AppointmentDetailScreen() {
         booking.invoiceStatus === 'DRAFT' ||
         booking.invoiceStatus === 'ISSUED'),
   );
+  const canRate = booking?.status === 'completed'
+    && booking.hasRated !== true
+    && booking.ratingSubmittedLocally !== true;
+  const bookingType = booking?.bookingType?.toLowerCase();
+  const legacyType = booking?.type?.toLowerCase();
+  const canCancel = Boolean(booking && bookingType !== 'group' && legacyType !== 'group' && [
+    'pending', 'awaiting_payment', 'deposit_paid', 'confirmed',
+  ].includes(booking.status));
   const hasScheduledTime = Boolean(booking?.scheduledAt);
   const scheduledDate = booking && hasScheduledTime
     ? new Date(booking.scheduledAt).toLocaleDateString(dir.isRTL ? 'ar-SA' : 'en-US', {
@@ -103,7 +111,16 @@ export default function AppointmentDetailScreen() {
             cancelMutation.mutate(
               { id, reason: dir.isRTL ? 'إلغاء من العميل' : 'Client cancelled' },
               {
-                onSuccess: () => router.back(),
+                onSuccess: (result) => {
+                  if (result.status === 'cancel_requested') {
+                    Alert.alert(
+                      t('appointments.cancellationRequestedTitle'),
+                      t('appointments.cancellationRequestedMessage'),
+                    );
+                    return;
+                  }
+                  router.back();
+                },
                 onError: (err) => {
                   Alert.alert(
                     dir.isRTL ? 'تعذّر الإلغاء' : 'Cancel failed',
@@ -232,22 +249,31 @@ export default function AppointmentDetailScreen() {
             variant="join"
           />
         ) : null}
+        {canRate && booking ? (
+          <PrimaryButton
+            label={t('appointments.rate')}
+            onPress={() => router.push(`/(client)/rate/${booking.id}`)}
+            fontFamily={f700}
+          />
+        ) : null}
       </Animated.View>
 
       {/* Cancel link */}
-      <Animated.View
-        entering={FadeInDown.delay(460).duration(800).easing(Easing.out(Easing.cubic))}
-        style={[styles.cancelRow, { bottom: insets.bottom + 80 }]}
-      >
-        <Pressable onPress={askCancel} disabled={cancelling} style={styles.cancelBtn}>
-          <XCircle size={14} color={colors.accent.coral} strokeWidth={2} />
-          <Text style={[styles.cancelText, { fontFamily: f500, fontWeight: '500' }]}>
-            {cancelling
-              ? (dir.isRTL ? 'جاري الإلغاء…' : 'Cancelling…')
-              : (dir.isRTL ? 'إلغاء الموعد' : 'Cancel booking')}
-          </Text>
-        </Pressable>
-      </Animated.View>
+      {canCancel ? (
+        <Animated.View
+          entering={FadeInDown.delay(460).duration(800).easing(Easing.out(Easing.cubic))}
+          style={[styles.cancelRow, { bottom: insets.bottom + 80 }]}
+        >
+          <Pressable onPress={askCancel} disabled={cancelling} style={styles.cancelBtn}>
+            <XCircle size={14} color={colors.accent.coral} strokeWidth={2} />
+            <Text style={[styles.cancelText, { fontFamily: f500, fontWeight: '500' }]}>
+              {cancelling
+                ? (dir.isRTL ? 'جاري الإلغاء…' : 'Cancelling…')
+                : (dir.isRTL ? 'إلغاء الموعد' : 'Cancel booking')}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      ) : null}
     </AquaBackground>
   );
 }

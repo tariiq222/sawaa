@@ -16,6 +16,7 @@ import { SettingsPaymentTab } from "@/components/features/settings/settings-paym
 import { SettingsIntegrationsTab } from "@/components/features/settings/settings-integrations-tab"
 import { SawaaAiSettingsContent } from "@/components/features/settings/sawaa-ai-settings-content"
 import { EmailTemplatesTab } from "@/components/features/settings/email-templates-tab"
+import { MobileHomeCardsTab } from "@/components/features/settings/mobile-home-cards-tab"
 import { DiscountReasonsManager } from "@/components/features/settings/discount-reasons-manager"
 import { PermissionGuard } from "@/components/features/permission-guard"
 
@@ -29,6 +30,7 @@ const VALID_TABS = new Set([
   "integrations",
   "sawaa-ai",
   "email-templates",
+  "mobile-home-cards",
 ])
 
 function SettingsTabs() {
@@ -69,6 +71,7 @@ function SettingsTabs() {
           <TabsTrigger value="integrations">{t("settings.tabs.integrations")}</TabsTrigger>
           <TabsTrigger value="sawaa-ai">{t("sawaaAi.menuLabel")}</TabsTrigger>
           <TabsTrigger value="email-templates">{t("settings.tabs.emailTemplates")}</TabsTrigger>
+          <TabsTrigger value="mobile-home-cards">{t("settings.tabs.mobileHomeCards")}</TabsTrigger>
         </TabsList>
       </div>
 
@@ -98,6 +101,9 @@ function SettingsTabs() {
       </TabsContent>
       <TabsContent value="email-templates" className="mt-4">
         <EmailTemplatesTab />
+      </TabsContent>
+      <TabsContent value="mobile-home-cards" className="mt-4">
+        <MobileHomeCardsTab />
       </TabsContent>
     </Tabs>
   )

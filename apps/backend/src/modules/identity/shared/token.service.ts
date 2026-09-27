@@ -92,7 +92,7 @@ export class TokenService {
   private parseTtlMs(ttl: string): number {
     const match = /^(\d+)([smhd])$/.exec(ttl);
     if (!match) return 30 * 24 * 60 * 60 * 1000;
-    const n = parseInt(match[1], 10);
+    const n = Number.parseInt(match[1], 10);
     const multipliers: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
     return n * multipliers[match[2]];
   }

@@ -270,7 +270,7 @@ export const arOps: Record<string, string> = {
 
   // ─── Departments ───
   "nav.departments": "الأقسام",
-  "nav.categories": "العيادات",
+  "nav.categories": "العيادات ومجموعات الخدمات",
   "departments.title": "الأقسام",
   "departments.description": "إدارة أقسام المركز وتنظيم الخدمات",
   "departments.addDepartment": "إضافة قسم",
@@ -281,7 +281,7 @@ export const arOps: Record<string, string> = {
   "departments.empty.title": "لا توجد أقسام",
   "departments.empty.description": "أضف أول قسم لتنظيم خدمات المركز.",
   "departments.col.name": "الاسم",
-  "departments.col.categories": "العيادات",
+  "departments.col.categories": "الفئات",
   "departments.col.status": "الحالة",
   "departments.status.active": "نشط",
   "departments.status.inactive": "غير نشط",

@@ -93,10 +93,17 @@ describe('CreateCategoryHandler', () => {
     );
   });
 
+  it('rejects a SERVICE_GROUP with DIRECT booking without writing', async () => {
+    await expect(handler.execute({ nameAr: 'مجموعة', kind: 'SERVICE_GROUP', bookingMode: 'DIRECT' } as never))
+      .rejects.toMatchObject({ status: 400 });
+    expect(prisma.serviceCategory.create).not.toHaveBeenCalled();
+  });
+
   it('invalidates both categories and departments cache prefixes after a write', async () => {
     await handler.execute({ nameAr: 'x', nameEn: 'x' } as never);
 
     expect(cache.invalidatePrefix).toHaveBeenCalledWith(CATEGORIES_CACHE_PREFIX);
     expect(cache.invalidatePrefix).toHaveBeenCalledWith(DEPARTMENTS_CACHE_PREFIX);
+    expect(cache.invalidatePrefix).toHaveBeenCalledWith('ref:public-catalog');
   });
 });

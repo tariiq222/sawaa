@@ -25,12 +25,12 @@ export interface PublicEmployeeItem {
 
 export const publicEmployeesService = {
   async list() {
-    const response = await api.get<PublicEmployeeItem[]>('/public/employees');
+    const response = await api.get<PublicEmployeeItem[]>('/public/employees', { params: { includeDirectClinics: true } });
     return response.data;
   },
 
   async getByKey(key: string) {
-    const response = await api.get<PublicEmployeeItem>(`/public/employees/${key}`);
+    const response = await api.get<PublicEmployeeItem>(`/public/employees/${key}`, { params: { includeDirectClinics: true } });
     return response.data;
   },
 

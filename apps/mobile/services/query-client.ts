@@ -32,7 +32,8 @@ export const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: (error, query) => {
+      if (query.meta?.silentError === true) return;
       if (isSilent(error)) return;
       Alert.alert(i18n.t('common.error', 'حدث خطأ'), extractMessage(error));
     },

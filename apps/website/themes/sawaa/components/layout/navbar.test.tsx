@@ -60,6 +60,7 @@ describe('Navbar mobile menu dialog keyboard focus', () => {
       'href',
       '/clinics',
     );
+    expect(screen.getByRole('menuitem', { name: 'الخدمات' })).toHaveAttribute('href', '/services');
   });
 
   it('labels the dashboard-backed programs as group programs', () => {

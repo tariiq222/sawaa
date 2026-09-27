@@ -116,7 +116,7 @@ export function middleware(request: NextRequest): NextResponse {
   // 2. CSP nonce for everything else.
   const nonce = crypto
     .randomUUID()
-    .replace(/-/g, '')
+    .replaceAll('-', '')
     .slice(0, 16)
 
   const requestHeaders = new Headers(request.headers)

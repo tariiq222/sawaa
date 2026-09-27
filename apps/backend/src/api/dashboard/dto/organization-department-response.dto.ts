@@ -60,6 +60,9 @@ export class DepartmentCategoryResponseDto {
   @ApiProperty({ description: 'Category booking mode', enum: ['DIRECT', 'SERVICES'], example: 'SERVICES' })
   bookingMode!: 'DIRECT' | 'SERVICES';
 
+  @ApiProperty({ description: 'Category kind, independent of department and name', enum: ['CLINIC', 'SERVICE_GROUP'], example: 'CLINIC' })
+  kind!: 'CLINIC' | 'SERVICE_GROUP';
+
   @ApiProperty({ description: 'Category image URL', type: String, nullable: true })
   imageUrl!: string | null;
 

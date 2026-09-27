@@ -106,16 +106,16 @@ export class ListPublicEmployeesHandler {
               ? {
                   id: { in: serviceIds }, isActive: true, archivedAt: null,
                   OR: [
-                    { isHidden: false },
+                    { isHidden: false, OR: [{ categoryId: null }, { category: { isActive: true } }] },
                     { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
                   ],
                 }
-              : { id: { in: serviceIds }, isActive: true, isHidden: false, archivedAt: null },
+              : { id: { in: serviceIds }, isActive: true, isHidden: false, archivedAt: null, OR: [{ categoryId: null }, { category: { isActive: true } }] },
             select: { id: true, price: true, isHidden: true },
           })
         : [];
     const activeServiceIds = new Set(services.map((s) => s.id));
-    const priceByServiceId = new Map(services.filter((s) => !s.isHidden).map((s) => [s.id, parseFloat(String(s.price))]));
+    const priceByServiceId = new Map(services.filter((s) => !s.isHidden).map((s) => [s.id, Number.parseFloat(String(s.price))]));
 
     const linkedBranchIds = [...new Set(employeeBranchLinks.map((l) => l.branchId))];
     const activeBranches =

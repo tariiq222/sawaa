@@ -20,7 +20,7 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({
 }));
 jest.mock('@/lib/money', () => ({ formatHalalas: (amount: number) => String(amount) }));
 jest.mock('@/services/client/payments', () => ({ clientPaymentsService: { initPayment: jest.fn() } }));
-jest.mock('../use-existing-booking-checkout', () => {
+jest.mock('@/features/booking/use-existing-booking-checkout', () => {
   const checkAgain = jest.fn();
   const invoice: { id: string; total?: number | string; currency: string; status: string; payments?: { id: string; status: string; amount?: number | string }[] } = {
     id: 'invoice-1', total: 10000, currency: 'SAR', status: 'DRAFT', payments: [],
@@ -63,8 +63,8 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string, op
 import ExistingBookingCheckoutScreen from '../checkout';
 
 const mockInitPayment = require('@/services/client/payments').clientPaymentsService.initPayment as jest.Mock;
-const mockCheckAgain = require('../use-existing-booking-checkout').__mockCheckAgain as jest.Mock;
-const mockInvoice = require('../use-existing-booking-checkout').__mockInvoice as {
+const mockCheckAgain = require('@/features/booking/use-existing-booking-checkout').__mockCheckAgain as jest.Mock;
+const mockInvoice = require('@/features/booking/use-existing-booking-checkout').__mockInvoice as {
   total?: number | string;
   payments?: { id: string; status: string; amount?: number | string }[];
 };

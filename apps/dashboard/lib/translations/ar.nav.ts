@@ -24,7 +24,7 @@ export const arNav: Record<string, string> = {
   "nav.tools": "الأدوات",
   "nav.admin": "الإدارة",
   "nav.services": "الخدمات",
-  "nav.categories": "العيادات",
+  "nav.categories": "العيادات ومجموعات الخدمات",
   "nav.departments": "الأقسام",
   "nav.payments": "المدفوعات",
   "nav.invoices": "الفواتير",

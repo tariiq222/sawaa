@@ -10,18 +10,20 @@ vi.mock('./account.api', () => ({
 }));
 
 vi.mock('@/features/booking/booking.api', () => ({
+  getPublicPaymentMethods: vi.fn().mockResolvedValue({ moyasarEnabled: true, atClinicEnabled: true }),
   initPayment: vi.fn(),
 }));
 
 import { InvoicesTab } from './invoices-tab';
 import { getMyInvoicesApi, requestRefundApi } from './account.api';
-import { initPayment } from '@/features/booking/booking.api';
+import { initPayment, getPublicPaymentMethods } from '@/features/booking/booking.api';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
 
 const getInvoicesMock = vi.mocked(getMyInvoicesApi);
 const requestRefundMock = vi.mocked(requestRefundApi);
 const initPaymentMock = vi.mocked(initPayment);
+const getPublicPaymentMethodsMock = vi.mocked(getPublicPaymentMethods);
 
 function wrap(locale: Locale, children: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -211,6 +213,24 @@ describe('InvoicesTab', () => {
 
     await screen.findByText('غير مدفوعة');
     expect(screen.queryByRole('button', { name: /طلب استرداد/ })).toBeNull();
-    expect(screen.getByRole('button', { name: /ادفع الآن/ })).toBeTruthy();
+    // The pay button appears once the payment capabilities resolve.
+    expect(await screen.findByRole('button', { name: /ادفع الآن/ })).toBeTruthy();
+  });
+
+  it('hides pay now and explains why when online payment is disabled', async () => {
+    getPublicPaymentMethodsMock.mockResolvedValueOnce({
+      moyasarEnabled: false,
+      atClinicEnabled: true,
+    });
+    getInvoicesMock.mockResolvedValue({
+      items: [invoice()],
+      total: 1,
+      page: 1,
+      outstandingBalance: 0, pageSize: 50,
+    });
+    render(wrap('ar', <InvoicesTab locale="ar" />));
+
+    expect(await screen.findByText(/الدفع الإلكتروني غير متاح/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /ادفع الآن/ })).toBeNull();
   });
 });

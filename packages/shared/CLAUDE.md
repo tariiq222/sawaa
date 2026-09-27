@@ -44,3 +44,10 @@ This package **compiles to `dist/`** — `package.json` `main` points at `dist/i
 - API calls, data fetching, env access.
 - App-specific UI components.
 - Vertical terminology packs — deleted; do not reintroduce them. Sawa serves one center.
+
+
+## Shared catalog logic
+
+[Canonical clinic/service contract](../../docs/architecture/clinic-service-booking-contract.md)
+
+catalog/ owns framework-free clinic selection and internal-service resolution for all consumers. Preserve legacy defaults, do not mutate inputs, do not derive kind from display names, and cover both clinic modes plus service groups.

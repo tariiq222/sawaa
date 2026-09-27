@@ -9,7 +9,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -22,12 +22,14 @@ import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useRegister } from '@/hooks/queries';
 import { LabeledInput } from '@/components/ui/LabeledInput';
+import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function RegisterScreen() {
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
+  const router = useRouter();
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
 
@@ -69,13 +71,14 @@ export default function RegisterScreen() {
           purpose: 'register',
           identifier: phone,
           maskedIdentifier: result.maskedPhone,
+          ...authContinuationParams(booking, redirect),
         },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.registerError'));
     }
-  }, [firstName, lastName, phone, email, validate, register, router, t]);
+  }, [firstName, lastName, phone, email, validate, register, router, t, booking, redirect]);
 
   return (
     <AquaBackground>

@@ -12,9 +12,10 @@ import {
   Image,
 } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { Glass } from '@/theme';
@@ -24,8 +25,11 @@ import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useRequestLoginOtp } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
+import { goBackOrHome } from '@/lib/navigation';
+import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function LoginScreen() {
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
@@ -41,6 +45,13 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | undefined>();
 
   const requestOtp = useRequestLoginOtp();
+  const continuation = authContinuationParams(booking, redirect);
+  const forgotPasswordHref = booking || redirect
+    ? { pathname: '/(auth)/forgot-password' as const, params: continuation }
+    : '/(auth)/forgot-password';
+  const registerHref = booking || redirect
+    ? { pathname: '/(auth)/register' as const, params: continuation }
+    : '/(auth)/register';
 
   const handleLogin = useCallback(async () => {
     if (!identifier.trim()) {
@@ -58,13 +69,14 @@ export default function LoginScreen() {
           purpose: 'login',
           identifier: identifier.trim(),
           maskedIdentifier: result.maskedIdentifier,
+          ...authContinuationParams(booking, redirect),
         },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.error.generic'));
     }
-  }, [identifier, requestOtp, router, t]);
+  }, [identifier, requestOtp, router, t, booking, redirect]);
 
   return (
     <AquaBackground>
@@ -75,11 +87,30 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scroll,
-            { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }
+            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <Glass
+            variant="strong"
+            radius={22}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              goBackOrHome(router);
+            }}
+            interactive
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.buttonBack')}
+            style={[styles.backBtn, { alignSelf: dir.alignStart }]}
+          >
+            {dir.isRTL ? (
+              <ChevronRight size={22} color={colors.teal[700]} strokeWidth={1.75} />
+            ) : (
+              <ChevronLeft size={22} color={colors.teal[700]} strokeWidth={1.75} />
+            )}
+          </Glass>
+
           <Animated.View
             entering={FadeIn.duration(700).easing(Easing.out(Easing.cubic))}
             style={styles.logoContainer}
@@ -96,7 +127,7 @@ export default function LoginScreen() {
             entering={FadeInDown.delay(150).duration(700).easing(Easing.out(Easing.cubic))}
             style={[
               styles.title,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f700 }
+              { textAlign: 'center', writingDirection: dir.writingDirection, fontFamily: f700 }
             ]}
           >
             {t('auth.login.title')}
@@ -105,7 +136,7 @@ export default function LoginScreen() {
             entering={FadeInDown.delay(250).duration(700).easing(Easing.out(Easing.cubic))}
             style={[
               styles.subtitle,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
+              { textAlign: 'center', writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
             ]}
           >
             {t('auth.welcomeBackSub')}
@@ -122,7 +153,7 @@ export default function LoginScreen() {
                 <Text
                   style={[
                     styles.label,
-                    { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f600, fontWeight: '600' }
+                    { textAlign: 'center', writingDirection: dir.writingDirection, fontFamily: f600, fontWeight: '600' }
                   ]}
                 >
                   {t('auth.login.identifier')}
@@ -147,7 +178,7 @@ export default function LoginScreen() {
                     textContentType="emailAddress"
                     style={[
                       styles.inputText,
-                      { textAlign: 'left', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }
+                      { textAlign: 'center', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }
                     ]}
                   />
                 </View>
@@ -155,7 +186,7 @@ export default function LoginScreen() {
                   <Text
                     style={[
                       styles.error,
-                      { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
+                      { textAlign: 'center', writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
                     ]}
                   >
                     {error}
@@ -174,7 +205,7 @@ export default function LoginScreen() {
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/(auth)/forgot-password');
+                  router.push(forgotPasswordHref);
                 }}
                 accessibilityRole="link"
                 style={[styles.linkTarget, { alignSelf: 'center', marginTop: 4 }]}
@@ -184,7 +215,9 @@ export default function LoginScreen() {
                 </Text>
               </Pressable>
 
-              <Pressable onPress={() => router.push('/(auth)/review-login')} accessibilityRole="button" style={{ alignSelf: 'center' }}>
+              <Pressable onPress={() => {
+                router.push({ pathname: '/(auth)/review-login', params: authContinuationParams(booking, redirect) });
+              }} accessibilityRole="button" style={{ alignSelf: 'center' }}>
                 <Text style={[styles.forgotLink, { fontFamily: f600 }]}>{t('auth.review.link')}</Text>
               </Pressable>
 
@@ -193,7 +226,7 @@ export default function LoginScreen() {
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push('/(auth)/register');
+                    router.push(registerHref);
                   }}
                   accessibilityRole="link"
                   style={styles.linkTarget}
@@ -201,6 +234,19 @@ export default function LoginScreen() {
                   <Text style={[styles.registerLink, { fontFamily: f700 }]}>{t('auth.createAccount')}</Text>
                 </Pressable>
               </View>
+
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.replace('/home');
+                }}
+                accessibilityRole="button"
+                style={[styles.linkTarget, { alignSelf: 'center' }]}
+              >
+                <Text style={[styles.guestLink, { fontFamily: f600, fontWeight: '600' }]}>
+                  {t('auth.login.continueAsGuest')}
+                </Text>
+              </Pressable>
             </View>
           </Glass>
           </Animated.View>
@@ -229,8 +275,10 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   inputText: { flex: 1, minHeight: 56, paddingVertical: 12, fontSize: 16, color: colors.ink[900] },
   error: { fontSize: 12, color: colors.accent.coral },
   linkTarget: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
-  forgotLink: { fontSize: 13, color: colors.teal[600] },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  guestLink: { fontSize: 13, color: colors.ink[500], textAlign: 'center' },
+  forgotLink: { fontSize: 13, color: colors.teal[600], textAlign: 'center' },
   registerRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
-  registerText: { fontSize: 14, color: colors.ink[500] },
-  registerLink: { fontSize: 14, color: colors.teal[700] },
+  registerText: { fontSize: 14, color: colors.ink[500], textAlign: 'center' },
+  registerLink: { fontSize: 14, color: colors.teal[700], textAlign: 'center' },
 });

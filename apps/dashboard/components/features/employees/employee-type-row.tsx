@@ -52,7 +52,7 @@ export function EmployeeTypeRow({
     if (val === "") {
       onUpdate({ price: null })
     } else {
-      onUpdate({ price: parseFloat(val) })
+      onUpdate({ price: Number.parseFloat(val) })
     }
   }
 
@@ -60,7 +60,7 @@ export function EmployeeTypeRow({
     if (val === "") {
       onUpdate({ duration: null })
     } else {
-      onUpdate({ duration: parseInt(val, 10) })
+      onUpdate({ duration: Number.parseInt(val, 10) })
     }
   }
 

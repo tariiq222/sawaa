@@ -16,11 +16,12 @@ export const portalKeys = {
     [...portalKeys.all, 'upcoming', { page, limit }] as const,
 };
 
-export function useHome() {
+export function useHome(enabled = true) {
   return useQuery<PortalHomeResponse>({
     queryKey: portalKeys.home(),
     queryFn: () => clientPortalService.getHome(),
     staleTime: FIVE_MINUTES,
+    enabled,
   });
 }
 

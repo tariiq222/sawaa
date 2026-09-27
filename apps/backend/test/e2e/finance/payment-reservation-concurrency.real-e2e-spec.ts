@@ -95,8 +95,9 @@ describeRealE2e('Payment reservation concurrency — real Postgres', () => {
     );
   }
 
-  function buildProcess(transactionService: unknown = rls, eventBus: unknown = { publish: jest.fn() }) {
-    return new ProcessPaymentHandler(prisma, transactionService as never, eventBus as never);
+  function buildProcess(transactionService: unknown = rls, eventBus?: unknown) {
+    const resolvedEventBus = eventBus ?? { publish: jest.fn() };
+    return new ProcessPaymentHandler(prisma, transactionService as never, resolvedEventBus as never);
   }
 
   async function waitForInvoiceLockWait(): Promise<void> {

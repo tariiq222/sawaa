@@ -169,7 +169,7 @@ export default function BankTransferScreen() {
                   : (dir.isRTL ? 'انقر لرفع صورة الإيصال' : 'Tap to upload receipt image')}
               </Text>
               <Text style={[styles.uploadSub, { fontFamily: f400, fontWeight: '400' }]}>
-                {dir.isRTL ? 'PNG, JPG, PDF · حتى ٥ ميجا' : 'PNG, JPG, PDF · max 5 MB'}
+                {dir.isRTL ? 'PNG, JPG · حتى ١٠ ميجا' : 'PNG, JPG · max 10 MB'}
               </Text>
             </View>
           </Glass>

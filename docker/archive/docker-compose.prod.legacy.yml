@@ -1,0 +1,558 @@
+# ARCHIVED — historical legacy Compose production override; DO NOT DEPLOY.
+# Current production and staging use docker/openship/compose.yml instead.
+# Retained for historical reference only, with its local migration-startup fix.
+# The relative mounts and paths below were written for the former location at
+# docker/docker-compose.prod.yml; this archived file is not a runnable template.
+
+services:
+  # No separate migrate service: override the image CMD with the existing
+  # startup script so migrations use an owner URL and Node retains the restricted
+  # runtime DATABASE_URL. This legacy Compose path requires an owner URL scoped
+  # only to backend; never use the owner URL as the runtime DATABASE_URL.
+  backend:
+    command: ["sh", "start-backend.sh"]
+    stop_grace_period: 40s
+    stop_signal: SIGTERM
+    restart: unless-stopped
+    # Container hardening (defense-in-depth): block privilege escalation and
+    # drop all Linux capabilities. The Node process binds an unprivileged port
+    # (5200) and needs no extra caps. Read-only rootfs intentionally NOT set.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      # Runtime
+      NODE_ENV: production
+      PORT: "5200"
+
+      # Database (Prisma) — runtime uses the NOBYPASSRLS app role; migrate uses OWNER.
+      # Supply a URL-encoded owner URL explicitly; never fall back to DATABASE_URL.
+      DATABASE_URL: postgresql://${APP_DB_USER:-deqah_app}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}?connection_limit=${DB_CONNECTION_LIMIT:-10}&pool_timeout=${DB_POOL_TIMEOUT_S:-20}
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set owner migration URL for legacy Compose backend}
+
+      # Redis (BullMQ + cache + token blacklist)
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: "0"
+
+      # MinIO (object storage)
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET:-sawaa}
+      MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
+      # Public endpoint for presigned URLs. Without it, minio.service.ts signs
+      # invoice/attachment URLs against the internal minio:9000 host and browsers
+      # get 404 — they must be signed against the externally reachable host.
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
+
+      # CORS — comma-separated, no trailing slash
+      CORS_ORIGINS: ${CORS_ORIGINS}
+
+      # Sentry — optional
+      SENTRY_DSN: ${SENTRY_DSN:-}
+
+      # JWT (Identity BC)
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+      JWT_OTP_SECRET: ${JWT_OTP_SECRET}
+
+      # Client JWT — separate namespace for mobile/website clients
+      JWT_CLIENT_ACCESS_SECRET: ${JWT_CLIENT_ACCESS_SECRET}
+      JWT_CLIENT_ACCESS_TTL: ${JWT_CLIENT_ACCESS_TTL:-7d}
+
+      # Unified web chat (disabled until staged launch)
+      WEB_CHAT_ENABLED: "${WEB_CHAT_ENABLED:-false}"
+      CHAT_GUEST_TOKEN_SECRET: ${CHAT_GUEST_TOKEN_SECRET}
+      CHAT_MAX_MESSAGE_LENGTH: "${CHAT_MAX_MESSAGE_LENGTH:-4000}"
+      CHAT_RATE_LIMIT_PER_MINUTE: "${CHAT_RATE_LIMIT_PER_MINUTE:-20}"
+      CHAT_DAILY_TOKEN_BUDGET: "${CHAT_DAILY_TOKEN_BUDGET:-100000}"
+      CHAT_GUEST_SESSION_DAYS: "${CHAT_GUEST_SESSION_DAYS:-30}"
+      RETENTION_CHAT_DAYS: "${RETENTION_CHAT_DAYS:-365}"
+
+      # SMTP (Comms BC)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+
+      # FCM (push notifications)
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}
+      FCM_CLIENT_EMAIL: ${FCM_CLIENT_EMAIL:-}
+      FCM_PRIVATE_KEY: ${FCM_PRIVATE_KEY:-}
+
+      # OpenAI / OpenRouter (AI BC)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      AI_PROVIDER_ENCRYPTION_KEY: ${AI_PROVIDER_ENCRYPTION_KEY}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_CHAT_MODEL: ${OPENROUTER_CHAT_MODEL:-anthropic/claude-3.5-haiku}
+
+
+      # Single-company mode. Tenant isolation jobs/workflows are legacy Sawaa SaaS.
+      TENANT_ENFORCEMENT: "${TENANT_ENFORCEMENT:-off}"
+      DEFAULT_ORGANIZATION_ID: ${DEFAULT_ORGANIZATION_ID:-00000000-0000-0000-0000-000000000001}
+
+      # Per-tenant SMS + Zoom credential encryption — both REQUIRED at boot
+      SMS_PROVIDER_ENCRYPTION_KEY: ${SMS_PROVIDER_ENCRYPTION_KEY}
+      ZOOM_PROVIDER_ENCRYPTION_KEY: ${ZOOM_PROVIDER_ENCRYPTION_KEY}
+      SMS_WEBHOOK_URL_BASE: ${SMS_WEBHOOK_URL_BASE:-}
+
+      # Moyasar + Email provider credential encryption — both REQUIRED at boot.
+      # Declared explicitly (not relying on per-key merge from the base compose).
+      MOYASAR_ENCRYPTION_KEY: ${MOYASAR_ENCRYPTION_KEY}
+      EMAIL_PROVIDER_ENCRYPTION_KEY: ${EMAIL_PROVIDER_ENCRYPTION_KEY}
+
+      # Legacy SaaS billing (disabled by default for Sawa single-company mode)
+      MOYASAR_PLATFORM_SECRET_KEY: ${MOYASAR_PLATFORM_SECRET_KEY:-}
+      MOYASAR_PLATFORM_WEBHOOK_SECRET: ${MOYASAR_PLATFORM_WEBHOOK_SECRET:-}
+      SAAS_TRIAL_DAYS: "${SAAS_TRIAL_DAYS:-14}"
+      SAAS_GRACE_PERIOD_DAYS: "${SAAS_GRACE_PERIOD_DAYS:-2}"
+      BILLING_CRON_ENABLED: "${BILLING_CRON_ENABLED:-false}"
+      PLATFORM_DEFAULT_PLAN_SLUG: ${PLATFORM_DEFAULT_PLAN_SLUG:-BASIC}
+
+      # Authentica (platform OTP)
+      AUTHENTICA_API_KEY: ${AUTHENTICA_API_KEY}
+      AUTHENTICA_BASE_URL: ${AUTHENTICA_BASE_URL:-https://api.authentica.sa}
+      AUTHENTICA_DEFAULT_TEMPLATE_ID: ${AUTHENTICA_DEFAULT_TEMPLATE_ID:-1}
+
+      # Public site URL (used in emails/notifications)
+      PUBLIC_WEBSITE_URL: ${PUBLIC_WEBSITE_URL}
+
+      # Required public URLs
+      DASHBOARD_PUBLIC_URL: ${DASHBOARD_PUBLIC_URL}
+      API_PUBLIC_URL: ${API_PUBLIC_URL}
+
+      # Platform settings encryption — REQUIRED in production. Backend aborts boot
+      # silently without it (env.validation.ts), and Swarm keeps serving the old
+      # version, so a missing value looks like a "no-op" deploy.
+      PLATFORM_SETTINGS_KEY: ${PLATFORM_SETTINGS_KEY}
+
+      # Super-admin bootstrap (min 16 chars)
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+
+      # Internal metrics
+      INTERNAL_METRICS_ALLOWED_IPS: ${INTERNAL_METRICS_ALLOWED_IPS}
+      INTERNAL_METRICS_TOKEN: ${INTERNAL_METRICS_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    expose:
+      - "5200"
+    healthcheck:
+      # Readiness probe: a backend that lost Postgres/Redis/Queue/MinIO is marked
+      # unhealthy and restarted, instead of merely confirming the process is alive.
+      # start_period covers prisma migrate deploy + Nest boot on cold start so the
+      # container does not flap before it can serve a real readiness response.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5200/api/v1/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+          cpus: '1.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: apps/dashboard/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    container_name: sawaa-dashboard
+    stop_grace_period: 40s
+    restart: unless-stopped
+    # Container hardening (defense-in-depth): no privilege escalation, drop all
+    # capabilities. Next.js binds unprivileged 5203. Read-only rootfs NOT set.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      PORT: "5203"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "5203"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5203/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  website:
+    build:
+      context: ..
+      dockerfile: apps/website/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_DEFAULT_ORG_ID=${NEXT_PUBLIC_DEFAULT_ORG_ID}
+        - NEXT_PUBLIC_WEB_CHAT_ENABLED=${NEXT_PUBLIC_WEB_CHAT_ENABLED:-false}
+    container_name: sawaa-website
+    stop_grace_period: 40s
+    restart: unless-stopped
+    # Container hardening (defense-in-depth): no privilege escalation, drop all
+    # capabilities. Next.js binds unprivileged 5205. Read-only rootfs NOT set.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      PORT: "5205"
+      INTERNAL_API_URL: http://backend:5200/api/v1
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "5205"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5205/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  postgres:
+    stop_grace_period: 40s
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      APP_DB_USER: ${APP_DB_USER:-deqah_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-}
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    ports: !override []
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    stop_grace_period: 40s
+    restart: unless-stopped
+    volumes:
+      - ./redis.conf:/etc/redis/redis.conf:ro
+    # Use entrypoint to write requirepass into config to keep password out of process args
+    entrypoint: >
+      sh -c "
+        cp /etc/redis/redis.conf /tmp/redis-runtime.conf &&
+        echo 'requirepass ${REDIS_PASSWORD}' >> /tmp/redis-runtime.conf &&
+        exec redis-server /tmp/redis-runtime.conf
+      "
+    ports: !override []
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  minio:
+    stop_grace_period: 40s
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports: !override []
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  backup:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      BACKUP_ALERT_WEBHOOK_URL: ${BACKUP_ALERT_WEBHOOK_URL:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      BACKUP_GDRIVE_FOLDER: ${BACKUP_GDRIVE_FOLDER:-}
+      RCLONE_CONFIG_GDRIVE_TYPE: ${RCLONE_CONFIG_GDRIVE_TYPE:-}
+      RCLONE_CONFIG_GDRIVE_SCOPE: ${RCLONE_CONFIG_GDRIVE_SCOPE:-}
+      RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE: ${RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE:-}
+      RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${RCLONE_CONFIG_GDRIVE_TEAM_DRIVE:-}
+    volumes:
+      - ./scripts/backup.sh:/scripts/backup.sh:ro
+      - ./scripts/offsite-upload.sh:/scripts/offsite-upload.sh:ro
+      - ./secrets:/secrets:ro
+      - backup_data:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      apk add --no-cache openssl curl rclone mc >/dev/null 2>&1 || true &&
+      chmod +x /scripts/backup.sh /scripts/offsite-upload.sh &&
+      echo '0 2 * * * /scripts/backup.sh >> /var/log/backup.log 2>&1' > /etc/crontabs/root &&
+      crond -f -l 2
+      "
+    stop_grace_period: 40s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: sawaa-nginx
+    stop_grace_period: 40s
+    restart: unless-stopped
+    # Container hardening (defense-in-depth): no privilege escalation, drop all
+    # capabilities then re-add only NET_BIND_SERVICE (nginx binds privileged
+    # ports 80/443). Read-only rootfs intentionally NOT set.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/proxy_params_common.conf:/etc/nginx/proxy_params_common.conf:ro
+      - ./nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+      dashboard:
+        condition: service_healthy
+      website:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/nginx-health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  minio-backup:
+    # NOTE: the official minio/mc image is RHEL-UBI minimal — it ships NO cron,
+    # no package manager, no openssl/tar. The backup script needs all of those,
+    # so we run on alpine and install mc + the toolchain at boot instead.
+    image: alpine:3.20
+    container_name: sawaa-minio-backup
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      BACKUP_ALERT_WEBHOOK_URL: ${BACKUP_ALERT_WEBHOOK_URL:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      BACKUP_GDRIVE_FOLDER: ${BACKUP_GDRIVE_FOLDER:-}
+      RCLONE_CONFIG_GDRIVE_TYPE: ${RCLONE_CONFIG_GDRIVE_TYPE:-}
+      RCLONE_CONFIG_GDRIVE_SCOPE: ${RCLONE_CONFIG_GDRIVE_SCOPE:-}
+      RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE: ${RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE:-}
+      RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${RCLONE_CONFIG_GDRIVE_TEAM_DRIVE:-}
+    volumes:
+      - ./scripts/backup-minio.sh:/scripts/backup-minio.sh:ro
+      - ./scripts/offsite-upload.sh:/scripts/offsite-upload.sh:ro
+      - ./secrets:/secrets:ro
+      - minio_backup_data:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      apk add --no-cache openssl tar curl rclone mc >/dev/null 2>&1 ||
+        { apk add --no-cache openssl tar curl rclone >/dev/null 2>&1 &&
+          wget -qO /usr/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc &&
+          chmod +x /usr/bin/mc ; } &&
+      chmod +x /scripts/backup-minio.sh /scripts/offsite-upload.sh &&
+      echo '30 2 * * * /scripts/backup-minio.sh >> /var/log/minio-backup.log 2>&1' | crontab - &&
+      crond -f -l 2
+      "
+    stop_grace_period: 40s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  env-backup:
+    # Encrypted nightly snapshot of the prod env file + secrets dir. Without this,
+    # losing the host means losing BACKUP_ENCRYPTION_KEY and every provider secret
+    # — which makes the encrypted DB/MinIO backups unrecoverable.
+    image: alpine:3.20
+    container_name: sawaa-env-backup
+    environment:
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      ENV_BACKUP_SOURCES: ${ENV_BACKUP_SOURCES:-/env/.env.prod /secrets}
+      BACKUP_ALERT_WEBHOOK_URL: ${BACKUP_ALERT_WEBHOOK_URL:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      BACKUP_GDRIVE_FOLDER: ${BACKUP_GDRIVE_FOLDER:-}
+      RCLONE_CONFIG_GDRIVE_TYPE: ${RCLONE_CONFIG_GDRIVE_TYPE:-}
+      RCLONE_CONFIG_GDRIVE_SCOPE: ${RCLONE_CONFIG_GDRIVE_SCOPE:-}
+      RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE: ${RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE:-}
+      RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${RCLONE_CONFIG_GDRIVE_TEAM_DRIVE:-}
+    volumes:
+      - ./scripts/backup-env.sh:/scripts/backup-env.sh:ro
+      - ./scripts/offsite-upload.sh:/scripts/offsite-upload.sh:ro
+      - ./secrets:/secrets:ro
+      - ./.env.prod:/env/.env.prod:ro
+      - env_backup_data:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      apk add --no-cache openssl tar curl rclone mc >/dev/null 2>&1 || true &&
+      chmod +x /scripts/backup-env.sh /scripts/offsite-upload.sh &&
+      echo '0 3 * * * /scripts/backup-env.sh >> /var/log/env-backup.log 2>&1' | crontab - &&
+      crond -f -l 2
+      "
+    stop_grace_period: 20s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  backup_data:
+  minio_backup_data:
+  env_backup_data:
+  nginx_logs:

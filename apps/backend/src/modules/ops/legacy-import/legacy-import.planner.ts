@@ -287,7 +287,7 @@ export function matchLegacyEmployees(
   }
 
   const newHistoricalEmployees: HistoricalEmployeePlan[] = [];
-  for (const [key, rows] of [...unmatchedGroups.entries()].sort()) {
+  for (const [key, rows] of [...unmatchedGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     const canonical = canonicalStaff(rows, appointmentCounts);
     const legacyIds = rows.map((row) => row.id).sort((a, b) => a - b);
     newHistoricalEmployees.push({
@@ -309,7 +309,7 @@ export function matchLegacyEmployees(
   return {
     legacyToEmployee,
     newHistoricalEmployees,
-    matchedCurrentEmployeeIds: [...matchedCurrentIds].sort(),
+    matchedCurrentEmployeeIds: [...matchedCurrentIds].sort((a, b) => a.localeCompare(b)),
   };
 }
 
@@ -369,7 +369,7 @@ export function matchLegacyClients(
 
   const newClients: HistoricalClientPlan[] = [];
   const reservedEmails = new Set(byEmail.keys());
-  for (const [key, rows] of [...newGroups.entries()].sort()) {
+  for (const [key, rows] of [...newGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     const canonical = [...rows].sort((left, right) => {
       const appointmentDelta =
         (appointmentCounts.get(right.id) ?? 0) -
@@ -399,7 +399,7 @@ export function matchLegacyClients(
   return {
     legacyToClient,
     newClients,
-    matchedCurrentClientIds: [...matchedIds].sort(),
+    matchedCurrentClientIds: [...matchedIds].sort((a, b) => a.localeCompare(b)),
   };
 }
 

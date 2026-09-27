@@ -6,6 +6,7 @@ import { CacheService } from '../../../infrastructure/cache';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { CATEGORIES_CACHE_PREFIX } from './categories.cache';
 import { DEPARTMENTS_CACHE_PREFIX } from '../departments/departments.cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { UpdateCategoryHandler } from './update-category.handler';
 
 describe('UpdateCategoryHandler', () => {
@@ -20,7 +21,7 @@ describe('UpdateCategoryHandler', () => {
         findFirst: jest.fn().mockResolvedValue({ id: 'c1', bookingMode: 'SERVICES' }),
         update: jest.fn().mockResolvedValue({ id: 'c1', bookingMode: 'SERVICES' }),
       },
-      service: { findFirst: jest.fn(), create: jest.fn() },
+      service: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
     };
     cache = { invalidatePrefix: jest.fn().mockResolvedValue(undefined) };
     storage = {
@@ -83,6 +84,7 @@ describe('UpdateCategoryHandler', () => {
 
     expect(cache.invalidatePrefix).toHaveBeenCalledWith(CATEGORIES_CACHE_PREFIX);
     expect(cache.invalidatePrefix).toHaveBeenCalledWith(DEPARTMENTS_CACHE_PREFIX);
+    expect(cache.invalidatePrefix).toHaveBeenCalledWith(SERVICES_CACHE_PREFIX);
   });
 
   it('skips creating a hidden service for SERVICES-mode categories', async () => {
@@ -91,5 +93,33 @@ describe('UpdateCategoryHandler', () => {
     await handler.execute({ categoryId: 'c1', nameAr: 'x', nameEn: 'x' } as never);
 
     expect(prisma.service.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a booking mode transition before writing', async () => {
+    await expect(handler.execute({ categoryId: 'c1', bookingMode: 'DIRECT' } as never))
+      .rejects.toMatchObject({ status: 409 });
+    expect(prisma.serviceCategory.update).not.toHaveBeenCalled();
+  });
+
+  it('permits an unchanged booking mode', async () => {
+    await handler.execute({ categoryId: 'c1', bookingMode: 'SERVICES' } as never);
+    expect(prisma.serviceCategory.update).toHaveBeenCalled();
+  });
+
+  it('rejects changing a DIRECT clinic to a SERVICE_GROUP', async () => {
+    prisma.serviceCategory.findFirst.mockResolvedValue({ id: 'c1', bookingMode: 'DIRECT', kind: 'CLINIC' });
+    await expect(handler.execute({ categoryId: 'c1', kind: 'SERVICE_GROUP' } as never))
+      .rejects.toMatchObject({ status: 400 });
+    expect(prisma.serviceCategory.update).not.toHaveBeenCalled();
+  });
+
+  it('renames the existing internal service in the same transaction', async () => {
+    prisma.serviceCategory.findFirst.mockResolvedValue({ id: 'c1', bookingMode: 'DIRECT', kind: 'CLINIC' });
+    prisma.serviceCategory.update.mockResolvedValue({ id: 'c1', nameAr: 'عيادة جديدة', nameEn: 'New clinic', bookingMode: 'DIRECT' });
+    prisma.service.findFirst.mockResolvedValue({ id: 'internal' });
+    await handler.execute({ categoryId: 'c1', nameAr: 'عيادة جديدة', nameEn: 'New clinic' } as never);
+    expect(prisma.service.update).toHaveBeenCalledWith({
+      where: { id: 'internal' }, data: { nameAr: 'عيادة جديدة', nameEn: 'New clinic' },
+    });
   });
 });

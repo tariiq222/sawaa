@@ -37,6 +37,9 @@ export function getCategoryColumns(
         return (
           <div className="flex flex-col">
             <span className="font-medium text-foreground">{primary}</span>
+            <span className="text-xs text-muted-foreground">
+              {label(row.original.kind === "SERVICE_GROUP" ? "services.categories.kind.group" : "services.categories.kind.clinic", row.original.kind === "SERVICE_GROUP" ? "Service group" : "Clinic")}
+            </span>
             {secondary && primary !== secondary && (
               <span className="text-xs text-muted-foreground">{secondary}</span>
             )}
@@ -63,7 +66,7 @@ export function getCategoryColumns(
       header: label("services.categories.col.services", "Services"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm text-muted-foreground">
-          {row.original._count?.services ?? 0}
+          {(row.original.bookingMode ?? "SERVICES") === "DIRECT" ? 0 : (row.original._count?.services ?? 0)}
         </span>
       ),
     },
@@ -72,8 +75,7 @@ export function getCategoryColumns(
       header: label("services.categories.col.bookingMode", "Type"),
       enableSorting: false,
       cell: ({ row }) => {
-        const mode = row.original.bookingMode
-        if (!mode) return <span className="text-sm text-muted-foreground">—</span>
+        const mode = row.original.bookingMode ?? "SERVICES"
         return (
           <Badge
             variant="outline"

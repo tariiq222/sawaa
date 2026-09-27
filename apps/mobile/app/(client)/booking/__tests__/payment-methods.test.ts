@@ -1,4 +1,4 @@
-import { isClientBankTransferAvailable } from '../payment-methods';
+import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
 
 describe('isClientBankTransferAvailable', () => {
   const account = {

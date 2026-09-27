@@ -125,6 +125,21 @@ describe('clientPackagesService authenticated balance and booking calls', () => 
     );
   });
 
+  it('fails before storing a purchase attempt when secure randomness is unavailable', async () => {
+    const originalCrypto = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    const storage = AsyncStorage as unknown as { getItem: jest.Mock; setItem: jest.Mock };
+    storage.getItem.mockResolvedValue(null);
+    Object.defineProperty(globalThis, 'crypto', { configurable: true, value: undefined });
+    try {
+      await expect(getPackagePurchaseAttemptKey('client-1', 'offer-9', 'family-1', 'branch-1'))
+        .rejects.toThrow('Secure random generation');
+      expect(storage.setItem).not.toHaveBeenCalled();
+    } finally {
+      if (originalCrypto) Object.defineProperty(globalThis, 'crypto', originalCrypto);
+      else Reflect.deleteProperty(globalThis, 'crypto');
+    }
+  });
+
   it('persists the purchase before opening hosted payment so a killed app can recover status', async () => {
     const storage = AsyncStorage as unknown as {
       getItem: jest.Mock;

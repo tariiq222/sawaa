@@ -66,7 +66,7 @@ function resolveDepositFromRow(row: RawDepositRow | null): DepositConfig {
   // value must degrade to "no deposit", never block a payment by throwing.
   const amount =
     row.depositAmount == null
-      ? NaN
+      ? Number.NaN
       : Math.round(Number(row.depositAmount.toString()));
 
   if (!Number.isFinite(amount) || amount <= 0) {

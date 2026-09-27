@@ -16,7 +16,7 @@ export async function SawaaAccountBookingsPage({ searchParams }: AccountBookings
   let bookings: ClientBookingItem[] = [];
   let total = 0;
   try {
-    const result = await getMyBookingsApi(parseInt(page), parseInt(pageSize));
+    const result = await getMyBookingsApi(Number.parseInt(page, 10), Number.parseInt(pageSize, 10));
     bookings = result.items;
     total = result.total;
   } catch {

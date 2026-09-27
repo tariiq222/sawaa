@@ -173,7 +173,7 @@ function stableValue(value: unknown): unknown {
   }
   if (value !== null && typeof value === 'object') {
     const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(value).sort()) {
+    for (const key of Object.keys(value).sort((a, b) => a.localeCompare(b))) {
       sorted[key] = stableValue((value as Record<string, unknown>)[key]);
     }
     return sorted;

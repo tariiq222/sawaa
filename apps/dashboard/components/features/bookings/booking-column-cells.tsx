@@ -36,6 +36,9 @@ import { generateInvoicePdf } from "@/lib/api/invoices"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
 import { BookingRefundDialog } from "@/components/features/bookings/booking-refund-dialog"
 import { canCollectBooking } from "@/components/features/bookings/booking-collect-action"
+import {
+  CANCELLABLE_BOOKING_STATUSES as CANCELLABLE_STATUSES,
+} from "@/lib/booking-statuses"
 import type { Booking } from "@/lib/types/booking"
 
 export type QuickStatusActionType = "confirm" | "checkin" | "complete" | "noshow" | "reschedule"
@@ -59,11 +62,11 @@ const rescheduleAction: QuickStatusAction = {
   icon: Calendar03Icon,
 }
 
-/* Quick status actions available per status */
+/* Quick status actions per status. Mirrors the backend state machine: a hold
+ * (awaiting_payment / pending_group_fill) is released through the cancel action,
+ * not "confirm" — CONFIRM is PENDING-only. */
 const quickStatusActions: Record<string, QuickStatusAction[]> = {
   pending:            [confirmAction, rescheduleAction],
-  pending_group_fill: [confirmAction],
-  awaiting_payment:   [confirmAction],
   confirmed: [
     { action: "checkin",  labelKey: "bookings.actions.action.checkin",  icon: UserCheck01Icon },
     { action: "complete", labelKey: "bookings.actions.action.complete", icon: CheckmarkCircle01Icon },
@@ -71,15 +74,6 @@ const quickStatusActions: Record<string, QuickStatusAction[]> = {
     rescheduleAction,
   ],
 }
-
-/* Statuses that can still be cancelled from the quick menu */
-const CANCELLABLE_STATUSES = new Set([
-  "pending",
-  "pending_group_fill",
-  "awaiting_payment",
-  "confirmed",
-  "cancel_requested",
-])
 
 /* Terminal statuses — the booking is over, so it can no longer be edited */
 /* ── Actions cell — delete opens the parent's AdminCancelDialog directly ──

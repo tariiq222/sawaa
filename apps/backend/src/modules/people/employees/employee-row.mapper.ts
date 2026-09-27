@@ -43,9 +43,11 @@ export interface EmployeeRatingAggregate {
   count: number;
 }
 
+const DEFAULT_EMPLOYEE_RATINGS: EmployeeRatingAggregate = Object.freeze({ avg: null, count: 0 });
+
 export function mapEmployeeRow(
   e: EmployeeWithRelations,
-  ratings: EmployeeRatingAggregate = { avg: null, count: 0 },
+  ratings: EmployeeRatingAggregate = DEFAULT_EMPLOYEE_RATINGS,
   bookingCount = 0,
 ): EmployeeListItem {
   return {

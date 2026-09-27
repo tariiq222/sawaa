@@ -229,7 +229,7 @@ function RefundTypeField({ value, onChange }: { value: RefundType; onChange: (v:
 function RefundAmountField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { t } = useLocale()
   const numericValue = Number(value)
-  const hasError = value !== "" && (isNaN(numericValue) || numericValue < 1)
+  const hasError = value !== "" && (Number.isNaN(numericValue) || numericValue < 1)
 
   return (
     <div className="flex flex-col gap-2">

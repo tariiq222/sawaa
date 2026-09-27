@@ -69,6 +69,7 @@ describe('therapists.api', () => {
     await getPublicEmployee('dr smith/خاص');
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain(encodeURIComponent('dr smith/خاص'));
+    expect(url).toMatch(/includeDirectClinics=true$/);
     expect(init).toMatchObject({
       next: { revalidate: 60 },
     });

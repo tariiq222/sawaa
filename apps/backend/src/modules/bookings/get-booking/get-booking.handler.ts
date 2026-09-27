@@ -51,7 +51,7 @@ export class GetBookingHandler {
       }
     }
 
-    const [client, employee, service, invoice, historicalRecord, credit, usage] = await Promise.all([
+    const [client, employee, service, invoice, historicalRecord, credit, usage, rating] = await Promise.all([
       this.prisma.client.findFirst({ where: { id: booking.clientId } }),
       this.prisma.employee.findFirst({ where: { id: booking.employeeId } }),
       booking.serviceId ? this.prisma.service.findFirst({ where: { id: booking.serviceId } }) : Promise.resolve(null),
@@ -98,6 +98,11 @@ export class GetBookingHandler {
             where: { bookingId: booking.id, creditId: booking.packageCreditId },
             select: { status: true },
           })
+        : Promise.resolve(null),
+      // Only the client-scoped mobile detail path needs rating state. Keeping
+      // this conditional avoids adding a rating query to dashboard reads.
+      query.clientId
+        ? this.prisma.rating.findUnique({ where: { bookingId: booking.id }, select: { id: true } })
         : Promise.resolve(null),
     ]);
 
@@ -201,6 +206,6 @@ export class GetBookingHandler {
       ),
     };
 
-    return mapBookingRow(booking, relations);
+    return mapBookingRow(booking, relations, query.clientId ? { hasRated: Boolean(rating) } : undefined);
   }
 }

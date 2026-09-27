@@ -1,7 +1,7 @@
 import React from 'react';
 import { ImageBackground, StyleSheet, View, ViewProps } from 'react-native';
 import { useTheme } from '../useTheme';
-import { getSawaaRoles } from './tokens';
+import { getSawaaColors, getSawaaRoles } from './tokens';
 
 interface Props extends ViewProps {
   variant?: 'aqua' | 'dark';
@@ -26,6 +26,9 @@ export function AquaBackground({ variant = 'aqua', style, children, ...rest }: P
         resizeMode="cover"
         style={StyleSheet.absoluteFill}
       />
+      {appearance === 'light' ? (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: getSawaaColors('light').glass.bgSoft }]} />
+      ) : null}
       <View
         style={[
           styles.content,

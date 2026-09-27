@@ -2,13 +2,13 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { ImageBackground, StyleSheet, View } from 'react-native';
 import { AquaBackground } from '../AquaBackground';
-import { getSawaaRoles } from '../tokens';
+import { getSawaaColors, getSawaaRoles } from '../tokens';
 
 let mockScheme = 'light';
 jest.mock('../../useTheme', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
 
 describe('AquaBackground appearance', () => {
-  it('resolves light and dark assets from system appearance without a wash', () => {
+  it('softens the light asset while keeping the dark asset free of a wash', () => {
     mockScheme = 'light';
     const screen = render(<AquaBackground testID="background" />);
     expect(screen.UNSAFE_getByType(ImageBackground).props.source).toEqual(
@@ -16,6 +16,9 @@ describe('AquaBackground appearance', () => {
     );
     expect(StyleSheet.flatten(screen.getByTestId('background').props.style).backgroundColor)
       .toBe(getSawaaRoles('light').backdrop.base);
+    expect(screen.UNSAFE_getAllByType(View).some(view =>
+      StyleSheet.flatten(view.props.style)?.backgroundColor === getSawaaColors('light').glass.bgSoft,
+    )).toBe(true);
 
     mockScheme = 'dark';
     screen.rerender(<AquaBackground testID="background" />);

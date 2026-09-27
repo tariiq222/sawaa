@@ -1,12 +1,13 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiCreatedResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { InitClientPaymentHandler } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { InitClientPaymentDto } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
+import { GetPublicPaymentMethodsHandler } from '../../modules/finance/payments/public/get-public-payment-methods/get-public-payment-methods.handler';
 import { InitPackagePurchaseHandler } from '../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
 import { InitPackagePurchaseDto } from '../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.dto';
 
@@ -17,7 +18,38 @@ export class PublicPaymentsController {
   constructor(
     private readonly initClientPayment: InitClientPaymentHandler,
     private readonly initPackagePurchase: InitPackagePurchaseHandler,
+    private readonly getPublicPaymentMethods: GetPublicPaymentMethodsHandler,
   ) {}
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 60 } })
+  @Get('methods')
+  @ApiOperation({
+    summary: 'List the payment methods clients can actually use',
+  })
+  @ApiOkResponse({
+    description:
+      'Client-facing payment capabilities. `moyasarEnabled` is false when online ' +
+      'payment is disabled or the gateway is not configured, so a client surface ' +
+      'never offers a method the backend would reject.',
+    schema: {
+      type: 'object',
+      required: ['moyasarEnabled', 'atClinicEnabled'],
+      properties: {
+        moyasarEnabled: {
+          type: 'boolean',
+          description: 'Online card checkout (Moyasar) can complete for this deployment',
+        },
+        atClinicEnabled: {
+          type: 'boolean',
+          description: 'Clients may confirm a booking and pay at the center',
+        },
+      },
+    },
+  })
+  getPaymentMethods() {
+    return this.getPublicPaymentMethods.execute();
+  }
 
   @Public()
   @ApiBearerAuth()

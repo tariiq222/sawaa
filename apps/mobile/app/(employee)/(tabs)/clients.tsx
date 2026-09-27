@@ -7,9 +7,9 @@ import { Search } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { Glass } from '@/theme/components/Glass';
 import {
   AquaBackground,
-  GlassSurface,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -35,7 +35,7 @@ function ClientRowSkeleton() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
+    <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
       <View style={styles.skeletonRow}>
         <Skeleton width={44} height={44} radius={sawaaRadius.pill} />
         <View style={styles.skeletonLines}>
@@ -43,7 +43,7 @@ function ClientRowSkeleton() {
           <Skeleton width="35%" height={11} radius={sawaaRadius.xs} />
         </View>
       </View>
-    </GlassSurface>
+    </Glass>
   );
 }
 
@@ -95,7 +95,7 @@ export default function ClientsScreen() {
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <GlassSurface variant="strong" radius={sawaaRadius.pill} style={styles.searchCard}>
+          <Glass variant="strong" radius={sawaaRadius.pill} style={styles.searchCard}>
             <View style={[styles.searchRow, { flexDirection: dir.row }]}>
               <Search size={18} strokeWidth={1.5} color={colors.ink[500]} />
               <TextInput
@@ -111,7 +111,7 @@ export default function ClientsScreen() {
                 ]}
               />
             </View>
-          </GlassSurface>
+          </Glass>
         </Animated.View>
 
         {showSkeleton ? (
@@ -140,7 +140,7 @@ export default function ClientsScreen() {
                   })}
                   style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                 >
-                  <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
+                  <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
                     <View style={[styles.clientRow, { flexDirection: dir.row }]}>
                       <Avatar size={44} name={item.name} imageUrl={item.avatarUrl} color={colors.teal[600]} />
                       <View style={styles.clientMid}>
@@ -168,7 +168,7 @@ export default function ClientsScreen() {
                         </View>
                       )}
                     </View>
-                  </GlassSurface>
+                  </Glass>
                 </Pressable>
               </Animated.View>
             )}

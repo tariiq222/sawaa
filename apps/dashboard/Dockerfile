@@ -77,7 +77,8 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SENTRY_DSN=""
 ARG SENTRY_DSN=""
 ARG SENTRY_RELEASE=""
-ARG SENTRY_AUTH_TOKEN=""
+# SENTRY_AUTH_TOKEN is passed as a BuildKit secret, not an ARG/ENV, to avoid leaking it into image layers.
+# Usage: docker build --secret id=sentry_auth_token,src=./sentry-token.txt ...
 
 # Fail fast if the required public API URL is missing
 RUN if [ -z "$NEXT_PUBLIC_API_URL" ]; then \
@@ -89,9 +90,11 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 ENV SENTRY_DSN=$SENTRY_DSN
 ENV SENTRY_RELEASE=$SENTRY_RELEASE
-ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 
-RUN pnpm --filter=dashboard run build
+# Mount the secret only for the build step — it never enters the image layers
+RUN --mount=type=secret,id=sentry_auth_token \
+    SENTRY_AUTH_TOKEN=$(cat /run/secrets/sentry_auth_token 2>/dev/null || echo "") \
+    pnpm --filter=dashboard run build
 
 # ── Stage 4: runner ──────────────────────────────────────────────────────────
 FROM node:22-bookworm-slim AS runner

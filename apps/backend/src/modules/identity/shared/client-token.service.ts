@@ -24,7 +24,7 @@ export interface ClientJwtPayload {
 function parseTtlMs(ttl: string): number {
   const match = /^(\d+)([smhd])$/.exec(ttl);
   if (!match) return 7 * 24 * 60 * 60 * 1000;
-  const n = parseInt(match[1], 10);
+  const n = Number.parseInt(match[1], 10);
   const multipliers: Record<string, number> = {
     s: 1_000,
     m: 60_000,

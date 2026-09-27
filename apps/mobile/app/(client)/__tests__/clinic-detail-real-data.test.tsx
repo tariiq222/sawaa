@@ -5,6 +5,7 @@ const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 let mockParams: Record<string, string> = { id: 'clinic-1' };
+let mockAuthToken: string | null = 'client-token';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack }),
@@ -12,7 +13,10 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockClinics = { data: undefined as unknown, isLoading: false, isError: false, refetch: jest.fn() };
-jest.mock('@/hooks/queries', () => ({ useClinics: () => mockClinics }));
+const mockCatalog = { data: undefined as unknown, isLoading: false, isError: false, refetch: jest.fn() };
+const mockTherapists = { data: undefined as unknown, isLoading: false, isError: false, refetch: jest.fn() };
+jest.mock('@/hooks/queries', () => ({ useClinics: () => mockClinics, usePublicCatalog: () => mockCatalog, useTherapists: () => mockTherapists }));
+jest.mock('@/hooks/use-redux', () => ({ useAppSelector: (selector: (state: unknown) => unknown) => selector({ auth: { token: mockAuthToken } }) }));
 
 jest.mock('@/hooks/useA11y', () => ({
   useReduceMotion: () => true,
@@ -59,7 +63,7 @@ jest.mock('lucide-react-native', () => ({
 
 import i18n from '@/i18n';
 import { DirContext, buildDirState } from '@/hooks/useDir';
-import ClinicDetailScreen from '../clinic/[id]';
+import ClinicDetailScreen from '../../public-clinic/[id]';
 
 const clinic = {
   id: 'clinic-1',
@@ -68,6 +72,8 @@ const clinic = {
   therapistCount: 4,
   serviceCount: 3,
   serviceIds: ['s1', 's2', 's3'],
+  bookingMode: 'SERVICES',
+  directServiceId: null,
 };
 
 async function renderIn(language: 'ar' | 'en') {
@@ -83,11 +89,28 @@ async function renderIn(language: 'ar' | 'en') {
 
 describe('clinic detail renders catalog data, not placeholders', () => {
   beforeEach(() => {
+    mockAuthToken = 'client-token';
     mockParams = { id: 'clinic-1' };
     mockClinics.data = [clinic];
     mockClinics.isLoading = false;
     mockClinics.isError = false;
     mockClinics.refetch = jest.fn();
+    mockCatalog.data = {
+      departments: [],
+      categories: [{ id: 'clinic-1', nameAr: 'عيادة القلق', nameEn: 'Anxiety Clinic', bookingMode: 'SERVICES', kind: 'CLINIC' }],
+      services: [
+        { id: 's1', categoryId: 'clinic-1', nameAr: 'جلسة إرشاد', nameEn: 'Counseling session', price: 200, currency: 'SAR', imageUrl: null },
+        { id: 's2', categoryId: 'clinic-1', nameAr: 'خدمة أخرى', nameEn: 'Other service', price: 150, currency: 'SAR', imageUrl: null },
+        { id: 'outside', categoryId: 'another-clinic', nameAr: 'خدمة خارجية', nameEn: 'Outside service', price: 150, currency: 'SAR', imageUrl: null },
+      ],
+    };
+    mockCatalog.isLoading = false;
+    mockCatalog.isError = false;
+    mockCatalog.refetch = jest.fn();
+    mockTherapists.data = [{ id: 'employee-1', slug: 'sara', nameAr: 'سارة', nameEn: 'Sara', serviceIds: ['s1'], isBookable: true }];
+    mockTherapists.isLoading = false;
+    mockTherapists.isError = false;
+    mockTherapists.refetch = jest.fn();
   });
 
   it('renders the real clinic name and bookable counts', async () => {
@@ -153,12 +176,65 @@ describe('clinic detail renders catalog data, not placeholders', () => {
     expect(mockReplace).toHaveBeenCalledWith('/(client)/clinics');
   });
 
-  it('sends the real clinic id to the therapist directory from the call to action', async () => {
+  it('shows only this clinic’s real services and keeps serviceId when opening its practitioners', async () => {
     const view = await renderIn('ar');
-    fireEvent.press(view.getByText(i18n.getFixedT('ar')('therapists.title')));
+
+    expect(view.getByText('جلسة إرشاد')).toBeTruthy();
+    expect(view.queryByText('خدمة خارجية')).toBeNull();
+    fireEvent.press(view.getByText('جلسة إرشاد'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/therapists',
-      params: { clinicId: 'clinic-1' },
+      params: { clinicId: 'clinic-1', serviceId: 's1' },
+    });
+  });
+
+  it('shows real clinic practitioners and carries clinicId into the employee profile', async () => {
+    const view = await renderIn('en');
+    expect(view.getByText('Sara')).toBeTruthy();
+    fireEvent.press(view.getByText('Sara'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(client)/employee/[id]',
+      params: { id: 'sara', clinicId: 'clinic-1' },
+    });
+  });
+
+  it('shows a retryable catalog error instead of hiding clinic services', async () => {
+    mockCatalog.data = undefined;
+    mockCatalog.isError = true;
+    const view = await renderIn('en');
+    expect(view.getByText(i18n.getFixedT('en')('guest.loadError'))).toBeTruthy();
+    fireEvent.press(view.getByText(i18n.getFixedT('en')('common.retry')));
+    expect(mockCatalog.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a retryable practitioner error instead of silently omitting the practitioners', async () => {
+    mockTherapists.data = undefined;
+    mockTherapists.isError = true;
+    const view = await renderIn('en');
+    expect(view.getByText(i18n.getFixedT('en')('guest.loadError'))).toBeTruthy();
+    fireEvent.press(view.getByText(i18n.getFixedT('en')('common.retry')));
+    expect(mockTherapists.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a guest browse a clinic and carry clinic and service into public practitioner discovery', async () => {
+    mockAuthToken = null;
+    const view = await renderIn('en');
+
+    fireEvent.press(view.getByText('Counseling session'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/public-list/[kind]',
+      params: { kind: 'therapists', clinicId: 'clinic-1', serviceId: 's1' },
+    });
+  });
+
+  it('lets a guest open a practitioner through public detail with clinic context', async () => {
+    mockAuthToken = null;
+    const view = await renderIn('en');
+
+    fireEvent.press(view.getByText('Sara'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/public-detail/[kind]/[id]',
+      params: { kind: 'therapist', id: 'sara', clinicId: 'clinic-1' },
     });
   });
 });

@@ -35,9 +35,12 @@ describe('AvatarUpload', () => {
     render(<AvatarUpload onChange={() => {}} onClear={() => {}} />);
     // No <img> rendered in the empty state.
     expect(screen.queryByAltText('avatar')).toBeNull();
-    // The circle (cursor-pointer group) is present as a clickable <div>.
-    // Plus an add (+) badge <button> to trigger the file input.
-    expect(screen.getAllByRole('button').length).toBe(1);
+    // Two buttons: the circle picker (accessible name "Change avatar") and the
+    // "+" badge ("Add avatar"). Both open the file input; keyboard users reach
+    // the picker through the circle button.
+    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getByRole('button', { name: 'Change avatar' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Add avatar' })).toBeDefined();
   });
 
   it('renders the supplied value as an <img alt="avatar"> when a value is given', () => {
@@ -158,15 +161,9 @@ describe('AvatarUpload', () => {
         />,
       );
       expect(screen.getByAltText('avatar')).not.toBeNull();
-      // The destructive badge button has the Cancel icon; find by closest role.
-      // The first <button> inside the badge is the only button in this state.
-      const buttons = screen.getAllByRole('button');
-      // Click the clear badge (the smaller one, not the circle).
-      // We have two buttons: the avatar-circle click target, and the clear badge.
-      // The clear badge has bg-destructive; the circle is a div, not a button.
-      // So the only button here is the clear badge.
-      expect(buttons[0]).toBeDefined();
-      fireEvent.click(buttons[0]!);
+      // The "×" clear badge is the destructive button with the Cancel icon.
+      const clearBadge = screen.getByRole('button', { name: 'Remove avatar' });
+      fireEvent.click(clearBadge);
       expect(onClear).toHaveBeenCalledTimes(1);
       // After clear, the preview image should be gone.
       expect(screen.queryByAltText('avatar')).toBeNull();
@@ -187,9 +184,8 @@ describe('AvatarUpload', () => {
         'input[type="file"]',
       ) as HTMLInputElement;
       const inputClickSpy = vi.spyOn(input, 'click');
-      const badge = screen.getAllByRole('button')[0];
-      expect(badge).toBeDefined();
-      fireEvent.click(badge!);
+      const badge = screen.getByRole('button', { name: 'Remove avatar' });
+      fireEvent.click(badge);
       expect(onClear).toHaveBeenCalledTimes(1);
       expect(inputClickSpy).not.toHaveBeenCalled();
     });
@@ -205,8 +201,8 @@ describe('AvatarUpload', () => {
       ) as HTMLInputElement;
       const inputClickSpy = vi.spyOn(input, 'click');
 
-      // The circle is the only element with "cursor-pointer" + "rounded-full".
-      const circle = container.querySelector('div.cursor-pointer') as HTMLElement;
+      // The circle picker is the button labelled "Change avatar".
+      const circle = screen.getByRole('button', { name: 'Change avatar' });
       fireEvent.click(circle);
 
       expect(inputClickSpy).toHaveBeenCalledTimes(1);
@@ -223,10 +219,9 @@ describe('AvatarUpload', () => {
       ) as HTMLInputElement;
       const inputClickSpy = vi.spyOn(input, 'click');
 
-      // The badge is a <button> in the empty state.
-      const buttons = screen.getAllByRole('button');
-      expect(buttons[0]).toBeDefined();
-      fireEvent.click(buttons[0]!);
+      // The badge is the "+" button labelled "Add avatar" in the empty state.
+      const addBadge = screen.getByRole('button', { name: 'Add avatar' });
+      fireEvent.click(addBadge);
 
       expect(inputClickSpy).toHaveBeenCalledTimes(1);
     });

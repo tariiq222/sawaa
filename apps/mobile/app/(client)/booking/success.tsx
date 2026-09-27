@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown, ZoomIn } from 'react-native-reanimated';
@@ -13,14 +13,14 @@ import {
   sawaaType,
   withAlpha,
 } from '@/theme/sawaa';
-import { GlassSurface } from '@/theme/sawaa/GlassSurface';
+import { Glass } from '@/theme/components/Glass';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
+import { useBooking } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
-import { clientBookingsService, type ClientBookingRow } from '@/services/client/bookings';
-import { usePaymentStatus, type PaymentPhase } from './use-payment-status';
+import { resolveConfirmedPhase, usePaymentStatus, type PaymentPhase } from '@/features/booking/use-payment-status';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -64,12 +64,26 @@ export default function BookingSuccessScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
-  const [booking, setBooking] = useState<ClientBookingRow | null>(null);
-  const [loading, setLoading] = useState(!!bookingId);
+  const bookingQuery = useBooking(bookingId);
+  const booking = bookingQuery.data ?? null;
+  const loading = Boolean(bookingId) && bookingQuery.isLoading;
 
   // Payment phase is derived by polling the backend (the source of truth). The
   // WebBrowser result alone is NOT trusted: see use-payment-status for the rules.
   const { phase, checkAgain } = usePaymentStatus(invoiceId, webResult);
+  const checkPaymentAndBookingAgain = () => {
+    checkAgain();
+    if (bookingId) void bookingQuery.refetch();
+  };
+
+  // A paid invoice does not guarantee the booking itself has been confirmed yet
+  // (e.g. settlement lag or DEPOSIT_PAID). See resolveConfirmedPhase.
+  const effectivePhase = resolveConfirmedPhase(
+    phase,
+    Boolean(invoiceId),
+    Boolean(booking) && !bookingQuery.isError,
+    booking?.status,
+  );
 
   // The booking and its invoice already exist by the time this screen renders,
   // so a failed payment must resume THAT invoice. Going back with router.back()
@@ -92,23 +106,6 @@ export default function BookingSuccessScreen() {
     });
   };
 
-  useEffect(() => {
-    if (!bookingId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await clientBookingsService.getById(bookingId);
-        if (!cancelled) setBooking(data);
-      } catch {
-        // Booking was created (we have an id) but fetch failed — fall back
-        // to a minimal display rather than blocking the success screen.
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [bookingId]);
-
   const therapistName = booking?.employee
     ? (dir.isRTL ? booking.employee.nameAr : booking.employee.nameEn) ?? booking.employee.nameAr ?? booking.employee.nameEn
     : null;
@@ -126,7 +123,12 @@ export default function BookingSuccessScreen() {
           ? 'سنتواصل معكِ قريباً لترتيب الدفع وإرسال تفاصيل الجلسة'
           : 'We\'ll reach out shortly to arrange payment and send session details'),
     },
-    pending: {
+    pending: phase === 'confirmed' ? {
+      title: dir.isRTL ? 'جاري تأكيد الموعد' : 'Confirming appointment',
+      subtitle: dir.isRTL
+        ? 'تم استلام الدفع. نتحقق من حالة الموعد، يمكنكِ المحاولة مرة أخرى.'
+        : 'Payment received. Checking the appointment status; you can try again.',
+    } : {
       title: dir.isRTL ? 'الدفع قيد المعالجة' : 'Payment processing',
       subtitle: dir.isRTL
         ? 'لم نتلقَّ تأكيد الدفع بعد. يمكنكِ التحقق مرة أخرى.'
@@ -139,11 +141,11 @@ export default function BookingSuccessScreen() {
         : 'We did not receive your payment. Your appointment is not confirmed yet.',
     },
   };
-  const { title: headerTitle, subtitle: paymentStatusCopy } = headerCopy[phase];
+  const { title: headerTitle, subtitle: paymentStatusCopy } = headerCopy[effectivePhase];
   const phaseColor =
-    phase === 'failed'
+    effectivePhase === 'failed'
       ? colors.accent.coral
-      : phase === 'pending' || phase === 'polling'
+      : effectivePhase === 'pending' || effectivePhase === 'polling'
         ? colors.accent.amber
         : colors.teal[500];
 
@@ -183,9 +185,9 @@ export default function BookingSuccessScreen() {
       <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <Animated.View entering={reduceMotion ? undefined : ZoomIn.duration(600).easing(Easing.out(Easing.cubic))}>
           <View style={[styles.iconCircle, { backgroundColor: withAlpha(phaseColor, 0.14), borderColor: withAlpha(phaseColor, 0.3) }]}>
-            {phase === 'failed' ? (
+            {effectivePhase === 'failed' ? (
               <X size={56} color={phaseColor} strokeWidth={2.5} />
-            ) : phase === 'confirmed' ? (
+            ) : effectivePhase === 'confirmed' ? (
               <Check size={56} color={phaseColor} strokeWidth={2.5} />
             ) : (
               <Clock size={56} color={phaseColor} strokeWidth={2.5} />
@@ -209,7 +211,7 @@ export default function BookingSuccessScreen() {
           entering={reduceMotion ? undefined : FadeInDown.delay(320).duration(700).easing(Easing.out(Easing.cubic))}
           style={styles.summaryWrap}
         >
-          <GlassSurface variant="strong" radius={sawaaRadius.xl}>
+          <Glass variant="strong" radius={sawaaRadius.xl}>
             {loading ? (
               <View style={styles.skeletonBlock}>
                 <Skeleton height={14} width="40%" />
@@ -238,20 +240,20 @@ export default function BookingSuccessScreen() {
                 </View>
               ))
             )}
-          </GlassSurface>
+          </Glass>
         </Animated.View>
 
         <Animated.View
           entering={reduceMotion ? undefined : FadeInDown.delay(480).duration(700).easing(Easing.out(Easing.cubic))}
           style={styles.actions}
         >
-          {phase === 'pending' ? (
+          {effectivePhase === 'pending' ? (
             <PrimaryButton
               label={dir.isRTL ? 'تحقق مرة أخرى' : 'Check again'}
-              onPress={checkAgain}
+              onPress={checkPaymentAndBookingAgain}
               fontFamily={f700}
             />
-          ) : phase === 'failed' ? (
+          ) : effectivePhase === 'failed' ? (
             <PrimaryButton
               label={dir.isRTL ? 'إعادة المحاولة' : 'Try again'}
               onPress={retryPayment}
@@ -268,13 +270,13 @@ export default function BookingSuccessScreen() {
             accessibilityRole="button"
             onPress={() => router.replace('/(client)/(tabs)/home')}
           >
-            <GlassSurface variant="base" radius={sawaaRadius.pill}>
+            <Glass variant="base" radius={sawaaRadius.pill}>
               <View style={styles.secondaryInner}>
                 <Text style={[styles.secondaryBtnText, { fontFamily: f600, fontWeight: '600' }, centeredText]}>
                   {dir.isRTL ? 'العودة إلى الرئيسية' : 'Back to home'}
                 </Text>
               </View>
-            </GlassSurface>
+            </Glass>
           </Pressable>
         </Animated.View>
       </View>

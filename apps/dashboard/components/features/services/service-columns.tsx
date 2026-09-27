@@ -19,6 +19,7 @@ import { Badge } from "@sawaa/ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/money"
+import { isDirectClinicBookingService } from "@/lib/service-catalog"
 import type { Service } from "@/lib/types/service"
 import { ServiceAvatar } from "@/components/features/shared/service-avatar"
 
@@ -145,6 +146,11 @@ export function getServiceColumns(
               <p className="text-sm font-medium text-foreground">
                 {locale === "ar" ? s.nameAr : s.nameEn}
               </p>
+              {isDirectClinicBookingService(s) && (
+                <Badge variant="outline" className="mt-1 text-xs border-primary/20 bg-primary/5 text-primary">
+                  {label("services.clinicBooking", "Clinic booking")}
+                </Badge>
+              )}
               {(locale === "ar" ? s.descriptionAr : s.descriptionEn) && (
                 <p className="text-xs text-muted-foreground line-clamp-1">
                   {locale === "ar" ? s.descriptionAr : s.descriptionEn}
@@ -162,7 +168,7 @@ export function getServiceColumns(
         const cat = locale === "ar" ? (row.category?.nameAr ?? "") : (row.category?.nameEn ?? "")
         return `${dept} ${cat}`.trim()
       },
-      header: label("services.col.category", "Clinic"),
+      header: label("services.col.category", "Category"),
       enableSorting: true,
       sortingFn: (a, b) => {
         const nameA = locale === "ar" ? (a.original.category?.nameAr ?? "") : (a.original.category?.nameEn ?? "")
@@ -180,7 +186,9 @@ export function getServiceColumns(
         const catName = locale === "ar" ? cat.nameAr : (cat.nameEn ?? cat.nameAr)
 
         return (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground">
+            <span className="text-foreground">{t?.(cat.kind === "SERVICE_GROUP" ? "services.categories.kind.group" : "services.categories.kind.clinic") ?? (cat.kind === "SERVICE_GROUP" ? "Service group" : "Clinic")}</span>
+            <span className="flex items-center gap-1">
             {deptName && (
               <>
                 <span>{deptName}</span>
@@ -192,6 +200,7 @@ export function getServiceColumns(
               </>
             )}
             <span className="text-foreground">{catName}</span>
+            </span>
           </div>
         )
       },
@@ -247,8 +256,8 @@ export function getServiceColumns(
             service={s}
             locale={locale}
             onView={() => onRowClick?.(s)}
-            onEdit={() => onEdit?.(s)}
-            onDelete={() => onDelete?.(s)}
+            onEdit={onEdit ? () => onEdit(s) : undefined}
+            onDelete={!isDirectClinicBookingService(s) && onDelete ? () => onDelete(s) : undefined}
             t={t}
           />
         )

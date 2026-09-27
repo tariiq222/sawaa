@@ -661,12 +661,10 @@ describeRealE2e(
 
     describe("PATCH /mobile/client/bookings/:id/cancel — happy path + ownership + state machine", () => {
       it("cancels own booking: 200 + DB status flips to CANCELLED + status log row written", async () => {
-        // Create a fresh booking as clientA, then bump status to CONFIRMED
-        // because the mobile-client path always writes AWAITING_PAYMENT but
-        // DIRECT_CANCEL only accepts PENDING | CONFIRMED | CANCEL_REQUESTED
-        // | DEPOSIT_PAID (see booking-state-machine.ts). Updating the row
-        // here mirrors the real-world sequence: client pays → status flips
-        // to CONFIRMED → client cancels.
+        // The mobile-client create path writes AWAITING_PAYMENT (price > 0, no
+        // payAtClinic) and CLIENT_DIRECT_CANCEL accepts that status, so the
+        // client cancels the unpaid hold exactly as created — no state priming
+        // needed. The persisted fromStatus proves it really was a hold.
         const target = nextUtcDayAt(new Date().getUTCDay(), 10, 0);
         const create = await withClient(ctx.clientAToken)(
           api().post("/api/v1/mobile/client/bookings"),
@@ -679,11 +677,6 @@ describeRealE2e(
         expect(create.status).toBe(201);
         const bookingId = create.body.id as string;
         ctx.bookingIds.push(bookingId);
-
-        await prisma.booking.update({
-          where: { id: bookingId },
-          data: { status: "CONFIRMED" },
-        });
 
         const res = await withClient(ctx.clientAToken)(
           api().patch(`/api/v1/mobile/client/bookings/${bookingId}/cancel`),
@@ -706,7 +699,7 @@ describeRealE2e(
           where: { bookingId, toStatus: "CANCELLED" },
         });
         expect(log).not.toBeNull();
-        expect(log!.fromStatus).toBe("CONFIRMED");
+        expect(log!.fromStatus).toBe("AWAITING_PAYMENT");
         expect(log!.reason).toBe("CLIENT_REQUESTED");
       });
 
@@ -760,9 +753,10 @@ describeRealE2e(
         ).send({ reason: "CLIENT_REQUESTED" });
 
         expect(res.status).toBe(400);
-        expect(res.body.message ?? "").toMatch(
-          /cannot apply transition|allowed source statuses/i,
-        );
+        // The mobile-client cancel endpoint routes through CancelBookingHandler,
+        // which answers a rejected transition in Arabic for the operator
+        // (HttpExceptionFilter passes the exception message through as-is).
+        expect(res.body.message ?? "").toMatch(/لا يمكن إلغاء هذا الحجز/);
       });
     });
 

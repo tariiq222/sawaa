@@ -7,9 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, ChevronLeft, Phone, Mail } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Glass } from '@/theme/components/Glass';
 import {
   AquaBackground,
-  GlassSurface,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -104,11 +104,11 @@ export default function DoctorClientRecordScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
-          <GlassSurface variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
+          <Glass variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
             <View style={styles.backInner}>
               <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
             </View>
-          </GlassSurface>
+          </Glass>
         </Pressable>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
@@ -118,7 +118,7 @@ export default function DoctorClientRecordScreen() {
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
+          <Glass variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
               <Avatar size={56} name={fullName} imageUrl={client.avatarUrl} color={colors.teal[600]} />
               <View style={styles.profileMid}>
@@ -151,7 +151,7 @@ export default function DoctorClientRecordScreen() {
                 )}
               </View>
             </View>
-          </GlassSurface>
+          </Glass>
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(180).duration(600).easing(Easing.out(Easing.cubic))}>
@@ -174,7 +174,7 @@ export default function DoctorClientRecordScreen() {
                   accessibilityRole="button"
                   style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                 >
-                  <GlassSurface variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
+                  <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
                     <View style={[styles.visitRow, { flexDirection: dir.row }]}>
                       <View style={styles.visitMid}>
                         <Text style={[styles.visitType, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
@@ -190,7 +190,7 @@ export default function DoctorClientRecordScreen() {
                       </View>
                       <StatusPill status={v.status} label={t(getStatusLabel(v.status))} />
                     </View>
-                  </GlassSurface>
+                  </Glass>
                 </Pressable>
               </Animated.View>
             ))}

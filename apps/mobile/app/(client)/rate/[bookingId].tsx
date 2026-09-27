@@ -63,7 +63,8 @@ export default function RateScreen() {
   // request is in flight, or after it failed, there is no verified subject to
   // rate — the user gets the retry action instead of a blind submission.
   const bookingReady = Boolean(booking) && !isLoading && !isError;
-  const submitDisabled = rating === 0 || submitting || !bookingReady;
+  const alreadyRatedThisSession = booking?.ratingSubmittedLocally === true;
+  const submitDisabled = rating === 0 || submitting || !bookingReady || alreadyRatedThisSession;
 
   const toggleTag = (i: number) => {
     Haptics.selectionAsync();
@@ -93,9 +94,14 @@ export default function RateScreen() {
         },
         onError: (error) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          const responseMessage = (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+          const duplicateRating = typeof responseMessage === 'string'
+            && responseMessage.toLowerCase().includes('rating already submitted');
           Alert.alert(
-            dir.isRTL ? 'تعذّر إرسال التقييم' : 'Could not submit rating',
-            error instanceof Error ? error.message : String(error),
+            duplicateRating ? t('appointments.ratingAlreadySubmitted') : (dir.isRTL ? 'تعذّر إرسال التقييم' : 'Could not submit rating'),
+            duplicateRating
+              ? t('appointments.ratingAlreadySubmitted')
+              : error instanceof Error ? error.message : String(error),
           );
         },
       },
@@ -260,7 +266,9 @@ export default function RateScreen() {
             style={[styles.ctaBtn, submitDisabled && { opacity: 0.55 }]}
           >
             <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
-              {submitting
+              {alreadyRatedThisSession
+                ? t('appointments.ratingAlreadySubmitted')
+                : submitting
                 ? (dir.isRTL ? 'جاري الإرسال…' : 'Submitting…')
                 : (dir.isRTL ? 'إرسال التقييم' : 'Submit rating')}
             </Text>

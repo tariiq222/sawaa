@@ -49,7 +49,7 @@ export async function SawaaHomePage() {
   const [locale, [therapists, clinicTherapists, catalog, testimonials, programsResult]] = await Promise.all([
     getLocale(),
     Promise.all([
-      safeFetch<PublicEmployee[]>(() => listPublicEmployees(), []),
+      safeFetch<PublicEmployee[]>(() => listPublicEmployees(true), []),
       safeFetch<PublicEmployee[]>(() => listPublicEmployees(true), []),
       safeFetch(() => getPublicCatalog(), { departments: [], categories: [], services: [] }),
       safeFetch(() => listPublicTestimonials(6), []),

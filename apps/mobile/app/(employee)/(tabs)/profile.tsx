@@ -15,9 +15,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
+import { Glass } from '@/theme/components/Glass';
 import {
   AquaBackground,
-  GlassSurface,
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
@@ -85,14 +85,14 @@ function MenuGroup({ entries }: { entries: MenuEntry[] }) {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <GlassSurface variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.xs}>
+    <Glass variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.xs}>
       {entries.map((entry, i) => (
         <View key={entry.label}>
           {i > 0 && <View style={styles.divider} />}
           <MenuRow {...entry} />
         </View>
       ))}
-    </GlassSurface>
+    </Glass>
   );
 }
 
@@ -141,7 +141,7 @@ export default function EmployeeProfileScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           await authService.logout();
           dispatch(logout());
-          router.replace('/(auth)/login');
+          router.replace('/home');
         },
       },
     ]);
@@ -161,7 +161,7 @@ export default function EmployeeProfileScreen() {
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
+          <Glass variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
               <Avatar size={64} name={fullName} imageUrl={user?.avatarUrl} color={colors.teal[600]} />
               <View style={styles.profileMid}>
@@ -173,7 +173,7 @@ export default function EmployeeProfileScreen() {
                 </Text>
               </View>
             </View>
-          </GlassSurface>
+          </Glass>
         </Animated.View>
 
         <Animated.View

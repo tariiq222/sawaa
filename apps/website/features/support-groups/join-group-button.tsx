@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient } from '@/features/auth/public';
 import { initPayment } from '@/features/booking/booking.api';
+import { publicErrorMessage } from '@/lib/public-fetch';
 import { bookGroupSession } from './support-groups.api';
 
 interface Props {
@@ -49,7 +50,10 @@ export function JoinGroupButton({ sessionId, categoryId, isFull }: Props) {
       }
       setStatus('joined');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
+      // `PublicFetchError.message` only carries the status, so the backend's own
+      // reason (full session, disabled payment method, in-flight payment) lives
+      // in the response body — without it every failure looked identical.
+      const msg = publicErrorMessage(err) ?? (err instanceof Error ? err.message : '');
       // Backend throws "الجلسة مكتملة العدد" or similar when full
       if (msg.includes('مكتمل') || msg.includes('full') || msg.includes('capacity')) {
         setStatus('full-error');

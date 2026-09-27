@@ -99,6 +99,16 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(assertTransition(BookingStatus.CANCEL_REQUESTED, 'DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
     });
 
+    // Reception must be able to release a slot held for an online payment that
+    // never arrived, without waiting for the expiry cron.
+    it('DIRECT_CANCEL: AWAITING_PAYMENT → CANCELLED', () => {
+      expect(assertTransition(BookingStatus.AWAITING_PAYMENT, 'DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
+    });
+
+    it('DIRECT_CANCEL: PENDING_GROUP_FILL → CANCELLED', () => {
+      expect(assertTransition(BookingStatus.PENDING_GROUP_FILL, 'DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
+    });
+
     it('CLIENT_DIRECT_CANCEL: PENDING → CANCELLED', () => {
       expect(assertTransition(BookingStatus.PENDING, 'CLIENT_DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
     });

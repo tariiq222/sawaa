@@ -59,11 +59,13 @@ export interface PersonaCredentials {
  * The same persona file is consumed by every spec via `test.use({ storageState: '<path>' })`,
  * which means specs never hit /auth/login and the throttler never fires.
  */
+const DEFAULT_STORAGE_STATE_OPTS: { kind: 'localStorage' | 'cookie' } = Object.freeze({ kind: 'localStorage' });
+
 export async function writePersonaStorageState(
   appBaseUrl: string,
   outFile: string,
   creds: PersonaCredentials,
-  opts: { kind: 'localStorage' | 'cookie' } = { kind: 'localStorage' },
+  opts: { kind: 'localStorage' | 'cookie' } = DEFAULT_STORAGE_STATE_OPTS,
 ): Promise<void> {
   const apiCtx = await request.newContext();
   try {

@@ -19,6 +19,8 @@ import {
   rescheduleMyBookingApi,
 } from '@/features/auth/auth.api';
 import { initPayment } from '@/features/booking/booking.api';
+import { usePaymentMethods } from '@/features/payment/use-payment-methods';
+import { paymentFailureMessage } from '@/features/payment/payment-error';
 import { riyadhWallTimeToUtcIso } from '@/features/booking/booking-timezone';
 import {
   paymentStatusKey,
@@ -82,6 +84,12 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
     enabled: !!client && !!bookingId,
   });
 
+  // Never offer a checkout the backend will reject: when online payment is off
+  // (or Moyasar is unconfigured) the client gets a note instead of a button that
+  // fails after the click. Declared before the early returns so the hook order
+  // is stable across the loading/error/empty states.
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
@@ -134,6 +142,8 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
   const payPillKey = paymentStatusKey(booking.paymentStatus);
   const payPillColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
   const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus);
+  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
   const canJoin =
     booking.deliveryType === 'ONLINE' && !!booking.zoomJoinUrl && booking.status === 'CONFIRMED';
 
@@ -144,8 +154,8 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
     try {
       const { redirectUrl } = await initPayment(booking.invoiceId);
       window.location.assign(redirectUrl);
-    } catch {
-      setPayError(tt('account.payError'));
+    } catch (err) {
+      setPayError(paymentFailureMessage(err, tt('account.payError')));
       setPaying(false);
     }
   }
@@ -236,9 +246,9 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
             <span className="text-sm font-medium text-[var(--sw-neutral-500)]">{booking.currency}</span>
           </span>
         </div>
-        {(payable || canJoin) && (
+        {(canPayOnline || showPayUnavailable || canJoin) && (
           <div className="mt-4 flex items-center gap-2 flex-wrap">
-            {payable && (
+            {canPayOnline && (
               <button
                 type="button"
                 onClick={handlePayNow}
@@ -248,6 +258,9 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
                 <CreditCard size={14} aria-hidden="true" />
                 {paying ? tt('account.paying') : tt('account.payNow')}
               </button>
+            )}
+            {showPayUnavailable && (
+              <span className="text-sm text-[var(--sw-body)]">{tt('account.payUnavailable')}</span>
             )}
             {canJoin && (
               <a

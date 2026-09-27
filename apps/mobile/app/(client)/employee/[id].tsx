@@ -6,18 +6,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 
 import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { useTherapist } from '@/hooks/queries';
-import { publicCatalogService } from '@/services/client/catalog';
+import { usePublicCatalog, useTherapist } from '@/hooks/queries';
+import { getProfileBookingServices } from '@/lib/clinic-profile';
 
 export default function EmployeeProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, clinicId, serviceId } = useLocalSearchParams<{ id: string; clinicId?: string; serviceId?: string }>();
   const { t } = useTranslation();
   const colors = useSawaaColors();
   const styles = createStyles(colors);
@@ -30,10 +29,7 @@ export default function EmployeeProfileScreen() {
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const { data: employee, isLoading: employeeLoading } = useTherapist(id);
-  const { data: catalog, isLoading: catalogLoading } = useQuery({
-    queryKey: ['public', 'services'],
-    queryFn: () => publicCatalogService.getCatalog(),
-  });
+  const { data: catalog, isLoading: catalogLoading } = usePublicCatalog();
   const [chosenServiceId, setChosenServiceId] = useState<string | null>(null);
 
   const employeeName = employee
@@ -46,7 +42,9 @@ export default function EmployeeProfileScreen() {
   const employeeBio = employee
     ? (dir.isRTL ? employee.publicBioAr : employee.publicBioEn) ?? employee.publicBioEn ?? employee.publicBioAr
     : null;
-  const services = catalog?.services.filter((service) => employee?.serviceIds.includes(service.id)) ?? [];
+  const services = catalog && employee
+    ? getProfileBookingServices(catalog, employee.serviceIds, clinicId, serviceId)
+    : [];
   const selectedServiceId = services.some((service) => service.id === chosenServiceId)
     ? chosenServiceId
     : services.length === 1 ? services[0].id : null;
@@ -57,9 +55,15 @@ export default function EmployeeProfileScreen() {
 
   const book = () => {
     if (!employee?.isBookable || !selectedServiceId) return;
+    const selectedService = services.find((service) => service.id === selectedServiceId);
+    const directClinic = catalog?.categories.find((category) =>
+      category.id === selectedService?.categoryId && category.bookingMode === 'DIRECT' &&
+      (category.kind ?? 'CLINIC') === 'CLINIC' && category.isActive !== false && category.archivedAt == null,
+    );
+    const bookingClinicId = clinicId ?? directClinic?.id;
     router.push({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: selectedServiceId, employeeId: employee.id },
+      params: { serviceId: selectedServiceId, employeeId: employee.id, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}) },
     });
   };
 
@@ -114,7 +118,11 @@ export default function EmployeeProfileScreen() {
           {services.length > 0 ? (
             <View style={styles.services}>
               {services.map((service) => {
-                const name = (dir.isRTL ? service.nameAr : service.nameEn) ?? service.nameAr;
+                const serviceCategory = catalog?.categories.find((category) => category.id === service.categoryId);
+                const directClinic = serviceCategory?.bookingMode === 'DIRECT' ? serviceCategory : undefined;
+                const name = directClinic
+                  ? (dir.isRTL ? directClinic.nameAr : directClinic.nameEn) ?? directClinic.nameAr
+                  : (dir.isRTL ? service.nameAr : service.nameEn) ?? service.nameAr;
                 const selected = service.id === selectedServiceId;
                 return (
                   <Pressable key={service.id} onPress={() => setChosenServiceId(service.id)}

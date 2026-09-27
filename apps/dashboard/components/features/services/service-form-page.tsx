@@ -3,23 +3,26 @@
 
 import { useState, useEffect, useRef, startTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useForm } from "react-hook-form"
+import { useForm, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { showApiError } from "@/lib/mutation-helpers"
 import { useQuery } from "@tanstack/react-query"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
-import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { Button, Skeleton } from "@sawaa/ui"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { BasicInfoTab } from "@/components/features/services/create/basic-info-tab"
+import { ServiceCategoryContextNotice } from "@/components/features/services/service-category-context-notice"
+import { ServiceFormActions } from "@/components/features/services/service-form-actions"
+import { ServiceFormPageHeader } from "@/components/features/services/service-form-page-header"
 import { PricingTab } from "@/components/features/services/create/pricing-tab"
 import { BookingSettingsTab } from "@/components/features/services/create/booking-settings-tab"
 import { ServiceEmployeesTab } from "@/components/features/services/service-employees-tab"
 import {
   createServiceSchema,
+  createServiceEditSchema,
   createServiceDefaults,
   type CreateServiceFormData,
 } from "@/components/features/services/create/form-schema"
@@ -31,22 +34,23 @@ import {
   useServiceMutations,
   useServiceBookingTypesMutation,
   useServiceBookingTypes,
-  useCategories,
 } from "@/hooks/use-services"
+import { useServiceCreateCategoryContext } from "@/components/features/services/use-service-create-category-context"
 import { fetchService } from "@/lib/api/services"
 import { formatRef } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
-import { useDepartmentOptions } from "@/hooks/use-departments"
 import { queryKeys } from "@/lib/query-keys"
 import {
   buildPayload,
+  buildServiceEditPayload,
   saveBookingTypesApi,
   saveBookingTypesMutation,
 } from "@/components/features/services/service-form-helpers"
 import { uploadServiceImage } from "@/lib/api/services"
 import { assignService, updateEmployeeService } from "@/lib/api/employees-schedule"
-import { ServiceBreadcrumb } from "@/components/features/services/service-breadcrumb"
 import { sarToHalalas, halalasToSar } from "@/lib/money"
+import { isDirectClinicBookingService } from "@/lib/service-catalog"
+import { canSubmitCreateCategoryContext, categoryServicesReturnPath } from "@/components/features/services/service-form-context"
 
 // DB-10: enum values are now uppercase
 const EMPTY_BOOKING_TYPES: DraftBookingType[] = [
@@ -61,7 +65,6 @@ interface ServiceFormPageProps { mode: "create" | "edit"; serviceId?: string }
 export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
-  const dir = locale === "ar" ? "rtl" : "ltr"
   const router = useRouter()
   const searchParams = useSearchParams()
   const isEdit = mode === "edit"
@@ -81,9 +84,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   const apiServiceId = service?.id ?? ""
 
   const { data: existingBookingTypes } = useServiceBookingTypes(apiServiceId)
-  const { data: allCategoriesData } = useCategories()
-  const allCategories = Array.isArray(allCategoriesData) ? allCategoriesData : (allCategoriesData?.items ?? [])
-  const { options: allDepartments } = useDepartmentOptions()
+  const hasCategoryContext = searchParams.has("categoryId")
 
   /* ── Mutations ── */
   const { createMut, updateMut } = useServiceMutations()
@@ -99,9 +100,15 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
 
   /* ── Form ── */
   const form = useForm<CreateServiceFormData>({
-    resolver: zodResolver(createServiceSchema),
+    resolver: zodResolver(isEdit ? createServiceEditSchema(service?.nameEn) : createServiceSchema) as Resolver<CreateServiceFormData>,
     defaultValues: createServiceDefaults,
   })
+  const { categories: allCategories, context: categoryContext, validCategory: validCategoryContext } = useServiceCreateCategoryContext(
+    searchParams.get("categoryId"),
+    hasCategoryContext,
+    isEdit,
+    form,
+  )
 
   /* ── Populate form on edit ── */
   useEffect(() => {
@@ -140,13 +147,14 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
 
   /* ── Submit ── */
   const handleSubmit = async (data: CreateServiceFormData) => {
+    if (!isEdit && !canSubmitCreateCategoryContext(hasCategoryContext, categoryContext?.status)) return
     setIsSubmitting(true)
     try {
       if (isEdit && service) {
         const firstEnabled = bookingTypes.find((bt) => bt.enabled)
         await updateMut.mutateAsync({
           id: service.id,
-          ...buildPayload(data),
+          ...buildServiceEditPayload(data, isInternalService, service.nameEn),
           price: firstEnabled ? sarToHalalas(firstEnabled.price) : undefined,
           durationMins: firstEnabled ? firstEnabled.durationMins : undefined,
         })
@@ -190,7 +198,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         toast.success(t("services.create.success"))
       }
 
-      router.push("/services")
+      router.push(validCategoryContext ? categoryServicesReturnPath(validCategoryContext) : "/services")
     } catch (err) {
       const key = isEdit ? "services.edit.error" : "services.create.error"
       showApiError(err, { fallback: t(key), t })
@@ -199,7 +207,6 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
     }
   }
 
-  // eslint-disable-next-line react-hooks/refs
   const onSubmit = form.handleSubmit(handleSubmit, (errors) => {
     const firstError = Object.values(errors)[0] as { message?: string } | undefined
     toast.error(firstError?.message ?? t("services.formError"))
@@ -237,46 +244,28 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
     )
   }
 
-  /* ── Breadcrumbs ── */
-  const breadcrumbItems = isEdit && service
-    ? [{ label: t("nav.dashboard"), href: "/" }, { label: t("nav.services"), href: "/services" }, { label: isAr ? (service.nameAr ?? "…") : (service.nameEn ?? service.nameAr ?? "…"), href: `/services/${formatRef("SVC", service.ref)}/edit` }, { label: t("nav.edit") }]
-    : undefined
   const watchedCategoryId = form.watch("categoryId")
-  const selectedCategory = allCategories?.find(
+  const selectedCategory = allCategories.find(
     (c) => c.id === (watchedCategoryId || service?.categoryId)
-  )
-  const selectedDepartment =
-    selectedCategory?.department ??
-    allDepartments?.find((d) => d.id === selectedCategory?.departmentId) ??
-    null
+  ) ?? service?.category ?? null
 
   const submitLabel = isSubmitting
     ? t(isEdit ? "services.edit.submitting" : "services.create.submitting")
     : t(isEdit ? "services.edit.submit" : "services.create.submit")
+  const isInternalService = Boolean(isEdit && service && isDirectClinicBookingService(service))
+  const clinicManagementHref = selectedCategory?.ref
+    ? `/categories/${formatRef("CAT", selectedCategory.ref)}/edit?tab=info`
+    : "/categories"
+  const contextReturnPath = validCategoryContext ? categoryServicesReturnPath(validCategoryContext) : null
+  const categoryContextHref = categoryContext?.status === "direct"
+    ? `/categories/${formatRef("CAT", categoryContext.category.ref)}/edit?tab=info`
+    : "/categories"
 
   return (
     <ListPageShell>
-      <Breadcrumbs items={breadcrumbItems} />
+      <ServiceFormPageHeader isEdit={isEdit} service={service} categories={allCategories} categoryId={watchedCategoryId} />
 
-      {selectedCategory && (
-        <ServiceBreadcrumb
-          departmentName={selectedDepartment ? (isAr ? selectedDepartment.nameAr : (selectedDepartment.nameEn ?? selectedDepartment.nameAr)) : null}
-          departmentId={selectedDepartment?.id}
-          categoryName={isAr ? selectedCategory.nameAr : (selectedCategory.nameEn ?? selectedCategory.nameAr)}
-          categoryId={selectedCategory.id}
-          serviceName={isEdit && service ? (isAr ? (service.nameAr ?? "") : (service.nameEn ?? service.nameAr ?? "")) : t("services.create.title")}
-          dir={dir}
-        />
-      )}
-
-      <PageHeader
-        title={t(isEdit ? "services.edit.title" : "services.create.pageTitle")}
-        description={
-          isEdit
-            ? (isAr ? service?.nameAr : (service?.nameEn ?? service?.nameAr))
-            : t("services.create.pageDescription")
-        }
-      />
+      {hasCategoryContext && categoryContext && <ServiceCategoryContextNotice context={categoryContext} />}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-6 pb-24">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -294,6 +283,12 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
               form={form}
               onImageSelect={(file) => { pendingAvatarFile.current = file }}
               serviceId={service?.id}
+              isEdit={isEdit}
+              isInternalService={isInternalService}
+              internalCategoryName={selectedCategory ? (isAr ? selectedCategory.nameAr : (selectedCategory.nameEn ?? selectedCategory.nameAr)) : undefined}
+              savedCategoryId={service?.categoryId}
+              savedCategoryName={service?.category ? (isAr ? service.category.nameAr : (service.category.nameEn ?? service.category.nameAr)) : undefined}
+              clinicManagementHref={clinicManagementHref}
             />
           </TabsContent>
 
@@ -323,14 +318,13 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
 
         </Tabs>
 
-        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/services")}>
-            {t(isEdit ? "services.edit.cancel" : "services.create.cancel")}
-          </Button>
-          <Button type="submit" size="lg" className="rounded-lg" disabled={isSubmitting}>
-            {submitLabel}
-          </Button>
-        </div>
+        <ServiceFormActions
+          cancelLabel={t(isEdit ? "services.edit.cancel" : "services.create.cancel")}
+          submitLabel={submitLabel}
+          isSubmitting={isSubmitting}
+          isSubmitBlocked={!isEdit && !canSubmitCreateCategoryContext(hasCategoryContext, categoryContext?.status)}
+          onCancel={() => router.push(contextReturnPath ?? (hasCategoryContext ? categoryContextHref : "/services"))}
+        />
       </form>
     </ListPageShell>
   )

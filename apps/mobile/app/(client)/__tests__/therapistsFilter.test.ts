@@ -1,4 +1,4 @@
-import { applyTherapistFilters } from '../therapistsFilter';
+import { applyTherapistFilters } from '@/features/therapists/therapistsFilter';
 import type { PublicEmployeeItem } from '@/services/client/employees';
 
 const make = (overrides: Partial<PublicEmployeeItem> = {}): PublicEmployeeItem => ({

@@ -33,7 +33,8 @@ export class PublicEmployeesController {
   @ApiParam({ name: 'key', description: 'Public slug or employee UUID', example: 'dr-ahmed' })
   @ApiOkResponse({ type: PublicEmployeeResponseDto, description: 'Single public employee' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  getOne(@Param('key') key: string) {
-    return this.getHandler.execute(key);
+  @ApiQuery({ name: 'includeDirectClinics', required: false, type: Boolean, description: 'Include hidden booking links for direct clinics' })
+  getOne(@Param('key') key: string, @Query('includeDirectClinics') includeDirectClinics?: string) {
+    return this.getHandler.execute(key, { includeDirectClinics: includeDirectClinics === 'true' });
   }
 }

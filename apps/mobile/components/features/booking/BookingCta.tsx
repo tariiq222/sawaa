@@ -3,10 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
-import { sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/ThemeProvider';
-import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
+import { Glass } from '@/theme/components/Glass';
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
 import { useReduceMotion } from '@/hooks/useA11y';
 import type { DirState } from '@/hooks/useDir';
@@ -33,8 +32,6 @@ export function BookingCta({
   f700,
 }: BookingCtaProps) {
   const sawaaColors = useSawaaColors();
-  const { scheme } = useTheme();
-  const action = getSawaaRoles(scheme).action;
   const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const reduceMotion = useReduceMotion();
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
@@ -70,20 +67,24 @@ export function BookingCta({
             {dir.isRTL ? 'تأمين مقبول' : 'Insurance accepted'}
           </Text>
         </View>
-        <PrimaryButton
-          label={dir.isRTL ? 'تأكيد' : 'Confirm'}
+        <Glass
+          radius={23}
+          interactive
+          accessibilityLabel={dir.isRTL ? 'تأكيد' : 'Confirm'}
+          accessibilityState={{ disabled: !selectedSlot }}
           onPress={onConfirm}
           disabled={!selectedSlot}
-          fontFamily={f700}
-          height={46}
-          icon={<GoIcon size={14} color={action.foreground} strokeWidth={2} />}
-        />
+          style={[styles.confirmArrow, { opacity: selectedSlot ? 1 : 0.45 }]}
+        >
+          <GoIcon size={23} color={sawaaColors.ink[900]} strokeWidth={2} />
+        </Glass>
       </FloatingActionBar>
     </Animated.View>
   );
 }
 
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
+  confirmArrow: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
   summary: { flex: 1, paddingHorizontal: sawaaSpacing.sm },
   summaryTop: {
     fontSize: sawaaType.micro.fontSize,

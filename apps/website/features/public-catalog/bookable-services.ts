@@ -1,4 +1,5 @@
 import type { PublicEmployee } from '@sawaa/api-client';
+import { getCategoryBookingServices, selectBookableClinicEntries } from '@sawaa/shared/catalog';
 
 import type {
   PublicCatalog,
@@ -37,29 +38,7 @@ export function selectBookableClinics(
   catalog: PublicCatalog,
   employees: BookableEmployee[],
 ): BookableClinic[] {
-  const publicDepartmentIds = new Set(catalog.departments.map((department) => department.id));
-  return catalog.categories
-    .filter((category) =>
-      category.isActive !== false &&
-      (category.departmentId === null || publicDepartmentIds.has(category.departmentId)),
-    )
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .flatMap((category) => {
-      const assignedServices = catalog.services.filter((service) => service.categoryId === category.id);
-      const bookingMode = category.bookingMode ?? 'SERVICES';
-      const bookingServices = assignedServices.filter((service) =>
-        bookingMode === 'DIRECT' ? service.isHidden === true : !service.isHidden,
-      );
-      const serviceIds = new Set(bookingServices.map((service) => service.id));
-      const therapistCount = employees.filter((employee) =>
-        employee.isBookable === true && employee.serviceIds.some((id) => serviceIds.has(id)),
-      ).length;
-      if (therapistCount === 0) return [];
-      const serviceCount = bookingMode === 'SERVICES' ? bookingServices.length : 0;
-      const directServiceId = assignedServices.find((service) => service.isHidden)?.id ?? null;
-      if (bookingMode === 'DIRECT' && !directServiceId) return [];
-      if (bookingMode === 'SERVICES' && serviceCount === 0) return [];
-      return [{
+  return selectBookableClinicEntries(catalog, employees).map(({ category, bookingMode, directServiceId, therapistCount, serviceCount }) => ({
         id: category.id,
         nameAr: category.nameAr,
         nameEn: category.nameEn,
@@ -67,11 +46,10 @@ export function selectBookableClinics(
         iconName: category.iconName,
         iconBgColor: category.iconBgColor,
         bookingMode,
-        directServiceId: bookingMode === 'DIRECT' ? directServiceId : null,
+        directServiceId,
         therapistCount,
         serviceCount,
-      }];
-    });
+      }));
 }
 
 const DELIVERY_TYPES: PublicDeliveryType[] = ['IN_PERSON', 'ONLINE'];
@@ -80,21 +58,16 @@ export function selectBookableClinicServices(
   catalog: PublicCatalog,
   employees: BookableEmployee[],
 ): BookableService[] {
-  const publicDepartmentIds = new Set(catalog.departments.map((department) => department.id));
   const categories = new Map(
     catalog.categories
-      .filter(
-        (category) =>
-          category.isActive !== false &&
-          (category.departmentId === null || publicDepartmentIds.has(category.departmentId)),
-      )
+      .filter((category) => category.isActive !== false && category.archivedAt == null && category.bookingMode !== 'DIRECT')
       .map((category) => [category.id, category]),
   );
   const bookableEmployees = employees.filter((employee) => employee.isBookable === true);
 
   return catalog.services.flatMap((service) => {
     const category = service.categoryId ? categories.get(service.categoryId) : undefined;
-    if (!category || service.isHidden) return [];
+    if (!category || !getCategoryBookingServices(category, [service]).length) return [];
 
     const practitioners = bookableEmployees.filter((employee) =>
       (employee.serviceIds ?? []).includes(service.id),

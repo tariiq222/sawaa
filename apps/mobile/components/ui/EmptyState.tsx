@@ -5,7 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { GlassSurface } from '@/theme/sawaa/GlassSurface';
+import { Glass } from '@/theme/components/Glass';
 import {
   sawaaRadius,
   sawaaSpacing,
@@ -99,7 +99,7 @@ export function EmptyState({
           onPress={onAction}
           style={{ marginTop: sawaaSpacing.sm }}
         >
-          <GlassSurface variant="strong" radius={sawaaRadius.pill}>
+          <Glass variant="strong" radius={sawaaRadius.pill}>
             <View
               style={{
                 paddingHorizontal: sawaaSpacing.lg,
@@ -119,7 +119,7 @@ export function EmptyState({
                 {actionLabel}
               </Text>
             </View>
-          </GlassSurface>
+          </Glass>
         </Pressable>
       ) : null}
     </View>

@@ -1,4 +1,4 @@
-import { resolveNotificationHref } from '../notification-deeplink';
+import { resolveNotificationHref, resolvePushHref } from '../notification-deeplink';
 import type { Notification } from '@/types/models';
 
 function notification(overrides: Partial<Notification>): Notification {
@@ -66,5 +66,43 @@ describe('resolveNotificationHref', () => {
     for (const type of ['new_rating', 'payment_received', 'receipt_rejected', 'system_alert', 'reminder'] as const) {
       expect(resolveNotificationHref(notification({ type }))).toBeNull();
     }
+  });
+});
+
+describe('resolvePushHref', () => {
+  it('opens the exact appointment when the payload carries a booking id', () => {
+    expect(resolvePushHref({ notificationType: 'BOOKING_REMINDER', bookingId: 'b-9' })).toEqual({
+      pathname: '/(client)/appointment/[id]',
+      params: { id: 'b-9' },
+    });
+  });
+
+  it('falls back to the appointments tab for a booking type without an id', () => {
+    expect(resolvePushHref({ notificationType: 'BOOKING_REMINDER' })).toBe('/(client)/(tabs)/appointments');
+    expect(resolvePushHref({ notificationType: 'BOOKING_CANCELLED' })).toBe('/(client)/(tabs)/appointments');
+  });
+
+  it('opens the chat tab for a conversation-scoped payload', () => {
+    expect(resolvePushHref({ conversationId: 'c-2' })).toBe('/(client)/(tabs)/chat');
+  });
+
+  it('never routes to a URL or path supplied by the payload', () => {
+    expect(resolvePushHref({ url: 'https://untrusted.example' })).toBeNull();
+    expect(resolvePushHref({ path: '/(client)/settings-profile' })).toBeNull();
+    expect(resolvePushHref({ route: 'javascript:alert(1)' })).toBeNull();
+  });
+
+  it('rejects ids that could contribute extra path segments', () => {
+    expect(resolvePushHref({ bookingId: '../../admin' })).toBeNull();
+    expect(resolvePushHref({ bookingId: 'a/b' })).toBeNull();
+    expect(resolvePushHref({ bookingId: '' })).toBeNull();
+    expect(resolvePushHref({ bookingId: 42 })).toBeNull();
+  });
+
+  it('ignores unknown types and non-object payloads', () => {
+    expect(resolvePushHref({ notificationType: 'SYSTEM_ALERT' })).toBeNull();
+    expect(resolvePushHref(null)).toBeNull();
+    expect(resolvePushHref(undefined)).toBeNull();
+    expect(resolvePushHref('BOOKING_REMINDER')).toBeNull();
   });
 });

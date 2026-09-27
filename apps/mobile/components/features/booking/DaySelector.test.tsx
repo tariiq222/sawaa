@@ -6,8 +6,8 @@ import type { DirState } from '@/hooks/useDir';
 
 let mockScheme: 'light' | 'dark' = 'light';
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
-jest.mock('@/theme/sawaa/GlassSurface', () => ({
-  GlassSurface: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+jest.mock('@/theme/components/Glass', () => ({
+  Glass: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }));
 const dir: DirState = { locale: 'en', isRTL: false, row: 'row', rowReverse: 'row-reverse', alignStart: 'flex-start', alignEnd: 'flex-end', textAlign: 'left', writingDirection: 'ltr', iconScaleX: 1 };

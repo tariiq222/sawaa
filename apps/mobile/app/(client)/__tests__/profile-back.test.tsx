@@ -38,4 +38,9 @@ describe('client profile screen escape route', () => {
     fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
+
+  it('does not show a back control when account is a persistent tab', () => {
+    const screen = render(<ProfileScreen asTab />);
+    expect(screen.queryByLabelText('a11y.buttonBack')).toBeNull();
+  });
 });
