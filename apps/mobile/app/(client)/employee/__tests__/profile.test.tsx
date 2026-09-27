@@ -3,6 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
 let mockRouteParams: Record<string, string> = { id: 'dr-example' };
+let mockDirectClinic = false;
 const mockEmployee = {
   id: 'employee-uuid', slug: 'dr-example', nameAr: 'سارة', nameEn: 'Sara',
   title: null, specialty: 'Family counseling', specialtyAr: 'إرشاد أسري',
@@ -34,8 +35,12 @@ jest.mock('expo-linear-gradient', () => {
 });
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left' }) }));
 jest.mock('@/hooks/queries', () => ({
-  useTherapist: () => ({ data: mockEmployee, isLoading: false }),
-  usePublicCatalog: () => ({ data: mockCatalog, isLoading: false }),
+  useTherapist: () => ({ data: mockDirectClinic ? { ...mockEmployee, serviceIds: ['direct-service'] } : mockEmployee, isLoading: false }),
+  usePublicCatalog: () => ({ data: mockDirectClinic ? {
+    departments: [],
+    categories: [{ id: 'direct-clinic', kind: 'CLINIC', bookingMode: 'DIRECT', nameAr: 'عيادة الأسرة', nameEn: 'Family clinic', isActive: true }],
+    services: [{ id: 'direct-service', categoryId: 'direct-clinic', nameAr: 'خدمة داخلية', nameEn: 'Internal service', price: 0, currency: 'SAR', isHidden: true, isActive: true }],
+  } : mockCatalog, isLoading: false }),
 }));
 jest.mock('@/services/client/catalog', () => ({ publicCatalogService: { getCatalog: jest.fn() } }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
@@ -61,7 +66,7 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) =>
 import EmployeeProfileScreen from '../[id]';
 
 describe('EmployeeProfileScreen', () => {
-  beforeEach(() => { mockPush.mockClear(); mockRouteParams = { id: 'dr-example' }; });
+  beforeEach(() => { mockPush.mockClear(); mockRouteParams = { id: 'dr-example' }; mockDirectClinic = false; });
 
   it('does not show invented profile claims or imply that an unknown price is free', () => {
     const screen = render(<EmployeeProfileScreen />);
@@ -87,6 +92,18 @@ describe('EmployeeProfileScreen', () => {
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
       params: { serviceId: 'service-b', employeeId: 'employee-uuid', clinicId: 'clinic-1' },
+    });
+  });
+
+  it('carries the direct clinic into booking when the profile was opened without clinic context', () => {
+    mockDirectClinic = true;
+    const screen = render(<EmployeeProfileScreen />);
+    expect(screen.getByText('Family clinic')).toBeTruthy();
+    expect(screen.queryByText('Internal service')).toBeNull();
+    fireEvent.press(screen.getByText('employeeProfile.bookNow'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/[serviceId]',
+      params: { serviceId: 'direct-service', employeeId: 'employee-uuid', clinicId: 'direct-clinic' },
     });
   });
 });

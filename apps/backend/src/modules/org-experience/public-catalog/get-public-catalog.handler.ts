@@ -37,11 +37,11 @@ export class GetPublicCatalogHandler {
                 isActive: true,
                 archivedAt: null,
                 OR: [
-                  { isHidden: false, category: { isActive: true } },
+                  { isHidden: false, OR: [{ categoryId: null }, { category: { isActive: true } }] },
                   { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
                 ],
               }
-            : { isActive: true, isHidden: false, archivedAt: null, category: { isActive: true } },
+            : { isActive: true, isHidden: false, archivedAt: null, OR: [{ categoryId: null }, { category: { isActive: true } }] },
           select: {
             id: true,
             categoryId: true,

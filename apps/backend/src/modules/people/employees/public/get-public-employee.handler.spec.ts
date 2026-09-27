@@ -77,7 +77,7 @@ describe('GetPublicEmployeeHandler', () => {
         id: { in: ['active-service', 'stale-service'] },
         isActive: true,
         isHidden: false,
-        category: { isActive: true },
+        OR: [{ categoryId: null }, { category: { isActive: true } }],
         archivedAt: null,
       },
       select: { id: true, price: true, isHidden: true },
@@ -103,11 +103,34 @@ describe('GetPublicEmployeeHandler', () => {
     const result = await handler.execute('john', { includeDirectClinics: true });
     expect(prisma.service.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       OR: [
-        { isHidden: false, category: { isActive: true } },
+        { isHidden: false, OR: [{ categoryId: null }, { category: { isActive: true } }] },
         { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
       ],
     }) }));
     expect(result.serviceIds).toEqual(['direct', 'visible']);
     expect(result.minServicePrice).toBe(200);
   });
+  it.each([false, true])('retains uncategorized visible booking links with includeDirectClinics=%s', async (includeDirectClinics) => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'e1', nameAr: 'معالج', nameEn: null, publicImageUrl: null });
+    prisma.rating.aggregate.mockResolvedValue({ _avg: { score: null }, _count: { _all: 0 } });
+    prisma.employeeService.findMany.mockResolvedValue([{ employeeId: 'e1', serviceId: 'legacy' }]);
+    prisma.employeeBranch.findMany.mockResolvedValue([{ employeeId: 'e1', branchId: 'branch' }]);
+    prisma.employeeAvailability.findMany.mockResolvedValue([{ employeeId: 'e1', dayOfWeek: 1 }]);
+    prisma.branch.findMany.mockResolvedValue([{ id: 'branch' }]);
+    prisma.service.findMany.mockResolvedValue([{ id: 'legacy', price: 150, isHidden: false }]);
+
+    const employee = await handler.execute('e1', { includeDirectClinics });
+    const { where } = prisma.service.findMany.mock.calls[0][0];
+    const visibleWhere = includeDirectClinics ? where.OR[0] : where;
+
+    expect(visibleWhere).toEqual(expect.objectContaining({
+      isHidden: false,
+      OR: [{ categoryId: null }, { category: { isActive: true } }],
+    }));
+    expect(visibleWhere).not.toHaveProperty('category');
+    expect(employee.serviceIds).toEqual(['legacy']);
+    expect(employee.isBookable).toBe(true);
+    expect(employee.minServicePrice).toBe(150);
+  });
+
 });

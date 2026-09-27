@@ -94,7 +94,7 @@ describe('GetPublicCatalogHandler', () => {
       orderBy: { sortOrder: 'asc' },
     });
     expect(prisma.service.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { isActive: true, isHidden: false, archivedAt: null, category: { isActive: true } },
+      where: { isActive: true, isHidden: false, archivedAt: null, OR: [{ categoryId: null }, { category: { isActive: true } }] },
       orderBy: { nameAr: 'asc' },
     }));
   });
@@ -108,7 +108,7 @@ describe('GetPublicCatalogHandler', () => {
         isActive: true,
         archivedAt: null,
         OR: [
-          { isHidden: false, category: { isActive: true } },
+          { isHidden: false, OR: [{ categoryId: null }, { category: { isActive: true } }] },
           { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
         ],
       },
@@ -173,4 +173,21 @@ describe('GetPublicCatalogHandler', () => {
     expect(result.vatRate).toBe(0);
     expect(storage.getSignedUrl).not.toHaveBeenCalled();
   });
+  it.each([false, true])('retains uncategorized visible services in the query with includeDirectClinics=%s', async (includeDirectClinics) => {
+    prisma.service.findMany.mockResolvedValue([
+      { id: 'legacy', categoryId: null, isHidden: false, imageUrl: null },
+    ]);
+
+    const result = await handler.execute({ includeDirectClinics });
+    const { where } = prisma.service.findMany.mock.calls[0][0];
+    const visibleWhere = includeDirectClinics ? where.OR[0] : where;
+
+    expect(visibleWhere).toEqual(expect.objectContaining({
+      isHidden: false,
+      OR: [{ categoryId: null }, { category: { isActive: true } }],
+    }));
+    expect(visibleWhere).not.toHaveProperty('category');
+    expect(result.services).toEqual([expect.objectContaining({ id: 'legacy', categoryId: null })]);
+  });
+
 });

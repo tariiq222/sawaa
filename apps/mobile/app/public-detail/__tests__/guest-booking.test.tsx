@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import { decodeRedirect } from '@/lib/navigation';
 
 const mockPush = jest.fn();
 let mockSignedIn = false;
@@ -34,8 +35,8 @@ jest.mock('@/hooks/queries', () => ({
   usePublicCatalog: () => ({ data: { categories: [{ id: 'clinic-42', kind: 'CLINIC', bookingMode: 'SERVICES', nameAr: 'عيادة', nameEn: 'Clinic' }], services: [{ id: 'service-1', categoryId: 'clinic-42', nameAr: 'خدمة', nameEn: 'Service', price: 10000, isActive: true }] }, isLoading: false }),
   useTherapists: () => ({ data: [{ id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }], isLoading: false }),
   useTherapist: () => ({ data: { id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }, isLoading: false }),
-  usePackageFamily: () => ({ data: null, isLoading: false }),
-  useGroupSession: () => ({ data: null, isLoading: false }),
+  usePackageFamily: () => ({ data: mockKind === 'package' ? { id: mockId, nameAr: 'باقة', nameEn: 'Package', options: [] } : null, isLoading: false }),
+  useGroupSession: () => ({ data: mockKind === 'program' ? { id: mockId, nameAr: 'برنامج', nameEn: 'Program', price: 10000 } : null, isLoading: false }),
 }));
 
 import PublicDetailScreen from '../[kind]/[id]';
@@ -71,5 +72,20 @@ describe('public appointment discovery', () => {
       pathname: '/public-booking/[serviceId]',
       params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
     });
+  });
+
+  it.each([
+    ['package', 'package-1', '/(client)/packages/package-1'],
+    ['program', 'program-1', '/(client)/groups/program-1'],
+  ])('returns to the chosen %s after signing in', (kind, id, destination) => {
+    mockKind = kind;
+    mockId = id;
+    const screen = render(<PublicDetailScreen />);
+    fireEvent.press(screen.getByRole('button', { name: 'auth.login' }));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(auth)/login',
+      params: { redirect: destination },
+    });
+    expect(decodeRedirect(mockPush.mock.calls[0][0].params.redirect)).toBe(destination);
   });
 });

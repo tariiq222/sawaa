@@ -55,9 +55,15 @@ export default function EmployeeProfileScreen() {
 
   const book = () => {
     if (!employee?.isBookable || !selectedServiceId) return;
+    const selectedService = services.find((service) => service.id === selectedServiceId);
+    const directClinic = catalog?.categories.find((category) =>
+      category.id === selectedService?.categoryId && category.bookingMode === 'DIRECT' &&
+      (category.kind ?? 'CLINIC') === 'CLINIC' && category.isActive !== false && category.archivedAt == null,
+    );
+    const bookingClinicId = clinicId ?? directClinic?.id;
     router.push({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: selectedServiceId, employeeId: employee.id, ...(clinicId ? { clinicId } : {}) },
+      params: { serviceId: selectedServiceId, employeeId: employee.id, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}) },
     });
   };
 

@@ -13,7 +13,7 @@ import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sa
 import { Glass } from '@/theme/components/Glass';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { formatHalalas } from '@/lib/package-utils';
-import { goBackOrHome } from '@/lib/navigation';
+import { goBackOrHome, loginRedirectHref } from '@/lib/navigation';
 import { getProfileBookingServices } from '@/lib/clinic-profile';
 
 type PublicKind = 'service' | 'package' | 'program' | 'therapist';
@@ -139,7 +139,9 @@ export default function PublicDetailScreen() {
         {type === 'package' || type === 'program' ? (
           <>
             <Text style={[styles.body, { fontFamily: font, textAlign: dir.textAlign }]}>{t('guest.signInToBook')}</Text>
-            <Pressable accessibilityRole="button" onPress={() => router.push('/(auth)/login')} style={styles.login}>
+            <Pressable accessibilityRole="button" onPress={() => router.push(loginRedirectHref(
+              ['(client)', type === 'package' ? 'packages' : 'groups', '[id]'], { id },
+            ))} style={styles.login}>
               <Text style={[styles.loginText, { fontFamily: bold }]}>{t('auth.login')}</Text>
             </Pressable>
           </>
