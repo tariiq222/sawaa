@@ -6,8 +6,6 @@ import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
-  ChevronRight,
-  ChevronLeft,
   Building2,
   Video,
   Calendar,
@@ -29,6 +27,7 @@ import {
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -72,7 +71,6 @@ export default function DoctorAppointmentDetailScreen() {
   const booking = bookingQuery.data ?? null;
   const loading = bookingQuery.isLoading;
 
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   if (loading) {
     return (
@@ -183,18 +181,7 @@ export default function DoctorAppointmentDetailScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          onPress={() => router.back()}
-          style={[styles.backBtn, { alignSelf: dir.alignStart }]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back')}
-        >
-          <Glass variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
-            <View style={styles.backInner}>
-              <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
-            </View>
-          </Glass>
-        </Pressable>
+        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} accessibilityLabel={t('common.back')} />
 
         <Animated.View
           entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}
@@ -294,9 +281,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   loaderBack: { marginBottom: sawaaSpacing.sm },
   loaderTitle: { marginBottom: sawaaSpacing.sm },
   loaderAction: { marginTop: sawaaSpacing.sm },
-  backBtn: { alignSelf: 'flex-start' },
-  backCircle: { width: 44, height: 44 },
-  backInner: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerRow: { justifyContent: 'space-between', alignItems: 'center' },
   title: {
     fontSize: sawaaType.heading.fontSize,

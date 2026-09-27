@@ -52,7 +52,7 @@ const mappedBookingWire = {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
 });
 
 describe('clientBookingsService.list', () => {
@@ -61,6 +61,44 @@ describe('clientBookingsService.list', () => {
     const result = await clientBookingsService.list({ tab: 'upcoming', page: 2, limit: 50 });
     expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', { params: { tab: 'upcoming', page: 2, limit: 50 } });
     expect(result.meta).toEqual({ total: 51, page: 2, perPage: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true });
+  });
+
+  it('uses real unfiltered pages when the deployed server rejects only the tab parameter', async () => {
+    mockedApi.get.mockRejectedValueOnce({
+      response: { status: 400, data: { message: ['property tab should not exist'] } },
+    });
+    mockedApi.get.mockResolvedValueOnce({ data: {
+      items: [
+        { ...sampleRow, id: 'past-1', status: 'COMPLETED' },
+        ...Array.from({ length: 99 }, (_, index) => ({ ...sampleRow, id: `future-${index}`, status: 'CONFIRMED' })),
+      ],
+      meta: { total: 102, page: 1, limit: 100, totalPages: 2, hasNextPage: true, hasPreviousPage: false },
+    } });
+    mockedApi.get.mockResolvedValueOnce({ data: {
+      items: [
+        { ...sampleRow, id: 'past-2', status: 'NO_SHOW' },
+        { ...sampleRow, id: 'cancelled-1', status: 'CANCELLED' },
+      ],
+      meta: { total: 102, page: 2, limit: 100, totalPages: 2, hasNextPage: false, hasPreviousPage: true },
+    } });
+
+    const result = await clientBookingsService.list({ tab: 'past', page: 2, limit: 1 });
+
+    expect(mockedApi.get.mock.calls.map(([, config]) => config.params)).toEqual([
+      { tab: 'past', page: 2, limit: 1 },
+      { page: 1, limit: 100 },
+      { page: 2, limit: 100 },
+    ]);
+    expect(result.items.map((item) => item.id)).toEqual(['past-2']);
+    expect(result.meta).toEqual({ total: 2, page: 2, perPage: 1, totalPages: 2, hasNextPage: false, hasPreviousPage: true });
+  });
+
+  it('does not conceal a different bad request as a legacy tab response', async () => {
+    mockedApi.get.mockRejectedValueOnce({
+      response: { status: 400, data: { message: ['limit must be an integer number'] } },
+    });
+    await expect(clientBookingsService.list({ tab: 'upcoming', page: 1, limit: 50 })).rejects.toBeTruthy();
+    expect(mockedApi.get).toHaveBeenCalledTimes(1);
   });
   it('normalizes mapped list rows and canonical limit metadata', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: {

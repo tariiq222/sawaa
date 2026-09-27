@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { usePublicCatalog, useTherapist } from '@/hooks/queries';
@@ -26,7 +27,6 @@ export default function EmployeeProfileScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const { data: employee, isLoading: employeeLoading } = useTherapist(id);
   const { data: catalog, isLoading: catalogLoading } = usePublicCatalog();
@@ -74,10 +74,7 @@ export default function EmployeeProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive
-            accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
-            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
-          </Glass>
+          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(80).duration(700).easing(Easing.out(Easing.cubic))}>
@@ -167,7 +164,6 @@ export default function EmployeeProfileScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 18 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   heroCard: { padding: 18 },
   heroRow: { alignItems: 'center', gap: 14 },
   avatar: { width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },

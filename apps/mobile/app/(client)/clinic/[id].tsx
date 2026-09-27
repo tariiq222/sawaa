@@ -13,6 +13,7 @@ import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sa
 import { Glass } from '@/theme/components/Glass';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useClinics, usePublicCatalog, useTherapists } from '@/hooks/queries';
@@ -33,7 +34,6 @@ export default function ClinicDetailScreen() {
   const dir = useDir();
   const f500 = getFontName(dir.locale, '500');
   const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
 
   // The clinic directory is derived from the public catalog + bookable
@@ -227,9 +227,7 @@ export default function ClinicDetailScreen() {
       >
         {/* Back button over hero */}
         <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
-            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
-          </Glass>
+          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
         </Animated.View>
 
         {/* Spacer so content starts below hero (hero is 200, with info card overlapping by ~36) */}
@@ -246,7 +244,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   hero: { position: 'absolute', top: 0, left: 0, right: 0, height: HERO_HEIGHT, overflow: 'hidden' },
   heroIcon: { position: 'absolute', bottom: -20, left: 0, right: 0, alignItems: 'center' },
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   stateWrap: { gap: sawaaSpacing.md },
   infoCard: { padding: sawaaSpacing.lg, gap: sawaaSpacing.sm },
   clinicName: { fontSize: 20, color: colors.ink[900] },

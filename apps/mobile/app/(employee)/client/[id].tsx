@@ -4,7 +4,7 @@ import { View, ScrollView, Pressable, Linking, StyleSheet, Text } from 'react-na
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ChevronLeft, Phone, Mail } from 'lucide-react-native';
+import { Phone, Mail } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Glass } from '@/theme/components/Glass';
@@ -18,6 +18,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -37,7 +38,6 @@ export default function DoctorClientRecordScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   const [client, setClient] = useState<ClientRecord | null>(null);
   const [visits, setVisits] = useState<EmployeeClientVisit[]>([]);
@@ -98,18 +98,7 @@ export default function DoctorClientRecordScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          onPress={() => router.back()}
-          style={[styles.backBtn, { alignSelf: dir.alignStart }]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back')}
-        >
-          <Glass variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
-            <View style={styles.backInner}>
-              <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
-            </View>
-          </Glass>
-        </Pressable>
+        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart, marginBottom: sawaaSpacing.sm }} accessibilityLabel={t('common.back')} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
@@ -206,9 +195,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   centered: { flex: 1, justifyContent: 'center' },
   loaderBlock: { marginBottom: sawaaSpacing.md },
   loaderRow: { marginBottom: sawaaSpacing.sm },
-  backBtn: { alignSelf: 'flex-start', marginBottom: sawaaSpacing.sm },
-  backCircle: { width: 44, height: 44 },
-  backInner: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,

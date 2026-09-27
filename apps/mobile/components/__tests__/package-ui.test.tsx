@@ -28,7 +28,10 @@ jest.mock('@/theme/sawaa', () => ({
   ...jest.requireActual('@/theme/sawaa/tokens'),
   AquaBackground: ({ children }: React.PropsWithChildren) => children,
 }));
-jest.mock('@/theme/components/Glass', () => ({ Glass: ({ children }: React.PropsWithChildren) => children }));
+jest.mock('@/theme/components/Glass', () => ({
+  Glass: ({ children, onPress, ...props }: React.PropsWithChildren<{ onPress?: () => void }>) =>
+    require('react').createElement(require('react-native').Pressable, { onPress, ...props }, children),
+}));
 jest.mock('@/components/features/packages/PackageBranchPicker', () => ({ PackageBranchPicker: () => null }));
 jest.mock('@/components/features/packages/PackageCreditCard', () => ({ PackageCreditCard: () => null }));
 jest.mock('@/components/features/packages/PackageBookingAction', () => ({ PackageBookingAction: () => null }));
@@ -77,17 +80,16 @@ it('shows the details fallback after loading finishes without data', async () =>
   expect(screen.getByText('packages.error')).toBeTruthy();
 });
 
-it.each([['details', Detail], ['catalog', Index], ['balance', Purchases], ['booking', Book]] as const)('%s has correct RTL/LTR back direction and 44pt target', async (_name, Component) => {
+it.each([['details', Detail], ['catalog', Index], ['balance', Purchases], ['booking', Book]] as const)('%s uses the shared accessible 44pt back button', async (_name, Component) => {
   const view = render(<Component />);
   await waitFor(() => expect(screen.getByRole('button', { name: 'a11y.buttonBack' })).toBeTruthy());
-  expect(screen.getByText('‹')).toBeTruthy();
   const back = screen.getByRole('button', { name: 'a11y.buttonBack' });
   const style = StyleSheet.flatten(back.props.style);
-  expect(style.minWidth).toBeGreaterThanOrEqual(44);
-  expect(style.minHeight).toBeGreaterThanOrEqual(44);
+  expect(style.width ?? style.minWidth).toBeGreaterThanOrEqual(44);
+  expect(style.height ?? style.minHeight).toBeGreaterThanOrEqual(44);
   fireEvent.press(back);
   expect(mockBack).toHaveBeenCalledTimes(1);
   mockRTL = true;
   view.rerender(<Component />);
-  expect(screen.getByText('›')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'a11y.buttonBack' })).toBeTruthy();
 });

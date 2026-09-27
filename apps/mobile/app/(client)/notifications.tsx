@@ -4,12 +4,13 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Bell, Calendar, Check, CheckCheck, ChevronLeft, ChevronRight, FileText, MessageCircle, Star, Video, type LucideIcon } from 'lucide-react-native';
+import { Bell, Calendar, Check, CheckCheck, FileText, MessageCircle, Star, Video, type LucideIcon } from 'lucide-react-native';
 
 import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -86,7 +87,6 @@ export default function NotificationsScreen() {
   const f700 = getFontName(dir.locale, '700');
   const [active, setActive] = useState<FilterKey>('all');
   // This screen sits outside the tab group, so it must own its way back.
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   const {
     notifications,
@@ -132,16 +132,7 @@ export default function NotificationsScreen() {
         {/* Header */}
         <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <View style={[styles.headerRow, { flexDirection: dir.row }]}>
-            <Glass
-              variant="regular"
-              radius={21}
-              onPress={() => router.back()}
-              interactive
-              accessibilityLabel={t('a11y.buttonBack')}
-              style={styles.backBtn}
-            >
-              <BackIcon size={20} color={colors.ink[700]} strokeWidth={1.75} />
-            </Glass>
+            <BackButton onPress={() => router.back()} />
             <View style={styles.headerText}>
               <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
                 {dir.isRTL ? 'الإشعارات' : 'Notifications'}
@@ -171,6 +162,7 @@ export default function NotificationsScreen() {
         <Animated.View entering={FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
           <GlassSegmented
             size="sm"
+            appearance="navigation"
             options={FILTERS.map((f) => ({
               value: f.key,
               label: dir.isRTL ? f.ar : f.en,
@@ -265,7 +257,6 @@ export default function NotificationsScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 12 },
   headerRow: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, paddingHorizontal: 4 },
-  backBtn: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   headerText: { flex: 1 },
   title: { fontSize: 28, color: colors.ink[900] },
   subtitle: { fontSize: 12.5, color: colors.ink[500], marginTop: 2 },

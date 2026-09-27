@@ -48,7 +48,7 @@ jest.mock('@/theme/sawaa', () => {
   const { View } = require('react-native') as typeof import('react-native');
   return {
     AquaBackground: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
-    sawaaColors: { ink: { 400: '#888', 500: '#555', 700: '#333', 900: '#000' }, teal: { 500: '#098', 600: '#087', 700: '#076' }, accent: { amber: '#fa0', sky: '#acf', violet: '#aaf', rose: '#faa' } },
+    sawaaColors: { ink: { 400: '#888', 500: '#555', 700: '#333', 900: '#000' }, teal: { 500: '#098', 600: '#087', 700: '#076' }, accent: { amber: '#fa0', sky: '#acf', violet: '#aaf', rose: '#faa' }, glass: { opaqueBg: '#fff' } },
     sawaaRadius: { pill: 999, xl: 24 },
   };
 });

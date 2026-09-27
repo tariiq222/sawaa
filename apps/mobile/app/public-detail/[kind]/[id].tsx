@@ -15,6 +15,7 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { formatHalalas } from '@/lib/package-utils';
 import { goBackOrHome, loginRedirectHref } from '@/lib/navigation';
 import { getProfileBookingServices } from '@/lib/clinic-profile';
+import { BackButton } from '@/components/ui/BackButton';
 
 type PublicKind = 'service' | 'package' | 'program' | 'therapist';
 
@@ -29,7 +30,6 @@ export default function PublicDetailScreen() {
   const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const font = getFontName(dir.locale, '400');
   const bold = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const NextIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const valid = kind === 'service' || kind === 'package' || kind === 'program' || kind === 'therapist';
   const type: PublicKind | undefined = valid ? kind : undefined;
@@ -74,16 +74,7 @@ export default function PublicDetailScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + sawaaSpacing['3xl'] }]}
         showsVerticalScrollIndicator={false}
       >
-        <Glass
-          variant="strong"
-          radius={sawaaRadius.pill}
-          onPress={() => goBackOrHome(router)}
-          interactive
-          accessibilityLabel={t('a11y.buttonBack')}
-          style={[styles.backButton, { alignSelf: dir.alignStart }]}
-        >
-          <BackIcon size={20} color={colors.ink[700]} strokeWidth={1.75} />
-        </Glass>
+        <BackButton onPress={() => goBackOrHome(router)} style={{ alignSelf: dir.alignStart }} />
         {loading ? <ActivityIndicator color={colors.teal[700]} /> : null}
         {!loading && !item ? <Text style={[styles.body, { fontFamily: font }]}>{t('guest.loadError')}</Text> : null}
         {item ? (
@@ -153,7 +144,6 @@ export default function PublicDetailScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   card: { padding: sawaaSpacing.md, borderRadius: sawaaRadius.xl, gap: sawaaSpacing.sm },
   title: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, color: colors.ink[900] },
   body: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[500] },

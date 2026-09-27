@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { ThemedText } from '@/theme/components/ThemedText';
+import { BackButton } from '@/components/ui/BackButton';
 import { sawaaTokens } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { getFontName } from '@/theme/fonts';
@@ -69,9 +70,7 @@ export default function ReviewLoginScreen() {
     <AquaBackground>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" style={{ alignSelf: dir.alignStart }}>
-            <ThemedText>{t('common.back')}</ThemedText>
-          </Pressable>
+          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
           <ThemedText variant="heading">{t('auth.review.title')}</ThemedText>
           <ThemedText>{t('auth.review.subtitle')}</ThemedText>
           <View style={styles.field}>

@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 import { ThemedText } from '@/theme/components/ThemedText';
-import { sawaaRadius } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useTheme } from '@/theme/useTheme';
 import { SettingsScaffold, SettingsSectionHeader } from '@/components/features/settings/SettingsScaffold';
@@ -16,14 +16,17 @@ import { GlassSwitch } from '@/components/ui/GlassSwitch';
 import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
 import { clientProfileService } from '@/services/client/profile';
 import { LANGUAGE_KEY } from '@/hooks/language-preference';
+import { useDir } from '@/hooks/useDir';
 
 /** Purpose-built route: app-wide preferences — language, appearance, about. */
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { language, scheme, setThemeMode } = useTheme();
+  const dir = useDir();
 
-  const version = Constants.expoConfig?.version ?? '1.0.0';
+  const version = Constants.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '1.0.0';
   const buildNumber =
+    Constants.nativeBuildVersion ??
     Constants.expoConfig?.ios?.buildNumber ??
     Constants.expoConfig?.android?.versionCode?.toString() ??
     '1';
@@ -62,13 +65,14 @@ export default function SettingsScreen() {
           ]}
           value={language === 'en' ? 'en' : 'ar'}
           onChange={handleLanguageSelect}
+          appearance="navigation"
         />
       </Glass>
 
       {/* Appearance */}
       <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
         <SettingsSectionHeader icon={Moon} label={t('settings.appearance')} />
-        <View style={styles.switchRow}>
+        <View style={[styles.switchRow, { flexDirection: dir.row }]}>
           <ThemedText variant="body">{t('settings.darkMode')}</ThemedText>
           <GlassSwitch
             value={scheme === 'dark'}
@@ -97,8 +101,9 @@ export default function SettingsScreen() {
 
 function AboutRow({ label, value }: { label: string; value: string }) {
   const { theme } = useTheme();
+  const dir = useDir();
   return (
-    <View style={styles.aboutRow}>
+    <View style={[styles.aboutRow, { flexDirection: dir.row }]}>
       <ThemedText variant="bodySm" color={theme.colors.textSecondary}>
         {label}
       </ThemedText>
@@ -108,18 +113,16 @@ function AboutRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 20, marginBottom: 16 },
-  cardLast: { padding: 20 },
-  brand: { marginBottom: 8 },
+  card: { padding: sawaaSpacing.xl, marginBottom: sawaaSpacing.lg },
+  cardLast: { padding: sawaaSpacing.xl },
+  brand: { marginBottom: sawaaSpacing.sm, fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   switchRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   aboutRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: sawaaSpacing.sm,
   },
 });

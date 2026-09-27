@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import { usePackagePurchases } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/package-utils';
 import { PackageCreditCard } from '@/components/features/packages/PackageCreditCard';
+import { BackButton } from '@/components/ui/BackButton';
 
 export default function PackagePurchasesScreen() {
   const colors = useSawaaColors();
@@ -30,9 +31,7 @@ export default function PackagePurchasesScreen() {
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
         <View style={[styles.header, { flexDirection: dir.row }]}>
-          <Pressable style={styles.backButton} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-            <Text style={[styles.back, { fontFamily: f700 }]}>{dir.isRTL ? '›' : '‹'}</Text>
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.balance')}</Text>
         </View>
         {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
@@ -87,8 +86,6 @@ export default function PackagePurchasesScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 120, gap: sawaaSpacing.md },
   header: { alignItems: 'center', gap: sawaaSpacing.md },
-  backButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  back: { color: colors.teal[700], fontSize: 34, lineHeight: 34 },
   title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   purchase: { padding: sawaaSpacing.lg, gap: sawaaSpacing.sm },

@@ -29,6 +29,7 @@ import { useBranding, useSummary } from '@/hooks/queries';
 import { formatHalalas } from '@/lib/money';
 import { PRIVACY_POLICY_URL } from '@/constants/config';
 import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
+import { BackButton } from '@/components/ui/BackButton';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -62,7 +63,6 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   const [refreshing, setRefreshing] = useState(false);
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
   // Pushed outside the tab group, so this screen owns its way back.
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   const displayName = user
     ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email
@@ -138,16 +138,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
         <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <View style={[styles.titleRow, { flexDirection: dir.row }]}>
             {!asTab ? (
-              <Glass
-                variant="regular"
-                radius={21}
-                onPress={() => router.back()}
-                interactive
-                accessibilityLabel={t('a11y.buttonBack')}
-                style={styles.backBtn}
-              >
-                <BackIcon size={20} color={colors.ink[700]} strokeWidth={1.75} />
-              </Glass>
+              <BackButton onPress={() => router.back()} />
             ) : null}
             <Text style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
               {t('profile.title')}
@@ -307,7 +298,6 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   scroll: { paddingHorizontal: 18, gap: 16 },
   titleRow: { alignItems: 'center', gap: 10, paddingHorizontal: 4 },
-  backBtn: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   pageTitle: { fontSize: 22, color: colors.ink[900], paddingHorizontal: 4 },
   profileCard: { padding: 18 },
   profileRow: { alignItems: 'center', gap: 14 },

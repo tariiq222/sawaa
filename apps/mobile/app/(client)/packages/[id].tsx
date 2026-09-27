@@ -19,6 +19,7 @@ import { getPackagePurchaseAttemptKey, getPendingPackagePurchase, savePendingPac
 import type { PublicBranchSummary } from '@/services/client';
 import { formatHalalas } from '@/lib/package-utils';
 import { PackageBranchPicker } from '@/components/features/packages/PackageBranchPicker';
+import { BackButton } from '@/components/ui/BackButton';
 
 export default function PackageFamilyDetailScreen() {
   const colors = useSawaaColors();
@@ -130,9 +131,7 @@ export default function PackageFamilyDetailScreen() {
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
         <View style={[styles.header, { flexDirection: dir.row }]}>
-          <Pressable style={styles.backButton} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-            <Text style={[styles.back, { fontFamily: f700 }]}>{dir.isRTL ? '›' : '‹'}</Text>
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.details')}</Text>
         </View>
         {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
@@ -228,8 +227,6 @@ export default function PackageFamilyDetailScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 120, gap: sawaaSpacing.md },
   header: { alignItems: 'center', gap: sawaaSpacing.md },
-  backButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  back: { color: colors.teal[700], fontSize: 34, lineHeight: 34 },
   title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   image: { width: '100%', height: 160, borderRadius: sawaaRadius.lg },

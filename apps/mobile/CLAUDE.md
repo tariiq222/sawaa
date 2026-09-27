@@ -121,6 +121,10 @@ npm run android       # Android emulator
 npm run test          # Jest + jest-expo
 ```
 
+## Mobile change and release record
+
+Before closing any mobile app change (screen, component, behavior, content, configuration, or store build), update the dated entry under [`../../docs/mobile-app/releases/`](../../docs/mobile-app/releases/) with the exact change, Git state, checks, environment, build/delivery IDs when applicable, and unverified device flows. Follow and update the [mobile release runbook](../../docs/mobile-app/runbook.md) whenever the build or TestFlight sequence changes. Keep [`../../docs/mobile-app/README.md`](../../docs/mobile-app/README.md) aligned with the latest observed status. This documentation work does not authorize a commit, push, backend deployment, or App Review submission. Never copy credentials or customer data into these files.
+
 
 ## Clinic discovery and booking context
 

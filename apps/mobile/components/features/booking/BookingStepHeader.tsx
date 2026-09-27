@@ -1,12 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { Glass } from '@/theme/components/Glass';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 const AR_DIGITS = ['١', '٢', '٣'] as const;
@@ -28,7 +27,6 @@ export function BookingStepHeader({ step, onBack, backAccessibilityLabel }: Book
   const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const dir = useDir();
   const f600 = getFontName(dir.locale, '600');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const label = dir.isRTL
     ? `خطوة ${AR_DIGITS[step - 1]} من ${AR_DIGITS[TOTAL_STEPS - 1]}`
     : `Step ${step} of ${TOTAL_STEPS}`;
@@ -42,16 +40,7 @@ export function BookingStepHeader({ step, onBack, backAccessibilityLabel }: Book
           justifyContent: 'space-between',
         }}
       >
-        <Glass
-          variant="strong"
-          radius={sawaaRadius.pill}
-          onPress={onBack}
-          interactive
-          accessibilityLabel={backAccessibilityLabel}
-          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-        </Glass>
+        <BackButton onPress={onBack} accessibilityLabel={backAccessibilityLabel} />
         <Text
           style={[styles.label, {
             fontFamily: f600,

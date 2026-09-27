@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Glass } from '@/theme/components/Glass';
 import { useTheme } from '@/theme/useTheme';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 
@@ -16,20 +16,21 @@ export type SegmentedOption<T extends string> = {
 };
 
 /**
- * The single glass segmented control used across the app. Every in-page selector
- * (language, appointment status, notification filters) renders through this so the
- * selected pill keeps one shape, one fill and one contrast treatment.
+ * Shared segmented control for in-page selectors. Appointments opt into the
+ * lighter navigation appearance; settings and filters retain the default fill.
  */
 export function GlassSegmented<T extends string>({
   options,
   value,
   onChange,
   size = 'md',
+  appearance = 'default',
 }: {
   options: readonly SegmentedOption<T>[];
   value: T;
   onChange: (value: T) => void;
   size?: 'sm' | 'md';
+  appearance?: 'default' | 'navigation';
 }) {
   const { theme } = useTheme();
   const colors = useSawaaColors();
@@ -38,11 +39,11 @@ export function GlassSegmented<T extends string>({
   const styles = createStyles(colors, size);
 
   return (
-    <Glass variant="regular" radius={sawaaRadius.pill}>
+    <Glass variant={appearance === 'navigation' ? 'strong' : 'regular'} radius={sawaaRadius.pill}>
       <View
         style={[
           styles.track,
-          { flexDirection: dir.row, backgroundColor: theme.colors.surfaceHigh },
+          { flexDirection: dir.row, backgroundColor: appearance === 'navigation' ? colors.glass.bgStrong : theme.colors.surfaceHigh },
         ]}
       >
         {options.map((option) => {
@@ -54,7 +55,7 @@ export function GlassSegmented<T extends string>({
                 if (isActive) return;
                 onChange(option.value);
               }}
-              style={[styles.tab, isActive && { backgroundColor: theme.colors.primarySelection }]}
+              style={[styles.tab, isActive && { backgroundColor: appearance === 'navigation' ? withAlpha(colors.teal[700], 0.12) : theme.colors.primarySelection }]}
               accessibilityRole="tab"
               accessibilityLabel={option.label}
               accessibilityState={{ selected: isActive }}
@@ -66,7 +67,9 @@ export function GlassSegmented<T extends string>({
                   {
                     fontFamily: f600,
                     fontWeight: '600',
-                    color: isActive ? theme.colors.primarySelectionForeground : colors.ink[700],
+                    color: isActive
+                      ? appearance === 'navigation' ? colors.teal[700] : theme.colors.primarySelectionForeground
+                      : colors.ink[700],
                   },
                 ]}
               >

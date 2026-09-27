@@ -8,9 +8,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Search, Star } from 'lucide-react-native';
+import { Search, Star } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
+import { BackButton } from '@/components/ui/BackButton';
 import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
@@ -40,7 +41,6 @@ export default function TherapistsListScreen() {
   const f500 = getFontName(dir.locale, '500');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   // A specialist with future openings is still a valid result for the clinic
   // or service the client selected. Today's availability is an opt-in filter.
   const [activeChip, setActiveChip] = useState<TherapistChip>(null);
@@ -132,9 +132,7 @@ export default function TherapistsListScreen() {
   const ListHeader = useMemo(() => (
     <View style={styles.header}>
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500)}>
-        <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
-          <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
-        </Glass>
+        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
       </Animated.View>
 
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
@@ -223,7 +221,7 @@ export default function TherapistsListScreen() {
         </View>
       ) : null}
     </View>
-  ), [colors, styles, theme, BackIcon, activeChip, clinicDirectoryFailed, directoryFailed, loading, refetchClinics, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t, therapistDirectoryFailed, refetchTherapists]);
+  ), [colors, styles, theme, activeChip, clinicDirectoryFailed, directoryFailed, loading, refetchClinics, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t, therapistDirectoryFailed, refetchTherapists]);
 
   const ListEmpty = useMemo(() => {
     if (loading) {
@@ -260,7 +258,6 @@ export default function TherapistsListScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16 },
   header: { gap: 14, marginBottom: 14 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   title: { fontSize: 22, color: colors.ink[900], paddingHorizontal: 4 },
   subtitle: { fontSize: 12, color: colors.ink[500], marginTop: 2, paddingHorizontal: 4 },
   errorBlock: { gap: 4 },

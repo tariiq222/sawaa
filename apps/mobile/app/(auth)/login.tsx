@@ -15,10 +15,10 @@ import Animated, { Easing, FadeIn, FadeInDown, FadeInUp } from 'react-native-rea
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { Glass } from '@/theme';
+import { BackButton } from '@/components/ui/BackButton';
 import { sawaaTokens } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
@@ -92,24 +92,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Glass
-            variant="strong"
-            radius={22}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              goBackOrHome(router);
-            }}
-            interactive
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.buttonBack')}
-            style={[styles.backBtn, { alignSelf: dir.alignStart }]}
-          >
-            {dir.isRTL ? (
-              <ChevronRight size={22} color={colors.teal[700]} strokeWidth={1.75} />
-            ) : (
-              <ChevronLeft size={22} color={colors.teal[700]} strokeWidth={1.75} />
-            )}
-          </Glass>
+          <BackButton onPress={() => goBackOrHome(router)} style={[styles.backBtn, { alignSelf: dir.alignStart }]} />
 
           <Animated.View
             entering={FadeIn.duration(700).easing(Easing.out(Easing.cubic))}

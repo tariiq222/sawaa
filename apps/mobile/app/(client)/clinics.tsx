@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Building2, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
+import { BackButton } from '@/components/ui/BackButton';
 import { useClinics } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import type { ClinicEntry } from '@/lib/clinics';
@@ -27,8 +28,6 @@ export default function ClinicsScreen() {
   const { t } = useTranslation();
   const clinicsQuery = useClinics();
   const clinics = useMemo(() => clinicsQuery.data ?? [], [clinicsQuery.data]);
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
-  const backSymbol = (dir.isRTL ? 'chevron.right' : 'chevron.left') as React.ComponentProps<typeof AppIcon>['sf'];
 
   const renderItem = useCallback(({ item }: { item: ClinicEntry }) => {
     const name = dir.isRTL ? item.nameAr : (item.nameEn ?? item.nameAr);
@@ -80,9 +79,7 @@ export default function ClinicsScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={(
           <View style={[styles.headerRow, { flexDirection: dir.row }]}> 
-            <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-              <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={colors.ink[900]} strokeWidth={1.5} />
-            </Pressable>
+            <BackButton onPress={() => router.back()} />
             <ThemedText variant="subheading">{t('clinics.title')}</ThemedText>
             <View style={styles.backBtn} />
           </View>

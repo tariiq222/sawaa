@@ -30,7 +30,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useClientBookings, clientBookingsKeys } from '@/hooks/queries';
-import { type ClientBookingStatus } from '@/services/client';
+import { bookingTabForStatus } from '@/services/client/bookings';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { resolveDeliveryType } from '@/types/booking-enums';
 import { createAppointmentsStyles } from '@/components/features/appointments/appointments.styles';
@@ -46,14 +46,6 @@ const TABS: { key: TabKey; ar: string; en: string }[] = [
 export function getAppointmentTabLabel(tab: TabKey, isRTL: boolean): string {
   const option = TABS.find((candidate) => candidate.key === tab);
   return option ? (isRTL ? option.ar : option.en) : '';
-}
-
-function tabOf(status: ClientBookingStatus): TabKey {
-  if (status === 'cancelled' || status === 'cancel_requested' || status === 'expired') {
-    return 'cancelled';
-  }
-  if (status === 'completed' || status === 'no_show') return 'past';
-  return 'upcoming';
 }
 
 function formatDate(iso: string, isRTL: boolean) {
@@ -92,7 +84,7 @@ export default function AppointmentsScreen() {
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
   const items = useMemo(
-    () => bookings.filter((b) => tabOf(b.status) === tab),
+    () => bookings.filter((b) => bookingTabForStatus(b.status) === tab),
     [bookings, tab],
   );
 
@@ -108,7 +100,7 @@ export default function AppointmentsScreen() {
   }), [colors]);
 
   const renderItem = useCallback(({ item: b, index: i }: { item: typeof bookings[0]; index: number }) => {
-    const status: TabKey = tabOf(b.status);
+    const status: TabKey = bookingTabForStatus(b.status);
     const cancellationPending = b.status === 'cancel_requested';
     const displayedStatus = cancellationPending
       ? { icon: <Clock size={12} color={colors.accent.amber} strokeWidth={2} />, color: colors.accent.amber }
@@ -218,6 +210,7 @@ export default function AppointmentsScreen() {
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
         <GlassSegmented
           size="sm"
+          appearance="navigation"
           options={TABS.map((tabItem) => ({
             value: tabItem.key,
             label: getAppointmentTabLabel(tabItem.key, dir.isRTL),

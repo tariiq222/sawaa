@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { useDir } from '@/hooks/useDir';
 import { usePackageFamilies } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/package-utils';
+import { BackButton } from '@/components/ui/BackButton';
 
 export default function PackagesIndexScreen() {
   const colors = useSawaaColors();
@@ -29,9 +30,7 @@ export default function PackagesIndexScreen() {
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
         <View style={[styles.header, { flexDirection: dir.row }]}>
-          <Pressable style={styles.backButton} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-            <Text style={[styles.back, { fontFamily: f700 }]}>{dir.isRTL ? '›' : '‹'}</Text>
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.title')}</Text>
         </View>
         <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.subtitle')}</Text>
@@ -86,8 +85,6 @@ export default function PackagesIndexScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 120, gap: sawaaSpacing.md },
   header: { alignItems: 'center', gap: sawaaSpacing.md },
-  backButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  back: { color: colors.teal[700], fontSize: 34, lineHeight: 34 },
   title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   subtitle: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },

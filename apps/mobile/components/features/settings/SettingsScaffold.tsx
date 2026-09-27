@@ -1,15 +1,14 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { AquaBackground } from '@/theme/sawaa';
 import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
-import { withAlpha } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, withAlpha } from '@/theme/sawaa';
+import { BackButton } from '@/components/ui/BackButton';
+import { useDir } from '@/hooks/useDir';
 
 /**
  * Shared chrome for every client settings page: surface background, safe-area
@@ -24,11 +23,8 @@ export function SettingsScaffold({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const dir = useDir();
   const insets = useSafeAreaInsets();
-  const { t } = useTranslation();
-  const { theme, isRTL } = useTheme();
-  const BackIcon = isRTL ? ChevronRight : ChevronLeft;
-
   return (
     <AquaBackground>
       <ScrollView
@@ -38,18 +34,8 @@ export function SettingsScaffold({
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerRow}>
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
-            }}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.buttonBack')}
-          >
-            <BackIcon size={24} strokeWidth={1.5} color={theme.colors.textPrimary} />
-          </Pressable>
+        <View style={[styles.headerRow, { flexDirection: dir.row }]}>
+          <BackButton onPress={() => router.back()} />
           <ThemedText variant="subheading">{title}</ThemedText>
           <View style={styles.backBtn} />
         </View>
@@ -67,8 +53,9 @@ export function SettingsSectionHeader({
   label: string;
 }) {
   const { theme } = useTheme();
+  const dir = useDir();
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, { flexDirection: dir.row }]}>
       <View style={[styles.sectionIcon, { backgroundColor: withAlpha(theme.colors.primary, 0.08) }]}>
         <Icon size={20} strokeWidth={1.5} color={theme.colors.primary} />
       </View>
@@ -81,10 +68,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
   headerRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: sawaaSpacing.xl,
   },
   backBtn: {
     width: 44,
@@ -93,15 +79,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sectionHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
+    gap: sawaaSpacing.sm,
+    marginBottom: sawaaSpacing.lg,
   },
   sectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: sawaaRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -4,7 +4,6 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, T
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { APP_SCHEME } from '@/constants/config';
@@ -15,6 +14,7 @@ import { clientPaymentsService, type ClientInvoice } from '@/services/client/pay
 import { formatHalalas } from '@/lib/money';
 import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { BackButton } from '@/components/ui/BackButton';
 import {
   useExistingBookingCheckout,
   canResumeHostedPayment,
@@ -78,7 +78,6 @@ export default function ExistingBookingCheckoutScreen() {
   const checkout = useExistingBookingCheckout({ bookingId, invoiceId });
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const copy = phaseCopy(checkout.phase, t);
   const amount = remainingHalalas(checkout.invoice);
   const currency = checkout.invoice?.currency ?? 'SAR';
@@ -127,9 +126,7 @@ export default function ExistingBookingCheckoutScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.lg, paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive style={styles.back}>
-          <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
-        </Glass>
+        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
 
         <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
           {copy.title}
@@ -209,7 +206,6 @@ export default function ExistingBookingCheckoutScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   body: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   card: { padding: sawaaSpacing.lg, gap: sawaaSpacing.xs },
