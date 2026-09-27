@@ -26,7 +26,7 @@ export function BackButton({
 
   return (
     <Glass
-      variant="strong"
+      variant="regular"
       radius={22}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -35,7 +35,7 @@ export function BackButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? t('a11y.buttonBack')}
       testID={testID}
-      style={[styles.button, { backgroundColor: colors.glass.opaqueBg }, style]}
+      style={[styles.button, style]}
     >
       <Icon size={22} color={colors.ink[700]} strokeWidth={1.75} />
     </Glass>

@@ -1,7 +1,7 @@
 import React from 'react';
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: false, language: 'en' }) }));
 import { fireEvent, render } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 
 jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
@@ -82,6 +82,14 @@ describe('appointment detail truthful states', () => {
 
     expect(screen.getByText('Cancel booking')).toBeTruthy();
     expect(screen.queryByText('appointments.rate')).toBeNull();
+  });
+
+  it('places cancellation with the appointment content instead of pinning it below empty space', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+    const scroll = screen.UNSAFE_getByType(ScrollView);
+    expect(scroll.findByProps({ children: 'Cancel booking' })).toBeTruthy();
+    expect(screen.getByText('appointments.details')).toBeTruthy();
   });
 
   it('does not offer client cancellation while a group appointment awaits enough participants', () => {

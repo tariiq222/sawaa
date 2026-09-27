@@ -156,11 +156,12 @@ export default function AppointmentDetailScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 140 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + sawaaSpacing['3xl'] }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.duration(500)}>
+        <Animated.View entering={FadeInDown.duration(500)} style={[styles.header, { flexDirection: dir.row }]}>
           <BackButton onPress={() => router.back()} style={styles.backBtn} />
+          <Text style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('appointments.details')}</Text>
         </Animated.View>
 
         {/* Hero therapist */}
@@ -232,55 +233,50 @@ export default function AppointmentDetailScreen() {
             />
           </Animated.View>
         ) : null}
-      </ScrollView>
 
-      {/* Bottom actions */}
-      <Animated.View
-        entering={FadeInDown.delay(360).duration(800).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + 20, flexDirection: dir.row }]}
-      >
         {canShowZoom && booking ? (
-          <JoinVideoCallButton
-            url={booking.zoomJoinUrl ?? booking.zoomLink ?? null}
-            scheduledAt={booking.scheduledAt}
-            durationMins={booking.durationMins}
-            status={booking.zoomMeetingStatus}
-            isRTL={dir.isRTL}
-            variant="join"
-          />
+          <Animated.View entering={FadeInDown.delay(360).duration(700)} style={styles.actionRow}>
+            <JoinVideoCallButton
+              url={booking.zoomJoinUrl ?? booking.zoomLink ?? null}
+              scheduledAt={booking.scheduledAt}
+              durationMins={booking.durationMins}
+              status={booking.zoomMeetingStatus}
+              isRTL={dir.isRTL}
+              variant="join"
+            />
+          </Animated.View>
         ) : null}
         {canRate && booking ? (
-          <PrimaryButton
-            label={t('appointments.rate')}
-            onPress={() => router.push(`/(client)/rate/${booking.id}`)}
-            fontFamily={f700}
-          />
+          <Animated.View entering={FadeInDown.delay(360).duration(700)}>
+            <PrimaryButton
+              label={t('appointments.rate')}
+              onPress={() => router.push(`/(client)/rate/${booking.id}`)}
+              fontFamily={f700}
+            />
+          </Animated.View>
         ) : null}
-      </Animated.View>
-
-      {/* Cancel link */}
-      {canCancel ? (
-        <Animated.View
-          entering={FadeInDown.delay(460).duration(800).easing(Easing.out(Easing.cubic))}
-          style={[styles.cancelRow, { bottom: insets.bottom + 80 }]}
-        >
-          <Pressable onPress={askCancel} disabled={cancelling} style={styles.cancelBtn}>
-            <XCircle size={14} color={colors.accent.coral} strokeWidth={2} />
-            <Text style={[styles.cancelText, { fontFamily: f500, fontWeight: '500' }]}>
-              {cancelling
-                ? (dir.isRTL ? 'جاري الإلغاء…' : 'Cancelling…')
-                : (dir.isRTL ? 'إلغاء الموعد' : 'Cancel booking')}
-            </Text>
-          </Pressable>
-        </Animated.View>
-      ) : null}
+        {canCancel ? (
+          <Animated.View entering={FadeInDown.delay(420).duration(700)} style={styles.cancelRow}>
+            <Pressable onPress={askCancel} disabled={cancelling} style={styles.cancelBtn} accessibilityRole="button">
+              <XCircle size={16} color={colors.accent.coral} strokeWidth={2} />
+              <Text style={[styles.cancelText, { fontFamily: f500, fontWeight: '500' }]}>
+                {cancelling
+                  ? (dir.isRTL ? 'جاري الإلغاء…' : 'Cancelling…')
+                  : (dir.isRTL ? 'إلغاء الموعد' : 'Cancel booking')}
+              </Text>
+            </Pressable>
+          </Animated.View>
+        ) : null}
+      </ScrollView>
     </AquaBackground>
   );
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  header: { alignItems: 'center', gap: sawaaSpacing.md },
   backBtn: { alignSelf: 'flex-start' },
+  pageTitle: { flex: 1, fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, color: colors.ink[900] },
   heroCard: { padding: sawaaSpacing.xl },
   heroRow: { alignItems: 'center', gap: sawaaSpacing.lg },
   avatar: {
@@ -300,21 +296,8 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: Re
   rowLabel: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, color: colors.ink[500] },
   rowValue: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[900], marginTop: sawaaSpacing.xs },
   sectionTitle: { fontSize: sawaaType.body.fontSize, color: colors.ink[900], marginBottom: sawaaSpacing.sm, paddingHorizontal: sawaaSpacing.xs },
-  ctaWrap: { position: 'absolute', left: sawaaSpacing.lg, right: sawaaSpacing.lg, gap: sawaaSpacing.md, alignItems: 'stretch' },
-  secondaryBtn: { flex: 1 },
-  secondaryGlass: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 52, gap: sawaaSpacing.sm,
-  },
-  secondaryText: { color: colors.teal[700], fontSize: 13 },
-  primaryBtn: { flex: 1.4 },
-  primaryGradient: {
-    borderRadius: 999, height: 52,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: colors.teal[600], shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 },
-  },
-  primaryText: { color: themeColors.primaryForeground, fontSize: 13.5 },
-  cancelRow: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  cancelBtn: { flexDirection: 'row', alignItems: 'center', gap: sawaaSpacing.xs, paddingVertical: sawaaSpacing.sm },
+  actionRow: { height: 52, alignItems: 'stretch' },
+  cancelRow: { alignItems: 'center' },
+  cancelBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.sm, paddingVertical: sawaaSpacing.md, width: '100%' },
   cancelText: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, color: colors.accent.coral },
 });

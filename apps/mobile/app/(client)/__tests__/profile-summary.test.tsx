@@ -38,7 +38,7 @@ jest.mock('@/hooks/queries', () => ({
 }));
 
 import ProfileScreen from '../profile';
-import { formatHalalas } from '@/lib/money';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 
 describe('client profile summary stats', () => {
   it('renders the outstanding balance as SAR, not raw halalas', () => {
@@ -47,11 +47,11 @@ describe('client profile summary stats', () => {
     // 12000 halalas must never surface as "12,000".
     expect(screen.queryByText(/12,000/)).toBeNull();
 
-    const balance = screen.getByText(/⃁/);
+    const balance = screen.getByText(/ر\.س/);
     const text = Array.isArray(balance.props.children)
       ? balance.props.children.join('')
       : String(balance.props.children);
     // The rendered figure is the SAR-major amount (120), never the raw 12000.
-    expect(text).toBe(`${formatHalalas(12000, { locale: 'ar-SA' })} ⃁`);
+    expect(text).toBe(formatCurrencyAmount(12000, 'SAR', true));
   });
 });

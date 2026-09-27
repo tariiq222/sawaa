@@ -4,6 +4,7 @@ import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { ChevronLeft, ChevronRight, Ticket } from 'lucide-react-native';
 
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Glass } from '@/theme/components/Glass';
@@ -25,6 +26,7 @@ export default function PackagesIndexScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
+  const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
   return (
     <AquaBackground>
@@ -34,6 +36,21 @@ export default function PackagesIndexScreen() {
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.title')}</Text>
         </View>
         <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.subtitle')}</Text>
+
+        <Glass
+          variant="strong"
+          radius={sawaaRadius.lg}
+          style={styles.balanceCard}
+          onPress={() => router.push('/(client)/packages/purchases')}
+          interactive
+          accessibilityLabel={t('packages.balance')}
+        >
+          <View style={[styles.balanceRow, { flexDirection: dir.row }]}>
+            <Ticket size={20} color={colors.teal[600]} strokeWidth={1.75} />
+            <Text style={[styles.balanceLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>{t('packages.balance')}</Text>
+            <Chevron size={18} color={colors.ink[400]} strokeWidth={1.75} />
+          </View>
+        </Glass>
 
         {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
         {!query.isLoading && query.isError ? (
@@ -87,6 +104,9 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   header: { alignItems: 'center', gap: sawaaSpacing.md },
   title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   subtitle: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  balanceCard: { padding: sawaaSpacing.lg },
+  balanceRow: { alignItems: 'center', gap: sawaaSpacing.md },
+  balanceLabel: { flex: 1, color: colors.ink[900], fontSize: sawaaType.body.fontSize },
   message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   card: { minHeight: 140, overflow: 'hidden' },
   image: { width: '100%', height: 120 },

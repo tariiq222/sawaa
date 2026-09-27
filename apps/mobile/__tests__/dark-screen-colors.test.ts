@@ -57,14 +57,6 @@ describe('route color migration safeguards', () => {
     expect(source).not.toMatch(/sawaaTokens\.colors/);
   });
 
-  it('the profile switch uses the persisted theme setting, not local demo state', () => {
-    const source = fs.readFileSync(path.join(appRoot, '(client)/profile.tsx'), 'utf8');
-    expect(source).toContain("const darkMode = scheme === 'dark'");
-    expect(source).toContain("setThemeMode(darkMode ? 'light' : 'dark')");
-    expect(source).toContain("accessibilityRole={it.toggle !== undefined ? 'switch' : 'button'}");
-    expect(source).not.toContain('setDarkMode');
-  });
-
   it('settings save pairs an action fill with its on-action foreground', () => {
     const source = fs.readFileSync(path.join(appRoot, '../components/features/settings/SettingsProfileSection.tsx'), 'utf8');
     expect(source).toContain('theme.colors.primaryFill');

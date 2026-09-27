@@ -8,12 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import {
-  Bell,
   ChevronLeft,
   ChevronRight,
   Leaf,
-  Lock,
-  Moon,
   Phone as PhoneIcon,
   Settings,
   Ticket, UsersRound, ClipboardList,
@@ -26,9 +23,7 @@ import { useAppSelector } from '@/hooks/use-redux';
 import { authService } from '@/services/auth';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useSummary } from '@/hooks/queries';
-import { formatHalalas } from '@/lib/money';
-import { PRIVACY_POLICY_URL } from '@/constants/config';
-import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import { BackButton } from '@/components/ui/BackButton';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -44,7 +39,7 @@ function formatLastVisit(iso: string | null, isRTL: boolean): string {
 
 export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   const colors = useSawaaColors();
-  const { theme, scheme, setThemeMode } = useTheme();
+  const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -54,8 +49,6 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const { t } = useTranslation();
-  const darkMode = scheme === 'dark';
-  const moneyLocale = dir.isRTL ? 'ar-SA' : 'en-US';
   const summaryQuery = useSummary();
   const summary = summaryQuery.data ?? null;
   const brandingQuery = useBranding();
@@ -93,8 +86,8 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
       en: 'Last visit',
     },
     {
-      // outstandingBalance is integer halalas; formatHalalas renders it as SAR.
-      value: summary ? `${formatHalalas(summary.outstandingBalance, { locale: moneyLocale })} ⃁` : '—',
+      // outstandingBalance is integer halalas.
+      value: summary ? formatCurrencyAmount(summary.outstandingBalance, 'SAR', dir.isRTL) : '—',
       ar: 'مبلغ مستحق',
       en: 'Outstanding',
     },
@@ -104,10 +97,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
     icon: React.ReactNode;
     label: { ar: string; en: string };
     color: string;
-    group: 'care' | 'preferences' | 'support';
-    meta?: { ar: string; en: string };
-    toggle?: boolean;
-    onToggle?: () => void;
+    group: 'care' | 'preferences';
     onPress?: () => void;
   };
 
@@ -115,17 +105,12 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
     { group: 'care', icon: <Ticket size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.title'), en: t('packages.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/packages') },
     { group: 'care', icon: <UsersRound size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('groups.title'), en: t('groups.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/groups') },
     { group: 'care', icon: <ClipboardList size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('tabs.records'), en: t('tabs.records') }, color: colors.teal[600], onPress: () => router.push('/(client)/(tabs)/records') },
-    { group: 'care', icon: <Ticket size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.balance'), en: t('packages.balance') }, color: colors.teal[600], onPress: () => router.push('/(client)/packages/purchases') },
-    { group: 'support', icon: <Lock size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.privacySecurity'), en: t('settings.privacySecurity') }, color: colors.teal[600], onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
-    { group: 'preferences', icon: <Bell size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.pushNotifications'), en: t('settings.pushNotifications') }, color: colors.teal[600], onPress: () => router.push('/(client)/settings-notifications') },
-    { group: 'preferences', icon: <Moon size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.darkMode'), en: t('settings.darkMode') }, color: colors.teal[600], toggle: darkMode, onToggle: () => setThemeMode(darkMode ? 'light' : 'dark') },
     { group: 'preferences', icon: <Settings size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.title'), en: t('settings.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/settings') },
   ];
 
   const settingGroups = [
     { key: 'care', title: dir.isRTL ? 'الرعاية والسجلات' : 'Care and records' },
     { key: 'preferences', title: dir.isRTL ? 'التفضيلات' : 'Preferences' },
-    { key: 'support', title: dir.isRTL ? 'المساعدة والسياسات' : 'Help and policies' },
   ] as const;
 
   return (
@@ -215,9 +200,8 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
                 {groupItems.map((it, i) => (
                   <Pressable
                     key={it.label.en}
-                    onPress={it.onToggle ?? it.onPress}
-                    accessibilityRole={it.toggle !== undefined ? 'switch' : 'button'}
-                    accessibilityState={it.toggle !== undefined ? { checked: it.toggle } : undefined}
+                    onPress={it.onPress}
+                    accessibilityRole="button"
                     style={[
                       styles.settingRow,
                       { flexDirection: dir.row },
@@ -230,24 +214,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
                     <Text style={[styles.settingLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
                       {dir.isRTL ? it.label.ar : it.label.en}
                     </Text>
-                    {it.meta && (
-                      <Text style={[styles.settingMeta, { fontFamily: f400, fontWeight: '400' }]}>
-                        {dir.isRTL ? it.meta.ar : it.meta.en}
-                      </Text>
-                    )}
-                    {it.toggle !== undefined ? (
-                      <View style={[
-                        styles.toggle,
-                        { backgroundColor: it.toggle ? colors.teal[500] : withAlpha(colors.ink[900], 0.15) },
-                      ]}>
-                        <View style={[
-                          styles.toggleKnob,
-                          it.toggle ? styles.toggleKnobOn : styles.toggleKnobOff,
-                        ]} />
-                      </View>
-                    ) : (
-                      <Chevron size={14} color={colors.ink[400]} strokeWidth={2} />
-                    )}
+                    <Chevron size={14} color={colors.ink[400]} strokeWidth={2} />
                   </Pressable>
                 ))}
               </Glass>
@@ -283,7 +250,6 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
         ) : null}
 
         <Animated.View entering={FadeInDown.delay(420).duration(700).easing(Easing.out(Easing.cubic))}>
-          <DeleteAccountButton />
           <Glass variant="regular" radius={sawaaRadius.pill} onPress={() => { void authService.logout().then(() => router.replace('/home')); }} interactive style={styles.logoutBtn}>
             <Text style={[styles.logoutText, { fontFamily: f700 }]}>
               {t('profile.signOut')}
@@ -338,14 +304,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnTy
   settingDivider: { borderBottomWidth: 0.5, borderBottomColor: colors.glass.border },
   settingIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   settingLabel: { flex: 1, fontSize: 13.5, color: colors.ink[900] },
-  settingMeta: { fontSize: 11, color: colors.ink[500] },
-  toggle: { width: 38, height: 22, borderRadius: 12, padding: 2, justifyContent: 'center' },
-  toggleKnob: {
-    width: 18, height: 18, borderRadius: 9, backgroundColor: theme.colors.primaryForeground,
-    shadowColor: theme.colors.black, shadowOpacity: 0.2, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
-  },
-  toggleKnobOn: { alignSelf: 'flex-end' },
-  toggleKnobOff: { alignSelf: 'flex-start' },
   sosCard: { padding: 14, backgroundColor: withAlpha(colors.accent.coral, 0.15) },
   sosRow: { alignItems: 'center', gap: 12 },
   sosIcon: {

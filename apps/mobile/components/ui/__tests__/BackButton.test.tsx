@@ -53,4 +53,13 @@ describe('BackButton', () => {
 
     expect(screen.getByText('left')).toBeTruthy();
   });
+
+  it('uses the shared translucent glass surface without an opaque fill', () => {
+    const screen = render(<BackButton onPress={jest.fn()} />);
+    const button = screen.getByRole('button');
+
+    expect(button).toHaveProp('variant', 'regular');
+    expect(button).toHaveProp('radius', 22);
+    expect(button).not.toHaveStyle({ backgroundColor: '#fff' });
+  });
 });

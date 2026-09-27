@@ -7,8 +7,11 @@ jest.mock('react-native-reanimated', () => {
   return { __esModule: true, default: { View: require('react-native').View }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
 });
 const mockBack = jest.fn();
+const mockPush = jest.fn();
+const mockMarkAsRead = jest.fn();
+let mockNotifications: import('@/types/models').Notification[] = [];
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: mockBack, push: jest.fn() }),
+  useRouter: () => ({ back: mockBack, push: mockPush }),
   useFocusEffect: jest.fn(),
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
@@ -20,19 +23,34 @@ jest.mock('@/theme/sawaa', () => {
   return { ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: View };
 });
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light') }));
-jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
+jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').Pressable }));
 jest.mock('@/hooks/use-notifications', () => ({
   useNotifications: () => ({
-    notifications: [], unreadCount: 0, refreshing: false, refresh: jest.fn(), loadMore: jest.fn(),
-    hasMore: false, loadingMore: false, loadError: false, markAsRead: jest.fn(), markAllAsRead: jest.fn(),
+    notifications: mockNotifications, unreadCount: mockNotifications.filter((n) => !n.isRead).length, refreshing: false, refresh: jest.fn(), loadMore: jest.fn(),
+    hasMore: false, loadingMore: false, loadError: false, markAsRead: mockMarkAsRead, markAllAsRead: jest.fn(),
   }),
 }));
-jest.mock('@/utils/notification-deeplink', () => ({ resolveNotificationHref: () => null }));
+jest.mock('@/utils/notification-deeplink', () => ({ resolveNotificationHref: () => '/(client)/appointment/booking-1' }));
 
 import NotificationsScreen from '../notifications';
 
 describe('notifications screen escape route', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => { jest.clearAllMocks(); mockNotifications = []; });
+
+  it('shows notification content and marks the selected notification read before navigation', () => {
+    mockNotifications = [{
+      id: 'n1', userId: 'u1', type: 'booking_confirmed',
+      titleAr: 'تم تأكيد الموعد', titleEn: 'Appointment confirmed',
+      bodyAr: 'موعدك غداً', bodyEn: 'Your appointment is tomorrow',
+      isRead: false, createdAt: new Date().toISOString(), metadata: { bookingId: 'booking-1' },
+    }];
+    const screen = render(<NotificationsScreen />);
+    expect(screen.getByText('تم تأكيد الموعد')).toBeTruthy();
+    expect(screen.getByText('موعدك غداً')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText(/تم تأكيد الموعد\. موعدك غداً/));
+    expect(mockMarkAsRead).toHaveBeenCalledWith('n1');
+    expect(mockPush).toHaveBeenCalledWith('/(client)/appointment/booking-1');
+  });
 
   it('exposes a back control that returns to the previous screen', () => {
     const screen = render(<NotificationsScreen />);

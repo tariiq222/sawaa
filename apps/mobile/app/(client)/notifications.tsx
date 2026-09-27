@@ -186,8 +186,8 @@ export default function NotificationsScreen() {
         ) : (
           visible.map((n, i) => {
             const { Icon, color } = iconForType(n.type, colors);
-            const title = dir.isRTL ? n.titleAr : n.titleEn;
-            const body = dir.isRTL ? n.bodyAr : n.bodyEn;
+            const title = (dir.isRTL ? n.titleAr : n.titleEn) || n.titleAr || n.titleEn;
+            const body = (dir.isRTL ? n.bodyAr : n.bodyEn) || n.bodyAr || n.bodyEn;
             const when = relativeWhen(n.createdAt, dir.isRTL);
             const unread = !n.isRead;
             return (
@@ -195,30 +195,32 @@ export default function NotificationsScreen() {
                 key={n.id}
                 entering={FadeInDown.delay(150 + i * 50).duration(600).easing(Easing.out(Easing.cubic))}
               >
-                <Pressable onPress={() => handlePress(n)}>
-                  <Glass variant={unread ? 'strong' : 'regular'} radius={sawaaRadius.xl} style={styles.card}>
-                    <View style={[styles.row, { flexDirection: dir.row }]}>
-                      <View style={[
-                        styles.iconBox,
-                        { backgroundColor: withAlpha(color, 0.13), borderColor: withAlpha(color, 0.2) },
-                      ]}>
-                        <Icon size={18} color={color} strokeWidth={1.75} />
-                      </View>
-                      <View style={styles.body}>
-                        <View style={[styles.bodyHead, { flexDirection: dir.row }]}>
-                          <Text style={[styles.itemTitle, { fontFamily: f700, textAlign: dir.textAlign, flex: 1 }]}>
-                            {title}
-                          </Text>
-                          <Text style={[styles.when, { fontFamily: f400, fontWeight: '400' }]}>{when}</Text>
-                        </View>
-                        <Text style={[styles.itemBody, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                          {body}
-                        </Text>
-                      </View>
-                      {unread ? <View style={styles.unreadDot} /> : null}
+                <Glass
+                  variant="regular"
+                  radius={sawaaRadius.xl}
+                  style={styles.card}
+                  onPress={() => handlePress(n)}
+                  accessibilityLabel={[title, body, when].filter(Boolean).join('. ')}
+                >
+                  <View style={[styles.row, { flexDirection: dir.row }]}>
+                    <View style={[
+                      styles.iconBox,
+                      { backgroundColor: withAlpha(color, 0.13), borderColor: withAlpha(color, 0.2) },
+                    ]}>
+                      <Icon size={18} color={color} strokeWidth={1.75} />
                     </View>
-                  </Glass>
-                </Pressable>
+                    <View style={styles.body}>
+                      <Text style={[styles.itemTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                        {title}
+                      </Text>
+                      <Text style={[styles.itemBody, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
+                        {body}
+                      </Text>
+                      <Text style={[styles.when, { fontFamily: f400, textAlign: dir.textAlign }]}>{when}</Text>
+                    </View>
+                    {unread ? <View style={styles.unreadDot} /> : null}
+                  </View>
+                </Glass>
               </Animated.View>
             );
           })
@@ -267,14 +269,13 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   row: { gap: 12, alignItems: 'flex-start' },
   iconBox: {
     width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 0.5,
+    borderWidth: 0.5, flexShrink: 0,
   },
-  body: { flex: 1 },
-  bodyHead: { justifyContent: 'space-between', alignItems: 'baseline', gap: 8 },
+  body: { flex: 1, minWidth: 0 },
   itemTitle: { fontSize: 13.5, color: colors.ink[900] },
-  when: { fontSize: 10.5, color: colors.ink[400] },
-  itemBody: { fontSize: 12, color: colors.ink[500], marginTop: 3, lineHeight: 18 },
-  unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.teal[500], marginTop: 6 },
+  when: { fontSize: 10.5, color: colors.ink[500], marginTop: 8 },
+  itemBody: { fontSize: 12, color: colors.ink[700], marginTop: 3, lineHeight: 18 },
+  unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.teal[500], marginTop: 6, flexShrink: 0 },
   empty: { padding: 28, alignItems: 'center', gap: 10 },
   emptyText: { fontSize: 12.5, color: colors.ink[500] },
   paginationButton: { alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 12 },
