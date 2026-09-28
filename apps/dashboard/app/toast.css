@@ -7,9 +7,11 @@
 
 /* ─── Base ─── */
 .ck-toast {
-  position: relative;
+  /* Sonner owns absolute positioning and transforms for stacking/swiping. */
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  text-align: start;
   gap: 10px;
   padding: 12px 16px;
   border-radius: var(--radius-lg);
@@ -19,13 +21,12 @@
     0 4px 24px rgba(0, 0, 0, 0.07),
     0 1px 4px rgba(0, 0, 0, 0.04);
   color: var(--foreground);
-  min-width: 280px;
-  max-width: 400px;
-  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ck-toast:hover {
-  transform: translateY(-1px);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.1),
     0 2px 8px rgba(0, 0, 0, 0.05);
@@ -66,6 +67,20 @@
 .ck-toast-icon-error   { color: var(--error); }
 
 /* ─── Text ─── */
+.ck-toast [data-content] {
+  flex: 1 1 180px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.ck-toast [data-button] {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .ck-toast-title {
   font-size: 0.875rem;
   font-weight: 500;

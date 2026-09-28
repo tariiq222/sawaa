@@ -79,8 +79,8 @@ export function NotificationCard({
   const { icon, tone } = TYPE_MAP[notification.type] ?? TYPE_MAP.GENERAL
   const toneClasses = TONE_STYLES[tone]
 
-  const typeKey = `notifications.types.${notification.type}` as const
-  const typeLabel = t(typeKey) || notification.title
+  const knownType = Object.hasOwn(TYPE_MAP, notification.type) ? notification.type : "GENERAL"
+  const typeLabel = t(`notifications.types.${knownType}`)
 
   const handleClick = () => {
     if (isUnread) onMarkRead(notification.id)
@@ -140,7 +140,7 @@ export function NotificationCard({
           </span>
           <span
             className={cn(
-              "flex-1 truncate text-sm text-foreground",
+              "min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm text-foreground",
               isUnread && "font-semibold",
             )}
           >
@@ -160,9 +160,9 @@ export function NotificationCard({
           </time>
         </div>
 
-        {/* Row 2: body (1 line, 2 max) */}
+        {/* Full message: this card is also the notification detail view. */}
         {notification.body && (
-          <p className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">
+          <p className="w-full whitespace-pre-wrap [overflow-wrap:anywhere] text-[13px] leading-relaxed text-muted-foreground">
             {formatNotificationBody(notification)}
           </p>
         )}
