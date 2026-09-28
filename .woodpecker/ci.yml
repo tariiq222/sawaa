@@ -1,0 +1,125 @@
+# Woodpecker CI — mirror of .github/workflows/ci.yml core gates
+# Runs on the local isolated agent; GitHub Actions remains the reference
+# definition until full parity. Services are pipeline-scoped containers on the
+# isolated Woodpecker engine (never the host).
+when:
+  - event: pull_request
+    branch: [main, develop]
+  - event: push
+    branch: [main, develop]
+
+variables:
+  - &node_image node:22-bookworm
+  - &backend_env
+    DATABASE_URL: postgresql://test:test@postgres:5432/sawaa_test?schema=public
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+    JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+    JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+    JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+    CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
+    MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+    AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
+    ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
+    EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
+    AUTHENTICA_API_KEY: ci-authentica-key
+    MINIO_ENDPOINT: minio
+    MINIO_PORT: "9000"
+    MINIO_ACCESS_KEY: minioadmin
+    MINIO_SECRET_KEY: minioadmin123
+    MINIO_BUCKET: sawaa-test
+    MINIO_USE_SSL: "false"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: sawaa_test
+    ports: ["5432"]
+  redis:
+    image: redis:7-alpine
+    ports: ["6379"]
+  minio:
+    image: bitnami/minio:latest
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports: ["9000"]
+
+steps:
+  install:
+    image: *node_image
+    commands:
+      - corepack enable
+      - pnpm install --frozen-lockfile
+
+  migration-immutability:
+    image: *node_image
+    when:
+      - event: pull_request
+    commands:
+      - git fetch origin $CI_COMMIT_TARGET_BRANCH
+      - node scripts/check-prisma-migration-immutability.mjs origin/$CI_COMMIT_TARGET_BRANCH
+
+  backend-typecheck-lint:
+    image: *node_image
+    depends_on: [install]
+    commands:
+      - corepack enable
+      - pnpm --filter=backend prisma:generate
+      - pnpm --filter=backend lint
+      - pnpm --filter=backend typecheck
+
+  backend-tests:
+    image: *node_image
+    depends_on: [install]
+    environment: *backend_env
+    commands:
+      - corepack enable
+      - pnpm --filter=backend prisma:generate
+      - pnpm --filter=backend prisma:migrate:deploy
+      - pnpm --filter=backend test
+
+  backend-contracts:
+    image: *node_image
+    depends_on: [backend-tests]
+    environment: *backend_env
+    commands:
+      - corepack enable
+      - cd packages/shared && node ../../node_modules/typescript/bin/tsc -p tsconfig.json && cd ../..
+      - pnpm --filter=backend run openapi:build-and-snapshot
+      - git diff --exit-code apps/backend/openapi.json
+      - pnpm --filter=backend run check:openapi-coverage
+      - node scripts/check-api-client-drift.mjs
+
+  dashboard:
+    image: *node_image
+    depends_on: [install]
+    commands:
+      - corepack enable
+      - pnpm --filter=dashboard test
+      - pnpm --filter=dashboard typecheck
+      - pnpm --filter=dashboard lint
+      - pnpm --filter=dashboard i18n:verify
+
+  website:
+    image: *node_image
+    depends_on: [install]
+    commands:
+      - corepack enable
+      - pnpm --filter=website test
+      - pnpm --filter=website typecheck
+      - pnpm --filter=website lint
+
+  mobile:
+    image: *node_image
+    depends_on: [install]
+    commands:
+      - corepack enable
+      - pnpm --dir apps/mobile typecheck
+      - pnpm --dir apps/mobile test -- --run
+      - pnpm --dir apps/mobile lint
