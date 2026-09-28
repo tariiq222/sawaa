@@ -130,6 +130,28 @@ describe('MaterializeNotificationIntentHandler', () => {
     ]);
   });
 
+  it('freezes appointment terminology for client cancellation in-app and push content', async () => {
+    const { handler, tx } = build({
+      ...baseIntent({ kind: 'booking-cancelled-client', bookingId: 'booking-1', clientId: 'client-1', reason: 'OTHER' }),
+      consumerKey: 'comms.booking-cancelled-client.v2',
+    });
+    tx.client.findUnique.mockResolvedValue({ id: 'client-1', isActive: true, deletedAt: null, pushEnabled: true });
+    tx.fcmToken.findMany.mockResolvedValue([{ token: 'token-a' }]);
+
+    await handler.execute('intent-1');
+
+    const copy = { title: 'تم إلغاء الموعد', body: 'نأسف، تم إلغاء موعدك.' };
+    expect(tx.notification.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining(copy),
+    }));
+    expect(tx.notificationDelivery.createMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining(['IN_APP', 'PUSH'].map((channel) => expect.objectContaining({
+        channel,
+        channelPayload: expect.objectContaining(copy),
+      }))),
+    });
+  });
+
   it('rolls back all materialization writes when a delivery write fails', async () => {
     const { handler, tx } = build(baseIntent({ kind: 'booking-created-staff', bookingId: 'booking-1' }));
     tx.user.findMany.mockResolvedValue([{ id: 'admin-1', role: 'ADMIN' }]);

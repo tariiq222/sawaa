@@ -22,7 +22,7 @@ function escapeHtml(s: string): string {
 export function renderBlocksToHtml(blocks: EmailBlock[]): string {
   const inner = blocks.map((block) => renderBlock(block)).join('\n');
   return [
-    '<div style="font-family:\'IBM Plex Sans Arabic\',system-ui;padding:24px;max-width:560px;margin:0 auto;">',
+    '<div dir="rtl" lang="ar" style="font-family:\'IBM Plex Sans Arabic\',system-ui;padding:24px;max-width:560px;margin:0 auto;">',
     inner,
     '</div>',
   ].join('\n');

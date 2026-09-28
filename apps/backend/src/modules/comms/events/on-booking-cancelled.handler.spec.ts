@@ -56,6 +56,18 @@ describe('OnBookingCancelledHandler', () => {
     expect(notify.execute).toHaveBeenCalledWith(expect.objectContaining({ channels: ['in-app', 'email'] }));
   });
 
+  it('uses appointment terminology in client cancellation notifications', async () => {
+    pushTargets.execute.mockResolvedValue({ pushEnabled: true, tokens: ['tok1'] });
+
+    await handler.handle({ payload: { bookingId: 'b1', clientId: 'c1', employeeId: 'e1', reason: 'OTHER' } } as any);
+
+    expect(notify.execute).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'تم إلغاء الموعد',
+      body: 'نأسف، تم إلغاء موعدك.',
+      channels: ['in-app', 'email', 'push'],
+    }));
+  });
+
   it('should capture exception on error', async () => {
     pushTargets.execute.mockRejectedValue(new Error('fail'));
     await handler.handle({ payload: { bookingId: 'b1', clientId: 'c1', employeeId: 'e1', reason: 'sick' } } as any);

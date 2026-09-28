@@ -216,7 +216,7 @@ export class MaterializeNotificationIntentHandler {
       return { type: 'BOOKING_CANCELLED', title: 'تم إلغاء حجز', body: `تم إلغاء الحجز ${value.bookingNumber ?? value.bookingId} — ${value.reason ?? ''}`, metadata: { bookingId: String(value.bookingId) } };
     }
     if (consumerKey === NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_CANCELLED_CLIENT) {
-      return { type: 'BOOKING_CANCELLED', title: 'تم إلغاء الحجز', body: 'نأسف، تم إلغاء حجزك.', metadata: { bookingId: String(value.bookingId) }, emailSlug: email?.templateSlug, emailVars: email?.variables };
+      return { type: 'BOOKING_CANCELLED', title: 'تم إلغاء الموعد', body: 'نأسف، تم إلغاء موعدك.', metadata: { bookingId: String(value.bookingId) }, emailSlug: email?.templateSlug, emailVars: email?.variables };
     }
     if (consumerKey === NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_REMINDER_CLIENT) {
       return { type: 'BOOKING_REMINDER', title: 'تذكير بموعدك', body: 'تذكير بموعدك غداً. افتح التطبيق للتفاصيل.', metadata: { bookingId: String(value.bookingId) }, emailSlug: email?.templateSlug, emailVars: email?.variables };
