@@ -27,6 +27,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { STATUS_LABEL_MAP } from '@/lib/status-helpers';
 import { hasZoomMeetingAccess, resolveDeliveryType } from '@/types/booking-enums';
 import { BackButton } from '@/components/ui/BackButton';
+import { goBackOrHome } from '@/lib/navigation';
 
 export default function AppointmentDetailScreen() {
   const colors = useSawaaColors();
@@ -35,6 +36,7 @@ export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
+  const handleBack = () => goBackOrHome(router, '/(client)/(tabs)/appointments');
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const f400 = getFontName(dir.locale, '400');
@@ -120,7 +122,7 @@ export default function AppointmentDetailScreen() {
                     );
                     return;
                   }
-                  router.back();
+                  handleBack();
                 },
                 onError: (err) => {
                   Alert.alert(
@@ -140,7 +142,7 @@ export default function AppointmentDetailScreen() {
     return (
       <AquaBackground>
         <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
-          <BackButton onPress={() => router.back()} style={styles.backBtn} />
+          <BackButton onPress={handleBack} style={styles.backBtn} />
           <EmptyState
             icon={isError ? 'alert-circle-outline' : 'calendar-outline'}
             title={t(isLoading ? 'common.loading' : isError ? 'common.error' : 'common.noResults')}
@@ -160,7 +162,7 @@ export default function AppointmentDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.duration(500)} style={[styles.header, { flexDirection: dir.row }]}>
-          <BackButton onPress={() => router.back()} style={styles.backBtn} />
+          <BackButton onPress={handleBack} style={styles.backBtn} />
           <Text style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('appointments.details')}</Text>
         </Animated.View>
 

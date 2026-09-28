@@ -6,16 +6,18 @@ type Router = ReturnType<typeof useRouter>;
  * Leaves the current screen when it may have been opened with no history entry:
  * a deep link, a notification tap, or a guard redirect that replaced the route.
  * `router.back()` alone is a no-op there, which strands the user on the screen.
- * Falling back to the public home always leaves a reachable next step, for
- * guests and signed-in clients alike (it is outside the role guards).
+ * Falling back to `/home` (or an explicit fallback href) leaves a reachable
+ * next step: `/home` serves as an alias that routes guests to the public home
+ * and signed-in users to their role-appropriate tab shell (`/(client)/(tabs)/home`
+ * or `/(employee)/(tabs)/today`), preventing redirect loops and tab shell loss.
  */
-export function goBackOrHome(router: Router): void {
+export function goBackOrHome(router: Router, fallback: Href = '/home'): void {
   if (router.canGoBack()) {
     router.back();
     return;
   }
 
-  router.replace('/home');
+  router.replace(fallback);
 }
 
 /** Query params exactly as expo-router hands them to a screen or layout. */

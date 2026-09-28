@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,25 +53,25 @@ function iconForType(type: Notification['type'], colors: ReturnType<typeof useSa
   }
 }
 
-function relativeWhen(iso: string, isRTL: boolean): string {
+function relativeWhen(iso: string, locale: 'ar' | 'en', t: TFunction): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
   const diffMs = Date.now() - then;
   const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return isRTL ? 'الآن' : 'Now';
-  if (mins < 60) return isRTL ? `قبل ${mins}د` : `${mins}m ago`;
+  if (mins < 1) return t('notifications.now');
+  if (mins < 60) return t('notifications.minutesAgo', { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return isRTL ? `قبل ${hours}س` : `${hours}h ago`;
+  if (hours < 24) return t('notifications.hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return isRTL ? `قبل ${days}ي` : `${days}d ago`;
-  return new Date(iso).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+  if (days < 7) return t('notifications.daysAgo', { count: days });
+  return new Date(iso).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
     day: 'numeric', month: 'short',
   });
 }
 
 const FILTERS = [
-  { key: 'all', ar: 'الكل', en: 'All' },
-  { key: 'unread', ar: 'غير المقروءة', en: 'Unread' },
+  { key: 'all', label: 'notifications.all' },
+  { key: 'unread', label: 'notifications.unreadFilter' },
 ] as const;
 
 type FilterKey = typeof FILTERS[number]['key'];
@@ -85,12 +86,14 @@ export default function NotificationsScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
+  const localizedText = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
   const [active, setActive] = useState<FilterKey>('all');
   // This screen sits outside the tab group, so it must own its way back.
 
   const {
     notifications,
     unreadCount,
+    loading,
     refreshing,
     refresh,
     loadMore,
@@ -134,23 +137,22 @@ export default function NotificationsScreen() {
           <View style={[styles.headerRow, { flexDirection: dir.row }]}>
             <BackButton onPress={() => router.back()} />
             <View style={styles.headerText}>
-              <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                {dir.isRTL ? 'الإشعارات' : 'Notifications'}
+              <Text style={[styles.title, { fontFamily: f700 }, localizedText]}>
+                {t('notifications.title')}
               </Text>
-              <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                {dir.isRTL
-                  ? unreadCount === 0
-                    ? 'لا إشعارات جديدة'
-                    : `لديكِ ${unreadCount === 1 ? 'إشعار جديد' : `${unreadCount} إشعارات جديدة`}`
-                  : `${unreadCount} new ${unreadCount === 1 ? 'notification' : 'notifications'}`}
-              </Text>
+              {!loading && !loadError ? (
+                <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }, localizedText]}>
+                  {t('notifications.newCount', { count: unreadCount })}
+                </Text>
+              ) : null}
             </View>
             {unreadCount > 0 ? (
-              <Glass variant="regular" radius={20} onPress={markAllAsRead} interactive style={styles.markAllBtn}>
+              <Glass variant="regular" radius={20} onPress={markAllAsRead} interactive style={styles.markAllBtn}
+                accessibilityRole="button" accessibilityLabel={t('notifications.markAllRead')}>
                 <View style={[styles.markAllInner, { flexDirection: dir.row }]}>
                   <CheckCheck size={14} color={colors.teal[700]} strokeWidth={2} />
-                  <Text style={[styles.markAllText, { fontFamily: f600, fontWeight: '600' }]}>
-                    {dir.isRTL ? 'تعليم الكل' : 'Mark all'}
+                  <Text style={[styles.markAllText, { fontFamily: f600, fontWeight: '600' }, localizedText]}>
+                    {t('notifications.markAllRead')}
                   </Text>
                 </View>
               </Glass>
@@ -165,7 +167,7 @@ export default function NotificationsScreen() {
             appearance="navigation"
             options={FILTERS.map((f) => ({
               value: f.key,
-              label: dir.isRTL ? f.ar : f.en,
+              label: t(f.label),
               badge: String(f.key === 'unread' ? unreadCount : notifications.length),
             }))}
             value={active}
@@ -174,12 +176,17 @@ export default function NotificationsScreen() {
         </Animated.View>
 
         {/* List */}
-        {visible.length === 0 ? (
+        {visible.length === 0 && (loading || refreshing) ? (
+          <View style={styles.paginationStatus} accessibilityLiveRegion="polite">
+            <ActivityIndicator color={colors.teal[600]} />
+            <Text style={[styles.emptyText, { fontFamily: f400 }, localizedText]}>{t('common.loading')}</Text>
+          </View>
+        ) : visible.length === 0 && loadError ? null : visible.length === 0 ? (
           <Animated.View entering={FadeInDown.delay(150).duration(600).easing(Easing.out(Easing.cubic))}>
             <Glass variant="regular" radius={sawaaRadius.xl} style={styles.empty}>
               <Bell size={20} color={colors.ink[400]} strokeWidth={1.75} />
-              <Text style={[styles.emptyText, { fontFamily: f400, fontWeight: '400' }]}>
-                {dir.isRTL ? 'لا توجد إشعارات لعرضها' : 'No notifications yet'}
+              <Text style={[styles.emptyText, { fontFamily: f400, fontWeight: '400' }, localizedText]}>
+                {t(active === 'unread' ? 'notifications.noUnread' : 'notifications.noNotifications')}
               </Text>
             </Glass>
           </Animated.View>
@@ -188,7 +195,7 @@ export default function NotificationsScreen() {
             const { Icon, color } = iconForType(n.type, colors);
             const title = (dir.isRTL ? n.titleAr : n.titleEn) || n.titleAr || n.titleEn;
             const body = (dir.isRTL ? n.bodyAr : n.bodyEn) || n.bodyAr || n.bodyEn;
-            const when = relativeWhen(n.createdAt, dir.isRTL);
+            const when = relativeWhen(n.createdAt, dir.locale, t);
             const unread = !n.isRead;
             return (
               <Animated.View
@@ -200,7 +207,7 @@ export default function NotificationsScreen() {
                   radius={sawaaRadius.xl}
                   style={styles.card}
                   onPress={() => handlePress(n)}
-                  accessibilityLabel={[title, body, when].filter(Boolean).join('. ')}
+                  accessibilityLabel={[title, body, when, t(unread ? 'notifications.unread' : 'notifications.read')].filter(Boolean).join('. ')}
                 >
                   <View style={[styles.row, { flexDirection: dir.row }]}>
                     <View style={[
@@ -210,13 +217,13 @@ export default function NotificationsScreen() {
                       <Icon size={18} color={color} strokeWidth={1.75} />
                     </View>
                     <View style={styles.body}>
-                      <Text style={[styles.itemTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                      <Text style={[styles.itemTitle, { fontFamily: f700 }, localizedText]}>
                         {title}
                       </Text>
-                      <Text style={[styles.itemBody, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
+                      <Text style={[styles.itemBody, { fontFamily: f400, fontWeight: '400' }, localizedText]}>
                         {body}
                       </Text>
-                      <Text style={[styles.when, { fontFamily: f400, textAlign: dir.textAlign }]}>{when}</Text>
+                      <Text style={[styles.when, { fontFamily: f400 }, localizedText]}>{when}</Text>
                     </View>
                     {unread ? <View style={styles.unreadDot} /> : null}
                   </View>
@@ -228,9 +235,9 @@ export default function NotificationsScreen() {
 
         {loadError ? (
           <View style={styles.paginationStatus}>
-            <Text style={[styles.paginationError, { fontFamily: f400 }]}>{t('notifications.loadError')}</Text>
-            <Pressable accessibilityRole="button" onPress={loadMore} disabled={loadingMore}>
-              <Text style={[styles.paginationAction, { fontFamily: f600 }]}>{t('common.retry')}</Text>
+            <Text accessibilityRole="alert" style={[styles.paginationError, { fontFamily: f400 }, localizedText]}>{t('notifications.loadError')}</Text>
+            <Pressable accessibilityRole="button" onPress={loadMore} disabled={loadingMore} style={styles.paginationButton}>
+              <Text style={[styles.paginationAction, { fontFamily: f600 }, localizedText]}>{t('common.retry')}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -244,10 +251,10 @@ export default function NotificationsScreen() {
             {loadingMore ? (
               <View style={[styles.loadingMore, { flexDirection: dir.row }]}>
                 <ActivityIndicator color={colors.teal[600]} />
-                <Text style={[styles.paginationAction, { fontFamily: f400 }]}>{t('notifications.loadingMore')}</Text>
+                <Text style={[styles.paginationAction, { fontFamily: f400 }, localizedText]}>{t('notifications.loadingMore')}</Text>
               </View>
             ) : (
-              <Text style={[styles.paginationAction, { fontFamily: f600 }]}>{t('notifications.loadMore')}</Text>
+              <Text style={[styles.paginationAction, { fontFamily: f600 }, localizedText]}>{t('notifications.loadMore')}</Text>
             )}
           </Pressable>
         ) : null}
@@ -259,12 +266,12 @@ export default function NotificationsScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 12 },
   headerRow: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, paddingHorizontal: 4 },
-  headerText: { flex: 1 },
+  headerText: { flex: 1, minWidth: 0 },
   title: { fontSize: 28, color: colors.ink[900] },
   subtitle: { fontSize: 12.5, color: colors.ink[500], marginTop: 2 },
-  markAllBtn: { marginTop: 6 },
-  markAllInner: { alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8 },
-  markAllText: { fontSize: 12, color: colors.teal[700] },
+  markAllBtn: { marginTop: 6, maxWidth: '45%', flexShrink: 1 },
+  markAllInner: { minHeight: 44, alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8 },
+  markAllText: { flexShrink: 1, fontSize: 12, color: colors.teal[700] },
   card: { padding: 14 },
   row: { gap: 12, alignItems: 'flex-start' },
   iconBox: {

@@ -7,12 +7,25 @@ const mockHome = jest.fn();
 const mockCards = jest.fn();
 const mockCardRefetch = jest.fn();
 let mockSignedIn = false;
+let mockUserOverride: unknown = undefined;
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ isRTL: true, locale: 'ar', textAlign: 'right', row: 'row', writingDirection: 'rtl' }) }));
-jest.mock('@/hooks/use-redux', () => ({ useAppSelector: (selector: (state: unknown) => unknown) => selector({ auth: { token: mockSignedIn ? 'token' : null, user: mockSignedIn ? { firstName: 'أمل' } : null } }) }));
+jest.mock('@/hooks/use-redux', () => ({
+  useAppSelector: (selector: (state: unknown) => unknown) =>
+    selector({
+      auth: {
+        token: mockSignedIn ? 'token' : null,
+        user: mockSignedIn
+          ? mockUserOverride !== undefined
+            ? mockUserOverride
+            : { firstName: 'أمل' }
+          : null,
+      },
+    }),
+}));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ teal: { 600: 'teal', 700: 'teal' }, ink: { 900: 'black' }, glass: { opaqueBg: 'white' } }) }));
@@ -51,6 +64,7 @@ import HomeScreen from '../(client)/(tabs)/home';
 describe('shared home', () => {
   beforeEach(() => {
     mockSignedIn = false;
+    mockUserOverride = undefined;
     mockHome.mockReset();
     mockHome.mockReturnValue({ data: undefined, isLoading: false, refetch: jest.fn() });
     mockCardRefetch.mockReset();
@@ -72,11 +86,24 @@ describe('shared home', () => {
     mockSignedIn = true;
     mockHome.mockReturnValue({ data: { upcomingBookings: [], unreadNotifications: [] }, isLoading: true, refetch: jest.fn() });
     const screen = render(<HomeScreen />);
-    expect(mockHome).toHaveBeenCalled();
+    expect(mockHome).toHaveBeenCalledWith(true);
     expect(screen.getByText('home.upcomingAppointment')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
     expect(screen.queryByText('guest-dock')).toBeNull();
     expect(screen.getByText('cards-client')).toBeTruthy();
+  });
+
+  it('does not request private home data or render client upcoming sections for staff users', () => {
+    mockSignedIn = true;
+    mockUserOverride = { role: 'EMPLOYEE', firstName: 'طبيب' };
+    mockHome.mockReturnValue({ data: { upcomingBookings: [], unreadNotifications: [] }, isLoading: false, refetch: jest.fn() });
+
+    const screen = render(<HomeScreen />);
+
+    expect(mockHome).toHaveBeenCalledWith(false);
+    expect(screen.queryByText('home.upcomingAppointment')).toBeNull();
+    expect(screen.getByText('cards-guest')).toBeTruthy();
+    expect(screen.getByText('guest-dock')).toBeTruthy();
   });
 
   it('refetches public home cards when the guest refreshes the home screen', async () => {

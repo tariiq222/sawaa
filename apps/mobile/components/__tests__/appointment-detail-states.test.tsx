@@ -11,8 +11,10 @@ const mockRefetch = jest.fn();
 const mockQuery = jest.fn();
 const mockPush = jest.fn();
 const mockBack = jest.fn();
+const mockReplace = jest.fn();
+let mockCanGoBack = true;
 const mockCancel = jest.fn();
-jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: 'a1' }), useRouter: () => ({ back: mockBack, push: mockPush }) }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: 'a1' }), useRouter: () => ({ back: mockBack, push: mockPush, replace: mockReplace, canGoBack: () => mockCanGoBack }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left' }) }));
@@ -33,7 +35,27 @@ jest.mock('@/components/ui/EmptyState', () => {
 import AppointmentDetail from '../../app/(client)/appointment/[id]';
 const booking = { id: 'a1', status: 'cancelled', scheduledAt: '', durationMins: 60, employee: { nameEn: 'Nora' } };
 describe('appointment detail truthful states', () => {
-  beforeEach(() => { jest.clearAllMocks(); mockQuery.mockReturnValue({ data: booking, isLoading: false, isError: false, refetch: mockRefetch }); });
+  beforeEach(() => { jest.clearAllMocks(); mockCanGoBack = true; mockQuery.mockReturnValue({ data: booking, isLoading: false, isError: false, refetch: mockRefetch }); });
+  it('returns to client appointments from a cold notification without history', () => {
+    mockCanGoBack = false;
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
+    expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+  it('preserves ordinary back navigation when history exists', () => {
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
+    expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+  it('can leave the error screen opened from a cold link', () => {
+    mockCanGoBack = false;
+    mockQuery.mockReturnValue({ data: null, isLoading: false, isError: true, refetch: mockRefetch });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
+    expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
+  });
   it('never invents clinical instructions or an upcoming confirmed status', () => {
     const screen = render(<AppointmentDetail />);
     expect(screen.queryByText(/progressive relaxation/)).toBeNull();
@@ -126,6 +148,20 @@ describe('appointment detail truthful states', () => {
     const screen = render(<AppointmentDetail />);
 
     expect(screen.queryByText('appointments.rate')).toBeNull();
+  });
+
+  it('returns to appointments after immediate cancellation from a cold link', () => {
+    mockCanGoBack = false;
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
+    mockCancel.mockImplementation((_vars, callbacks) => callbacks.onSuccess({ status: 'cancelled' }));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation((title, _message, buttons) => {
+      if (title === 'Cancel booking') buttons?.[1]?.onPress?.();
+    });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByText('Cancel booking'));
+    expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
+    expect(mockBack).not.toHaveBeenCalled();
+    alert.mockRestore();
   });
 
   it('explains that a cancellation is awaiting approval and keeps the detail open', () => {

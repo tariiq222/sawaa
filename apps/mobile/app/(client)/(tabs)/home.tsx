@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { AquaBackground } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
+import { getPrimaryRole } from '@/types/auth';
 import { getFontName } from '@/theme/fonts';
 import { useHome, useMobileHomeCards, usePublicCatalog, useTherapists } from '@/hooks/queries';
 import { HomeAssessmentServices } from '@/components/features/home/HomeAssessmentServices';
@@ -29,7 +30,7 @@ export default function HomeScreen() {
   const reduceMotion = useReduceMotion();
   const router = useRouter();
   const { token, user } = useAppSelector((s) => s.auth);
-  const isClient = Boolean(token && user);
+  const isClient = Boolean(token && user && getPrimaryRole(user) === 'client');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const firstName = user?.firstName?.trim() ?? '';

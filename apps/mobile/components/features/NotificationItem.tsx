@@ -80,6 +80,7 @@ export function NotificationItem({
       style={({ pressed }) => [
         styles.row,
         {
+          flexDirection: language === 'ar' ? 'row-reverse' : 'row',
           backgroundColor: notification.isRead
             ? theme.colors.surface
             : theme.colors.white,
@@ -94,10 +95,10 @@ export function NotificationItem({
       </View>
 
       <View style={styles.content}>
-        <ThemedText variant="subheading" numberOfLines={1}>
+        <ThemedText variant="subheading">
           {title}
         </ThemedText>
-        <ThemedText variant="bodySm" numberOfLines={2}>
+        <ThemedText variant="bodySm">
           {body}
         </ThemedText>
         <ThemedText
@@ -134,6 +135,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   time: {
