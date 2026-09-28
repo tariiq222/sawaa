@@ -107,11 +107,10 @@ describe('ClientBookingsList', () => {
     expect(getBookingsMock).toHaveBeenLastCalledWith(2, 50, 'past');
   });
 
-  it('fetches canonical page one rather than trusting SSR rows with an unknown page size', async () => {
+  it('fetches the canonical first page with its active-tab filter', async () => {
     getBookingsMock.mockResolvedValue({ items: [booking({ serviceNameAr: 'الصفحة الأولى' })], total: 51, page: 1, pageSize: 50 });
-    render(wrap('ar', <ClientBookingsList locale="ar" initialBookings={[booking({ id: 'other-page', serviceNameAr: 'صفحة أخرى' })]} initialTotal={51} />));
+    render(wrap('ar', <ClientBookingsList locale="ar" />));
     expect(await screen.findByText('الصفحة الأولى')).toBeTruthy();
-    expect(screen.queryByText('صفحة أخرى')).toBeNull();
     expect(getBookingsMock).toHaveBeenCalledWith(1, 50, 'upcoming');
   });
 

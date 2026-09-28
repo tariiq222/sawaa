@@ -85,6 +85,28 @@ describe('LoginForm chat resume', () => {
     expect(readPendingChatResume()).toBe('conversation-retry');
   });
 
+  it.each([
+    ['/packages/purchase?packageId=offer-9&packageFamilyId=family-1', 'group /&?', '/packages/purchase?packageId=offer-9&packageFamilyId=family-1&groupId=group+%2F%26%3F'],
+    ['/account?groupId=old', 'new', '/account?groupId=new'],
+    ['/account', 'group-1', '/account?groupId=group-1'],
+  ])('merges a group into the safe return URL %s without losing existing query', async (redirect, groupId, target) => {
+    mocks.searchParams = new URLSearchParams({ redirect, groupId });
+    render(<LocaleProvider locale="en"><LoginForm /></LocaleProvider>);
+    fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '0501234567' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+    await waitFor(() => expect(mocks.routerPush).toHaveBeenCalledWith(target));
+  });
+
+  it.each(['//evil.example', '/\\\\evil.example', 'https://evil.example', '/account\n'])('rejects unsafe return URL %s even when a group is present', async (redirect) => {
+    mocks.searchParams = new URLSearchParams({ redirect, groupId: 'group-1' });
+    render(<LocaleProvider locale="en"><LoginForm /></LocaleProvider>);
+    fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '0501234567' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+    await waitFor(() => expect(mocks.routerPush).toHaveBeenCalledWith('/account'));
+  });
+
   it('preserves the selected package option through the login return URL', async () => {
     mocks.searchParams = new URLSearchParams(
       'redirect=%2Fpackages%2Fpurchase%3FpackageId%3Doffer-9%26packageFamilyId%3Dfamily-1',

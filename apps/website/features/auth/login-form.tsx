@@ -74,9 +74,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           typeof redirectTo === 'string' &&
           /^\/(?![/\\])[A-Za-z0-9_\-./?&=%:]*$/.test(redirectTo);
         const groupId = searchParams.get('groupId');
-        const target = isSafeRelativePath
-          ? `${redirectTo}${groupId ? `?groupId=${encodeURIComponent(groupId)}` : ''}`
-          : '/account';
+        let target = isSafeRelativePath ? redirectTo! : '/account';
+        if (isSafeRelativePath && groupId) {
+          const queryStart = target.indexOf('?');
+          const pathname = queryStart === -1 ? target : target.slice(0, queryStart);
+          const query = new URLSearchParams(queryStart === -1 ? '' : target.slice(queryStart + 1));
+          query.set('groupId', groupId);
+          target = `${pathname}?${query.toString()}`;
+        }
         router.push(target);
       }
     } catch {

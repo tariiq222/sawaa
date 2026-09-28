@@ -1,27 +1,14 @@
 import Link from 'next/link';
 import { getLocale } from '@/features/locale/public';
 import { t } from '@/features/locale/dictionary';
-import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { ClientBookingsList } from '@/features/auth/client-bookings-list';
-import type { ClientBookingItem } from '@sawaa/shared';
 
-interface AccountBookingsPageProps {
-  searchParams: Promise<{ page?: string; pageSize?: string }>;
-}
-
-export async function SawaaAccountBookingsPage({ searchParams }: AccountBookingsPageProps) {
+// Keep the route prop contract for theme callers; the list owns pagination in React Query.
+export async function SawaaAccountBookingsPage(props: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  void props.searchParams;
   const locale = await getLocale();
-  const { page = '1', pageSize = '10' } = await searchParams;
-
-  let bookings: ClientBookingItem[] = [];
-  let total = 0;
-  try {
-    const result = await getMyBookingsApi(Number.parseInt(page, 10), Number.parseInt(pageSize, 10));
-    bookings = result.items;
-    total = result.total;
-  } catch {
-    // not authenticated — auth-guard redirects elsewhere
-  }
 
   return (
     <section
@@ -45,7 +32,7 @@ export async function SawaaAccountBookingsPage({ searchParams }: AccountBookings
             {t(locale, 'account.bookings')}
           </h1>
         </header>
-        <ClientBookingsList locale={locale} initialBookings={bookings} initialTotal={total} />
+        <ClientBookingsList locale={locale} />
       </div>
     </section>
   );
