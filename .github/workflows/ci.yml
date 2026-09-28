@@ -262,7 +262,7 @@ jobs:
         run: node --test scripts/assert-critical-test-results.test.mjs
       - name: Upload critical test artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: critical-real-e2e-results
           path: |
@@ -331,7 +331,7 @@ jobs:
         run: docker start "$OUTBOX_TEST_REDIS_CONTAINER" >/dev/null 2>&1 || true
       - name: Upload outbox transport artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: outbox-transport-results
           path: apps/backend/test-results-outbox.json
@@ -539,7 +539,7 @@ jobs:
 
       - name: Upload Playwright artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dashboard-smoke-playwright-artifacts
           path: |
@@ -674,7 +674,7 @@ jobs:
 
       - name: Upload Trivy SARIF artifact
         if: always() && hashFiles('trivy-fs.sarif') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trivy-fs-sarif
           path: trivy-fs.sarif

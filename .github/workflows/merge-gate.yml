@@ -171,7 +171,7 @@ jobs:
 
       - name: Upload Trivy SARIF artifact
         if: always() && hashFiles('trivy-fs.sarif') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: merge-gate-trivy-fs-sarif
           path: trivy-fs.sarif
