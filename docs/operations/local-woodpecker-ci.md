@@ -27,7 +27,7 @@
 
 ## التشغيل اليدوي المحلي
 
-يلزم checkout مستقل نظيف تمامًا عند commit المرشح بكامل تاريخ Git (مجلد `.git` فعلي، لا worktree مرتبط)، مع `origin/develop` عند أساس الطلب. شغّل من النسخة المستقلة:
+يلزم checkout مستقل نظيف تمامًا عند commit المرشح بكامل تاريخ Git (مجلد `.git` فعلي، لا worktree مرتبط)، مع `origin/develop` عند أساس الطلب. قبل أول تشغيل جهّز صورة MinIO Linux من الإصدار المثبّت باستخدام `bash scripts/ci/prepare-minio.sh`؛ السكربت يحتاج Go وPython3 على المضيف؛ يترجم ملف Linux على المضيف ثم يبني صورة الحاوية داخل محرك CI المعزول. لا يشغّل خدمة MinIO على المضيف. ثم شغّل من النسخة المستقلة:
 
 ```bash
 /Users/tariq/.local/share/woodpecker-local/bin/woodpecker-cli \
@@ -39,7 +39,7 @@
 
 أداة CLI مثبتة من إصدار 3.18.0 الرسمي بعد مطابقة SHA256 بملف checksums المنشور. `skip_clone` مقصود في هذا المسار اليدوي: المسؤول يجهز النسخة المستقلة أولًا. لا ترسل هذا التعريف إلى مشغّل الخادم بوصفه تشغيلًا تلقائيًا قبل إعداد مرحلة جلب المصدر.
 
-السكربت يطبع مجلد النتائج عند الانتهاء؛ الافتراضي `~/.local/share/woodpecker-local/artifacts/<run-id>/`، ويمكن تعيين `SAWAA_CI_ARTIFACT_DIR` عند التشغيل المباشر للسكربت. يتضمن `phases.tsv` و`gates.exitcode` و`launcher.exitcode` وبصمات المصدر وملفات التقارير. أي FAIL أو BLOCKED يمنع قبول التشغيل.
+السكربت يطبع مجلد النتائج عند الانتهاء؛ الافتراضي مجلد شقيق لنسخة المصدر: `../sawaa-ci-artifacts/<run-id>/` (خارج HOME المؤقت الذي يحذفه Woodpecker)، ويمكن تعيين `SAWAA_CI_ARTIFACT_DIR` عند التشغيل المباشر للسكربت. يتضمن `phases.tsv` و`gates.exitcode` و`launcher.exitcode` وبصمات المصدر وملفات التقارير. أي FAIL أو BLOCKED يمنع قبول التشغيل.
 
 ## دليل القبول
 

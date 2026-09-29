@@ -5,7 +5,7 @@ engine=woodpecker-local-engine-1
 source_dir=$(cd "${SAWAA_CI_SOURCE_DIR:-.}" && pwd -P)
 base_ref=${SAWAA_CI_BASE_REF:?Set SAWAA_CI_BASE_REF to the local PR base ref}
 run_id="sawaa-safe-ci-$(date -u +%Y%m%d%H%M%S)-$$-$RANDOM"
-artifact_root=${SAWAA_CI_ARTIFACT_DIR:-${HOME}/.local/share/woodpecker-local/artifacts}
+artifact_root=${SAWAA_CI_ARTIFACT_DIR:-$(dirname "$source_dir")/sawaa-ci-artifacts}
 mkdir -p "$artifact_root/$run_id"
 artifacts=$(cd "$artifact_root/$run_id" && pwd -P)
 pg="$run_id-postgres"
@@ -64,6 +64,27 @@ git status --porcelain=v1 --untracked-files=all > "$artifacts/source-status.txt"
   echo 'CI source must be a clean committed checkout (no staged, unstaged or untracked files).' >&2
   exit 1
 }
+# Refuse a missing, incorrectly built, or non-runnable MinIO image before any
+# database/cache/service resource is created. Prepare it explicitly with the
+# companion script; never reuse the historical ambiguous :pinned image.
+engine_arch=$(ndocker info --format '{{.Architecture}}')
+case "$engine_arch" in aarch64|arm64) engine_arch=arm64 ;; x86_64|amd64) engine_arch=amd64 ;; *) echo "Unsupported engine architecture: $engine_arch" >&2; exit 1 ;; esac
+minio_revision=9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a
+minio_image=${SAWAA_CI_MINIO_IMAGE:-sawaa-ci-minio:9e49d5e7a648-linux-$engine_arch-go1.24.13}
+if ! ndocker image inspect "$minio_image" >/dev/null 2>&1; then
+  echo 'Required Linux MinIO image missing. Run bash scripts/ci/prepare-minio.sh first.' >&2
+  exit 1
+fi
+[ "$(ndocker image inspect --format '{{.Os}}/{{.Architecture}}' "$minio_image")" = "linux/$engine_arch" ]
+[ "$(ndocker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$minio_image")" = "$minio_revision" ]
+[ "$(ndocker image inspect --format '{{index .Config.Labels "io.sawaa.ci.go"}}' "$minio_image")" = go1.24.13 ]
+[ "$(ndocker image inspect --format '{{index .Config.Labels "io.sawaa.ci.os"}}' "$minio_image")" = linux ]
+[ "$(ndocker image inspect --format '{{index .Config.Labels "io.sawaa.ci.arch"}}' "$minio_image")" = "$engine_arch" ]
+minio_image_id=$(ndocker image inspect --format '{{.Id}}' "$minio_image")
+ndocker run --rm --network none --read-only --cap-drop ALL --memory 512m --cpus 1 \
+  "$minio_image_id" --version > "$artifacts/minio-version.txt"
+grep -q '^minio version ' "$artifacts/minio-version.txt"
+printf '%s %s\n' "$minio_image" "$minio_image_id" > "$artifacts/images.txt"
 # Hash only the image build inputs, so cached tools survive source changes.
 image_hash=$(cat scripts/ci/Dockerfile scripts/security/requirements.txt | shasum -a 256 | cut -c1-16)
 runner_image="sawaa-ci-runner:$image_hash"
@@ -72,6 +93,10 @@ if ! ndocker image inspect "$runner_image" >/dev/null 2>&1; then
     ndocker build --tag "$runner_image" --file scripts/ci/Dockerfile - 2>&1 |
     tee "$artifacts/runner-image-build.log"
 fi
+for image in "$runner_image" pgvector/pgvector:pg16 redis:7-alpine; do
+  image_id=$(ndocker image inspect --format '{{.Id}}' "$image")
+  printf '%s %s\n' "$image" "$image_id" >> "$artifacts/images.txt"
+done
 ndocker volume create --label "sawaa.ci.run=$run_id" "$volume" >/dev/null
 volume_created=1
 ndocker volume create sawaa-ci-pnpm-store >/dev/null
@@ -96,7 +121,7 @@ ndocker run -d --name "$outbox" --label "sawaa.ci.run=$run_id" --label sawaa.tes
 containers+=("$outbox")
 ndocker run -d --name "$minio" --label "sawaa.ci.run=$run_id" \
   --network "container:$pg" -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin123 \
-  sawaa-ci-minio:pinned server /data --address :9000 --console-address :9001 >/dev/null
+  "$minio_image_id" server /data --address :9000 --console-address :9001 >/dev/null
 containers+=("$minio")
 ndocker run -d --name "$runner" --label "sawaa.ci.run=$run_id" \
   --network "container:$pg" --cpus 2 --cpuset-cpus 0,1 --memory 5g --shm-size 256m \
