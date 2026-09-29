@@ -25,6 +25,16 @@ This is the shared deployment policy for every AI tool and contributor working o
 - A code rollback does not authorize restoring an old production database or losing newer customer data. Assess compatibility and obtain explicit authorization for destructive recovery.
 - Keep credentials out of Git, logs and reports.
 
+## CI provider — owner direction, 2026-09-30
+
+The owner selected **local Woodpecker** to replace GitHub Actions CI. GitHub Actions is disabled for the repository. The old GitHub budget failure is historical infrastructure evidence, not a permanent merge prerequisite once the replacement gate has passed.
+
+For a PR targeting `develop`, acceptance requires a complete successful local Woodpecker run of the candidate source, including the former backend, real-database, outbox transport, dashboard, dashboard smoke, website, mobile, security, Semgrep and release-integrity checks. Record candidate SHA, base SHA, source tree evidence, overall exit code and per-phase artifacts. A started, partial, skipped or failed pipeline does not authorize merging. If the candidate changes after verification, its new content must be verified before merging.
+
+CI uses disposable test infrastructure in the local isolated Docker engine. Never use development, staging or production credentials/databases. Local execution does not imply a public webhook, automatic GitHub check reporting, deployment, or manual staging acceptance. See [the local CI runbook](local-woodpecker-ci.md).
+
+The production promotion rules above remain in force. Main-only release/tag automation and the additional production merge gate are not replaced by the `develop` validation run.
+
 ## Enforcement status
 
 This file records the approved policy. It does not itself configure GitHub protections or OpenShip automation. Verify those settings live before claiming automated enforcement.
