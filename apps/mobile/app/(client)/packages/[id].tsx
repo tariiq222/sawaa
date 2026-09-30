@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/useTheme';
-import { Alert, AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,14 +16,14 @@ import { getFontName } from '@/theme/fonts';
 import { publicBranchesService } from '@/services/client';
 import { getPackagePurchaseAttemptKey, getPendingPackagePurchase, savePendingPackagePurchase } from '@/services/client/packages';
 import type { PublicBranchSummary } from '@/services/client';
-import { formatHalalas } from '@/lib/package-utils';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import { PackageBranchPicker } from '@/components/features/packages/PackageBranchPicker';
-import { BackButton } from '@/components/ui/BackButton';
+import { FloatingCta } from '@/components/ui/FloatingCta';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 export default function PackageFamilyDetailScreen() {
   const colors = useSawaaColors();
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -127,45 +126,51 @@ export default function PackageFamilyDetailScreen() {
     }
   };
 
+  const purchaseDisabled = initPurchase.isPending || !option || !branchId || !user?.id;
+  const optionName = (candidate: { nameAr: string; nameEn?: string | null }) => (dir.isRTL ? candidate.nameAr : candidate.nameEn ?? candidate.nameAr);
+
   return (
     <AquaBackground>
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
-        <View style={[styles.header, { flexDirection: dir.row }]}>
-          <BackButton onPress={() => router.back()} />
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.details')}</Text>
-        </View>
-        {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 180 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <ScreenHeader title={t('packages.details')} onBack={() => router.back()} />
+        {query.isLoading ? <Text style={[styles.message, { color: colors.ink[500], fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
         {!query.isLoading && (query.isError || !query.data) ? (
           <>
-            <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.error')}</Text>
+            <Text style={[styles.message, { color: colors.ink[500], fontFamily: f600 }]}>{t('packages.error')}</Text>
             <PrimaryButton label={t('common.retry')} fontFamily={f600} disabled={query.isFetching} onPress={() => { void query.refetch(); }} />
           </>
         ) : null}
         {query.data ? (
           <>
             {query.data.imageUrl ? <Image source={{ uri: query.data.imageUrl }} style={styles.image} /> : null}
-            <Text style={[styles.familyName, { fontFamily: f700, textAlign: dir.textAlign }]}>
-              {dir.isRTL ? query.data.nameAr : query.data.nameEn ?? query.data.nameAr}
-            </Text>
-            <Text style={[styles.description, { fontFamily: f400, textAlign: dir.textAlign }]}>
-              {dir.isRTL ? query.data.descriptionAr : query.data.descriptionEn ?? query.data.descriptionAr}
-            </Text>
-            <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.chooseOption')}</Text>
+            <View style={styles.intro}>
+              <Text style={[styles.familyName, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
+                {optionName(query.data)}
+              </Text>
+              <Text style={[styles.description, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                {dir.isRTL ? query.data.descriptionAr : query.data.descriptionEn ?? query.data.descriptionAr}
+              </Text>
+            </View>
+            <SectionHeader title={t('packages.chooseOption')} />
             {query.data.options.map((candidate) => {
               const selected = candidate.id === option?.id;
               return (
                 <Glass
                   key={candidate.id}
-                  variant={selected ? 'strong' : 'regular'}
-                  radius={sawaaRadius.md}
-                  style={[styles.option, selected && styles.optionSelected]}
+                  radius={sawaaRadius.lg}
+                  style={[styles.option, selected && { borderWidth: 2, borderColor: colors.teal[600] }]}
                   onPress={() => setSelectedId(candidate.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
                 >
                   <View style={[styles.optionRow, { flexDirection: dir.row }]}>
-                    <Text style={[styles.optionName, { fontFamily: f600 }]}>{dir.isRTL ? candidate.nameAr : candidate.nameEn ?? candidate.nameAr}</Text>
-                    <Text style={[styles.optionPrice, { fontFamily: f700 }]}>{formatHalalas(candidate.price.finalPrice, dir.locale)}</Text>
+                    <Text style={[styles.optionName, { color: colors.ink[900], fontFamily: f700 }]}>{optionName(candidate)}</Text>
+                    <Text style={[styles.optionPrice, { color: colors.teal[700], fontFamily: f700 }]}>{formatCurrencyAmount(candidate.price.finalPrice, 'SAR', dir.isRTL)}</Text>
                   </View>
-                  <Text style={[styles.optionCount, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                  <Text style={[styles.optionCount, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
                     {t('packages.sessionCount', { count: candidate.sessionCount })}
                   </Text>
                   {(candidate.displayGroups?.length ? candidate.displayGroups : (candidate.groups ?? []).map((group) => ({
@@ -176,11 +181,11 @@ export default function PackageFamilyDetailScreen() {
                     employeeName: '',
                     sessions: group.sessions.map((session, position) => ({ position, durationMins: 0, deliveryType: session.deliveryType })),
                   }))).map((group) => (
-                    <View key={group.key} style={styles.groupDetail}>
-                      <Text style={[styles.groupLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>
+                    <View key={group.key} style={[styles.groupDetail, { borderTopColor: colors.ink[400] }]}>
+                      <Text style={[styles.groupLabel, { color: colors.ink[700], fontFamily: f600, textAlign: dir.textAlign }]}>
                         {group.label || t('packages.groupLabel', { key: group.key })}
                       </Text>
-                      <Text style={[styles.groupMeta, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                      <Text style={[styles.groupMeta, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
                         {group.serviceNameAr || group.serviceNameEn
                           ? t('packages.groupComposition', {
                             sessions: group.sessions.length,
@@ -209,41 +214,36 @@ export default function PackageFamilyDetailScreen() {
               f600={f600}
               f700={f700}
             />
-            <Pressable
-              onPress={handlePurchase}
-              disabled={initPurchase.isPending || !option || !branchId || !user?.id}
-              style={[styles.cta, (initPurchase.isPending || !option || !branchId || !user?.id) && styles.ctaDisabled]}
-              accessibilityRole="button"
-            >
-              <Text style={[styles.ctaText, { fontFamily: f700 }]}>{initPurchase.isPending ? t('packages.purchasing') : t('packages.purchase')}</Text>
-            </Pressable>
           </>
         ) : null}
       </ScrollView>
+      {query.data ? (
+        <FloatingCta>
+          <PrimaryButton
+            label={initPurchase.isPending ? t('packages.purchasing') : t('packages.purchase')}
+            fontFamily={f700}
+            disabled={purchaseDisabled}
+            onPress={handlePurchase}
+          />
+        </FloatingCta>
+      ) : null}
     </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
-  content: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 120, gap: sawaaSpacing.md },
-  header: { alignItems: 'center', gap: sawaaSpacing.md },
-  title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  message: { textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   image: { width: '100%', height: 160, borderRadius: sawaaRadius.lg },
-  familyName: { color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  description: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
-  sectionTitle: { color: colors.ink[900], fontSize: sawaaType.subheading.fontSize, marginTop: sawaaSpacing.md },
+  intro: { gap: sawaaSpacing.sm },
+  familyName: { fontSize: sawaaType.heading.fontSize - 2, lineHeight: sawaaType.heading.lineHeight },
+  description: { fontSize: 15, lineHeight: 24 },
   option: { padding: sawaaSpacing.lg, minHeight: 80 },
-  optionSelected: { borderWidth: 1, borderColor: colors.teal[500] },
-  optionRow: { justifyContent: 'space-between', alignItems: 'center' },
-  optionName: { color: colors.ink[900], fontSize: sawaaType.body.fontSize },
-  optionPrice: { color: colors.teal[700], fontSize: sawaaType.body.fontSize },
-  optionCount: { color: colors.ink[500], fontSize: sawaaType.caption.fontSize, marginTop: sawaaSpacing.xs },
-  groupDetail: { borderTopWidth: 1, borderTopColor: colors.glass.borderSoft, marginTop: sawaaSpacing.sm, paddingTop: sawaaSpacing.sm, gap: sawaaSpacing.xs },
-  groupLabel: { color: colors.ink[700], fontSize: sawaaType.caption.fontSize },
-  groupMeta: { color: colors.ink[500], fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
-  warning: { color: colors.accent.amber, fontSize: sawaaType.caption.fontSize },
-  cta: { alignItems: 'center', backgroundColor: themeColors.primaryFill, borderRadius: sawaaRadius.md, padding: sawaaSpacing.lg, marginTop: sawaaSpacing.md },
-  ctaDisabled: { opacity: 0.55 },
-  ctaText: { color: themeColors.primaryForeground, fontSize: sawaaType.body.fontSize },
+  optionRow: { justifyContent: 'space-between', alignItems: 'center', gap: sawaaSpacing.md },
+  optionName: { flex: 1, fontSize: 16 },
+  optionPrice: { fontSize: 16 },
+  optionCount: { fontSize: 14, marginTop: sawaaSpacing.xs },
+  groupDetail: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: sawaaSpacing.sm, paddingTop: sawaaSpacing.sm, gap: sawaaSpacing.xs },
+  groupLabel: { fontSize: sawaaType.caption.fontSize + 1 },
+  groupMeta: { fontSize: sawaaType.caption.fontSize, lineHeight: 18 },
 });

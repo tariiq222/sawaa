@@ -57,8 +57,12 @@ jest.mock('expo-linear-gradient', () => ({
 
 jest.mock('lucide-react-native', () => ({
   Building2: () => null,
+  CalendarPlus: () => null,
+  Check: () => null,
   ChevronLeft: () => null,
   ChevronRight: () => null,
+  Star: () => null,
+  User: () => null,
 }));
 
 import i18n from '@/i18n';
@@ -190,6 +194,7 @@ describe('clinic detail renders catalog data, not placeholders', () => {
 
   it('shows real clinic practitioners and carries clinicId into the employee profile', async () => {
     const view = await renderIn('en');
+    fireEvent.press(view.getByText(i18n.getFixedT('en')('clinics.specialistsTab')));
     expect(view.getByText('Sara')).toBeTruthy();
     fireEvent.press(view.getByText('Sara'));
     expect(mockPush).toHaveBeenCalledWith({
@@ -211,6 +216,7 @@ describe('clinic detail renders catalog data, not placeholders', () => {
     mockTherapists.data = undefined;
     mockTherapists.isError = true;
     const view = await renderIn('en');
+    fireEvent.press(view.getByText(i18n.getFixedT('en')('clinics.specialistsTab')));
     expect(view.getByText(i18n.getFixedT('en')('guest.loadError'))).toBeTruthy();
     fireEvent.press(view.getByText(i18n.getFixedT('en')('common.retry')));
     expect(mockTherapists.refetch).toHaveBeenCalledTimes(1);
@@ -231,6 +237,7 @@ describe('clinic detail renders catalog data, not placeholders', () => {
     mockAuthToken = null;
     const view = await renderIn('en');
 
+    fireEvent.press(view.getByText(i18n.getFixedT('en')('clinics.specialistsTab')));
     fireEvent.press(view.getByText('Sara'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-detail/[kind]/[id]',

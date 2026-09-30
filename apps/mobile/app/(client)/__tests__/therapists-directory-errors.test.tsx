@@ -98,4 +98,31 @@ describe('therapist directory query failures', () => {
     expect(screen.getByText(i18n.getFixedT('en')('therapists.loading'))).toBeTruthy();
     expect(screen.queryByText(i18n.getFixedT('en')('therapists.availableCount', { count: 0 }))).toBeNull();
   });
+
+  it('filters with chips and the "All" chip clears the filter', () => {
+    mockTherapists.data = [
+      { id: 'a', slug: 'a', nameEn: 'Available therapist', serviceIds: [], isAvailableToday: true, minServicePrice: 20000 },
+      { id: 'b', slug: 'b', nameEn: 'Busy therapist', serviceIds: [], isAvailableToday: false, minServicePrice: null },
+    ];
+    const screen = renderScreen();
+    expect(screen.getByText('Available therapist')).toBeTruthy();
+    expect(screen.getByText('Busy therapist')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Available' }));
+    expect(screen.queryByText('Busy therapist')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Available' })).toHaveProp('accessibilityState', { selected: true, disabled: false });
+
+    fireEvent.press(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByText('Busy therapist')).toBeTruthy();
+  });
+
+  it('shows availability today and the lowest price only where the directory has them', () => {
+    mockTherapists.data = [
+      { id: 'a', slug: 'a', nameEn: 'Available therapist', serviceIds: [], isAvailableToday: true, minServicePrice: 20000 },
+      { id: 'b', slug: 'b', nameEn: 'Busy therapist', serviceIds: [], isAvailableToday: false, minServicePrice: null },
+    ];
+    const screen = renderScreen();
+    expect(screen.getAllByText('Available today')).toHaveLength(1);
+    expect(screen.getAllByText(/^From /)).toHaveLength(1);
+  });
 });

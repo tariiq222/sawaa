@@ -1,107 +1,79 @@
-import React, { useCallback, useMemo } from 'react';
-import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { FlatList, Image, StyleSheet, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Building2, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
-import { AppIcon } from '@/components/ui/AppIcon';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { ClinicCard, filterClinics } from '@/components/features/directory/ClinicCard';
+import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
 import { useClinics } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import type { ClinicEntry } from '@/lib/clinics';
-import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
-import { concentricRadius } from '@/theme/sawaa/tokens';
-import { Glass } from '@/theme/components/Glass';
-import { ThemedText } from '@/theme/components/ThemedText';
-
-const CARD_RADIUS = sawaaRadius.xl;
-const CARD_PADDING = 16;
+import { getFontName } from '@/theme/fonts';
+import { AquaBackground } from '@/theme/sawaa';
+import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 export default function ClinicsScreen() {
   const colors = useSawaaColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
   const clinicsQuery = useClinics();
+  const [query, setQuery] = useState('');
   const clinics = useMemo(() => clinicsQuery.data ?? [], [clinicsQuery.data]);
+  const visible = useMemo(() => filterClinics(clinics, query), [clinics, query]);
+  const messageStyle = [styles.message, { color: colors.ink[500], fontFamily: getFontName(dir.locale, '400') }];
 
-  const renderItem = useCallback(({ item }: { item: ClinicEntry }) => {
-    const name = dir.isRTL ? item.nameAr : (item.nameEn ?? item.nameAr);
-    return (
-      <Glass
-        variant="strong"
-        radius={CARD_RADIUS}
-        onPress={() => router.push({ pathname: '/(client)/clinic/[id]', params: { id: item.id } })}
-        accessibilityLabel={`${name}, ${t('clinics.therapistsCount', { count: item.therapistCount })}, ${t('clinics.servicesCount', { count: item.serviceCount })}`}
-        interactive
-        style={styles.card}
-      >
-        <View style={[styles.cardBody, { flexDirection: dir.row }]}>
-          {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.clinicImage} accessibilityLabel={name} />
-          ) : (
-            <View style={styles.iconWrap}>
-              <AppIcon sf="building.2.fill" fallback={Building2} size={24} color={colors.teal[700]} strokeWidth={1.6} />
-            </View>
-          )}
-          <View style={styles.cardText}>
-            <ThemedText variant="subheading" style={{ textAlign: dir.textAlign }} numberOfLines={2}>
-              {name}
-            </ThemedText>
-            {(dir.isRTL ? item.descriptionAr : item.descriptionEn ?? item.descriptionAr) ? (
-              <ThemedText variant="bodySm" color={colors.ink[500]} style={{ textAlign: dir.textAlign }} numberOfLines={2}>
-                {dir.isRTL ? item.descriptionAr : item.descriptionEn ?? item.descriptionAr}
-              </ThemedText>
-            ) : null}
-            <ThemedText variant="bodySm" color={colors.ink[500]} style={{ textAlign: dir.textAlign }}>
-              {item.serviceCount > 0
-                ? `${t('clinics.therapistsCount', { count: item.therapistCount })} · ${t('clinics.servicesCount', { count: item.serviceCount })}`
-                : t('clinics.therapistsCount', { count: item.therapistCount })}
-            </ThemedText>
-          </View>
-          <AppIcon sf={dir.isRTL ? 'chevron.left' : 'chevron.right'} fallback={dir.isRTL ? ChevronLeft : ChevronRight} size={18} color={colors.ink[500]} strokeWidth={1.6} />
+  const renderItem = useCallback(({ item }: { item: ClinicEntry }) => (
+    <ClinicCard
+      clinic={item}
+      onPress={() => router.push({ pathname: '/(client)/clinic/[id]', params: { id: item.id } })}
+    />
+  ), [router]);
+
+  const emptyState = (() => {
+    if (clinicsQuery.isLoading) return <Text style={messageStyle}>{t('common.loading')}</Text>;
+    if (clinicsQuery.isError) {
+      return (
+        <View style={styles.empty}>
+          <Text style={messageStyle}>{t('clinics.loadError')}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.retry')}
+            onPress={() => { void clinicsQuery.refetch(); }}
+            style={styles.retry}
+          >
+            <Text style={[styles.retryText, { color: colors.teal[700], fontFamily: getFontName(dir.locale, '600') }]}>{t('common.retry')}</Text>
+          </Pressable>
         </View>
-      </Glass>
-    );
-  }, [colors, styles, dir, router, t]);
-
-  const emptyState = useMemo(() => {
-    if (clinicsQuery.isLoading) return (
-      <View style={styles.emptyState}><ThemedText variant="bodySm" align="center">{t('common.loading')}</ThemedText></View>
-    );
-    if (clinicsQuery.isError) return (
-      <View style={styles.emptyState}>
-        <ThemedText variant="bodySm" color={colors.ink[500]} align="center">{t('clinics.loadError')}</ThemedText>
-        <Glass variant="strong" radius={sawaaRadius.md} interactive
-          accessibilityLabel={t('common.retry')} onPress={() => { void clinicsQuery.refetch(); }} style={styles.retry}>
-          <ThemedText variant="bodySm" align="center">{t('common.retry')}</ThemedText>
-        </Glass>
-      </View>
-    );
-    return (
-      <View style={styles.emptyState}>
-        <ThemedText variant="bodySm" color={colors.ink[500]} align="center">{t('clinics.empty')}</ThemedText>
-      </View>
-    );
-  }, [colors, styles, clinicsQuery.isLoading, clinicsQuery.isError, clinicsQuery.refetch, t]);
+      );
+    }
+    return <Text style={messageStyle}>{clinics.length > 0 ? t('common.noResults') : t('clinics.empty')}</Text>;
+  })();
 
   return (
     <AquaBackground>
       <FlatList
-        data={clinics}
+        data={visible}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        ItemSeparatorComponent={Separator}
         ListHeaderComponent={(
-          <View style={[styles.headerRow, { flexDirection: dir.row }]}> 
-            <BackButton onPress={() => router.back()} />
-            <ThemedText variant="subheading">{t('clinics.title')}</ThemedText>
-            <View style={styles.backBtn} />
+          <View style={styles.header}>
+            <ScreenHeader title={t('clinics.title')} onBack={() => router.back()} />
+            <DirectorySearch
+              value={query}
+              onChangeText={setQuery}
+              placeholder={t('clinics.searchPlaceholder')}
+              accessibilityLabel={t('clinics.searchPlaceholder')}
+              testID="clinic-search"
+            />
           </View>
         )}
         ListEmptyComponent={emptyState}
@@ -110,31 +82,16 @@ export default function ClinicsScreen() {
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  list: { flexGrow: 1, paddingHorizontal: 24, gap: 12 },
-  headerRow: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  card: { marginBottom: 12 },
-  cardBody: { alignItems: 'center', gap: 12, padding: CARD_PADDING },
-  clinicImage: { width: 56, height: 56, borderRadius: sawaaRadius.md },
-  retry: { marginTop: 12, paddingHorizontal: 24, paddingVertical: 12, minHeight: 44, justifyContent: 'center' },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING),
-    backgroundColor: colors.glass.opaqueBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardText: { flex: 1, gap: 3 },
-  emptyState: { flex: 1, minHeight: 260, alignItems: 'center', justifyContent: 'center' },
+function Separator() {
+  return <View style={styles.separator} />;
+}
+
+const styles = StyleSheet.create({
+  list: { flexGrow: 1, paddingHorizontal: sawaaSpacing.lg },
+  header: { gap: sawaaSpacing.md, marginBottom: sawaaSpacing.xl },
+  separator: { height: sawaaSpacing.md },
+  empty: { alignItems: 'center', gap: sawaaSpacing.sm },
+  message: { fontSize: sawaaType.body.fontSize + 1, lineHeight: 22, textAlign: 'center', paddingVertical: sawaaSpacing['3xl'] },
+  retry: { minHeight: 44, justifyContent: 'center', paddingHorizontal: sawaaSpacing.lg },
+  retryText: { fontSize: 14, textDecorationLine: 'underline' },
 });

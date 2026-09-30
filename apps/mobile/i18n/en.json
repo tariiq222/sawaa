@@ -169,6 +169,10 @@
     "empty": "No clinics available right now",
     "loadError": "Couldn't load clinics. Check your connection and try again.",
     "bookAppointment": "Book your appointment",
+    "searchPlaceholder": "Search for a clinic",
+    "profileTitle": "Clinic",
+    "specialistsTab": "Therapists",
+    "noAbout": "There is no description for this clinic yet.",
     "notFound": "Clinic not found"
   },
   "groups": {
@@ -224,10 +228,14 @@
     "loading": "Loading…",
     "empty": "No therapists yet",
     "unknownName": "Therapist",
+    "listTitle": "Therapists",
+    "availableToday": "Available today",
+    "fromPrice": "From {{price}}",
     "bookingService": "{{service}}",
     "bookingServiceTitle": "Choose a service",
     "noBookableServices": "No services are currently available for booking.",
     "filters": {
+      "all": "All",
       "available": "Available",
       "women": "Women",
       "remote": "Remote",
@@ -236,6 +244,7 @@
   },
   "employeeProfile": {
     "about": "About",
+    "profileTitle": "Therapist profile",
     "clinics": "Clinics",
     "services": "Services",
     "ratingCount": "({{count}} reviews)",
@@ -244,6 +253,8 @@
     "selectBookingOption": "Select a clinic or service to continue",
     "unavailable": "Booking unavailable",
     "priceAtNextStep": "Price shown in next step",
+    "bookAppointment": "Book an appointment",
+    "noBio": "There is no description for this therapist yet.",
     "bookNow": "Book now"
   },
   "appointments": {
@@ -563,6 +574,7 @@
   "packages": {
     "title": "Packages",
     "subtitle": "Choose a package that fits your care plan.",
+    "intro": "You pay once for a number of sessions and book your appointments from them later. The remaining balance appears on the package balance page.",
     "details": "Package details",
     "balance": "Package balance",
     "homeEntry": "Explore session packages",
@@ -572,6 +584,10 @@
     "empty": "No packages are available right now.",
     "noPurchases": "Your purchased sessions will appear here.",
     "optionsCount": "{{count}} options",
+    "startsFrom": "Starts from",
+    "sessionsFrom": "From {{count}} sessions",
+    "featureSessionsOf": "{{count}} sessions of {{service}}",
+    "featurePractitioner": "With {{name}}",
     "chooseOption": "Choose an option",
     "sessionCount": "{{count}} sessions",
     "groupLabel": "Group {{key}}",
@@ -587,6 +603,7 @@
     "branchError": "Branches could not be loaded.",
     "retry": "Retry",
     "purchase": "Continue to payment",
+    "buy": "Buy package",
     "purchasing": "Opening payment...",
     "purchaseError": "Payment could not be started. Your attempt is safe to retry.",
     "refund": "Refunded: {{amount}}",
