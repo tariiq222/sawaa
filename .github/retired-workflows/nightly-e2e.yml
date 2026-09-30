@@ -141,7 +141,7 @@ jobs:
 
       - name: Upload Playwright artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dashboard-flows-playwright-artifacts
           path: |
@@ -298,7 +298,7 @@ jobs:
         run: docker start "$OUTBOX_TEST_REDIS_CONTAINER" >/dev/null 2>&1 || true
       - name: Upload outbox transport artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nightly-outbox-transport-results
           path: apps/backend/test-results-outbox.json
