@@ -24,7 +24,8 @@ import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
-import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { CancelApprovalRequiredException, CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../../modules/bookings/client/client-reschedule-booking.handler';
 import { ClientRescheduleBookingDto } from '../../../modules/bookings/client/client-reschedule-booking.dto';
 import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/submit-rating.handler';
@@ -111,6 +112,7 @@ export class MobileClientBookingsController {
     private readonly get: GetBookingHandler,
     private readonly create: CreateBookingHandler,
     private readonly cancel: CancelBookingHandler,
+    private readonly requestCancel: RequestCancelBookingHandler,
     private readonly reschedule: ClientRescheduleBookingHandler,
     private readonly rate: SubmitRatingHandler,
     private readonly bookingAction: GetClientBookingForActionHandler,
@@ -182,19 +184,32 @@ export class MobileClientBookingsController {
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'Booking cancelled', schema: { type: 'object' } })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  cancelBooking(
+  async cancelBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: MobileCancelBookingDto,
   ) {
-    return this.cancel.execute({
-      bookingId: id,
-      reason: body.reason,
-      cancelNotes: body.cancelNotes,
-      changedBy: user.id,
-      source: 'client',
-      clientId: user.id,
-    });
+    try {
+      return await this.cancel.execute({
+        bookingId: id,
+        reason: body.reason,
+        cancelNotes: body.cancelNotes,
+        changedBy: user.id,
+        source: 'client',
+        clientId: user.id,
+      });
+    } catch (error) {
+      if (!(error instanceof CancelApprovalRequiredException)) throw error;
+      // The branch requires the centre to approve cancellations: turn the
+      // client's cancel into a cancellation request instead of a dead end.
+      await this.bookingAction.executeForRate(id, user.id);
+      return this.requestCancel.execute({
+        bookingId: id,
+        reason: body.reason,
+        cancelNotes: body.cancelNotes,
+        requestedBy: user.id,
+      });
+    }
   }
 
   @Get(':id/join')
