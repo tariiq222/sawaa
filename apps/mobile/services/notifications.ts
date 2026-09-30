@@ -47,6 +47,9 @@ function firstText(...values: Array<string | null | undefined>): string {
 function normalizeNotification(item: NotificationPayload): Notification {
   return {
     ...item,
+    // The backend enum is UPPER_SNAKE_CASE (BOOKING_CONFIRMED); every consumer
+    // in the app matches the lower-case form.
+    type: String(item.type ?? '').toLowerCase() as Notification['type'],
     userId: item.userId ?? item.recipientId ?? '',
     titleAr: firstText(item.titleAr, item.title, item.titleEn),
     titleEn: firstText(item.titleEn, item.title, item.titleAr),
