@@ -33,24 +33,24 @@ describe('HomeTopBar', () => {
   beforeEach(() => mockPush.mockClear());
 
   it.each([
-    ['en', 'Explore', 'Notifications', 'Profile'],
-    ['ar', 'استكشف', 'الإشعارات', 'الملف الشخصي'],
-  ])('labels its buttons from the real %s locale', async (language, search, notifications, profile) => {
+    ['en', 'Notifications'],
+    ['ar', 'الإشعارات'],
+  ])('shows the date, greeting and a labelled bell for clients in %s', async (language, notifications) => {
     await act(async () => { await i18n.changeLanguage(language as string); });
-    const { getByRole } = render(<HomeTopBar f600="System" />);
+    const { getByRole, getByText } = render(<HomeTopBar f600="System" dateLabel="Wednesday 30 September" greeting="Good evening, Amal" />);
 
-    fireEvent.press(getByRole('button', { name: search as string }));
-
-    expect(mockPush).toHaveBeenCalledWith('/(client)/(tabs)/explore');
-    expect(getByRole('button', { name: notifications as string })).toBeTruthy();
-    expect(getByRole('button', { name: profile as string })).toBeTruthy();
+    expect(getByText('Wednesday 30 September')).toBeTruthy();
+    expect(getByText('Good evening, Amal')).toBeTruthy();
+    fireEvent.press(getByRole('button', { name: notifications as string }));
+    expect(mockPush).toHaveBeenCalledWith('/(client)/notifications');
   });
 
-  it('keeps only discovery controls for guests', async () => {
+  it('shows the centre name and a sign-in button for guests', async () => {
     await act(async () => { await i18n.changeLanguage('ar'); });
     const { getByRole, getByText, queryByRole } = render(<HomeTopBar f600="System" isClient={false} />);
-    expect(getByRole('button', { name: 'استكشف' })).toBeTruthy();
     expect(getByText('مركز سواء للإرشاد الأسري')).toBeTruthy();
-    expect(queryByRole('button', { name: 'تسجيل الدخول' })).toBeNull();
+    expect(queryByRole('button', { name: 'الإشعارات' })).toBeNull();
+    fireEvent.press(getByRole('button', { name: 'تسجيل الدخول' }));
+    expect(mockPush).toHaveBeenCalledWith('/(auth)/login');
   });
 });
