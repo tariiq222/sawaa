@@ -118,6 +118,67 @@ describe('RefundPaymentHandler', () => {
     });
   });
 
+  describe('unsupported repeated Moyasar refunds', () => {
+    it.each([
+      ['dashboard', PaymentStatus.PARTIALLY_REFUNDED, 400],
+      ['dashboard', PaymentStatus.COMPLETED, 400],
+      ['dashboard', PaymentStatus.PARTIALLY_REFUNDED, 0],
+      ['cancellation', PaymentStatus.PARTIALLY_REFUNDED, 400],
+      ['cancellation', PaymentStatus.COMPLETED, 400],
+      ['cancellation', PaymentStatus.PARTIALLY_REFUNDED, 0],
+    ])('rejects %s card refund from %s with refunded=%i before creating a request', async (path, status, refunded) => {
+      const row = {
+        id: 'payment-1', method: 'ONLINE_CARD', status, gatewayRef: 'gateway-payment-1',
+        amount: new Prisma.Decimal(1000), refundedAmount: new Prisma.Decimal(refunded), invoiceId: 'invoice-1',
+      };
+      prisma.$queryRaw.mockResolvedValue([row]);
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(invoice({
+        total: new Prisma.Decimal(1000), vatAmt: new Prisma.Decimal(0), refundedAmount: new Prisma.Decimal(refunded),
+      }));
+      const finalize = jest.spyOn(handler, 'finalizeRefundFromCancellation').mockResolvedValue(undefined);
+      const cmd = { paymentId: 'payment-1', reason: 'remaining refund', amount: 600 };
+      const action = path === 'dashboard'
+        ? handler.execute(cmd)
+        : handler.createRefundRequestInTx(prisma, cmd);
+
+      await expect(action).rejects.toThrow('Moyasar does not support a second gateway refund');
+      await expect(action).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.refundRequest.create).not.toHaveBeenCalled();
+      expect(finalize).not.toHaveBeenCalled();
+      expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+    });
+
+    it.each(['CASH', 'BANK_TRANSFER'])('keeps repeated off-gateway %s cancellation refunds supported', async (method) => {
+      prisma.$queryRaw.mockResolvedValue([{
+        id: 'payment-1', method, status: PaymentStatus.PARTIALLY_REFUNDED, gatewayRef: null,
+        amount: new Prisma.Decimal(1000), refundedAmount: new Prisma.Decimal(400), invoiceId: 'invoice-1',
+      }]);
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(invoice({
+        total: new Prisma.Decimal(1000), vatAmt: new Prisma.Decimal(0), refundedAmount: new Prisma.Decimal(400),
+      }));
+
+      const result = await handler.createRefundRequestInTx(prisma, {
+        paymentId: 'payment-1', reason: 'remaining cash refund', amount: 600,
+      });
+
+      expect(result.payment.gatewayRef).toBeNull();
+      expect(prisma.refundRequest.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: RefundStatus.COMPLETED, amount: 600 }),
+      }));
+      expect(prisma.payment.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: PaymentStatus.REFUNDED, refundedAmount: { increment: 600 } }),
+      }));
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'REFUNDED', refundedAmount: 1000 }),
+      }));
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
+    });
+  });
+
   describe('createRefundRequestInTx', () => {
     const rawPayment = (overrides: Record<string, unknown> = {}) => ({
       id: 'payment-1', status: PaymentStatus.COMPLETED, gatewayRef: 'gateway-payment-1',
@@ -258,6 +319,76 @@ describe('RefundPaymentHandler', () => {
           id: 'refund-1', eventType: 'finance.refund.completed',
         }),
       });
+    });
+
+    it.each([
+      [400, 400, PaymentStatus.PARTIALLY_REFUNDED],
+      [1000, 1000, PaymentStatus.REFUNDED],
+    ])('keeps the first gateway refund of %i halalas supported', async (amount, target, status) => {
+      prisma.refundRequest.findUniqueOrThrow.mockResolvedValue(processing({ amount: new Prisma.Decimal(amount) }));
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(payment(0, { amount: new Prisma.Decimal(1000) }));
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(invoice({
+        total: new Prisma.Decimal(1000), vatAmt: new Prisma.Decimal(0), refundedAmount: new Prisma.Decimal(0),
+      }));
+      moyasar.getPaymentStatus.mockResolvedValue(providerPayment(0, { amount: 1000 }));
+      moyasar.createRefund.mockResolvedValue(providerRefund(target, { amount }));
+
+      await handler.finalizeRefundFromCancellation({ refundRequestId: 'refund-1', idempotencyKey: 'refund:refund-1' });
+
+      expect(moyasar.createRefund).toHaveBeenCalledTimes(1);
+      expect(moyasar.createRefund).toHaveBeenCalledWith(DEFAULT_ORG_ID, { paymentId: 'gateway-payment-1', amount });
+      const baselineWrite = prisma.refundRequest.updateMany.mock.calls.findIndex(([update]: [any]) =>
+        update.data.providerState === 'CALL_UNKNOWN'
+        && update.data.baselineRefundedAmount === 0
+        && update.data.targetCumulativeRefundedAmount === target);
+      expect(baselineWrite).toBeGreaterThanOrEqual(0);
+      expect(prisma.refundRequest.updateMany.mock.invocationCallOrder[baselineWrite])
+        .toBeLessThan(moyasar.createRefund.mock.invocationCallOrder[0]);
+      expect(prisma.refundRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: RefundStatus.COMPLETED, providerState: 'CONFIRMED' }),
+      }));
+      expect(prisma.payment.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status, refundedAmount: { increment: amount } }),
+      }));
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status, refundedAmount: target, refundedVatAmt: 0 }),
+      }));
+      expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
+      expect(prisma.payment.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
+        data: { refundProviderLeaseOwner: null, refundProviderLeaseExpiresAt: null },
+      }));
+    });
+
+    it.each([
+      ['already refunded provider payment', {}, 400, 600],
+      ['zero refunded baseline', { refunded: 0 }, 0, 600],
+      ['fully refunded payment', { refunded: 1000 }, 1000, 1],
+      ['refund above original amount', { refunded: 1001 }, 1001, 1],
+      ['negative refunded baseline', { refunded: -1 }, -1, 600],
+      ['provider/local baseline drift', { refunded: 300 }, 400, 600],
+      ['currency drift', { currency: 'USD' }, 400, 600],
+      ['identity drift', { id: 'other-payment' }, 400, 600],
+      ['original amount drift', { amount: 1100 }, 400, 600],
+      ['request above remaining balance', {}, 400, 601],
+      ['zero refund request', {}, 400, 0],
+      ['failed payment', { status: 'failed' }, 400, 600],
+      ['voided payment', { status: 'voided' }, 400, 600],
+      ['authorized payment', { status: 'authorized' }, 400, 600],
+      ['initiated payment', { status: 'initiated' }, 400, 600],
+    ])('keeps %s in MANUAL_REVIEW without POST or accounting', async (_case, overrides, localRefunded, amount) => {
+      prisma.refundRequest.findUniqueOrThrow.mockResolvedValue(processing({ amount: new Prisma.Decimal(amount) }));
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(payment(localRefunded, { amount: new Prisma.Decimal(1000) }));
+      moyasar.getPaymentStatus.mockResolvedValue(providerPayment(400, { status: 'refunded', amount: 1000, ...overrides }));
+
+      await handler.finalizeRefundFromCancellation({ refundRequestId: 'refund-1', idempotencyKey: 'refund:refund-1' });
+
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+      expect(prisma.refundRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: RefundStatus.MANUAL_REVIEW, providerState: 'MANUAL_REVIEW' }),
+      }));
     });
 
     it.each([
