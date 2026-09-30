@@ -419,7 +419,15 @@
     "walkIn": "Walk-in",
     "step": "Step",
     "of": "of",
-    "confirmAndPay": "Confirm & Pay"
+    "confirmAndPay": "Confirm & Pay",
+    "stepOfTwo": "Step {{step}} of 2",
+    "continue": "Continue",
+    "visitType": "Visit type",
+    "paymentMethod": "Payment method",
+    "viewAppointment": "View appointment",
+    "backToHome": "Back to home",
+    "tryAgain": "Try again",
+    "yourLocalTime": "Your local time"
   },
   "payment": {
     "methodsLoading": "Loading payment methods…",

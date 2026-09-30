@@ -26,8 +26,10 @@ jest.mock('react-native-reanimated', () => {
 });
 jest.mock('lucide-react-native', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
-  return { Check: NativeView, Clock: NativeView, X: NativeView };
+  return { Calendar: NativeView, Check: NativeView, CircleAlert: NativeView, Clock: NativeView, Hash: NativeView, User: NativeView };
 });
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
+jest.mock('react-i18next', () => ({ __esModule: true, initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => ({ t: (key: string) => key === 'booking.backToHome' ? 'Back to home' : key }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));

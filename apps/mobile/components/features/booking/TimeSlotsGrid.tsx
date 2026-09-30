@@ -1,11 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
+import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Glass } from '@/theme/components/Glass';
+import { useTheme } from '@/theme/useTheme';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { DirState } from '@/hooks/useDir';
@@ -55,7 +55,8 @@ export function TimeSlotsGrid({
   onRetry,
 }: TimeSlotsGridProps) {
   const sawaaColors = useSawaaColors();
-  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
+  const { scheme } = useTheme();
+  const roles = getSawaaRoles(scheme);
   if (loading) {
     return (
       <View style={[styles.slotsGrid, { flexDirection: dir.row }]}>
@@ -98,50 +99,46 @@ export function TimeSlotsGrid({
       {slots.map((s, i) => {
         const isSelected = selectedIdx === i;
         return (
-          <Glass
+          <Pressable
             key={s.startTime}
             onPress={() => {
               Haptics.selectionAsync();
               onSelect(i);
             }}
-            variant={isSelected ? 'strong' : 'clear'}
-            radius={sawaaRadius.md}
-            tint={withAlpha(sawaaColors.teal[600], isSelected ? 0.22 : 0.09)}
-            style={[styles.slotWrap, styles.slot, isSelected && styles.slotSelected]}
+            style={[styles.slotWrap, styles.slot, {
+              backgroundColor: isSelected ? roles.selection.fill : roles.surface,
+              borderColor: isSelected ? roles.selection.fill : roles.surfaceHigh,
+            }]}
             accessibilityRole="button"
             accessibilityLabel={`${dir.isRTL ? 'وقت' : 'Time'} ${formatTime(s.startTime, dir.isRTL)}`}
             accessibilityState={{ selected: isSelected }}
           >
-            <View style={styles.slotInner}>
-                <Text
-                  style={[
-                    styles.slotText,
-                    isSelected && styles.slotTextSelected,
-                    {
-                      fontFamily: f600,
-                      fontWeight: '600',
-                    },
-                  ]}
-                >
-                  {formatTime(s.startTime, dir.isRTL)}
-                </Text>
-            </View>
-          </Glass>
+            <Text
+              style={[styles.slotText, {
+                fontFamily: f600,
+                color: isSelected ? roles.selection.foreground : sawaaColors.ink[900],
+              }]}
+            >
+              {formatTime(s.startTime, dir.isRTL)}
+            </Text>
+          </Pressable>
         );
       })}
     </Animated.View>
   );
 }
 
-const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
+const styles = StyleSheet.create({
   slotsGrid: { flexWrap: 'wrap', gap: sawaaSpacing.sm },
-  slotWrap: { width: '48.5%' },
-  slot: { overflow: 'hidden', backgroundColor: sawaaColors.glass.opaqueBg, borderRadius: sawaaRadius.md },
-  slotSelected: { borderWidth: 1.5, borderColor: sawaaColors.teal[600] },
-  slotInner: { paddingVertical: sawaaSpacing.lg, alignItems: 'center' },
-  slotTextSelected: { color: sawaaColors.teal[700] },
+  slotWrap: { width: '31.5%' },
+  slot: {
+    minHeight: 48,
+    borderRadius: sawaaRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   slotText: {
-    color: sawaaColors.ink[900],
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
     textAlign: 'center',
