@@ -83,7 +83,7 @@ export function PackageCatalogFeature({
                   ? '—'
                   : `${halalasToSar(lowest)} ${locale === 'ar' ? 'ر.س' : 'SAR'}`}
                 {lowestSessions !== null
-                  ? ` · ${lowestSessions} ${t(lowestSessions === 1 ? 'packages.sessionsUnit.one' : lowestSessions === 2 ? 'packages.sessionsUnit.two' : 'packages.sessionsUnit.many')}`
+                  ? ` · ${lowestSessions} ${t(lowestSessions === 1 ? 'packages.sessionsUnit.one' : lowestSessions === 2 ? 'packages.sessionsUnit.two' : lowestSessions <= 10 ? 'packages.sessionsUnit.many' : 'packages.sessionsUnit.other')}`
                   : null}
               </p>
               <Link

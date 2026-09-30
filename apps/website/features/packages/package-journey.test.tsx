@@ -129,7 +129,7 @@ describe('website package journey', () => {
     expect(screen.getByRole('link', { name: /view package/i }).getAttribute('href')).toBe('/packages/family-1');
   });
 
-  it.each([1, 2, 5])('uses the dictionary session unit for the cheapest public %i-session option', (count) => {
+  it.each([1, 2, 5, 12])('uses the dictionary session unit for the cheapest public %i-session option', (count) => {
     const original = dictionary.t;
     const translation = vi.spyOn(dictionary, 't').mockImplementation((locale, key) =>
       key.startsWith('packages.sessionsUnit.') ? 'translated-unit' : original(locale, key),
@@ -141,6 +141,14 @@ describe('website package journey', () => {
       ] }]} />);
       expect(screen.getByText(`From 200.00 SAR · ${count} translated-unit`)).toBeTruthy();
     } finally { translation.mockRestore(); }
+  });
+
+  it('renders the literal Arabic singular unit for a 12-session package', () => {
+    render(<LocaleProvider locale="ar"><PackageCatalogFeature families={[{ ...family, options: [
+      { ...family.options[0], sessionCount: 12 },
+    ] }]} /></LocaleProvider>);
+    expect(screen.getByText('يبدأ من 200.00 ر.س · 12 جلسة')).toBeTruthy();
+    expect(screen.queryByText(/12 جلسات/)).toBeNull();
   });
 
   it('separates a failed package load from a successfully empty catalog', () => {

@@ -6,12 +6,14 @@ const mockCreate = jest.fn();
 const mockInit = jest.fn();
 const mockBrowser = jest.fn();
 const mockGetBooking = jest.fn();
+let mockUserId: string | null = 'user-1';
+const mockBankQuery = jest.fn((..._args: unknown[]) => ({ data: { enabled: false, accounts: [] }, isLoading: false, isError: false }));
 const mockStorage = new Map<string, string>();
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ isRTL: false }) }));
-jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => 'user-1' }));
+jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockUserId }));
 jest.mock('@/hooks/queries', () => ({
-  useBankTransferSettings: () => ({ data: { enabled: false, accounts: [] }, isLoading: false, isError: false }),
+  useBankTransferSettings: (...args: unknown[]) => mockBankQuery(...args),
   usePublicPaymentMethods: () => ({ data: { moyasarEnabled: true, atClinicEnabled: true }, isLoading: false, isError: false }),
 }));
 jest.mock('@/constants/config', () => ({ APP_SCHEME: 'sawa' }));
@@ -34,6 +36,7 @@ describe('new booking payment retries', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockStorage.clear();
+    mockUserId = 'user-1';
     jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     mockCreate.mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1' });
     mockGetBooking.mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1', status: 'pending', ...input });
@@ -105,7 +108,13 @@ describe('new booking payment retries', () => {
     act(() => { result.current.setMethod('at_center'); });
     await act(async () => { await result.current.pay(); });
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/payment', params: { bookingId: 'booking-1', invoiceId: 'invoice-1' } });
+    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/payment', params: { bookingId: 'booking-1', invoiceId: 'invoice-1', amount: '45000', currency: 'SAR' } });
+  });
+
+  it('keeps the authenticated bank-settings query disabled for a guest', () => {
+    mockUserId = null;
+    renderHook(() => useBookingPayment(input, false));
+    expect(mockBankQuery).toHaveBeenCalledWith(false);
   });
 
 });

@@ -46,9 +46,16 @@ export async function enrichExistingCatalog(prisma: PrismaClient): Promise<void>
   // imageUrl (an object key signed at read time), a bare key is dropped by the
   // public employees handler. For this local demo we serve the object straight
   // from MinIO with an anonymous-download bucket policy.
-  const minioPort = Number(process.env.MINIO_PORT || 9000);
-  const publicObjectUrl = (key: string) =>
-    `http://${process.env.MINIO_ENDPOINT}:${minioPort}/${bucket}/${key}`;
+  // Match MinioService's existing public signing endpoint contract: public
+  // settings are independent of the internal upload host and TLS setting.
+  const publicEndpoint = process.env.MINIO_PUBLIC_ENDPOINT;
+  const publicUseSSL = (publicEndpoint ? process.env.MINIO_PUBLIC_USE_SSL : process.env.MINIO_USE_SSL) === 'true';
+  const publicPort = Number(publicEndpoint
+    ? process.env.MINIO_PUBLIC_PORT ?? (publicUseSSL ? 443 : 80)
+    : process.env.MINIO_PORT || 9000);
+  const defaultPort = publicUseSSL ? 443 : 80;
+  const publicOrigin = `${publicUseSSL ? 'https' : 'http'}://${publicEndpoint || endpoint}${publicPort === defaultPort ? '' : `:${publicPort}`}`;
+  const publicObjectUrl = (key: string) => `${publicOrigin}/${bucket}/${key}`;
   if (client && bucket) {
     try {
       // Read before writing: preserve every existing statement and policy field.

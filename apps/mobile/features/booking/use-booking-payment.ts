@@ -46,7 +46,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
   const router = useRouter();
   const dir = useDir();
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
-  const bankQuery = useBankTransferSettings();
+  const bankQuery = useBankTransferSettings(Boolean(userId));
   const methodsQuery = usePublicPaymentMethods();
   const bankTransferSettings = bankQuery.data;
   const paymentMethods = methodsQuery.data;
@@ -122,6 +122,8 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         if (method === 'at_center') {
           router.replace({ pathname: '/(client)/booking/payment', params: {
             bookingId: booking.bookingId, invoiceId: booking.invoiceId!,
+            ...(input.amount ? { amount: String(total) } : {}),
+            ...(input.currency ? { currency: input.currency } : {}),
           } });
           return;
         }

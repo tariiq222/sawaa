@@ -2,18 +2,20 @@ import { enrichExistingCatalog } from './enrich-existing-catalog';
 
 const getBucketPolicy = jest.fn();
 const setBucketPolicy = jest.fn();
-jest.mock('minio', () => ({ Client: jest.fn().mockImplementation(() => ({ getBucketPolicy, setBucketPolicy })) }));
+const putObject = jest.fn();
+jest.mock('node:fs/promises', () => ({ readFile: jest.fn(async () => Buffer.from('test-image')) }));
+jest.mock('minio', () => ({ Client: jest.fn().mockImplementation(() => ({ getBucketPolicy, setBucketPolicy, putObject })) }));
 
 function database() {
   const table = () => ({ findFirst: jest.fn().mockResolvedValue(null), update: jest.fn().mockResolvedValue({}) });
-  return { serviceCategory: table(), service: table(), employee: table(), packageFamily: table(), sessionPackage: table(), program: table() };
+  return { file: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({}) }, serviceCategory: table(), service: table(), employee: table(), packageFamily: table(), sessionPackage: table(), program: table() };
 }
 
 describe('demo catalog enrichment safeguards', () => {
   const previousEnv = process.env;
   beforeEach(() => {
     process.env = { ...previousEnv };
-    delete process.env.MINIO_ENDPOINT;
+    for (const key of ['MINIO_ENDPOINT', 'MINIO_PORT', 'MINIO_USE_SSL', 'MINIO_PUBLIC_ENDPOINT', 'MINIO_PUBLIC_PORT', 'MINIO_PUBLIC_USE_SSL']) delete process.env[key];
     jest.clearAllMocks();
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -68,4 +70,19 @@ describe('demo catalog enrichment safeguards', () => {
     await enrichExistingCatalog(database() as never);
     expect(JSON.parse(setBucketPolicy.mock.calls.at(-1)![1]).Statement).toHaveLength(1);
   });
+  it.each([
+    [{ MINIO_ENDPOINT: 'minio-internal', MINIO_PUBLIC_ENDPOINT: 'cdn.example.test', MINIO_PUBLIC_USE_SSL: 'true' }, 'https://cdn.example.test/demo/'],
+    [{ MINIO_ENDPOINT: 'minio-internal', MINIO_PUBLIC_ENDPOINT: 'cdn.example.test', MINIO_PUBLIC_PORT: '8443', MINIO_PUBLIC_USE_SSL: 'true' }, 'https://cdn.example.test:8443/demo/'],
+    [{ MINIO_ENDPOINT: 'minio-internal', MINIO_PUBLIC_ENDPOINT: 'cdn.example.test', MINIO_USE_SSL: 'true' }, 'http://cdn.example.test/demo/'],
+    [{ MINIO_ENDPOINT: 'storage.example.test', MINIO_PORT: '9443', MINIO_USE_SSL: 'true' }, 'https://storage.example.test:9443/demo/'],
+  ])('builds employee image URLs using the existing public storage contract: %j', async (settings, prefix) => {
+    enableStorage();
+    Object.assign(process.env, settings);
+    getBucketPolicy.mockResolvedValue('');
+    const db = database();
+    db.employee.findFirst.mockResolvedValueOnce({ id: 'employee-demo' });
+    await enrichExistingCatalog(db as never);
+    expect(db.employee.update.mock.calls[0][0].data.publicImageUrl).toMatch(new RegExp(`^${prefix}demo-catalog/[a-f0-9]+\\.png$`));
+  });
+
 });
