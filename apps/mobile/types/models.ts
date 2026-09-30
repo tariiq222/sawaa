@@ -169,6 +169,12 @@ export interface Notification {
     | 'receipt_rejected'
     | 'reminder'
     | 'payment_received'
+    | 'booking_created'
+    | 'payment_completed'
+    | 'payment_failed'
+    | 'payment_reminder'
+    | 'welcome'
+    | 'general'
     | 'new_rating'
     | 'problem_report'
     | 'system_alert';

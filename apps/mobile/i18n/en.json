@@ -408,6 +408,7 @@
     "processing": "Processing payment...",
     "bankDetails": "Bank Account Details",
     "bankAccountLabel": "Account",
+    "invoiceSettled": "Nothing is owed on this invoice.",
     "bankTransferUnavailable": "Bank transfer is currently unavailable. Please choose another payment method.",
     "bankName": "Bank Name",
     "iban": "IBAN",

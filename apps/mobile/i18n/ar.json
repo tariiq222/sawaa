@@ -408,6 +408,7 @@
     "processing": "جاري معالجة الدفع...",
     "bankDetails": "تفاصيل الحساب البنكي",
     "bankAccountLabel": "الحساب",
+    "invoiceSettled": "لا يوجد مبلغ مستحق على هذه الفاتورة.",
     "bankTransferUnavailable": "التحويل البنكي غير متاح حاليًا. اختر طريقة دفع أخرى.",
     "bankName": "اسم البنك",
     "iban": "الآيبان",
