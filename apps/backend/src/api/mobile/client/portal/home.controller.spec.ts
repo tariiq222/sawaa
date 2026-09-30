@@ -50,9 +50,9 @@ describe('MobileClientHomeController (e2e)', () => {
 
   describe('GET /mobile/client/portal/home', () => {
     it('returns 200 with aggregated home data', async () => {
-      mockListBookings.execute.mockResolvedValue({ data: [{ id: 'b-1' }], total: 1 });
-      mockListNotifications.execute.mockResolvedValue({ data: [{ id: 'n-1' }], total: 1 });
-      mockListPayments.execute.mockResolvedValue({ data: [{ id: 'p-1' }], total: 1 });
+      mockListBookings.execute.mockResolvedValue({ items: [{ id: 'b-1' }], meta: { total: 1 } });
+      mockListNotifications.execute.mockResolvedValue({ items: [{ id: 'n-1' }], meta: { total: 1 } });
+      mockListPayments.execute.mockResolvedValue({ items: [{ id: 'p-1' }], meta: { total: 1 } });
       mockGetClient.execute.mockResolvedValue({ id: 'client-1', name: 'Sara' });
 
       const res = await request(app.getHttpServer())

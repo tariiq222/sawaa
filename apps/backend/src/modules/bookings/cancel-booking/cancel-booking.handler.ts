@@ -36,6 +36,17 @@ const CANCEL_BOOKING_MESSAGES = {
     'لا يمكن إلغاء هذا الحجز في حالته الحالية. حدّث الصفحة ثم أعد المحاولة.',
 } as const;
 
+/**
+ * Thrown when a client asks for a direct cancel while the branch requires the
+ * centre to approve cancellations. Callers that can route the request to
+ * request-cancel-booking catch this type instead of matching the message.
+ */
+export class CancelApprovalRequiredException extends BadRequestException {
+  constructor() {
+    super('Cancel approval is required. Use request-cancel-booking instead.');
+  }
+}
+
 @Injectable()
 export class CancelBookingHandler {
   private readonly logger = new Logger(CancelBookingHandler.name);
@@ -84,9 +95,7 @@ export class CancelBookingHandler {
         ? (settings as Record<string, unknown>).requireCancelApproval
         : false;
       if (requireApproval) {
-        throw new BadRequestException(
-          'Cancel approval is required. Use request-cancel-booking instead.',
-        );
+        throw new CancelApprovalRequiredException();
       }
     }
 
