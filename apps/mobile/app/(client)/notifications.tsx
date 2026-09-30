@@ -5,13 +5,14 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Bell, Calendar, Check, CheckCheck, FileText, MessageCircle, Star, Video, type LucideIcon } from 'lucide-react-native';
+import { Bell, Calendar, Check, FileText, MessageCircle, Star, Video, type LucideIcon } from 'lucide-react-native';
 
 import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { Pill } from '@/components/ui/Pill';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -90,7 +91,6 @@ export default function NotificationsScreen() {
   const dir = useDir();
   const router = useRouter();
   const f400 = getFontName(dir.locale, '400');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const localizedText = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
   const [active, setActive] = useState<FilterKey>('all');
@@ -134,68 +134,62 @@ export default function NotificationsScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: 140 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: 140 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.teal[600]} />}
       >
-        {/* Header */}
-        <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <View style={[styles.headerRow, { flexDirection: dir.row }]}>
-            <BackButton onPress={() => router.back()} />
-            <View style={styles.headerText}>
-              <Text style={[styles.title, { fontFamily: f700 }, localizedText]}>
-                {t('notifications.title')}
-              </Text>
-              {!loading && !loadError ? (
-                <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }, localizedText]}>
-                  {t('notifications.newCount', { count: unreadCount })}
-                </Text>
-              ) : null}
-            </View>
+        <ScreenHeader title={t('notifications.title')} onBack={() => router.back()} />
+
+        {!loading && !loadError ? (
+          <View style={[styles.summaryRow, { flexDirection: dir.row }]}>
+            <Pill label={t('notifications.newCount', { count: unreadCount })} tone={unreadCount > 0 ? 'brand' : 'muted'} />
             {unreadCount > 0 ? (
-              <Glass variant="regular" radius={20} onPress={markAllAsRead} interactive style={styles.markAllBtn}
-                accessibilityRole="button" accessibilityLabel={t('notifications.markAllRead')}>
-                <View style={[styles.markAllInner, { flexDirection: dir.row }]}>
-                  <CheckCheck size={14} color={colors.teal[700]} strokeWidth={2} />
-                  <Text style={[styles.markAllText, { fontFamily: f600, fontWeight: '600' }, localizedText]}>
-                    {t('notifications.markAllRead')}
-                  </Text>
-                </View>
-              </Glass>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('notifications.markAllRead')}
+                onPress={markAllAsRead}
+                hitSlop={8}
+                style={styles.markAll}
+              >
+                <Text style={[styles.markAllText, { fontFamily: f700 }, localizedText]}>
+                  {t('notifications.markAllRead')}
+                </Text>
+              </Pressable>
             ) : null}
           </View>
-        </Animated.View>
+        ) : null}
 
-        {/* Filter chips */}
-        <Animated.View entering={FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <GlassSegmented
-            size="sm"
-            appearance="navigation"
-            options={FILTERS.map((f) => ({
-              value: f.key,
-              label: t(f.label),
-              badge: String(f.key === 'unread' ? unreadCount : notifications.length),
-            }))}
-            value={active}
-            onChange={setActive}
-          />
-        </Animated.View>
+        <GlassSegmented
+          size="sm"
+          appearance="navigation"
+          options={FILTERS.map((f) => ({
+            value: f.key,
+            label: t(f.label),
+            badge: String(f.key === 'unread' ? unreadCount : notifications.length),
+          }))}
+          value={active}
+          onChange={setActive}
+        />
 
-        {/* List */}
         {visible.length === 0 && (loading || refreshing) ? (
           <View style={styles.paginationStatus} accessibilityLiveRegion="polite">
             <ActivityIndicator color={colors.teal[600]} />
             <Text style={[styles.emptyText, { fontFamily: f400 }, localizedText]}>{t('common.loading')}</Text>
           </View>
         ) : visible.length === 0 && loadError ? null : visible.length === 0 ? (
-          <Animated.View entering={FadeInDown.delay(150).duration(600).easing(Easing.out(Easing.cubic))}>
-            <Glass variant="regular" radius={sawaaRadius.xl} style={styles.empty}>
-              <Bell size={20} color={colors.ink[400]} strokeWidth={1.75} />
-              <Text style={[styles.emptyText, { fontFamily: f400, fontWeight: '400' }, localizedText]}>
-                {t(active === 'unread' ? 'notifications.noUnread' : 'notifications.noNotifications')}
+          <View style={styles.empty}>
+            <View style={styles.emptyCircle}>
+              <Bell size={44} color={colors.teal[700]} strokeWidth={1.75} />
+            </View>
+            <Text style={[styles.emptyTitle, { fontFamily: f700, textAlign: 'center' }]}>
+              {t(active === 'unread' ? 'notifications.noUnread' : 'notifications.noNotifications')}
+            </Text>
+            {active === 'all' ? (
+              <Text style={[styles.emptyText, { fontFamily: f400, textAlign: 'center' }]}>
+                {t('notifications.noNotificationsDesc')}
               </Text>
-            </Glass>
-          </Animated.View>
+            ) : null}
+          </View>
         ) : (
           visible.map((n, i) => {
             const { Icon, color } = iconForType(n.type, colors);
@@ -206,29 +200,22 @@ export default function NotificationsScreen() {
             return (
               <Animated.View
                 key={n.id}
-                entering={FadeInDown.delay(150 + i * 50).duration(600).easing(Easing.out(Easing.cubic))}
+                entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(500).easing(Easing.out(Easing.cubic))}
               >
                 <Glass
-                  variant="regular"
-                  radius={sawaaRadius.xl}
+                  variant="strong"
+                  radius={sawaaRadius.lg}
                   style={styles.card}
                   onPress={() => handlePress(n)}
                   accessibilityLabel={[title, body, when, t(unread ? 'notifications.unread' : 'notifications.read')].filter(Boolean).join('. ')}
                 >
                   <View style={[styles.row, { flexDirection: dir.row }]}>
-                    <View style={[
-                      styles.iconBox,
-                      { backgroundColor: withAlpha(color, 0.13), borderColor: withAlpha(color, 0.2) },
-                    ]}>
-                      <Icon size={18} color={color} strokeWidth={1.75} />
+                    <View style={[styles.iconBox, { backgroundColor: withAlpha(color, 0.13) }]}>
+                      <Icon size={22} color={color} strokeWidth={1.75} />
                     </View>
                     <View style={styles.body}>
-                      <Text style={[styles.itemTitle, { fontFamily: f700 }, localizedText]}>
-                        {title}
-                      </Text>
-                      <Text style={[styles.itemBody, { fontFamily: f400, fontWeight: '400' }, localizedText]}>
-                        {body}
-                      </Text>
+                      <Text style={[styles.itemTitle, { fontFamily: f700 }, localizedText]}>{title}</Text>
+                      <Text style={[styles.itemBody, { fontFamily: f400, fontWeight: '400' }, localizedText]}>{body}</Text>
                       <Text style={[styles.when, { fontFamily: f400 }, localizedText]}>{when}</Text>
                     </View>
                     {unread ? <View style={styles.unreadDot} /> : null}
@@ -243,7 +230,7 @@ export default function NotificationsScreen() {
           <View style={styles.paginationStatus}>
             <Text accessibilityRole="alert" style={[styles.paginationError, { fontFamily: f400 }, localizedText]}>{t('notifications.loadError')}</Text>
             <Pressable accessibilityRole="button" onPress={loadMore} disabled={loadingMore} style={styles.paginationButton}>
-              <Text style={[styles.paginationAction, { fontFamily: f600 }, localizedText]}>{t('common.retry')}</Text>
+              <Text style={[styles.paginationAction, { fontFamily: f700 }, localizedText]}>{t('common.retry')}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -252,15 +239,15 @@ export default function NotificationsScreen() {
             accessibilityRole="button"
             onPress={loadMore}
             disabled={loadingMore}
-            style={styles.paginationButton}
+            style={styles.loadMore}
           >
             {loadingMore ? (
               <View style={[styles.loadingMore, { flexDirection: dir.row }]}>
-                <ActivityIndicator color={colors.teal[600]} />
+                <ActivityIndicator color={colors.teal[700]} />
                 <Text style={[styles.paginationAction, { fontFamily: f400 }, localizedText]}>{t('notifications.loadingMore')}</Text>
               </View>
             ) : (
-              <Text style={[styles.paginationAction, { fontFamily: f600 }, localizedText]}>{t('notifications.loadMore')}</Text>
+              <Text style={[styles.paginationAction, { fontFamily: f700 }, localizedText]}>{t('notifications.loadMore')}</Text>
             )}
           </Pressable>
         ) : null}
@@ -271,29 +258,40 @@ export default function NotificationsScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 12 },
-  headerRow: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, paddingHorizontal: 4 },
-  headerText: { flex: 1, minWidth: 0 },
-  title: { fontSize: 28, color: colors.ink[900] },
-  subtitle: { fontSize: 12.5, color: colors.ink[500], marginTop: 2 },
-  markAllBtn: { marginTop: 6, maxWidth: '45%', flexShrink: 1 },
-  markAllInner: { minHeight: 44, alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8 },
-  markAllText: { flexShrink: 1, fontSize: 12, color: colors.teal[700] },
-  card: { padding: 14 },
+  summaryRow: { alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  markAll: { minHeight: 44, justifyContent: 'center' },
+  markAllText: { fontSize: 14, color: colors.teal[700] },
+  card: { padding: 16 },
   row: { gap: 12, alignItems: 'flex-start' },
-  iconBox: {
-    width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 0.5, flexShrink: 0,
+  iconBox: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  body: { flex: 1, minWidth: 0, gap: 2 },
+  itemTitle: { fontSize: 16, lineHeight: 22, color: colors.ink[900] },
+  itemBody: { fontSize: 14, lineHeight: 20, color: colors.ink[700] },
+  when: { fontSize: 13, lineHeight: 18, color: colors.ink[500], marginTop: 4 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.teal[500], marginTop: 6, flexShrink: 0 },
+  empty: { alignItems: 'center', gap: 10, paddingTop: 48 },
+  emptyCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: withAlpha(colors.teal[500], 0.14),
+    marginBottom: 6,
   },
-  body: { flex: 1, minWidth: 0 },
-  itemTitle: { fontSize: 13.5, color: colors.ink[900] },
-  when: { fontSize: 10.5, color: colors.ink[500], marginTop: 8 },
-  itemBody: { fontSize: 12, color: colors.ink[700], marginTop: 3, lineHeight: 18 },
-  unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.teal[500], marginTop: 6, flexShrink: 0 },
-  empty: { padding: 28, alignItems: 'center', gap: 10 },
-  emptyText: { fontSize: 12.5, color: colors.ink[500] },
-  paginationButton: { alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 12 },
+  emptyTitle: { fontSize: 18, lineHeight: 24, color: colors.ink[900] },
+  emptyText: { fontSize: 14, lineHeight: 20, color: colors.ink[700] },
+  paginationButton: { alignSelf: 'center', paddingHorizontal: 20, minHeight: 44, justifyContent: 'center' },
   paginationStatus: { alignItems: 'center', gap: 8, paddingVertical: 12 },
+  loadMore: {
+    minHeight: 56,
+    borderRadius: sawaaRadius.pill,
+    borderWidth: 1,
+    borderColor: colors.teal[700],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   loadingMore: { alignItems: 'center', gap: 8 },
-  paginationError: { fontSize: 12, color: colors.accent.rose },
-  paginationAction: { fontSize: 13, color: colors.teal[700] },
+  paginationError: { fontSize: 13, color: colors.accent.coral },
+  paginationAction: { fontSize: 16, color: colors.teal[700] },
 });

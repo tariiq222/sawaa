@@ -25,6 +25,9 @@
     "login.identifierPlaceholder": "05xxxxxxxx",
     "login.submit": "الدخول",
     "login.submitting": "جارٍ...",
+    "login.welcome": "أهلاً بك",
+    "login.subtitle": "أدخل رقم جوالك أو بريدك الإلكتروني، ونرسل لك رمز التحقق.",
+    "login.sendCode": "إرسال الرمز",
     "login.identifierError": "الرجاء إدخال رقم الجوال أو البريد الإلكتروني",
     "login.continueAsGuest": "متابعة كزائر",
     "otp.title": "رمز التحقق",
@@ -36,6 +39,7 @@
     "otp.sentTo": "الرمز المرسل إلى",
     "otp.registerNoResend": "اضغط رجوع وأعد الإرسال إذا لم تستلم الرمز",
     "otp.noAccount": "ليس لديك حساب؟",
+    "otp.changeNumber": "تغيير الرقم",
     "otp.createAccount": "أنشئ حساباً",
     "error.generic": "حدث خطأ. حاول مجدداً.",
     "otpVerify": "تأكيد رمز التحقق",
@@ -348,6 +352,9 @@
     "deleteAccountConfirm": "إغلاق الحساب الآن",
     "deleteAccountCancel": "إلغاء",
     "deleteAccountError": "تعذّر إغلاق الحساب. حاول مرة أخرى.",
+    "deleteAccountSheetTitle": "حذف الحساب؟",
+    "deleteAccountAction": "حذف حسابي",
+    "settingsHint": "اللغة والمظهر",
     "crisisSupport": {
       "title": "دعم الأزمات · ٢٤/٧",
       "subtitle": "اتصال فوري بمختص"

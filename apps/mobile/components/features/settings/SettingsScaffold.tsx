@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
 import { sawaaRadius, sawaaSpacing, withAlpha } from '@/theme/sawaa';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
 
 /**
@@ -23,7 +23,6 @@ export function SettingsScaffold({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const dir = useDir();
   const insets = useSafeAreaInsets();
   return (
     <AquaBackground>
@@ -33,11 +32,10 @@ export function SettingsScaffold({
           { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.headerRow, { flexDirection: dir.row }]}>
-          <BackButton onPress={() => router.back()} />
-          <ThemedText variant="subheading">{title}</ThemedText>
-          <View style={styles.backBtn} />
+        <View style={styles.header}>
+          <ScreenHeader title={title} onBack={() => router.back()} />
         </View>
         {children}
       </ScrollView>
@@ -65,19 +63,8 @@ export function SettingsSectionHeader({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: 24 },
-  headerRow: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: sawaaSpacing.xl,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  scroll: { flexGrow: 1, paddingHorizontal: 16 },
+  header: { marginBottom: sawaaSpacing.xl },
   sectionHeader: {
     alignItems: 'center',
     gap: sawaaSpacing.sm,

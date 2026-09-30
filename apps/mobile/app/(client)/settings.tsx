@@ -2,19 +2,19 @@ import { useCallback } from 'react';
 import { View, Alert, Linking, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
-import { Bell, ChevronLeft, ChevronRight, Globe, Info, Lock, Moon } from 'lucide-react-native';
+import { Bell, ChevronLeft, ChevronRight, Info, Lock, Moon, Smartphone } from 'lucide-react-native';
 import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 import { ThemedText } from '@/theme/components/ThemedText';
-import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useTheme } from '@/theme/useTheme';
-import { SettingsScaffold, SettingsSectionHeader } from '@/components/features/settings/SettingsScaffold';
+import { SettingsScaffold } from '@/components/features/settings/SettingsScaffold';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
-import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { clientProfileService } from '@/services/client/profile';
 import { LANGUAGE_KEY } from '@/hooks/language-preference';
 import { useDir } from '@/hooks/useDir';
@@ -72,10 +72,8 @@ export default function SettingsScreen() {
 
   return (
     <SettingsScaffold title={t('settings.title')}>
-      {/* Language Section (local-only) */}
-      <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
-        <SettingsSectionHeader icon={Globe} label={t('settings.language')} />
-
+      <View style={styles.section}>
+        <SectionHeader title={t('settings.language')} />
         <GlassSegmented
           options={[
             { value: 'ar', label: t('settings.arabic') },
@@ -85,29 +83,21 @@ export default function SettingsScreen() {
           onChange={handleLanguageSelect}
           appearance="navigation"
         />
-      </Glass>
+      </View>
 
-      {/* Appearance */}
-      <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
-        <SettingsSectionHeader icon={Moon} label={t('settings.appearance')} />
-        <View style={[styles.switchRow, { flexDirection: dir.row }]}>
-          <ThemedText variant="body">{t('settings.darkMode')}</ThemedText>
+      <Glass variant="strong" radius={sawaaRadius.lg} style={styles.group}>
+        <View style={[styles.row, { flexDirection: dir.row }]}>
+          <Moon size={22} color={theme.colors.primary} strokeWidth={1.75} />
+          <ThemedText variant="body" style={styles.rowLabel}>{t('settings.darkMode')}</ThemedText>
           <GlassSwitch
             value={scheme === 'dark'}
             onValueChange={(v) => setThemeMode(v ? 'dark' : 'light')}
             accessibilityLabel={t('settings.darkMode')}
           />
         </View>
-      </Glass>
-
-      <Glass
-        variant="strong"
-        radius={sawaaRadius.xl}
-        style={styles.linkCard}
-      >
-        <View style={[styles.linkRow, { flexDirection: dir.row }]}>
-          <Bell size={20} color={theme.colors.primary} strokeWidth={1.75} />
-          <ThemedText variant="body" style={styles.linkLabel}>{t('settings.pushNotifications')}</ThemedText>
+        <View style={[styles.row, styles.divider, { flexDirection: dir.row, borderTopColor: theme.colors.border }]}>
+          <Bell size={22} color={theme.colors.primary} strokeWidth={1.75} />
+          <ThemedText variant="body" style={styles.rowLabel}>{t('settings.pushNotifications')}</ThemedText>
           <GlassSwitch
             value={pushEnabled}
             disabled={pushPreference.isPending || pushPreference.isError || pushMutation.isPending}
@@ -119,42 +109,53 @@ export default function SettingsScreen() {
 
       <Glass
         variant="strong"
-        radius={sawaaRadius.xl}
-        style={styles.linkCard}
+        radius={sawaaRadius.lg}
+        style={styles.group}
         onPress={() => { void Linking.openURL(PRIVACY_POLICY_URL); }}
         interactive
         accessibilityLabel={t('settings.privacyPolicy')}
       >
-        <View style={[styles.linkRow, { flexDirection: dir.row }]}>
-          <Lock size={20} color={theme.colors.primary} strokeWidth={1.75} />
-          <ThemedText variant="body" style={styles.linkLabel}>{t('settings.privacyPolicy')}</ThemedText>
+        <View style={[styles.row, { flexDirection: dir.row }]}>
+          <Lock size={22} color={theme.colors.primary} strokeWidth={1.75} />
+          <ThemedText variant="body" style={styles.rowLabel}>{t('settings.privacyPolicy')}</ThemedText>
           <Chevron size={18} color={theme.colors.textSecondary} strokeWidth={1.75} />
         </View>
       </Glass>
 
-      {/* About Section */}
-      <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
-        <SettingsSectionHeader icon={Info} label={t('settings.about')} />
-
-        <ThemedText variant="heading" style={styles.brand}>
-          سواء
-        </ThemedText>
-
-        <AboutRow label={t('settings.version')} value={version} />
-        <AboutRow label={t('settings.buildNumber')} value={buildNumber} />
-      </Glass>
-
-      <DeleteAccountButton />
+      <View style={styles.section}>
+        <SectionHeader title={t('settings.about')} />
+        <Glass variant="strong" radius={sawaaRadius.lg} style={styles.group}>
+          <AboutRow icon={Info} label={t('settings.version')} value={version} />
+          <AboutRow icon={Smartphone} label={t('settings.buildNumber')} value={buildNumber} divided />
+        </Glass>
+      </View>
     </SettingsScaffold>
   );
 }
 
-function AboutRow({ label, value }: { label: string; value: string }) {
+function AboutRow({
+  icon: Icon,
+  label,
+  value,
+  divided,
+}: {
+  icon: typeof Info;
+  label: string;
+  value: string;
+  divided?: boolean;
+}) {
   const { theme } = useTheme();
   const dir = useDir();
   return (
-    <View style={[styles.aboutRow, { flexDirection: dir.row }]}>
-      <ThemedText variant="bodySm" color={theme.colors.textSecondary}>
+    <View
+      style={[
+        styles.row,
+        divided && styles.divider,
+        { flexDirection: dir.row, borderTopColor: theme.colors.border },
+      ]}
+    >
+      <Icon size={22} color={theme.colors.primary} strokeWidth={1.75} />
+      <ThemedText variant="body" color={theme.colors.textSecondary} style={styles.rowLabel}>
         {label}
       </ThemedText>
       <ThemedText variant="body">{value}</ThemedText>
@@ -163,18 +164,9 @@ function AboutRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  card: { padding: sawaaSpacing.xl, marginBottom: sawaaSpacing.lg },
-  linkCard: { padding: sawaaSpacing.lg, marginBottom: sawaaSpacing.lg },
-  linkRow: { alignItems: 'center', gap: sawaaSpacing.md },
-  linkLabel: { flex: 1 },
-  brand: { marginBottom: sawaaSpacing.sm, fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  switchRow: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  aboutRow: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: sawaaSpacing.sm,
-  },
+  section: { gap: sawaaSpacing.md, marginBottom: sawaaSpacing.xl },
+  group: { padding: 0, marginBottom: sawaaSpacing.xl },
+  row: { alignItems: 'center', gap: sawaaSpacing.md, paddingHorizontal: sawaaSpacing.lg, minHeight: 56 },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth },
+  rowLabel: { flex: 1 },
 });
