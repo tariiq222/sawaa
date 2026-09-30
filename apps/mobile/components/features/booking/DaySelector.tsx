@@ -1,11 +1,11 @@
 import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
+import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Glass } from '@/theme/components/Glass';
+import { useTheme } from '@/theme/useTheme';
 import type { DirState } from '@/hooks/useDir';
 
 const DAYS_AR_SHORT = ['أحد', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب'];
@@ -30,28 +30,21 @@ interface DaySelectorProps {
   f700: string;
 }
 
+/** Horizontal strip of 60pt day buttons; the selected day uses the `selection` role. */
 export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f500, f700 }: DaySelectorProps) {
-  const sawaaColors = useSawaaColors();
-  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
+  const colors = useSawaaColors();
+  const { scheme } = useTheme();
+  const roles = getSawaaRoles(scheme);
   const selectedDay = days[dayIdx ?? 0];
   const monthLabel = dir.isRTL
     ? `${MONTHS_AR[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`
     : `${MONTHS_EN[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`;
 
   return (
-    <Glass variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.md}>
-      <View style={[styles.monthHead, { flexDirection: dir.row }]}>
-        <View />
-        <Text
-          style={[
-            styles.monthTitle,
-            { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-          ]}
-        >
-          {monthLabel}
-        </Text>
-        <View />
-      </View>
+    <View style={styles.wrap}>
+      <Text style={[styles.month, { fontFamily: f500, color: colors.ink[500], textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+        {monthLabel}
+      </Text>
       <LocalizedHorizontalScroll
         dir={dir}
         showsHorizontalScrollIndicator={false}
@@ -63,7 +56,7 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
           const canSelect = availabilityByDate === undefined || availabilityByDate?.[dateKey] === true;
           const dow = d.getDay();
           return (
-            <Glass
+            <Pressable
               key={d.toISOString()}
               onPress={() => {
                 if (!canSelect) return;
@@ -73,72 +66,42 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
               disabled={!canSelect}
               accessibilityRole="button"
               accessibilityState={{ selected: isActive, disabled: !canSelect }}
-              variant={isActive ? 'strong' : 'regular'}
-              radius={sawaaRadius.md}
-              tint={isActive ? withAlpha(sawaaColors.teal[600], 0.16) : undefined}
-              style={[styles.dayCell, isActive && styles.dayCellActive, !canSelect && styles.dayCellUnavailable]}
+              style={[
+                styles.dayCell,
+                {
+                  backgroundColor: isActive ? roles.selection.fill : roles.surface,
+                  borderColor: isActive ? roles.selection.fill : roles.surfaceHigh,
+                  opacity: canSelect ? 1 : 0.4,
+                },
+              ]}
             >
-              <Text
-                style={[
-                  styles.dayName,
-                  {
-                    fontFamily: f500,
-                    fontWeight: '500',
-                    color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700],
-                  },
-                ]}
-              >
+              <Text style={[styles.dayName, { fontFamily: f500, color: isActive ? roles.selection.foreground : colors.ink[700] }]}>
                 {dir.isRTL ? DAYS_AR_SHORT[dow] : DAYS_EN_SHORT[dow]}
               </Text>
-              <Text
-                style={[
-                  styles.dayNum,
-                  { fontFamily: f700, color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[900] },
-                ]}
-              >
+              <Text style={[styles.dayNum, { fontFamily: f700, color: isActive ? roles.selection.foreground : colors.ink[900] }]}>
                 {dir.isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate()}
               </Text>
-            </Glass>
+            </Pressable>
           );
         })}
       </LocalizedHorizontalScroll>
-    </Glass>
+    </View>
   );
 }
 
-const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  monthHead: {
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: sawaaSpacing.xs,
-    paddingBottom: sawaaSpacing.md,
-  },
-  monthTitle: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
-    textAlign: 'center',
-  },
-  daysRow: { gap: sawaaSpacing.sm, paddingHorizontal: sawaaSpacing.xs },
+const styles = StyleSheet.create({
+  wrap: { gap: sawaaSpacing.sm },
+  month: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: sawaaType.caption.lineHeight + 2 },
+  daysRow: { gap: sawaaSpacing.sm },
   dayCell: {
     width: 60,
+    minHeight: 72,
     paddingVertical: sawaaSpacing.md,
     borderRadius: sawaaRadius.md,
+    borderWidth: 1,
     alignItems: 'center',
-    overflow: 'hidden',
+    justifyContent: 'center',
   },
-  dayCellActive: { borderWidth: 1.5, borderColor: sawaaColors.teal[600] },
-  dayCellUnavailable: { opacity: 0.35 },
-  dayName: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    opacity: 0.85,
-    textAlign: 'center',
-  },
-  dayNum: {
-    fontSize: sawaaType.subheading.fontSize,
-    lineHeight: sawaaType.subheading.lineHeight,
-    marginTop: sawaaSpacing.xs,
-    textAlign: 'center',
-  },
+  dayName: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: sawaaType.caption.lineHeight, textAlign: 'center' },
+  dayNum: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight, marginTop: sawaaSpacing.xs, textAlign: 'center' },
 });

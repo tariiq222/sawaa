@@ -1,11 +1,12 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { DaySelector } from './DaySelector';
-import { getSawaaColors } from '@/theme/sawaa/tokens';
+import { getSawaaColors, getSawaaRoles } from '@/theme/sawaa/tokens';
 import type { DirState } from '@/hooks/useDir';
 
 let mockScheme: 'light' | 'dark' = 'light';
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
 jest.mock('@/theme/components/Glass', () => ({
   Glass: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) =>
     require('react').createElement(require('react-native').Pressable, props, children),
@@ -21,10 +22,10 @@ it('updates unselected day text and surfaces while preserving selected contrast 
   mockScheme = 'dark';
   view.rerender(React.cloneElement(element));
   expect(view.getByText('5')).toHaveStyle({ color: getSawaaColors('dark').ink[900] });
-  expect(view.getByText('4')).toHaveStyle({ color: getSawaaColors('dark').teal[700] });
+  expect(view.getByText('4')).toHaveStyle({ color: getSawaaRoles('dark').selection.foreground });
   const buttons = view.getAllByRole('button');
-  expect(buttons[1]).toHaveProp('variant', 'regular');
-  expect(buttons[0]).toHaveProp('variant', 'strong');
+  expect(buttons[1]).toHaveStyle({ backgroundColor: getSawaaRoles('dark').surface });
+  expect(buttons[0]).toHaveStyle({ backgroundColor: getSawaaRoles('dark').selection.fill });
   fireEvent.press(buttons[1]);
   expect(onSelect).toHaveBeenCalledWith(1);
 });

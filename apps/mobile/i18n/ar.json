@@ -391,7 +391,15 @@
     "walkIn": "بدون حجز",
     "step": "خطوة",
     "of": "من",
-    "confirmAndPay": "تأكيد والدفع"
+    "confirmAndPay": "تأكيد والدفع",
+    "stepOfTwo": "الخطوة {{step}} من ٢",
+    "continue": "متابعة",
+    "visitType": "نوع الزيارة",
+    "paymentMethod": "طريقة الدفع",
+    "viewAppointment": "عرض الموعد",
+    "backToHome": "العودة إلى الرئيسية",
+    "tryAgain": "إعادة المحاولة",
+    "yourLocalTime": "بتوقيتك المحلي"
   },
   "payment": {
     "methodsLoading": "جارٍ تحميل طرق الدفع…",

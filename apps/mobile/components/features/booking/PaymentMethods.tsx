@@ -4,7 +4,7 @@ import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { Apple, Banknote, Building2, Check, CreditCard } from 'lucide-react-native';
 
 import { Glass } from '@/theme/components/Glass';
-import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
+import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 import { getFontName } from '@/theme/fonts';
@@ -59,7 +59,8 @@ interface PaymentMethodsProps {
 /** Payment-method chooser for the new booking review step. */
 export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMethodsProps) {
   const colors = useSawaaColors();
-  const { theme } = useTheme();
+  const { scheme } = useTheme();
+  const roles = getSawaaRoles(scheme);
   const reduceMotion = useReduceMotion();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const f400 = getFontName(dir.locale, '400');
@@ -76,13 +77,12 @@ export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMeth
             entering={reduceMotion ? undefined : FadeInDown.delay(160 + i * 80).duration(700).easing(Easing.out(Easing.cubic))}
           >
             <Glass
-              variant="strong"
-              radius={sawaaRadius.xl}
+              radius={sawaaRadius.lg}
               onPress={() => onSelect(key)}
               interactive
               accessibilityRole="radio"
               accessibilityState={{ selected: isSelected }}
-              style={[styles.methodCard, isSelected && { borderWidth: 2, borderColor: colors.teal[600] }]}
+              style={[styles.methodCard, { borderWidth: 2, borderColor: isSelected ? roles.selection.fill : 'transparent' }]}
             >
               <View style={[styles.methodRow, { flexDirection: dir.row }]}>
                 <View style={[styles.methodIcon, { backgroundColor: withAlpha(colors.teal[600], 0.12) }]}>
@@ -96,11 +96,14 @@ export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMeth
                     {dir.isRTL ? meta.subAr : meta.subEn}
                   </Text>
                 </View>
-                {isSelected ? (
-                  <View style={[styles.checkCircle, { backgroundColor: theme.colors.primaryFill }]}>
-                    <Check size={14} color={theme.colors.primaryForeground} strokeWidth={3} />
-                  </View>
-                ) : null}
+                <View
+                  style={[styles.radio, {
+                    borderColor: isSelected ? roles.selection.fill : colors.ink[400],
+                    backgroundColor: isSelected ? roles.selection.fill : 'transparent',
+                  }]}
+                >
+                  {isSelected ? <Check size={14} color={roles.selection.foreground} strokeWidth={3} /> : null}
+                </View>
               </View>
             </Glass>
           </Animated.View>
@@ -127,15 +130,16 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     color: colors.ink[900],
   },
   methodSub: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
     color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
   },
-  checkCircle: {
+  radio: {
     width: 24,
     height: 24,
     borderRadius: sawaaRadius.pill,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

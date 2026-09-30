@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { ProgressBar } from '@/components/ui/ProgressBar';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 const AR_DIGITS = ['١', '٢'] as const;
@@ -14,54 +14,48 @@ const TOTAL_STEPS = 2;
 interface BookingStepHeaderProps {
   /** 1-based step within the 2-step booking flow. */
   step: 1 | 2;
+  title: string;
   onBack: () => void;
-  backAccessibilityLabel?: string;
 }
 
-/**
- * Shared booking-wizard header: glass back button, step counter, and the
- * shared determinate ProgressBar (replaces the per-screen inline bars).
- */
-export function BookingStepHeader({ step, onBack, backAccessibilityLabel }: BookingStepHeaderProps) {
-  const sawaaColors = useSawaaColors();
-  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
+/** Booking-wizard header: back + centred title, two progress segments and the step counter. */
+export function BookingStepHeader({ step, title, onBack }: BookingStepHeaderProps) {
+  const colors = useSawaaColors();
+  const { t } = useTranslation();
   const dir = useDir();
-  const f600 = getFontName(dir.locale, '600');
-  const label = dir.isRTL
-    ? `${AR_DIGITS[step - 1]} / ${AR_DIGITS[TOTAL_STEPS - 1]}`
-    : `Step ${step} of ${TOTAL_STEPS}`;
+  const stepText = t('booking.stepOfTwo', { step: dir.isRTL ? AR_DIGITS[step - 1] : step });
 
   return (
-    <View style={{ gap: sawaaSpacing.sm }}>
+    <View style={{ gap: sawaaSpacing.md }}>
+      <ScreenHeader title={title} onBack={onBack} />
       <View
-        style={{
-          flexDirection: dir.row,
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
+        style={[styles.segments, { flexDirection: dir.row }]}
+        accessibilityRole="progressbar"
+        accessibilityValue={{ min: 1, max: TOTAL_STEPS, now: step }}
       >
-        <BackButton onPress={onBack} accessibilityLabel={backAccessibilityLabel} />
-        <Text
-          style={[styles.label, {
-            fontFamily: f600,
-            textAlign: dir.textAlign,
-            writingDirection: dir.writingDirection,
-          }]}
-        >
-          {label}
-        </Text>
+        {[1, 2].map((n) => (
+          <View
+            key={n}
+            style={[styles.segment, { backgroundColor: n <= step ? colors.teal[700] : withAlpha(colors.teal[700], 0.14) }]}
+          />
+        ))}
       </View>
-      <ProgressBar progress={step / TOTAL_STEPS} />
+      <Text
+        style={[styles.label, {
+          color: colors.ink[500],
+          fontFamily: getFontName(dir.locale, '500'),
+          textAlign: dir.textAlign,
+          writingDirection: dir.writingDirection,
+        }]}
+      >
+        {stepText}
+      </Text>
     </View>
   );
 }
 
-const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  label: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    fontWeight: '600',
-    color: sawaaColors.ink[500],
-    textAlign: 'center',
-  },
+const styles = StyleSheet.create({
+  segments: { gap: 8 },
+  segment: { flex: 1, height: 4, borderRadius: sawaaRadius.pill },
+  label: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: sawaaType.caption.lineHeight + 2 },
 });

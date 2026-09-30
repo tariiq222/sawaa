@@ -18,6 +18,7 @@ import { DaySelector } from '@/components/features/booking/DaySelector';
 import { TimeSlotsGrid } from '@/components/features/booking/TimeSlotsGrid';
 import { BookingCta } from '@/components/features/booking/BookingCta';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { goBackOrHome } from '@/lib/navigation';
 import type { DeliveryType } from '@/types/booking-enums';
@@ -80,29 +81,20 @@ export default function BookingScheduleScreen() {
     });
   };
 
-  const tzLabel = dir.isRTL ? 'بتوقيتك المحلي' : 'Your local time';
+  const tzLabel = t('booking.yourLocalTime');
   const noOpenings = slots.availabilityByDate && !Object.values(slots.availabilityByDate).some(Boolean);
 
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 140 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 160 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={1} onBack={() => goBackOrHome(router)} backAccessibilityLabel={t('a11y.buttonBack')} />
+          <BookingStepHeader step={1} title={t('booking.selectDate')} onBack={() => goBackOrHome(router)} />
         </Animated.View>
 
-        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-            {dir.isRTL ? 'اختاري موعداً' : 'Pick a time'}
-          </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-            {dir.isRTL
-              ? 'الأوقات المتاحة بحسب جدول المختصة'
-              : "Available times based on the therapist's schedule"}
-          </Text>
-        </Animated.View>
+        <SectionHeader title={dir.isRTL ? 'اليوم' : 'Day'} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
           <DaySelector
@@ -130,17 +122,10 @@ export default function BookingScheduleScreen() {
 
         {slots.dayIdx != null ? (
           <>
-            <Animated.View
-              entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(600).easing(Easing.out(Easing.cubic))}
-              style={[styles.slotsHead, { flexDirection: dir.row }]}
-            >
-              <Text style={[styles.slotsTitle, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-                {dir.isRTL ? 'الأوقات المتاحة' : 'Available times'}
-              </Text>
-              <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-                {tzLabel}
-              </Text>
-            </Animated.View>
+            <SectionHeader title={dir.isRTL ? 'الوقت' : 'Time'} />
+            <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+              {tzLabel}
+            </Text>
 
             {slots.loading || slots.error || slots.slots.length > 0 ? (
               <TimeSlotsGrid
@@ -176,29 +161,9 @@ export default function BookingScheduleScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
-    color: colors.ink[900],
-    marginTop: 0,
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  subtitle: {
+  tz: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[500],
-    marginTop: 0,
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  slotsHead: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },
-  slotsTitle: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: colors.ink[900],
-  },
-  tz: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
     color: colors.ink[500],
   },
 });

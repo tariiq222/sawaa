@@ -7,6 +7,7 @@ jest.mock('react-native-reanimated', () => ({
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => require('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
 
 import { formatTime } from './TimeSlotsGrid';
