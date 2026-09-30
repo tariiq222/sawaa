@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { CalendarDays } from 'lucide-react-native';
 
 import { Glass } from '@/theme/components/Glass';
-import { GuestDock } from '@/components/features/home/GuestDock';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -40,7 +39,6 @@ export default function GuestAppointmentsScreen() {
           </Pressable>
         </Glass>
       </ScrollView>
-      <GuestDock active="appointments" />
     </AquaBackground>
   );
 }
