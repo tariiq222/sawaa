@@ -1,10 +1,10 @@
 import React from 'react';
 import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Glass } from '@/theme/components/Glass';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { sawaaRadius, withAlpha } from '@/theme/sawaa/tokens';
+import { Thumb } from '@/components/ui/Thumb';
+import { sawaaRadius, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import type { DirState } from '@/hooks/useDir';
 import type { PublicEmployeeItem } from '@/services/client/employees';
@@ -17,16 +17,18 @@ interface TherapistsRowProps {
   f700: string;
 }
 
+const PHOTO = 148;
+
+/** Horizontal row of specialist photos with name and specialty. */
 export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsRowProps) {
-  const sawaaColors = useSawaaColors();
-  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
+  const colors = useSawaaColors();
   const router = useRouter();
   const [failedImages, setFailedImages] = React.useState<Record<string, string>>({});
 
   if (therapists.length === 0) {
     return (
-      <View style={styles.empty}>
-        <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
+      <View style={[styles.empty, { backgroundColor: colors.glass.opaqueBg }]}>
+        <Text style={[styles.emptyText, { fontFamily: f600, color: colors.ink[700], textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'لا يوجد معالجون متاحون حالياً' : 'No therapists available right now'}
         </Text>
       </View>
@@ -42,64 +44,37 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
       {therapists.map((t) => {
         const name = (dir.isRTL ? t.nameAr : t.nameEn) ?? t.nameAr ?? t.nameEn ?? '';
         const specialty = (dir.isRTL ? t.specialtyAr : t.specialty) ?? t.specialty ?? t.specialtyAr ?? '';
-        const initial = name.trim().charAt(0) || '·';
+        const photo = t.publicImageUrl && failedImages[t.id] !== t.publicImageUrl ? t.publicImageUrl : null;
         return (
-          <Glass key={t.id} variant="strong" radius={24} style={styles.card}>
-            <Pressable
-              onPress={() => router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: 'therapist', id: t.slug ?? t.id } })}
-              accessibilityRole="button" accessibilityLabel={name}
-              style={styles.inner}
-            >
-              {t.publicImageUrl && failedImages[t.id] !== t.publicImageUrl ? (
-                <Image
-                  source={{ uri: t.publicImageUrl }}
-                  accessible
-                  accessibilityRole="image"
-                  accessibilityLabel={name}
-                  style={styles.avatar}
-                  resizeMode="cover"
-                  onError={() => setFailedImages((previous) => ({ ...previous, [t.id]: t.publicImageUrl! }))}
-                />
-              ) : <View style={[styles.avatar, styles.avatarFallback]}>
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>{initial}</Text>
-              </View>}
-              <Text
-                style={[styles.name, { fontFamily: f700, textAlign: 'center' }]}
-                numberOfLines={1}
-              >
-                {name}
-              </Text>
-              <Text
-                style={[styles.spec, { fontFamily: f400, fontWeight: '400', textAlign: 'center' }]}
-                numberOfLines={2}
-              >
-                {t.title || specialty}
-              </Text>
-            </Pressable>
-          </Glass>
+          <Pressable
+            key={t.id}
+            onPress={() => router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: 'therapist', id: t.slug ?? t.id } })}
+            accessibilityRole="button"
+            accessibilityLabel={name}
+            style={styles.item}
+          >
+            <Thumb
+              uri={photo}
+              width={PHOTO}
+              height={PHOTO}
+              radius={sawaaRadius.lg}
+              accessibilityLabel={name}
+              onError={() => setFailedImages((previous) => ({ ...previous, [t.id]: t.publicImageUrl! }))}
+            />
+            <Text numberOfLines={1} style={[styles.name, { fontFamily: f700, color: colors.ink[900], textAlign: dir.textAlign }]}>{name}</Text>
+            <Text numberOfLines={2} style={[styles.spec, { fontFamily: f400, color: colors.ink[500], textAlign: dir.textAlign }]}>{t.title || specialty}</Text>
+          </Pressable>
         );
       })}
     </LocalizedHorizontalScroll>
   );
 }
 
-const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  hScrollContent: { gap: 10, paddingHorizontal: 2 },
-  empty: { padding: 24, alignItems: 'center', backgroundColor: sawaaColors.glass.opaqueBg, borderRadius: sawaaRadius.xl },
-  emptyText: { fontSize: 13, color: sawaaColors.ink[700] },
-  card: { width: 186, height: 186 },
-  inner: { height: 186, padding: 14, gap: 6, alignItems: 'center', justifyContent: 'center' },
-  avatar: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    position: 'relative',
-  },
-  avatarFallback: { backgroundColor: withAlpha(sawaaColors.teal[700], 0.1) },
-  avatarText: { fontSize: 30, color: sawaaColors.teal[700] },
-  name: { fontSize: 14, lineHeight: 21, color: sawaaColors.ink[900], width: '100%' },
-  spec: { fontSize: 11, lineHeight: 17, color: sawaaColors.ink[500], width: '100%' },
+const styles = StyleSheet.create({
+  hScrollContent: { gap: 12, paddingHorizontal: 2 },
+  empty: { padding: 24, alignItems: 'center', borderRadius: sawaaRadius.xl },
+  emptyText: { fontSize: 14 },
+  item: { width: PHOTO, gap: 4 },
+  name: { fontSize: 15, lineHeight: 22, marginTop: 4 },
+  spec: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: 18 },
 });

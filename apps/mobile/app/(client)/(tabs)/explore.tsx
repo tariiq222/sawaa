@@ -29,5 +29,5 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, gap: 20 },
-  title: { fontSize: 26, lineHeight: 34 },
+  title: { fontSize: 28, lineHeight: 38 },
 });
