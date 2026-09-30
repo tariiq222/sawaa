@@ -21,6 +21,7 @@ let mockStatus = 'cancelled';
 let mockCheckedIn = false;
 jest.mock('@/hooks/queries', () => ({
   useEmployeeBooking: () => ({ data: { id: 'booking-1', status: mockStatus, checkedInAt: mockCheckedIn ? '2026-09-27T09:55:00Z' : null, bookingType: 'individual', deliveryType: 'in_person', date: '2026-09-27T10:00:00Z', startTime: '10:00', endTime: '11:00' }, isLoading: false, refetch: mockRefetch }),
+  useEmployeeMeetingStart: () => ({ data: undefined }),
   useCancelEmployeeBooking: () => ({ mutateAsync: mockCancel }),
   useRequestCancelEmployeeBooking: () => ({ mutateAsync: mockRequestCancel }),
   useMarkEmployeeBookingCompleted: () => ({ mutateAsync: mockComplete }),

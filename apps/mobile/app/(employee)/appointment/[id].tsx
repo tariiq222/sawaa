@@ -36,6 +36,7 @@ import {
   useCancelEmployeeBooking,
   useRequestCancelEmployeeBooking,
   useEmployeeBooking,
+  useEmployeeMeetingStart,
   useMarkEmployeeBookingCompleted,
   useStartEmployeeBookingSession,
 } from '@/hooks/queries';
@@ -43,6 +44,7 @@ import { useAppSelector } from '@/hooks/use-redux';
 import { getStatusLabel } from '@/lib/status-helpers';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
 import { hasZoomMeetingAccess, resolveBookingType, resolveDeliveryType } from '@/types/booking-enums';
+import { FEATURE_FLAGS } from '@/constants/feature-flags';
 import { createStyles } from '@/components/features/employee-appointment-styles';
 import { hasBookingPermission, resolveCancellationMode } from '@/lib/employee-booking-actions';
 
@@ -77,6 +79,14 @@ export default function DoctorAppointmentDetailScreen() {
   const cancelBooking = useCancelEmployeeBooking();
   const requestCancelBooking = useRequestCancelEmployeeBooking();
   const booking = bookingQuery.isError ? null : (bookingQuery.data ?? null);
+  // Exact timing and the host link come from the dedicated start-meeting
+  // endpoint; the detail payload carries neither. Skipped while video calls are
+  // switched off so the host link is never fetched for a hidden button.
+  const meetingStartQuery = useEmployeeMeetingStart(
+    id,
+    FEATURE_FLAGS.videoCalls && booking ? hasZoomMeetingAccess(booking) : false,
+  );
+  const meetingStart = meetingStartQuery.data;
   const loading = bookingQuery.isLoading;
   const isError = bookingQuery.isError;
 
@@ -266,13 +276,13 @@ export default function DoctorAppointmentDetailScreen() {
           </Glass>
         </Animated.View>
 
-        {canShowZoom && (booking.zoomMeetingStatus || booking.zoomStartUrl || booking.zoomJoinUrl) && booking.scheduledAt && booking.durationMins ? (
+        {canShowZoom && meetingStart ? (
           <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(180).duration(600).easing(Easing.out(Easing.cubic))}>
             <JoinVideoCallButton
-              url={booking.zoomStartUrl ?? booking.zoomJoinUrl ?? null}
-              scheduledAt={booking.scheduledAt}
-              durationMins={booking.durationMins}
-              status={booking.zoomMeetingStatus ?? null}
+              url={meetingStart.startUrl}
+              scheduledAt={meetingStart.scheduledAt}
+              durationMins={meetingStart.durationMins}
+              status={meetingStart.meetingStatus}
               isRTL={dir.isRTL}
               variant="start"
             />
