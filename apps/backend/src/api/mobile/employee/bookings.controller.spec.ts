@@ -10,6 +10,7 @@ import { CompleteBookingHandler } from '../../../modules/bookings/complete-booki
 import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
 import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
 import { CreateEmployeeBookingHandler } from '../../../modules/bookings/create-employee-booking/create-employee-booking.handler';
+import { GetEmployeeMeetingStartHandler } from '../../../modules/bookings/get-employee-meeting-start/get-employee-meeting-start.handler';
 import { ResolveEmployeeIdHandler } from '../../../modules/people/employees/resolve-employee-id.handler';
 import { AssertEmployeeBookingOwnershipHandler } from '../../../modules/bookings/assert-employee-booking-ownership/assert-employee-booking-ownership.handler';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
@@ -34,6 +35,7 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
   const mockRequestCancel = { execute: jest.fn() };
   const mockCreateEmployeeBooking = { execute: jest.fn() };
   const mockResolveEmployeeId = { execute: jest.fn() };
+  const mockMeetingStart = { execute: jest.fn() };
 
   const buildApp = async (user: any) => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -48,6 +50,7 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
         { provide: RequestCancelBookingHandler, useValue: mockRequestCancel },
         { provide: CreateEmployeeBookingHandler, useValue: mockCreateEmployeeBooking },
         { provide: ResolveEmployeeIdHandler, useValue: mockResolveEmployeeId },
+        { provide: GetEmployeeMeetingStartHandler, useValue: mockMeetingStart },
         AssertEmployeeBookingOwnershipHandler,
       ],
     })
@@ -144,6 +147,38 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
         .get(`/mobile/employee/bookings/${uuid(1)}`)
         .set('Authorization', 'Bearer fake-jwt')
         .expect(403);
+    });
+  });
+
+  describe('GET /mobile/employee/bookings/:id/start-meeting', () => {
+    it('returns the host link for an owned booking', async () => {
+      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'employee-1' });
+      mockMeetingStart.execute.mockResolvedValue({
+        bookingId: uuid(1),
+        scheduledAt: '2026-10-01T14:30:00.000Z',
+        durationMins: 50,
+        meetingStatus: 'CREATED',
+        startUrl: 'https://zoom.us/s/123?zak=token',
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/mobile/employee/bookings/${uuid(1)}/start-meeting`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(res.body.startUrl).toBe('https://zoom.us/s/123?zak=token');
+      expect(mockMeetingStart.execute).toHaveBeenCalledWith({ bookingId: uuid(1), employeeId: 'employee-1' });
+    });
+
+    it('never asks for the host link of another employee\'s booking', async () => {
+      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'emp-2' });
+
+      await request(app.getHttpServer())
+        .get(`/mobile/employee/bookings/${uuid(1)}/start-meeting`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(403);
+
+      expect(mockMeetingStart.execute).not.toHaveBeenCalled();
     });
   });
 

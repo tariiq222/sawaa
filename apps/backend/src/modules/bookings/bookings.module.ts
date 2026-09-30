@@ -66,6 +66,7 @@ import { AssertEmployeeBookingOwnershipHandler } from './assert-employee-booking
 import { GetClientPortalSummaryHandler } from './client/get-client-portal-summary.handler';
 import { ListClientUpcomingBookingsHandler } from './client/list-client-upcoming-bookings.handler';
 import { GetClientBookingForActionHandler } from './client/get-client-booking-for-action.handler';
+import { GetEmployeeMeetingStartHandler } from './get-employee-meeting-start/get-employee-meeting-start.handler';
 import { EmployeeAvailabilityQueryHandler } from './employee-availability-query.handler';
 
 const handlers = [
@@ -124,6 +125,7 @@ const handlers = [
   GetClientPortalSummaryHandler,
   ListClientUpcomingBookingsHandler,
   GetClientBookingForActionHandler,
+  GetEmployeeMeetingStartHandler,
   EmployeeAvailabilityQueryHandler,
 ];
 

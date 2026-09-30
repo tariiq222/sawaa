@@ -9,7 +9,7 @@ export { useNotifications, notificationKeys } from './useNotifications';
 export { useCancelBooking, useRateBooking } from './useBookingMutations';
 export { useEmployeeClients, employeeClientsKeys } from './useEmployeeClients';
 export { useEmployeeDayBookings, employeeDayBookingsKeys } from './useEmployeeDayBookings';
-export { useEmployeeBooking, useEmployeeTodayBookings, employeeBookingKeys } from './useEmployeeBookings';
+export { useEmployeeBooking, useEmployeeMeetingStart, useEmployeeTodayBookings, employeeBookingKeys } from './useEmployeeBookings';
 export {
   useCancelEmployeeBooking,
   useRequestCancelEmployeeBooking,

@@ -25,6 +25,21 @@ interface GetBookingsParams {
   limit?: number;
 }
 
+/**
+ * Host-side meeting details from GET /mobile/employee/bookings/{id}/start-meeting.
+ * The booking detail payload never carries the Zoom host link or exact timing
+ * (`scheduledAt` / `durationMins`); this is the only place they come from.
+ */
+export interface EmployeeMeetingStart {
+  bookingId: string;
+  /** Exact UTC instant of the session start. */
+  scheduledAt: string;
+  durationMins: number;
+  meetingStatus: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null;
+  /** Host link; null until the meeting has been created. */
+  startUrl: string | null;
+}
+
 export interface EmployeeBookingPage {
   items: Booking[];
   meta: {
@@ -99,6 +114,13 @@ export const employeeBookingsService = {
   async getById(id: string) {
     const response = await api.get<Booking>(`/mobile/employee/bookings/${id}`);
     return { success: true as const, data: response.data };
+  },
+
+  async getMeetingStart(id: string) {
+    const response = await api.get<EmployeeMeetingStart>(
+      `/mobile/employee/bookings/${id}/start-meeting`,
+    );
+    return response.data;
   },
 
   async create(data: CreateEmployeeBookingData) {

@@ -36,6 +36,7 @@ import { CompleteBookingHandler } from '../../../modules/bookings/complete-booki
 import { CompleteBookingDto } from '../../../modules/bookings/complete-booking/complete-booking.dto';
 import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
 import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
+import { GetEmployeeMeetingStartHandler } from '../../../modules/bookings/get-employee-meeting-start/get-employee-meeting-start.handler';
 import { CreateEmployeeBookingHandler } from '../../../modules/bookings/create-employee-booking/create-employee-booking.handler';
 import { CreateEmployeeBookingDto } from '../../../modules/bookings/create-employee-booking/create-employee-booking.dto';
 
@@ -91,6 +92,7 @@ export class MobileEmployeeBookingsController {
     private readonly cancelHandler: CancelBookingHandler,
     private readonly requestCancelHandler: RequestCancelBookingHandler,
     private readonly createEmployeeHandler: CreateEmployeeBookingHandler,
+    private readonly meetingStartHandler: GetEmployeeMeetingStartHandler,
   ) {}
 
   @Post()
@@ -147,6 +149,35 @@ export class MobileEmployeeBookingsController {
     });
     await this.assertEmployeeBookingOwnership.execute({ bookingId: id, employeeId });
     return this.getHandler.execute({ bookingId: id });
+  }
+
+  @Get(':id/start-meeting')
+  @CheckPermissions({ action: 'read', subject: 'Booking' })
+  @ApiOperation({ summary: 'Get the Zoom host link and timing for an assigned online booking' })
+  @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description: 'Meeting start details; startUrl is null until the meeting has been created',
+    schema: {
+      type: 'object',
+      properties: {
+        bookingId: { type: 'string', format: 'uuid' },
+        scheduledAt: { type: 'string', format: 'date-time' },
+        durationMins: { type: 'integer' },
+        meetingStatus: { type: 'string', nullable: true, enum: ['PENDING', 'CREATED', 'FAILED', 'CANCELLED'] },
+        startUrl: { type: 'string', nullable: true },
+      },
+    },
+  })
+  async startMeeting(
+    @CurrentUser() user: JwtUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const employeeId = await this.resolveEmployeeId.execute({
+      userId: user.sub,
+      employeeId: user.employeeId,
+    });
+    await this.assertEmployeeBookingOwnership.execute({ bookingId: id, employeeId });
+    return this.meetingStartHandler.execute({ bookingId: id, employeeId });
   }
 
   @Post(':id/start')

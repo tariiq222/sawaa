@@ -49,11 +49,12 @@ function adaptClient(row: ClientBookingRow, isRTL: boolean): BookingView {
 }
 
 function adaptEmployee(b: Booking, isRTL: boolean): BookingView {
-  // The employee mapper doesn't always emit `scheduledAt`; reconstruct from
-  // the `date` + `startTime` pair which is always present.
+  // The employee mapper doesn't emit `scheduledAt`; reconstruct it from the
+  // `date` + `startTime` pair, which the backend formats in the business time
+  // zone (Asia/Riyadh, +03:00, no DST) - not UTC.
   const scheduledAt =
     b.scheduledAt ??
-    new Date(`${b.date}T${b.startTime}:00.000Z`).toISOString();
+    new Date(`${b.date}T${b.startTime}:00+03:00`).toISOString();
   // duration: prefer durationMins, fall back to service.duration if present.
   const durationMins = b.durationMins ?? b.service?.duration ?? 0;
   const clientName = b.client

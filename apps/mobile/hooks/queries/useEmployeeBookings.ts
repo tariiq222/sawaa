@@ -4,11 +4,13 @@ import {
   employeeBookingsService,
   getEmployeeBusinessDateToday,
 } from '@/services/employee/bookings';
+import type { EmployeeMeetingStart } from '@/services/employee/bookings';
 import type { Booking } from '@/types/models';
 
 export const employeeBookingKeys = {
   all: ['employee', 'bookings'] as const,
   detail: (id: string | undefined) => [...employeeBookingKeys.all, 'detail', id ?? '__none__'] as const,
+  meetingStart: (id: string | undefined) => [...employeeBookingKeys.all, 'meeting-start', id ?? '__none__'] as const,
   today: (businessDate: string) => [...employeeBookingKeys.all, 'today', businessDate] as const,
 };
 
@@ -22,6 +24,25 @@ export function useEmployeeBooking(id: string | undefined) {
       return response.data;
     },
     enabled: Boolean(id),
+  });
+}
+
+/**
+ * Host link and exact timing for an assigned online booking. Always refetched:
+ * the link only exists once the meeting has been created, and it must not be
+ * kept around longer than the screen needs it.
+ */
+export function useEmployeeMeetingStart(id: string | undefined, enabled: boolean) {
+  return useQuery<EmployeeMeetingStart>({
+    queryKey: employeeBookingKeys.meetingStart(id),
+    queryFn: () => {
+      if (!id) throw new Error('Booking id is required');
+      return employeeBookingsService.getMeetingStart(id);
+    },
+    enabled: Boolean(id) && enabled,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
   });
 }
 

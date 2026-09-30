@@ -55,6 +55,7 @@ jest.mock('@/hooks/queries', () => ({
     isError: mockIsError,
     refetch: mockRefetch,
   }),
+  useEmployeeMeetingStart: () => ({ data: undefined }),
   useCancelEmployeeBooking: () => ({ mutateAsync: mockCancel }),
   useRequestCancelEmployeeBooking: () => ({ mutateAsync: mockRequestCancel }),
   useMarkEmployeeBookingCompleted: () => ({ mutateAsync: mockComplete }),
