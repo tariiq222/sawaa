@@ -173,7 +173,15 @@ while IFS= read -r -d '' file; do
   printf '%s\0' "$file" >> "$artifacts/archived-files.nul"
   if [ -f "$file" ]; then shasum -a 256 "$file"; fi
 done < "$artifacts/source-files.nul" > "$artifacts/source-sha256.txt"
-tar --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='.next' \
+# macOS tar attaches each file's com.apple.provenance xattr as a pax
+# LIBARCHIVE.xattr header, and GNU tar in the Linux runner materializes every
+# one of them as an AppleDouble ._file. eslint, prisma and jest then parse those
+# as source: one run produced 2957 of them and failed 22 phases. Woodpecker's
+# own checkout has no xattrs, so this only bites when the script is invoked
+# directly against a working copy.
+mac_metadata_flag=''
+if tar --no-mac-metadata --version >/dev/null 2>&1; then mac_metadata_flag='--no-mac-metadata'; fi
+tar $mac_metadata_flag --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='.next' \
   --exclude='coverage' --exclude='.turbo' --exclude='playwright-report' \
   --exclude='test-results' --null -T "$artifacts/archived-files.nul" -cf "$artifacts/source.tar" .git
 shasum -a 256 "$artifacts/source.tar" > "$artifacts/source-archive.sha256"
