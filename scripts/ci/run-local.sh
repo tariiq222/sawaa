@@ -100,6 +100,7 @@ done
 ndocker volume create --label "sawaa.ci.run=$run_id" "$volume" >/dev/null
 volume_created=1
 ndocker volume create sawaa-ci-pnpm-store >/dev/null
+ndocker volume create sawaa-ci-playwright-cache >/dev/null
 ndocker run -d --name "$pg" --label "sawaa.ci.run=$run_id" \
   -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=sawaa_test \
   pgvector/pgvector:pg16 >/dev/null
@@ -126,6 +127,7 @@ containers+=("$minio")
 ndocker run -d --name "$runner" --label "sawaa.ci.run=$run_id" \
   --network "container:$pg" --cpus 2 --cpuset-cpus 0,1 --memory 5g --shm-size 256m \
   -v "$volume:/repo" -v sawaa-ci-pnpm-store:/pnpm/store \
+  -v sawaa-ci-playwright-cache:/root/.cache/ms-playwright \
   -v /run/user/1000/docker.sock:/var/run/docker.sock \
   -e SAWAA_CI_BASE_REF="$base_ref" -e OUTBOX_TEST_REDIS_CONTAINER="$outbox" \
   "$runner_image" sleep infinity >/dev/null
