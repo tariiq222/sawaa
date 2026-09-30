@@ -35,11 +35,20 @@ describe('deriveClinics', () => {
     expect(deriveClinics({ ...catalog, departments: [] } as never, therapists as never).map((c) => c.id)).toEqual(['cat-2', 'cat-1']);
   });
 
+  it('maps signed clinic artwork and a visible service description without exposing internal service count', () => {
+    const enriched = { ...catalog, categories: [{ ...catalog.categories[0], imageUrl: 'https://signed.example/clinic.png' }], services: [
+      { ...catalog.services[0], descriptionAr: 'وصف العيادة', descriptionEn: 'Clinic description' },
+    ] };
+    expect(deriveClinics(enriched as never, therapists as never)[0]).toMatchObject({
+      imageUrl: 'https://signed.example/clinic.png', descriptionAr: 'وصف العيادة', descriptionEn: 'Clinic description',
+    });
+  });
+
   it('shows a direct clinic with zero visible services', () => {
     const direct = { ...catalog, categories: [{ ...catalog.categories[0], bookingMode: 'DIRECT' }], services: [
       { ...catalog.services[0], id: 'visible', isHidden: false },
       { ...catalog.services[0], id: 'internal', isHidden: true },
     ] };
-    expect(deriveClinics(direct as never, [{ isBookable: true, serviceIds: ['internal'] }] as never)[0]).toMatchObject({ directServiceId: 'internal', serviceCount: 0 });
+    expect(deriveClinics(direct as never, [{ isBookable: true, serviceIds: ['internal'] }] as never)[0]).toMatchObject({ directServiceId: 'internal', serviceCount: 0, descriptionAr: null });
   });
 });

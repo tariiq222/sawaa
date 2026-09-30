@@ -54,7 +54,8 @@ jest.mock('@/components/ui/Skeleton', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
   return { Skeleton: NativeView };
 });
-jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, textAlign: 'left', writingDirection: 'ltr' }) }));
+let mockRTL = false;
+jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, textAlign: mockRTL ? 'right' : 'left', writingDirection: 'ltr' }) }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/hooks/queries', () => ({
@@ -70,6 +71,7 @@ import BookingSuccessScreen from '../success';
 describe('booking success verification', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRTL = false;
     mockBooking = { id: 'booking-1', status: 'PENDING' };
     mockBookingError = false;
     mockPhase = 'confirmed';
@@ -113,4 +115,13 @@ describe('booking success verification', () => {
       params: { bookingId: 'booking-1', invoiceId: 'invoice-1' },
     });
   });
+  it.each([false, true])('aligns rendered details with the locale (RTL=%s)', (rtl) => {
+    mockRTL = rtl;
+    const { StyleSheet } = require('react-native') as typeof import('react-native');
+    const screen = render(<BookingSuccessScreen />);
+    for (const text of [mockRTL ? 'رقم الموعد' : 'Booking #']) {
+      expect(StyleSheet.flatten(screen.getByText(text).props.style).textAlign).toBe(rtl ? 'right' : 'left');
+    }
+  });
+
 });

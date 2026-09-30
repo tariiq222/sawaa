@@ -80,7 +80,7 @@ export function GuestDock({ active }: { active: GuestDockSection }) {
 
   return (
     <View pointerEvents="box-none" style={[styles.dockPosition, { bottom: Math.max(sawaaSpacing.sm, insets.bottom - sawaaSpacing.sm) }]}>
-      <Glass variant="regular" tint={withAlpha(colors.teal[500], scheme === 'dark' ? 0.12 : 0.08)}
+      <Glass material="glass" variant="regular" tint={withAlpha(colors.teal[500], scheme === 'dark' ? 0.12 : 0.08)}
         radius={sawaaRadius.pill} padding={sawaaSpacing.xs}>
       <View style={[styles.row, { flexDirection: dir.row }]} accessibilityRole="tablist">
         <Animated.View pointerEvents="none" testID="dock-glass-lens"
@@ -89,7 +89,7 @@ export function GuestDock({ active }: { active: GuestDockSection }) {
             opacity: layoutReady && selectedSection in positions.current ? 1 : 0,
             transform: [{ translateX: lensX }, { scale: lensScale }],
           }]}>
-          <Glass variant="regular" tint={withAlpha(colors.teal[600], scheme === 'dark' ? 0.26 : 0.2)}
+          <Glass material="glass" variant="regular" tint={withAlpha(colors.teal[600], scheme === 'dark' ? 0.26 : 0.2)}
             radius={sawaaRadius.pill} style={styles.lensGlass}>
             <View style={[styles.lensFill, { backgroundColor: withAlpha(colors.teal[500], scheme === 'dark' ? 0.15 : 0.12) }]} />
           </Glass>

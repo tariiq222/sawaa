@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -12,27 +12,24 @@ import { BookingStepHeader } from '@/components/features/booking/BookingStepHead
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { bookingStepPath } from '@/features/booking/guest-booking-flow';
+import { useBookingSlots } from '@/features/booking/use-booking-slots';
 import { getFontName } from '@/theme/fonts';
-import { publicEmployeesService } from '@/services/client/employees';
-import { branchesService } from '@/services/branches';
 import { DaySelector } from '@/components/features/booking/DaySelector';
-import { TimeSlotsGrid, type Slot } from '@/components/features/booking/TimeSlotsGrid';
+import { TimeSlotsGrid } from '@/components/features/booking/TimeSlotsGrid';
 import { BookingCta } from '@/components/features/booking/BookingCta';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { goBackOrHome } from '@/lib/navigation';
 import type { DeliveryType } from '@/types/booking-enums';
 
-function toLocalDateOnly(d: Date): string {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
+/**
+ * Time-only variant of step 1. The merged booking page carries duration + time
+ * together; this route stays for existing links and shares the same slot state
+ * hook so there is a single availability implementation.
+ */
 export default function BookingScheduleScreen() {
   const colors = useSawaaColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{
     clinicId?: string;
     serviceId?: string;
@@ -55,166 +52,17 @@ export default function BookingScheduleScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
-  const days = useMemo(() => {
-    const out: Date[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = 0; i < 30; i += 1) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      out.push(d);
-    }
-    return out;
-  }, []);
-
-  const [dayIdx, setDayIdx] = useState<number | null>(null);
-  const [branchId, setBranchId] = useState<string | null>(params.branchId ?? null);
-  const [availabilityByDate, setAvailabilityByDate] = useState<Record<string, boolean> | null>(null);
-  const [daysLoading, setDaysLoading] = useState(true);
-  const [daysError, setDaysError] = useState<string | null>(null);
-  const [daysReloadKey, setDaysReloadKey] = useState(0);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [slotIdx, setSlotIdx] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  const tzLabel = dir.isRTL ? 'بتوقيتك المحلي' : `Your local time`;
-
-  useEffect(() => {
-    if (branchId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const list = await branchesService.getAll();
-        if (cancelled) return;
-        const main = list.find((b) => b.isMain) ?? list[0];
-        if (main) setBranchId(main.id);
-        else {
-          setDaysLoading(false);
-          setDaysError(dir.isRTL ? 'لا توجد فروع متاحة' : 'No branches available');
-        }
-      } catch {
-        if (!cancelled) {
-          setDaysLoading(false);
-          setDaysError(dir.isRTL ? 'تعذّر تحميل الفرع' : 'Failed to load branch');
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [branchId, dir.isRTL, reloadKey]);
-
-  useEffect(() => {
-    const employeeId = params.employeeId;
-    if (!employeeId) {
-      setDaysLoading(false);
-      setDaysError(dir.isRTL ? 'بيانات الحجز غير مكتملة' : 'Booking details are incomplete');
-      return;
-    }
-    if (!branchId) return;
-    let cancelled = false;
-    setDaysLoading(true);
-    setDaysError(null);
-    setAvailabilityByDate(null);
-    setDayIdx(null);
-    setSlots([]);
-    setSlotIdx(null);
-    (async () => {
-      try {
-        const availableDays = await publicEmployeesService.getAvailableDays({
-          employeeId,
-          branchId,
-          serviceId: params.serviceId,
-          startDate: toLocalDateOnly(days[0]),
-          days: days.length,
-          durationOptionId: params.durationOptionId,
-          durationMins: params.durationMins ? Number(params.durationMins) : undefined,
-          deliveryType: params.deliveryType ?? 'in_person',
-        });
-        if (cancelled) return;
-        const availability = Object.fromEntries(availableDays.map(({ date, hasSlots }) => [date, hasSlots]));
-        setAvailabilityByDate(availability);
-        const firstAvailable = days.findIndex((day) => availability[toLocalDateOnly(day)] === true);
-        setDayIdx(firstAvailable >= 0 ? firstAvailable : null);
-      } catch {
-        if (!cancelled) setDaysError(dir.isRTL ? 'تعذّر التحقق من الأيام المتاحة' : 'Could not check available days');
-      } finally {
-        if (!cancelled) setDaysLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [params.employeeId, params.serviceId, params.durationOptionId, params.durationMins, params.deliveryType, branchId, days, dir.isRTL, daysReloadKey]);
-
-  useEffect(() => {
-    const employeeId = params.employeeId;
-    if (!employeeId || !branchId || dayIdx == null) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setSlotIdx(null);
-    (async () => {
-      try {
-        const selectedDeliveryType = params.deliveryType ?? 'in_person';
-        const data = await publicEmployeesService.getSlots({
-          employeeId,
-          branchId,
-          date: toLocalDateOnly(days[dayIdx]),
-          serviceId: params.serviceId,
-          durationOptionId: params.durationOptionId,
-          durationMins: params.durationMins ? Number(params.durationMins) : undefined,
-          deliveryType: selectedDeliveryType,
-        });
-        if (cancelled) return;
-        if (!data?.length) {
-          const date = toLocalDateOnly(days[dayIdx]);
-          setAvailabilityByDate((current) => current ? { ...current, [date]: false } : current);
-          const nextAvailable = days.findIndex((day) => {
-            const candidate = toLocalDateOnly(day);
-            return candidate !== date && availabilityByDate?.[candidate] === true;
-          });
-          setDayIdx(nextAvailable >= 0 ? nextAvailable : null);
-          setSlots([]);
-        } else {
-          setSlots(data);
-        }
-      } catch {
-        if (!cancelled) setError(dir.isRTL ? 'تعذّر تحميل الأوقات' : 'Failed to load times');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    params.employeeId,
-    branchId,
-    dayIdx,
-    days,
-    availabilityByDate,
-    params.serviceId,
-    params.durationOptionId,
-    params.durationMins,
-    params.deliveryType,
-    dir.isRTL,
-    reloadKey,
-  ]);
-
-  const selectedSlot = slotIdx != null ? slots[slotIdx] : null;
-  const selectedDay = days[dayIdx ?? 0];
-
-  const handleRetry = () => setReloadKey((k) => k + 1);
-  const handleRetryDays = () => {
-    setDaysLoading(true);
-    setDaysError(null);
-    if (!branchId) setReloadKey((k) => k + 1);
-    else setDaysReloadKey((k) => k + 1);
-  };
+  const slots = useBookingSlots({
+    serviceId: params.serviceId,
+    employeeId: params.employeeId,
+    branchId: params.branchId,
+    durationOptionId: params.durationOptionId,
+    durationMins: params.durationMins,
+    deliveryType: params.deliveryType ?? 'in_person',
+  });
 
   const handleConfirm = () => {
-    if (!selectedSlot || !branchId) return;
+    if (!slots.selectedSlot || !slots.branchId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
       pathname: bookingStepPath('confirm', signedIn),
@@ -222,9 +70,9 @@ export default function BookingScheduleScreen() {
         clinicId: params.clinicId,
         serviceId: params.serviceId,
         employeeId: params.employeeId ?? '',
-        branchId,
+        branchId: slots.branchId,
         deliveryType: params.deliveryType ?? 'in_person',
-        scheduledAt: selectedSlot.startTime,
+        scheduledAt: slots.selectedSlot.startTime,
         durationOptionId: params.durationOptionId?.trim() || undefined,
         chargedPrice: params.chargedPrice,
         currency: params.currency,
@@ -232,38 +80,24 @@ export default function BookingScheduleScreen() {
     });
   };
 
+  const tzLabel = dir.isRTL ? 'بتوقيتك المحلي' : 'Your local time';
+  const noOpenings = slots.availabilityByDate && !Object.values(slots.availabilityByDate).some(Boolean);
+
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 },
-        ]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 140 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader
-            step={2}
-            onBack={() => goBackOrHome(router)}
-            backAccessibilityLabel={t('a11y.buttonBack')}
-          />
+          <BookingStepHeader step={1} onBack={() => goBackOrHome(router)} backAccessibilityLabel={t('a11y.buttonBack')} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text
-            style={[
-              styles.title,
-              { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
+          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
             {dir.isRTL ? 'اختاري موعداً' : 'Pick a time'}
           </Text>
-          <Text
-            style={[
-              styles.subtitle,
-              { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
+          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
             {dir.isRTL
               ? 'الأوقات المتاحة بحسب جدول المختصة'
               : "Available times based on the therapist's schedule"}
@@ -272,64 +106,54 @@ export default function BookingScheduleScreen() {
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
           <DaySelector
-            days={days}
-            dayIdx={dayIdx}
-            availabilityByDate={availabilityByDate}
-            onSelect={setDayIdx}
+            days={slots.days}
+            dayIdx={slots.dayIdx}
+            availabilityByDate={slots.availabilityByDate}
+            onSelect={slots.setDayIdx}
             dir={dir}
             f500={f500}
             f700={f700}
           />
         </Animated.View>
 
-        {daysLoading ? (
+        {slots.daysLoading ? (
           <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'جارٍ التحقق من الأيام المتاحة…' : 'Checking available days…'}
           </Text>
-        ) : daysError ? (
-          <EmptyState icon="cloud-offline-outline" tone="danger" title={daysError}
-            actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'} onAction={handleRetryDays} />
-        ) : availabilityByDate && !Object.values(availabilityByDate).some(Boolean) ? (
+        ) : slots.daysError ? (
+          <EmptyState icon="cloud-offline-outline" tone="danger" title={slots.daysError}
+            actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'} onAction={slots.handleRetryDays} />
+        ) : noOpenings ? (
           <EmptyState icon="calendar-outline"
             title={dir.isRTL ? 'لا مواعيد متاحة لهذا الحجز خلال ٣٠ يومًا' : 'No openings for this booking in the next 30 days'} />
         ) : null}
 
-        {dayIdx != null ? (
+        {slots.dayIdx != null ? (
           <>
             <Animated.View
               entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(600).easing(Easing.out(Easing.cubic))}
               style={[styles.slotsHead, { flexDirection: dir.row }]}
             >
-              <Text
-                style={[
-                  styles.slotsTitle,
-                  { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-                ]}
-              >
+              <Text style={[styles.slotsTitle, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                 {dir.isRTL ? 'الأوقات المتاحة' : 'Available times'}
               </Text>
-              <Text
-                style={[
-                  styles.tz,
-                  { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-                ]}
-              >
+              <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                 {tzLabel}
               </Text>
             </Animated.View>
 
-            {loading || error || slots.length > 0 ? (
+            {slots.loading || slots.error || slots.slots.length > 0 ? (
               <TimeSlotsGrid
-                loading={loading}
-                error={error}
-                slots={slots}
-                selectedIdx={slotIdx}
-                onSelect={setSlotIdx}
+                loading={slots.loading}
+                error={slots.error}
+                slots={slots.slots}
+                selectedIdx={slots.slotIdx}
+                onSelect={slots.setSlotIdx}
                 dir={dir}
                 f500={f500}
                 f600={f600}
                 reduceMotion={reduceMotion}
-                onRetry={handleRetry}
+                onRetry={slots.handleRetry}
               />
             ) : null}
           </>
@@ -337,8 +161,8 @@ export default function BookingScheduleScreen() {
       </ScrollView>
 
       <BookingCta
-        selectedDay={selectedDay}
-        selectedSlot={selectedSlot}
+        selectedDay={slots.selectedDay}
+        selectedSlot={slots.selectedSlot}
         chargedPrice={params.chargedPrice}
         currency={params.currency}
         onConfirm={handleConfirm}

@@ -117,6 +117,7 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSh
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
     color: sawaaColors.ink[900],
+    textAlign: 'center',
   },
   daysRow: { gap: sawaaSpacing.sm, paddingHorizontal: sawaaSpacing.xs },
   dayCell: {
@@ -132,10 +133,12 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSh
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
     opacity: 0.85,
+    textAlign: 'center',
   },
   dayNum: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
     marginTop: sawaaSpacing.xs,
+    textAlign: 'center',
   },
 });

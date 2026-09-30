@@ -626,6 +626,14 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                 {t('booking.paymentMethod.secureMoyasar')}
               </p>
             )}
+            {!noPaymentMethodAvailable && !payAtClinic && isPaidBooking && (
+              <p
+                className="text-center text-[0.6875rem]"
+                style={{ color: 'var(--sw-neutral-500)' }}
+              >
+                {t('booking.paymentMethod.redirectNote')}
+              </p>
+            )}
           </section>
         </>
       )}

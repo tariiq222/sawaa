@@ -167,10 +167,14 @@
     "therapistsCount": "{{count}} معالج",
     "servicesCount": "{{count}} خدمة",
     "empty": "لا توجد عيادات متاحة حالياً",
+    "loadError": "تعذّر تحميل العيادات. تحقق من الاتصال ثم حاول مرة أخرى.",
+    "bookAppointment": "احجز موعدك",
     "notFound": "لم نعثر على هذه العيادة"
   },
   "groups": {
     "title": "مجموعات الدعم",
+    "dateTba": "الموعد يُعلن لاحقًا",
+    "joinSession": "انضم للجلسة",
     "empty": "لا توجد جلسات جماعية متاحة حالياً",
     "spotsLeft": "متبقي {{count}} مقاعد",
     "full": "مكتمل",
@@ -390,6 +394,9 @@
     "confirmAndPay": "تأكيد والدفع"
   },
   "payment": {
+    "methodsLoading": "جارٍ تحميل طرق الدفع…",
+    "methodsError": "تعذّر تحميل طرق الدفع",
+    "methodsUnavailable": "لا توجد طرق دفع متاحة حاليًا",
     "title": "الدفع",
     "selectMethod": "اختر طريقة الدفع",
     "cardPayment": "الدفع بالبطاقة",

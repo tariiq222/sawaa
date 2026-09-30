@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, View, ViewStyle } from 'react-native';
 import { useTheme } from '../useTheme';
-import { withAlpha } from '../sawaa/tokens';
+import { sawaaRadius } from '../sawaa/tokens';
 
 interface ThemedCardProps {
   children: React.ReactNode;
@@ -13,9 +13,8 @@ interface ThemedCardProps {
 }
 
 /**
- * DS Rule: No borders on standard cards.
- * White cards on gray background create hierarchy via tonal shifts.
- * Selected state = faint blue tint + subtle border.
+ * Shared opaque content card. Selected state uses the semantic selection
+ * foreground and a clear outline instead of a faint translucent tint.
  */
 export function ThemedCard({
   children,
@@ -28,12 +27,12 @@ export function ThemedCard({
   const { theme } = useTheme();
 
   const cardStyle: ViewStyle = {
-    backgroundColor: selected ? withAlpha(theme.colors.primary, 0.05) : theme.colors.white,
-    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: sawaaRadius.lg,
     padding,
-    borderWidth: selected ? 1.5 : 0,
-    borderColor: selected ? withAlpha(theme.colors.primary, 0.3) : 'transparent',
-    ...theme.shadows[elevation],
+    borderWidth: selected ? 2 : 0,
+    borderColor: selected ? theme.colors.primarySelection : 'transparent',
+    ...(elevation === 'none' ? {} : theme.shadows[elevation]),
   };
 
   if (onPress) {

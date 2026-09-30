@@ -305,11 +305,13 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
     color: colors.ink[500],
+    textAlign: 'center',
   },
   summaryWrap: { width: '100%' },
   summaryRow: { padding: sawaaSpacing.lg, gap: sawaaSpacing.xs },
@@ -317,12 +319,14 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
     color: colors.ink[500],
+    textAlign: 'right',
   },
   summaryValue: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
     color: colors.ink[900],
     fontVariant: ['tabular-nums'],
+    textAlign: 'right',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
@@ -341,5 +345,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
     color: colors.teal[700],
+    textAlign: 'center',
   },
 });

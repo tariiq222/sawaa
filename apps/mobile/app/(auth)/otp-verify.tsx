@@ -118,7 +118,8 @@ export default function OtpVerifyScreen() {
 
       const bookingReturn = sessionKind === 'client' ? decodeBookingReturn(params.booking) : null;
       if (bookingReturn) {
-        router.replace({ pathname: '/(client)/booking/payment', params: { ...bookingReturn } });
+        const { amount, ...selection } = bookingReturn;
+        router.replace({ pathname: '/(client)/booking/confirm', params: { ...selection, chargedPrice: amount } });
         return;
       }
       if (redirectMatchesSession(params.redirect, sessionKind)) {

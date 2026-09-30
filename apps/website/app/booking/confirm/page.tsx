@@ -128,7 +128,25 @@ function ConfirmContent() {
   if (state.phase === 'loading') {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <div style={{ marginBottom: '1rem' }}>{t('booking.checkingPayment')}</div>
+        {/* M3: visible waiting state — polling can take up to ~30s and previously
+         * showed a bare text line with no indication of expected duration. */}
+        <div
+          aria-hidden
+          style={{
+            width: 48,
+            height: 48,
+            margin: '0 auto 1.5rem',
+            border: '3px solid color-mix(in srgb, var(--primary) 20%, transparent)',
+            borderTopColor: 'var(--primary)',
+            borderRadius: '50%',
+            animation: 'sw-spin 0.9s linear infinite',
+          }}
+        />
+        <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>{t('booking.checkingPayment')}</div>
+        <p style={{ opacity: 0.65, fontSize: '0.875rem', maxWidth: '40ch', margin: '0 auto' }}>
+          {t('booking.paymentVerifyNote')}
+        </p>
+        <style>{`@keyframes sw-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }

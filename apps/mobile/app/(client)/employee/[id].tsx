@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -98,10 +98,18 @@ export default function EmployeeProfileScreen() {
         <Animated.View entering={FadeInDown.delay(80).duration(700).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.xl} style={styles.heroCard}>
             <View style={[styles.heroRow, { flexDirection: dir.row }]}>
-              <LinearGradient colors={[colors.teal[100], colors.teal[300]]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatar}>
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>{employeeName.charAt(0)}</Text>
-              </LinearGradient>
+              {employee?.publicImageUrl ? (
+                <Image
+                  source={{ uri: employee.publicImageUrl }}
+                  style={styles.avatar}
+                  accessibilityLabel={employeeName}
+                />
+              ) : (
+                <LinearGradient colors={[colors.teal[100], colors.teal[300]]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatar}>
+                  <Text style={[styles.avatarText, { fontFamily: f700 }]}>{employeeName.charAt(0)}</Text>
+                </LinearGradient>
+              )}
               <View style={styles.heroMid}>
                 <Text style={[styles.heroName, { fontFamily: f700, textAlign: dir.textAlign }]}>{employeeName}</Text>
                 {employeeSpec ? (
@@ -209,7 +217,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   clinicGroup: { gap: 8, padding: 12 },
   clinicName: { fontSize: 14, color: colors.ink[900], marginBottom: 2 },
   serviceOption: { padding: 12 },
-  serviceSelected: { borderWidth: 1.5, borderColor: colors.teal[600] },
+  serviceSelected: { borderColor: colors.teal[600], borderWidth: 2 },
   serviceName: { fontSize: 13, color: colors.ink[900] },
   emptyText: { fontSize: 12, color: colors.ink[500] },
   ctaWrap: { position: 'absolute', left: 16, right: 16 },

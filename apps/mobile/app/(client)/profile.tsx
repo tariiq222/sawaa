@@ -292,8 +292,8 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnTy
   statsRow: { marginTop: 16, gap: 8 },
   statBox: {
     flex: 1, paddingVertical: 10, borderRadius: 16,
-    backgroundColor: colors.glass.bg,
-    borderWidth: 0.5, borderColor: colors.glass.border,
+    backgroundColor: theme.colors.surfaceLow,
+    borderWidth: 0.5, borderColor: theme.colors.surfaceHigh,
     alignItems: 'center',
   },
   statN: { fontSize: 18, color: colors.teal[700] },

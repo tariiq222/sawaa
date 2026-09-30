@@ -68,6 +68,13 @@ export class MobileCreateBookingDto {
 
   @ApiPropertyOptional({ description: 'Free-text notes for the booking', example: 'Please prepare the room in advance' })
   @IsOptional() @IsString() notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Client chose to pay at the center. When true the booking is confirmed without an online invoice; the amount is collected at reception. Rejected when the deployment has pay-at-center disabled.',
+    example: false,
+  })
+  @IsOptional() @IsBoolean() payAtClinic?: boolean;
 }
 
 export class MobileCancelBookingDto {
@@ -137,6 +144,7 @@ export class MobileClientBookingsController {
       // dropped and normalizeBookingTypes defaulted the session to IN_PERSON.
       deliveryType: body.deliveryType,
       notes: body.notes,
+      payAtClinic: body.payAtClinic,
       source: 'ONLINE',
     });
   }

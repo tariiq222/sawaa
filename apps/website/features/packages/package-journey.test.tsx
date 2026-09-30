@@ -27,6 +27,7 @@ vi.mock('@/features/booking/booking.api', () => ({
 }));
 
 import { LocaleProvider } from '@/features/locale/locale-provider';
+import * as dictionary from '@/features/locale/dictionary';
 import { PackageCatalogFeature } from './package-catalog';
 import { PackageDetailFeature } from './package-detail';
 import { clearPackagePurchaseAttempt, getPackagePurchaseIdempotencyKey, PackagePurchaseStatusFeature, rememberPackagePurchaseAttempt } from './package-purchase';
@@ -126,6 +127,37 @@ describe('website package journey', () => {
 
     expect(screen.getByRole('heading', { name: 'Therapy package' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /view package/i }).getAttribute('href')).toBe('/packages/family-1');
+  });
+
+  it.each([1, 2, 5, 12])('uses the dictionary session unit for the cheapest public %i-session option', (count) => {
+    const original = dictionary.t;
+    const translation = vi.spyOn(dictionary, 't').mockImplementation((locale, key) =>
+      key.startsWith('packages.sessionsUnit.') ? 'translated-unit' : original(locale, key),
+    );
+    try {
+      renderWithLocale(<PackageCatalogFeature families={[{ ...family, options: [
+        { ...family.options[0], sessionCount: count },
+        { ...family.options[1], isPublic: false, price: { ...family.options[1].price!, finalPrice: 1 } },
+      ] }]} />);
+      expect(screen.getByText(`From 200.00 SAR · ${count} translated-unit`)).toBeTruthy();
+    } finally { translation.mockRestore(); }
+  });
+
+  it('renders the literal Arabic singular unit for a 12-session package', () => {
+    render(<LocaleProvider locale="ar"><PackageCatalogFeature families={[{ ...family, options: [
+      { ...family.options[0], sessionCount: 12 },
+    ] }]} /></LocaleProvider>);
+    expect(screen.getByText('يبدأ من 200.00 ر.س · 12 جلسة')).toBeTruthy();
+    expect(screen.queryByText(/12 جلسات/)).toBeNull();
+  });
+
+  it('separates a failed package load from a successfully empty catalog', () => {
+    const view = renderWithLocale(<PackageCatalogFeature families={[]} loadFailed />);
+    expect(screen.getByRole('alert').textContent).toContain('Packages could not be loaded');
+    expect(screen.queryByRole('status')).toBeNull();
+    view.rerender(<LocaleProvider locale="en"><PackageCatalogFeature families={[]} /></LocaleProvider>);
+    expect(screen.getByRole('status').textContent).toContain('No packages');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('lets a visitor choose the 5 or 9 session option and carries the selected offer into checkout', () => {
