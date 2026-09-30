@@ -66,6 +66,7 @@ const ignoredDirs = new Set([
   'playwright-report',
   // Isolated orchestration state and tool caches (see the header comment).
   '.agent-teams',
+  '.superpowers',
   '.pnpm-store',
   '.commandcode',
   '.cursor',

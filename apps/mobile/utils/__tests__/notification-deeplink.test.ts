@@ -31,6 +31,11 @@ describe('resolveNotificationHref', () => {
     expect(href).toEqual({ pathname: '/(client)/appointment/[id]', params: { id: 'b-9' } });
   });
 
+  it('sends a type-only booking notification to the appointments tab', () => {
+    expect(resolveNotificationHref(notification({ type: 'booking_created' }))).toBe('/(client)/(tabs)/appointments');
+    expect(resolveNotificationHref(notification({ type: 'booking_confirmed' }))).toBe('/(client)/(tabs)/appointments');
+  });
+
   it('opens the chat tab for a conversation-scoped notification', () => {
     expect(resolveNotificationHref(notification({ metadata: { conversationId: 'c-2' } }))).toBe(
       '/(client)/(tabs)/chat',

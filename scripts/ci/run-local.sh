@@ -20,6 +20,7 @@ runner_created=0
 # This is the sole host Docker entry point. Every Docker operation targets
 # the pre-existing nested daemon, never the host engine's service containers.
 ndocker() { docker exec -i "$engine" docker "$@"; }
+engine_exec() { docker exec -i "$engine" "$@"; }
 cleanup() {
   status=$?
   trap - EXIT INT TERM
@@ -124,8 +125,34 @@ ndocker run -d --name "$minio" --label "sawaa.ci.run=$run_id" \
   --network "container:$pg" -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin123 \
   "$minio_image_id" server /data --address :9000 --console-address :9001 >/dev/null
 containers+=("$minio")
+# The runner shares the nested engine's cgroup budget with Postgres, Redis and
+# MinIO, so its limits are derived from that budget instead of being fixed.
+# Raising the engine (docker update on the engine container, after giving the
+# Docker VM more RAM) therefore raises the runner with no edit here.
+# Overridable: SAWAA_CI_RUNNER_CPUS, SAWAA_CI_RUNNER_MEMORY (Docker size suffix).
+engine_memory_bytes=$(engine_exec cat /sys/fs/cgroup/memory.max)
+case "$engine_memory_bytes" in
+  max) engine_memory_mb=$(( $(engine_exec sh -c "awk '/MemTotal/{print \$2}' /proc/meminfo") / 1024 )) ;;
+  *) engine_memory_mb=$(( engine_memory_bytes / 1048576 )) ;;
+esac
+engine_cpu_quota=$(engine_exec sh -c 'cut -d" " -f1 /sys/fs/cgroup/cpu.max')
+engine_cpu_period=$(engine_exec sh -c 'cut -d" " -f2 /sys/fs/cgroup/cpu.max')
+case "$engine_cpu_quota" in
+  max) engine_cpus=$(engine_exec nproc) ;;
+  *) engine_cpus=$(( engine_cpu_quota / engine_cpu_period )) ;;
+esac
+# One core and 1 GiB stay with the service containers and the engine daemon.
+runner_cpus=${SAWAA_CI_RUNNER_CPUS:-$(( engine_cpus > 2 ? engine_cpus - 1 : 1 ))}
+runner_memory=${SAWAA_CI_RUNNER_MEMORY:-$(( engine_memory_mb > 3072 ? engine_memory_mb - 1024 : 2048 ))m}
+printf 'Engine budget: %s CPUs / %s MiB. Runner: %s CPUs / %s.\n' \
+  "$engine_cpus" "$engine_memory_mb" "$runner_cpus" "$runner_memory" | tee "$artifacts/runner-limits.txt"
+# next build collecting traces is the first phase to die at a low ceiling; it
+# was OOM-killed (exit 137) at 5 GiB, so warn rather than fail silently later.
+if [ "${runner_memory%m}" != "$runner_memory" ] && [ "${runner_memory%m}" -lt 8192 ]; then
+  printf 'WARNING: runner memory below 8 GiB risks OOM kills in website-build and dashboard-build.\n' >&2
+fi
 ndocker run -d --name "$runner" --label "sawaa.ci.run=$run_id" \
-  --network "container:$pg" --cpus 2 --cpuset-cpus 0,1 --memory 5g --shm-size 256m \
+  --network "container:$pg" --cpus "$runner_cpus" --memory "$runner_memory" --shm-size 256m \
   -v "$volume:/repo" -v sawaa-ci-pnpm-store:/pnpm/store \
   -v sawaa-ci-playwright-cache:/root/.cache/ms-playwright \
   -v /run/user/1000/docker.sock:/var/run/docker.sock \
@@ -146,7 +173,15 @@ while IFS= read -r -d '' file; do
   printf '%s\0' "$file" >> "$artifacts/archived-files.nul"
   if [ -f "$file" ]; then shasum -a 256 "$file"; fi
 done < "$artifacts/source-files.nul" > "$artifacts/source-sha256.txt"
-tar --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='.next' \
+# macOS tar attaches each file's com.apple.provenance xattr as a pax
+# LIBARCHIVE.xattr header, and GNU tar in the Linux runner materializes every
+# one of them as an AppleDouble ._file. eslint, prisma and jest then parse those
+# as source: one run produced 2957 of them and failed 22 phases. Woodpecker's
+# own checkout has no xattrs, so this only bites when the script is invoked
+# directly against a working copy.
+mac_metadata_flag=''
+if tar --no-mac-metadata --version >/dev/null 2>&1; then mac_metadata_flag='--no-mac-metadata'; fi
+tar $mac_metadata_flag --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='.next' \
   --exclude='coverage' --exclude='.turbo' --exclude='playwright-report' \
   --exclude='test-results' --null -T "$artifacts/archived-files.nul" -cf "$artifacts/source.tar" .git
 shasum -a 256 "$artifacts/source.tar" > "$artifacts/source-archive.sha256"

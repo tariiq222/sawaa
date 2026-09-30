@@ -9,6 +9,13 @@ import { ListPaymentsHandler } from '../../../../modules/finance/list-payments/l
 import { GetClientHandler } from '../../../../modules/people/clients/get-client.handler';
 import { Public } from '../../../../common/guards/jwt.guard';
 
+/** List handlers answer `{ items, meta }`; the home payload exposes plain arrays. */
+function rowsOf(result: unknown): unknown[] {
+  if (Array.isArray(result)) return result;
+  const page = result as { items?: unknown[]; data?: unknown[] } | null;
+  return page?.items ?? page?.data ?? [];
+}
+
 @ApiTags('Mobile Client / Portal')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -48,9 +55,9 @@ export class MobileClientHomeController {
 
     return {
       profile,
-      upcomingBookings: (upcomingResult as { data?: unknown[] }).data ?? upcomingResult,
-      unreadNotifications: (notificationsResult as { data?: unknown[] }).data ?? notificationsResult,
-      recentPayments: (paymentsResult as { data?: unknown[] }).data ?? paymentsResult,
+      upcomingBookings: rowsOf(upcomingResult),
+      unreadNotifications: rowsOf(notificationsResult),
+      recentPayments: rowsOf(paymentsResult),
     };
   }
 }

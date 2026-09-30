@@ -27,6 +27,14 @@ describe('employeeBookingsService', () => {
     expect(mockedApi.get).toHaveBeenCalledWith('/mobile/employee/bookings/booking-1');
   });
 
+  it('reads the host link and exact timing from the start-meeting route', async () => {
+    const details = { bookingId: 'booking-1', scheduledAt: '2026-10-01T14:30:00.000Z', durationMins: 50, meetingStatus: 'CREATED', startUrl: 'https://zoom.us/s/1' };
+    mockedApi.get.mockResolvedValueOnce({ data: details });
+
+    await expect(employeeBookingsService.getMeetingStart('booking-1')).resolves.toEqual(details);
+    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/employee/bookings/booking-1/start-meeting');
+  });
+
   it('uses scalar status and an explicit day range for list queries', async () => {
     const list = { items: [{ id: 'booking-1', date: '2026-09-18', startTime: '13:00' }], meta: { total: 1, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false } };
     mockedApi.get.mockResolvedValueOnce({ data: list });

@@ -30,10 +30,15 @@ interface TypeConfig {
 }
 
 const typeMap = (sharedColors: ReturnType<typeof useTheme>['theme']['colors']): Partial<Record<Notification['type'], TypeConfig>> => ({
+  booking_created: { icon: Calendar, color: sharedColors.info },
   booking_confirmed: { icon: Calendar, color: sharedColors.success },
   booking_cancelled: { icon: CalendarX, color: sharedColors.error },
   reminder: { icon: Bell, color: sharedColors.warning },
+  booking_reminder: { icon: Bell, color: sharedColors.warning },
   payment_received: { icon: CreditCard, color: sharedColors.info },
+  payment_completed: { icon: CreditCard, color: sharedColors.success },
+  payment_reminder: { icon: CreditCard, color: sharedColors.warning },
+  payment_failed: { icon: CreditCard, color: sharedColors.error },
   new_rating: { icon: Star, color: sharedColors.purple },
   problem_report: { icon: AlertTriangle, color: sharedColors.error },
 });

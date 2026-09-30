@@ -31,7 +31,7 @@ jest.mock('expo-router/unstable-native-tabs', () => {
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/components/ui/AppIcon', () => ({ AppIcon: () => null }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
-  useSawaaColors: () => ({ teal: { 600: 'brand-teal' }, ink: { 900: 'adaptive-ink' } }),
+  useSawaaColors: () => ({ teal: { 600: 'brand-teal' }, ink: { 700: 'idle-ink' } }),
 }));
 
 let mockIsRTL = true;
@@ -56,7 +56,10 @@ describe('client tab navigation', () => {
 
   it('keeps native layout and uses the brand color for the selected tab', () => {
     render(<ClientTabsLayout />);
-    expect(mockNativeTabOptions).toHaveBeenCalledWith({ tintColor: 'brand-teal' });
+    expect(mockNativeTabOptions).toHaveBeenCalledWith({
+      tintColor: 'brand-teal',
+      iconColor: { default: 'idle-ink', selected: 'brand-teal' },
+    });
   });
 
   it('keeps the English visual order', () => {

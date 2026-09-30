@@ -10,7 +10,6 @@ import { getFontName } from '@/theme/fonts';
 import { AquaBackground } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
-import { GuestDock, type GuestDockSection } from '@/components/features/home/GuestDock';
 import { Avatar } from '@/components/ui/Avatar';
 import { BackButton } from '@/components/ui/BackButton';
 import { useAppSelector } from '@/hooks/use-redux';
@@ -47,7 +46,6 @@ export default function PublicListScreen() {
       : kind === 'packages' ? (families.data ?? []).map((item) => ({ id: item.id, kind: 'package', nameAr: item.nameAr, nameEn: item.nameEn ?? null }))
         : kind === 'programs' ? (programs.data ?? []).map((item) => ({ id: item.id, kind: 'program', nameAr: item.nameAr, nameEn: item.nameEn ?? null })) : [];
   const valid = kind === 'clinics' || kind === 'therapists' || kind === 'packages' || kind === 'programs';
-  const dockSection: GuestDockSection | null = valid ? kind as GuestDockSection : null;
   const loading = kind === 'clinics' ? clinics.isLoading
     : kind === 'therapists' ? therapists.isLoading || Boolean(clinicId && clinics.isLoading)
       : kind === 'packages' ? families.isLoading : programs.isLoading;
@@ -61,7 +59,7 @@ export default function PublicListScreen() {
         columnWrapperStyle={kind === 'therapists' ? [styles.gridRow, { flexDirection: dir.row }] : undefined}
         data={entries}
         keyExtractor={(item) => `${item.kind}-${item.id}`}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: isGuest ? insets.bottom + 120 : insets.bottom + 40 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
         ListHeaderComponent={(
           <View style={styles.header}>
             <BackButton onPress={() => goBackOrHome(router)} style={{ alignSelf: dir.alignStart }} />
@@ -96,7 +94,6 @@ export default function PublicListScreen() {
           </Glass>
         )}
       />
-      {isGuest && dockSection ? <GuestDock active={dockSection} /> : null}
     </AquaBackground>
   );
 }

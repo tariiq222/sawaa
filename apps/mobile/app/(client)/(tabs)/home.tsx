@@ -18,7 +18,6 @@ import { HomeCardsCarousel } from '@/components/features/home/HomeCardsCarousel'
 import { HomeTopBar } from '@/components/features/home/HomeTopBar';
 import { TherapistsRow } from '@/components/features/home/TherapistsRow';
 import { UpNextCard } from '@/components/features/home/UpNextCard';
-import { GuestDock } from '@/components/features/home/GuestDock';
 import { useReduceMotion } from '@/hooks/useA11y';
 
 export default function HomeScreen() {
@@ -108,7 +107,6 @@ export default function HomeScreen() {
           </View>
         ) : null}
       </ScrollView>
-      {!isClient ? <GuestDock active="home" /> : null}
     </AquaBackground>
   );
 }
