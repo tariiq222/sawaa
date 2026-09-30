@@ -441,14 +441,14 @@ test.describe('Practitioner onboarding, custom service options, and booking visi
     // Selecting the practitioner auto-advances the wizard: with a single active
     // delivery type (IN_PERSON) the type/duration step auto-selects it and
     // collapses, surfacing the effective price in the booking summary panel
-    // ("ملخص الحجز"). The summary's price line (booking-summary.tsx →
+    // ("ملخص الموعد"). The summary's price line (booking-summary.tsx →
     // FormattedCurrency) reflects the practitioner-owned EmployeeServiceType
     // price, i.e. the 180.00 SAR override that REPLACES the 200.00 service
     // default — which is the whole point of this test: custom practitioner
     // pricing is visible to bookings. Scope to the summary panel and assert it
     // shows 180.00 (the riyal glyph renders as its own node, so match the
     // number; 180.00 vs the 200.00 default disambiguates the override).
-    const bookingSummary = page.locator('div').filter({ hasText: /ملخص الحجز/u }).last()
+    const bookingSummary = page.locator('div').filter({ hasText: /ملخص الموعد/u }).last()
     await expect(
       bookingSummary.getByText(/180\.00/u).first(),
       'booking summary should reflect the practitioner-owned 180.00 SAR override',

@@ -23,6 +23,7 @@ export const DEFAULT_BOOKING_SETTINGS = {
   autoNoShowAfterEnd: true,
   minBookingLeadMinutes: 60,
   maxAdvanceBookingDays: 90,
+  // Client surfaces require operator opt-in, matching the persisted Prisma default.
   payAtClinicEnabled: false,
   requireCancelApproval: false,
   autoRefundOnCancel: true,
