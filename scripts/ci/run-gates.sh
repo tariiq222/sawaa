@@ -24,9 +24,11 @@ export SEMGREP_SEND_METRICS=off SEMGREP_APP_TOKEN=''
 for key in JWT_ACCESS_SECRET JWT_REFRESH_SECRET JWT_OTP_SECRET JWT_CLIENT_ACCESS_SECRET CHAT_GUEST_TOKEN_SECRET; do
   export "$key=$(node -e 'process.stdout.write(require("crypto").randomBytes(48).toString("hex"))')"
 done
-for key in MOYASAR_ENCRYPTION_KEY AI_PROVIDER_ENCRYPTION_KEY SMS_PROVIDER_ENCRYPTION_KEY ZOOM_PROVIDER_ENCRYPTION_KEY EMAIL_PROVIDER_ENCRYPTION_KEY PLATFORM_SETTINGS_KEY; do
+for key in MOYASAR_ENCRYPTION_KEY AI_PROVIDER_ENCRYPTION_KEY SMS_PROVIDER_ENCRYPTION_KEY ZOOM_PROVIDER_ENCRYPTION_KEY EMAIL_PROVIDER_ENCRYPTION_KEY; do
   export "$key=$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("base64"))')"
 done
+# Platform settings validation requires exactly 64 hexadecimal characters.
+export PLATFORM_SETTINGS_KEY=$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')
 # Pin pnpm to the repository's packageManager; Corepack downloads it once.
 corepack prepare "$(node -p 'require("./package.json").packageManager')" --activate
 printf 'phase\tstatus\texit_code\tseconds\n' > /evidence/phases.tsv
