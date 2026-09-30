@@ -8,10 +8,12 @@ describe('GetPublicPaymentMethodsHandler', () => {
   let prisma: PrismaService;
   let findSettings: jest.Mock;
   let findConfig: jest.Mock;
+  let findClientSettings: jest.Mock;
 
   beforeEach(async () => {
     findSettings = jest.fn();
     findConfig = jest.fn();
+    findClientSettings = jest.fn().mockResolvedValue({ payAtClinicEnabled: true });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -21,6 +23,7 @@ describe('GetPublicPaymentMethodsHandler', () => {
           useValue: {
             organizationSettings: { findFirst: findSettings },
             organizationPaymentConfig: { findUnique: findConfig },
+            bookingSettings: { findFirst: findClientSettings },
           },
         },
       ],
@@ -32,6 +35,8 @@ describe('GetPublicPaymentMethodsHandler', () => {
 
   const withSettings = (settings: unknown) => findSettings.mockResolvedValue(settings);
   const withConfig = (config: unknown) => findConfig.mockResolvedValue(config);
+  const withClientSettings = (clientSettings: unknown) =>
+    findClientSettings.mockResolvedValue(clientSettings);
 
   it('advertises both methods when both are enabled and Moyasar is configured', async () => {
     withSettings({ paymentMoyasarEnabled: true, paymentAtClinicEnabled: true });
@@ -79,6 +84,39 @@ describe('GetPublicPaymentMethodsHandler', () => {
 
     await expect(handler.execute()).resolves.toEqual({
       moyasarEnabled: false,
+      atClinicEnabled: false,
+    });
+  });
+
+  it('hides pay-at-center from clients when the client-only switch is off, without touching reception', async () => {
+    withSettings({ paymentMoyasarEnabled: true, paymentAtClinicEnabled: true });
+    withConfig({ id: 'cfg-1' });
+    withClientSettings({ payAtClinicEnabled: false });
+
+    await expect(handler.execute()).resolves.toEqual({
+      moyasarEnabled: true,
+      atClinicEnabled: false,
+    });
+  });
+
+  it('keeps pay-at-center for clients when the client-only switch is on', async () => {
+    withSettings({ paymentMoyasarEnabled: true, paymentAtClinicEnabled: true });
+    withConfig({ id: 'cfg-1' });
+    withClientSettings({ payAtClinicEnabled: true });
+
+    await expect(handler.execute()).resolves.toEqual({
+      moyasarEnabled: true,
+      atClinicEnabled: true,
+    });
+  });
+
+  it('requires explicit client opt-in when no client-settings row exists', async () => {
+    withSettings({ paymentMoyasarEnabled: true, paymentAtClinicEnabled: true });
+    withConfig({ id: 'cfg-1' });
+    withClientSettings(null);
+
+    await expect(handler.execute()).resolves.toEqual({
+      moyasarEnabled: true,
       atClinicEnabled: false,
     });
   });

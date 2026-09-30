@@ -12,6 +12,8 @@ export type GlassSurfaceVariant = SurfaceVariant | 'regular' | 'clear';
 
 export type GlassSurfaceProps = Omit<PressableProps, 'style' | 'children' | 'onPress'> & {
   variant?: GlassSurfaceVariant;
+  /** Reserve the translucent material for the bottom navigation dock. */
+  material?: 'surface' | 'glass';
   tint?: string;
   radius?: number;
   padding?: number | ViewStyle['padding'];
@@ -35,6 +37,7 @@ function toSurfaceVariant(variant: GlassSurfaceVariant): SurfaceVariant {
  */
 export function GlassSurface({
   variant = 'base',
+  material = 'surface',
   tint,
   radius = sawaaRadius.xl,
   padding,
@@ -74,10 +77,16 @@ export function GlassSurface({
     ? colors.glass.opaqueDarkBg
     : theme.colors.surface ?? colors.glass.opaqueBg;
   const fallbackFill = fillMap[surfaceVariant];
+  const solidFill = surfaceVariant === 'soft'
+    ? getSawaaRoles(glassScheme).surfaceLow
+    : surfaceVariant === 'strong'
+      ? getSawaaRoles(glassScheme).surface
+      : getSawaaRoles(glassScheme).surface;
+  const useGlass = material === 'glass' && !reduceTransparency;
   const usePressable = Boolean(interactive || onPress || onPressIn || onPressOut || onLongPress);
   const nativeGlass =
     Platform.OS === 'ios' &&
-    !reduceTransparency &&
+    useGlass &&
     isGlassEffectAPIAvailable() &&
     isLiquidGlassAvailable();
   const [pressedInternal, setPressedInternal] = useState(false);
@@ -89,11 +98,10 @@ export function GlassSurface({
     borderWidth: increasedContrast ? 2 : StyleSheet.hairlineWidth,
     borderColor: increasedContrast
       ? isDark ? colors.glass.opaqueDarkBorder : theme.colors.textPrimary
-      : borderMap[surfaceVariant],
+      : useGlass ? borderMap[surfaceVariant] : getSawaaRoles(glassScheme).surfaceHigh,
     overflow: 'hidden',
-    backgroundColor: reduceTransparency
-      ? opaqueSurface
-      : Platform.OS === 'android' ? fallbackFill : 'transparent',
+    backgroundColor: reduceTransparency ? opaqueSurface
+      : useGlass ? (Platform.OS === 'android' ? fallbackFill : 'transparent') : solidFill,
   };
   const pressTransform: ViewStyle | undefined = usePressable && pressed && !reduceMotion
     ? { transform: [{ scale: 0.96 }] }
@@ -104,7 +112,8 @@ export function GlassSurface({
   const wrapperStyle = [
     containerStyle,
     style,
-    reduceTransparency ? { backgroundColor: opaqueSurface } : null,
+    reduceTransparency ? { backgroundColor: opaqueSurface }
+      : !useGlass ? { backgroundColor: solidFill } : null,
     pressTransform,
     wrapperTransition,
   ];
@@ -118,7 +127,7 @@ export function GlassSurface({
           tintColor={tint ?? (isDark ? colors.glass.darkBg : undefined)}
           isInteractive={usePressable}
         />
-      ) : !reduceTransparency ? (
+      ) : useGlass ? (
         <>
           {Platform.OS === 'ios' ? (
             <BlurView

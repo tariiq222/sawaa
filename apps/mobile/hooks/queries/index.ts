@@ -23,6 +23,7 @@ export { useMobileHomeCards, mobileHomeCardsQueryKey } from './useMobileHomeCard
 export { useRegister, useRequestLoginOtp, useVerifyOtp, useRequestEmailVerification } from './useMobileAuth';
 export { useMe } from './useMe';
 export { useBankTransferSettings, bankTransferSettingsKeys } from './useBankTransferSettings';
+export { usePublicPaymentMethods, publicPaymentMethodsKeys } from './usePublicPaymentMethods';
 export { useGroupSessions, useGroupSession, useBookGroupSession, groupSessionKeys } from './useGroupSessions';
 export {
   packageKeys,

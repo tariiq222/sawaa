@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Glass } from '@/theme/components/Glass';
 import { useTheme } from '@/theme/useTheme';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 
@@ -43,7 +43,7 @@ export function GlassSegmented<T extends string>({
       <View
         style={[
           styles.track,
-          { flexDirection: dir.row, backgroundColor: appearance === 'navigation' ? colors.glass.bgStrong : theme.colors.surfaceHigh },
+          { flexDirection: dir.row, backgroundColor: theme.colors.surfaceHigh },
         ]}
       >
         {options.map((option) => {
@@ -55,7 +55,7 @@ export function GlassSegmented<T extends string>({
                 if (isActive) return;
                 onChange(option.value);
               }}
-              style={[styles.tab, isActive && { backgroundColor: appearance === 'navigation' ? withAlpha(colors.teal[700], 0.12) : theme.colors.primarySelection }]}
+              style={[styles.tab, isActive && { backgroundColor: theme.colors.primarySelection }]}
               accessibilityRole="tab"
               accessibilityLabel={option.label}
               accessibilityState={{ selected: isActive }}
@@ -68,7 +68,7 @@ export function GlassSegmented<T extends string>({
                     fontFamily: f600,
                     fontWeight: '600',
                     color: isActive
-                      ? appearance === 'navigation' ? colors.teal[700] : theme.colors.primarySelectionForeground
+                      ? theme.colors.primarySelectionForeground
                       : colors.ink[700],
                   },
                 ]}

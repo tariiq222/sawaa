@@ -47,7 +47,8 @@ export default function ReviewLoginScreen() {
       setPassword('');
       const bookingReturn = decodeBookingReturn(booking);
       if (bookingReturn) {
-        router.replace({ pathname: '/(client)/booking/payment', params: { ...bookingReturn } });
+        const { amount, ...selection } = bookingReturn;
+        router.replace({ pathname: '/(client)/booking/confirm', params: { ...selection, chargedPrice: amount } });
         return;
       }
       const redirectReturn = decodeRedirect(redirect);

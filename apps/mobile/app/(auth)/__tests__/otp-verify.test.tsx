@@ -185,7 +185,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     });
   });
 
-  it('returns a verified client to the selected appointment payment step', async () => {
+  it('returns a verified client to confirmation with the selected practitioner price', async () => {
     mockRedirect = '/(client)/(tabs)/appointments';
     mockBooking = JSON.stringify({
       clinicId: 'clinic-1', serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
@@ -199,12 +199,12 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     const { getByLabelText } = render(<OtpVerifyScreen />);
     fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({
-      pathname: '/(client)/booking/payment',
+      pathname: '/(client)/booking/confirm',
       params: {
         clinicId: 'clinic-1',
         serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
         deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
-        durationOptionId: 'duration-1', amount: '45000', currency: 'SAR',
+        durationOptionId: 'duration-1', chargedPrice: '45000', currency: 'SAR',
       },
     }));
   });
@@ -283,7 +283,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(
-      expect.objectContaining({ pathname: '/(client)/booking/payment' }),
+      expect.objectContaining({ pathname: '/(client)/booking/confirm' }),
     ));
   });
 

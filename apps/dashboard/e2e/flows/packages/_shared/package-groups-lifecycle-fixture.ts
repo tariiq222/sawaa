@@ -240,7 +240,7 @@ export async function chooseActualDateAndTime(pos: Locator): Promise<void> {
 }
 export async function submitCreditBooking(page: Page, pos: Locator, creditId: string): Promise<string> {
   const responsePromise = page.waitForResponse((response) => response.url().includes("/from-credit") && response.request().method() === "POST", { timeout: 30_000 })
-  const submit = pos.getByRole("button", { name: /تأكيد الحجز|Confirm Booking/i })
+  const submit = pos.getByRole("button", { name: /تأكيد الموعد|Confirm Appointment/i })
   await expect(submit, "credit booking submit control should be available").toBeEnabled({ timeout: 15_000 })
   await submit.click()
   const response = await responsePromise

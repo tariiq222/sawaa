@@ -124,7 +124,7 @@ test.describe("Booking POS — collection-timing radiogroup", () => {
 
     const collectNow = group.getByRole("radio", { name: /تحصيل الآن|Collect now/i })
     const payAtClinic = group.getByRole("radio", {
-      name: /الدفع في العيادة|Pay at Clinic/i,
+      name: /الدفع في المركز|الدفع في العيادة|Pay at (the )?Center|Pay at Clinic/i,
     })
     await expect(collectNow).toBeVisible()
     await expect(payAtClinic).toBeVisible()
@@ -156,7 +156,7 @@ test.describe("Booking POS — collection-timing radiogroup", () => {
 
     const collectNow = group.getByRole("radio", { name: /تحصيل الآن|Collect now/i })
     const payAtClinic = group.getByRole("radio", {
-      name: /الدفع في العيادة|Pay at Clinic/i,
+      name: /الدفع في المركز|الدفع في العيادة|Pay at (the )?Center|Pay at Clinic/i,
     })
 
     await expect(payAtClinic).toHaveAttribute("aria-checked", "true")
@@ -263,7 +263,7 @@ test.describe("Booking POS — collection-timing radiogroup", () => {
     )
 
     await pos
-      .getByRole("button", { name: /تأكيد الحجز|Confirm Booking/i })
+      .getByRole("button", { name: /تأكيد الموعد|Confirm Appointment/i })
       .click()
 
     const bookingRes = await bookingCreate

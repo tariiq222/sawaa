@@ -25,7 +25,7 @@ export const sawaaColors = {
   ink: {
     900: '#0a2a2a',
     700: '#2e4747',
-    500: '#5c7878',
+    500: '#4d6868',
     400: '#84a0a0',
   },
   glass: {

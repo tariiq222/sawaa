@@ -190,8 +190,6 @@ async function main() {
       price: p.priceHalalas,
       currency: 'SAR',
       iconName: p.iconName,
-      minParticipants: 4,
-      maxParticipants: 10,
       // Public catalog visibility (GET /public/services requires all three).
       isActive: true,
       isHidden: false,
@@ -265,35 +263,9 @@ async function main() {
   // …5101–5106) from the fallback service to the matching per-program service
   // by exact title, so detail pages (which list sessions by service) show
   // them. Skips silently when the demo sessions are absent. Safe vs re-runs of
-  // seed:support-groups — its upsert update branch never touches serviceId.
+  // NOTE: the legacy GroupSession model (demo-support-groups rows) was replaced
+  // by the Program model; the old re-pointing block is intentionally removed.
   // -------------------------------------------------------------------------
-  const DEMO_SESSION_IDS = [
-    '00000000-0000-4000-8000-000000005101',
-    '00000000-0000-4000-8000-000000005102',
-    '00000000-0000-4000-8000-000000005103',
-    '00000000-0000-4000-8000-000000005104',
-    '00000000-0000-4000-8000-000000005105',
-    '00000000-0000-4000-8000-000000005106',
-  ];
-  const demoSessions = await prisma.groupSession.findMany({
-    where: { id: { in: DEMO_SESSION_IDS } },
-    select: { id: true, title: true, serviceId: true },
-  });
-  const programByTitle = new Map(PROGRAMS.map((p) => [p.nameAr, p]));
-  for (const s of demoSessions) {
-    const program = programByTitle.get(s.title.trim());
-    if (!program || s.serviceId === program.serviceId) continue;
-    const assignedTherapist = therapistByService.get(program.serviceId);
-    await prisma.groupSession.update({
-      where: { id: s.id },
-      data: {
-        serviceId: program.serviceId,
-        ...(assignedTherapist ? { employeeId: assignedTherapist } : {}),
-      },
-    });
-    console.log(`re-pointed session "${s.title}" → service ${program.serviceId}`);
-  }
-
   const categoryCount = await prisma.serviceCategory.count({
     where: { departmentId: department.id, isActive: true },
   });

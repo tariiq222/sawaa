@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
-import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
@@ -92,17 +92,19 @@ export function BookingCta({
 }
 
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  confirmArrow: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  confirmArrow: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center', borderRadius: sawaaRadius.pill },
   summary: { flex: 1, paddingHorizontal: sawaaSpacing.sm },
   summaryTop: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
     color: sawaaColors.ink[500],
+    textAlign: 'center',
   },
   summaryBot: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
     color: sawaaColors.ink[900],
     marginTop: sawaaSpacing.xs,
+    textAlign: 'center',
   },
 });

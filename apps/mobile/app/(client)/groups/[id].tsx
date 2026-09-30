@@ -19,12 +19,14 @@ import { concentricRadius, withAlpha } from '@/theme/sawaa/tokens';
 const CARD_RADIUS = sawaaRadius.xl;
 const CARD_PADDING = 18;
 
-function formatDateTime(value: string, isRTL: boolean) {
+function formatDateTime(value: string, isRTL: boolean): string | null {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat(isRTL ? 'ar-SA' : 'en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
     ...(isRTL ? { calendar: 'gregory' } : {}),
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function formatPrice(price: number, isRTL: boolean, sar: string) {
@@ -47,8 +49,13 @@ export default function GroupDetailScreen() {
   // Keep the enrollment action available when a program is full: the server
   // can return an existing active enrollment for this client, which is the
   // recovery path for a previously reserved place.
-  const ctaLabel = t('groups.join');
-  const description = group ? (dir.isRTL ? group.descriptionAr : group.descriptionEn ?? group.descriptionAr) : null;
+  const ctaLabel = t('groups.joinSession');
+  // Public copy wins; the internal description is only a fallback.
+  const description = group
+    ? (dir.isRTL
+      ? group.publicDescriptionAr ?? group.descriptionAr
+      : group.publicDescriptionEn ?? group.descriptionEn ?? group.publicDescriptionAr ?? group.descriptionAr)
+    : null;
 
   const onJoin = () => {
     if (!id) return;
@@ -111,7 +118,11 @@ export default function GroupDetailScreen() {
             </View>
 
             <View style={styles.detailsGrid}>
-              {group.scheduledAt ? <DetailRow icon="calendar" label={formatDateTime(group.scheduledAt, dir.isRTL)} dir={dir} /> : null}
+              {group.scheduledAt ? (
+                <DetailRow icon="calendar" label={formatDateTime(group.scheduledAt, dir.isRTL) ?? t('groups.dateTba')} dir={dir} />
+              ) : (
+                <DetailRow icon="calendar" label={t('groups.dateTba')} dir={dir} />
+              )}
               <DetailRow icon="duration" label={t('groups.duration', { count: group.durationMins ?? 0 })} dir={dir} />
               <DetailRow icon="users" label={t('groups.enrolled', { count: group.enrolledCount, max: group.maxCapacity ?? 0 })} dir={dir} />
               <DetailRow icon="price" label={formatPrice(Number(group.price), dir.isRTL, t('home.sar'))} dir={dir} />
@@ -180,7 +191,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     width: 58,
     height: 58,
     borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING),
-    backgroundColor: colors.glass.bgStrong,
+    backgroundColor: colors.glass.opaqueBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -192,7 +203,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: sawaaRadius.md,
-    backgroundColor: colors.glass.bgSoft,
+    backgroundColor: colors.glass.opaqueBg,
   },
   badgeRow: { flexWrap: 'wrap', gap: 8 },
   badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: sawaaRadius.pill, borderWidth: 0.5 },
