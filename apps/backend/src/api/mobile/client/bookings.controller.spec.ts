@@ -101,6 +101,28 @@ describe('MobileClientBookingsController (e2e)', () => {
         .expect(400);
     });
 
+    it('forwards payAtClinic so a client can book and pay at the center', async () => {
+      mockCreate.execute.mockResolvedValue({ id: 'b-2', status: 'CONFIRMED', invoiceId: null });
+
+      await request(app.getHttpServer())
+        .post('/mobile/client/bookings')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...validBooking, payAtClinic: true })
+        .expect(201);
+
+      expect(mockCreate.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ payAtClinic: true, source: 'ONLINE' }),
+      );
+    });
+
+    it('rejects a non-boolean payAtClinic instead of coercing it', async () => {
+      return request(app.getHttpServer())
+        .post('/mobile/client/bookings')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...validBooking, payAtClinic: 'true' })
+        .expect(400);
+    });
+
     it('returns 400 for unknown fields', async () => {
       return request(app.getHttpServer())
         .post('/mobile/client/bookings')

@@ -7269,6 +7269,11 @@
             "example": "Please prepare the room in advance",
             "type": "string"
           },
+          "payAtClinic": {
+            "description": "Client chose to pay at the center. When true the booking is confirmed without an online invoice; the amount is collected at reception. Rejected when the deployment has pay-at-center disabled.",
+            "example": false,
+            "type": "boolean"
+          },
           "scheduledAt": {
             "description": "ISO 8601 start datetime",
             "example": "2026-05-01T09:00:00.000Z",

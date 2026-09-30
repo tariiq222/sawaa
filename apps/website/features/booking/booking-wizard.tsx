@@ -182,6 +182,11 @@ function PractitionerChoicePicker({
                     <span className="text-[0.8125rem] font-medium" style={{ color: 'var(--sw-body)' }}>
                       {`${opt.durationMins} ${isAr ? 'دقيقة' : 'min'}`}
                     </span>
+                    <span className="text-[0.75rem]" style={{ color: 'var(--sw-neutral-500)' }}>
+                      {opt.deliveryType === 'ONLINE'
+                        ? t('booking.delivery.onlineNote')
+                        : t('booking.delivery.inPersonNote')}
+                    </span>
                   </div>
                   <div className="flex flex-col items-end shrink-0 gap-0.5">
                     <span className="flex items-baseline gap-1">
@@ -231,7 +236,7 @@ function BookingWizardInner() {
         <div className="mx-auto w-full max-w-[1024px] px-4 sm:px-6 pt-6 sm:pt-8 pb-16">
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <div className="flex items-center gap-2">
-              <IconButton onClick={w.handleClose} ariaLabel="إغلاق">
+              <IconButton onClick={w.handleClose} ariaLabel={w.t('common.close')}>
                 <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M4 4l8 8M12 4l-8 8" />
                 </svg>

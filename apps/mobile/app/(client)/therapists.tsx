@@ -2,7 +2,7 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import React, { useMemo, useState, useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -85,41 +85,48 @@ export default function TherapistsListScreen() {
       <Animated.View
         entering={reduceMotion ? undefined : FadeInDown.delay(280 + index * 80).duration(700).easing(Easing.out(Easing.cubic))}
       >
-        <Glass variant="strong" radius={sawaaRadius.xl} style={styles.therapistCard}>
-          <Pressable
-            onPress={() => router.push({ pathname: '/(client)/employee/[id]', params: { id: navKey, ...(clinicId ? { clinicId } : {}), ...(serviceId ? { serviceId } : {}) } })}
-            style={[styles.therapistRow, { flexDirection: dir.row }]}
-            accessibilityRole="button"
-            accessibilityLabel={`${name}, ${spec}`}
-            testID={`therapist-${item.id}`}
-          >
-            <LinearGradient
-              colors={gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatar}
-            >
-              <Text style={[styles.avatarText, { fontFamily: f700, color: theme.colors.primaryForeground }]}>{initial}</Text>
-            </LinearGradient>
+        <Glass
+          variant="strong"
+          radius={sawaaRadius.xl}
+          style={styles.therapistCard}
+          interactive
+          onPress={() => router.push({ pathname: '/(client)/employee/[id]', params: { id: navKey, ...(clinicId ? { clinicId } : {}), ...(serviceId ? { serviceId } : {}) } })}
+          accessibilityRole="button"
+          accessibilityLabel={`${name}, ${spec}`}
+          testID={`therapist-${item.id}`}
+        >
+          <View style={[styles.therapistRow, { flexDirection: dir.row }]}>
+            {item.publicImageUrl ? (
+              <Image source={{ uri: item.publicImageUrl }} style={styles.avatar} accessibilityLabel={name} />
+            ) : (
+              <LinearGradient
+                colors={gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatar}
+              >
+                <Text style={[styles.avatarText, { fontFamily: f700, color: theme.colors.primaryForeground }]}>{initial}</Text>
+              </LinearGradient>
+            )}
             <View style={styles.therapistBody}>
               <View style={[styles.therapistTop, { flexDirection: dir.row }]}>
-                <Text style={[styles.therapistName, { fontFamily: f700, textAlign: dir.textAlign, flex: 1 }]}>
+                <Text style={[styles.therapistName, { fontFamily: f700, textAlign: dir.textAlign, flex: 1 }]} numberOfLines={1}>
                   {name}
                 </Text>
               </View>
-              <Text style={[styles.therapistSpec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
+              <Text style={[styles.therapistSpec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]} numberOfLines={2}>
                 {spec}
               </Text>
               {item.title ? (
                 <View style={[styles.therapistMeta, { flexDirection: dir.row }]}>
                   <AppIcon sf="star.fill" fallback={Star} size={11} color={colors.accent.amber} strokeWidth={2} />
-                  <Text style={[styles.therapistExp, { fontFamily: f500, fontWeight: '500' }]}> 
+                  <Text style={[styles.therapistExp, { fontFamily: f500, fontWeight: '500' }]} numberOfLines={1}>
                     {item.title}
                   </Text>
                 </View>
               ) : null}
             </View>
-          </Pressable>
+          </View>
         </Glass>
       </Animated.View>
     );
@@ -175,26 +182,26 @@ export default function TherapistsListScreen() {
           {CHIPS.map((chip) => {
             const isActive = chip.key === activeChip;
             return (
-              <Pressable
+              <Glass
                 key={chip.key}
+                variant={isActive ? 'strong' : 'regular'}
+                radius={14}
+                interactive
                 onPress={() => setActiveChip((prev) => (prev === chip.key ? null : chip.key))}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+                style={[
+                  styles.chip,
+                  isActive && { borderColor: colors.teal[600], borderWidth: 1.5 },
+                ]}
               >
-                <Glass
-                  variant={isActive ? 'strong' : 'regular'}
-                  radius={14}
-                  style={[
-                    styles.chip,
-                    isActive && { backgroundColor: theme.colors.primaryFill },
-                  ]}
-                >
-                  <Text style={[
-                    styles.chipText,
-                    { fontFamily: f600, fontWeight: '600', color: isActive ? theme.colors.primaryForeground : colors.ink[700] },
-                  ]}>
-                    {t(chip.labelKey)}
-                  </Text>
-                </Glass>
-              </Pressable>
+                <Text style={[
+                  styles.chipText,
+                  { fontFamily: f600, fontWeight: '600', color: isActive ? colors.teal[700] : colors.ink[700] },
+                ]}>
+                  {t(chip.labelKey)}
+                </Text>
+              </Glass>
             );
           })}
         </LocalizedHorizontalScroll>
@@ -221,7 +228,7 @@ export default function TherapistsListScreen() {
         </View>
       ) : null}
     </View>
-  ), [colors, styles, theme, activeChip, clinicDirectoryFailed, directoryFailed, loading, refetchClinics, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t, therapistDirectoryFailed, refetchTherapists]);
+  ), [colors, styles, activeChip, clinicDirectoryFailed, directoryFailed, loading, refetchClinics, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t, therapistDirectoryFailed, refetchTherapists]);
 
   const ListEmpty = useMemo(() => {
     if (loading) {

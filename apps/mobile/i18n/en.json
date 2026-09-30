@@ -167,10 +167,14 @@
     "therapistsCount": "{{count}} therapists",
     "servicesCount": "{{count}} services",
     "empty": "No clinics available right now",
+    "loadError": "Couldn't load clinics. Check your connection and try again.",
+    "bookAppointment": "Book your appointment",
     "notFound": "Clinic not found"
   },
   "groups": {
     "title": "Support Groups",
+    "dateTba": "Date to be announced",
+    "joinSession": "Join the session",
     "empty": "No group sessions are available right now",
     "spotsLeft": "{{count}} spots left",
     "full": "Full",
@@ -390,6 +394,9 @@
     "confirmAndPay": "Confirm & Pay"
   },
   "payment": {
+    "methodsLoading": "Loading payment methods…",
+    "methodsError": "Could not load payment methods",
+    "methodsUnavailable": "No payment methods are currently available",
     "title": "Payment",
     "selectMethod": "Select Payment Method",
     "cardPayment": "Card Payment",

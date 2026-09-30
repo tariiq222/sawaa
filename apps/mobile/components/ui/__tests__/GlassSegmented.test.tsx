@@ -73,7 +73,7 @@ describe('GlassSegmented', () => {
     expect(screen.getByText('0')).toBeTruthy();
   });
 
-  it('gives the appointments navigation style a light selected pill and branded text', () => {
+  it('gives the appointments navigation style a solid selected pill and readable text', () => {
     const screen = render(
       <GlassSegmented options={OPTIONS} value="ar" onChange={jest.fn()} appearance="navigation" />,
     );
@@ -83,9 +83,8 @@ describe('GlassSegmented', () => {
     const inactiveStyle = StyleSheet.flatten(inactive.props.style);
     const selectedText = screen.getByText('العربية');
 
-    expect(selectedStyle.backgroundColor).not.toBe('#087a6f');
-    expect(selectedStyle.backgroundColor).toMatch(/^#[0-9a-f]{8}$/i);
+    expect(selectedStyle.backgroundColor).toBe('#087a6f');
     expect(inactiveStyle.backgroundColor).toBeUndefined();
-    expect(StyleSheet.flatten(selectedText.props.style).color).toBe('#066962');
+    expect(StyleSheet.flatten(selectedText.props.style).color).toBe('#FFFFFF');
   });
 });

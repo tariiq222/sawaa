@@ -5,6 +5,8 @@ export interface PublicService {
   categoryId: string | null;
   nameAr: string;
   nameEn: string | null;
+  descriptionAr?: string | null;
+  descriptionEn?: string | null;
   price: number | string;
   currency: string;
   imageUrl: string | null;
@@ -34,6 +36,7 @@ export interface PublicCatalogCategory {
   nameAr: string;
   nameEn: string | null;
   sortOrder: number;
+  imageUrl?: string | null;
   kind?: 'CLINIC' | 'SERVICE_GROUP';
   bookingMode?: 'DIRECT' | 'SERVICES';
   isActive?: boolean;

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -40,16 +40,27 @@ export default function ClinicsScreen() {
         interactive
         style={styles.card}
       >
-        <View style={[styles.cardBody, { flexDirection: dir.row }]}> 
-          <View style={styles.iconWrap}>
-            <AppIcon sf="building.2.fill" fallback={Building2} size={24} color={colors.teal[700]} strokeWidth={1.6} />
-          </View>
+        <View style={[styles.cardBody, { flexDirection: dir.row }]}>
+          {item.imageUrl ? (
+            <Image source={{ uri: item.imageUrl }} style={styles.clinicImage} accessibilityLabel={name} />
+          ) : (
+            <View style={styles.iconWrap}>
+              <AppIcon sf="building.2.fill" fallback={Building2} size={24} color={colors.teal[700]} strokeWidth={1.6} />
+            </View>
+          )}
           <View style={styles.cardText}>
             <ThemedText variant="subheading" style={{ textAlign: dir.textAlign }} numberOfLines={2}>
               {name}
             </ThemedText>
+            {(dir.isRTL ? item.descriptionAr : item.descriptionEn ?? item.descriptionAr) ? (
+              <ThemedText variant="bodySm" color={colors.ink[500]} style={{ textAlign: dir.textAlign }} numberOfLines={2}>
+                {dir.isRTL ? item.descriptionAr : item.descriptionEn ?? item.descriptionAr}
+              </ThemedText>
+            ) : null}
             <ThemedText variant="bodySm" color={colors.ink[500]} style={{ textAlign: dir.textAlign }}>
-              {`${t('clinics.therapistsCount', { count: item.therapistCount })} · ${t('clinics.servicesCount', { count: item.serviceCount })}`}
+              {item.serviceCount > 0
+                ? `${t('clinics.therapistsCount', { count: item.therapistCount })} · ${t('clinics.servicesCount', { count: item.serviceCount })}`
+                : t('clinics.therapistsCount', { count: item.therapistCount })}
             </ThemedText>
           </View>
           <AppIcon sf={dir.isRTL ? 'chevron.left' : 'chevron.right'} fallback={dir.isRTL ? ChevronLeft : ChevronRight} size={18} color={colors.ink[500]} strokeWidth={1.6} />
@@ -59,15 +70,24 @@ export default function ClinicsScreen() {
   }, [colors, styles, dir, router, t]);
 
   const emptyState = useMemo(() => {
-    if (clinicsQuery.isLoading) return null;
-    return (
+    if (clinicsQuery.isLoading) return (
+      <View style={styles.emptyState}><ThemedText variant="bodySm" align="center">{t('common.loading')}</ThemedText></View>
+    );
+    if (clinicsQuery.isError) return (
       <View style={styles.emptyState}>
-        <ThemedText variant="bodySm" color={colors.ink[500]} align="center">
-          {t('clinics.empty')}
-        </ThemedText>
+        <ThemedText variant="bodySm" color={colors.ink[500]} align="center">{t('clinics.loadError')}</ThemedText>
+        <Glass variant="strong" radius={sawaaRadius.md} interactive
+          accessibilityLabel={t('common.retry')} onPress={() => { void clinicsQuery.refetch(); }} style={styles.retry}>
+          <ThemedText variant="bodySm" align="center">{t('common.retry')}</ThemedText>
+        </Glass>
       </View>
     );
-  }, [colors, styles, clinicsQuery.isLoading, t]);
+    return (
+      <View style={styles.emptyState}>
+        <ThemedText variant="bodySm" color={colors.ink[500]} align="center">{t('clinics.empty')}</ThemedText>
+      </View>
+    );
+  }, [colors, styles, clinicsQuery.isLoading, clinicsQuery.isError, clinicsQuery.refetch, t]);
 
   return (
     <AquaBackground>
@@ -105,11 +125,13 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   },
   card: { marginBottom: 12 },
   cardBody: { alignItems: 'center', gap: 12, padding: CARD_PADDING },
+  clinicImage: { width: 56, height: 56, borderRadius: sawaaRadius.md },
+  retry: { marginTop: 12, paddingHorizontal: 24, paddingVertical: 12, minHeight: 44, justifyContent: 'center' },
   iconWrap: {
     width: 48,
     height: 48,
     borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING),
-    backgroundColor: colors.glass.bgStrong,
+    backgroundColor: colors.glass.opaqueBg,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -86,12 +86,12 @@ export function BankTransferAccountDetails({
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { gap: sawaaSpacing.md },
   accountPicker: { flexWrap: 'wrap', gap: sawaaSpacing.sm },
-  accountChip: { paddingHorizontal: sawaaSpacing.md, paddingVertical: sawaaSpacing.sm },
-  accountChipText: { color: colors.ink[700], fontSize: sawaaType.caption.fontSize },
-  card: { padding: 0 },
+  accountChip: { paddingHorizontal: sawaaSpacing.md, paddingVertical: sawaaSpacing.sm, borderRadius: sawaaRadius.pill },
+  accountChipText: { color: colors.ink[700], fontSize: sawaaType.caption.fontSize, textAlign: 'center' },
+  card: { padding: sawaaSpacing.md, borderRadius: sawaaRadius.xl },
   row: { padding: sawaaSpacing.lg, alignItems: 'center', gap: sawaaSpacing.md },
   rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.glass.border },
   rowMid: { flex: 1 },
   rowLabel: { fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight, color: colors.ink[500] },
-  rowValue: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[900], marginTop: sawaaSpacing.xs, fontVariant: ['tabular-nums'] },
+  rowValue: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[900], marginTop: sawaaSpacing.xs, fontVariant: ['tabular-nums'], textAlign: 'right' },
 });

@@ -9610,6 +9610,11 @@ export interface components {
              */
             notes?: string;
             /**
+             * @description Client chose to pay at the center. When true the booking is confirmed without an online invoice; the amount is collected at reception. Rejected when the deployment has pay-at-center disabled.
+             * @example false
+             */
+            payAtClinic?: boolean;
+            /**
              * @description ISO 8601 start datetime
              * @example 2026-05-01T09:00:00.000Z
              */

@@ -56,6 +56,14 @@ jest.mock('expo-linear-gradient', () => ({
 }));
 
 describe('GlassSurface shared renderer', () => {
+  it('defaults to an opaque content surface while preserving the bottom-dock glass opt-in', () => {
+    mockGlassApiAvailable = true;
+    const content = render(<GlassSurface testID="content" />);
+    expect(StyleSheet.flatten(content.getByTestId('content').props.style).backgroundColor).toBe('#F7F9FB');
+    expect(content.queryByTestId('native-glass')).toBeNull();
+    const dock = render(<GlassSurface material="glass" testID="dock" />);
+    expect(dock.getByTestId('native-glass')).toBeTruthy();
+  });
   beforeEach(() => {
     mockReduceTransparency = false;
     mockIncreasedContrast = false;
@@ -68,7 +76,7 @@ describe('GlassSurface shared renderer', () => {
     mockReduceTransparency = true;
     mockIncreasedContrast = true;
     mockScheme = 'light';
-    const { queryByTestId, getByTestId } = render(<GlassSurface testID="surface" />);
+    const { queryByTestId, getByTestId } = render(<GlassSurface material="glass" testID="surface" />);
     const surface = getByTestId('surface');
     const style = StyleSheet.flatten(surface.props.style);
 
@@ -117,7 +125,7 @@ describe('GlassSurface shared renderer', () => {
     mockIncreasedContrast = false;
     mockGlassApiAvailable = true;
     mockScheme = 'light';
-    const { getByTestId } = render(<GlassSurface testID="surface" />);
+    const { getByTestId } = render(<GlassSurface material="glass" testID="surface" />);
 
     expect(getByTestId('native-glass')).toBeTruthy();
     expect(getByTestId('native-glass').props.colorScheme).toBe('light');
@@ -131,8 +139,8 @@ describe('GlassSurface shared renderer', () => {
     mockGlassApiAvailable = true;
     mockScheme = 'light';
 
-    const regular = render(<Glass variant="regular" testID="regular-glass" />);
-    const clear = render(<Glass variant="clear" testID="clear-glass" />);
+    const regular = render(<Glass material="glass" variant="regular" testID="regular-glass" />);
+    const clear = render(<Glass material="glass" variant="clear" testID="clear-glass" />);
 
     expect(regular.getByTestId('native-glass').props.tintColor).toBeUndefined();
     expect(clear.getByTestId('native-glass').props.tintColor).toBeUndefined();
@@ -147,7 +155,7 @@ describe('GlassSurface shared renderer', () => {
     mockReduceTransparency = false;
     mockIncreasedContrast = false;
     mockGlassApiAvailable = false;
-    const { queryByTestId, getByTestId } = render(<GlassSurface testID="surface" />);
+    const { queryByTestId, getByTestId } = render(<GlassSurface material="glass" testID="surface" />);
 
     expect(queryByTestId('native-glass')).toBeNull();
     expect(getByTestId('fallback-blur')).toBeTruthy();
@@ -158,7 +166,7 @@ describe('GlassSurface shared renderer', () => {
     mockIncreasedContrast = false;
     mockGlassApiAvailable = false;
     mockScheme = 'dark';
-    const { getByTestId, UNSAFE_getAllByType } = render(<GlassSurface variant="base" testID="surface" />);
+    const { getByTestId, UNSAFE_getAllByType } = render(<GlassSurface material="glass" variant="base" testID="surface" />);
 
     expect(getByTestId('fallback-blur').props.tint).toBe('dark');
     const darkFill = UNSAFE_getAllByType(View).some((view) =>
@@ -178,7 +186,7 @@ describe('GlassSurface shared renderer', () => {
     mockIncreasedContrast = false;
     mockGlassApiAvailable = false;
     mockScheme = 'dark';
-    const { getByTestId } = render(<Glass><Text>Dark glass</Text></Glass>);
+    const { getByTestId } = render(<Glass material="glass"><Text>Dark glass</Text></Glass>);
 
     expect(getByTestId('fallback-blur').props.tint).toBe('dark');
     expect(getByTestId('fallback-blur').props.intensity).toBe(24);
@@ -208,7 +216,7 @@ describe('GlassSurface shared renderer', () => {
     mockIncreasedContrast = false;
     mockGlassApiAvailable = true;
     mockScheme = 'light';
-    const { getByTestId } = render(<Glass variant="soft" interactive onPress={() => {}} testID="soft-action" />);
+    const { getByTestId } = render(<Glass material="glass" variant="soft" interactive onPress={() => {}} testID="soft-action" />);
 
     expect(getByTestId('native-glass').props.glassEffectStyle).toBe('clear');
     expect(getByTestId('native-glass').props.isInteractive).toBe(true);

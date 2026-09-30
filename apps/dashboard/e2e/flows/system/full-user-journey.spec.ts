@@ -241,7 +241,7 @@ async function createBookingFromDashboardPos(page: Page): Promise<SeededBooking>
   await expect(collectionTimingGroup).toBeVisible({ timeout: 10_000 })
 
   const payAtClinicRadio = collectionTimingGroup.getByRole("radio", {
-    name: /الدفع في العيادة|Pay at Clinic/i,
+    name: /الدفع في المركز|الدفع في العيادة|Pay at (the )?Center|Pay at Clinic/i,
   })
   // Default state — protects the invariant that existing reception bookings
   // keep being invoiced as they are today.
@@ -256,7 +256,7 @@ async function createBookingFromDashboardPos(page: Page): Promise<SeededBooking>
       response.request().method() === "POST",
     { timeout: 30_000 }
   )
-  await pos.getByRole("button", { name: /تأكيد الحجز|Confirm Booking/i }).click()
+  await pos.getByRole("button", { name: /تأكيد الموعد|Confirm Appointment/i }).click()
   const createResponse = await createResponsePromise
   expect(createResponse.ok()).toBeTruthy()
 

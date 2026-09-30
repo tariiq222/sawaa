@@ -226,6 +226,11 @@ interface CreateBookingData {
   notes?: string;
   /** Session channel is sent as the uppercase Prisma `DeliveryType` enum. */
   deliveryType?: DeliveryType;
+  /**
+   * Client chose to pay at the center: the booking is confirmed without an
+   * online invoice and reception collects later. Omitted means online payment.
+   */
+  payAtClinic?: boolean;
 }
 
 /**

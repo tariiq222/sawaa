@@ -25,22 +25,22 @@ describe('StatusPill in the light appearance', () => {
     expect(renderedColor('completed', 'Completed')).not.toBe('#354FD8');
   });
 
-  it('renders available with the Sawa teal ramp, not the old lime', () => {
-    expect(renderedColor('available', 'Available')).toBe(sawaaColors.teal[500]);
+  it('renders available with readable Sawa teal, not the old lime', () => {
+    expect(renderedColor('available', 'Available')).toBe(lightTheme.colors.statusForeground?.available);
     expect(renderedColor('available', 'Available')).not.toBe('#82CC17');
   });
 
   it('renders the positive payment and booking statuses with the Sawa teal', () => {
-    expect(renderedColor('confirmed', 'Confirmed')).toBe(sawaaColors.teal[700]);
-    expect(renderedColor('paid', 'Paid')).toBe(sawaaColors.teal[700]);
+    expect(renderedColor('confirmed', 'Confirmed')).toBe(lightTheme.colors.statusForeground?.confirmed);
+    expect(renderedColor('paid', 'Paid')).toBe(lightTheme.colors.statusForeground?.paid);
     expect(lightTheme.colors.success).toBe(sawaaColors.teal[700]);
   });
 
-  it('keeps the readable attention and negative hues it shipped with', () => {
-    expect(renderedColor('pending', 'Pending')).toBe('#F59E0B');
-    expect(renderedColor('cancelled', 'Cancelled')).toBe('#DC2626');
-    expect(renderedColor('cancel_requested', 'Cancellation requested')).toBe('#F97316');
-    expect(renderedColor('refunded', 'Refunded')).toBe('#7C3AED');
-    expect(renderedColor('failed', 'Failed')).toBe('#DC2626');
+  it('uses the dedicated readable status foregrounds', () => {
+    expect(renderedColor('pending', 'Pending')).toBe(lightTheme.colors.statusForeground?.pending);
+    expect(renderedColor('cancelled', 'Cancelled')).toBe(lightTheme.colors.statusForeground?.cancelled);
+    expect(renderedColor('cancel_requested', 'Cancellation requested')).toBe(lightTheme.colors.statusForeground?.pendingCancellation);
+    expect(renderedColor('refunded', 'Refunded')).toBe(lightTheme.colors.statusForeground?.refunded);
+    expect(renderedColor('failed', 'Failed')).toBe(lightTheme.colors.statusForeground?.failed);
   });
 });

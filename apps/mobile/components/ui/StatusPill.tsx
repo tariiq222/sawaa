@@ -23,16 +23,21 @@ interface StatusPillProps {
 export function StatusPill({ status, label }: StatusPillProps) {
   const { theme } = useTheme();
   const palette = statusColors(theme.colors);
-  const color = palette[status] ?? palette.pending;
+  const bgColor = palette[status] ?? palette.pending;
+  // In light mode, use darker foreground shades for >=4.5:1 contrast on the
+  // composited pill background (status color at 14% alpha over surface).
+  // Dark mode accents are already bright enough — fall back to the bg color.
+  const fgMap = theme.colors.statusForeground as Record<string, string> | null;
+  const textColor = fgMap?.[status === 'cancel_requested' ? 'pendingCancellation' : status] ?? bgColor;
 
   return (
     <View
       style={[styles.pill, {
-        backgroundColor: withAlpha(color, 0.14),
-        borderColor: withAlpha(color, 0.3),
+        backgroundColor: withAlpha(bgColor, 0.14),
+        borderColor: withAlpha(bgColor, 0.3),
       }]}
     >
-      <Text style={[styles.label, { color }]}>{label}</Text>
+      <Text style={[styles.label, { color: textColor }]}>{label}</Text>
     </View>
   );
 }

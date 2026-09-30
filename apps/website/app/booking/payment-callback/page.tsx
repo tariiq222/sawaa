@@ -24,11 +24,14 @@ function PaymentCallbackContent() {
       <h1 className="text-2xl font-semibold text-[var(--sw-secondary-700)]">{t('payment.callback.title')}</h1>
       <p className="text-[var(--sw-body)]">{t('payment.callback.description')}</p>
       <div className="flex w-full flex-col gap-3 sm:flex-row">
-        <a className="flex-1 rounded-xl bg-[var(--sw-primary-600)] px-5 py-3 font-semibold text-[var(--sw-primary-600-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sw-primary-600)]" href={`sawa://booking/payment-callback${suffix}`}>
-          {t('payment.callback.app')}
-        </a>
-        <a className="flex-1 rounded-xl border border-[var(--sw-primary-600)] px-5 py-3 font-semibold text-[var(--sw-primary-600)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sw-primary-600)]" href={`/booking/confirm${suffix}`}>
+        {/* Website continuation is the primary action: this page is reached from
+         * the web booking flow, and most users have no idea what "the app" is
+         * here (audit M1). The deep link stays available as a secondary option. */}
+        <a className="flex-1 rounded-xl bg-[var(--sw-primary-600)] px-5 py-3 font-semibold text-[var(--sw-primary-600-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sw-primary-600)]" href={`/booking/confirm${suffix}`}>
           {t('payment.callback.website')}
+        </a>
+        <a className="flex-1 rounded-xl border border-[var(--sw-primary-600)] px-5 py-3 font-semibold text-[var(--sw-primary-600)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sw-primary-600)]" href={`sawa://booking/payment-callback${suffix}`}>
+          {t('payment.callback.app')}
         </a>
       </div>
     </div>

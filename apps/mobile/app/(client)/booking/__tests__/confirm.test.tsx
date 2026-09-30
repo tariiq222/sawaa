@@ -1,7 +1,14 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
+const mockRetryMethods = jest.fn();
+let mockMethodsLoading = false;
+let mockMethodsError = false;
+let mockCatalogError = false;
+let mockPaymentMethods = { moyasarEnabled: true, atClinicEnabled: true };
+(globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = false;
 const mockCatalog = {
   departments: [],
   categories: [
@@ -31,7 +38,7 @@ let mockRouteParams: {
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockRouteParams,
-  useRouter: () => ({ push: mockPush, back: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
+  useRouter: () => ({ push: mockPush, back: jest.fn(), replace: mockReplace, canGoBack: () => true }),
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-native-reanimated', () => {
@@ -41,15 +48,36 @@ jest.mock('react-native-reanimated', () => {
 });
 jest.mock('lucide-react-native', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
-  return { Calendar: NativeView, ChevronLeft: NativeView, ChevronRight: NativeView, Clock: NativeView, Video: NativeView };
+  return { Calendar: NativeView, ChevronLeft: NativeView, ChevronRight: NativeView, Clock: NativeView, Video: NativeView, CreditCard: NativeView, Apple: NativeView, Banknote: NativeView, Building2: NativeView, Check: NativeView };
 });
-jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('react-i18next', () => ({
+  __esModule: true,
+  initReactI18next: { type: '3rdParty', init: () => undefined },
+  useTranslation: () => ({ t: (key: string) => ({ 'payment.methodsLoading': 'Loading payment methods…', 'payment.methodsError': 'Could not load payment methods', 'payment.methodsUnavailable': 'No payment methods are currently available', 'common.retry': 'Retry' }[key] ?? key) }),
+}));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left', writingDirection: 'ltr' }) }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
-jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => false }));
+jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn === true }));
 jest.mock('@/hooks/queries', () => ({
   useCatalogDepartments: () => ({ data: [], isLoading: false, isError: false, refetch: jest.fn() }),
-  usePublicCatalog: () => ({ data: mockCatalog, isLoading: false, isError: false, refetch: jest.fn() }),
+  usePublicCatalog: () => ({ data: mockCatalog, isLoading: false, isError: mockCatalogError, refetch: jest.fn() }),
+  useBankTransferSettings: () => ({ data: undefined, refetch: jest.fn() }),
+  usePublicPaymentMethods: () => ({ data: mockPaymentMethods, isLoading: mockMethodsLoading, isError: mockMethodsError, refetch: mockRetryMethods }),
+}));
+const mockBookingCreate = jest.fn();
+jest.mock('@/services/client/bookings', () => ({
+  clientBookingsService: { create: (...args: unknown[]) => mockBookingCreate(...args) },
+}));
+jest.mock('@/features/booking/payment-resume-state', () => ({
+  bookingPaymentDraft: () => ({ branchId: 'branch-1' }),
+  savePendingBookingCheckout: jest.fn().mockResolvedValue(undefined),
+  resolvePendingBookingResume: jest.fn().mockResolvedValue({ kind: 'missing' }),
+}));
+jest.mock('@/constants/config', () => ({ APP_SCHEME: 'sawa' }));
+jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn() }));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() },
 }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: { colors: { primaryForeground: '#fff' } } }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
@@ -68,13 +96,17 @@ jest.mock('@/theme/sawaa', () => {
   };
 });
 jest.mock('@/theme/components/Glass', () => {
-  const { View: NativeView } = require('react-native') as typeof import('react-native');
-  return { Glass: ({ children }: { children: React.ReactNode }) => <NativeView>{children}</NativeView> };
+  const { Pressable } = require('react-native') as typeof import('react-native');
+  // Forward onPress so option cards (payment methods) stay interactive in tests.
+  return {
+    Glass: ({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) =>
+      <Pressable onPress={onPress}>{children}</Pressable>,
+  };
 });
 jest.mock('@/components/features/booking/BookingStepHeader', () => ({ BookingStepHeader: () => null }));
 jest.mock('@/components/ui/EmptyState', () => {
-  const { Text } = require('react-native') as typeof import('react-native');
-  return { EmptyState: ({ title }: { title: string }) => <Text>{title}</Text> };
+  const { Text, Pressable } = require('react-native') as typeof import('react-native');
+  return { EmptyState: ({ title, actionLabel, onAction }: { title: string; actionLabel?: string; onAction?: () => void }) => <><Text>{title}</Text>{onAction ? <Pressable onPress={onAction}><Text>{actionLabel}</Text></Pressable> : null}</> };
 });
 jest.mock('@/components/ui/FloatingActionBar', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
@@ -86,13 +118,21 @@ jest.mock('@/components/ui/Skeleton', () => {
 });
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/lib/navigation', () => ({ goBackOrHome: jest.fn() }));
-jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), NotificationFeedbackType: { Success: 'success' } }));
+jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), selectionAsync: jest.fn(), impactAsync: jest.fn(), NotificationFeedbackType: { Success: 'success' }, ImpactFeedbackStyle: { Light: 'light' } }));
 
 import BookingConfirmScreen from '../confirm';
 
 describe('BookingConfirmScreen direct clinic service', () => {
   beforeEach(() => {
     mockPush.mockClear();
+    mockReplace.mockClear();
+    mockBookingCreate.mockReset();
+    mockMethodsLoading = false;
+    mockMethodsError = false;
+    mockCatalogError = false;
+    mockRetryMethods.mockClear();
+    (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = false;
+    mockPaymentMethods = { moyasarEnabled: true, atClinicEnabled: true };
     mockRouteParams = {
       clinicId: 'clinic-1', serviceId: 'direct-service', employeeId: 'employee-1',
       branchId: 'branch-1', deliveryType: 'in_person', scheduledAt: '2026-10-01T10:00:00.000Z',
@@ -116,6 +156,33 @@ describe('BookingConfirmScreen direct clinic service', () => {
     });
   });
 
+  it('offers pay-at-center to a signed-in client and books without online payment', async () => {
+    (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = true;
+    mockBookingCreate.mockResolvedValue({ id: 'booking-1', invoiceId: null });
+    const screen = render(<BookingConfirmScreen />);
+
+    expect(screen.getByText('Pay at the center')).toBeTruthy();
+    fireEvent.press(screen.getByText('Pay at the center'));
+    // The CTA carries the amount; method subtitles also start with "Pay".
+    fireEvent.press(screen.getAllByText(/Pay .*450/)[0]);
+
+    await waitFor(() => expect(mockBookingCreate).toHaveBeenCalled());
+    expect(mockBookingCreate.mock.calls[0][0]).toMatchObject({ payAtClinic: true });
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    const destination = mockReplace.mock.calls[0][0] as { pathname: string; params: { bookingId: string } };
+    expect(destination.pathname).toBe('/(client)/booking/success');
+    expect(destination.params.bookingId).toBe('booking-1');
+  });
+
+  it('hides pay-at-center and online methods the deployment cannot complete', () => {
+    (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = true;
+    mockPaymentMethods = { moyasarEnabled: false, atClinicEnabled: false };
+    const screen = render(<BookingConfirmScreen />);
+
+    expect(screen.queryByText('Pay at the center')).toBeNull();
+    expect(screen.queryByText('Credit card')).toBeNull();
+  });
+
   it('does not substitute a service from another clinic when the scoped service is invalid', () => {
     mockRouteParams = { ...mockRouteParams, serviceId: 'other-service' };
     const screen = render(<BookingConfirmScreen />);
@@ -136,4 +203,56 @@ describe('BookingConfirmScreen direct clinic service', () => {
     const destination = mockPush.mock.calls[0][0] as { params: { booking: string } };
     expect(JSON.parse(destination.params.booking)).toMatchObject({ serviceId: 'supporting-service', amount: '12000' });
   });
+  it.each(['wrong-service', 'missing-price', 'invalid-date', 'catalog-error'])('blocks signed-in submission for %s', async (invalid) => {
+    (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = true;
+    if (invalid === 'wrong-service') mockRouteParams.serviceId = 'other-service';
+    if (invalid === 'missing-price') mockRouteParams.chargedPrice = undefined;
+    if (invalid === 'invalid-date') mockRouteParams.scheduledAt = 'invalid';
+    if (invalid === 'catalog-error') mockCatalogError = true;
+    const screen = render(<BookingConfirmScreen />);
+    fireEvent.press(screen.getByText(/^Pay \d/));
+    await waitFor(() => expect(mockBookingCreate).not.toHaveBeenCalled());
+  });
+
+  it('shows payment loading separately and disables submission', () => {
+    (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = true;
+    mockMethodsLoading = true;
+    const screen = render(<BookingConfirmScreen />);
+    expect(screen.getByText('Loading payment methods…')).toBeTruthy();
+    expect(screen.queryByText('Credit card')).toBeNull();
+    fireEvent.press(screen.getByText(/^Pay /));
+    expect(mockBookingCreate).not.toHaveBeenCalled();
+  });
+
+  it('shows failed payment capabilities with retry instead of a disabled-method state', () => {
+    (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = true;
+    mockMethodsError = true;
+    const screen = render(<BookingConfirmScreen />);
+    expect(screen.getByText('Could not load payment methods')).toBeTruthy();
+    expect(screen.queryByText('Credit card')).toBeNull();
+    fireEvent.press(screen.getByText('Retry'));
+    expect(mockRetryMethods).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains when loaded payment methods are all disabled', () => {
+    (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = true;
+    mockPaymentMethods = { moyasarEnabled: false, atClinicEnabled: false };
+    const screen = render(<BookingConfirmScreen />);
+    expect(screen.getByText('No payment methods are currently available')).toBeTruthy();
+    expect(screen.queryByText('Could not load payment methods')).toBeNull();
+  });
+
+  it('retains pay-at-center after a guest returns from authentication to confirmation', async () => {
+    const screen = render(<BookingConfirmScreen />);
+    fireEvent.press(screen.getByText('Sign in or register to continue'));
+    const draft = JSON.parse(mockPush.mock.calls[0][0].params.booking);
+    mockRouteParams = { ...draft, chargedPrice: draft.amount };
+    (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = true;
+    mockBookingCreate.mockResolvedValue({ id: 'booking-after-auth', invoiceId: null });
+    screen.rerender(<BookingConfirmScreen />);
+    fireEvent.press(screen.getByText('Pay at the center'));
+    fireEvent.press(screen.getByText(/^Pay .*450/));
+    await waitFor(() => expect(mockBookingCreate).toHaveBeenCalledWith(expect.objectContaining({ payAtClinic: true })));
+  });
+
 });

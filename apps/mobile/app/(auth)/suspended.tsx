@@ -51,7 +51,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     paddingHorizontal: 24,
   },
   card: {
-    backgroundColor: colors.glass.bgStrong,
+    backgroundColor: colors.glass.opaqueBg,
     borderRadius: 20,
     padding: 32,
     alignItems: 'center',
@@ -73,7 +73,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   },
   button: {
     marginTop: 8,
-    backgroundColor: colors.glass.bg,
+    backgroundColor: colors.glass.opaqueBg,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,

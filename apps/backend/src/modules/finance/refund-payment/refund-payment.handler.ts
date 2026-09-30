@@ -208,12 +208,13 @@ export class RefundPaymentHandler {
       Array<{
         id: string;
         status: string;
+        method: string;
         gatewayRef: string | null;
         amount: Prisma.Decimal;
         refundedAmount: Prisma.Decimal | null;
         invoiceId: string;
       }>
-    >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
+    >`SELECT id, status, method, "gatewayRef", amount, "refundedAmount", "invoiceId"
         FROM "Payment"
         WHERE id = ${cmd.paymentId}
         FOR UPDATE`;
@@ -225,6 +226,16 @@ export class RefundPaymentHandler {
       row.status !== PaymentStatus.PARTIALLY_REFUNDED
     ) {
       throw new BadRequestException('Only completed or partially-refunded payments can be refunded');
+    }
+    // Moyasar rejects a second refund even when its first refund was partial.
+    // Fail before persisting another request; off-gateway accounting stays separate.
+    if (row.method === 'ONLINE_CARD' && row.gatewayRef && (
+      row.status === PaymentStatus.PARTIALLY_REFUNDED
+      || decimalToHalalas(row.refundedAmount ?? 0) > 0
+    )) {
+      throw new BadRequestException(
+        'Moyasar does not support a second gateway refund; reconcile the remaining balance separately',
+      );
     }
     // The outstanding-balance clamp below is the real guard against over-refund;
     // here we only assert the status is in a refundable state.
@@ -876,12 +887,13 @@ export class RefundPaymentHandler {
           Array<{
             id: string;
             status: string;
+            method: string;
             gatewayRef: string | null;
             amount: Prisma.Decimal;
             refundedAmount: Prisma.Decimal | null;
             invoiceId: string;
           }>
-        >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
+        >`SELECT id, status, method, "gatewayRef", amount, "refundedAmount", "invoiceId"
             FROM "Payment"
             WHERE id = ${cmd.paymentId}
             FOR UPDATE`;
@@ -893,6 +905,16 @@ export class RefundPaymentHandler {
           row.status !== PaymentStatus.PARTIALLY_REFUNDED
         ) {
           throw new BadRequestException('Only completed or partially-refunded payments can be refunded');
+        }
+        // Do not create an unsupported second Moyasar request or reroute it
+        // through the manual cash/bank-transfer refund policy.
+        if (row.method === 'ONLINE_CARD' && row.gatewayRef && (
+          row.status === PaymentStatus.PARTIALLY_REFUNDED
+          || decimalToHalalas(row.refundedAmount ?? 0) > 0
+        )) {
+          throw new BadRequestException(
+            'Moyasar does not support a second gateway refund; reconcile the remaining balance separately',
+          );
         }
         // Outstanding-balance clamp below is the real over-refund guard.
         assertValidTransition(row.status as PaymentStatus, PaymentStatus.PARTIALLY_REFUNDED);

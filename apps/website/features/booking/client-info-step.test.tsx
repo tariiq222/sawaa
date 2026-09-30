@@ -496,7 +496,7 @@ describe('ClientInfoStep', () => {
     fireEvent.click(screen.getByRole('radio', { name: /الدفع في المركز/i }));
     expect(screen.getByRole('radio', { name: /الدفع في المركز/i })).toBeChecked();
     expect(screen.queryByText(/دفع آمن ومشفّر عبر ميسر/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /تأكيد الحجز/i }));
+    fireEvent.click(screen.getByRole('button', { name: /تأكيد الموعد/i }));
 
     expect(onSubmitInfo).toHaveBeenCalledWith(true);
   });
@@ -820,7 +820,7 @@ describe('ClientInfoStep — payment method gating', () => {
     expect(screen.queryByRole('radio', { name: /Online payment/i })).toBeNull();
     expect(screen.getByRole('radio', { name: /Pay at the center/i })).toBeChecked();
 
-    fireEvent.click(screen.getByRole('button', { name: /Confirm booking/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirm appointment/i }));
     expect(onSubmitInfo).toHaveBeenCalledWith(true);
   });
 

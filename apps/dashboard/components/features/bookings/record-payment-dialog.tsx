@@ -71,6 +71,13 @@ export function RecordPaymentDialog({
           <DialogDescription>
             {t("bookings.recordPayment.description")}
           </DialogDescription>
+          {/* Pay-at-center bookings carry no invoice until first collection —
+              explain the automatic DRAFT invoice so reception is not surprised (t1-D3). */}
+          {!booking.invoice && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("bookings.recordPayment.autoInvoiceNote")}
+            </p>
+          )}
         </DialogHeader>
         {/* Remount on open so the form state seeds fresh from the booking — no reset effect. */}
         {open && (
