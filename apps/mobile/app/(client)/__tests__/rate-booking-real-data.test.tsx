@@ -67,6 +67,7 @@ jest.mock('lucide-react-native', () => ({
   ChevronLeft: () => null,
   ChevronRight: () => null,
   Star: () => null,
+  User: () => null,
 }));
 
 import i18n from '@/i18n';
@@ -146,7 +147,6 @@ describe('rate screen shows the booking being rated, not a placeholder therapist
 
     // Each star carries its own accessible label (a11y.rateStars).
     fireEvent.press(view.getByLabelText('تقييم 5 نجوم'));
-    fireEvent.press(view.getByText('مهنية'));
     fireEvent.press(view.getByText('إرسال التقييم'));
 
     expect(mockMutate).toHaveBeenCalledWith(
