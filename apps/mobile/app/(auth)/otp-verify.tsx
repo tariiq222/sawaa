@@ -8,20 +8,18 @@ import {
   Alert,
   StyleSheet,
   Text,
-  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { BackButton } from '@/components/ui/BackButton';
+import { Lock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/theme/components/ThemedText';
-import { ThemedButton } from '@/theme/components/ThemedButton';
-import { useTheme } from '@/theme/useTheme';
-import { withAlpha } from '@/theme/sawaa/tokens';
-import { AquaBackground } from '@/theme/sawaa';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useDir } from '@/hooks/useDir';
+import { getFontName } from '@/theme/fonts';
 import { useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
 import { useVerifyOtp, useRequestLoginOtp } from '@/hooks/queries';
@@ -58,8 +56,10 @@ export default function OtpVerifyScreen() {
   const { identifier = '', purpose = 'register', maskedIdentifier = '' } = params;
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  const { theme } = useTheme();
   const colors = useSawaaColors();
+  const dir = useDir();
+  const f400 = getFontName(dir.locale, '400');
+  const f700 = getFontName(dir.locale, '700');
 
   const [otp, setOtp] = useState('');
   const [loading, setIsLoading] = useState(false);
@@ -174,7 +174,6 @@ export default function OtpVerifyScreen() {
 
   return (
     <AquaBackground>
-      <View style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -185,27 +184,20 @@ export default function OtpVerifyScreen() {
             { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 },
           ]}
         >
-          <BackButton onPress={() => router.back()} style={styles.backBtn} />
+          <ScreenHeader title={t('auth.otp.title')} onBack={() => router.back()} />
 
           <View style={styles.header}>
-            <Image
-              source={require('../../assets/sawa/logo.png')}
-              style={[styles.logo, { tintColor: colors.teal[700] }]}
-              resizeMode="contain"
-              accessible={false}
-            />
-
-            <ThemedText variant="displaySm" align="center">
-              {t('auth.otp.title')}
-            </ThemedText>
-            <ThemedText
-              variant="bodySm"
-              align="center"
-              color={theme.colors.textSecondary}
-              style={styles.sub}
+            <View style={[styles.lockCircle, { backgroundColor: colors.glass.opaqueBg }]}>
+              <Lock size={32} color={colors.teal[700]} strokeWidth={1.75} />
+            </View>
+            <Text
+              style={[
+                styles.sub,
+                { color: colors.ink[700], fontFamily: f400, writingDirection: dir.writingDirection },
+              ]}
             >
               {t('auth.otp.sentTo')} {maskedIdentifier}
-            </ThemedText>
+            </Text>
           </View>
 
           <View style={styles.otpRow}>
@@ -216,12 +208,12 @@ export default function OtpVerifyScreen() {
                 style={[
                   styles.otpBox,
                   {
-                    backgroundColor: theme.colors.surfaceHigh,
-                    borderColor: otp[index] ? withAlpha(theme.colors.primary, 0.4) : 'transparent',
+                    backgroundColor: colors.glass.opaqueBg,
+                    borderColor: otp[index] ? colors.teal[600] : colors.teal[200],
                   },
                 ]}
               >
-                <Text style={[styles.digit, { color: theme.colors.textPrimary }]}>
+                <Text style={[styles.digit, { color: colors.ink[900], fontFamily: f700 }]}>
                   {otp[index] ?? ''}
                 </Text>
               </View>
@@ -236,93 +228,78 @@ export default function OtpVerifyScreen() {
               autoComplete="sms-otp"
               accessibilityLabel={t('auth.otp.code')}
               caretHidden
-              selectionColor={theme.colors.surfaceHigh}
+              selectionColor={colors.glass.opaqueBg}
               style={styles.codeInput}
             />
           </View>
 
           <View style={styles.actions}>
-            <ThemedButton
+            <PrimaryButton
+              label={loading ? t('auth.otp.submitting') : t('auth.otp.submit')}
               onPress={handleVerify}
-              variant="primary"
-              size="lg"
-              full
-              loading={loading}
+              fontFamily={f700}
               disabled={!isComplete || loading}
-            >
-              {loading ? t('auth.otp.submitting') : t('auth.otp.submit')}
-            </ThemedButton>
+            />
 
             <View style={styles.resendRow}>
               {purpose === 'login' ? (
                 countdown > 0 ? (
-                  <ThemedText
-                    variant="bodySm"
-                    color={theme.colors.textMuted}
-                    align="center"
-                  >
+                  <Text style={[styles.meta, { color: colors.ink[700], fontFamily: f400 }]}>
                     {t('auth.otp.resendIn', { seconds: countdown })}
-                  </ThemedText>
+                  </Text>
                 ) : (
-                  <Pressable onPress={handleResend} disabled={resendLoading}>
-                    <ThemedText
-                      variant="bodySm"
-                      color={theme.colors.primary}
-                      align="center"
-                      style={styles.link}
-                    >
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={handleResend}
+                    disabled={resendLoading}
+                    style={styles.linkTarget}
+                  >
+                    <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
                       {resendLoading ? t('common.loading') : t('auth.otp.resend')}
-                    </ThemedText>
+                    </Text>
                   </Pressable>
                 )
               ) : (
-                <ThemedText
-                  variant="bodySm"
-                  color={theme.colors.textMuted}
-                  align="center"
-                >
+                <Text style={[styles.meta, { color: colors.ink[700], fontFamily: f400 }]}>
                   {t('auth.otp.registerNoResend')}
-                </ThemedText>
+                </Text>
               )}
+              <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.linkTarget}>
+                <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
+                  {t('auth.otp.changeNumber')}
+                </Text>
+              </Pressable>
             </View>
           </View>
         </View>
       </KeyboardAvoidingView>
-      </View>
     </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   flex: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: 24 },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  header: { alignItems: 'center', marginBottom: 40 },
-  logo: { width: 112, height: 112, marginBottom: 16 },
-  sub: { marginTop: 8 },
+  content: { flex: 1, paddingHorizontal: 16 },
+  header: { alignItems: 'center', marginTop: 24, marginBottom: 28, gap: 14 },
+  lockCircle: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
+  sub: { fontSize: 15, lineHeight: 24, textAlign: 'center' },
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 10,
-    marginBottom: 32,
+    marginBottom: 24,
     position: 'relative',
   },
   otpBox: {
-    width: 48,
-    height: 56,
-    borderRadius: 12,
-    borderWidth: 2,
+    flex: 1,
+    maxWidth: 64,
+    height: 60,
+    borderRadius: 16,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  digit: { fontSize: 22, fontWeight: '700' },
+  digit: { fontSize: 24, lineHeight: 32 },
   codeInput: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
@@ -330,7 +307,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     textAlign: 'center',
   },
-  actions: { gap: 20 },
+  actions: { gap: 12 },
   resendRow: { alignItems: 'center' },
-  link: { fontWeight: '600' },
+  meta: { fontSize: 14, lineHeight: 20, textAlign: 'center', minHeight: 44, textAlignVertical: 'center' },
+  linkTarget: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+  link: { fontSize: 15, textAlign: 'center' },
 });

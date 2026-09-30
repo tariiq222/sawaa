@@ -14,13 +14,12 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
-import { Glass } from '@/theme';
-import { BackButton } from '@/components/ui/BackButton';
-import { sawaaTokens } from '@/theme/sawaa/tokens';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useRegister } from '@/hooks/queries';
+import { getFontName } from '@/theme/fonts';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
@@ -82,7 +81,6 @@ export default function RegisterScreen() {
 
   return (
     <AquaBackground>
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -90,108 +88,101 @@ export default function RegisterScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scroll,
-            { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 },
+            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <BackButton onPress={() => router.back()} style={[styles.backBtn, { alignSelf: dir.alignStart }]} />
+          <ScreenHeader title={t('auth.register.title')} onBack={() => router.back()} />
 
           <Text
             style={[
-              styles.title,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
-            {t('auth.register.title')}
-          </Text>
-          <Text
-            style={[
               styles.subtitle,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: getFontName(dir.locale, '400') },
             ]}
           >
             {t('auth.createAccountSub')}
           </Text>
 
-          <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
-            <View style={styles.formInner}>
-              <View style={[styles.row, { flexDirection: dir.row }]}>
-                <View style={styles.half}>
-                  <LabeledInput
-                    label={t('auth.register.firstName')}
-                    value={firstName}
-                    onChangeText={(v) => {
-                      setFirstName(v);
-                      clearError('firstName');
-                    }}
-                    placeholder={t('auth.firstNamePlaceholder')}
-                    error={errors.firstName}
-                    dir={dir}
-                  />
-                </View>
-                <View style={styles.half}>
-                  <LabeledInput
-                    label={t('auth.register.lastName')}
-                    value={lastName}
-                    onChangeText={(v) => {
-                      setLastName(v);
-                      clearError('lastName');
-                    }}
-                    placeholder={t('auth.lastNamePlaceholder')}
-                    error={errors.lastName}
-                    dir={dir}
-                  />
-                </View>
-              </View>
-
-              <LabeledInput
-                label={t('auth.register.phone')}
-                value={phone}
-                onChangeText={(v) => {
-                  setPhone(v);
-                  clearError('phone');
-                }}
-                placeholder={t('auth.phonePlaceholder')}
-                error={errors.phone}
-                keyboardType="phone-pad"
-                dir={dir}
-              />
-
-              <LabeledInput
-                label={t('auth.register.email')}
-                value={email}
-                onChangeText={(v) => {
-                  setEmail(v);
-                  clearError('email');
-                }}
-                placeholder={t('auth.emailPlaceholder')}
-                error={errors.email}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                dir={dir}
-              />
-
-              <PrimaryButton
-                label={register.isPending ? t('auth.register.submitting') : t('auth.register.submit')}
-                onPress={handleRegister}
-                disabled={register.isPending}
-                style={{ marginTop: 8 }}
-              />
-
-              <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
-                <Pressable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.back();
+          <View style={styles.form}>
+            <View style={[styles.row, { flexDirection: dir.row }]}>
+              <View style={styles.half}>
+                <LabeledInput
+                  label={t('auth.register.firstName')}
+                  value={firstName}
+                  onChangeText={(v) => {
+                    setFirstName(v);
+                    clearError('firstName');
                   }}
-                >
-                  <Text style={styles.loginLink}>{t('auth.login')}</Text>
-                </Pressable>
+                  placeholder={t('auth.firstNamePlaceholder')}
+                  error={errors.firstName}
+                  dir={dir}
+                />
+              </View>
+              <View style={styles.half}>
+                <LabeledInput
+                  label={t('auth.register.lastName')}
+                  value={lastName}
+                  onChangeText={(v) => {
+                    setLastName(v);
+                    clearError('lastName');
+                  }}
+                  placeholder={t('auth.lastNamePlaceholder')}
+                  error={errors.lastName}
+                  dir={dir}
+                />
               </View>
             </View>
-          </Glass>
+
+            <LabeledInput
+              label={t('auth.register.phone')}
+              value={phone}
+              onChangeText={(v) => {
+                setPhone(v);
+                clearError('phone');
+              }}
+              placeholder={t('auth.phonePlaceholder')}
+              error={errors.phone}
+              keyboardType="phone-pad"
+              dir={dir}
+            />
+
+            <LabeledInput
+              label={t('auth.register.email')}
+              value={email}
+              onChangeText={(v) => {
+                setEmail(v);
+                clearError('email');
+              }}
+              placeholder={t('auth.emailPlaceholder')}
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              dir={dir}
+            />
+
+            <PrimaryButton
+              label={register.isPending ? t('auth.register.submitting') : t('auth.register.submit')}
+              onPress={handleRegister}
+              fontFamily={getFontName(dir.locale, '700')}
+              disabled={register.isPending}
+              style={styles.primary}
+            />
+
+            <View style={[styles.loginRow, { flexDirection: dir.row }]}>
+              <Text style={[styles.loginText, { fontFamily: getFontName(dir.locale, '400') }]}>{t('auth.hasAccount')} </Text>
+              <Pressable
+                accessibilityRole="link"
+                style={styles.linkTarget}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.back();
+                }}
+              >
+                <Text style={[styles.loginLink, { fontFamily: getFontName(dir.locale, '700') }]}>{t('auth.login')}</Text>
+              </Pressable>
+            </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </AquaBackground>
@@ -199,24 +190,15 @@ export default function RegisterScreen() {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  container: { flex: 1 },
   flex: { flex: 1 },
-  scroll: { paddingHorizontal: 24 },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    alignSelf: 'flex-start',
-  },
-  title: { fontSize: 32, fontWeight: '800', color: colors.teal[700], lineHeight: 42, marginBottom: 8 },
-  subtitle: { fontSize: 14, color: colors.ink[500], lineHeight: 20 },
-  form: { padding: 24 },
-  formInner: { gap: 16 },
+  scroll: { paddingHorizontal: 16 },
+  subtitle: { fontSize: 15, lineHeight: 24, color: colors.ink[700], marginTop: 16 },
+  form: { marginTop: 20, gap: 16 },
   row: { gap: 12 },
   half: { flex: 1 },
-  loginRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
-  loginText: { fontSize: 14, color: colors.ink[500] },
-  loginLink: { fontSize: 14, fontWeight: '700', color: colors.teal[700] },
+  primary: { marginTop: 8 },
+  loginRow: { alignItems: 'center', justifyContent: 'center' },
+  linkTarget: { minHeight: 44, justifyContent: 'center' },
+  loginText: { fontSize: 14, color: colors.ink[700] },
+  loginLink: { fontSize: 14, color: colors.teal[700] },
 });

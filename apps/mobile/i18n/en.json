@@ -25,6 +25,9 @@
     "login.identifierPlaceholder": "05xxxxxxxx",
     "login.submit": "Login",
     "login.submitting": "Logging in...",
+    "login.welcome": "Welcome",
+    "login.subtitle": "Enter your phone number or email and we will send you a verification code.",
+    "login.sendCode": "Send code",
     "login.identifierError": "Please enter your phone or email",
     "login.continueAsGuest": "Continue as guest",
     "otp.title": "Verification Code",
@@ -36,6 +39,7 @@
     "otp.sentTo": "Code sent to",
     "otp.registerNoResend": "Go back and re-submit if you didn't receive the code.",
     "otp.noAccount": "Don't have an account?",
+    "otp.changeNumber": "Change number",
     "otp.createAccount": "Create Account",
     "error.generic": "Something went wrong. Please try again.",
     "otpVerify": "Verify OTP",
@@ -412,6 +416,9 @@
     "deleteAccountConfirm": "Close account now",
     "deleteAccountCancel": "Cancel",
     "deleteAccountError": "Could not close the account. Try again.",
+    "deleteAccountSheetTitle": "Delete account?",
+    "deleteAccountAction": "Delete my account",
+    "settingsHint": "Language and appearance",
     "crisisSupport": {
       "title": "Crisis support · 24/7",
       "subtitle": "Instant expert call"

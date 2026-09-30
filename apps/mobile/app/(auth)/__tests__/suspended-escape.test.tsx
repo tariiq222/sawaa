@@ -11,6 +11,7 @@ jest.mock('@/theme/sawaa', () => ({ AquaBackground: require('react-native').View
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', language: 'ar', isRTL: true }) }));
 const mockLogout = jest.fn();
 jest.mock('@/services/auth', () => ({ authService: { logout: () => mockLogout() } }));
 

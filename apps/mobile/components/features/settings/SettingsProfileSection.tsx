@@ -13,8 +13,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaRadius } from '@/theme/sawaa';
-import { Glass } from '@/theme/components/Glass';
+import { User } from 'lucide-react-native';
+
+import { sawaaRadius, withAlpha } from '@/theme/sawaa';
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
 import { useAppDispatch, useAppSelector } from '@/hooks/use-redux';
@@ -108,9 +109,22 @@ export function SettingsProfileSection() {
   });
 
   const errorText = (key?: string) => (key ? t(`settings.errors.${key}`) : '');
+  const inputStyle = (hasError: boolean) => [
+    styles.input,
+    {
+      color: theme.colors.textPrimary,
+      borderColor: hasError ? theme.colors.error : theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      textAlign: isRTL ? ('right' as const) : ('left' as const),
+    },
+  ];
 
   return (
-    <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
+    <View style={styles.form}>
+      <View style={[styles.avatar, { backgroundColor: withAlpha(theme.colors.primary, 0.12) }]}>
+        <User size={44} color={theme.colors.primary} strokeWidth={1.75} />
+      </View>
+
       <Field label={t('settings.fullName')} error={errorText(errors.name?.message)}>
         <Controller
           control={control}
@@ -120,16 +134,10 @@ export function SettingsProfileSection() {
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
+              accessibilityLabel={t('settings.fullName')}
               placeholder={t('settings.fullNamePlaceholder')}
               placeholderTextColor={theme.colors.textMuted}
-              style={[
-                styles.input,
-                {
-                  color: theme.colors.textPrimary,
-                  borderColor: theme.colors.border,
-                  textAlign: isRTL ? 'right' : 'left',
-                },
-              ]}
+              style={inputStyle(Boolean(errors.name))}
             />
           )}
         />
@@ -144,17 +152,11 @@ export function SettingsProfileSection() {
               value={value ?? ''}
               onChangeText={onChange}
               onBlur={onBlur}
+              accessibilityLabel={t('settings.phone')}
               placeholder="+9665XXXXXXXX"
               keyboardType="phone-pad"
               placeholderTextColor={theme.colors.textMuted}
-              style={[
-                styles.input,
-                {
-                  color: theme.colors.textPrimary,
-                  borderColor: theme.colors.border,
-                  textAlign: isRTL ? 'right' : 'left',
-                },
-              ]}
+              style={inputStyle(Boolean(errors.phone))}
             />
           )}
         />
@@ -169,18 +171,12 @@ export function SettingsProfileSection() {
               value={value ?? ''}
               onChangeText={onChange}
               onBlur={onBlur}
+              accessibilityLabel={t('settings.email')}
               placeholder="you@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
               placeholderTextColor={theme.colors.textMuted}
-              style={[
-                styles.input,
-                {
-                  color: theme.colors.textPrimary,
-                  borderColor: theme.colors.border,
-                  textAlign: isRTL ? 'right' : 'left',
-                },
-              ]}
+              style={inputStyle(Boolean(errors.email))}
             />
           )}
         />
@@ -189,6 +185,8 @@ export function SettingsProfileSection() {
       <Pressable
         onPress={onSave}
         disabled={!isDirty || saving}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !isDirty || saving }}
         style={({ pressed }) => [
           styles.saveBtn,
           {
@@ -200,12 +198,12 @@ export function SettingsProfileSection() {
         {saving ? (
           <ActivityIndicator color={theme.colors.primaryForeground} />
         ) : (
-          <ThemedText variant="body" color={theme.colors.primaryForeground} style={{ fontWeight: '600' }}>
+          <ThemedText variant="body" color={theme.colors.primaryForeground} style={{ fontWeight: '700', fontSize: 17 }}>
             {t('settings.saveProfile')}
           </ThemedText>
         )}
       </Pressable>
-    </Glass>
+    </View>
   );
 }
 
@@ -220,17 +218,13 @@ function Field({
 }) {
   const { theme } = useTheme();
   return (
-    <View style={{ marginBottom: 12 }}>
-      <ThemedText
-        variant="bodySm"
-        color={theme.colors.textSecondary}
-        style={{ marginBottom: 6 }}
-      >
+    <View style={styles.field}>
+      <ThemedText variant="bodySm" color={theme.colors.textPrimary} style={styles.label}>
         {label}
       </ThemedText>
       {children}
       {error ? (
-        <ThemedText variant="caption" color={theme.colors.error} style={{ marginTop: 4 }}>
+        <ThemedText variant="caption" color={theme.colors.error}>
           {error}
         </ThemedText>
       ) : null}
@@ -239,18 +233,28 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 20, marginBottom: 16 },
+  form: { gap: 16, marginBottom: 8 },
+  avatar: {
+    alignSelf: 'center',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  field: { gap: 8 },
+  label: { fontWeight: '700' },
   input: {
+    minHeight: 56,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: sawaaRadius.lg,
+    paddingHorizontal: 16,
+    fontSize: 16,
   },
   saveBtn: {
-    marginTop: 4,
-    paddingVertical: 12,
-    borderRadius: 10,
+    marginTop: 8,
+    minHeight: 56,
+    borderRadius: sawaaRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

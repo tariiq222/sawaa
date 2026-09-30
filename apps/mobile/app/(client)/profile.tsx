@@ -1,30 +1,33 @@
 import React, { useMemo, useState } from 'react';
-import { useTheme } from '@/theme/useTheme';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import {
+  Bell,
   ChevronLeft,
   ChevronRight,
-  Leaf,
+  ClipboardList,
+  LogOut,
   Phone as PhoneIcon,
   Settings,
-  Ticket, UsersRound, ClipboardList,
+  Ticket,
+  User,
+  UsersRound,
+  type LucideIcon,
 } from 'lucide-react-native';
 
-import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { authService } from '@/services/auth';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useSummary } from '@/hooks/queries';
 import { formatCurrencyAmount } from '@/lib/currency-display';
-import { BackButton } from '@/components/ui/BackButton';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -37,10 +40,11 @@ function formatLastVisit(iso: string | null, isRTL: boolean): string {
   return `${day} ${month}`;
 }
 
+type Row = { key: string; icon: LucideIcon; label: string; hint?: string; onPress: () => void };
+
 export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   const colors = useSawaaColors();
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const router = useRouter();
@@ -55,13 +59,11 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   const contactPhone = brandingQuery.data?.contactPhone ?? null;
   const [refreshing, setRefreshing] = useState(false);
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
-  // Pushed outside the tab group, so this screen owns its way back.
 
   const displayName = user
     ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email
     : '—';
-  const email = user?.email ?? '';
-  const initial = (user?.firstName ?? '·').charAt(0);
+  const secondary = user?.phone || user?.email || '';
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -72,212 +74,171 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
     }
   };
 
-  const stats: Array<{ value: string; ar: string; en: string }> = [
+  const stats: Array<{ key: string; value: string; label: string }> = [
     {
+      key: 'sessions',
       value: summary
         ? (dir.isRTL ? summary.totalBookings.toLocaleString('ar-SA') : String(summary.totalBookings))
         : '—',
-      ar: 'جلسة',
-      en: 'Sessions',
+      label: dir.isRTL ? 'جلسة' : 'Sessions',
     },
     {
+      key: 'lastVisit',
       value: summary ? formatLastVisit(summary.lastVisit, dir.isRTL) : '—',
-      ar: 'آخر زيارة',
-      en: 'Last visit',
+      label: dir.isRTL ? 'آخر زيارة' : 'Last visit',
     },
     {
+      key: 'outstanding',
       // outstandingBalance is integer halalas.
       value: summary ? formatCurrencyAmount(summary.outstandingBalance, 'SAR', dir.isRTL) : '—',
-      ar: 'مبلغ مستحق',
-      en: 'Outstanding',
+      label: dir.isRTL ? 'مبلغ مستحق' : 'Outstanding',
     },
   ];
 
-  type SettingItem = {
-    icon: React.ReactNode;
-    label: { ar: string; en: string };
-    color: string;
-    group: 'care' | 'preferences';
-    onPress?: () => void;
-  };
-
-  const settingsItems: SettingItem[] = [
-    { group: 'care', icon: <Ticket size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.title'), en: t('packages.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/packages') },
-    { group: 'care', icon: <UsersRound size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('groups.title'), en: t('groups.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/groups') },
-    { group: 'care', icon: <ClipboardList size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('tabs.records'), en: t('tabs.records') }, color: colors.teal[600], onPress: () => router.push('/(client)/(tabs)/records') },
-    { group: 'preferences', icon: <Settings size={18} color={colors.teal[600]} strokeWidth={1.75} />, label: { ar: t('settings.title'), en: t('settings.title') }, color: colors.teal[600], onPress: () => router.push('/(client)/settings') },
+  const careRows: Row[] = [
+    { key: 'packages', icon: Ticket, label: t('packages.title'), onPress: () => router.push('/(client)/packages') },
+    { key: 'groups', icon: UsersRound, label: t('groups.title'), onPress: () => router.push('/(client)/groups') },
+    { key: 'records', icon: ClipboardList, label: t('tabs.records'), onPress: () => router.push('/(client)/(tabs)/records') },
+  ];
+  const appRows: Row[] = [
+    { key: 'notifications', icon: Bell, label: t('profile.notifications'), onPress: () => router.push('/(client)/notifications') },
+    { key: 'settings', icon: Settings, label: t('settings.title'), hint: t('profile.settingsHint'), onPress: () => router.push('/(client)/settings') },
   ];
 
-  const settingGroups = [
-    { key: 'care', title: dir.isRTL ? 'الرعاية والسجلات' : 'Care and records' },
-    { key: 'preferences', title: dir.isRTL ? 'التفضيلات' : 'Preferences' },
-  ] as const;
+  const renderGroup = (rows: Row[]) => (
+    <Glass variant="strong" radius={sawaaRadius.lg} style={styles.group}>
+      {rows.map((row, index) => {
+        const Icon = row.icon;
+        return (
+          <Pressable
+            key={row.key}
+            onPress={row.onPress}
+            accessibilityRole="button"
+            style={[
+              styles.row,
+              { flexDirection: dir.row },
+              index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.ink[400] },
+            ]}
+          >
+            <Icon size={22} color={colors.teal[700]} strokeWidth={1.75} />
+            <Text style={[styles.rowLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>{row.label}</Text>
+            {row.hint ? <Text style={[styles.rowHint, { fontFamily: f400 }]}>{row.hint}</Text> : null}
+            <Chevron size={18} color={colors.ink[500]} strokeWidth={2} />
+          </Pressable>
+        );
+      })}
+    </Glass>
+  );
 
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: 140 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + (asTab ? 24 : 12), paddingBottom: 140 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal[600]} />}
       >
-        <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <View style={[styles.titleRow, { flexDirection: dir.row }]}>
-            {!asTab ? (
-              <BackButton onPress={() => router.back()} />
-            ) : null}
-            <Text style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-              {t('profile.title')}
-            </Text>
-          </View>
-        </Animated.View>
+        {asTab ? (
+          <Text accessibilityRole="header" style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+            {t('profile.title')}
+          </Text>
+        ) : (
+          <ScreenHeader title={t('profile.title')} onBack={() => router.back()} />
+        )}
 
-        <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-          {dir.isRTL ? 'البيانات الشخصية' : 'Personal details'}
-        </Text>
-        <Animated.View entering={FadeInDown.delay(100).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.profileCard}>
+        <Animated.View entering={FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+          <Glass variant="strong" radius={sawaaRadius.lg} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
-              <LinearGradient
-                colors={theme.colors.primaryGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}
-              >
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>{initial}</Text>
-              </LinearGradient>
+              <View style={styles.avatar}>
+                <User size={30} color={colors.teal[700]} strokeWidth={1.75} />
+              </View>
               <View style={styles.profileMid}>
-                <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                <Text numberOfLines={1} style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {displayName}
                 </Text>
-                <Text style={[styles.profileEmail, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                  {email}
+                <Text numberOfLines={1} style={[styles.profileMeta, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {secondary}
                 </Text>
-                {summary && summary.totalBookings > 0 ? (
-                  <View style={[styles.membership, { flexDirection: dir.row }]}>
-                    <Leaf size={11} color={colors.teal[700]} strokeWidth={2} />
-                    <Text style={[styles.membershipText, { fontFamily: f600, fontWeight: '600' }]}>
-                      {dir.isRTL
-                        ? `${summary.totalBookings.toLocaleString('ar-SA')} جلسة سابقة`
-                        : `${summary.totalBookings} past session${summary.totalBookings === 1 ? '' : 's'}`}
-                    </Text>
-                  </View>
-                ) : null}
               </View>
               <Glass variant="regular" radius={14} onPress={() => router.push('/(client)/settings-profile')} interactive style={styles.editBtn}>
-                <Text style={[styles.editText, { fontFamily: f600, fontWeight: '600' }]}>
-                  {t('profile.edit')}
-                </Text>
+                <Text style={[styles.editText, { fontFamily: f600 }]}>{t('profile.edit')}</Text>
               </Glass>
             </View>
 
             <View style={[styles.statsRow, { flexDirection: dir.row }]}>
               {stats.map((s) => (
-                <View key={s.en} style={styles.statBox}>
-                  <Text style={[styles.statN, { fontFamily: f700 }]} numberOfLines={1}>
-                    {s.value}
-                  </Text>
-                  <Text style={[styles.statL, { fontFamily: f400, fontWeight: '400' }]}>
-                    {dir.isRTL ? s.ar : s.en}
-                  </Text>
+                <View key={s.key} style={styles.statBox}>
+                  <Text style={[styles.statN, { fontFamily: f700 }]} numberOfLines={1}>{s.value}</Text>
+                  <Text style={[styles.statL, { fontFamily: f400 }]}>{s.label}</Text>
                 </View>
               ))}
             </View>
           </Glass>
         </Animated.View>
 
-        {settingGroups.map((group, groupIndex) => {
-          const groupItems = settingsItems.filter((item) => item.group === group.key);
-          if (!groupItems.length) return null;
-          return (
-            <Animated.View
-              key={group.key}
-              entering={FadeInDown.delay(220 + groupIndex * 80).duration(700).easing(Easing.out(Easing.cubic))}
-            >
-              <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                {group.title}
-              </Text>
-              <Glass variant="strong" radius={sawaaRadius.xl} style={styles.settingsCard}>
-                {groupItems.map((it, i) => (
-                  <Pressable
-                    key={it.label.en}
-                    onPress={it.onPress}
-                    accessibilityRole="button"
-                    style={[
-                      styles.settingRow,
-                      { flexDirection: dir.row },
-                      i < groupItems.length - 1 && styles.settingDivider,
-                    ]}
-                  >
-                    <View style={[styles.settingIcon, { backgroundColor: `${it.color}1e` }]}>
-                      {it.icon}
-                    </View>
-                    <Text style={[styles.settingLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
-                      {dir.isRTL ? it.label.ar : it.label.en}
-                    </Text>
-                    <Chevron size={14} color={colors.ink[400]} strokeWidth={2} />
-                  </Pressable>
-                ))}
-              </Glass>
-            </Animated.View>
-          );
-        })}
+        <Animated.View entering={FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))}>
+          {renderGroup(careRows)}
+        </Animated.View>
+        <Animated.View entering={FadeInDown.delay(140).duration(500).easing(Easing.out(Easing.cubic))}>
+          {renderGroup(appRows)}
+        </Animated.View>
 
         {contactPhone ? (
-          <Animated.View entering={FadeInDown.delay(340).duration(700).easing(Easing.out(Easing.cubic))}>
-            <Glass
-              variant="strong"
-              radius={sawaaRadius.xl}
-              style={styles.sosCard}
-              onPress={() => void Linking.openURL(`tel:${contactPhone}`)}
-              interactive
-            >
-              <View style={[styles.sosRow, { flexDirection: dir.row }]}>
-                <View style={styles.sosIcon}>
-                  <PhoneIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />
-                </View>
-                <View style={styles.sosMid}>
-                  <Text style={[styles.sosTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                    {t('profile.crisisSupport.title')}
-                  </Text>
-                  <Text style={[styles.sosSub, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                    {t('profile.crisisSupport.subtitle')}
-                  </Text>
-                </View>
-                <Text style={[styles.sosPhone, { fontFamily: f700 }]}>{contactPhone}</Text>
+          <Glass
+            variant="strong"
+            radius={sawaaRadius.lg}
+            style={styles.sosCard}
+            onPress={() => void Linking.openURL(`tel:${contactPhone}`)}
+            interactive
+          >
+            <View style={[styles.sosRow, { flexDirection: dir.row }]}>
+              <PhoneIcon size={22} color={colors.accent.coral} strokeWidth={1.75} />
+              <View style={styles.profileMid}>
+                <Text style={[styles.rowLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                  {t('profile.crisisSupport.title')}
+                </Text>
+                <Text style={[styles.profileMeta, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {t('profile.crisisSupport.subtitle')}
+                </Text>
               </View>
-            </Glass>
-          </Animated.View>
+              <Text style={[styles.sosPhone, { fontFamily: f700 }]}>{contactPhone}</Text>
+            </View>
+          </Glass>
         ) : null}
 
-        <Animated.View entering={FadeInDown.delay(420).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="regular" radius={sawaaRadius.pill} onPress={() => { void authService.logout().then(() => router.replace('/home')); }} interactive style={styles.logoutBtn}>
-            <Text style={[styles.logoutText, { fontFamily: f700 }]}>
-              {t('profile.signOut')}
-            </Text>
-          </Glass>
-        </Animated.View>
+        <Glass
+          variant="strong"
+          radius={sawaaRadius.lg}
+          onPress={() => { void authService.logout().then(() => router.replace('/home')); }}
+          interactive
+          accessibilityRole="button"
+          style={styles.group}
+        >
+          <View style={[styles.row, { flexDirection: dir.row }]}>
+            <LogOut size={22} color={colors.accent.coral} strokeWidth={1.75} />
+            <Text style={[styles.rowLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>{t('profile.signOut')}</Text>
+          </View>
+        </Glass>
       </ScrollView>
     </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
-  scroll: { paddingHorizontal: 18, gap: 16 },
-  titleRow: { alignItems: 'center', gap: 10, paddingHorizontal: 4 },
-  pageTitle: { fontSize: 22, color: colors.ink[900], paddingHorizontal: 4 },
-  profileCard: { padding: 18 },
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
+  scroll: { paddingHorizontal: 16, gap: 16 },
+  pageTitle: { fontSize: 28, lineHeight: 38, color: colors.ink[900] },
+  profileCard: { padding: 16 },
   profileRow: { alignItems: 'center', gap: 14 },
   avatar: {
-    width: 68, height: 68, borderRadius: 34,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.teal[600], shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 },
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.teal[100],
   },
-  avatarText: { fontSize: 26, color: theme.colors.primaryForeground },
-  profileMid: { flex: 1 },
-  profileName: { fontSize: 17, color: colors.ink[900] },
-  profileEmail: { fontSize: 12, color: colors.ink[500], marginTop: 2 },
-  membership: { alignItems: 'center', gap: 4, marginTop: 6 },
-  membershipText: { fontSize: 11, color: colors.teal[700] },
+  profileMid: { flex: 1, minWidth: 0 },
+  profileName: { fontSize: 18, lineHeight: 26, color: colors.ink[900] },
+  profileMeta: { fontSize: sawaaType.body.fontSize, lineHeight: 20, color: colors.ink[700] },
   // Compact pill: the fixed height + centered content stop the Glass inner
   // `flex: 1` wrapper from stretching the button to the profile row's height.
   editBtn: {
@@ -288,33 +249,22 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnTy
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editText: { fontSize: 12, lineHeight: 16, color: colors.teal[700] },
+  editText: { fontSize: 13, lineHeight: 18, color: colors.teal[700] },
   statsRow: { marginTop: 16, gap: 8 },
   statBox: {
-    flex: 1, paddingVertical: 10, borderRadius: 16,
-    backgroundColor: theme.colors.surfaceLow,
-    borderWidth: 0.5, borderColor: theme.colors.surfaceHigh,
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: sawaaRadius.md,
+    backgroundColor: withAlpha(colors.teal[500], 0.08),
     alignItems: 'center',
   },
-  statN: { fontSize: 18, color: colors.teal[700] },
-  statL: { fontSize: 10.5, color: colors.ink[500], marginTop: 2 },
-  settingsCard: { padding: 0 },
-  sectionTitle: { fontSize: 14, color: colors.ink[700], marginBottom: 8, paddingHorizontal: 4 },
-  settingRow: { alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14 },
-  settingDivider: { borderBottomWidth: 0.5, borderBottomColor: colors.glass.border },
-  settingIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  settingLabel: { flex: 1, fontSize: 13.5, color: colors.ink[900] },
-  sosCard: { padding: 14, backgroundColor: withAlpha(colors.accent.coral, 0.15) },
-  sosRow: { alignItems: 'center', gap: 12 },
-  sosIcon: {
-    width: 36, height: 36, borderRadius: 999,
-    backgroundColor: theme.colors.primaryFill,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  sosMid: { flex: 1 },
-  sosTitle: { fontSize: 13.5, color: colors.ink[900] },
-  sosSub: { fontSize: 11, color: colors.ink[500], marginTop: 2 },
-  sosPhone: { fontSize: 12, color: colors.accent.coral },
-  logoutBtn: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  logoutText: { fontSize: 14, color: colors.accent.coral },
+  statN: { fontSize: 16, lineHeight: 22, color: colors.teal[700] },
+  statL: { fontSize: 12, lineHeight: 16, color: colors.ink[700], marginTop: 2 },
+  group: { padding: 0 },
+  row: { alignItems: 'center', gap: 14, paddingHorizontal: 16, minHeight: 56 },
+  rowLabel: { flex: 1, fontSize: 16, lineHeight: 22, color: colors.ink[900] },
+  rowHint: { fontSize: 13, color: colors.ink[700] },
+  sosCard: { padding: 16 },
+  sosRow: { alignItems: 'center', gap: 14 },
+  sosPhone: { fontSize: 14, color: colors.ink[900] },
 });
