@@ -15,6 +15,8 @@ import { setCredentials } from '@/stores/slices/auth-slice';
 import { AquaBackground } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
+const HYDRATION_TIMEOUT_MS = 15_000;
+
 /**
  * Public `/home` route.
  *
@@ -39,9 +41,12 @@ export default function HomeRoute() {
 
   useEffect(() => {
     let mounted = true;
+    let expired = false;
+    let hydrationTimeout: ReturnType<typeof setTimeout> | undefined;
     const hydrationEpoch = getSessionEpoch();
 
     const finish = () => {
+      if (hydrationTimeout !== undefined) clearTimeout(hydrationTimeout);
       if (mounted) setHydrating(false);
     };
 
@@ -55,10 +60,16 @@ export default function HomeRoute() {
       return;
     }
 
+    // Bound the entire storage/profile chain, including a pending token refresh.
+    hydrationTimeout = setTimeout(() => {
+      expired = true;
+      finish();
+    }, HYDRATION_TIMEOUT_MS);
+
     async function hydrate() {
       try {
         const stored = await authService.getStoredTokens();
-        if (!mounted || !isSessionCurrent(hydrationEpoch)) {
+        if (!mounted || expired || !isSessionCurrent(hydrationEpoch)) {
           finish();
           return;
         }
@@ -70,14 +81,14 @@ export default function HomeRoute() {
         }
 
         const profileRes = await authService.getProfile();
-        if (!mounted || !isSessionCurrent(hydrationEpoch)) {
+        if (!mounted || expired || !isSessionCurrent(hydrationEpoch)) {
           finish();
           return;
         }
 
         if (profileRes.success && profileRes.data) {
           const fresh = await authService.getStoredTokens();
-          if (!mounted || !isSessionCurrent(hydrationEpoch)) {
+          if (!mounted || expired || !isSessionCurrent(hydrationEpoch)) {
             finish();
             return;
           }
@@ -102,6 +113,7 @@ export default function HomeRoute() {
     void hydrate();
     return () => {
       mounted = false;
+      if (hydrationTimeout !== undefined) clearTimeout(hydrationTimeout);
     };
   }, [dispatch, token, user]);
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { act, cleanup, render, waitFor } from '@testing-library/react-native';
 
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
@@ -173,6 +173,70 @@ describe('HomeRoute /home alias', () => {
       expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
     });
     expect(screen.queryByTestId('guest-home-rendered')).toBeNull();
+  });
+
+  describe('hydration deadline', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => {
+      cleanup();
+      jest.useRealTimers();
+    });
+
+    it('shares one deadline across storage and profile lookup', async () => {
+      let resolveTokens!: (value: unknown) => void;
+      mockedGetStoredTokens.mockReturnValue(new Promise((resolve) => { resolveTokens = resolve; }));
+      mockedGetProfile.mockReturnValue(new Promise(() => {}));
+      const screen = render(<HomeRoute />);
+
+      act(() => jest.advanceTimersByTime(10_000));
+      await act(async () => {
+        resolveTokens({ accessToken: 'pending-profile', refreshToken: 'refresh' });
+      });
+      expect(screen.getByTestId('home-loading')).toBeTruthy();
+
+      act(() => jest.advanceTimersByTime(5_000));
+      expect(screen.queryByTestId('home-loading')).toBeNull();
+      expect(screen.getByTestId('guest-home-rendered')).toBeTruthy();
+      expect(mockDispatch).not.toHaveBeenCalled();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it.each(['stored tokens', 'profile', 'fresh tokens'])(
+      'expires pending %s hydration and ignores its late session',
+      async (pendingStep) => {
+        const tokens = { accessToken: 'late-access', refreshToken: 'late-refresh' };
+        const profile = { success: true, data: clientUser };
+        let resolvePending!: (value: unknown) => void;
+        const pending = new Promise((resolve) => { resolvePending = resolve; });
+        mockedGetStoredTokens.mockResolvedValue(tokens);
+        mockedGetProfile.mockResolvedValue(profile);
+        if (pendingStep === 'profile') {
+          mockedGetProfile.mockReturnValueOnce(pending);
+        } else if (pendingStep === 'fresh tokens') {
+          mockedGetStoredTokens.mockResolvedValueOnce(tokens).mockReturnValueOnce(pending);
+        } else {
+          mockedGetStoredTokens.mockReturnValueOnce(pending);
+        }
+
+        const screen = render(<HomeRoute />);
+        await act(async () => {});
+        act(() => jest.advanceTimersByTime(14_999));
+        expect(screen.getByTestId('home-loading')).toBeTruthy();
+
+        act(() => jest.advanceTimersByTime(1));
+        expect(screen.queryByTestId('home-loading')).toBeNull();
+        expect(screen.getByTestId('guest-home-rendered')).toBeTruthy();
+        expect(mockReplace).not.toHaveBeenCalled();
+
+        await act(async () => {
+          resolvePending(pendingStep === 'profile' ? profile : tokens);
+        });
+        expect(screen.getByTestId('guest-home-rendered')).toBeTruthy();
+        expect(mockDispatch).not.toHaveBeenCalled();
+        expect(mockReplace).not.toHaveBeenCalled();
+        expect(reduxAuthState).toEqual({ token: null, user: null });
+      },
+    );
   });
 
   it('hydrates stored tokens for staff and redirects to employee tabs', async () => {
