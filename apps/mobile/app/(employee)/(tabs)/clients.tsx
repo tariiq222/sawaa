@@ -3,7 +3,7 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { View, FlatList, Pressable, TextInput, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Search } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -13,9 +13,9 @@ import {
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
-  withAlpha,
 } from '@/theme/sawaa';
-import { Avatar } from '@/components/ui/Avatar';
+import { Pill } from '@/components/ui/Pill';
+import { Thumb } from '@/components/ui/Thumb';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
@@ -37,7 +37,7 @@ function ClientRowSkeleton() {
   return (
     <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
       <View style={styles.skeletonRow}>
-        <Skeleton width={44} height={44} radius={sawaaRadius.pill} />
+        <Skeleton width={52} height={52} radius={sawaaRadius.pill} />
         <View style={styles.skeletonLines}>
           <Skeleton width="60%" height={14} radius={sawaaRadius.xs} />
           <Skeleton width="35%" height={11} radius={sawaaRadius.xs} />
@@ -55,9 +55,9 @@ export default function ClientsScreen() {
   const dir = useDir();
   const reduceMotion = useReduceMotion();
   const f400 = getFontName(dir.locale, '400');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const router = useRouter();
+  const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -89,13 +89,13 @@ export default function ClientsScreen() {
     <AquaBackground>
       <View style={[styles.container, { paddingTop: insets.top + sawaaSpacing.lg }]}>
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+          <Text accessibilityRole="header" style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
             {t('employee.clients')}
           </Text>
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.pill} style={styles.searchCard}>
+          <Glass variant="base" radius={sawaaRadius.pill} style={styles.searchCard}>
             <View style={[styles.searchRow, { flexDirection: dir.row }]}>
               <Search size={18} strokeWidth={1.5} color={colors.ink[500]} />
               <TextInput
@@ -132,6 +132,8 @@ export default function ClientsScreen() {
                 entering={reduceMotion ? undefined : FadeInDown.delay(180 + index * 60).duration(600).easing(Easing.out(Easing.cubic))}
               >
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={item.name}
                   onPress={() => router.push({
                     pathname: '/(employee)/client/[id]',
                     params: {
@@ -142,16 +144,16 @@ export default function ClientsScreen() {
                 >
                   <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
                     <View style={[styles.clientRow, { flexDirection: dir.row }]}>
-                      <Avatar size={44} name={item.name} imageUrl={item.avatarUrl} color={colors.teal[600]} />
+                      <Thumb uri={item.avatarUrl} width={52} height={52} radius={sawaaRadius.pill} />
                       <View style={styles.clientMid}>
                         <Text
                           numberOfLines={1}
-                          style={[styles.clientName, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
+                          style={[styles.clientName, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
                         >
                           {item.name}
                         </Text>
                         {item.lastVisit !== null && (
-                          <Text style={[styles.clientMeta, { textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+                          <Text style={[styles.clientMeta, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                             {t('doctor.lastVisit')}:{' '}
                             {new Date(item.lastVisit).toLocaleDateString(
                               dir.isRTL ? 'ar-SA' : 'en-US',
@@ -160,13 +162,8 @@ export default function ClientsScreen() {
                           </Text>
                         )}
                       </View>
-                      {item.visitCount > 0 && (
-                        <View style={[styles.visitBadge, { backgroundColor: withAlpha(colors.teal[600], 0.1) }]}>
-                          <Text style={[styles.visitBadgeText, { fontFamily: f600, fontWeight: '600', writingDirection: dir.writingDirection }]}>
-                            {item.visitCount} {t('doctor.visits')}
-                          </Text>
-                        </View>
-                      )}
+                      {item.visitCount > 0 && <Pill label={`${item.visitCount} ${t('doctor.visits')}`} />}
+                      <Chevron size={20} color={colors.ink[500]} strokeWidth={1.75} />
                     </View>
                   </Glass>
                 </Pressable>
@@ -188,8 +185,8 @@ export default function ClientsScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { flex: 1, paddingHorizontal: sawaaSpacing.lg },
   title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
+    fontSize: 28,
+    lineHeight: 38,
     color: colors.ink[900],
     marginBottom: sawaaSpacing.lg,
   },
@@ -210,24 +207,14 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   clientRow: { alignItems: 'center', gap: sawaaSpacing.md },
   clientMid: { flex: 1, gap: sawaaSpacing.xs },
   clientName: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
+    fontSize: sawaaType.subheading.fontSize - 2,
+    lineHeight: sawaaType.subheading.lineHeight,
     color: colors.ink[900],
   },
   clientMeta: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[500],
-  },
-  visitBadge: {
-    borderRadius: sawaaRadius.pill,
-    paddingHorizontal: sawaaSpacing.sm,
-    paddingVertical: sawaaSpacing.xs,
-  },
-  visitBadgeText: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.teal[700],
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: colors.ink[700],
   },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: sawaaSpacing.md },
   skeletonLines: { flex: 1, gap: sawaaSpacing.sm },

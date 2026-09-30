@@ -326,7 +326,18 @@
     "dayOff": "يوم إجازة",
     "noClients": "لا يوجد مرضى بعد",
     "clientNotFound": "مريض غير موجود",
-    "appVersion": "الإصدار"
+    "appVersion": "الإصدار",
+    "greetingName": "أهلاً، {{name}}",
+    "durationMinutes": "{{count}} د",
+    "deliveryOnline": "عن بُعد",
+    "deliveryInPerson": "حضوري",
+    "viewClientRecord": "عرض سجل العميل",
+    "previousWeek": "الأسبوع السابق",
+    "nextWeek": "الأسبوع التالي",
+    "detailAppointment": "الموعد",
+    "detailService": "الخدمة",
+    "detailDuration": "المدة",
+    "detailType": "النوع"
   },
   "profile": {
     "title": "حسابي",
@@ -630,7 +641,12 @@
     "title": "إدارة التوفر",
     "save": "حفظ الجدول",
     "saveSuccess": "تم تحديث جدول عملك بنجاح",
-    "saveError": "تعذّر حفظ الجدول"
+    "saveError": "تعذّر حفظ الجدول",
+    "hours": "أوقات التوفر",
+    "manage": "إدارة أوقات التوفر",
+    "subtitle": "حدد الأيام والساعات التي تستقبل فيها المواعيد.",
+    "from": "من",
+    "to": "إلى"
   },
   "days": {
     "0": "الأحد",

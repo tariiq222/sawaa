@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
+  Clock,
   Info,
   Shield,
   LogOut,
@@ -23,7 +24,7 @@ import {
   sawaaType,
   withAlpha,
 } from '@/theme/sawaa';
-import { Avatar } from '@/components/ui/Avatar';
+import { Thumb } from '@/components/ui/Thumb';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -47,7 +48,7 @@ function MenuRow({ icon: Icon, label, value, danger, onPress }: MenuEntry) {
   const dir = useDir();
   const f400 = getFontName(dir.locale, '400');
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
-  const tint = danger ? colors.accent.coral : colors.teal[600];
+  const tint = danger ? colors.accent.coral : colors.teal[700];
 
   return (
     <Pressable
@@ -57,13 +58,11 @@ function MenuRow({ icon: Icon, label, value, danger, onPress }: MenuEntry) {
       style={({ pressed }) => [styles.menuRow, { flexDirection: dir.row, opacity: pressed ? 0.7 : 1 }]}
     >
       <View style={[styles.menuLeft, { flexDirection: dir.row }]}>
-        <View style={[styles.menuIconCircle, { backgroundColor: withAlpha(tint, 0.1) }]}>
-          <Icon size={18} strokeWidth={1.5} color={tint} />
-        </View>
+        <Icon size={22} strokeWidth={1.75} color={tint} />
         <Text
           style={[
             styles.menuLabel,
-            { fontFamily: f400, fontWeight: '400', color: danger ? colors.accent.coral : colors.ink[900], writingDirection: dir.writingDirection },
+            { fontFamily: f400, color: danger ? colors.accent.coral : colors.ink[900], writingDirection: dir.writingDirection },
           ]}
         >
           {label}
@@ -75,7 +74,7 @@ function MenuRow({ icon: Icon, label, value, danger, onPress }: MenuEntry) {
             {value}
           </Text>
         ) : null}
-        {!danger && <Chevron size={16} strokeWidth={1.5} color={colors.ink[400]} />}
+        {!danger && <Chevron size={20} strokeWidth={1.75} color={colors.ink[500]} />}
       </View>
     </Pressable>
   );
@@ -85,7 +84,7 @@ function MenuGroup({ entries }: { entries: MenuEntry[] }) {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <Glass variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.xs}>
+    <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.xs}>
       {entries.map((entry, i) => (
         <View key={entry.label}>
           {i > 0 && <View style={styles.divider} />}
@@ -155,15 +154,15 @@ export default function EmployeeProfileScreen() {
       >
         <UnverifiedEmailBanner />
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+          <Text accessibilityRole="header" style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
             {t('employee.profile')}
           </Text>
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
+          <Glass variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
-              <Avatar size={64} name={fullName} imageUrl={user?.avatarUrl} color={colors.teal[600]} />
+              <Thumb uri={user?.avatarUrl} width={64} height={64} radius={sawaaRadius.pill} />
               <View style={styles.profileMid}>
                 <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                   {fullName}
@@ -182,6 +181,7 @@ export default function EmployeeProfileScreen() {
         >
           <MenuGroup
             entries={[
+              { icon: Clock, label: t('availability.hours'), onPress: () => router.push('/(employee)/availability') },
               { icon: Info, label: t('profile.about'), onPress: () => Alert.alert('مركز سواء', 'نسخة 1.0.0') },
               { icon: Shield, label: t('profile.privacy'), onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
             ]}
@@ -206,12 +206,12 @@ export default function EmployeeProfileScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 140 },
   title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
+    fontSize: 28,
+    lineHeight: 38,
     color: colors.ink[900],
     marginBottom: sawaaSpacing.xl,
   },
-  profileCard: { marginBottom: sawaaSpacing['2xl'] },
+  profileCard: { marginBottom: sawaaSpacing.lg },
   profileRow: { alignItems: 'center', gap: sawaaSpacing.lg },
   profileMid: { flex: 1, gap: sawaaSpacing.xs },
   profileName: {
@@ -220,24 +220,18 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     color: colors.ink[900],
   },
   profileEmail: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[500],
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: colors.ink[700],
   },
-  group: { marginBottom: sawaaSpacing.xl },
+  group: { marginBottom: sawaaSpacing.lg },
   menuRow: {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: sawaaSpacing.md,
+    minHeight: 52,
   },
   menuLeft: { alignItems: 'center', gap: sawaaSpacing.md, flex: 1 },
-  menuIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: sawaaRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   menuLabel: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
@@ -256,7 +250,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   version: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[400],
+    color: colors.ink[500],
     textAlign: 'center',
     marginTop: sawaaSpacing.lg,
   },

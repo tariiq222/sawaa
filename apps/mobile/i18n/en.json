@@ -326,7 +326,18 @@
     "dayOff": "Day Off",
     "noClients": "No clients yet",
     "clientNotFound": "Client not found",
-    "appVersion": "Version"
+    "appVersion": "Version",
+    "greetingName": "Hello, {{name}}",
+    "durationMinutes": "{{count}} min",
+    "deliveryOnline": "Online",
+    "deliveryInPerson": "In person",
+    "viewClientRecord": "View client record",
+    "previousWeek": "Previous week",
+    "nextWeek": "Next week",
+    "detailAppointment": "Appointment",
+    "detailService": "Service",
+    "detailDuration": "Duration",
+    "detailType": "Type"
   },
   "profile": {
     "title": "My Account",
@@ -627,7 +638,12 @@
     "title": "Manage Availability",
     "save": "Save Schedule",
     "saveSuccess": "Your schedule has been updated",
-    "saveError": "Failed to save schedule"
+    "saveError": "Failed to save schedule",
+    "hours": "Availability hours",
+    "manage": "Manage availability hours",
+    "subtitle": "Set the days and hours when you take appointments.",
+    "from": "From",
+    "to": "To"
   },
   "days": {
     "0": "Sunday",

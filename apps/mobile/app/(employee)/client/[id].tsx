@@ -4,7 +4,7 @@ import { View, ScrollView, Pressable, Linking, StyleSheet, Text } from 'react-na
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Phone, Mail } from 'lucide-react-native';
+import { CalendarDays, Mail, Phone } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Glass } from '@/theme/components/Glass';
@@ -14,11 +14,13 @@ import {
   sawaaSpacing,
   sawaaType,
 } from '@/theme/sawaa';
-import { Avatar } from '@/components/ui/Avatar';
+import { Pill } from '@/components/ui/Pill';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Thumb } from '@/components/ui/Thumb';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -35,7 +37,6 @@ export default function DoctorClientRecordScreen() {
   const dir = useDir();
   const reduceMotion = useReduceMotion();
   const f400 = getFontName(dir.locale, '400');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
 
@@ -88,6 +89,12 @@ export default function DoctorClientRecordScreen() {
   }
 
   const fullName = client.name || [client.firstName, client.lastName].filter(Boolean).join(' ');
+  const locale = dir.isRTL ? 'ar-SA' : 'en-US';
+  const textStyle = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
+  const contactRows = [
+    client.phone ? { key: 'phone', Icon: Phone, value: client.phone, url: `tel:${client.phone}` } : null,
+    client.email ? { key: 'email', Icon: Mail, value: client.email, url: `mailto:${client.email}` } : null,
+  ].filter((row): row is NonNullable<typeof row> => row !== null);
 
   return (
     <AquaBackground>
@@ -98,91 +105,83 @@ export default function DoctorClientRecordScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart, marginBottom: sawaaSpacing.sm }} accessibilityLabel={t('common.back')} />
-
-        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-            {t('doctor.clientRecord')}
-          </Text>
-        </Animated.View>
+        <ScreenHeader title={t('doctor.clientRecord')} onBack={() => router.back()} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
+          <Glass variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.lg}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
-              <Avatar size={56} name={fullName} imageUrl={client.avatarUrl} color={colors.teal[600]} />
+              <Thumb uri={client.avatarUrl} width={64} height={64} radius={sawaaRadius.pill} />
               <View style={styles.profileMid}>
-                <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+                <Text numberOfLines={2} style={[styles.profileName, textStyle, { fontFamily: f700 }]}>
                   {fullName}
                 </Text>
-                {client.phone && (
-                  <Pressable
-                    onPress={() => Linking.openURL(`tel:${client.phone}`)}
-                    accessibilityRole="button"
-                    style={[styles.contactRow, { flexDirection: dir.row }]}
-                  >
-                    <Phone size={14} strokeWidth={1.5} color={colors.teal[700]} />
-                    <Text style={[styles.contactText, { fontFamily: f400, fontWeight: '400' }]}>
-                      {client.phone}
-                    </Text>
-                  </Pressable>
-                )}
-                {client.email && (
-                  <Pressable
-                    onPress={() => Linking.openURL(`mailto:${client.email}`)}
-                    accessibilityRole="button"
-                    style={[styles.contactRow, { flexDirection: dir.row }]}
-                  >
-                    <Mail size={14} strokeWidth={1.5} color={colors.teal[700]} />
-                    <Text style={[styles.contactText, { fontFamily: f400, fontWeight: '400' }]}>
-                      {client.email}
-                    </Text>
-                  </Pressable>
-                )}
+                {visits.length > 0 ? (
+                  <View style={{ alignSelf: dir.alignStart }}>
+                    <Pill label={`${visits.length} ${t('doctor.visits')}`} />
+                  </View>
+                ) : null}
               </View>
             </View>
+            {contactRows.length > 0 ? (
+              <View style={styles.contactList}>
+                {contactRows.map(({ key, Icon, value, url }) => (
+                  <Pressable
+                    key={key}
+                    onPress={() => Linking.openURL(url)}
+                    accessibilityRole="button"
+                    accessibilityLabel={value}
+                    style={[styles.contactRow, { flexDirection: dir.row }]}
+                  >
+                    <Icon size={22} strokeWidth={1.75} color={colors.teal[700]} />
+                    <Text style={[styles.contactText, textStyle, { fontFamily: f400 }]}>{value}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </Glass>
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(180).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-            {t('doctor.visitHistory')}
-          </Text>
+          <SectionHeader title={t('doctor.visitHistory')} />
         </Animated.View>
 
         {visits.length === 0 ? (
           <EmptyState icon="calendar-outline" title={t('common.noResults')} />
         ) : (
           <View style={styles.visitList}>
-            {visits.map((v, index) => (
-              <Animated.View
-                key={v.id}
-                entering={reduceMotion ? undefined : FadeInDown.delay(240 + index * 70).duration(600).easing(Easing.out(Easing.cubic))}
-              >
-                <Pressable
-                  onPress={() => router.push(`/(employee)/appointment/${v.id}`)}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            {visits.map((v, index) => {
+              const when = new Date(v.scheduledAt);
+              const dateLabel = when.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+              const timeLabel = when.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+              return (
+                <Animated.View
+                  key={v.id}
+                  entering={reduceMotion ? undefined : FadeInDown.delay(240 + index * 70).duration(600).easing(Easing.out(Easing.cubic))}
                 >
-                  <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
-                    <View style={[styles.visitRow, { flexDirection: dir.row }]}>
+                  <Glass variant="base" radius={sawaaRadius.lg}>
+                    <Pressable
+                      onPress={() => router.push(`/(employee)/appointment/${v.id}`)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${dateLabel} ${timeLabel} ${t(getStatusLabel(v.status))}`}
+                      style={({ pressed }) => [styles.visitRow, { flexDirection: dir.row, opacity: pressed ? 0.7 : 1 }]}
+                    >
+                      <View style={[styles.visitIcon, { backgroundColor: colors.teal[100] }]}>
+                        <CalendarDays size={22} strokeWidth={1.75} color={colors.teal[700]} />
+                      </View>
                       <View style={styles.visitMid}>
-                        <Text style={[styles.visitType, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-                          {t(`bookings.type.${v.type}`)}
+                        <Text numberOfLines={1} style={[styles.visitTitle, textStyle, { fontFamily: f700 }]}>
+                          {dateLabel} · {timeLabel}
                         </Text>
-                        <Text style={[styles.visitDate, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-                          {new Date(v.date).toLocaleDateString('ar-SA', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
+                        <Text style={[styles.visitSub, textStyle, { fontFamily: f400 }]}>
+                          {t(v.deliveryType === 'online' ? 'doctor.deliveryOnline' : 'doctor.deliveryInPerson')}
                         </Text>
                       </View>
                       <StatusPill status={v.status} label={t(getStatusLabel(v.status))} />
-                    </View>
+                    </Pressable>
                   </Glass>
-                </Pressable>
-              </Animated.View>
-            ))}
+                </Animated.View>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -191,47 +190,42 @@ export default function DoctorClientRecordScreen() {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  scroll: { flexGrow: 1, paddingHorizontal: sawaaSpacing.xl },
+  scroll: { flexGrow: 1, paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   centered: { flex: 1, justifyContent: 'center' },
   loaderBlock: { marginBottom: sawaaSpacing.md },
   loaderRow: { marginBottom: sawaaSpacing.sm },
-  title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
-    color: colors.ink[900],
-    marginBottom: sawaaSpacing.lg,
-  },
-  profileCard: { marginBottom: sawaaSpacing['2xl'] },
   profileRow: { alignItems: 'center', gap: sawaaSpacing.lg },
-  profileMid: { flex: 1, gap: sawaaSpacing.xs },
+  profileMid: { flex: 1, gap: sawaaSpacing.sm },
   profileName: {
-    fontSize: sawaaType.subheading.fontSize,
-    lineHeight: sawaaType.subheading.lineHeight,
+    fontSize: sawaaType.subheading.fontSize + 2,
+    lineHeight: sawaaType.subheading.lineHeight + 2,
     color: colors.ink[900],
   },
-  contactRow: { alignItems: 'center', gap: sawaaSpacing.xs },
+  contactList: {
+    marginTop: sawaaSpacing.lg,
+    paddingTop: sawaaSpacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.ink[400],
+  },
+  contactRow: { alignItems: 'center', gap: sawaaSpacing.md, minHeight: 44 },
   contactText: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.teal[700],
-  },
-  sectionTitle: {
-    fontSize: sawaaType.subheading.fontSize,
-    lineHeight: sawaaType.subheading.lineHeight,
+    flex: 1,
+    fontSize: 15,
+    lineHeight: sawaaType.body.lineHeight + 2,
     color: colors.ink[900],
-    marginBottom: sawaaSpacing.md,
   },
   visitList: { gap: sawaaSpacing.sm },
-  visitRow: { alignItems: 'center', gap: sawaaSpacing.md },
-  visitMid: { flex: 1, gap: sawaaSpacing.xs },
-  visitType: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
+  visitRow: { alignItems: 'center', gap: sawaaSpacing.md, padding: sawaaSpacing.md, minHeight: 68 },
+  visitIcon: { width: 44, height: 44, borderRadius: sawaaRadius.md, alignItems: 'center', justifyContent: 'center' },
+  visitMid: { flex: 1, gap: 2 },
+  visitTitle: {
+    fontSize: 15,
+    lineHeight: sawaaType.subheading.lineHeight,
     color: colors.ink[900],
   },
-  visitDate: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[500],
+  visitSub: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: colors.ink[700],
   },
 });
