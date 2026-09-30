@@ -20,7 +20,7 @@ interface Props {
  * Matches the "ابدأ الآن / تسجيل جديد" CTA style from the welcome screen.
  * Use everywhere a primary action is surfaced so the app stays visually uniform.
  */
-export function PrimaryButton({ label, onPress, fontFamily = getFontName('ar', '600'), style, height = 52, disabled, icon }: Props) {
+export function PrimaryButton({ label, onPress, fontFamily = getFontName('ar', '600'), style, height = 56, disabled, icon }: Props) {
   const { scheme } = useTheme();
   const action = getSawaaRoles(scheme).action;
   const styles = createStyles(action);
@@ -63,9 +63,10 @@ const createStyles = (action: ReturnType<typeof getSawaaRoles>['action']) => Sty
     gap: 8,
     overflow: 'hidden',
     shadowColor: action.fill,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    elevation: 6,
   },
   sheen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: '55%' },
   topEdge: {
@@ -76,5 +77,5 @@ const createStyles = (action: ReturnType<typeof getSawaaRoles>['action']) => Sty
     height: 1,
     backgroundColor: action.sheen,
   },
-  label: { color: action.foreground, fontSize: 15, letterSpacing: 0.2 },
+  label: { color: action.foreground, fontSize: 17, letterSpacing: 0.2 },
 });
