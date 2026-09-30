@@ -1,7 +1,7 @@
-import { View, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Calendar, User as UserIcon, Briefcase } from 'lucide-react-native';
+import { Calendar, User as UserIcon, Briefcase } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/theme/components/ThemedText';
@@ -15,6 +15,7 @@ import type { Booking } from '@/types/models';
 import { hasZoomMeetingAccess } from '@/types/booking-enums';
 import { AquaBackground } from '@/theme/sawaa';
 import { withAlpha } from '@/theme/sawaa/tokens';
+import { BackButton } from '@/components/ui/BackButton';
 
 interface VideoCallScreenProps {
   role: 'client' | 'employee';
@@ -77,7 +78,6 @@ export function VideoCallScreen({ role }: VideoCallScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const dir = useDir();
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   const clientBookingQuery = useBooking(role === 'client' ? bookingId : undefined);
   const employeeBookingQuery = useEmployeeBooking(role === 'employee' ? bookingId : undefined);
@@ -108,9 +108,7 @@ export function VideoCallScreen({ role }: VideoCallScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.headerRow, { flexDirection: dir.row }]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <BackIcon size={24} strokeWidth={1.5} color={theme.colors.textPrimary} />
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
           <ThemedText variant="subheading">{t('videoCall.title')}</ThemedText>
           <View style={styles.backBtn} />
         </View>

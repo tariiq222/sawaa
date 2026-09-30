@@ -1,13 +1,11 @@
 import { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
-import { View, ScrollView, Pressable, Linking, Alert, StyleSheet, Text } from 'react-native';
+import { View, ScrollView, Pressable, Linking, Alert, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
-  ChevronRight,
-  ChevronLeft,
   Building2,
   Video,
   Calendar,
@@ -23,24 +21,30 @@ import {
   PrimaryButton,
   sawaaRadius,
   sawaaSpacing,
-  sawaaType,
   withAlpha,
 } from '@/theme/sawaa';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
+import { BackButton } from '@/components/ui/BackButton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import {
   useCancelEmployeeBooking,
+  useRequestCancelEmployeeBooking,
   useEmployeeBooking,
   useMarkEmployeeBookingCompleted,
   useStartEmployeeBookingSession,
 } from '@/hooks/queries';
+import { useAppSelector } from '@/hooks/use-redux';
 import { getStatusLabel } from '@/lib/status-helpers';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
 import { hasZoomMeetingAccess, resolveBookingType, resolveDeliveryType } from '@/types/booking-enums';
+import { createStyles } from '@/components/features/employee-appointment-styles';
+import { hasBookingPermission, resolveCancellationMode } from '@/lib/employee-booking-actions';
 
 const getTypeMeta = (colors: ReturnType<typeof useSawaaColors>): Record<string, { icon: React.ElementType; color: string }> => ({
   individual: { icon: Building2, color: colors.accent.sky },
@@ -58,6 +62,7 @@ export default function DoctorAppointmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
+  const handleBack = () => goBackOrHome(router, '/(employee)/(tabs)/today');
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
@@ -65,20 +70,21 @@ export default function DoctorAppointmentDetailScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
+  const user = useAppSelector((state) => state.auth.user);
   const bookingQuery = useEmployeeBooking(id);
   const markCompleted = useMarkEmployeeBookingCompleted();
   const startSession = useStartEmployeeBookingSession();
   const cancelBooking = useCancelEmployeeBooking();
-  const booking = bookingQuery.data ?? null;
+  const requestCancelBooking = useRequestCancelEmployeeBooking();
+  const booking = bookingQuery.isError ? null : (bookingQuery.data ?? null);
   const loading = bookingQuery.isLoading;
-
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
+  const isError = bookingQuery.isError;
 
   if (loading) {
     return (
       <AquaBackground>
         <View style={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md }]}>
-          <Skeleton width={44} height={44} radius={sawaaRadius.pill} style={styles.loaderBack} />
+          <BackButton onPress={handleBack} style={{ alignSelf: dir.alignStart }} accessibilityLabel={t('common.back')} />
           <Skeleton width="55%" height={24} radius={sawaaRadius.sm} style={styles.loaderTitle} />
           <Skeleton height={160} radius={sawaaRadius.xl} />
           <Skeleton height={52} radius={sawaaRadius.pill} style={styles.loaderAction} />
@@ -87,7 +93,26 @@ export default function DoctorAppointmentDetailScreen() {
     );
   }
 
-  if (!booking) return null;
+  if (isError) {
+    return (
+      <AquaBackground>
+        <View style={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, flex: 1, justifyContent: 'center' }]}>
+          <BackButton onPress={handleBack} style={{ alignSelf: dir.alignStart, marginBottom: sawaaSpacing.lg }} accessibilityLabel={t('common.back')} />
+          <EmptyState icon="alert" title={t('common.error')} description={t('common.tryAgain')} actionLabel={t('common.retry')} onAction={() => bookingQuery.refetch()} />
+        </View>
+      </AquaBackground>
+    );
+  }
+  if (!booking) {
+    return (
+      <AquaBackground>
+        <View style={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, flex: 1, justifyContent: 'center' }]}>
+          <BackButton onPress={handleBack} style={{ alignSelf: dir.alignStart, marginBottom: sawaaSpacing.lg }} accessibilityLabel={t('common.back')} />
+          <EmptyState icon="calendar-outline" title={t('appointments.notFound')} />
+        </View>
+      </AquaBackground>
+    );
+  }
 
   const bookingType = resolveBookingType(booking.bookingType ?? booking.type);
   const deliveryType = resolveDeliveryType(booking.deliveryType);
@@ -106,7 +131,7 @@ export default function DoctorAppointmentDetailScreen() {
           try {
             await markCompleted.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.back();
+            handleBack();
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t('common.error'), t('common.error'));
@@ -144,7 +169,7 @@ export default function DoctorAppointmentDetailScreen() {
           try {
             await cancelBooking.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.back();
+            handleBack();
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t('common.error'), t('common.error'));
@@ -154,11 +179,37 @@ export default function DoctorAppointmentDetailScreen() {
     ]);
   };
 
+  const handleRequestCancel = () => {
+    Alert.alert(t('appointments.requestCancel'), t('doctor.requestCancelConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.confirm'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await requestCancelBooking.mutateAsync(booking.id);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            await bookingQuery.refetch();
+            Alert.alert(
+              t('appointments.cancellationRequestedTitle'),
+              t('appointments.cancellationRequestedMessage'),
+            );
+          } catch {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(t('common.error'), t('common.error'));
+          }
+        },
+      },
+    ]);
+  };
+
+  const hasUpdate = hasBookingPermission(user, 'update');
   const isCheckedIn = !!booking.checkedInAt;
-  const canStartSession = booking.status === 'confirmed' && !isCheckedIn;
-  const canComplete = booking.status === 'confirmed' && isCheckedIn;
-  const canCancel = booking.status === 'confirmed' || booking.status === 'pending';
-  const hasBarActions = canStartSession || canComplete || canCancel;
+  const canStartSession = hasUpdate && booking.status === 'confirmed' && !isCheckedIn;
+  const canComplete = hasUpdate && booking.status === 'confirmed' && isCheckedIn;
+  const canCancelStatus = booking.status === 'confirmed' || booking.status === 'pending';
+  const cancellationMode = canCancelStatus ? resolveCancellationMode(user) : 'none';
+  const hasBarActions = canStartSession || canComplete || cancellationMode !== 'none';
 
   const infoRows: { icon: React.ElementType; color: string; text: string }[] = [
     {
@@ -183,18 +234,7 @@ export default function DoctorAppointmentDetailScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          onPress={() => router.back()}
-          style={[styles.backBtn, { alignSelf: dir.alignStart }]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back')}
-        >
-          <Glass variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
-            <View style={styles.backInner}>
-              <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
-            </View>
-          </Glass>
-        </Pressable>
+        <BackButton onPress={handleBack} style={{ alignSelf: dir.alignStart }} accessibilityLabel={t('common.back')} />
 
         <Animated.View
           entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}
@@ -268,16 +308,18 @@ export default function DoctorAppointmentDetailScreen() {
               icon={<Check size={16} color={theme.colors.primaryForeground} />}
             />
           )}
-          {canCancel && (
+          {cancellationMode !== 'none' && (
             <Pressable
-              onPress={handleEmployeeCancel}
+              onPress={cancellationMode === 'direct_cancel' ? handleEmployeeCancel : handleRequestCancel}
               accessibilityRole="button"
               style={styles.barAction}
             >
               <Glass variant="strong" radius={sawaaRadius.pill}>
                 <View style={styles.cancelInner}>
                   <Text style={[styles.cancelText, { fontFamily: f600, fontWeight: '600', writingDirection: dir.writingDirection }]}>
-                    {t('doctor.cancelBooking')}
+                    {cancellationMode === 'direct_cancel'
+                      ? t('doctor.cancelBooking')
+                      : t('appointments.requestCancel')}
                   </Text>
                 </View>
               </Glass>
@@ -288,48 +330,3 @@ export default function DoctorAppointmentDetailScreen() {
     </AquaBackground>
   );
 }
-
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  scroll: { flexGrow: 1, paddingHorizontal: sawaaSpacing.xl, gap: sawaaSpacing.lg },
-  loaderBack: { marginBottom: sawaaSpacing.sm },
-  loaderTitle: { marginBottom: sawaaSpacing.sm },
-  loaderAction: { marginTop: sawaaSpacing.sm },
-  backBtn: { alignSelf: 'flex-start' },
-  backCircle: { width: 44, height: 44 },
-  backInner: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerRow: { justifyContent: 'space-between', alignItems: 'center' },
-  title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
-    color: colors.ink[900],
-  },
-  infoCard: { marginBottom: sawaaSpacing.sm },
-  infoList: { gap: sawaaSpacing.md },
-  infoRow: { alignItems: 'center', gap: sawaaSpacing.md },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: sawaaRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoText: {
-    flex: 1,
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: colors.ink[900],
-  },
-  barAction: { flex: 1 },
-  cancelInner: {
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: sawaaSpacing.md,
-  },
-  cancelText: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: colors.accent.coral,
-    textAlign: 'center',
-  },
-})

@@ -2,6 +2,16 @@ import { renderBlocksToHtml } from './render-blocks';
 import type { EmailBlock } from './email-block.types';
 
 describe('renderBlocksToHtml', () => {
+  it('declares Arabic language and RTL direction on the outer email wrapper', () => {
+    const blocks: EmailBlock[] = [{ id: 'reminder', type: 'paragraph', text: 'مرحباً {{client_name}}، موعدك غداً.' }];
+    const html = renderBlocksToHtml(blocks);
+    const wrapper = html.split('\n')[0];
+
+    expect(wrapper).toMatch(/^<div\b[^>]*\bdir="rtl"/);
+    expect(wrapper).toMatch(/^<div\b[^>]*\blang="ar"/);
+    expect(html).toContain('مرحباً {{client_name}}، موعدك غداً.');
+  });
+
   it('should render heading', () => {
     const blocks: any[] = [{ type: 'heading', text: 'Hello', level: 1 }];
     const html = renderBlocksToHtml(blocks);

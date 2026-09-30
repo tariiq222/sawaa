@@ -68,6 +68,30 @@ describe('OnBookingReminderHandler', () => {
     );
   });
 
+  it.each(['UTC', 'America/New_York'])(
+    'formats Arabic reminder email time in Riyadh when the host defaults to %s',
+    async (hostTimeZone) => {
+      // Jest config pins TZ to Riyadh; emulate another host default without
+      // replacing Intl formatting or overriding an explicit caller timezone.
+      const format = Date.prototype.toLocaleTimeString;
+      const spy = jest.spyOn(Date.prototype, 'toLocaleTimeString').mockImplementation(function (this: Date, locales, options) {
+        return format.call(this, locales, { timeZone: hostTimeZone, ...options });
+      });
+      try {
+        await handler.handle(envelope({
+          scheduledAt: '2026-05-23T22:30:00Z',
+          clientEmail: 'client@example.com',
+        }) as never);
+
+        expect(notify.execute).toHaveBeenCalledWith(expect.objectContaining({
+          emailVars: expect.objectContaining({ time: '٠١:٣٠ ص' }),
+        }));
+      } finally {
+        spy.mockRestore();
+      }
+    },
+  );
+
   it('adds push channel when push tokens present', async () => {
     pushTargets.execute.mockResolvedValueOnce({ pushEnabled: true, tokens: ['tok-1'] });
     await handler.handle(envelope() as never);

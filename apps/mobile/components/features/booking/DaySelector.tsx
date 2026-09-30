@@ -1,12 +1,10 @@
 import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/ThemeProvider';
 import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 
@@ -23,19 +21,19 @@ const MONTHS_EN = [
 
 interface DaySelectorProps {
   days: Date[];
-  dayIdx: number;
+  dayIdx: number | null;
+  /** Null while loading or after a failed probe; dates without slots cannot be selected. */
+  availabilityByDate?: Record<string, boolean> | null;
   onSelect: (idx: number) => void;
   dir: DirState;
   f500: string;
   f700: string;
 }
 
-export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySelectorProps) {
+export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f500, f700 }: DaySelectorProps) {
   const sawaaColors = useSawaaColors();
-  const { scheme } = useTheme();
-  const action = getSawaaRoles(scheme).action;
   const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
-  const selectedDay = days[dayIdx];
+  const selectedDay = days[dayIdx ?? 0];
   const monthLabel = dir.isRTL
     ? `${MONTHS_AR[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`
     : `${MONTHS_EN[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`;
@@ -61,33 +59,32 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
       >
         {days.map((d, i) => {
           const isActive = i === dayIdx;
+          const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const canSelect = availabilityByDate === undefined || availabilityByDate?.[dateKey] === true;
           const dow = d.getDay();
           return (
-            <Pressable
+            <Glass
               key={d.toISOString()}
               onPress={() => {
+                if (!canSelect) return;
                 Haptics.selectionAsync();
                 onSelect(i);
               }}
+              disabled={!canSelect}
               accessibilityRole="button"
-              accessibilityState={{ selected: isActive }}
-              style={[styles.dayCell, !isActive && styles.dayCellInactive]}
+              accessibilityState={{ selected: isActive, disabled: !canSelect }}
+              variant={isActive ? 'strong' : 'regular'}
+              radius={sawaaRadius.md}
+              tint={isActive ? withAlpha(sawaaColors.teal[600], 0.16) : undefined}
+              style={[styles.dayCell, isActive && styles.dayCellActive, !canSelect && styles.dayCellUnavailable]}
             >
-              {isActive ? (
-                <LinearGradient
-                  colors={action.gradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : null}
               <Text
                 style={[
                   styles.dayName,
                   {
                     fontFamily: f500,
                     fontWeight: '500',
-                    color: isActive ? action.foreground : sawaaColors.ink[700],
+                    color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700],
                   },
                 ]}
               >
@@ -96,12 +93,12 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
               <Text
                 style={[
                   styles.dayNum,
-                  { fontFamily: f700, color: isActive ? action.foreground : sawaaColors.ink[900] },
+                  { fontFamily: f700, color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[900] },
                 ]}
               >
                 {dir.isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate()}
               </Text>
-            </Pressable>
+            </Glass>
           );
         })}
       </LocalizedHorizontalScroll>
@@ -129,11 +126,8 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSh
     alignItems: 'center',
     overflow: 'hidden',
   },
-  dayCellInactive: {
-    backgroundColor: sawaaColors.glass.bgStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: sawaaColors.glass.border,
-  },
+  dayCellActive: { borderWidth: 1.5, borderColor: sawaaColors.teal[600] },
+  dayCellUnavailable: { opacity: 0.35 },
   dayName: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,

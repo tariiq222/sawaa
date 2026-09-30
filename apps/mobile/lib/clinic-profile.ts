@@ -1,4 +1,4 @@
-import { getCategoryBookingServices } from '@sawaa/shared/catalog';
+import { getCategoryBookingServices, selectBookableClinicEntries } from '@sawaa/shared/catalog';
 import type { PublicCatalogRaw, PublicService } from '@/services/client/catalog';
 
 /** A scoped profile must never widen an invalid clinic/service link into all
@@ -24,4 +24,27 @@ export function getProfileBookingServices(
   const allowed = services.filter((service) => employeeIds.has(service.id));
   if (serviceId) return allowed.filter((service) => service.id === serviceId);
   return allowed;
+}
+
+/** Group already-scoped choices by clinic; standalone services keep their identity.
+ * Display assignments even when the practitioner is temporarily not bookable;
+ * the profile CTA independently enforces the practitioner's booking status. */
+export function getProfileBookingGroups(
+  catalog: PublicCatalogRaw,
+  services: readonly PublicService[],
+) {
+  const allowedIds = new Set(services.map((service) => service.id));
+  const clinics = selectBookableClinicEntries(catalog, [
+    { serviceIds: [...allowedIds], isBookable: true },
+  ]).map((entry) => ({
+    ...entry,
+    services: services.filter((service) => entry.serviceIds.includes(service.id)),
+  }));
+  const clinicServiceIds = new Set(clinics.flatMap((clinic) => clinic.services.map((service) => service.id)));
+  const standaloneServices = services.filter((service) => !clinicServiceIds.has(service.id));
+  const serviceGroups = [...new Set(standaloneServices.map((service) => service.categoryId))].map((categoryId) => ({
+    category: catalog.categories.find((category) => category.id === categoryId),
+    services: standaloneServices.filter((service) => service.categoryId === categoryId),
+  }));
+  return { clinics, serviceGroups };
 }

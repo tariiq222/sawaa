@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Users } from 'lucide-react-native';
+import { CalendarDays, CircleDollarSign, Clock3, Users } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
+import { BackButton } from '@/components/ui/BackButton';
 import { useBookGroupSession, useGroupSession } from '@/hooks/queries';
 import { resolveEnrollmentNextStep } from '@/services/client/group-sessions';
 import { useDir } from '@/hooks/useDir';
@@ -41,8 +42,6 @@ export default function GroupDetailScreen() {
   const groupQuery = useGroupSession(id);
   const book = useBookGroupSession();
   const group = groupQuery.data;
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
-  const backSymbol = (dir.isRTL ? 'chevron.right' : 'chevron.left') as React.ComponentProps<typeof AppIcon>['sf'];
 
   const isClosed = Boolean(group?.isFull);
   // Keep the enrollment action available when a program is full: the server
@@ -84,9 +83,7 @@ export default function GroupDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.headerRow, { flexDirection: dir.row }]}> 
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-            <AppIcon sf={backSymbol} fallback={BackIcon} size={24} color={colors.ink[900]} strokeWidth={1.5} />
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
           <ThemedText variant="subheading">{t('groups.title')}</ThemedText>
           <View style={styles.backBtn} />
         </View>

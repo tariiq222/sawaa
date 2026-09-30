@@ -4,6 +4,7 @@ import { EventBusService, type DomainEventEnvelope } from '../../../infrastructu
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
 import { GetClientPushTargetsHandler } from '../fcm-tokens/get-client-push-targets.handler';
 import { PrismaService } from '../../../infrastructure/database';
+import { BUSINESS_TZ } from '../../../common/timezone';
 import { CaptureNotificationIntentHandler } from '../notification-outbox/capture-notification-intent.handler';
 import { MaterializeNotificationIntentHandler } from '../notification-outbox/materialize-notification-intent.handler';
 import { ResolveNotificationIntentOwnershipHandler } from '../notification-outbox/resolve-notification-intent-ownership.handler';
@@ -50,6 +51,7 @@ export class OnBookingReminderHandler {
     const timeStr = scheduledAt.toLocaleTimeString('ar-SA', {
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: BUSINESS_TZ,
     });
     try {
       const { pushEnabled, tokens } = await this.pushTargets.execute({ clientId: payload.clientId });

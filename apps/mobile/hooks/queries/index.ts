@@ -12,6 +12,7 @@ export { useEmployeeDayBookings, employeeDayBookingsKeys } from './useEmployeeDa
 export { useEmployeeBooking, useEmployeeTodayBookings, employeeBookingKeys } from './useEmployeeBookings';
 export {
   useCancelEmployeeBooking,
+  useRequestCancelEmployeeBooking,
   useMarkEmployeeBookingCompleted,
   useStartEmployeeBookingSession,
 } from './useEmployeeBookingMutations';

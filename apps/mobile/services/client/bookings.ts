@@ -5,6 +5,9 @@ import type {
   DeliveryType,
   LegacyBookingType,
 } from '@/types/booking-enums';
+import { listLegacyTab, rejectsUnknownTab, type BookingListParams } from './booking-tab';
+
+export { bookingTabForStatus } from './booking-tab';
 
 export type { BookingStatus, BookingType, DeliveryType };
 
@@ -125,6 +128,7 @@ export function normalizeClientBooking(raw: unknown): ClientBookingRow {
     const type = stringValue(row.type);
     return {
       ...(raw as ClientBookingRow),
+      status: normalizeStatus(row.status),
       ...(bookingType ? { bookingType: bookingType.toLowerCase() as LegacyBookingType } : {}),
       ...(type ? { type: type.toLowerCase() as LegacyBookingType } : {}),
       ...(typeof row.hasRated === 'boolean' ? { hasRated: row.hasRated } : {}),
@@ -220,20 +224,8 @@ interface CreateBookingData {
   scheduledAt: string;
   durationOptionId?: string;
   notes?: string;
-  /**
-   * Session channel chosen in the booking flow (the service/duration option
-   * pair is IN_PERSON | ONLINE). Sent UPPERCASE because the backend validates
-   * it against the Prisma `DeliveryType` enum — the same boundary rule as
-   * `status`, see `upperStatus` below.
-   */
+  /** Session channel is sent as the uppercase Prisma `DeliveryType` enum. */
   deliveryType?: DeliveryType;
-}
-
-interface ListParams {
-  tab?: 'upcoming' | 'past' | 'cancelled';
-  status?: string | string[];
-  page?: number;
-  limit?: number;
 }
 
 /**
@@ -256,14 +248,19 @@ interface RateData {
 }
 
 export const clientBookingsService = {
-  async list(params?: ListParams) {
+  async list(params?: BookingListParams): Promise<BookingsListResponse> {
     const outgoing = params?.status !== undefined
       ? { ...params, status: upperStatus(params.status) }
       : params;
-    const response = await api.get<unknown>(
-      '/mobile/client/bookings',
-      { params: outgoing },
-    );
+    let response;
+    try {
+      response = await api.get<unknown>('/mobile/client/bookings', { params: outgoing });
+    } catch (error) {
+      if (params?.tab && rejectsUnknownTab(error)) {
+        return listLegacyTab(params, params.tab, (legacyParams) => clientBookingsService.list(legacyParams));
+      }
+      throw error;
+    }
     const body = asRecord(response.data) ?? {};
     const meta = asRecord(body.meta) ?? {};
     const items = Array.isArray(body.items) ? body.items.map(normalizeClientBooking) : [];

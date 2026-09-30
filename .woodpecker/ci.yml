@@ -1,0 +1,18 @@
+# The native macOS agent launches only the isolated nested Docker engine.
+labels:
+  backend: local
+
+when:
+  - event: [pull_request, push, manual]
+    branch: [develop, 'feature/packages-phase-*']
+
+# Caller supplies a standalone checkout and complete Git history.
+skip_clone: true
+
+steps:
+  - name: develop-pr-gates
+    image: bash
+    environment:
+      SAWAA_CI_BASE_REF: origin/develop
+    commands:
+      - bash scripts/ci/run-local.sh

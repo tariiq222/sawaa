@@ -9,16 +9,16 @@ import * as WebBrowser from 'expo-web-browser';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Apple, Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
-import { useTranslation } from 'react-i18next';
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { APP_SCHEME } from '@/constants/config';
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
-import { formatHalalas } from '@/lib/money';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import type { DeliveryType } from '@/types/booking-enums';
 import { useBankTransferSettings } from '@/hooks/queries';
 import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
@@ -35,7 +35,6 @@ export default function BookingPaymentScreen() {
   const colors = useSawaaColors();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
-  const { t } = useTranslation();
   const params = useLocalSearchParams<{
     serviceId?: string;
     employeeId?: string;
@@ -62,11 +61,9 @@ export default function BookingPaymentScreen() {
   const draft = useMemo<BookingPaymentDraft | null>(() => bookingPaymentDraft({ branchId: params.branchId, employeeId: params.employeeId, serviceId: params.serviceId, scheduledAt: params.scheduledAt, durationOptionId: params.durationOptionId, deliveryType: params.deliveryType }), [params.branchId, params.employeeId, params.serviceId, params.scheduledAt, params.durationOptionId, params.deliveryType]);
   const [createdBooking, setCreatedBooking] = useState<{ bookingId: string; invoiceId: string | null } | null>(null);
   const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const total = params.amount ? Number(params.amount) : 0;
-  const formatMoney = (halalas: number) =>
-    `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
+  const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, params.currency, dir.isRTL);
   const methods: Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }> = [
     { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: colors.teal[600] },
     { key: 'apple_pay', icon: <Apple size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.teal[600] },
@@ -199,9 +196,7 @@ export default function BookingPaymentScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
-            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
-          </Glass>
+          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
@@ -285,7 +280,6 @@ export default function BookingPaymentScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,

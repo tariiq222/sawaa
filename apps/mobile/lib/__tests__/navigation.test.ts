@@ -141,4 +141,22 @@ describe('goBackOrHome', () => {
     expect(router.replace).toHaveBeenCalledWith('/home');
     expect(router.back).not.toHaveBeenCalled();
   });
+
+  it('falls back to custom href when provided and screen has no history', () => {
+    const router = { canGoBack: () => false, back: jest.fn(), replace: jest.fn() };
+
+    goBackOrHome(router as never, '/(client)/(tabs)/home');
+
+    expect(router.replace).toHaveBeenCalledWith('/(client)/(tabs)/home');
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it('prefers going back over custom fallback when history exists', () => {
+    const router = { canGoBack: () => true, back: jest.fn(), replace: jest.fn() };
+
+    goBackOrHome(router as never, '/(client)/(tabs)/home');
+
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(router.replace).not.toHaveBeenCalled();
+  });
 });

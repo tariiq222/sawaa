@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { View, ScrollView, StyleSheet, Alert, Pressable, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, Alert, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { Glass } from '@/theme/components/Glass';
 import {
@@ -19,6 +18,7 @@ import {
 import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -57,7 +57,6 @@ export default function AvailabilityScreen() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   const toggleDay = useCallback((dayIndex: number) => {
     setSchedule((prev) => toggleAvailabilityDay(prev, dayIndex));
@@ -100,18 +99,7 @@ export default function AvailabilityScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          onPress={() => router.back()}
-          style={[styles.backBtn, { alignSelf: dir.alignStart }]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back')}
-        >
-          <Glass variant="base" radius={sawaaRadius.pill} style={styles.backCircle}>
-            <View style={styles.backInner}>
-              <BackIcon size={22} strokeWidth={1.5} color={colors.ink[900]} />
-            </View>
-          </Glass>
-        </Pressable>
+        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart, marginBottom: sawaaSpacing.sm }} accessibilityLabel={t('common.back')} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
@@ -178,9 +166,6 @@ export default function AvailabilityScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg },
-  backBtn: { alignSelf: 'flex-start', marginBottom: sawaaSpacing.sm },
-  backCircle: { width: 44, height: 44 },
-  backInner: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,

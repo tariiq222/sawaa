@@ -232,10 +232,12 @@
   },
   "employeeProfile": {
     "about": "نبذة",
+    "clinics": "العيادات",
     "services": "الخدمات",
     "ratingCount": "({{count}} تقييم)",
     "noServices": "لا توجد خدمات متاحة",
     "selectService": "اختر الخدمة",
+    "selectBookingOption": "اختر العيادة أو الخدمة للمتابعة",
     "unavailable": "الحجز غير متاح",
     "priceAtNextStep": "يظهر السعر في الخطوة التالية",
     "bookNow": "احجز جلسة"
@@ -305,6 +307,7 @@
     "startSession": "بدء الجلسة",
     "cancelBooking": "إلغاء الموعد",
     "cancelConfirm": "هل أنت متأكد من إلغاء هذا الموعد؟ لا يمكن التراجع عن هذا الإجراء.",
+    "requestCancelConfirm": "هل ترغب في إرسال طلب إلغاء لهذا الموعد لمراجعة الإدارة؟",
     "clientRecord": "سجل المريض",
     "visitHistory": "سجل الزيارات",
     "visits": "زيارات",
@@ -470,10 +473,21 @@
       }
     },
     "privacySecurity": "الخصوصية والأمان",
+    "privacyPolicy": "سياسة الخصوصية",
     "appearance": "المظهر"
   },
   "notifications": {
     "title": "الإشعارات",
+    "all": "الكل",
+    "unreadFilter": "غير المقروءة",
+    "noUnread": "لا توجد إشعارات غير مقروءة",
+    "now": "الآن",
+    "newCount_zero": "لا إشعارات جديدة",
+    "newCount_one": "إشعار جديد واحد",
+    "newCount_two": "إشعاران جديدان",
+    "newCount_few": "{{count}} إشعارات جديدة",
+    "newCount_many": "{{count}} إشعارًا جديدًا",
+    "newCount_other": "{{count}} إشعار جديد",
     "loadMore": "عرض المزيد",
     "loadingMore": "جارٍ تحميل المزيد…",
     "loadError": "تعذّر تحميل الإشعارات. حاول مرة أخرى.",

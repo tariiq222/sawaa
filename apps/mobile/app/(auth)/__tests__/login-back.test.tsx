@@ -40,6 +40,10 @@ jest.mock('react-native-reanimated', () => {
 });
 
 jest.mock('@/theme', () => ({ Glass: require('react-native').View }));
+jest.mock('@/theme/components/Glass', () => ({
+  Glass: ({ children, onPress, ...props }: React.PropsWithChildren<{ onPress?: () => void }>) =>
+    require('react').createElement(require('react-native').Pressable, { onPress, ...props }, children),
+}));
 jest.mock('@/theme/sawaa', () => {
   const { View, Pressable, Text } = require('react-native');
   return {

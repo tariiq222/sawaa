@@ -7,6 +7,7 @@ const mockPush = jest.fn();
 let mockScheme: 'light' | 'dark' = 'dark';
 let mockReduceMotion = false;
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace, push: mockPush }) }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ row: 'row-reverse' }) }));
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
@@ -74,13 +75,13 @@ describe('GuestDock', () => {
       const value = StyleSheet.flatten(screen.getByTestId('dock-glass-lens').props.style).transform[0].translateX;
       return typeof value === 'number' ? value : value.__getValue();
     };
-    expect(lensPosition()).toBe(-10);
-    expect(StyleSheet.flatten(screen.getByTestId('dock-glass-lens').props.style).width).toBe(90);
+    expect(lensPosition()).toBe(0);
+    expect(StyleSheet.flatten(screen.getByTestId('dock-glass-lens').props.style).width).toBe(70);
     fireEvent(tabs[0], 'layout', { nativeEvent: { layout: { x: 50, width: 70 } } });
-    expect(lensPosition()).toBe(40);
+    expect(lensPosition()).toBe(50);
   });
 
-  it('expands the lens only while a tab is pressed', () => {
+  it('compresses the selected lens only while a tab is pressed', () => {
     mockReduceMotion = true;
     const screen = render(<GuestDock active="home" />);
     const tab = screen.getByRole('tab', { name: 'tabs.home' });
@@ -88,10 +89,10 @@ describe('GuestDock', () => {
       const value = StyleSheet.flatten(screen.getByTestId('dock-glass-lens').props.style).transform[1].scale;
       return typeof value === 'number' ? value : value.__getValue();
     };
-    expect(lensScale()).toBe(0.78);
-    fireEvent(tab, 'pressIn');
     expect(lensScale()).toBe(1);
+    fireEvent(tab, 'pressIn');
+    expect(lensScale()).toBe(0.96);
     fireEvent(tab, 'pressOut');
-    expect(lensScale()).toBe(0.78);
+    expect(lensScale()).toBe(1);
   });
 });

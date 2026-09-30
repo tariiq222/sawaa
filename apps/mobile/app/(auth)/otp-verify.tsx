@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ChevronLeft } from 'lucide-react-native';
+import { BackButton } from '@/components/ui/BackButton';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -58,7 +58,7 @@ export default function OtpVerifyScreen() {
   const { identifier = '', purpose = 'register', maskedIdentifier = '' } = params;
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  const { theme, isRTL } = useTheme();
+  const { theme } = useTheme();
   const colors = useSawaaColors();
 
   const [otp, setOtp] = useState('');
@@ -170,7 +170,6 @@ export default function OtpVerifyScreen() {
   }, [otp, handleVerify, loading]);
 
   const isComplete = otp.length === OTP_LENGTH;
-  const BackIcon = isRTL ? ChevronRight : ChevronLeft;
 
   return (
     <AquaBackground>
@@ -185,21 +184,7 @@ export default function OtpVerifyScreen() {
             { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 },
           ]}
         >
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
-            }}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.buttonBack')}
-          >
-            <BackIcon
-              size={24}
-              strokeWidth={1.5}
-              color={theme.colors.textPrimary}
-            />
-          </Pressable>
+          <BackButton onPress={() => router.back()} style={styles.backBtn} />
 
           <View style={styles.header}>
             <Image

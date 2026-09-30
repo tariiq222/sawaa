@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../common/security/escape-html';
+import { BUSINESS_TZ } from '../../../common/timezone';
 import {
   NOTIFICATION_OUTBOX_CONSUMERS,
   type NotificationIntentPayload,
@@ -53,7 +54,7 @@ export function notificationEmailDefinition(
       variables: {
         client_name: clientName,
         service_name: typeof value.serviceName === 'string' ? value.serviceName : '',
-        time: scheduledAt.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+        time: scheduledAt.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', timeZone: BUSINESS_TZ }),
       },
     };
   }

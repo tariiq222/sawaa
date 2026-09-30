@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/theme/useTheme';
-import { withAlpha } from '@/theme/sawaa/tokens';
+import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
 
 const statusColors = (colors: ReturnType<typeof useTheme>['theme']['colors']): Record<string, string> => ({
   pending: colors.status.pending,
@@ -27,15 +27,27 @@ export function StatusPill({ status, label }: StatusPillProps) {
 
   return (
     <View
-      style={{
-        backgroundColor: withAlpha(color, 0.1),
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        alignSelf: 'flex-start',
-      }}
+      style={[styles.pill, {
+        backgroundColor: withAlpha(color, 0.14),
+        borderColor: withAlpha(color, 0.3),
+      }]}
     >
-      <Text style={{ color, fontSize: 11, fontWeight: '600' }}>{label}</Text>
+      <Text style={[styles.label, { color }]}>{label}</Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  pill: {
+    borderRadius: sawaaRadius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: sawaaSpacing.md,
+    paddingVertical: sawaaSpacing.xs,
+    alignSelf: 'flex-start',
+  },
+  label: {
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
+    fontWeight: '600',
+  },
+});

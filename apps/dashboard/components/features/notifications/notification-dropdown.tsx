@@ -86,7 +86,7 @@ function NotificationRow({
 
 export function NotificationDropdown() {
   const { locale, t } = useLocale()
-  const { data, isLoading } = useDashboardNotifications()
+  const { data, isLoading, isError, refetch } = useDashboardNotifications()
   const { data: unreadCount } = useUnreadCount()
   const { markAllMut, markOneMut } = useNotificationMutations()
 
@@ -99,7 +99,7 @@ export function NotificationDropdown() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Notifications"
+          aria-label={t("notifications.title")}
           data-testid="notifications-bell"
           className="relative size-9 hover:text-primary hover:bg-primary/10"
         >
@@ -150,6 +150,15 @@ export function NotificationDropdown() {
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={`skeleton-${i}`} className="h-14 rounded-md" />
                 ))}
+              </div>
+            ) : isError ? (
+              <div className="flex flex-col items-center gap-2 p-4 text-center">
+                <p role="alert" className="text-sm text-muted-foreground">
+                  {t("notifications.loadError")}
+                </p>
+                <Button variant="ghost" size="sm" onClick={() => void refetch()}>
+                  {t("notifications.retry")}
+                </Button>
               </div>
             ) : recentNotifications.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">

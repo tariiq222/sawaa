@@ -36,10 +36,13 @@ import ProfileScreen from '../profile';
 describe('profile rows lead to purpose-specific pages', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('sends notification settings to its own screen, not the general settings page', () => {
+  it('keeps preferences in settings and leaves one entry per care destination', () => {
     const screen = render(<ProfileScreen />);
-    fireEvent.press(screen.getByText('settings.pushNotifications'));
-    expect(mockPush).toHaveBeenCalledWith('/(client)/settings-notifications');
+    expect(screen.queryByText('settings.pushNotifications')).toBeNull();
+    expect(screen.queryByText('settings.darkMode')).toBeNull();
+    expect(screen.queryByText('packages.balance')).toBeNull();
+    expect(screen.queryByText('settings.privacySecurity')).toBeNull();
+    expect(screen.getAllByText('settings.title')).toHaveLength(1);
   });
 
   it('sends the edit control to profile editing, not the general settings page', () => {
@@ -97,7 +100,7 @@ describe('profile rows lead to purpose-specific pages', () => {
 
   it('never routes two different rows to the same destination', () => {
     const screen = render(<ProfileScreen />);
-    fireEvent.press(screen.getByText('settings.pushNotifications'));
+    fireEvent.press(screen.getByText('packages.title'));
     fireEvent.press(screen.getByText('profile.edit'));
     fireEvent.press(screen.getByText('settings.title'));
 

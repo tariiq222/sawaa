@@ -20,8 +20,6 @@ import { Calendar, Clock, MapPin, ChevronRight, CalendarPlus, CreditCard } from 
 
 interface ClientBookingsListProps {
   locale: Locale;
-  initialBookings?: ClientBookingItem[];
-  initialTotal?: number;
 }
 
 type Tab = 'upcoming' | 'past' | 'cancelled';

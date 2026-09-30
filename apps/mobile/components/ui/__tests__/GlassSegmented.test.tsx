@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 jest.mock('@/theme/useTheme', () => ({
   useTheme: () => ({
@@ -70,5 +71,21 @@ describe('GlassSegmented', () => {
     );
     expect(screen.getByText('3')).toBeTruthy();
     expect(screen.getByText('0')).toBeTruthy();
+  });
+
+  it('gives the appointments navigation style a light selected pill and branded text', () => {
+    const screen = render(
+      <GlassSegmented options={OPTIONS} value="ar" onChange={jest.fn()} appearance="navigation" />,
+    );
+    const selected = screen.getByRole('tab', { name: 'العربية' });
+    const inactive = screen.getByRole('tab', { name: 'English' });
+    const selectedStyle = StyleSheet.flatten(selected.props.style);
+    const inactiveStyle = StyleSheet.flatten(inactive.props.style);
+    const selectedText = screen.getByText('العربية');
+
+    expect(selectedStyle.backgroundColor).not.toBe('#087a6f');
+    expect(selectedStyle.backgroundColor).toMatch(/^#[0-9a-f]{8}$/i);
+    expect(inactiveStyle.backgroundColor).toBeUndefined();
+    expect(StyleSheet.flatten(selectedText.props.style).color).toBe('#066962');
   });
 });

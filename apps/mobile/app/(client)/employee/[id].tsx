@@ -10,10 +10,11 @@ import { useTranslation } from 'react-i18next';
 import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { usePublicCatalog, useTherapist } from '@/hooks/queries';
-import { getProfileBookingServices } from '@/lib/clinic-profile';
+import { getProfileBookingGroups, getProfileBookingServices } from '@/lib/clinic-profile';
 
 export default function EmployeeProfileScreen() {
   const { id, clinicId, serviceId } = useLocalSearchParams<{ id: string; clinicId?: string; serviceId?: string }>();
@@ -26,7 +27,6 @@ export default function EmployeeProfileScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const { data: employee, isLoading: employeeLoading } = useTherapist(id);
   const { data: catalog, isLoading: catalogLoading } = usePublicCatalog();
@@ -45,6 +45,9 @@ export default function EmployeeProfileScreen() {
   const services = catalog && employee
     ? getProfileBookingServices(catalog, employee.serviceIds, clinicId, serviceId)
     : [];
+  const { clinics, serviceGroups } = catalog
+    ? getProfileBookingGroups(catalog, services)
+    : { clinics: [], serviceGroups: [] };
   const selectedServiceId = services.some((service) => service.id === chosenServiceId)
     ? chosenServiceId
     : services.length === 1 ? services[0].id : null;
@@ -56,15 +59,30 @@ export default function EmployeeProfileScreen() {
   const book = () => {
     if (!employee?.isBookable || !selectedServiceId) return;
     const selectedService = services.find((service) => service.id === selectedServiceId);
-    const directClinic = catalog?.categories.find((category) =>
-      category.id === selectedService?.categoryId && category.bookingMode === 'DIRECT' &&
+    const selectedClinic = catalog?.categories.find((category) =>
+      category.id === selectedService?.categoryId &&
       (category.kind ?? 'CLINIC') === 'CLINIC' && category.isActive !== false && category.archivedAt == null,
     );
-    const bookingClinicId = clinicId ?? directClinic?.id;
+    const bookingClinicId = clinicId ?? selectedClinic?.id;
     router.push({
       pathname: '/(client)/booking/[serviceId]',
       params: { serviceId: selectedServiceId, employeeId: employee.id, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}) },
     });
+  };
+
+  const serviceOption = (service: typeof services[number], name?: string) => {
+    const selected = service.id === selectedServiceId;
+    return (
+      <Glass key={service.id} onPress={() => setChosenServiceId(service.id)}
+        variant={selected ? 'strong' : 'regular'} radius={sawaaRadius.md}
+        accessibilityRole="radio" accessibilityState={{ selected }}
+        testID={`employee-service-${service.id}`}
+        style={[styles.serviceOption, selected && styles.serviceSelected]}>
+        <Text style={[styles.serviceName, { fontFamily: selected ? f700 : f600, textAlign: dir.textAlign }]}>
+          {name ?? (dir.isRTL ? service.nameAr : service.nameEn) ?? service.nameAr}
+        </Text>
+      </Glass>
+    );
   };
 
   return (
@@ -74,10 +92,7 @@ export default function EmployeeProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive
-            accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
-            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
-          </Glass>
+          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(80).duration(700).easing(Easing.out(Easing.cubic))}>
@@ -113,32 +128,43 @@ export default function EmployeeProfileScreen() {
           </Animated.View>
         ) : null}
 
-        <Animated.View entering={FadeInDown.delay(260).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('employeeProfile.services')}</Text>
-          {services.length > 0 ? (
+        <Animated.View style={styles.services} entering={FadeInDown.delay(260).duration(700).easing(Easing.out(Easing.cubic))}>
+          {clinics.length > 0 ? (
             <View style={styles.services}>
-              {services.map((service) => {
-                const serviceCategory = catalog?.categories.find((category) => category.id === service.categoryId);
-                const directClinic = serviceCategory?.bookingMode === 'DIRECT' ? serviceCategory : undefined;
-                const name = directClinic
-                  ? (dir.isRTL ? directClinic.nameAr : directClinic.nameEn) ?? directClinic.nameAr
-                  : (dir.isRTL ? service.nameAr : service.nameEn) ?? service.nameAr;
-                const selected = service.id === selectedServiceId;
+              <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('employeeProfile.clinics')}</Text>
+              {clinics.map(({ category, bookingMode, directServiceId, services: clinicServices }) => {
+                const name = (dir.isRTL ? category.nameAr : category.nameEn) ?? category.nameAr;
+                if (bookingMode === 'DIRECT') {
+                  const internalService = clinicServices.find((service) => service.id === directServiceId);
+                  return internalService ? serviceOption(internalService, name) : null;
+                }
                 return (
-                  <Pressable key={service.id} onPress={() => setChosenServiceId(service.id)}
-                    accessibilityRole="radio" accessibilityState={{ selected }}
-                    testID={`employee-service-${service.id}`}
-                    style={[styles.serviceOption, selected && styles.serviceSelected]}>
-                    <Text style={[styles.serviceName, { fontFamily: selected ? f700 : f600, textAlign: dir.textAlign }]}>{name}</Text>
-                  </Pressable>
+                  <Glass key={category.id} testID={`employee-clinic-${category.id}`} variant="regular" radius={sawaaRadius.lg} style={styles.clinicGroup}>
+                    <Text accessibilityRole="header" style={[styles.clinicName, { fontFamily: f700, textAlign: dir.textAlign }]}>{name}</Text>
+                    {clinicServices.map((service) => serviceOption(service))}
+                  </Glass>
                 );
               })}
             </View>
-          ) : (
+          ) : null}
+          {serviceGroups.length > 0 ? (
+            <View style={styles.services}>
+              <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('employeeProfile.services')}</Text>
+              {serviceGroups.map(({ category, services: groupServices }) => (
+                <View key={category?.id ?? 'uncategorized'} style={styles.services}>
+                  {category ? <Text accessibilityRole="header" style={[styles.clinicName, { fontFamily: f600, textAlign: dir.textAlign }]}>
+                    {(dir.isRTL ? category.nameAr : category.nameEn) ?? category.nameAr}
+                  </Text> : null}
+                  {groupServices.map((service) => serviceOption(service))}
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {services.length === 0 ? (
             <Text style={[styles.emptyText, { fontFamily: f400, textAlign: dir.textAlign }]}>
               {employeeLoading || catalogLoading ? t('therapists.loading') : t('employeeProfile.noServices')}
             </Text>
-          )}
+          ) : null}
         </Animated.View>
       </ScrollView>
 
@@ -148,7 +174,7 @@ export default function EmployeeProfileScreen() {
           <View style={[styles.ctaRow, { flexDirection: dir.row }]}>
             <Text style={[styles.ctaHint, { fontFamily: f400 }]}>
               {canBook ? t('employeeProfile.priceAtNextStep') : services.length > 1 && employee?.isBookable
-                ? t('employeeProfile.selectService') : t('employeeProfile.unavailable')}
+                ? t('employeeProfile.selectBookingOption') : t('employeeProfile.unavailable')}
             </Text>
             <Pressable onPress={book} disabled={!canBook} accessibilityRole="button"
               accessibilityState={{ disabled: !canBook }} style={[styles.ctaBtnPress, !canBook && styles.ctaDisabled]}>
@@ -167,7 +193,6 @@ export default function EmployeeProfileScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 18 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   heroCard: { padding: 18 },
   heroRow: { alignItems: 'center', gap: 14 },
   avatar: { width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
@@ -181,8 +206,10 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   sectionTitle: { fontSize: 14, color: colors.ink[900], marginBottom: 8 },
   aboutText: { fontSize: 12.5, color: colors.ink[700], lineHeight: 22 },
   services: { gap: 8 },
-  serviceOption: { borderRadius: 14, borderWidth: 1, borderColor: colors.ink[400], padding: 12 },
-  serviceSelected: { borderColor: colors.teal[600], backgroundColor: colors.teal[50] },
+  clinicGroup: { gap: 8, padding: 12 },
+  clinicName: { fontSize: 14, color: colors.ink[900], marginBottom: 2 },
+  serviceOption: { padding: 12 },
+  serviceSelected: { borderWidth: 1.5, borderColor: colors.teal[600] },
   serviceName: { fontSize: 13, color: colors.ink[900] },
   emptyText: { fontSize: 12, color: colors.ink[500] },
   ctaWrap: { position: 'absolute', left: 16, right: 16 },

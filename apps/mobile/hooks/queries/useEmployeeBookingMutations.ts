@@ -20,6 +20,10 @@ export function useStartEmployeeBookingSession() {
   return useEmployeeBookingAction(async (id) => employeeBookingsService.startSession(id));
 }
 
+export function useRequestCancelEmployeeBooking() {
+  return useEmployeeBookingAction(async (id) => employeeBookingsService.requestCancellation(id, ''));
+}
+
 export function useCancelEmployeeBooking() {
   return useEmployeeBookingAction(async (id) => employeeBookingsService.employeeCancel(id));
 }

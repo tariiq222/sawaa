@@ -7,13 +7,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react-native';
+import { Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useBooking, useRateBooking } from '@/hooks/queries';
@@ -38,7 +39,6 @@ export default function RateScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const [rating, setRating] = useState(0);
   const [tags, setTags] = useState<Set<number>>(new Set());
   const [note, setNote] = useState('');
@@ -115,9 +115,7 @@ export default function RateScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={[styles.backBtn, { alignSelf: dir.alignStart }]}>
-            <BackIcon size={22} color={colors.ink[700]} strokeWidth={1.75} />
-          </Glass>
+          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
@@ -281,7 +279,6 @@ export default function RateScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>, theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 14 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   title: { fontSize: 24, color: colors.ink[900], marginTop: 8, paddingHorizontal: 4 },
   subtitle: { fontSize: 12.5, color: colors.ink[500], marginTop: 4, paddingHorizontal: 4 },
   therapistCard: { padding: 14 },

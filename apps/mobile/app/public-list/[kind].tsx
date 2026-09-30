@@ -3,7 +3,6 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { useClinics, useTherapists, useGroupSessions, usePackageFamilies } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
@@ -13,7 +12,7 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { GuestDock, type GuestDockSection } from '@/components/features/home/GuestDock';
 import { Avatar } from '@/components/ui/Avatar';
-import { AppIcon } from '@/components/ui/AppIcon';
+import { BackButton } from '@/components/ui/BackButton';
 import { useAppSelector } from '@/hooks/use-redux';
 import { goBackOrHome } from '@/lib/navigation';
 
@@ -65,11 +64,7 @@ export default function PublicListScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: isGuest ? insets.bottom + 120 : insets.bottom + 40 }]}
         ListHeaderComponent={(
           <View style={styles.header}>
-            <Glass variant="clear" radius={18} style={[styles.back, { alignSelf: dir.alignStart }]}
-              onPress={() => goBackOrHome(router)}
-              accessibilityLabel={t('a11y.buttonBack')} interactive>
-              <AppIcon sf={dir.isRTL ? 'chevron.right' : 'chevron.left'} fallback={dir.isRTL ? ChevronRight : ChevronLeft} size={21} color={colors.teal[700]} />
-            </Glass>
+            <BackButton onPress={() => goBackOrHome(router)} style={{ alignSelf: dir.alignStart }} />
             <Text accessibilityRole="header" style={[styles.title, { fontFamily: bold, textAlign: dir.textAlign }]}>{title}</Text>
             {valid && loading ? <ActivityIndicator color={colors.teal[700]} /> : null}
           </View>
@@ -109,7 +104,6 @@ export default function PublicListScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: 16, gap: 12, flexGrow: 1 },
   header: { gap: 14, marginBottom: 16 },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { color: colors.ink[900], fontSize: 24 },
   card: { marginBottom: 12 },
   gridRow: { justifyContent: 'space-between', gap: 10 },
