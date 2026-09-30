@@ -38151,6 +38151,111 @@
         ]
       }
     },
+    "/api/v1/mobile/employee/bookings/{id}/start-meeting": {
+      "get": {
+        "operationId": "MobileEmployeeBookingsController_startMeeting_v1",
+        "parameters": [
+          {
+            "description": "Booking ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bookingId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "durationMins": {
+                      "type": "integer"
+                    },
+                    "meetingStatus": {
+                      "enum": [
+                        "PENDING",
+                        "CREATED",
+                        "FAILED",
+                        "CANCELLED"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "scheduledAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "startUrl": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Meeting start details; startUrl is null until the meeting has been created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the Zoom host link and timing for an assigned online booking",
+        "tags": [
+          "Mobile Employee / Bookings"
+        ]
+      }
+    },
     "/api/v1/mobile/employee/clients": {
       "get": {
         "operationId": "MobileEmployeeClientsController_listMyClients_v1",

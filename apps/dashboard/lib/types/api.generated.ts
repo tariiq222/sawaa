@@ -3863,6 +3863,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/employee/bookings/{id}/start-meeting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the Zoom host link and timing for an assigned online booking */
+        get: operations["MobileEmployeeBookingsController_startMeeting_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/employee/clients": {
         parameters: {
             query?: never;
@@ -31851,6 +31868,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmployeeBookingsController_startMeeting_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Meeting start details; startUrl is null until the meeting has been created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        bookingId?: string;
+                        durationMins?: number;
+                        /** @enum {string|null} */
+                        meetingStatus?: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+                        /** Format: date-time */
+                        scheduledAt?: string;
+                        startUrl?: string | null;
+                    };
                 };
             };
             /** @description Validation failed */
