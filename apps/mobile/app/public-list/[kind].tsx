@@ -1,19 +1,30 @@
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { ClinicCard, filterClinics } from '@/components/features/directory/ClinicCard';
+import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
+import { ServiceRow } from '@/components/features/directory/ServiceRow';
+import { TherapistCard } from '@/components/features/directory/TherapistCard';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useClinics, useTherapists, useGroupSessions, usePackageFamilies } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
+import { applyTherapistFilters } from '@/features/therapists/therapistsFilter';
+import type { ClinicEntry } from '@/lib/clinics';
+import { goBackOrHome } from '@/lib/navigation';
+import type { PublicEmployeeItem } from '@/services/client/employees';
 import { getFontName } from '@/theme/fonts';
 import { AquaBackground } from '@/theme/sawaa';
+import { sawaaSpacing } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Glass } from '@/theme/components/Glass';
-import { Avatar } from '@/components/ui/Avatar';
-import { BackButton } from '@/components/ui/BackButton';
 import { useAppSelector } from '@/hooks/use-redux';
-import { goBackOrHome } from '@/lib/navigation';
+
+type Entry =
+  | { key: string; kind: 'clinic'; clinic: ClinicEntry }
+  | { key: string; kind: 'therapist'; therapist: PublicEmployeeItem }
+  | { key: string; kind: 'package' | 'program'; id: string; title: string; subtitle: string | null };
 
 export default function PublicListScreen() {
   const { kind, clinicId, serviceId } = useLocalSearchParams<{ kind?: string; clinicId?: string; serviceId?: string }>();
@@ -22,9 +33,8 @@ export default function PublicListScreen() {
   const dir = useDir();
   const colors = useSawaaColors();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   const isGuest = !useAppSelector((state) => state.auth.token);
-  const bold = getFontName(dir.locale, '700');
+  const [query, setQuery] = useState('');
   const clinics = useClinics();
   const therapists = useTherapists();
   const programs = useGroupSessions();
@@ -35,81 +45,109 @@ export default function PublicListScreen() {
     serviceMatchesClinic
     && (!clinicId || (selectedClinic != null && person.serviceIds.some((id) => selectedClinic.serviceIds.includes(id))))
     && (!serviceId || person.serviceIds.includes(serviceId))) ?? [];
-  const entries: Array<{ id: string; kind: string; nameAr: string | null; nameEn: string | null; detail?: string; title?: string | null; bio?: string | null; imageUrl?: string | null }> = kind === 'clinics' ? (clinics.data ?? []).map((item) => ({
-    id: item.id,
-    kind: 'clinic',
-    nameAr: item.nameAr,
-    nameEn: item.nameEn ?? null,
-    detail: `${t('clinics.therapistsCount', { count: item.therapistCount })} · ${t('clinics.servicesCount', { count: item.serviceCount })}`,
-  }))
-    : kind === 'therapists' ? visibleTherapists.map((item) => ({ id: item.slug ?? item.id, kind: 'therapist', nameAr: item.nameAr, nameEn: item.nameEn ?? null, title: item.title, imageUrl: item.publicImageUrl, bio: dir.isRTL ? item.publicBioAr : item.publicBioEn ?? item.publicBioAr }))
-      : kind === 'packages' ? (families.data ?? []).map((item) => ({ id: item.id, kind: 'package', nameAr: item.nameAr, nameEn: item.nameEn ?? null }))
-        : kind === 'programs' ? (programs.data ?? []).map((item) => ({ id: item.id, kind: 'program', nameAr: item.nameAr, nameEn: item.nameEn ?? null })) : [];
+  const searchable = kind === 'clinics' || kind === 'therapists';
+
+  const entries: Entry[] = (() => {
+    if (kind === 'clinics') {
+      return filterClinics(clinics.data ?? [], query).map((clinic) => ({ key: `clinic-${clinic.id}`, kind: 'clinic', clinic }));
+    }
+    if (kind === 'therapists') {
+      return applyTherapistFilters(visibleTherapists, query, null).map((therapist) => ({ key: `therapist-${therapist.id}`, kind: 'therapist', therapist }));
+    }
+    if (kind === 'packages') {
+      return (families.data ?? []).map((item) => ({
+        key: `package-${item.id}`,
+        kind: 'package',
+        id: item.id,
+        title: (dir.isRTL ? item.nameAr : item.nameEn ?? item.nameAr) ?? '',
+        subtitle: (dir.isRTL ? item.descriptionAr : item.descriptionEn ?? item.descriptionAr) ?? null,
+      }));
+    }
+    if (kind === 'programs') {
+      return (programs.data ?? []).map((item) => ({
+        key: `program-${item.id}`,
+        kind: 'program',
+        id: item.id,
+        title: (dir.isRTL ? item.nameAr : item.nameEn ?? item.nameAr) ?? '',
+        subtitle: null,
+      }));
+    }
+    return [];
+  })();
+
   const valid = kind === 'clinics' || kind === 'therapists' || kind === 'packages' || kind === 'programs';
   const loading = kind === 'clinics' ? clinics.isLoading
     : kind === 'therapists' ? therapists.isLoading || Boolean(clinicId && clinics.isLoading)
       : kind === 'packages' ? families.isLoading : programs.isLoading;
   const title = kind === 'clinics' ? t('clinics.title') : kind === 'therapists' ? t('guest.therapists') : kind === 'packages' ? t('guest.packages') : t('guest.programs');
 
+  const openDetail = (detailKind: string, id: string, extra: Record<string, string> = {}) =>
+    router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: detailKind, id, ...extra } });
+
+  const renderItem = ({ item }: { item: Entry }) => {
+    if (item.kind === 'clinic') {
+      return (
+        <ClinicCard
+          clinic={item.clinic}
+          onPress={() => router.push({ pathname: isGuest ? '/public-clinic/[id]' : '/(client)/clinic/[id]', params: { id: item.clinic.id } })}
+        />
+      );
+    }
+    if (item.kind === 'therapist') {
+      const therapist = item.therapist;
+      return (
+        <TherapistCard
+          item={therapist}
+          onPress={() => openDetail('therapist', therapist.slug ?? therapist.id, {
+            ...(clinicId ? { clinicId } : {}),
+            ...(serviceId ? { serviceId } : {}),
+          })}
+        />
+      );
+    }
+    return <ServiceRow title={item.title} subtitle={item.subtitle} onPress={() => openDetail(item.kind, item.id)} />;
+  };
+
   return (
     <AquaBackground>
       <FlatList
-        key={kind === 'therapists' ? 'therapist-grid' : 'list'}
-        numColumns={kind === 'therapists' ? 2 : 1}
-        columnWrapperStyle={kind === 'therapists' ? [styles.gridRow, { flexDirection: dir.row }] : undefined}
         data={entries}
-        keyExtractor={(item) => `${item.kind}-${item.id}`}
+        keyExtractor={(item) => item.key}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={Separator}
         ListHeaderComponent={(
           <View style={styles.header}>
-            <BackButton onPress={() => goBackOrHome(router)} style={{ alignSelf: dir.alignStart }} />
-            <Text accessibilityRole="header" style={[styles.title, { fontFamily: bold, textAlign: dir.textAlign }]}>{title}</Text>
+            <ScreenHeader title={title} onBack={() => goBackOrHome(router)} />
+            {searchable ? (
+              <DirectorySearch
+                value={query}
+                onChangeText={setQuery}
+                placeholder={kind === 'clinics' ? t('clinics.searchPlaceholder') : t('therapists.searchPlaceholder')}
+                accessibilityLabel={kind === 'clinics' ? t('clinics.searchPlaceholder') : t('a11y.searchTherapists')}
+                testID="public-list-search"
+              />
+            ) : null}
             {valid && loading ? <ActivityIndicator color={colors.teal[700]} /> : null}
           </View>
         )}
-        ListEmptyComponent={!loading ? <Text style={styles.empty}>{t('guest.empty')}</Text> : null}
-        renderItem={({ item }) => (
-          <Glass variant="strong" radius={20} style={[styles.card, item.kind === 'therapist' && styles.squareCard]}
-            onPress={() => item.kind === 'clinic'
-              ? router.push({ pathname: isGuest ? '/public-clinic/[id]' : '/(client)/clinic/[id]', params: { id: item.id } })
-              : router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: item.kind, id: item.id, ...(item.kind === 'therapist' && clinicId ? { clinicId } : {}), ...(item.kind === 'therapist' && serviceId ? { serviceId } : {}) } })}
-            accessibilityLabel={`${dir.isRTL ? item.nameAr ?? '' : item.nameEn ?? item.nameAr ?? ''}${'detail' in item && item.detail ? `, ${item.detail}` : ''}`} interactive>
-            <View style={[styles.cardBody, item.kind === 'therapist' && styles.therapistBody]}>
-              {item.kind === 'therapist' ? (
-                <Avatar size={64} name={(dir.isRTL ? item.nameAr : item.nameEn ?? item.nameAr) ?? ''} imageUrl={item.imageUrl} />
-              ) : null}
-              <Text numberOfLines={item.kind === 'therapist' ? 1 : undefined} style={[styles.cardText, item.kind === 'therapist' && styles.gridName, { fontFamily: bold, textAlign: item.kind === 'therapist' ? 'center' : dir.textAlign }]}>
-                {dir.isRTL ? item.nameAr : item.nameEn ?? item.nameAr}
-              </Text>
-              {'title' in item && typeof item.title === 'string' && item.title ? (
-                <Text numberOfLines={1} style={[styles.cardDetail, styles.gridDetail, { fontFamily: bold, textAlign: 'center', color: colors.teal[700] }]}>{item.title}</Text>
-              ) : null}
-              {'bio' in item && typeof item.bio === 'string' && item.bio ? (
-                <Text numberOfLines={2} style={[styles.cardDetail, styles.gridDetail, { fontFamily: getFontName(dir.locale, '400'), textAlign: 'center' }]}>{item.bio}</Text>
-              ) : null}
-              {'detail' in item && typeof item.detail === 'string' ? (
-                <Text style={[styles.cardDetail, { textAlign: dir.textAlign }]}>{item.detail}</Text>
-              ) : null}
-            </View>
-          </Glass>
-        )}
+        ListEmptyComponent={!loading ? (
+          <Text style={[styles.empty, { color: colors.ink[500], fontFamily: getFontName(dir.locale, '400') }]}>{t('guest.empty')}</Text>
+        ) : null}
+        renderItem={renderItem}
       />
     </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  content: { paddingHorizontal: 16, gap: 12, flexGrow: 1 },
-  header: { gap: 14, marginBottom: 16 },
-  title: { color: colors.ink[900], fontSize: 24 },
-  card: { marginBottom: 12 },
-  gridRow: { justifyContent: 'space-between', gap: 10 },
-  squareCard: { width: '48%', aspectRatio: 1 },
-  therapistBody: { paddingHorizontal: 10, paddingVertical: 10, gap: 4, alignItems: 'center' },
-  gridName: { fontSize: 14, lineHeight: 20, alignSelf: 'stretch' },
-  gridDetail: { fontSize: 11, lineHeight: 16, alignSelf: 'stretch' },
-  cardBody: { paddingHorizontal: 18, paddingVertical: 16, gap: 4 },
-  cardText: { color: colors.ink[900], fontSize: 16 },
-  cardDetail: { color: colors.ink[500], fontSize: 13 },
-  empty: { color: colors.ink[500], textAlign: 'center', padding: 24 },
+function Separator() {
+  return <View style={styles.separator} />;
+}
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: sawaaSpacing.lg, flexGrow: 1 },
+  header: { gap: sawaaSpacing.md, marginBottom: sawaaSpacing.xl },
+  separator: { height: sawaaSpacing.md },
+  empty: { fontSize: 15, lineHeight: 22, textAlign: 'center', padding: sawaaSpacing['2xl'] },
 });

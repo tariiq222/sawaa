@@ -5,7 +5,7 @@ const mockPush = jest.fn();
 let mockRouteParams: Record<string, string> = { id: 'dr-example' };
 let mockDirectClinic = false;
 let mockServiceGroup = false;
-const mockEmployee = {
+const mockEmployee: { publicBioEn: string | null; [key: string]: unknown } = {
   id: 'employee-uuid', slug: 'dr-example', nameAr: 'سارة', nameEn: 'Sara',
   title: null, specialty: 'Family counseling', specialtyAr: 'إرشاد أسري',
   publicBioAr: null, publicBioEn: null, publicImageUrl: null, gender: null,
@@ -24,6 +24,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockRouteParams,
   useRouter: () => ({ push: mockPush, back: jest.fn() }),
 }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-native-reanimated', () => {
   const { View } = require('react-native') as typeof import('react-native');
@@ -48,13 +49,12 @@ jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa', () => {
   const { View } = require('react-native') as typeof import('react-native');
   return {
+    ...jest.requireActual('@/theme/sawaa/tokens'),
     AquaBackground: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
-    sawaaColors: { ink: { 400: '#888', 500: '#555', 700: '#333', 900: '#000' }, teal: { 500: '#098', 600: '#087', 700: '#076' }, accent: { amber: '#fa0', sky: '#acf', violet: '#aaf', rose: '#faa' }, glass: { opaqueBg: '#fff' } },
-    sawaaRadius: { pill: 999, xl: 24 },
   };
 });
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
-  useSawaaColors: () => require('@/theme/sawaa').sawaaColors,
+  useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));
 jest.mock('@/theme/components/Glass', () => ({
   Glass: ({ children, onPress, testID, accessibilityRole, accessibilityState }: { children: React.ReactNode; onPress?: () => void; testID?: string; accessibilityRole?: 'radio'; accessibilityState?: { selected?: boolean } }) => {
@@ -67,7 +67,7 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) =>
 import EmployeeProfileScreen from '../[id]';
 
 describe('EmployeeProfileScreen', () => {
-  beforeEach(() => { mockPush.mockClear(); mockRouteParams = { id: 'dr-example' }; mockDirectClinic = false; mockServiceGroup = false; });
+  beforeEach(() => { mockEmployee.publicBioEn = null; mockPush.mockClear(); mockRouteParams = { id: 'dr-example' }; mockDirectClinic = false; mockServiceGroup = false; });
 
   it('does not show invented profile claims or imply that an unknown price is free', () => {
     const screen = render(<EmployeeProfileScreen />);
@@ -79,7 +79,7 @@ describe('EmployeeProfileScreen', () => {
   it('books the selected real service with the canonical employee ID', () => {
     const screen = render(<EmployeeProfileScreen />);
     fireEvent.press(screen.getByText('Family session'));
-    fireEvent.press(screen.getByText('employeeProfile.bookNow'));
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
       params: { serviceId: 'service-b', employeeId: 'employee-uuid', clinicId: 'clinic-1' },
@@ -99,10 +99,11 @@ describe('EmployeeProfileScreen', () => {
     mockServiceGroup = true;
     const screen = render(<EmployeeProfileScreen />);
     expect(screen.queryByText('employeeProfile.clinics')).toBeNull();
-    expect(screen.getByText('employeeProfile.services')).toBeTruthy();
+    expect(screen.getAllByText('employeeProfile.services')).toHaveLength(1); // the tab only
+    expect(screen.queryByText('employeeProfile.clinics')).toBeNull();
     expect(screen.getByText('Assessments')).toBeTruthy();
     fireEvent.press(screen.getByText('Family session'));
-    fireEvent.press(screen.getByText('employeeProfile.bookNow'));
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
       params: { serviceId: 'service-b', employeeId: 'employee-uuid' },
@@ -114,14 +115,14 @@ describe('EmployeeProfileScreen', () => {
     const screen = render(<EmployeeProfileScreen />);
     expect(screen.queryByText('Family session')).toBeNull();
     expect(screen.getByText('employeeProfile.noServices')).toBeTruthy();
-    fireEvent.press(screen.getByText('employeeProfile.bookNow'));
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('retains clinic context when booking a service selected from clinic detail', () => {
     mockRouteParams = { id: 'dr-example', clinicId: 'clinic-1', serviceId: 'service-b' };
     const screen = render(<EmployeeProfileScreen />);
-    fireEvent.press(screen.getByText('employeeProfile.bookNow'));
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
       params: { serviceId: 'service-b', employeeId: 'employee-uuid', clinicId: 'clinic-1' },
@@ -131,12 +132,38 @@ describe('EmployeeProfileScreen', () => {
   it('carries the direct clinic into booking when the profile was opened without clinic context', () => {
     mockDirectClinic = true;
     const screen = render(<EmployeeProfileScreen />);
-    expect(screen.getAllByText('Family clinic')).toHaveLength(1);
+    expect(within(screen.getByTestId('employee-clinic-direct-clinic')).getAllByText('Family clinic')).toHaveLength(1);
     expect(screen.queryByText('Internal service')).toBeNull();
-    fireEvent.press(screen.getByText('employeeProfile.bookNow'));
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
       params: { serviceId: 'direct-service', employeeId: 'employee-uuid', clinicId: 'direct-clinic' },
+    });
+  });
+
+  it('opens on the about tab when there is a bio and switches to the services tab', () => {
+    mockEmployee.publicBioEn = 'Works with families.';
+    const screen = render(<EmployeeProfileScreen />);
+    expect(screen.getByText('Works with families.')).toBeTruthy();
+    expect(screen.queryByText('Family session')).toBeNull();
+    fireEvent.press(screen.getByRole('tab', { name: 'employeeProfile.services' }));
+    expect(screen.getByText('Family session')).toBeTruthy();
+    expect(screen.queryByText('Works with families.')).toBeNull();
+  });
+
+  it('never starts booking until one of several services is chosen, and says so', () => {
+    mockEmployee.publicBioEn = 'Works with families.';
+    const screen = render(<EmployeeProfileScreen />);
+    expect(screen.getByText('employeeProfile.selectBookingOption')).toBeTruthy();
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
+    expect(mockPush).not.toHaveBeenCalled();
+    // The action sends the client to the services tab to choose.
+    expect(screen.getByText('Individual session')).toBeTruthy();
+    fireEvent.press(screen.getByText('Individual session'));
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/[serviceId]',
+      params: { serviceId: 'service-a', employeeId: 'employee-uuid', clinicId: 'clinic-1' },
     });
   });
 });

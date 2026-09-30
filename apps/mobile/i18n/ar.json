@@ -175,6 +175,10 @@
     "empty": "لا توجد عيادات متاحة حالياً",
     "loadError": "تعذّر تحميل العيادات. تحقق من الاتصال ثم حاول مرة أخرى.",
     "bookAppointment": "احجز موعدك",
+    "searchPlaceholder": "ابحث عن عيادة",
+    "profileTitle": "العيادة",
+    "specialistsTab": "الأخصائيون",
+    "noAbout": "لا توجد نبذة عن هذه العيادة بعد.",
     "notFound": "لم نعثر على هذه العيادة"
   },
   "groups": {
@@ -230,10 +234,14 @@
     "loading": "جاري التحميل…",
     "empty": "لا يوجد معالجون بعد",
     "unknownName": "معالج",
+    "listTitle": "الأخصائيون",
+    "availableToday": "متاح اليوم",
+    "fromPrice": "من {{price}}",
     "bookingService": "{{service}}",
     "bookingServiceTitle": "اختاري خدمة للموعد",
     "noBookableServices": "لا توجد خدمات متاحة للموعد حالياً.",
     "filters": {
+      "all": "الكل",
       "available": "متاح الآن",
       "women": "النساء",
       "remote": "عن بُعد",
@@ -242,6 +250,7 @@
   },
   "employeeProfile": {
     "about": "نبذة",
+    "profileTitle": "ملف الأخصائي",
     "clinics": "العيادات",
     "services": "الخدمات",
     "ratingCount": "({{count}} تقييم)",
@@ -250,6 +259,8 @@
     "selectBookingOption": "اختر العيادة أو الخدمة للمتابعة",
     "unavailable": "الحجز غير متاح",
     "priceAtNextStep": "يظهر السعر في الخطوة التالية",
+    "bookAppointment": "احجز موعدًا",
+    "noBio": "لا توجد نبذة عن هذا الأخصائي بعد.",
     "bookNow": "احجز جلسة"
   },
   "appointments": {
@@ -589,6 +600,7 @@
   "packages": {
     "title": "الباقات",
     "subtitle": "اختاري الباقة المناسبة لخطة رعايتك.",
+    "intro": "تدفع ثمن عدد من الجلسات مرة واحدة، وتحجز منها مواعيدك لاحقًا. يظهر الرصيد المتبقي في صفحة رصيد الباقات.",
     "details": "تفاصيل الباقة",
     "balance": "رصيد الباقات",
     "homeEntry": "استكشفي باقات الجلسات",
@@ -598,6 +610,10 @@
     "empty": "لا توجد باقات متاحة حالياً.",
     "noPurchases": "ستظهر جلساتك المشتراة هنا.",
     "optionsCount": "{{count}} خيارات",
+    "startsFrom": "تبدأ من",
+    "sessionsFrom": "تبدأ من {{count}} جلسة",
+    "featureSessionsOf": "{{count}} جلسة من نوع {{service}}",
+    "featurePractitioner": "مع {{name}}",
     "chooseOption": "اختاري خياراً",
     "sessionCount": "{{count}} جلسة",
     "groupLabel": "المجموعة {{key}}",
@@ -613,6 +629,7 @@
     "branchError": "تعذّر تحميل الفروع.",
     "retry": "إعادة المحاولة",
     "purchase": "المتابعة للدفع",
+    "buy": "اشترِ الباقة",
     "purchasing": "جارٍ فتح الدفع...",
     "purchaseError": "تعذّر بدء الدفع. يمكنك إعادة المحاولة بأمان.",
     "refund": "المسترد: {{amount}}",

@@ -25,7 +25,8 @@ jest.mock('@/theme/components/Glass', () => ({
     return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>{children}</Pressable>;
   },
 }));
-jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ teal: { 700: 'teal' }, ink: { 900: 'black', 500: 'grey' } }) }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
+jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light') }));
 jest.mock('@/hooks/queries', () => ({
   useClinics: () => ({ data: mockClinics, isLoading: false }),
   useTherapists: () => ({ data: mockTherapists, isLoading: false }),
@@ -64,7 +65,6 @@ it('keeps clinic and selected service context when opening a guest practitioner 
   const { fireEvent } = require('@testing-library/react-native');
   fireEvent.press(screen.getByRole('button', { name: 'سارة' }));
   expect(screen.getByText('أخصائية إرشاد تربوي وأسري')).toBeTruthy();
-  expect(screen.getByText('إرشاد الوالدين وتحديات الأطفال والمراهقين')).toBeTruthy();
   expect(mockPush).toHaveBeenCalledWith({
     pathname: '/public-detail/[kind]/[id]',
     params: { kind: 'therapist', id: 'sara', clinicId: 'clinic-1', serviceId: 'service-1' },
