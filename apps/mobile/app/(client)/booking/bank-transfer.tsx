@@ -19,7 +19,8 @@ import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { clientPaymentsService, type ReceiptUploadAsset } from '@/services/client';
 import { formatCurrencyAmount } from '@/lib/currency-display';
-import { useBankTransferSettings } from '@/hooks/queries';
+import { useBankTransferSettings, useClientInvoice } from '@/hooks/queries';
+import { getOutstandingHalalas } from '@/lib/invoice-outstanding';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { BankTransferAccountDetails } from '@/components/features/booking/BankTransferAccountDetails';
@@ -34,19 +35,23 @@ export default function BankTransferScreen() {
   const dir = useDir();
   const reduceMotion = useReduceMotion();
   const bankTransferQuery = useBankTransferSettings();
-  const { invoiceId, amount, bookingId } = useLocalSearchParams<{
+  const { invoiceId, bookingId } = useLocalSearchParams<{
     invoiceId?: string;
-    amount?: string;
     bookingId?: string;
   }>();
+  const invoiceQuery = useClientInvoice(invoiceId);
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
   const [receipt, setReceipt] = useState<ReceiptUploadAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const uploaded = !!receipt;
-  // amount is integer halalas (forwarded from payment.tsx).
-  const numericAmount = amount ? Number(amount) : 0;
+  // The transfer must match what the invoice still owes (total minus payments
+  // already reserved), which the server enforces. Read it from the invoice
+  // instead of trusting a price passed through the route, which ignores
+  // discounts, coupons and earlier payments. Integer halalas.
+  const outstanding = invoiceQuery.data ? getOutstandingHalalas(invoiceQuery.data) : null;
+  const numericAmount = outstanding ?? 0;
   const amountLabel = formatCurrencyAmount(numericAmount, 'SAR', dir.isRTL);
   const accounts = bankTransferQuery.data?.enabled ? bankTransferQuery.data.accounts : [];
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? accounts[0];
@@ -122,8 +127,23 @@ export default function BankTransferScreen() {
           </View>
         </Animated.View>
 
-        {bankTransferQuery.isLoading ? (
+        {bankTransferQuery.isLoading || invoiceQuery.isLoading ? (
           <Skeleton height={190} radius={sawaaRadius.xl} />
+        ) : invoiceQuery.isError || outstanding === null ? (
+          <EmptyState
+            icon="alert"
+            title={t('common.error')}
+            description={t('common.tryAgain')}
+            actionLabel={t('common.retry')}
+            onAction={() => void invoiceQuery.refetch()}
+          />
+        ) : outstanding <= 0 ? (
+          <EmptyState
+            icon="information-circle-outline"
+            title={t('payment.invoiceSettled')}
+            actionLabel={t('common.back')}
+            onAction={() => router.back()}
+          />
         ) : !selectedAccount ? (
           <EmptyState
             icon="information-circle-outline"
@@ -180,12 +200,12 @@ export default function BankTransferScreen() {
         entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
         style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
       >
-        <Pressable disabled={!uploaded || !selectedAccount || submitting} onPress={submitReceipt}>
+        <Pressable disabled={!uploaded || !selectedAccount || numericAmount <= 0 || submitting} onPress={submitReceipt}>
           <LinearGradient
             colors={theme.colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.ctaBtn, (!uploaded || !selectedAccount || submitting) && { opacity: 0.55 }]}
+            style={[styles.ctaBtn, (!uploaded || !selectedAccount || numericAmount <= 0 || submitting) && { opacity: 0.55 }]}
           >
             <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
               {submitting

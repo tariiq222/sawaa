@@ -28,6 +28,8 @@ function iconForType(type: Notification['type'], colors: ReturnType<typeof useSa
     case 'booking_confirmed':
     case 'booking_completed':
       return { Icon: Check, color: colors.teal[600] };
+    case 'booking_created':
+      return { Icon: Calendar, color: colors.teal[600] };
     case 'booking_reminder':
     case 'booking_reminder_urgent':
     case 'reminder':
@@ -37,7 +39,11 @@ function iconForType(type: Notification['type'], colors: ReturnType<typeof useSa
     case 'new_rating':
       return { Icon: Star, color: colors.accent.amber };
     case 'payment_received':
+    case 'payment_completed':
+    case 'payment_reminder':
       return { Icon: FileText, color: colors.accent.amber };
+    case 'payment_failed':
+      return { Icon: FileText, color: colors.accent.rose };
     case 'cancellation_requested':
     case 'cancellation_rejected':
     case 'booking_cancellation_rejected':

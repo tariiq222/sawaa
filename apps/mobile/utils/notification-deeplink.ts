@@ -6,6 +6,7 @@ import type { Notification, NotificationMetadata } from '@/types/models';
  * Mirrors the backend notification type list.
  */
 const BOOKING_ROUTE_TYPES = new Set<string>([
+  'booking_created',
   'booking_confirmed',
   'booking_completed',
   'booking_cancelled',
