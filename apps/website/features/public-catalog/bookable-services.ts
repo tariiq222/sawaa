@@ -25,6 +25,10 @@ export interface BookableClinic {
   id: string;
   nameAr: string;
   nameEn: string | null;
+  /** Falls back to the linked booking service description — ServiceCategory has no
+   * description column. Kept null when the service has none (audit C1). */
+  descriptionAr: string | null;
+  descriptionEn: string | null;
   imageUrl: string | null;
   iconName: string | null;
   iconBgColor: string | null;
@@ -38,10 +42,19 @@ export function selectBookableClinics(
   catalog: PublicCatalog,
   employees: BookableEmployee[],
 ): BookableClinic[] {
-  return selectBookableClinicEntries(catalog, employees).map(({ category, bookingMode, directServiceId, therapistCount, serviceCount }) => ({
+  const servicesById = new Map(catalog.services.map((service) => [service.id, service]));
+  return selectBookableClinicEntries(catalog, employees).map(
+    ({ category, bookingMode, directServiceId, serviceIds, therapistCount, serviceCount }) => {
+      // Prefer the direct internal service (DIRECT) or the first visible booking
+      // service (SERVICES) as the source of the clinic card description.
+      const descriptionSourceId = directServiceId ?? serviceIds[0] ?? null;
+      const descriptionSource = descriptionSourceId ? servicesById.get(descriptionSourceId) : undefined;
+      return {
         id: category.id,
         nameAr: category.nameAr,
         nameEn: category.nameEn,
+        descriptionAr: descriptionSource?.descriptionAr ?? null,
+        descriptionEn: descriptionSource?.descriptionEn ?? null,
         imageUrl: category.imageUrl,
         iconName: category.iconName,
         iconBgColor: category.iconBgColor,
@@ -49,7 +62,9 @@ export function selectBookableClinics(
         directServiceId,
         therapistCount,
         serviceCount,
-      }));
+      };
+    },
+  );
 }
 
 const DELIVERY_TYPES: PublicDeliveryType[] = ['IN_PERSON', 'ONLINE'];

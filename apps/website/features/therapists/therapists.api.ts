@@ -10,7 +10,7 @@ function unwrap<T>(json: unknown): T {
   return json as T;
 }
 
-export async function listPublicEmployees(includeDirectClinics = false): Promise<PublicEmployee[]> {
+export async function listPublicEmployeesResult(includeDirectClinics = false): Promise<{ employees: PublicEmployee[]; failed: boolean }> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 1500);
@@ -23,7 +23,7 @@ export async function listPublicEmployees(includeDirectClinics = false): Promise
     // Hide therapists that aren't actually bookable — no active services,
     // no branch, or no availability rules. Mirrors the booking wizard logic
     // so the directory never shows a card that dead-ends on booking.
-    return all.filter((e) => e.isBookable);
+    return { employees: all.filter((e) => e.isBookable), failed: false };
   } catch (err) {
     Sentry.addBreadcrumb({
       category: 'fetch',
@@ -31,8 +31,12 @@ export async function listPublicEmployees(includeDirectClinics = false): Promise
       message: '[therapists] listPublicEmployees error — using empty list',
       data: { error: err instanceof Error ? err.message : String(err) },
     });
-    return [];
+    return { employees: [], failed: true };
   }
+}
+
+export async function listPublicEmployees(includeDirectClinics = false): Promise<PublicEmployee[]> {
+  return (await listPublicEmployeesResult(includeDirectClinics)).employees;
 }
 
 export async function getPublicEmployee(slug: string): Promise<PublicEmployee> {
