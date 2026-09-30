@@ -24,9 +24,9 @@ interface EmptyStateProps {
   tone?: 'default' | 'danger';
 }
 
-const ICON_SIZE = 28;
-const CIRCLE_SIZE = 56;
-const DESCRIPTION_MAX_WIDTH = 280;
+const ICON_SIZE = 44;
+const CIRCLE_SIZE = 96;
+const DESCRIPTION_MAX_WIDTH = 290;
 
 /**
  * Centered block for empty/error states. Purely presentational —
@@ -57,7 +57,7 @@ export function EmptyState({
           width: CIRCLE_SIZE,
           height: CIRCLE_SIZE,
           borderRadius: sawaaRadius.pill,
-          backgroundColor: withAlpha(accentColor, 0.08),
+          backgroundColor: withAlpha(accentColor, 0.14),
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -66,10 +66,11 @@ export function EmptyState({
       </View>
       <Text
         style={{
-          fontSize: sawaaType.subheading.fontSize,
-          lineHeight: sawaaType.subheading.lineHeight,
-          fontFamily: getFontName(locale, sawaaType.subheading.weight),
-          fontWeight: sawaaType.subheading.weight,
+          fontSize: 22,
+          lineHeight: 30,
+          fontFamily: getFontName(locale, '700'),
+          fontWeight: '700',
+          marginTop: sawaaSpacing.xs,
           color: sawaaColors.ink[900],
           textAlign: 'center',
           writingDirection,
@@ -80,8 +81,8 @@ export function EmptyState({
       {description ? (
         <Text
           style={{
-            fontSize: sawaaType.body.fontSize,
-            lineHeight: sawaaType.body.lineHeight,
+            fontSize: 15,
+            lineHeight: 24,
             fontFamily: getFontName(locale, sawaaType.body.weight),
             fontWeight: sawaaType.body.weight,
             color: sawaaColors.ink[500],

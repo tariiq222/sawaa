@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -11,10 +11,13 @@ import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { getPrimaryRole } from '@/types/auth';
 import { getFontName } from '@/theme/fonts';
-import { useHome, useMobileHomeCards, usePublicCatalog, useTherapists } from '@/hooks/queries';
+import { useHome, useMobileHomeCards, useClinics, usePublicCatalog, useTherapists } from '@/hooks/queries';
 import { HomeAssessmentServices } from '@/components/features/home/HomeAssessmentServices';
 import { HomeDiscoveryCards } from '@/components/features/home/HomeDiscoveryCards';
 import { HomeCardsCarousel } from '@/components/features/home/HomeCardsCarousel';
+import { FeaturedClinics } from '@/components/features/home/FeaturedClinics';
+import { PackageBalanceCard } from '@/components/features/home/PackageBalanceCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { HomeTopBar } from '@/components/features/home/HomeTopBar';
 import { TherapistsRow } from '@/components/features/home/TherapistsRow';
 import { UpNextCard } from '@/components/features/home/UpNextCard';
@@ -22,7 +25,6 @@ import { useReduceMotion } from '@/hooks/useA11y';
 
 export default function HomeScreen() {
   const colors = useSawaaColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -46,9 +48,9 @@ export default function HomeScreen() {
   const mobileHomeCardsQuery = useMobileHomeCards();
   const catalogQuery = usePublicCatalog();
   const therapistsQuery = useTherapists();
+  const clinicsQuery = useClinics();
   const [refreshing, setRefreshing] = useState(false);
   const nextBooking = homeQuery.data?.upcomingBookings?.[0] ?? null;
-  const unreadCount = homeQuery.data?.unreadNotifications?.length ?? 0;
   const loading = homeQuery.isLoading;
 
   const onRefresh = async () => {
@@ -57,6 +59,7 @@ export default function HomeScreen() {
       await Promise.all([
         catalogQuery.refetch(),
         therapistsQuery.refetch(),
+        clinicsQuery.refetch(),
         mobileHomeCardsQuery.refetch(),
         ...(isClient ? [homeQuery.refetch()] : []),
       ]);
@@ -65,6 +68,10 @@ export default function HomeScreen() {
     }
   };
 
+  const therapistsHref: Href = isClient ? '/(client)/therapists' : '/public-list/therapists';
+  const clinicsHref: Href = isClient ? '/(client)/clinics' : '/public-list/clinics';
+  const fade = (delay: number) => (reduceMotion ? undefined : FadeInDown.delay(delay).duration(450).easing(Easing.out(Easing.cubic)));
+
   return (
     <AquaBackground>
       <ScrollView
@@ -72,52 +79,48 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal[600]} />}
       >
-        <HomeTopBar f600={f600} isClient={isClient} />
-        <HomeCardsCarousel cards={mobileHomeCardsQuery.data ?? []} signedIn={isClient} />
-
-        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))} style={styles.hero}>
-          <Text style={[styles.dateLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>{today}</Text>
-          <Text style={[styles.greeting, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {firstName ? `${greeting}${dir.isRTL ? '،' : ','} ${firstName}` : greeting}
-          </Text>
-        </Animated.View>
+        <HomeTopBar
+          f600={f600}
+          isClient={isClient}
+          dateLabel={today}
+          greeting={firstName ? `${greeting}${dir.isRTL ? '،' : ','} ${firstName}` : greeting}
+        />
 
         {isClient && (loading || nextBooking) ? (
-          <View>
-            <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(120).duration(450)} style={[styles.sectionHead, { flexDirection: dir.row }]}>
-              <Text style={[styles.sectionTitle, { fontFamily: f700 }]}>{t('home.upcomingAppointment')}</Text>
-              {unreadCount > 0 ? (
-                <Text onPress={() => router.push('/(client)/notifications')} style={[styles.sectionMeta, { fontFamily: f600, color: colors.teal[700] }]}>
-                  {dir.isRTL ? `${unreadCount.toLocaleString('ar-SA')} تنبيه جديد` : `${unreadCount} new alert${unreadCount === 1 ? '' : 's'}`}
-                </Text>
-              ) : null}
-            </Animated.View>
-            <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(180).duration(500)}>
-              <UpNextCard loading={loading} booking={nextBooking} dir={dir} f600={f600} f700={f700} />
-            </Animated.View>
-          </View>
+          <Animated.View entering={fade(60)}>
+            <UpNextCard loading={loading} booking={nextBooking} dir={dir} f600={f600} f700={f700} />
+          </Animated.View>
         ) : null}
 
-        <HomeDiscoveryCards signedIn={isClient} />
-        <HomeAssessmentServices />
+        <HomeCardsCarousel cards={mobileHomeCardsQuery.data ?? []} signedIn={isClient} />
+        {isClient ? <PackageBalanceCard /> : null}
+
+        <View style={styles.section}>
+          <SectionHeader title={t(isClient ? 'home.chooseHere' : 'home.introTitle')} />
+          <HomeDiscoveryCards signedIn={isClient} />
+        </View>
+
         {(therapistsQuery.data?.length ?? 0) > 0 ? (
-          <View style={styles.therapistsSection}>
-            <Text accessibilityRole="header" style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('guest.therapists')}</Text>
+          <View style={styles.section}>
+            <SectionHeader title={t('guest.therapists')} actionLabel={t('home.seeAll')} onActionPress={() => router.push(therapistsHref)} />
             <TherapistsRow therapists={therapistsQuery.data ?? []} dir={dir} f400={getFontName(dir.locale, '400')} f600={f600} f700={f700} />
           </View>
         ) : null}
+
+        {(clinicsQuery.data?.length ?? 0) > 0 ? (
+          <View style={styles.section}>
+            <SectionHeader title={t('clinics.title')} actionLabel={t('home.seeAll')} onActionPress={() => router.push(clinicsHref)} />
+            <FeaturedClinics dir={dir} f600={f600} f700={f700} />
+          </View>
+        ) : null}
+
+        <HomeAssessmentServices />
       </ScrollView>
     </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  therapistsSection: { gap: 12, marginTop: 12 },
-  scroll: { paddingHorizontal: 16, gap: 12 },
-  hero: { paddingHorizontal: 12, paddingVertical: 10 },
-  dateLabel: { fontSize: 12, color: colors.teal[700], opacity: 0.75 },
-  greeting: { fontSize: 24, lineHeight: 31, color: colors.ink[900], marginTop: 2 },
-  sectionHead: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4, marginBottom: 8 },
-  sectionTitle: { fontSize: 16, color: colors.ink[900] },
-  sectionMeta: { fontSize: 12 },
+const styles = StyleSheet.create({
+  scroll: { paddingHorizontal: 16, gap: 20 },
+  section: { gap: 12 },
 });

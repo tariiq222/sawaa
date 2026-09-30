@@ -15,6 +15,9 @@ import {
   withAlpha,
 } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useTheme } from '@/theme/useTheme';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
@@ -41,6 +44,8 @@ import { bookingStepPath } from '@/features/booking/guest-booking-flow';
  */
 export default function BookingTypeScreen() {
   const colors = useSawaaColors();
+  const { scheme } = useTheme();
+  const roles = getSawaaRoles(scheme);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { clinicId, serviceId, employeeId, branchId: branchParam } = useLocalSearchParams<{
     clinicId?: string;
@@ -135,29 +140,19 @@ export default function BookingTypeScreen() {
       : dir.isRTL ? 'حضوري' : 'In-person';
     return `${mins} · ${channel}`;
   };
-  const tzLabel = dir.isRTL ? 'بتوقيتك المحلي' : 'Your local time';
+  const tzLabel = t('booking.yourLocalTime');
   const noOpenings = slots.availabilityByDate && !Object.values(slots.availabilityByDate).some(Boolean);
   return (
     <AquaBackground>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 140 },
+          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 160 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={1} onBack={() => goBackOrHome(router)} backAccessibilityLabel={t('a11y.buttonBack')} />
-        </Animated.View>
-        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-            {dir.isRTL ? 'اختر المدة والوقت' : 'Choose duration and time'}
-          </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-            {dir.isRTL
-              ? 'اختر مدة الجلسة وطريقة الحضور، ثم الوقت المناسب.'
-              : 'Pick the session duration and attendance type, then a time.'}
-          </Text>
+          <BookingStepHeader step={1} title={dir.isRTL ? 'اختر المدة والوقت' : 'Choose duration and time'} onBack={() => goBackOrHome(router)} />
         </Animated.View>
 
         {loading ? (
@@ -189,13 +184,12 @@ export default function BookingTypeScreen() {
                   entering={reduceMotion ? undefined : FadeInDown.delay(120 + i * 60).duration(600).easing(Easing.out(Easing.cubic))}
                 >
                   <Glass
-                    variant="strong"
-                    radius={sawaaRadius.xl}
+                    radius={sawaaRadius.lg}
                     onPress={() => choose(opt)}
                     interactive
                     accessibilityRole="radio"
                     accessibilityState={{ selected: isSelected }}
-                    style={[styles.typeCard, isSelected && { borderWidth: 2, borderColor: colors.teal[600] }]}
+                    style={[styles.typeCard, isSelected && { borderWidth: 2, borderColor: roles.selection.fill }]}
                   >
                     <View style={[styles.typeRow, { flexDirection: dir.row }]}>
                       <View style={[styles.typeIcon, { backgroundColor: withAlpha(colors.teal[600], 0.12) }]}>
@@ -214,8 +208,8 @@ export default function BookingTypeScreen() {
                           {formatMoney(opt.price, opt.currency)}
                         </Text>
                         {isSelected ? (
-                          <View style={[styles.checkCircle, { backgroundColor: colors.teal[600] }]}>
-                            <Check size={13} color={colors.teal[50]} strokeWidth={3} />
+                          <View style={[styles.checkCircle, { backgroundColor: roles.selection.fill }]}>
+                            <Check size={13} color={roles.selection.foreground} strokeWidth={3} />
                           </View>
                         ) : (
                           <ChevronRight size={16} color={colors.ink[400]} strokeWidth={2} />
@@ -229,6 +223,7 @@ export default function BookingTypeScreen() {
 
             {selected ? (
               <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(600).easing(Easing.out(Easing.cubic))}>
+                <SectionHeader title={dir.isRTL ? 'اليوم' : 'Day'} />
                 <DaySelector
                   days={slots.days}
                   dayIdx={slots.dayIdx}
@@ -260,12 +255,8 @@ export default function BookingTypeScreen() {
 
                 {slots.dayIdx != null ? (
                   <>
-                    <View style={[styles.slotsHead, { flexDirection: dir.row }]}>
-                      <Text style={[styles.slotsTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                        {dir.isRTL ? 'الأوقات المتاحة' : 'Available times'}
-                      </Text>
-                      <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign }]}>{tzLabel}</Text>
-                    </View>
+                    <SectionHeader title={dir.isRTL ? 'الوقت' : 'Time'} />
+                    <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign }]}>{tzLabel}</Text>
                     {slots.loading || slots.error || slots.slots.length > 0 ? (
                       <TimeSlotsGrid
                         loading={slots.loading}
@@ -306,18 +297,6 @@ export default function BookingTypeScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  title: {
-    fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight,
-    color: colors.ink[900],
-    marginVertical: sawaaSpacing.xs,
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  subtitle: {
-    fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[500],
-    marginTop: -sawaaSpacing.xs,
-    paddingHorizontal: sawaaSpacing.xs,
-  },
   skeletonBlock: { gap: sawaaSpacing.lg },
   typeCard: { padding: sawaaSpacing.md },
   typeRow: { alignItems: 'center', gap: sawaaSpacing.md },
@@ -343,7 +322,5 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     color: colors.teal[700],
     fontVariant: ['tabular-nums'],
   },
-  slotsHead: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },
-  slotsTitle: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[900] },
-  tz: { fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight, color: colors.ink[500] },
+  tz: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, color: colors.ink[500] },
 });

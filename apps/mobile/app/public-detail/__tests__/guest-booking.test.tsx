@@ -15,6 +15,7 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn() }),
   useLocalSearchParams: () => ({ kind: mockKind, id: mockId, clinicId: mockClinicId, serviceId: mockServiceId }),
 }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ isRTL: false, locale: 'en', textAlign: 'left' }) }));
@@ -60,10 +61,11 @@ describe('public appointment discovery', () => {
     mockKind = 'therapist'; mockId = 'employee-1';
     const screen = render(<PublicDetailScreen />);
     expect(screen.getByText('employeeProfile.clinics')).toBeTruthy();
-    const clinic = within(screen.getByTestId('guest-clinic-clinic-42'));
+    const clinic = within(screen.getByTestId('employee-clinic-clinic-42'));
     expect(clinic.getByText('Clinic')).toBeTruthy();
     expect(clinic.getByRole('button', { name: 'Service' })).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Service' }));
+    fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
       params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
@@ -74,6 +76,7 @@ describe('public appointment discovery', () => {
     mockKind = 'therapist'; mockId = 'employee-1'; mockClinicId = 'clinic-42'; mockServiceId = 'service-1';
     const screen = render(<PublicDetailScreen />);
     fireEvent.press(screen.getByRole('button', { name: 'Service' }));
+    fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
       params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
@@ -83,9 +86,10 @@ describe('public appointment discovery', () => {
   it('shows a direct clinic once without exposing its internal service', () => {
     mockKind = 'therapist'; mockId = 'employee-1'; mockBookingMode = 'DIRECT';
     const screen = render(<PublicDetailScreen />);
-    expect(screen.getAllByText('Clinic')).toHaveLength(1);
+    expect(within(screen.getByTestId('employee-clinic-clinic-42')).getAllByText('Clinic')).toHaveLength(1);
     expect(screen.queryByText('Service')).toBeNull();
     fireEvent.press(screen.getByRole('button', { name: 'Clinic' }));
+    fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
       params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
@@ -96,9 +100,11 @@ describe('public appointment discovery', () => {
     mockKind = 'therapist'; mockId = 'employee-1'; mockCategoryKind = 'SERVICE_GROUP';
     const screen = render(<PublicDetailScreen />);
     expect(screen.queryByText('employeeProfile.clinics')).toBeNull();
-    expect(screen.getByText('employeeProfile.services')).toBeTruthy();
+    expect(screen.getAllByText('employeeProfile.services')).toHaveLength(1); // the tab only
+    expect(screen.queryByText('employeeProfile.clinics')).toBeNull();
     expect(screen.getByText('Assessments')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Service' }));
+    fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
       params: { serviceId: 'service-1', employeeId: 'employee-1' },
@@ -109,7 +115,7 @@ describe('public appointment discovery', () => {
     mockKind = 'therapist'; mockId = 'employee-1'; mockClinicId = 'missing';
     const screen = render(<PublicDetailScreen />);
     expect(screen.queryByRole('button', { name: 'Service' })).toBeNull();
-    expect(screen.getByText('guest.empty')).toBeTruthy();
+    expect(screen.getByText('employeeProfile.noServices')).toBeTruthy();
     expect(mockPush).not.toHaveBeenCalled();
   });
 

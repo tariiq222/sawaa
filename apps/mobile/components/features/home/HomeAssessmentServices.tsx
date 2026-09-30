@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { usePublicCatalog } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Glass } from '@/theme/components/Glass';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { getAssessmentServices } from '@/lib/assessment-services';
@@ -18,11 +19,10 @@ export function HomeAssessmentServices() {
   const dir = useDir();
   const colors = useSawaaColors();
   const regular = getFontName(dir.locale, '400');
-  const bold = getFontName(dir.locale, '700');
   const Arrow = dir.isRTL ? ChevronLeft : ChevronRight;
   return (
     <View style={styles.section}>
-      <Text accessibilityRole="header" style={[styles.heading, { fontFamily: bold, color: colors.ink[900], textAlign: dir.textAlign }]}>{t('home.assessmentServices')}</Text>
+      <SectionHeader title={t('home.assessmentServices')} />
       {catalog.isLoading ? <ActivityIndicator color={colors.teal[700]} /> : catalog.isError ? (
         <Glass padding={14} onPress={() => { void catalog.refetch(); }} accessibilityLabel={t('common.retry')}>
           <Text style={{ fontFamily: regular, color: colors.ink[700], textAlign: dir.textAlign }}>{t('guest.loadError')} · {t('common.retry')}</Text>
@@ -30,7 +30,7 @@ export function HomeAssessmentServices() {
       ) : services.length === 0 ? (
         <Text style={{ fontFamily: regular, color: colors.ink[700], textAlign: dir.textAlign }}>{t('home.assessmentServicesEmpty')}</Text>
       ) : services.map((service) => (
-        <Glass key={service.id} variant="strong" radius={18} padding={12} interactive
+        <Glass key={service.id} variant="strong" radius={20} padding={16} interactive
           accessibilityLabel={dir.isRTL ? service.nameAr : service.nameEn ?? service.nameAr}
           onPress={() => router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: 'service', id: service.id } })}>
           <View style={[styles.row, { flexDirection: dir.row }]}>
@@ -44,8 +44,7 @@ export function HomeAssessmentServices() {
   );
 }
 const styles = StyleSheet.create({
-  section: { gap: 9, marginTop: 12 },
-  heading: { fontSize: 17, lineHeight: 25, marginBottom: 2 },
+  section: { gap: 12 },
   row: { alignItems: 'center', gap: 10, minHeight: 24 },
-  name: { flex: 1, fontSize: 13, lineHeight: 21 },
+  name: { flex: 1, fontSize: 15, lineHeight: 22 },
 });

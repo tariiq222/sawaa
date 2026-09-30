@@ -99,7 +99,7 @@ describe('staff appointment deep-link back button', () => {
 
   it('returns to the staff tabs when the app opened without history', () => {
     const screen = render(<EmployeeAppointmentDetail />);
-    fireEvent.press(screen.getByLabelText('common.back'));
+    fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
     expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today');
     expect(mockBack).not.toHaveBeenCalled();
   });
@@ -107,7 +107,7 @@ describe('staff appointment deep-link back button', () => {
   it('uses the existing history when available', () => {
     mockCanGoBack = true;
     const screen = render(<EmployeeAppointmentDetail />);
-    fireEvent.press(screen.getByLabelText('common.back'));
+    fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockReplace).not.toHaveBeenCalled();
   });

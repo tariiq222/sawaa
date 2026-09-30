@@ -78,7 +78,9 @@ describe('route color migration safeguards', () => {
   });
 
   it('memoized client lists update their rendered content when the palette changes', () => {
-    for (const name of ['clinics.tsx', 'therapists.tsx', '(tabs)/appointments.tsx']) {
+    // The clinic and therapist directories render through shared cards that read
+    // the palette themselves, so only the appointments list keeps a screen-level factory.
+    for (const name of ['(tabs)/appointments.tsx']) {
       const source = fs.readFileSync(path.join(appRoot, '(client)', name), 'utf8');
       const styleFactory = name === '(tabs)/appointments.tsx' ? 'createAppointmentsStyles' : 'createStyles';
       expect(source).toContain(`useMemo(() => ${styleFactory}(colors), [colors])`);

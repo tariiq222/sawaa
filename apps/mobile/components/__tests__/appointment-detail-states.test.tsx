@@ -66,7 +66,7 @@ describe('appointment detail truthful states', () => {
     mockQuery.mockReturnValue({ isLoading: true, isError: false, refetch: mockRefetch });
     const screen = render(<AppointmentDetail />);
     expect(screen.getByText('common.loading')).toBeTruthy();
-    expect(screen.queryByText('Cancel booking')).toBeNull();
+    expect(screen.queryByText('appointments.cancelAppointment')).toBeNull();
   });
   it('offers retry on query failure without showing cached details', () => {
     mockQuery.mockReturnValue({ data: booking, isLoading: false, isError: true, refetch: mockRefetch });
@@ -79,7 +79,7 @@ describe('appointment detail truthful states', () => {
     mockQuery.mockReturnValue({ isLoading: false, isError: false, refetch: mockRefetch });
     const screen = render(<AppointmentDetail />);
     expect(screen.getByText('common.noResults')).toBeTruthy();
-    expect(screen.queryByText('Cancel booking')).toBeNull();
+    expect(screen.queryByText('appointments.cancelAppointment')).toBeNull();
   });
 
   it('offers a rating route for completed appointments', () => {
@@ -95,14 +95,14 @@ describe('appointment detail truthful states', () => {
     const screen = render(<AppointmentDetail />);
 
     expect(screen.queryByText('appointments.rate')).toBeNull();
-    expect(screen.queryByText('Cancel booking')).toBeNull();
+    expect(screen.queryByText('appointments.cancelAppointment')).toBeNull();
   });
 
   it('keeps cancellation available for a confirmed appointment', () => {
     mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
     const screen = render(<AppointmentDetail />);
 
-    expect(screen.getByText('Cancel booking')).toBeTruthy();
+    expect(screen.getByText('appointments.cancelAppointment')).toBeTruthy();
     expect(screen.queryByText('appointments.rate')).toBeNull();
   });
 
@@ -110,7 +110,7 @@ describe('appointment detail truthful states', () => {
     mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
     const screen = render(<AppointmentDetail />);
     const scroll = screen.UNSAFE_getByType(ScrollView);
-    expect(scroll.findByProps({ children: 'Cancel booking' })).toBeTruthy();
+    expect(scroll.findByProps({ children: 'appointments.cancelAppointment' })).toBeTruthy();
     expect(screen.getByText('appointments.details')).toBeTruthy();
   });
 
@@ -118,14 +118,14 @@ describe('appointment detail truthful states', () => {
     mockQuery.mockReturnValue({ data: { ...booking, type: 'group', status: 'pending_group_fill' }, isLoading: false, isError: false, refetch: mockRefetch });
     const screen = render(<AppointmentDetail />);
 
-    expect(screen.queryByText('Cancel booking')).toBeNull();
+    expect(screen.queryByText('appointments.cancelAppointment')).toBeNull();
   });
 
   it('does not offer cancellation for an active group booking', () => {
     mockQuery.mockReturnValue({ data: { ...booking, bookingType: 'GROUP', status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
     const screen = render(<AppointmentDetail />);
 
-    expect(screen.queryByText('Cancel booking')).toBeNull();
+    expect(screen.queryByText('appointments.cancelAppointment')).toBeNull();
   });
 
   it('shows a pending cancellation label for a cancellation request', () => {
@@ -133,7 +133,7 @@ describe('appointment detail truthful states', () => {
     const screen = render(<AppointmentDetail />);
 
     expect(screen.getByText('appointments.pendingCancellation')).toBeTruthy();
-    expect(screen.queryByText('Cancel booking')).toBeNull();
+    expect(screen.queryByText('appointments.cancelAppointment')).toBeNull();
   });
 
   it('does not offer the rating CTA when this session has submitted a rating', () => {
@@ -155,10 +155,10 @@ describe('appointment detail truthful states', () => {
     mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
     mockCancel.mockImplementation((_vars, callbacks) => callbacks.onSuccess({ status: 'cancelled' }));
     const alert = jest.spyOn(Alert, 'alert').mockImplementation((title, _message, buttons) => {
-      if (title === 'Cancel booking') buttons?.[1]?.onPress?.();
+      if (title === 'appointments.cancelAppointment') buttons?.[1]?.onPress?.();
     });
     const screen = render(<AppointmentDetail />);
-    fireEvent.press(screen.getByText('Cancel booking'));
+    fireEvent.press(screen.getByText('appointments.cancelAppointment'));
     expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
     expect(mockBack).not.toHaveBeenCalled();
     alert.mockRestore();
@@ -168,11 +168,11 @@ describe('appointment detail truthful states', () => {
     mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
     mockCancel.mockImplementation((_vars, callbacks) => callbacks.onSuccess({ status: 'cancel_requested' }));
     const alert = jest.spyOn(Alert, 'alert').mockImplementation((title, _message, buttons) => {
-      if (title === 'Cancel booking') buttons?.[1]?.onPress?.();
+      if (title === 'appointments.cancelAppointment') buttons?.[1]?.onPress?.();
     });
     render(<AppointmentDetail />);
 
-    fireEvent.press(require('@testing-library/react-native').screen.getByText('Cancel booking'));
+    fireEvent.press(require('@testing-library/react-native').screen.getByText('appointments.cancelAppointment'));
 
     expect(alert).toHaveBeenCalledWith(
       'appointments.cancellationRequestedTitle',

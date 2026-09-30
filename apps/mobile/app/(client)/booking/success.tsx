@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { Easing, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check, Clock, X } from 'lucide-react-native';
+import { Calendar, Check, CircleAlert, Clock, Hash, User, type LucideIcon } from 'lucide-react-native';
 
 import {
   AquaBackground,
@@ -16,7 +17,10 @@ import {
 import { Glass } from '@/theme/components/Glass';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { InfoRows, type InfoRow } from '@/components/ui/InfoRows';
+import { FloatingCta } from '@/components/ui/FloatingCta';
 import { useDir } from '@/hooks/useDir';
+import { useTranslation } from 'react-i18next';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { useBooking } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
@@ -51,6 +55,7 @@ export default function BookingSuccessScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const { t } = useTranslation();
   const reduceMotion = useReduceMotion();
   const { bookingId, invoiceId, paymentId, webResult, amount, currency } = useLocalSearchParams<{
     bookingId?: string;
@@ -150,56 +155,54 @@ export default function BookingSuccessScreen() {
         : colors.teal[500];
 
   const centeredText = { textAlign: 'center', writingDirection: dir.writingDirection } as const;
-  const startText = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
 
-  const summaryRows: Array<{ key: string; labelAr: string; labelEn: string; value: string; accent?: boolean }> = [];
+  const infoRows: InfoRow[] = [];
   if (therapistName) {
-    summaryRows.push({ key: 'therapist', labelAr: 'المعالج', labelEn: 'Therapist', value: therapistName });
+    infoRows.push({ icon: User, label: dir.isRTL ? 'المعالج' : 'Therapist', value: therapistName });
   }
   if (booking?.scheduledAt) {
-    summaryRows.push({
-      key: 'when',
-      labelAr: 'التاريخ والوقت',
-      labelEn: 'Date & time',
+    infoRows.push({
+      icon: Calendar,
+      label: dir.isRTL ? 'التاريخ والوقت' : 'Date & time',
       value: formatWhen(booking.scheduledAt, dir.isRTL),
     });
   }
-  summaryRows.push({
-    key: 'ref',
-    labelAr: 'رقم الموعد',
-    labelEn: 'Booking #',
+  infoRows.push({
+    icon: Hash,
+    label: dir.isRTL ? 'رقم الموعد' : 'Booking #',
     value: bookingId ? shortBookingRef(bookingId) : '—',
-    accent: true,
   });
   if (paymentId) {
-    summaryRows.push({
-      key: 'payment',
-      labelAr: 'رقم الدفع',
-      labelEn: 'Payment #',
+    infoRows.push({
+      icon: Hash,
+      label: dir.isRTL ? 'رقم الدفع' : 'Payment #',
       value: shortBookingRef(paymentId),
     });
   }
 
+  const StatusIcon: LucideIcon = effectivePhase === 'failed' ? CircleAlert : effectivePhase === 'confirmed' ? Check : Clock;
+  const isConfirmed = effectivePhase === 'confirmed';
+
   return (
     <AquaBackground>
-      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <View style={[styles.container, { paddingTop: insets.top + sawaaSpacing['2xl'], paddingBottom: insets.bottom + 180 }]}>
         <Animated.View entering={reduceMotion ? undefined : ZoomIn.duration(600).easing(Easing.out(Easing.cubic))}>
-          <View style={[styles.iconCircle, { backgroundColor: withAlpha(phaseColor, 0.14), borderColor: withAlpha(phaseColor, 0.3) }]}>
-            {effectivePhase === 'failed' ? (
-              <X size={56} color={phaseColor} strokeWidth={2.5} />
-            ) : effectivePhase === 'confirmed' ? (
-              <Check size={56} color={phaseColor} strokeWidth={2.5} />
-            ) : (
-              <Clock size={56} color={phaseColor} strokeWidth={2.5} />
-            )}
-          </View>
+          {isConfirmed ? (
+            <LinearGradient colors={[colors.teal[500], colors.teal[700]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconCircle}>
+              <StatusIcon size={56} color={colors.teal[50]} strokeWidth={2.5} />
+            </LinearGradient>
+          ) : (
+            <View style={[styles.iconCircle, { backgroundColor: withAlpha(phaseColor, 0.14), borderColor: withAlpha(phaseColor, 0.3), borderWidth: StyleSheet.hairlineWidth }]}>
+              <StatusIcon size={56} color={phaseColor} strokeWidth={2.5} />
+            </View>
+          )}
         </Animated.View>
 
         <Animated.View
           entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(600).easing(Easing.out(Easing.cubic))}
           style={styles.textBlock}
         >
-          <Text style={[styles.title, { fontFamily: f700 }, centeredText]}>
+          <Text accessibilityRole="header" style={[styles.title, { fontFamily: f700 }, centeredText]}>
             {headerTitle}
           </Text>
           <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }, centeredText]}>
@@ -211,75 +214,50 @@ export default function BookingSuccessScreen() {
           entering={reduceMotion ? undefined : FadeInDown.delay(320).duration(700).easing(Easing.out(Easing.cubic))}
           style={styles.summaryWrap}
         >
-          <Glass variant="strong" radius={sawaaRadius.xl}>
-            {loading ? (
+          {loading ? (
+            <Glass radius={sawaaRadius.lg}>
               <View style={styles.skeletonBlock}>
                 <Skeleton height={14} width="40%" />
                 <Skeleton height={14} width="70%" />
                 <Skeleton height={14} width="55%" />
               </View>
-            ) : (
-              summaryRows.map((row, i) => (
-                <View key={row.key}>
-                  {i > 0 ? <View style={styles.divider} /> : null}
-                  <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }, startText]}>
-                      {dir.isRTL ? row.labelAr : row.labelEn}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.summaryValue,
-                        { fontFamily: f700 },
-                        row.accent && { color: colors.teal[700] },
-                        startText,
-                      ]}
-                    >
-                      {row.value}
-                    </Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </Glass>
-        </Animated.View>
-
-        <Animated.View
-          entering={reduceMotion ? undefined : FadeInDown.delay(480).duration(700).easing(Easing.out(Easing.cubic))}
-          style={styles.actions}
-        >
-          {effectivePhase === 'pending' ? (
-            <PrimaryButton
-              label={dir.isRTL ? 'تحقق مرة أخرى' : 'Check again'}
-              onPress={checkPaymentAndBookingAgain}
-              fontFamily={f700}
-            />
-          ) : effectivePhase === 'failed' ? (
-            <PrimaryButton
-              label={dir.isRTL ? 'إعادة المحاولة' : 'Try again'}
-              onPress={retryPayment}
-              fontFamily={f700}
-            />
-          ) : (
-            <PrimaryButton
-              label={dir.isRTL ? 'عرض مواعيدي' : 'View my appointments'}
-              onPress={() => router.replace('/(client)/(tabs)/appointments')}
-              fontFamily={f700}
-            />
-          )}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.replace('/(client)/(tabs)/home')}
-          >
-            <Glass variant="base" radius={sawaaRadius.pill}>
-              <View style={styles.secondaryInner}>
-                <Text style={[styles.secondaryBtnText, { fontFamily: f600, fontWeight: '600' }, centeredText]}>
-                  {dir.isRTL ? 'العودة إلى الرئيسية' : 'Back to home'}
-                </Text>
-              </View>
             </Glass>
-          </Pressable>
+          ) : (
+            <InfoRows rows={infoRows} />
+          )}
         </Animated.View>
       </View>
+
+      <FloatingCta>
+        {effectivePhase === 'pending' ? (
+          <PrimaryButton
+            label={dir.isRTL ? 'تحقق مرة أخرى' : 'Check again'}
+            onPress={checkPaymentAndBookingAgain}
+            fontFamily={f700}
+          />
+        ) : effectivePhase === 'failed' ? (
+          <PrimaryButton
+            label={dir.isRTL ? 'إعادة المحاولة' : 'Try again'}
+            onPress={retryPayment}
+            fontFamily={f700}
+          />
+        ) : (
+          <PrimaryButton
+            label={dir.isRTL ? 'عرض مواعيدي' : 'View my appointments'}
+            onPress={() => router.replace('/(client)/(tabs)/appointments')}
+            fontFamily={f700}
+          />
+        )}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.replace('/(client)/(tabs)/home')}
+          style={styles.secondaryBtn}
+        >
+          <Text style={[styles.secondaryBtnText, { fontFamily: f600, fontWeight: '600' }, centeredText]}>
+            {t('booking.backToHome')}
+          </Text>
+        </Pressable>
+      </FloatingCta>
     </AquaBackground>
   );
 }
@@ -289,7 +267,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     flex: 1,
     paddingHorizontal: sawaaSpacing['2xl'],
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: sawaaSpacing['2xl'],
   },
   iconCircle: {
@@ -298,7 +276,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     borderRadius: sawaaRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
   },
   textBlock: { alignItems: 'center', gap: sawaaSpacing.sm },
   title: {
@@ -314,36 +291,17 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     textAlign: 'center',
   },
   summaryWrap: { width: '100%' },
-  summaryRow: { padding: sawaaSpacing.lg, gap: sawaaSpacing.xs },
-  summaryLabel: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[500],
-    textAlign: 'right',
-  },
-  summaryValue: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: colors.ink[900],
-    fontVariant: ['tabular-nums'],
-    textAlign: 'right',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: withAlpha(colors.ink[900], 0.06),
-    marginHorizontal: sawaaSpacing.lg,
-  },
   skeletonBlock: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  actions: { width: '100%', gap: sawaaSpacing.md },
-  secondaryInner: {
-    height: 48,
+  secondaryBtn: {
+    height: 56,
+    borderRadius: sawaaRadius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.teal[700],
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: sawaaSpacing.lg,
   },
   secondaryBtnText: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
+    fontSize: sawaaType.body.fontSize + 2,
     color: colors.teal[700],
     textAlign: 'center',
   },

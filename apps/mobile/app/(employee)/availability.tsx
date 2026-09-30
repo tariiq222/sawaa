@@ -13,12 +13,11 @@ import {
   sawaaRadius,
   sawaaSpacing,
   sawaaType,
-  withAlpha,
 } from '@/theme/sawaa';
-import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
+import { FloatingCta } from '@/components/ui/FloatingCta';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -49,6 +48,7 @@ export default function AvailabilityScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const [schedule, setSchedule] = useState<DayScheduleGroup[]>(DEFAULT_SCHEDULE);
@@ -99,11 +99,11 @@ export default function AvailabilityScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart, marginBottom: sawaaSpacing.sm }} accessibilityLabel={t('common.back')} />
+        <ScreenHeader title={t('availability.hours')} onBack={() => router.back()} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
-            {t('availability.title')}
+          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+            {t('availability.subtitle')}
           </Text>
         </Animated.View>
 
@@ -123,25 +123,35 @@ export default function AvailabilityScreen() {
                 <Glass variant="base" radius={sawaaRadius.lg} padding={sawaaSpacing.lg}>
                   <View style={[styles.dayRow, { flexDirection: dir.row }]}>
                     <Text
-                      style={[styles.dayLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
+                      style={[styles.dayLabel, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
                     >
                       {t(`days.${day.dayOfWeek}`)}
                     </Text>
-                    <View style={styles.timeChips}>
-                      {day.windows.filter((window) => window.isActive !== false).map((window) => (
-                        <View key={`${window.startTime}-${window.endTime}`} style={[styles.timeChip, { backgroundColor: withAlpha(colors.teal[600], 0.1) }]}>
-                          <Text style={[styles.timeChipText, { fontFamily: f600, fontWeight: '600' }]}>
-                            {window.startTime} - {window.endTime}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
                     <GlassSwitch
                       value={day.windows.some((window) => window.isActive !== false)}
                       onValueChange={() => toggleDay(day.dayOfWeek)}
                       accessibilityLabel={t(`days.${day.dayOfWeek}`)}
                     />
                   </View>
+                  {day.windows.some((window) => window.isActive !== false) ? (
+                    <View style={styles.windows}>
+                      {day.windows.filter((window) => window.isActive !== false).map((window) => (
+                        <View key={`${window.startTime}-${window.endTime}`} style={[styles.windowRow, { flexDirection: dir.row }]}>
+                          <View style={[styles.timeBox, { borderColor: colors.teal[700] }]}>
+                            <Text style={[styles.timeText, { fontFamily: f600 }]}>{window.startTime}</Text>
+                          </View>
+                          <Text style={[styles.toText, { fontFamily: f400 }]}>{t('availability.to')}</Text>
+                          <View style={[styles.timeBox, { borderColor: colors.teal[700] }]}>
+                            <Text style={[styles.timeText, { fontFamily: f600 }]}>{window.endTime}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={[styles.offText, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+                      {t('doctor.dayOff')}
+                    </Text>
+                  )}
                 </Glass>
               </Animated.View>
             ))}
@@ -150,47 +160,60 @@ export default function AvailabilityScreen() {
       </ScrollView>
 
       {!loading && !loadFailed && (
-        <FloatingActionBar>
+        <FloatingCta>
           <PrimaryButton
             label={t('availability.save')}
             onPress={handleSave}
             disabled={saving}
             fontFamily={f600}
-            style={styles.saveBtn}
           />
-        </FloatingActionBar>
+        </FloatingCta>
       )}
     </AquaBackground>
   );
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  content: { paddingHorizontal: sawaaSpacing.lg },
-  title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
-    color: colors.ink[900],
-    marginBottom: sawaaSpacing.xl,
+  content: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  subtitle: {
+    fontSize: sawaaType.body.fontSize + 1,
+    lineHeight: sawaaType.body.lineHeight + 4,
+    color: colors.ink[700],
   },
   skeletonList: { gap: sawaaSpacing.sm },
   dayList: { gap: sawaaSpacing.sm },
-  dayRow: { alignItems: 'center', gap: sawaaSpacing.md },
-  timeChips: { flex: 1, alignItems: 'flex-end', gap: sawaaSpacing.xs },
+  dayRow: { alignItems: 'center', justifyContent: 'space-between', gap: sawaaSpacing.md, minHeight: 44 },
   dayLabel: {
     flex: 1,
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
+    fontSize: sawaaType.subheading.fontSize - 2,
+    lineHeight: sawaaType.subheading.lineHeight,
     color: colors.ink[900],
   },
-  timeChip: {
-    borderRadius: sawaaRadius.pill,
-    paddingHorizontal: sawaaSpacing.sm,
-    paddingVertical: sawaaSpacing.xs,
+  windows: { gap: sawaaSpacing.sm, marginTop: sawaaSpacing.sm },
+  windowRow: { alignItems: 'center', gap: sawaaSpacing.md },
+  timeBox: {
+    minWidth: 84,
+    minHeight: 44,
+    borderRadius: sawaaRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: sawaaSpacing.md,
   },
-  timeChipText: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
+  timeText: {
+    fontSize: sawaaType.body.fontSize + 1,
+    lineHeight: sawaaType.body.lineHeight + 2,
     color: colors.teal[700],
   },
-  saveBtn: { flex: 1 },
+  toText: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: colors.ink[700],
+  },
+  offText: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: colors.ink[700],
+    marginTop: sawaaSpacing.xs,
+  },
 });

@@ -50,8 +50,10 @@ jest.mock('@/components/features/home/HomeCardsCarousel', () => ({ HomeCardsCaro
   const { Text } = require('react-native');
   return <Text>{signedIn ? 'cards-client' : 'cards-guest'}</Text>;
 } }));
-jest.mock('@/components/features/home/UpNextCard', () => ({ UpNextCard: () => null }));
+jest.mock('@/components/features/home/UpNextCard', () => ({ UpNextCard: () => { const { Text } = require('react-native'); return <Text>up-next</Text>; } }));
+jest.mock('@/components/features/home/PackageBalanceCard', () => ({ PackageBalanceCard: () => { const { Text } = require('react-native'); return <Text>balance</Text>; } }));
 jest.mock('@/components/features/home/FeaturedClinics', () => ({ FeaturedClinics: () => null }));
+jest.mock('@/components/ui/SectionHeader', () => ({ SectionHeader: () => null }));
 jest.mock('@/components/features/home/SupportSessions', () => ({ SupportSessions: () => null }));
 jest.mock('@/components/features/home/TherapistsRow', () => ({ TherapistsRow: () => null }));
 jest.mock('@/components/features/home/HomeSectionHeading', () => ({ HomeSectionHeading: () => null }));
@@ -83,7 +85,8 @@ describe('shared home', () => {
     mockHome.mockReturnValue({ data: { upcomingBookings: [], unreadNotifications: [] }, isLoading: true, refetch: jest.fn() });
     const screen = render(<HomeScreen />);
     expect(mockHome).toHaveBeenCalledWith(true);
-    expect(screen.getByText('home.upcomingAppointment')).toBeTruthy();
+    expect(screen.getByText('up-next')).toBeTruthy();
+    expect(screen.getByText('balance')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
     expect(screen.getByText('cards-client')).toBeTruthy();
   });
@@ -96,7 +99,8 @@ describe('shared home', () => {
     const screen = render(<HomeScreen />);
 
     expect(mockHome).toHaveBeenCalledWith(false);
-    expect(screen.queryByText('home.upcomingAppointment')).toBeNull();
+    expect(screen.queryByText('up-next')).toBeNull();
+    expect(screen.queryByText('balance')).toBeNull();
     expect(screen.getByText('cards-guest')).toBeTruthy();
   });
 
