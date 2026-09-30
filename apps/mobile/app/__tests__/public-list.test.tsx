@@ -32,22 +32,8 @@ jest.mock('@/hooks/queries', () => ({
   useGroupSessions: () => ({ data: [], isLoading: false }),
   usePackageFamilies: () => ({ data: [], isLoading: false }),
 }));
-jest.mock('@/components/features/home/GuestDock', () => ({
-  GuestDock: () => { const { Text } = require('react-native'); return <Text>guest-dock</Text>; },
-}));
 
 import PublicListScreen from '../public-list/[kind]';
-
-it('keeps public navigation available on guest list pages only', () => {
-  mockSignedIn = false;
-  const guest = render(<PublicListScreen />);
-  expect(guest.getByText('guest-dock')).toBeTruthy();
-  guest.unmount();
-
-  mockSignedIn = true;
-  const client = render(<PublicListScreen />);
-  expect(client.queryByText('guest-dock')).toBeNull();
-});
 
 it('returns to public home when a list has no history entry', () => {
   mockSignedIn = false;

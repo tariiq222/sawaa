@@ -52,7 +52,7 @@ jest.mock('../(client)/(tabs)/home', () => {
 
 import { authService } from '@/services/auth';
 import type { User } from '@/types/auth';
-import HomeRoute from '../home';
+import HomeRoute from '../(guest)/home';
 
 const mockedGetStoredTokens = authService.getStoredTokens as jest.Mock;
 const mockedGetProfile = authService.getProfile as jest.Mock;

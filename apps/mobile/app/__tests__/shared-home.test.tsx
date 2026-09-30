@@ -54,9 +54,6 @@ jest.mock('@/components/features/home/UpNextCard', () => ({ UpNextCard: () => nu
 jest.mock('@/components/features/home/FeaturedClinics', () => ({ FeaturedClinics: () => null }));
 jest.mock('@/components/features/home/SupportSessions', () => ({ SupportSessions: () => null }));
 jest.mock('@/components/features/home/TherapistsRow', () => ({ TherapistsRow: () => null }));
-jest.mock('@/components/features/home/GuestDock', () => ({
-  GuestDock: () => { const { Text } = require('react-native'); return <Text>guest-dock</Text>; },
-}));
 jest.mock('@/components/features/home/HomeSectionHeading', () => ({ HomeSectionHeading: () => null }));
 
 import HomeScreen from '../(client)/(tabs)/home';
@@ -75,7 +72,6 @@ describe('shared home', () => {
 
   it('renders public sections without a standalone login action or private portal request', () => {
     const screen = render(<HomeScreen />);
-    expect(screen.getByText('guest-dock')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
     expect(mockHome).toHaveBeenCalledWith(false);
     expect(screen.getByText('cards-guest')).toBeTruthy();
@@ -89,7 +85,6 @@ describe('shared home', () => {
     expect(mockHome).toHaveBeenCalledWith(true);
     expect(screen.getByText('home.upcomingAppointment')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
-    expect(screen.queryByText('guest-dock')).toBeNull();
     expect(screen.getByText('cards-client')).toBeTruthy();
   });
 
@@ -103,7 +98,6 @@ describe('shared home', () => {
     expect(mockHome).toHaveBeenCalledWith(false);
     expect(screen.queryByText('home.upcomingAppointment')).toBeNull();
     expect(screen.getByText('cards-guest')).toBeTruthy();
-    expect(screen.getByText('guest-dock')).toBeTruthy();
   });
 
   it('refetches public home cards when the guest refreshes the home screen', async () => {

@@ -9,12 +9,11 @@ jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'ar', textAlign: '
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa', () => ({ AquaBackground: require('react-native').View }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => require('@/theme/sawaa/tokens').getSawaaColors('light') }));
-jest.mock('@/components/features/home/GuestDock', () => ({ GuestDock: () => null }));
 jest.mock('@/components/ui/AppIcon', () => ({ AppIcon: () => null }));
 
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
 
-import GuestAccountScreen from '../guest-account';
+import GuestAccountScreen from '../(guest)/guest-account';
 
 it('keeps the guest in account until they explicitly ask to sign in for appointments', () => {
   mockPush.mockClear();

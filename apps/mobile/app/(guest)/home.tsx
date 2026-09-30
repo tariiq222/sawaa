@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import HomeScreen from './(client)/(tabs)/home';
+import HomeScreen from '../(client)/(tabs)/home';
 import { useAppDispatch, useAppSelector } from '@/hooks/use-redux';
 import { getPrimaryRole } from '@/types/auth';
 import { authService } from '@/services/auth';
@@ -21,7 +21,7 @@ const HYDRATION_TIMEOUT_MS = 15_000;
  * Public `/home` route.
  *
  * Serves as an alias:
- * - Guests render the public home screen with `GuestDock` and public catalog.
+ * - Guests render the public home screen inside the guest native tab bar.
  * - Authenticated clients redirect to their tab shell `/(client)/(tabs)/home`.
  * - Authenticated staff redirect to their tab shell `/(employee)/(tabs)/today`.
  * - Pending session restoration displays a bounded loading indicator before

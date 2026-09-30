@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { ExploreDirectory } from '@/components/features/explore/ExploreDirectory';
-import { GuestDock } from '@/components/features/home/GuestDock';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { AquaBackground } from '@/theme/sawaa';
@@ -24,7 +23,6 @@ export default function PublicExploreScreen() {
         </Text>
         <ExploreDirectory />
       </ScrollView>
-      <GuestDock active="explore" />
     </AquaBackground>
   );
 }
