@@ -19,12 +19,15 @@ import { concentricRadius, withAlpha } from '@/theme/sawaa/tokens';
 const CARD_RADIUS = sawaaRadius.xl;
 const CARD_PADDING = 16;
 
-function formatDateTime(value: string, isRTL: boolean) {
+/** Returns null for a missing/invalid date instead of throwing inside Intl.format. */
+function formatDateTime(value: string, isRTL: boolean): string | null {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat(isRTL ? 'ar-SA' : 'en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
     ...(isRTL ? { calendar: 'gregory' } : {}),
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function formatPrice(price: number, isRTL: boolean, sar: string) {
@@ -64,7 +67,7 @@ export default function GroupsScreen() {
               <ThemedText variant="subheading" style={{ textAlign: dir.textAlign }} numberOfLines={2}>
                 {item.title}
               </ThemedText>
-              <MetaLine icon="calendar" text={formatDateTime(item.scheduledAt ?? '', dir.isRTL)} dir={dir} />
+              <MetaLine icon="calendar" text={formatDateTime(item.scheduledAt ?? '', dir.isRTL) ?? t('groups.dateTba')} dir={dir} />
             </View>
           </View>
 
@@ -76,7 +79,7 @@ export default function GroupsScreen() {
           <View style={[styles.footerRow, { flexDirection: dir.row }]}>
             <StateBadge label={stateLabel} tone={isClosed ? 'muted' : 'open'} />
             <ThemedText variant="label" color={isClosed ? colors.ink[400] : colors.teal[700]}>
-              {isClosed ? t('groups.contactUs') : t('groups.join')}
+              {isClosed ? t('groups.contactUs') : t('groups.joinSession')}
             </ThemedText>
           </View>
         </View>
@@ -151,7 +154,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     width: 48,
     height: 48,
     borderRadius: concentricRadius(CARD_RADIUS, CARD_PADDING),
-    backgroundColor: colors.glass.bgStrong,
+    backgroundColor: colors.glass.opaqueBg,
     alignItems: 'center',
     justifyContent: 'center',
   },

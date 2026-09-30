@@ -8,7 +8,8 @@ jest.mock('expo-router', () => ({
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn().mockResolvedValue({ type: 'dismiss' }) }));
 jest.mock('@/constants/config', () => ({ APP_SCHEME: 'sawa' }));
-jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, textAlign: 'left' }) }));
+let mockRTL = false;
+jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, textAlign: mockRTL ? 'right' : 'left' }) }));
 jest.mock('@/hooks/queries', () => ({
   useGroupSession: () => ({ data: { title: 'Program' } }),
   useBranding: () => ({ data: { contactPhone: null } }),
@@ -72,6 +73,7 @@ const mockInvoice = require('@/features/booking/use-existing-booking-checkout').
 describe('ExistingBookingCheckoutScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRTL = false;
     mockScheme = 'light';
     mockInvoice.total = 10000;
     mockInvoice.payments = [];
@@ -158,4 +160,13 @@ describe('ExistingBookingCheckoutScreen', () => {
     expect(mockInitPayment).toHaveBeenCalledWith('invoice-1', 'ONLINE_CARD');
     expect(mockCheckAgain).toHaveBeenCalledTimes(1);
   });
+  it.each([false, true])('aligns rendered details with the locale (RTL=%s)', (rtl) => {
+    mockRTL = rtl;
+    const { StyleSheet } = require('react-native') as typeof import('react-native');
+    const screen = render(<ExistingBookingCheckoutScreen />);
+    for (const text of ['checkout.program', 'Program', 'checkout.remainingAmount', '10000 SAR']) {
+      expect(StyleSheet.flatten(screen.getByText(text).props.style).textAlign).toBe(rtl ? 'right' : 'left');
+    }
+  });
+
 });

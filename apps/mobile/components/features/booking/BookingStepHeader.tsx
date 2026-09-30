@@ -8,12 +8,12 @@ import { getFontName } from '@/theme/fonts';
 import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
-const AR_DIGITS = ['١', '٢', '٣'] as const;
-const TOTAL_STEPS = 3;
+const AR_DIGITS = ['١', '٢'] as const;
+const TOTAL_STEPS = 2;
 
 interface BookingStepHeaderProps {
-  /** 1-based step within the 3-step booking flow. */
-  step: 1 | 2 | 3;
+  /** 1-based step within the 2-step booking flow. */
+  step: 1 | 2;
   onBack: () => void;
   backAccessibilityLabel?: string;
 }
@@ -28,7 +28,7 @@ export function BookingStepHeader({ step, onBack, backAccessibilityLabel }: Book
   const dir = useDir();
   const f600 = getFontName(dir.locale, '600');
   const label = dir.isRTL
-    ? `خطوة ${AR_DIGITS[step - 1]} من ${AR_DIGITS[TOTAL_STEPS - 1]}`
+    ? `${AR_DIGITS[step - 1]} / ${AR_DIGITS[TOTAL_STEPS - 1]}`
     : `Step ${step} of ${TOTAL_STEPS}`;
 
   return (
@@ -62,5 +62,6 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSh
     lineHeight: sawaaType.caption.lineHeight,
     fontWeight: '600',
     color: sawaaColors.ink[500],
+    textAlign: 'center',
   },
 });

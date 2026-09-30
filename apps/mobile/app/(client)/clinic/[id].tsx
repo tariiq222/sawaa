@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
@@ -119,6 +120,11 @@ export default function ClinicDetailScreen() {
             <Text style={[styles.clinicName, { fontFamily: f700, textAlign: dir.textAlign }]}>
               {clinicName}
             </Text>
+            {(dir.isRTL ? clinic.descriptionAr : clinic.descriptionEn ?? clinic.descriptionAr) ? (
+              <Text style={[styles.clinicMeta, { textAlign: dir.textAlign }]}>
+                {dir.isRTL ? clinic.descriptionAr : clinic.descriptionEn ?? clinic.descriptionAr}
+              </Text>
+            ) : null}
             <View style={[styles.metaRow, { flexDirection: dir.row }]}>
               <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500' }]}>
                 {t('clinics.therapistsCount', { count: clinic.therapistCount })}
@@ -216,13 +222,17 @@ export default function ClinicDetailScreen() {
         end={{ x: 0, y: 1 }}
         style={styles.hero}
       >
-        <View style={styles.heroIcon}>
-          <Building2 size={160} color={theme.colors.primaryForeground} opacity={0.28} strokeWidth={1} />
-        </View>
+        {clinic?.imageUrl ? (
+          <Image source={{ uri: clinic.imageUrl }} style={styles.heroImage} accessibilityLabel={clinicName} />
+        ) : (
+          <View style={styles.heroIcon}>
+            <Building2 size={160} color={theme.colors.primaryForeground} opacity={0.28} strokeWidth={1} />
+          </View>
+        )}
       </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 160 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Back button over hero */}
@@ -236,6 +246,41 @@ export default function ClinicDetailScreen() {
         {renderBody()}
       </ScrollView>
 
+      {clinic ? (
+        <View style={[styles.ctaWrap, { bottom: insets.bottom + 20 }]}>
+          <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaPill}>
+            <PrimaryButton
+              label={t('clinics.bookAppointment')}
+              onPress={() => {
+                if (signedIn) {
+                  router.push({
+                    pathname: '/(client)/therapists',
+                    params: {
+                      clinicId: clinic.id,
+                      ...(clinic.bookingMode === 'DIRECT' && clinic.directServiceId
+                        ? { serviceId: clinic.directServiceId }
+                        : {}),
+                    },
+                  });
+                  return;
+                }
+                router.push({
+                  pathname: '/public-list/[kind]',
+                  params: {
+                    kind: 'therapists',
+                    clinicId: clinic.id,
+                    ...(clinic.bookingMode === 'DIRECT' && clinic.directServiceId
+                      ? { serviceId: clinic.directServiceId }
+                      : {}),
+                  },
+                });
+              }}
+              height={50}
+            />
+          </Glass>
+        </View>
+      ) : null}
+
     </AquaBackground>
   );
 }
@@ -243,6 +288,7 @@ export default function ClinicDetailScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   hero: { position: 'absolute', top: 0, left: 0, right: 0, height: HERO_HEIGHT, overflow: 'hidden' },
   heroIcon: { position: 'absolute', bottom: -20, left: 0, right: 0, alignItems: 'center' },
+  heroImage: { width: '100%', height: HERO_HEIGHT, resizeMode: 'cover' },
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   stateWrap: { gap: sawaaSpacing.md },
   infoCard: { padding: sawaaSpacing.lg, gap: sawaaSpacing.sm },
@@ -257,4 +303,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   requestState: { alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.sm, padding: sawaaSpacing.md, backgroundColor: colors.glass.opaqueBg, borderRadius: sawaaRadius.lg },
   retryButton: { minHeight: 40, paddingHorizontal: sawaaSpacing.md, borderRadius: sawaaRadius.pill, backgroundColor: colors.teal[700], alignItems: 'center', justifyContent: 'center' },
   retryText: { color: colors.glass.opaqueBg, fontSize: 13 },
+  ctaWrap: { position: 'absolute', start: 16, end: 16 },
+  ctaPill: { padding: 6 },
 });

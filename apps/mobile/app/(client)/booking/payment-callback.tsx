@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { AquaBackground } from '@/theme/sawaa';
+import { AquaBackground, sawaaSpacing } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -41,5 +41,5 @@ export default function PaymentCallbackScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: sawaaSpacing.lg },
 });

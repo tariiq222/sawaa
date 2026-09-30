@@ -32,11 +32,29 @@ import {
  * Pinned by `theme/__tests__/light-mode-roles.test.ts`.
  */
 const lightStatusInk = {
-  pending: '#F59E0B',
-  pendingCancellation: '#F97316',
+  pending: '#B45309',
+  pendingCancellation: '#C2410C',
   cancelled: '#DC2626',
   refunded: '#7C3AED',
-  info: '#0EA5E9',
+  info: '#0369A1',
+} as const;
+
+/**
+ * Darker foreground shades for StatusPill text in light mode.
+ * The pill background uses the status color at 14% alpha over the surface;
+ * these foreground values ensure >=4.5:1 contrast against that composited bg.
+ * Dark mode reuses the accent palette directly (already bright enough).
+ */
+const lightStatusForeground = {
+  pending: '#92400E',
+  pendingCancellation: '#9A3412',
+  cancelled: '#991B1B',
+  refunded: '#5B21B6',
+  info: '#0C4A6E',
+  confirmed: '#064E48',
+  paid: '#064E48',
+  failed: '#991B1B',
+  available: '#064E48',
 } as const;
 
 /**
@@ -96,6 +114,7 @@ function sharedRoleColors(scheme: 'light' | 'dark') {
       refunded: violet,
       failed: danger,
     },
+    statusForeground: isDark ? null : lightStatusForeground,
   };
 }
 

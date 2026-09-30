@@ -136,7 +136,7 @@ export function TimeSlotsGrid({
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   slotsGrid: { flexWrap: 'wrap', gap: sawaaSpacing.sm },
   slotWrap: { width: '48.5%' },
-  slot: { overflow: 'hidden', backgroundColor: sawaaColors.glass.opaqueBg },
+  slot: { overflow: 'hidden', backgroundColor: sawaaColors.glass.opaqueBg, borderRadius: sawaaRadius.md },
   slotSelected: { borderWidth: 1.5, borderColor: sawaaColors.teal[600] },
   slotInner: { paddingVertical: sawaaSpacing.lg, alignItems: 'center' },
   slotTextSelected: { color: sawaaColors.teal[700] },
@@ -144,5 +144,6 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSh
     color: sawaaColors.ink[900],
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
+    textAlign: 'center',
   },
 });

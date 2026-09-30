@@ -9,8 +9,9 @@ const lightRoles = getSawaaRoles('light');
 const darkRoles = getSawaaRoles('dark');
 
 /** Attention/negative hues light keeps because the Sawa accents are tuned for
- *  dark surfaces; see the rationale in `theme/tokens.ts`. */
-const lightInkExceptions = ['#F59E0B', '#F97316', '#DC2626', '#7C3AED', '#0EA5E9'];
+ *  dark surfaces; see the rationale in `theme/tokens.ts`. Updated to darker
+ *  values that meet WCAG AA 4.5:1 contrast on light opaque surfaces. */
+const lightInkExceptions = ['#B45309', '#C2410C', '#DC2626', '#7C3AED', '#0369A1'];
 
 /** The pre-Sawa brand mark that must never reach a rendered light surface. */
 const preSawaaBrandValues = ['#354FD8', '#2438B0', '#82CC17', '#191C1E', '#64748B', '#C4C5D7', '#0D9488'];
@@ -83,30 +84,29 @@ describe('light appearance maps the shared roles onto the fixed Sawa palette', (
       expect(contrast(light.colors.textPrimary, surface)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(light.colors.textSecondary, surface)).toBeGreaterThanOrEqual(4.5);
     }
-    // Muted copy is anchored to the card surface (4.51:1); on the canvas behind
-    // the cards it measures 4.36:1 — still 2.7× the inherited #C4C5D7 (1.6:1),
-    // which was unreadable. A darker muted would collapse the hierarchy with
-    // textSecondary (ink[700]).
+    // Muted copy is anchored to ink[500] (#4d6868) which now meets >=4.5:1 on
+    // all light opaque surfaces including background and surfaceLow.
     expect(contrast(light.colors.textMuted, lightRoles.surface)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(light.colors.textMuted, lightRoles.background)).toBeGreaterThanOrEqual(4.3);
+    expect(contrast(light.colors.textMuted, lightRoles.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(light.colors.textMuted, lightRoles.surfaceLow)).toBeGreaterThanOrEqual(4.5);
     expect(light.colors.textMuted).toBe(palette.ink[500]);
     expect(contrast('#C4C5D7', lightRoles.surface)).toBeLessThan(2);
   });
 
-  it('never lowers a light status hue below the contrast it shipped with', () => {
-    // Ratios measured against `roles.surface` before the role mapping existed.
-    const shipped: Array<[string, number]> = [
-      [light.colors.status.pending, 2.03],
-      [light.colors.status.confirmed, 3.57],
-      [light.colors.status.completed, 6.1],
-      [light.colors.status.cancelled, 4.58],
-      [light.colors.status.pendingCancellation, 2.66],
-      [light.colors.payment.paid, 3.57],
-      [light.colors.payment.refunded, 5.4],
-      [light.colors.payment.failed, 4.58],
+  it('meets WCAG AA 4.5:1 for every light status foreground on the surface', () => {
+    // All light status hues now meet >=4.5:1 after the contrast fix.
+    const statuses: Array<[string, string]> = [
+      ['pending', light.colors.status.pending],
+      ['confirmed', light.colors.status.confirmed],
+      ['completed', light.colors.status.completed],
+      ['cancelled', light.colors.status.cancelled],
+      ['pendingCancellation', light.colors.status.pendingCancellation],
+      ['paid', light.colors.payment.paid],
+      ['refunded', light.colors.payment.refunded],
+      ['failed', light.colors.payment.failed],
     ];
-    for (const [value, before] of shipped) {
-      expect(contrast(value, lightRoles.surface)).toBeGreaterThanOrEqual(before - 0.05);
+    for (const [, value] of statuses) {
+      expect(contrast(value, lightRoles.surface)).toBeGreaterThanOrEqual(4.5);
     }
     // The kept hues are the documented exceptions, not accidental leftovers.
     expect(lightInkExceptions).toContain(light.colors.status.cancelled);
