@@ -123,7 +123,11 @@ case "${1:?Phase name required}" in
     require_phase root-install
     pnpm audit --audit-level=high ;;
   gitleaks)
-    gitleaks git --log-opts=--all --redact --report-format json --report-path /evidence/gitleaks.json . ;;
+    # The retired gitleaks-action v3 PR gate scans PR commits, not all refs.
+    # Include every commit since the merge base (also merged branch commits).
+    scan_base=$(git merge-base "$SAWAA_CI_BASE_REF" HEAD)
+    printf '%s..HEAD\n' "$scan_base" > /evidence/gitleaks-range.txt
+    gitleaks git --log-opts="$scan_base..HEAD" --redact --report-format json --report-path /evidence/gitleaks.json . ;;
   trivy)
     trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
       --format sarif --output /evidence/trivy-fs.sarif \

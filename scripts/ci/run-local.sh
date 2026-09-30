@@ -56,7 +56,7 @@ cd "$source_dir"
 [ ! -s .git/objects/info/alternates ] || { echo 'Git alternates must be dissociated before CI.' >&2; exit 1; }
 git rev-parse --verify "${base_ref}^{commit}" > "$artifacts/base.sha"
 git rev-parse HEAD > "$artifacts/head.sha"
-# These gates inspect Git commits (base...HEAD and the full commit history).
+# These gates inspect Git commits (base...HEAD and commits since the merge base).
 # Reject staged, unstaged and untracked source so those checks cover precisely
 # the files copied into the runner. Do this before touching the nested engine.
 git status --porcelain=v1 --untracked-files=all > "$artifacts/source-status.txt"
