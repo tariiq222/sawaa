@@ -14,6 +14,7 @@ import { Label } from "@sawaa/ui"
 
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { useLocale } from "@/components/locale-provider"
+import { vatHalalas } from "@/lib/money"
 import type { SessionPackage } from "@/lib/types/package"
 
 interface Props {
@@ -30,8 +31,7 @@ export function SellPackagePricePreview({ pkg }: Props) {
   // The sale invoice adds VAT on top of the net price, rounded half-up to a
   // whole halala — the same math as the backend's computeVat.
   const vatRate = Number(pkg.vatRate) || 0
-  // Trim float noise (5000 × 0.0003 = 1.4999999999999998) before rounding.
-  const vatAmount = vatRate > 0 ? Math.round(Number((finalPrice * vatRate).toFixed(6))) : 0
+  const vatAmount = vatHalalas(finalPrice, vatRate)
   const total = finalPrice + vatAmount
 
   return (

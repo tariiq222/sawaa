@@ -227,6 +227,7 @@ export const enPackages: Record<string, string> = {
   "packages.sell.price.subtotal": "Subtotal",
   "packages.sell.price.discount": "Discount",
   "packages.sell.price.vat": "VAT ({rate}%)",
+  "packages.sell.price.inclVat": "incl. VAT",
   "packages.sell.price.total": "Total",
   "packages.sell.frozenPrice": "Frozen price",
   "packages.sell.submit": "Sell package",

@@ -1,3 +1,4 @@
+import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.handler';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../infrastructure/database';
@@ -77,6 +78,8 @@ export class GetPublicPackageHandler {
       ownerEmployeeId: pkg.ownerEmployeeId ?? null,
       imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
       price,
+      // Prices are net; the purchase invoice adds VAT at this rate.
+      vatRate: (await resolveVatRate(this.prisma)).toNumber(),
     };
   }
 }
