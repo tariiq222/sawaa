@@ -27,7 +27,7 @@ This is the shared deployment policy for every AI tool and contributor working o
 
 ## Merge checks for `develop` — owner direction, 2026-10-01
 
-Local Woodpecker CI was removed on 2026-10-01 by owner decision. Do not run, reintroduce or require it. GitHub Actions remains disabled for the repository.
+Local Woodpecker CI was removed on 2026-10-01 by owner decision. Do not run, reintroduce or require it. GitHub Actions was re-enabled for the repository on 2026-10-01 by the owner after it became public (free standard runners). The `merge-gate` workflow runs on PRs into `develop` and `main`, on pushes to `main`, and on manual dispatch; its `critical-e2e` job runs `test:e2e:critical` against a disposable Postgres service. CI results supplement, not replace, the local checks below.
 
 Before a PR merges into `develop`, run the local checks that match the changed surface, using the test matrix in the root `CLAUDE.md` (for example backend Jest specs and `pnpm openapi:sync` for endpoint changes, dashboard Vitest and smoke for dashboard flows, `pnpm --dir apps/mobile test`/`typecheck`/`lint` for mobile). Documentation-only changes need only `git diff --check`. Record the commands, the candidate SHA and the results in the PR. A failed or skipped required check blocks the merge; if the candidate changes after verification, verify the new content before merging.
 

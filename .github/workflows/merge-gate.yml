@@ -6,10 +6,11 @@ name: merge-gate
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     types: [opened, synchronize, reopened]
   push:
     branches: [main]
+  workflow_dispatch:
 
 # Cancel in-progress runs when a new commit is pushed.
 concurrency:
@@ -27,7 +28,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     env:
       # Backend unit tests + openapi:build-and-snapshot both load AppModule,
@@ -87,7 +88,7 @@ jobs:
         # force-pushed or someone re-targeted a stale PR.
         run: node scripts/check-deploy-state.mjs origin/main HEAD
 
-      - name: Backend — typecheck + unit + e2e (smoke)
+      - name: Backend — unit
         run: pnpm --filter backend test
 
       - name: Dashboard — typecheck + unit
@@ -182,3 +183,68 @@ jobs:
           echo "See the failing step output above."
           echo "This PR cannot be merged until all checks pass."
         shell: bash
+
+  # ─────────────────────────────────────────────────────────────────────
+  # critical-e2e — backend real-database e2e lane (test:e2e:critical).
+  # Runs against a disposable pgvector Postgres service. Redis, MinIO,
+  # Zoom, Moyasar and other providers stay mocked by test/setup-e2e.ts.
+  # ─────────────────────────────────────────────────────────────────────
+  critical-e2e:
+    name: critical-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d sawaa_e2e_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_e2e_test?schema=public
+      REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_e2e_test?schema=public
+      TZ: Asia/Riyadh
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+
+      - name: Prisma generate + migrate test database
+        working-directory: apps/backend
+        run: pnpm run prisma:generate && pnpm run prisma:migrate:deploy
+
+      - name: Backend — critical real-database e2e
+        working-directory: apps/backend
+        run: pnpm run test:e2e:critical
+
+      - name: Upload critical e2e results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: critical-e2e-results
+          path: apps/backend/test-results-critical.json
+          if-no-files-found: ignore
+          retention-days: 7
