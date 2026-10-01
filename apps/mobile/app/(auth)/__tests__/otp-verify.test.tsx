@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
@@ -11,19 +12,35 @@ jest.mock('expo-router', () => ({
     back: mockBack,
   }),
   useLocalSearchParams: () => ({
-    identifier: 'test@example.com',
-    maskedIdentifier: 't***@example.com',
-    purpose: 'login',
+    ...mockParams,
     booking: mockBooking,
     redirect: mockRedirect,
   }),
 }));
 
+const loginParams = {
+  identifier: 'test@example.com',
+  maskedIdentifier: 't***@example.com',
+  purpose: 'login',
+};
+const registerParams = {
+  identifier: '0501234567',
+  maskedIdentifier: '+966***67',
+  purpose: 'register',
+  firstName: 'Sara',
+  lastName: 'Ahmad',
+  email: 'sara@example.com',
+};
+let mockParams: Record<string, string> = loginParams;
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { index?: number; total?: number }) => {
+    t: (key: string, options?: { index?: number; total?: number; seconds?: number }) => {
       if (key === 'auth.otpBoxLabel') {
         return `OTP digit ${options?.index} of ${options?.total}`;
+      }
+      if (key === 'auth.otp.resendIn') {
+        return `auth.otp.resendIn ${options?.seconds}`;
       }
       return key;
     },
@@ -50,6 +67,7 @@ const mockVerifyOtp = jest.fn().mockResolvedValue({
   sessionEpoch: 1,
 });
 const mockRequestLoginOtp = jest.fn().mockResolvedValue({ maskedIdentifier: 't***@example.com' });
+const mockRegister = jest.fn().mockResolvedValue({ userId: 'u1', maskedPhone: '+966***67' });
 const mockGetProfile = jest.fn().mockResolvedValue({
   success: true,
   data: { id: 'u1', role: 'CLIENT' },
@@ -57,6 +75,7 @@ const mockGetProfile = jest.fn().mockResolvedValue({
 jest.mock('@/hooks/queries', () => ({
   useVerifyOtp: () => ({ mutateAsync: mockVerifyOtp }),
   useRequestLoginOtp: () => ({ mutateAsync: mockRequestLoginOtp }),
+  useRegister: () => ({ mutateAsync: mockRegister }),
 }));
 
 jest.mock('@/services/push', () => ({
@@ -124,6 +143,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     mockCurrentEpoch = 1;
     mockBooking = undefined;
     mockRedirect = undefined;
+    mockParams = loginParams;
   });
 
   it('uses one four-character input for native SMS autofill', () => {
@@ -363,5 +383,81 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
       expect(mockDispatch).not.toHaveBeenCalled();
       expect(mockReplace).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('OtpVerifyScreen resend', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    mockCurrentEpoch = 1;
+    mockBooking = undefined;
+    mockRedirect = undefined;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  function waitOutCooldown() {
+    act(() => {
+      jest.advanceTimersByTime(60_000);
+    });
+  }
+
+  it('shows a cooldown on the register screen before resend is allowed', () => {
+    mockParams = registerParams;
+    const { getByText, queryByText } = render(<OtpVerifyScreen />);
+
+    expect(getByText('auth.otp.resendIn 60')).toBeTruthy();
+    expect(queryByText('auth.otp.resend')).toBeNull();
+    expect(queryByText('auth.otp.registerNoResend')).toBeNull();
+  });
+
+  it('re-submits the same registration details to re-send the register code', async () => {
+    mockParams = registerParams;
+    const { getByText } = render(<OtpVerifyScreen />);
+
+    waitOutCooldown();
+    fireEvent.press(getByText('auth.otp.resend'));
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith({
+        firstName: 'Sara',
+        lastName: 'Ahmad',
+        phone: '0501234567',
+        email: 'sara@example.com',
+      });
+    });
+    expect(mockRequestLoginOtp).not.toHaveBeenCalled();
+    // Cooldown restarts after a successful resend.
+    await waitFor(() => expect(getByText('auth.otp.resendIn 60')).toBeTruthy());
+  });
+
+  it('shows an error and keeps resend available when the register resend fails', async () => {
+    mockParams = registerParams;
+    mockRegister.mockRejectedValueOnce(new Error('429'));
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const { getByText } = render(<OtpVerifyScreen />);
+
+    waitOutCooldown();
+    fireEvent.press(getByText('auth.otp.resend'));
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('common.error', 'auth.error.generic'));
+    expect(getByText('auth.otp.resend')).toBeTruthy();
+    alertSpy.mockRestore();
+  });
+
+  it('uses the login OTP request on the login screen', async () => {
+    mockParams = loginParams;
+    const { getByText } = render(<OtpVerifyScreen />);
+
+    waitOutCooldown();
+    fireEvent.press(getByText('auth.otp.resend'));
+
+    await waitFor(() => {
+      expect(mockRequestLoginOtp).toHaveBeenCalledWith({ identifier: 'test@example.com' });
+    });
+    expect(mockRegister).not.toHaveBeenCalled();
   });
 });

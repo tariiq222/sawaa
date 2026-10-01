@@ -37,7 +37,6 @@
     "otp.submit": "تحقق",
     "otp.submitting": "جارٍ التحقق...",
     "otp.sentTo": "الرمز المرسل إلى",
-    "otp.registerNoResend": "اضغط رجوع وأعد الإرسال إذا لم تستلم الرمز",
     "otp.noAccount": "ليس لديك حساب؟",
     "otp.changeNumber": "تغيير الرقم",
     "otp.createAccount": "أنشئ حساباً",

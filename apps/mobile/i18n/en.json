@@ -37,7 +37,6 @@
     "otp.submit": "Verify",
     "otp.submitting": "Verifying...",
     "otp.sentTo": "Code sent to",
-    "otp.registerNoResend": "Go back and re-submit if you didn't receive the code.",
     "otp.noAccount": "Don't have an account?",
     "otp.changeNumber": "Change number",
     "otp.createAccount": "Create Account",
