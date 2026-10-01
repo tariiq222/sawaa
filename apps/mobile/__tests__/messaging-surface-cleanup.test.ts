@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const mobileRoot = resolve(__dirname, '..');
@@ -14,8 +14,11 @@ describe('retired messaging surface cleanup', () => {
     }
   });
 
-  it('keeps the old tab deep link as a safe redirect', () => {
-    const route = readFileSync(resolve(mobileRoot, 'app/(client)/(tabs)/chat.tsx'), 'utf8');
+  it('keeps the old chat deep link as a safe redirect straight to the home tab', () => {
+    // NativeTabs registers only declared triggers, so a chat file inside (tabs)
+    // would be an unreachable route; the redirect lives in the client stack.
+    expect(existsSync(resolve(mobileRoot, 'app/(client)/(tabs)/chat.tsx'))).toBe(false);
+    const route = readFileSync(resolve(mobileRoot, 'app/(client)/chat.tsx'), 'utf8');
     expect(route).toContain('Redirect');
     expect(route).toContain('/(client)/(tabs)/home');
     expect(route).not.toContain('wa.me');

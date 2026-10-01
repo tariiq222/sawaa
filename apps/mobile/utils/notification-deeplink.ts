@@ -53,8 +53,10 @@ export function resolveNotificationHref(notification: Notification): Href | null
     return appointmentHref(meta.bookingId);
   }
 
+  // The client chat tab was retired; conversation notices land on the
+  // notifications list rather than an unregistered route.
   if (typeof meta.conversationId === 'string' && meta.conversationId.length > 0) {
-    return '/(client)/(tabs)/chat' as Href;
+    return '/(client)/notifications' as Href;
   }
 
   return BOOKING_ROUTE_TYPES.has(notification.type)
@@ -76,7 +78,7 @@ export function resolvePushHref(data: unknown): Href | null {
   if (bookingId) return appointmentHref(bookingId);
 
   if (pushId(payload.conversationId)) {
-    return '/(client)/(tabs)/chat' as Href;
+    return '/(client)/notifications' as Href;
   }
 
   // The backend sends the uppercase intent type (e.g. BOOKING_REMINDER).
