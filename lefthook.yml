@@ -33,6 +33,10 @@ pre-push:
   parallel: true
   jobs:
     - name: block direct push to main
+      # git passes the pushed refs on stdin. Without use_stdin lefthook gives
+      # the job a pseudo TTY, so `read` waits on the keyboard in a terminal and
+      # sees nothing in scripts, and the guard never inspects a ref.
+      use_stdin: true
       run: |
         while read local_ref local_sha remote_ref remote_sha; do
           if [ "$remote_ref" = "refs/heads/main" ]; then
