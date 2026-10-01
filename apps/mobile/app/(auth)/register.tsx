@@ -71,6 +71,11 @@ export default function RegisterScreen() {
           identifier: phone,
           maskedIdentifier: result.maskedPhone,
           ...authContinuationParams(booking, redirect),
+          // Needed by the OTP screen to re-send the code: the backend re-sends
+          // the register OTP when the same details are submitted again.
+          firstName,
+          lastName,
+          email,
         },
       });
     } catch {

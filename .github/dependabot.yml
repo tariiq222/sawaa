@@ -3,12 +3,18 @@
 # Per CLAUDE.md: pnpm overrides in package.json handle known CVEs manually,
 # but Dependabot adds a second, continuous signal — PRs land weekly so we
 # notice transitive bumps without re-running pnpm audit by hand.
+#
+# Every ecosystem targets `develop`: the deployment policy forbids PRs straight
+# into `main` (docs/operations/deployment-policy.md). There is no
+# github-actions ecosystem because GitHub Actions is disabled for this repo,
+# so workflow bumps would only pile up PRs.
 
 version: 2
 
 updates:
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -34,18 +40,7 @@ updates:
 
   - package-ecosystem: "pip"
     directory: "/scripts/security"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    labels:
-      - "dependencies"
-    commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"

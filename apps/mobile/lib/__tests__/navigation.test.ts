@@ -52,7 +52,7 @@ describe('decodeRedirect', () => {
   });
 
   it('uses the first value when the param arrives repeated', () => {
-    expect(decodeRedirect(['/(client)/(tabs)/home', '/(client)/(tabs)/chat']))
+    expect(decodeRedirect(['/(client)/(tabs)/home', '/(client)/notifications']))
       .toBe('/(client)/(tabs)/home');
   });
 });

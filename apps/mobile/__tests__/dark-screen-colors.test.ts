@@ -12,8 +12,8 @@ function routeFiles(directory: string): string[] {
 const routes = routeFiles(appRoot);
 
 // Expo Router layout files configure navigation rather than painting a screen;
-// these routes redirect without presenting a screen of their own. The two chat
-// routes only redirect.
+// these routes redirect without presenting a screen of their own. The chat
+// route only redirects.
 const backgroundExceptions = new Set([
   '(auth)/_layout.tsx',
   '(client)/_layout.tsx',
@@ -23,7 +23,6 @@ const backgroundExceptions = new Set([
   '(guest)/_layout.tsx',
   '_layout.tsx',
   '(client)/chat.tsx',
-  '(client)/(tabs)/chat.tsx',
   '(guest)/home.tsx',
   '(client)/(tabs)/account.tsx',
   'public-booking/[serviceId].tsx',

@@ -98,7 +98,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   const careRows: Row[] = [
     { key: 'packages', icon: Ticket, label: t('packages.title'), onPress: () => router.push('/(client)/packages') },
     { key: 'groups', icon: UsersRound, label: t('groups.title'), onPress: () => router.push('/(client)/groups') },
-    { key: 'records', icon: ClipboardList, label: t('tabs.records'), onPress: () => router.push('/(client)/(tabs)/records') },
+    { key: 'records', icon: ClipboardList, label: t('tabs.records'), onPress: () => router.push('/(client)/records') },
   ];
   const appRows: Row[] = [
     { key: 'notifications', icon: Bell, label: t('profile.notifications'), onPress: () => router.push('/(client)/notifications') },

@@ -36,9 +36,9 @@ describe('resolveNotificationHref', () => {
     expect(resolveNotificationHref(notification({ type: 'booking_confirmed' }))).toBe('/(client)/(tabs)/appointments');
   });
 
-  it('opens the chat tab for a conversation-scoped notification', () => {
+  it('opens the notifications list for a conversation-scoped notification', () => {
     expect(resolveNotificationHref(notification({ metadata: { conversationId: 'c-2' } }))).toBe(
-      '/(client)/(tabs)/chat',
+      '/(client)/notifications',
     );
   });
 
@@ -87,8 +87,8 @@ describe('resolvePushHref', () => {
     expect(resolvePushHref({ notificationType: 'BOOKING_CANCELLED' })).toBe('/(client)/(tabs)/appointments');
   });
 
-  it('opens the chat tab for a conversation-scoped payload', () => {
-    expect(resolvePushHref({ conversationId: 'c-2' })).toBe('/(client)/(tabs)/chat');
+  it('opens the notifications list for a conversation-scoped payload', () => {
+    expect(resolvePushHref({ conversationId: 'c-2' })).toBe('/(client)/notifications');
   });
 
   it('never routes to a URL or path supplied by the payload', () => {
