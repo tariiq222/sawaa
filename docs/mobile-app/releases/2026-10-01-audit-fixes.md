@@ -19,7 +19,7 @@ Owner authorized all identified source fixes. Worktree branch `codex/mobile-audi
 
 Focused mobile regressions: navigation8suites/64tests and appointment identity2suites/39tests passed after demonstrated failures before the fixes; independent task reviews approved the actual diffs. Dependency regressions demonstrated the original decoder timeout and all four missing filter bounds; the independent decoder bypass and escaped-percent regressions also failed before the final amendment. Integrated final evidence will be appended after completion.
 
-Tests in `scripts/security/dependency-fixes.test.cjs` exercise installed root/mobile packages, bounded child processes, normal JSON filtering/JSONL imports, original JSON body bytes, upload size bounds, ExcelJS export/import, TSX transforms, xcode project parse/write/IDs and calendar dates/locales. Woodpecker runs them as `dependency-regressions` after the two frozen installations. For local invocation after both installations: `SAWAA_INCLUDE_MOBILE_DEPENDENCIES=1 node --test scripts/security/dependency-fixes.test.cjs`.
+Tests in `scripts/security/dependency-fixes.test.cjs` exercise installed root/mobile packages, bounded child processes, normal JSON filtering/JSONL imports, original JSON body bytes, upload size bounds, ExcelJS export/import, TSX transforms, xcode project parse/write/IDs and calendar dates/locales. There is no automated CI gate for them (local Woodpecker CI was removed from `develop`). To run them after both installations: `SAWAA_INCLUDE_MOBILE_DEPENDENCIES=1 node --test scripts/security/dependency-fixes.test.cjs`.
 
 Code verification does not update the already uploaded TestFlight14 binary or prove native gestures, large-text/VoiceOver, real device login/booking/payment/Push/3DS, staging or production acceptance.
 
@@ -64,3 +64,17 @@ After both mobile amendments, the orchestrator ran `pnpm --dir apps/mobile typec
 One bounded download retry used the official `ghcr.io/aquasecurity/trivy-db:2` repository with the same pinned Trivy0.72.0 binary, `--download-db-only --timeout15m --no-progress`, and the new cache. It exited1 after10minutes with `oci download error: copy error: unexpected EOF`. This is external transport failure, not an advisory finding or successful scan. No further retry, stale database substitution, advisory suppression or skip-update is used. Evidence: `/tmp/sawaa-trivy-db-preflight.log`, retained through the Codex Security artifact tool as `artifacts/trivy-final-download-blocker.log`, SHA256 `cb2e50818534c25c5cb429f0285127914c573a68ce806431792594cbcd9b292d`.
 
 All actual task-branch modifications remain uncommitted in `codex/mobile-audit-fixes`. Develop's earlier dependency merge remains local; these subsequent fixes have not been merged or pushed. No deployment, provider/Apple write or native-device acceptance occurred. Original dirty TestFlight records remain byte-identical. The only post-CI source differences are the reviewed route-test types, Jest mapper, Trivy timeout/cache and evidence documents; application runtime code and both locks are unchanged from the integrated snapshot. Disposable attempt services and the unused scanner-source container/volume were removed; standard dependency/browser/scanner caches remain.
+
+## Post-merge verification (2026-10-01, Claude)
+
+The uncommitted work was committed on `codex/mobile-audit-fixes`, and the branch's `scripts/ci/*` edits were dropped because `develop` removed local Woodpecker CI and that directory. `develop` was then merged in with no conflicts. The Woodpecker and Trivy results above are historical; there is no Woodpecker gate any more. Checks run on the merged result:
+
+- `pnpm --dir apps/mobile typecheck` / `lint` / `test --runInBand`: exit 0; 156 suites / 997 tests passed; lint 0 errors, 5 warnings.
+- `SAWAA_INCLUDE_MOBILE_DEPENDENCIES=1 node --test scripts/security/dependency-fixes.test.cjs`: 32/32 passed.
+- `pnpm typecheck` (root, after `prisma generate`): 8/8 tasks passed.
+- `pnpm --filter=backend test`: 853 suites, 8,011 tests passed (1 existing skip). `src/app.module.spec.ts` needs config env; it passed (2/2) with synthetic, non-real values.
+- `pnpm --filter=dashboard test`: 275 files, 2,175 tests passed.
+- `pnpm --filter=@sawaa/shared --filter=@sawaa/api-client --filter=@sawaa/ui test`: 503 tests passed.
+- `pnpm --filter=@sawaa/website test`: 49 failed / 828 passed. These are the **same 49 failures on `develop`** (localStorage `clear` undefined in theme / cookie-consent / chat-widget tests), so they come from `develop`, not this branch.
+
+Not done: dashboard e2e smoke, live device testing, staging deployment.
