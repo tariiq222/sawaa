@@ -6,6 +6,7 @@ import { EventBusService } from '../../../infrastructure/events';
 
 const buildPrisma = () => ({
   $queryRaw: jest.fn().mockResolvedValue([{ id: 'book-1' }]),
+  organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
   invoice: {
     findUnique: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockImplementation((args: any) =>
@@ -232,6 +233,44 @@ describe('CreateInvoiceHandler', () => {
     // vatAmt and total are now Prisma.Decimal — compare via Number()
     expect(Number(result.vatAmt)).toBe(1500);
     expect(Number(result.total)).toBe(11500);
+  });
+
+  describe('VAT rate source', () => {
+    const base = { branchId: 'b1', clientId: 'c1', employeeId: 'e1', bookingId: 'book-1', subtotal: 10000, discountAmt: 2000 };
+
+    it('uses OrganizationSettings.vatRate when no rate is passed', async () => {
+      prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
+      await handler.execute(base);
+      expect(prisma.invoice.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ vatAmt: expect.anything(), total: expect.anything() }),
+      }));
+      const data = prisma.invoice.create.mock.calls[0][0].data;
+      expect(data.vatRate.toString()).toBe('0.15');
+      expect(data.vatAmt.toString()).toBe('1200');
+      expect(data.total.toString()).toBe('9200');
+    });
+
+    it('charges no VAT when the setting is 0', async () => {
+      prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0' });
+      await handler.execute(base);
+      const data = prisma.invoice.create.mock.calls[0][0].data;
+      expect(data.vatAmt.toString()).toBe('0');
+      expect(data.total.toString()).toBe('8000');
+    });
+
+    it('falls back to DEFAULT_VAT_RATE (0) when no settings row exists', async () => {
+      prisma.organizationSettings.findFirst.mockResolvedValue(null);
+      await handler.execute(base);
+      const data = prisma.invoice.create.mock.calls[0][0].data;
+      expect(data.vatRate.toString()).toBe('0');
+      expect(data.total.toString()).toBe('8000');
+    });
+
+    it('keeps an explicit rate without reading settings', async () => {
+      await handler.execute({ ...base, vatRate: 0.05 });
+      expect(prisma.organizationSettings.findFirst).not.toHaveBeenCalled();
+      expect(prisma.invoice.create.mock.calls[0][0].data.total.toString()).toBe('8400');
+    });
   });
 
   it('publishes finance.invoice.created as an optional event after creation', async () => {
