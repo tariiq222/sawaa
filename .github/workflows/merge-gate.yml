@@ -10,7 +10,6 @@ on:
     types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
-  workflow_dispatch:
 
 # Cancel in-progress runs when a new commit is pushed.
 concurrency:
@@ -189,12 +188,12 @@ jobs:
         shell: bash
 
   # ─────────────────────────────────────────────────────────────────────
-  # critical-e2e — backend real-database e2e lane (test:e2e:critical).
+  # critical-real-e2e — backend real-database e2e lane (test:e2e:critical).
   # Runs against a disposable pgvector Postgres service. Redis, MinIO,
   # Zoom, Moyasar and other providers stay mocked by test/setup-e2e.ts.
   # ─────────────────────────────────────────────────────────────────────
-  critical-e2e:
-    name: critical-e2e
+  critical-real-e2e:
+    name: critical-real-e2e
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -250,7 +249,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: critical-e2e-results
+          name: critical-real-e2e-results
           path: apps/backend/test-results-critical.json
           if-no-files-found: ignore
           retention-days: 7
