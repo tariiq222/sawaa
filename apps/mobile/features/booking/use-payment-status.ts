@@ -15,11 +15,21 @@ import { clientPaymentsService, type ClientInvoice } from '@/services/client/pay
  * - invoice cancelled/void or a payment FAILED → 'failed'
  * - a payment still PENDING / PENDING_VERIFICATION → 'pending'
  * - still settling after the polling window → 'pending'
+ *
+ * When the client cancelled or dismissed the hosted gateway the rules differ,
+ * because the backend creates the PENDING card payment before the gateway
+ * opens (see `abortedGatewayPhase`).
  */
 export type PaymentPhase = 'polling' | 'confirmed' | 'pending' | 'failed';
 
 const MAX_ATTEMPTS = 10;
 const INTERVAL_MS = 3000;
+/**
+ * Extra checks after the client closed the gateway while a hosted (card /
+ * Apple Pay) payment is still PENDING. They catch a charge that settled just
+ * before the browser was dismissed; after them the attempt counts as abandoned.
+ */
+export const ABORTED_GATEWAY_RECHECKS = 2;
 
 function isPaidInvoice(inv: ClientInvoice): boolean {
   return inv.status === 'PAID' || inv.status === 'DEPOSIT_PAID';
@@ -39,6 +49,57 @@ function hasPendingPayment(inv: ClientInvoice): boolean {
       (p) => p.status === 'PENDING' || p.status === 'PENDING_VERIFICATION',
     ) ?? false
   );
+}
+
+function normalized(value: string | null | undefined): string {
+  return value?.trim().toUpperCase() ?? '';
+}
+
+/**
+ * Payments that settle outside the hosted gateway: a bank transfer awaiting
+ * its receipt or a receipt awaiting staff verification. Closing the browser
+ * says nothing about them, so they stay 'pending'.
+ */
+function hasPendingOfflinePayment(inv: ClientInvoice): boolean {
+  return (
+    inv.payments?.some((p) => {
+      const status = normalized(p.status);
+      if (status === 'PENDING_VERIFICATION') return true;
+      return status === 'PENDING' && normalized(p.method).replace('-', '_') === 'BANK_TRANSFER';
+    }) ?? false
+  );
+}
+
+function hasPendingHostedPayment(inv: ClientInvoice): boolean {
+  return (
+    inv.payments?.some(
+      (p) =>
+        normalized(p.status) === 'PENDING' &&
+        normalized(p.method).replace('-', '_') !== 'BANK_TRANSFER',
+    ) ?? false
+  );
+}
+
+export function isAbortedGatewayResult(webResult?: string): boolean {
+  return webResult === 'cancel' || webResult === 'dismiss';
+}
+
+/**
+ * Phase after the client cancelled/dismissed the hosted gateway.
+ *
+ * The backend records a PENDING card payment before the gateway opens, so a
+ * PENDING hosted payment alone does not mean money is on its way. `null` means
+ * "check again shortly" (a recheck is still allowed).
+ */
+export function abortedGatewayPhase(
+  inv: ClientInvoice,
+  recheckAllowed: boolean,
+): Exclude<PaymentPhase, 'polling'> | null {
+  if (isPaidInvoice(inv)) return 'confirmed';
+  if (inv.status === 'CANCELLED' || inv.status === 'VOID') return 'failed';
+  if (hasPendingOfflinePayment(inv)) return 'pending';
+  if (hasPendingHostedPayment(inv) && recheckAllowed) return null;
+  return 'failed';
 }
 
 const CONFIRMED_BOOKING_STATUSES = new Set(['CONFIRMED', 'COMPLETED']);
@@ -67,9 +128,9 @@ export function resolveConfirmedPhase(
 /**
  * `webResult` is the `expo-web-browser` auth-session result type
  * ('success' | 'cancel' | 'dismiss' | 'locked'). When the user explicitly
- * aborted the gateway and the backend has not yet recorded any payment, we
- * short-circuit to 'failed' rather than spinning the full window on an
- * abandoned charge.
+ * aborted the gateway we resolve with `abortedGatewayPhase` instead of
+ * spinning the full window (and ending on 'pending') for an abandoned charge,
+ * so the success screen offers a payment retry for the same invoice.
  */
 export function usePaymentStatus(invoiceId?: string, webResult?: string) {
   const [phase, setPhase] = useState<PaymentPhase>(invoiceId ? 'polling' : 'confirmed');
@@ -92,6 +153,17 @@ export function usePaymentStatus(invoiceId?: string, webResult?: string) {
         const inv = await clientPaymentsService.getInvoice(invoiceId!);
         if (cancelled) return;
 
+        if (isAbortedGatewayResult(webResult)) {
+          const abortedPhase = abortedGatewayPhase(inv, attempts < ABORTED_GATEWAY_RECHECKS);
+          if (abortedPhase) {
+            setPhase(abortedPhase);
+            return;
+          }
+          attempts += 1;
+          timer = setTimeout(poll, INTERVAL_MS);
+          return;
+        }
+
         if (isPaidInvoice(inv)) {
           setPhase('confirmed');
           return;
@@ -104,16 +176,6 @@ export function usePaymentStatus(invoiceId?: string, webResult?: string) {
           return;
         }
         if (isFailedInvoice(inv)) {
-          setPhase('failed');
-          return;
-        }
-
-        // User aborted the gateway and nothing was charged yet → failed.
-        if (
-          attempts === 0 &&
-          (webResult === 'cancel' || webResult === 'dismiss') &&
-          (inv.payments?.length ?? 0) === 0
-        ) {
           setPhase('failed');
           return;
         }
