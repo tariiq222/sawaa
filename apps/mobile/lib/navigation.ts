@@ -6,12 +6,11 @@ type Router = ReturnType<typeof useRouter>;
  * Leaves the current screen when it may have been opened with no history entry:
  * a deep link, a notification tap, or a guard redirect that replaced the route.
  * `router.back()` alone is a no-op there, which strands the user on the screen.
- * Falling back to `/home` (or an explicit fallback href) leaves a reachable
- * next step: `/home` serves as an alias that routes guests to the public home
- * and signed-in users to their role-appropriate tab shell (`/(client)/(tabs)/home`
- * or `/(employee)/(tabs)/today`), preventing redirect loops and tab shell loss.
+ * The group-qualified guest home avoids the client home with the same URL.
+ * Its existing role dispatcher sends signed-in users to their tab shell;
+ * callers can still supply an explicit fallback for a role-specific screen.
  */
-export function goBackOrHome(router: Router, fallback: Href = '/home'): void {
+export function goBackOrHome(router: Router, fallback: Href = '/(guest)/home'): void {
   if (router.canGoBack()) {
     router.back();
     return;

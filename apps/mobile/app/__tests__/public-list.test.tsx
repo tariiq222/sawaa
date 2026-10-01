@@ -44,7 +44,7 @@ it('returns to public home when a list has no history entry', () => {
   const screen = render(<PublicListScreen />);
   const { fireEvent } = require('@testing-library/react-native');
   fireEvent.press(screen.getByRole('button', { name: 'a11y.buttonBack' }));
-  expect(mockReplace).toHaveBeenCalledWith('/home');
+  expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
   expect(mockBack).not.toHaveBeenCalled();
 });
 

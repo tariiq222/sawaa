@@ -140,7 +140,7 @@ export default function EmployeeProfileScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           await authService.logout();
           dispatch(logout());
-          router.replace('/home');
+          router.replace('/(guest)/home');
         },
       },
     ]);

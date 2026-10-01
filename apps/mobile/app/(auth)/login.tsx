@@ -168,7 +168,7 @@ export default function LoginScreen() {
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.replace('/home');
+              router.replace('/(guest)/home');
             }}
             accessibilityRole="button"
             style={styles.secondary}

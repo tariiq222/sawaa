@@ -135,7 +135,7 @@ beforeEach(() => {
 // ── tests ────────────────────────────────────────────────────────────────────
 
 describe('IndexScreen — unauthenticated paths route to public browsing', () => {
-  it('routes to /home when no token is in Redux or SecureStore', async () => {
+  it('routes to guest home when no token is in Redux or SecureStore', async () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: null,
       refreshToken: null,
@@ -144,12 +144,12 @@ describe('IndexScreen — unauthenticated paths route to public browsing', () =>
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/home');
+      expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     });
     expect(mockReplace).not.toHaveBeenCalledWith('/(client)/(tabs)/home');
   });
 
-  it('routes to /home when stored token is expired (profile fetch throws)', async () => {
+  it('routes to guest home when stored token is expired (profile fetch throws)', async () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
@@ -159,12 +159,12 @@ describe('IndexScreen — unauthenticated paths route to public browsing', () =>
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/home');
+      expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     });
     expect(mockReplace).not.toHaveBeenCalledWith('/(client)/(tabs)/home');
   });
 
-  it('routes to /home when profile fetch returns success: false', async () => {
+  it('routes to guest home when profile fetch returns success: false', async () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: 'some-token',
       refreshToken: 'refresh-token',
@@ -174,7 +174,7 @@ describe('IndexScreen — unauthenticated paths route to public browsing', () =>
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/home');
+      expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     });
   });
 });
@@ -273,7 +273,7 @@ describe('IndexScreen — valid stored token routes to correct tab', () => {
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/home');
+      expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     });
     expect(mockDispatch).not.toHaveBeenCalled();
   });

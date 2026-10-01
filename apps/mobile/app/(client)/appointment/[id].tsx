@@ -28,6 +28,7 @@ import { InfoRows, type InfoRow } from '@/components/ui/InfoRows';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { STATUS_LABEL_MAP } from '@/lib/status-helpers';
+import { getBookingServiceName } from '@/lib/booking-service-name';
 import { formatLongDate, formatTimeOfDay } from '@/lib/session-format';
 import { hasZoomMeetingAccess, resolveDeliveryType } from '@/types/booking-enums';
 import { goBackOrHome } from '@/lib/navigation';
@@ -53,6 +54,7 @@ export default function AppointmentDetailScreen() {
         ? booking.employee?.nameAr ?? booking.employee?.nameEn
         : booking.employee?.nameEn ?? booking.employee?.nameAr) ?? '—'
     : '—';
+  const serviceName = booking ? getBookingServiceName(booking, dir.isRTL) : null;
   const isOnline = booking ? resolveDeliveryType(booking.deliveryType) === 'online' : false;
   const canShowZoom = booking ? hasZoomMeetingAccess(booking) : false;
   const canResumePayment = Boolean(
@@ -167,6 +169,11 @@ export default function AppointmentDetailScreen() {
                 <Text numberOfLines={1} style={[styles.time, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
                   {scheduledTime ?? t('appointments.toBeScheduled')}
                 </Text>
+                {serviceName ? (
+                  <Text testID="appointment-service-name" numberOfLines={2} style={[styles.therapist, { color: colors.ink[900], fontFamily: f500, textAlign: dir.textAlign }]}>
+                    {serviceName}
+                  </Text>
+                ) : null}
                 <Text numberOfLines={1} style={[styles.therapist, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
                   {t('appointments.with', { name: therapistName })}
                 </Text>

@@ -138,7 +138,7 @@ describe('goBackOrHome', () => {
 
     goBackOrHome(router as never);
 
-    expect(router.replace).toHaveBeenCalledWith('/home');
+    expect(router.replace).toHaveBeenCalledWith('/(guest)/home');
     expect(router.back).not.toHaveBeenCalled();
   });
 

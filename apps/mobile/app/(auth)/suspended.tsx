@@ -45,7 +45,7 @@ export default function SuspendedScreen() {
             accessibilityRole="button"
             accessibilityLabel={t('suspended.continueAsGuest')}
             style={styles.secondary}
-            onPress={() => router.replace('/home')}
+            onPress={() => router.replace('/(guest)/home')}
           >
             <Text style={[styles.secondaryText, { fontFamily: f700 }]}>{t('suspended.continueAsGuest')}</Text>
           </Pressable>

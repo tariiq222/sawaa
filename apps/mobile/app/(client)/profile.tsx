@@ -208,7 +208,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
         <Glass
           variant="strong"
           radius={sawaaRadius.lg}
-          onPress={() => { void authService.logout().then(() => router.replace('/home')); }}
+          onPress={() => { void authService.logout().then(() => router.replace('/(guest)/home')); }}
           interactive
           accessibilityRole="button"
           style={styles.group}
