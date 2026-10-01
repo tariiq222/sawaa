@@ -6,7 +6,7 @@
 //   3. Run mutation inside cls.run with the default org compatibility context.
 
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, SmsDeliveryStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { ClsService } from 'nestjs-cls';
 import {
@@ -86,6 +86,7 @@ export class SmsDlrHandler {
     // the claim back and the provider can safely retry the webhook.
     const webhookEventId = `${parsed.providerMessageId}:${parsed.status}`;
     const payloadHash = createHash('sha256').update(req.rawBody).digest('hex');
+    let stale = false;
     try {
       return await this.cls.run(async () => {
         this.cls.set(TENANT_CLS_KEY, {
@@ -104,8 +105,14 @@ export class SmsDlrHandler {
             },
             select: { id: true },
           });
+          // Receipts can arrive out of order. Only move a delivery forward
+          // (QUEUED → SENT/UNKNOWN → FAILED → DELIVERED); a late FAILED must
+          // not overwrite a DELIVERED row.
           const updated = await tx.smsDelivery.updateMany({
-            where: { providerMessageId: parsed.providerMessageId },
+            where: {
+              providerMessageId: parsed.providerMessageId,
+              status: { in: [...statusesBefore(parsed.status)] },
+            },
             data: {
               status: parsed.status,
               errorCode: parsed.errorCode,
@@ -115,11 +122,23 @@ export class SmsDlrHandler {
             },
           });
           if (updated.count === 0) {
-            throw new Error(
-              `SMS delivery not found for provider message ${parsed.providerMessageId}`,
-            );
+            const exists = await tx.smsDelivery.count({
+              where: { providerMessageId: parsed.providerMessageId },
+            });
+            if (exists === 0) {
+              throw new Error(
+                `SMS delivery not found for provider message ${parsed.providerMessageId}`,
+              );
+            }
+            stale = true;
           }
         });
+        if (stale) {
+          this.logger.log(
+            `SMS DLR: skipped_stale provider=SMS_${req.provider} eventId=${webhookEventId}`,
+          );
+          return { skipped: true };
+        }
         return {};
       });
     } catch (err) {
@@ -132,4 +151,22 @@ export class SmsDlrHandler {
       throw err;
     }
   }
+}
+
+// A confirmed delivery is final: a late FAILED receipt must not overwrite it,
+// while a DELIVERED receipt may still correct an earlier FAILED.
+const DLR_STATUS_RANK: Record<SmsDeliveryStatus, number> = {
+  QUEUED: 0,
+  SENT: 1,
+  UNKNOWN: 1,
+  FAILED: 2,
+  DELIVERED: 3,
+};
+
+/** Current statuses a receipt with `next` may overwrite (strictly earlier ranks). */
+function statusesBefore(next: SmsDeliveryStatus): SmsDeliveryStatus[] {
+  const rank = DLR_STATUS_RANK[next];
+  return (Object.keys(DLR_STATUS_RANK) as SmsDeliveryStatus[]).filter(
+    (status) => DLR_STATUS_RANK[status] < rank,
+  );
 }
