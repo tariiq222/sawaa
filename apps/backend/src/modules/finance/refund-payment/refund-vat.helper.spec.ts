@@ -126,4 +126,21 @@ describe('computeRefundAccounting', () => {
     expect(last.newRefundedVatAmt).toBe(1500);
     expect(last.newInvoiceStatus).toBe('REFUNDED');
   });
+
+  it('closes at exactly the invoice VAT even when earlier shares rounded up', () => {
+    // 4 + 4 + 11490 + 2 on 11500 / 1500 VAT: proportional shares reach 1501
+    // before the final 2-halala refund, which must bring it back to 1500.
+    let refunded = 0;
+    let refundedVat = 0;
+    for (const amount of [4, 4, 11490, 2]) {
+      const r = computeRefundAccounting({
+        invoiceTotal: 11500, invoiceVatAmt: 1500,
+        alreadyRefundedAmount: refunded, alreadyRefundedVatAmt: refundedVat, thisRefundAmount: amount,
+      });
+      refunded = r.newRefundedAmount;
+      refundedVat = r.newRefundedVatAmt;
+    }
+    expect(refunded).toBe(11500);
+    expect(refundedVat).toBe(1500);
+  });
 });

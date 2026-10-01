@@ -65,12 +65,11 @@ export function computeRefundAccounting(
 
   let refundedVatPortion: Decimal;
   if (isLastRefund) {
-    // Remaining pattern: assign all un-refunded VAT to this operation
+    // Remaining pattern: this operation closes the invoice, so its share is
+    // whatever brings the cumulative VAT to exactly the invoice VAT. It can
+    // be negative when earlier proportional shares rounded up (e.g. refunds of
+    // 4 + 4 on an 11500/1500 invoice each round to 1).
     refundedVatPortion = vatAmt.minus(alreadyRefundedVat);
-    // Floor to 0 to guard against over-refund of VAT (should not happen in normal flow)
-    if (refundedVatPortion.lt(0)) {
-      refundedVatPortion = new Decimal(0);
-    }
   } else {
     refundedVatPortion = allocateVatPortion(thisRefund, total, vatAmt);
   }
