@@ -7,14 +7,15 @@ name: merge-gate
 on:
   pull_request:
     branches: [main, develop]
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
   workflow_dispatch:
 
 # Cancel in-progress runs when a new commit is pushed.
+# Title/body edits get their own group so they never cancel a real run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ (github.event.action == 'edited' && github.event.changes.base == null) && format('-edit-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -28,7 +29,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # `edited` is included so a PR retargeted to develop/main gets a fresh
+    # gate; other edits (title/body) are skipped.
+    if: github.event.action != 'edited' || github.event.changes.base != null
 
     env:
       # Backend unit tests + openapi:build-and-snapshot both load AppModule,
@@ -126,7 +129,9 @@ jobs:
 
       - name: Prisma migration immutability
         if: github.event_name == 'pull_request'
-        run: node scripts/check-prisma-migration-immutability.mjs origin/main
+        # Diff against the PR's own base so develop-only migrations are
+        # protected too (origin/main would report them as additions).
+        run: node scripts/check-prisma-migration-immutability.mjs origin/${{ github.base_ref }}
 
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v3.0.0
@@ -195,6 +200,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+    if: github.event.action != 'edited' || github.event.changes.base != null
 
     services:
       postgres:
@@ -215,6 +221,8 @@ jobs:
       DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_e2e_test?schema=public
       REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_e2e_test?schema=public
       TZ: Asia/Riyadh
+      # Hosted runners can default to a ~2 GiB heap; the 28-suite run needs more.
+      NODE_OPTIONS: --max-old-space-size=4096
 
     steps:
       - uses: actions/checkout@v7
