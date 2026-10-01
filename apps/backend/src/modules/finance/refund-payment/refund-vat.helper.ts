@@ -12,12 +12,12 @@ export interface ComputeRefundAccountingInput {
    * Required to implement the "remaining VAT" pattern and avoid drift on the
    * final refund operation.
    *
-   * Pass 0 if this is the first refund against the invoice.
+   * Pass the invoice's refundedVatAmt; it is 0 for the first refund.
    */
   alreadyRefundedVatAmt?: Decimal | string | number;
   /**
    * Set to true when this is the LAST refund operation (i.e. will fully
-   * refund the invoice). When true, the VAT portion is computed as
+   * refund the invoice). When omitted it is derived from the amounts. When true, the VAT portion is computed as
    * (totalVat - alreadyRefundedVatAmt) rather than proportionally, which
    * guarantees that sum(vatPortions) === totalVat with zero drift.
    */
@@ -58,8 +58,13 @@ export function computeRefundAccounting(
 
   // Compute VAT portion for this refund using allocateVatPortion (pure Decimal).
   // On the last refund, use the remaining-VAT pattern to eliminate drift.
+  // When the caller does not say, a refund that settles the invoice (within the
+  // 1-halala tolerance) is the last one and takes the remaining VAT.
+  const isLastRefund = input.isLastRefund
+    ?? alreadyRefunded.plus(thisRefund).gte(total.minus(new Decimal('1')));
+
   let refundedVatPortion: Decimal;
-  if (input.isLastRefund) {
+  if (isLastRefund) {
     // Remaining pattern: assign all un-refunded VAT to this operation
     refundedVatPortion = vatAmt.minus(alreadyRefundedVat);
     // Floor to 0 to guard against over-refund of VAT (should not happen in normal flow)

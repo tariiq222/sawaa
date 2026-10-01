@@ -109,4 +109,21 @@ describe('computeRefundAccounting', () => {
     expect(last.newRefundedVatAmt).toBe(1500); // exact, no drift
     expect(last.newInvoiceStatus).toBe('REFUNDED');
   });
+
+  it('treats a refund that settles the invoice as the last one when the caller does not say', () => {
+    // 1007 + 5246 + 5247 on 11500 / 1500 VAT: proportional shares alone sum
+    // to 1499, so the last refund must take the remaining VAT.
+    const first = computeRefundAccounting({ invoiceTotal: 11500, invoiceVatAmt: 1500, alreadyRefundedAmount: 0, alreadyRefundedVatAmt: 0, thisRefundAmount: 1007 });
+    const second = computeRefundAccounting({
+      invoiceTotal: 11500, invoiceVatAmt: 1500,
+      alreadyRefundedAmount: first.newRefundedAmount, alreadyRefundedVatAmt: first.newRefundedVatAmt, thisRefundAmount: 5246,
+    });
+    const last = computeRefundAccounting({
+      invoiceTotal: 11500, invoiceVatAmt: 1500,
+      alreadyRefundedAmount: second.newRefundedAmount, alreadyRefundedVatAmt: second.newRefundedVatAmt, thisRefundAmount: 5247,
+    });
+    expect(last.newRefundedAmount).toBe(11500);
+    expect(last.newRefundedVatAmt).toBe(1500);
+    expect(last.newInvoiceStatus).toBe('REFUNDED');
+  });
 });
