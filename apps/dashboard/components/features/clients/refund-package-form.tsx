@@ -68,6 +68,8 @@ export function RefundPackageForm({
   // amountPaid is the net package price; refunds are measured against what
   // the client was actually charged (VAT-inclusive when VAT is enabled).
   const charged = purchase.totalCharged ?? purchase.amountPaid
+  // Earlier partial refunds reduce what can still be returned.
+  const refundable = Math.max(0, charged - (purchase.refundAmount ?? 0))
 
   // The operator types SAR; we convert to halalas at submit. Default
   // to the original amount paid (full refund). The parent remounts
@@ -75,8 +77,8 @@ export function RefundPackageForm({
   // the dialog shell), so the useState initialiser always re-runs
   // fresh — no manual reset effect is needed.
   const defaultSar = useMemo(
-    () => halalasToSar(charged),
-    [charged],
+    () => halalasToSar(refundable),
+    [refundable],
   )
   const [refundSar, setRefundSar] = useState<string>(
     defaultSar > 0 ? String(defaultSar) : "0",
@@ -99,7 +101,7 @@ export function RefundPackageForm({
   const isValid =
     Number.isFinite(refundAmountHalalas) &&
     refundAmountHalalas >= 0 &&
-    refundAmountHalalas <= charged &&
+    refundAmountHalalas <= refundable &&
     notes.length <= MAX_NOTES &&
     !refundMut.isPending
 
@@ -187,7 +189,7 @@ export function RefundPackageForm({
             <p className="text-xs text-muted-foreground">
               {t("packages.balances.refund.amountHelper").replace(
                 "{max}",
-                halalasToSar(charged).toFixed(2),
+                halalasToSar(refundable).toFixed(2),
               )}
             </p>
           </div>

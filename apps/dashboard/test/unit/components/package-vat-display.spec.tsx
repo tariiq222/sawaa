@@ -53,3 +53,12 @@ describe("RefundPackageForm amount charged", () => {
     expect(screen.getByDisplayValue("360")).toBeInTheDocument()
   })
 })
+
+describe("RefundPackageForm after a partial refund", () => {
+  it("defaults to and caps at what is still refundable", () => {
+    const purchase = { id: "p1", amountPaid: 36_000, totalCharged: 41_400, vatAmount: 5_400, refundAmount: 36_000, credits: [] } as unknown as ClientPackagePurchase
+    render(<RefundPackageForm purchase={purchase} onClose={() => {}} />)
+    expect(screen.getByDisplayValue("54")).toBeInTheDocument()
+  })
+})
+
