@@ -90,6 +90,18 @@ describe('TokenService', () => {
       );
     });
 
+    it('records the refresh token source, defaulting to DASHBOARD', async () => {
+      const prisma = buildPrisma();
+      const svc = new TokenService(buildJwt() as never, buildConfig() as never, prisma as never);
+      const user = { id: 'user-1', email: 'user@example.com', role: 'EMPLOYEE', customRoleId: null, customRole: null, tokenVersion: 1 };
+
+      await svc.issueTokenPair(user, {});
+      await svc.issueTokenPair(user, {}, undefined, 'MOBILE');
+
+      expect(prisma.refreshToken.create).toHaveBeenNthCalledWith(1, expect.objectContaining({ data: expect.objectContaining({ source: 'DASHBOARD' }) }));
+      expect(prisma.refreshToken.create).toHaveBeenNthCalledWith(2, expect.objectContaining({ data: expect.objectContaining({ source: 'MOBILE' }) }));
+    });
+
     it('uses JWT_ACCESS_SECRET and JWT_ACCESS_TTL', async () => {
       const jwt = buildJwt();
       const config = buildConfig();

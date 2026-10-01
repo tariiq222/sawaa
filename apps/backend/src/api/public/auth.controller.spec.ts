@@ -293,6 +293,24 @@ describe('AuthController (e2e)', () => {
       await refreshApp.close();
     });
 
+    it('refuses a mobile-issued refresh token without rotating it', async () => {
+      const mockPrisma = buildMockPrisma();
+      mockPrisma.refreshToken.findMany.mockResolvedValue([{
+        id: 'rt-mobile', tokenHash, tokenSelector: 'raw-toke', userId: 'user-1',
+        revokedAt: null, expiresAt: new Date(Date.now() + 86400000), source: 'MOBILE',
+      }]);
+      const refreshApp = await buildApp(mockPrisma, { canActivate: () => true });
+
+      await request(refreshApp.getHttpServer())
+        .post('/auth/refresh')
+        .set('Cookie', 'ck_refresh=raw-token')
+        .send({})
+        .expect(401);
+      expect(mockPrisma.refreshToken.updateMany).not.toHaveBeenCalled();
+      expect(mockTokens.issueTokenPair).not.toHaveBeenCalled();
+      await refreshApp.close();
+    });
+
     it('returns 401 when refreshToken cookie is missing', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/refresh')

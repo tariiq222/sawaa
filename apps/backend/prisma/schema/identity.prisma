@@ -103,9 +103,17 @@ model RefreshToken {
   expiresAt     DateTime
   revokedAt     DateTime?
   createdAt     DateTime  @default(now())
+  // Which sign-in channel minted this token. Null for tokens issued before
+  // the column existed. Dashboard refresh rejects MOBILE tokens.
+  source        RefreshTokenSource?
 
   @@index([userId])
   @@index([tokenSelector])
+}
+
+enum RefreshTokenSource {
+  DASHBOARD
+  MOBILE
 }
 
 model PasswordResetToken {

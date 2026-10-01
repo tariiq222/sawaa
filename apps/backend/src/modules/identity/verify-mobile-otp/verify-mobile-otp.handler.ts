@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
-import { OtpChannel, OtpPurpose, Prisma } from '@prisma/client';
+import { OtpChannel, OtpPurpose, Prisma, RefreshTokenSource } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { TokenService, TokenPair } from '../shared/token.service';
@@ -140,7 +140,7 @@ export class VerifyMobileOtpHandler {
           client = await this.ensureRegisteredClient(tx, updated, identifier, client);
         } else if (user && user.role !== 'CLIENT') {
           if (!user.isActive) throw new UnauthorizedException('Account is inactive');
-          return { tokens: await this.tokens.issueTokenPair(user, { isSuperAdmin: user.isSuperAdmin ?? false }, tx), sessionKind: 'staff' as const };
+          return { tokens: await this.tokens.issueTokenPair(user, { isSuperAdmin: user.isSuperAdmin ?? false }, tx, RefreshTokenSource.MOBILE), sessionKind: 'staff' as const };
         }
         if (cmd.purpose === MobileOtpPurposeDto.LOGIN && user?.role === 'CLIENT' && channel === 'SMS') {
           client = await this.ensureRegisteredClient(tx, user, identifier, client);

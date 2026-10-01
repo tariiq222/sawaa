@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { Prisma } from '@prisma/client';
+import { Prisma, RefreshTokenSource } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
 
@@ -52,6 +52,7 @@ export class TokenService {
     },
     claims: AuthClaims,
     transaction?: Prisma.TransactionClient,
+    source: RefreshTokenSource = RefreshTokenSource.DASHBOARD,
   ): Promise<TokenPair> {
     const permissions = user.customRole?.permissions ?? [];
     const payload: JwtPayload = {
@@ -83,6 +84,7 @@ export class TokenService {
         tokenHash,
         tokenSelector,
         expiresAt,
+        source,
       },
     });
 

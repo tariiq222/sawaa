@@ -5,7 +5,7 @@ import {
 import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import * as bcrypt from 'bcryptjs';
-import { Prisma } from '@prisma/client';
+import { Prisma, RefreshTokenSource } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiNoContentResponse, ApiResponse
@@ -168,6 +168,11 @@ export class AuthController {
     if (!rawToken) throw new UnauthorizedException('No refresh token');
 
     const record = await this.findActiveToken(rawToken);
+    // Mobile sessions rotate only through /mobile/auth/refresh, which enforces
+    // practitioner eligibility; never upgrade them into a dashboard session.
+    if (record.source === RefreshTokenSource.MOBILE) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
 
     const tokens = await this.rlsTransaction.withTransaction(async (tx) => {
       // Logout takes this same lock before revoking all refresh credentials.

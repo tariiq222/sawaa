@@ -10,6 +10,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import cookieParser from 'cookie-parser';
 import * as bcrypt from 'bcryptjs';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { AppModule } from '../../../src/app.module';
@@ -56,6 +57,7 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
       .overrideProvider(EmailChannelAdapter).useValue(mail)
       .compile();
     app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
     configureHttpContract(app, 'production');
     await app.init();
     prisma = app.get(PrismaService);
@@ -298,6 +300,15 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     expect(verified.body.sessionKind).toBe('staff');
     await api().get('/api/v1/auth/me').set('Authorization', `Bearer ${verified.body.tokens.accessToken}`).expect(200);
     await api().get('/api/v1/mobile/client/profile').set('Authorization', `Bearer ${verified.body.tokens.accessToken}`).expect(401);
+    // A mobile-issued staff refresh token cannot be rotated through the dashboard cookie route.
+    const staffRefresh = verified.body.tokens.refreshToken as string;
+    const dashboardRefresh = await api().post('/api/v1/auth/refresh').set('Cookie', `ck_refresh=${staffRefresh}`).send({});
+    expect(dashboardRefresh.status).toBe(401);
+    expect(dashboardRefresh.body.message).toBe('Invalid or expired refresh token');
+    await api().post('/api/v1/mobile/auth/refresh').send({ refreshToken: staffRefresh }).expect(200);
+    const sources = await prisma.refreshToken.findMany({ where: { userId: u.id }, select: { source: true } });
+    expect(sources.length).toBeGreaterThan(0);
+    expect(sources.every((row) => row.source === 'MOBILE')).toBe(true);
     const client = await seedClient({ label: 'opposite-guard' });
     const pair = await issueClientPair(client.id);
     await api().get('/api/v1/mobile/client/profile').set('Authorization', `Bearer ${pair.accessToken}`).expect(200);

@@ -307,6 +307,7 @@ describe('VerifyMobileOtpHandler', () => {
 
       const out = await handler.execute({ identifier: '+966500000000', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN });
       expect(out).toEqual({ tokens: { accessToken: 'a', refreshToken: 'r' }, sessionKind: 'staff' });
+      expect(tokensMock.issueTokenPair).toHaveBeenCalledWith(expect.objectContaining({ id: 'u-staff' }), { isSuperAdmin: true }, prismaMock, 'MOBILE');
     });
 
     it('refuses staff without an active practitioner record, without touching the code', async () => {

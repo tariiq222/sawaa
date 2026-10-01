@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, RefreshTokenSource } from '@prisma/client';
 import { RlsTransactionService } from '../../../infrastructure/database';
 import { TokenPair, TokenService } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
@@ -51,7 +51,7 @@ export class NativeRefreshHandler {
         data: { revokedAt: new Date() },
       });
       if (consumed.count !== 1) throw new UnauthorizedException('Invalid or expired refresh token');
-      return this.tokens.issueTokenPair(user, { isSuperAdmin: user.isSuperAdmin ?? false }, tx);
+      return this.tokens.issueTokenPair(user, { isSuperAdmin: user.isSuperAdmin ?? false }, tx, RefreshTokenSource.MOBILE);
     });
     if (result === 'ineligible') throw new UnauthorizedException('User not found or inactive');
     return result;
