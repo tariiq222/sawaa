@@ -19,6 +19,7 @@ import { SmsChannelAdapter } from '../../../src/modules/comms/notification-chann
 import { EmailChannelAdapter } from '../../../src/modules/comms/notification-channel/email-channel.adapter';
 import { ClientTokenService } from '../../../src/modules/identity/shared/client-token.service';
 import { PlatformSettingsService } from '../../../src/modules/platform/settings/platform-settings.service';
+import { TokenService } from '../../../src/modules/identity/shared/token.service';
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
 
@@ -307,27 +308,41 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     const admin = await seedUser({ label: 'super-admin-2fa', role: 'ADMIN', isSuperAdmin: true });
     await linkPractitioner(admin.id, 'super-admin-2fa');
     const settings = app.get(PlatformSettingsService);
-    await settings.set('security.twoFactor.required', true);
+    const twoFactorKey = 'security.twoFactor.required';
+    const previous = await prisma.platformSetting.findUnique({ where: { key: twoFactorKey } });
     try {
+      await settings.set(twoFactorKey, true);
       const requested = await api().post('/api/v1/mobile/auth/request-login-otp').send({ identifier: admin.phone });
       expect(requested.status).toBe(200);
       expect(sentCodes.has(codeKey(admin.phone!, OtpPurpose.MOBILE_LOGIN))).toBe(false);
 
       // Even with a valid code planted directly, verify must not issue staff tokens.
-      const code = '4242';
-      const planted = await seedOtp(admin.phone!, code);
-      const verified = await verify(admin.phone!, code);
+      const planted = await seedOtp(admin.phone!, '4242');
+      const verified = await verify(admin.phone!, '4242');
       expect(verified.status).toBe(401);
       expect(verified.body.tokens).toBeUndefined();
       expect((await prisma.otpCode.findUniqueOrThrow({ where: { id: planted.id } })).consumedAt).toBeNull();
-    } finally {
-      await prisma.platformSetting.deleteMany({ where: { key: 'security.twoFactor.required' } });
-    }
 
-    // Control: the same account signs in once two-factor is no longer required.
-    const verifiedWithout2fa = await verify(admin.phone!, '4242');
-    expect(verifiedWithout2fa.status).toBe(200);
-    expect(verifiedWithout2fa.body.sessionKind).toBe('staff');
+      // Control: the same account signs in once two-factor is not required.
+      await settings.set(twoFactorKey, false);
+      const verifiedWithout2fa = await verify(admin.phone!, '4242');
+      expect(verifiedWithout2fa.status).toBe(200);
+      expect(verifiedWithout2fa.body.sessionKind).toBe('staff');
+    } finally {
+      if (previous) {
+        await prisma.platformSetting.update({ where: { key: twoFactorKey }, data: { value: previous.value, isSecret: previous.isSecret } });
+      } else {
+        await prisma.platformSetting.deleteMany({ where: { key: twoFactorKey } });
+      }
+    }
+  });
+
+  it('refuses mobile refresh for staff without a practitioner record and revokes the token', async () => {
+    const reception = await seedUser({ label: 'reception-refresh', role: 'RECEPTIONIST' });
+    const pair = await app.get(TokenService).issueTokenPair({ ...reception, customRole: null }, { isSuperAdmin: false });
+    const refreshed = await api().post('/api/v1/mobile/auth/refresh').send({ refreshToken: pair.refreshToken });
+    expect(refreshed.status).toBe(401);
+    expect(await prisma.refreshToken.count({ where: { userId: reception.id, revokedAt: null } })).toBe(0);
   });
 
   it('refuses mobile OTP login for staff without a practitioner record', async () => {

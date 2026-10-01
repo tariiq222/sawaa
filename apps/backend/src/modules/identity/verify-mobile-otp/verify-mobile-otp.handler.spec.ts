@@ -291,6 +291,16 @@ describe('VerifyMobileOtpHandler', () => {
       expect(prismaMock.otpCode.updateMany).not.toHaveBeenCalled();
     });
 
+    it('does not reveal staff eligibility for a wrong code', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(staffUser(false));
+      prismaMock.employee.findFirst.mockResolvedValue(null);
+
+      await expect(handler.execute({ identifier: '+966500000000', code: '9999', purpose: MobileOtpPurposeDto.LOGIN }))
+        .rejects.toThrow('Invalid OTP code');
+      expect(prismaMock.employee.findFirst).not.toHaveBeenCalled();
+      expect(settingsMock.get).not.toHaveBeenCalled();
+    });
+
     it('allows a super-admin when two-factor is not required', async () => {
       prismaMock.user.findFirst.mockResolvedValue(staffUser(true));
       settingsMock.get.mockResolvedValue(false);

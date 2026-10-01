@@ -5,6 +5,7 @@ import { RequestOtpHandler } from '../otp/request-otp.handler';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import type { RequestMobileLoginOtpDto } from './request-mobile-login-otp.dto';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 
 export type RequestMobileLoginOtpCommand = RequestMobileLoginOtpDto;
 
@@ -63,7 +64,7 @@ export class RequestMobileLoginOtpHandler {
 
     // Staff who cannot finish a mobile OTP login (see VerifyMobileOtpHandler)
     // get the same generic response without a code.
-    const staffBlocked = shouldIssue && user !== null && user.role !== 'CLIENT' && await this.isStaffBlocked(user);
+    const staffBlocked = shouldIssue && user !== null && user.role !== 'CLIENT' && !await isMobileStaffEligible(this.prisma, this.settings, user);
 
     if (shouldIssue && !staffBlocked) {
       await this.requestOtp.execute({
@@ -74,12 +75,6 @@ export class RequestMobileLoginOtpHandler {
     }
 
     return { maskedIdentifier: maskIdentifier(identifier, channel) };
-  }
-
-  private async isStaffBlocked(user: { id: string; isSuperAdmin: boolean | null }): Promise<boolean> {
-    const practitioner = await this.prisma.employee.findFirst({ where: { userId: user.id, isActive: true }, select: { id: true } });
-    if (!practitioner) return true;
-    return user.isSuperAdmin === true && (await this.settings.get<boolean>('security.twoFactor.required')) === true;
   }
 }
 

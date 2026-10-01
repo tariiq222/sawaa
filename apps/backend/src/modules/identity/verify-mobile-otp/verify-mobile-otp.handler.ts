@@ -9,6 +9,7 @@ import { ClientTokenService } from '../shared/client-token.service';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import { MobileOtpPurposeDto, VerifyMobileOtpDto } from './verify-mobile-otp.dto';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 
 const LOCKOUT_WINDOW_MINUTES = 10;
 export type VerifyMobileOtpCommand = VerifyMobileOtpDto;
@@ -62,16 +63,6 @@ export class VerifyMobileOtpHandler {
             throw new UnauthorizedException('Registration requires a customer account');
           }
           if (cmd.purpose === MobileOtpPurposeDto.LOGIN && !user.isActive) throw new UnauthorizedException('Account is inactive');
-          // Mobile OTP is a single factor and the app's staff side is the
-          // practitioner interface. Only staff linked to an active Employee may
-          // use it, and super-admins never while dashboard two-factor is required.
-          if (cmd.purpose === MobileOtpPurposeDto.LOGIN && user.role !== 'CLIENT') {
-            const practitioner = await tx.employee.findFirst({ where: { userId: user.id, isActive: true }, select: { id: true } });
-            if (!practitioner) throw new UnauthorizedException('Staff sign-in from the app is for practitioners only');
-            if (user.isSuperAdmin && await this.settings.get<boolean>('security.twoFactor.required')) {
-              throw new UnauthorizedException('Two-factor sign-in is required for this account');
-            }
-          }
           if (channel === 'SMS' && user.phone !== identifier) throw new ConflictException('Client identity conflict: verified phone changed');
           if (channel === 'EMAIL' && user.email !== identifier) throw new ConflictException('Client identity conflict: verified email changed');
           if (user.role === 'CLIENT') client = await this.resolveUserClient(tx, user.id, channel, identifier);
@@ -116,6 +107,13 @@ export class VerifyMobileOtpHandler {
             data: { attempts: { increment: 1 }, ...(nextAttempts >= currentOtp.maxAttempts ? { lockedUntil: new Date(lockedNow.getTime() + LOCKOUT_WINDOW_MINUTES * 60 * 1000) } : {}) },
           });
           return { kind: 'wrong-code' as const };
+        }
+
+        // Checked only after the code matches, so the response cannot reveal a
+        // staff account's role or practitioner link, and before consumption.
+        if (cmd.purpose === MobileOtpPurposeDto.LOGIN && user && user.role !== 'CLIENT' &&
+            !await isMobileStaffEligible(tx, this.settings, user)) {
+          throw new UnauthorizedException('Invalid credentials');
         }
 
         const consumed = await tx.otpCode.updateMany({
