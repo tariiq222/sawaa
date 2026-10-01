@@ -156,13 +156,6 @@
       "level": "error"
     },
     {
-      "file": "app/(client)/(tabs)/chat.tsx",
-      "line": 9,
-      "rule": "legacy-themed-import",
-      "detail": "Themed*",
-      "level": "warning"
-    },
-    {
       "file": "app/(client)/(tabs)/home.tsx",
       "line": 16,
       "rule": "no-hex-color",

@@ -794,5 +794,15 @@
     "title": "Page not available",
     "message": "The link you opened no longer exists or is incorrect.",
     "back": "Go back"
+  },
+  "records": {
+    "title": "Records",
+    "subtitle": "Your past sessions and notes",
+    "loadError": "Failed to load records",
+    "empty": "No past sessions yet",
+    "emptyHint": "Completed sessions will appear here",
+    "date": "Date",
+    "time": "Time",
+    "video": "Video"
   }
 }
