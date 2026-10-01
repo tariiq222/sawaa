@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("@/components/locale-provider", () => ({
@@ -11,6 +12,7 @@ vi.mock("@/hooks/use-package-credit-ops", () => ({
 
 import { SellPackagePricePreview } from "@/components/features/clients/sell-package-price-preview"
 import { RefundPackageForm } from "@/components/features/clients/refund-package-form"
+import { PurchaseCard } from "@/components/features/clients/client-package-balance-cards"
 import type { SessionPackage } from "@/lib/types/package"
 import type { PackagePurchase as ClientPackagePurchase } from "@/lib/types/package-purchase"
 
@@ -59,6 +61,40 @@ describe("RefundPackageForm after a partial refund", () => {
     const purchase = { id: "p1", amountPaid: 36_000, totalCharged: 41_400, vatAmount: 5_400, refundAmount: 36_000, credits: [] } as unknown as ClientPackagePurchase
     render(<RefundPackageForm purchase={purchase} onClose={() => {}} />)
     expect(screen.getByDisplayValue("54")).toBeInTheDocument()
+  })
+})
+
+describe("RefundPackageForm partial vs full", () => {
+  const purchase = { id: "p1", amountPaid: 36_000, totalCharged: 41_400, vatAmount: 5_400, refundAmount: 0, credits: [], status: "ACTIVE" } as unknown as ClientPackagePurchase
+
+  it("warns that credits are voided for a full refund", () => {
+    render(<RefundPackageForm purchase={purchase} onClose={() => {}} />)
+    expect(screen.getByText("packages.balances.refund.warning")).toBeInTheDocument()
+    expect(screen.queryByText("packages.balances.refund.partialNote")).not.toBeInTheDocument()
+  })
+
+  it("explains that credits stay usable for a partial refund", async () => {
+    render(<RefundPackageForm purchase={purchase} onClose={() => {}} />)
+    const input = screen.getByDisplayValue("414")
+    await userEvent.clear(input)
+    await userEvent.type(input, "360")
+    expect(screen.getByText("packages.balances.refund.partialNote")).toBeInTheDocument()
+    expect(screen.queryByText("packages.balances.refund.warning")).not.toBeInTheDocument()
+  })
+})
+
+describe("PurchaseCard refunded amount", () => {
+  it("shows a partial refund on a still-active purchase", () => {
+    const purchase = {
+      id: "p1", packageNameAr: "باقة", packageNameEn: "Pack", status: "ACTIVE", paidAt: "2026-10-02",
+      amountPaid: 36_000, totalCharged: 41_400, refundAmount: 36_000, credits: [],
+    } as unknown as ClientPackagePurchase
+    render(
+      <PurchaseCard purchase={purchase} locale="en" t={(k) => k} formatDate={(d) => d}
+        canTransferCredit={false} canRefundPurchase={false}
+        onBookCredit={() => {}} onTransferCredit={() => {}} onRefundPurchase={() => {}} />,
+    )
+    expect(screen.getByText(/packages\.balances\.refundAmount/)).toBeInTheDocument()
   })
 })
 

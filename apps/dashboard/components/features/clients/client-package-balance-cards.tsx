@@ -69,7 +69,7 @@ export function PurchaseCard({
             <span className="text-sm font-semibold tabular-nums">
               <FormattedCurrency amount={purchase.totalCharged ?? purchase.amountPaid} locale={locale} decimals={2} />
             </span>
-            {isRefunded && purchase.refundAmount > 0 && (
+            {purchase.refundAmount > 0 && (
               <span className="text-xs text-muted-foreground">
                 {t("packages.balances.refundAmount")}: {" "}
                 <span className="tabular-nums text-error">

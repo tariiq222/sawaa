@@ -7,7 +7,7 @@
  * operator enters the refund amount in SAR (we convert to integer
  * halalas at submit) plus an optional note. The form defaults the
  * refund amount to the amount charged (`totalCharged`, VAT-inclusive; full refund) and
- * shows a clear warning that the action voids the remaining credits.
+ * warns that a full refund voids the remaining credits (a partial refund keeps them).
  *
  * Money flow:
  *   - The backend stores money in integer halalas (RefundPackagePurchaseDto
@@ -98,6 +98,13 @@ export function RefundPackageForm({
     return sarToHalalas(refundAmountSar)
   }, [refundAmountSar])
 
+  // Mirrors the backend: a refund that returns everything still refundable
+  // (or a zero-money cancellation) ends the purchase and voids its credits;
+  // anything less is partial and keeps the remaining credits usable.
+  const isFullRefund =
+    Number.isFinite(refundAmountHalalas) &&
+    (refundAmountHalalas === 0 || refundAmountHalalas >= refundable)
+
   const isValid =
     Number.isFinite(refundAmountHalalas) &&
     refundAmountHalalas >= 0 &&
@@ -115,7 +122,9 @@ export function RefundPackageForm({
           notes: notes.trim() || undefined,
         },
       })
-      toast.success(t("packages.balances.refund.success"))
+      toast.success(
+        t(isFullRefund ? "packages.balances.refund.success" : "packages.balances.refund.partialSuccess"),
+      )
       onRefunded?.()
       onClose()
     } catch (err) {
@@ -151,8 +160,13 @@ export function RefundPackageForm({
             />
           </div>
 
-          {/* ── Warning when the purchase still has remaining credits ── */}
-          {!isAlreadyRefunded && (
+          {/* ── Full refund voids remaining credits; a partial one keeps them ── */}
+          {!isAlreadyRefunded && !isFullRefund && (
+            <p className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
+              {t("packages.balances.refund.partialNote")}
+            </p>
+          )}
+          {!isAlreadyRefunded && isFullRefund && (
             <div
               className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3 text-warning"
               role="alert"

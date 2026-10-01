@@ -284,7 +284,7 @@ export const arPackages: Record<string, string> = {
   "packages.balances.refund.button": "استرداد",
   "packages.balances.refund.aria": "استرد قيمة هذه الباقة",
   "packages.balances.refund.title": "استرداد الباقة",
-  "packages.balances.refund.description": "سجّل استرداداً يدوياً. سيتم إلغاء صلاحية الأرصدة المتبقية فوراً.",
+  "packages.balances.refund.description": "سجّل استرداداً يدوياً. استرداد كامل المبلغ يُلغي صلاحية الأرصدة المتبقية.",
   "packages.balances.refund.summary.amountPaid": "المبلغ المدفوع",
   "packages.balances.refund.summary.credits": "عدد الأرصدة",
   "packages.balances.refund.warning": "تحذير: سيتم إبطال كل الرصيد المتبقي في هذه الباقة تلقائياً، ولن يعود قابلاً للاستخدام.",
@@ -295,5 +295,7 @@ export const arPackages: Record<string, string> = {
   "packages.balances.refund.submit": "تأكيد الاسترداد",
   "packages.balances.refund.submitting": "جارٍ الاسترداد...",
   "packages.balances.refund.success": "تم تسجيل الاسترداد وإبطال الأرصدة",
+  "packages.balances.refund.partialSuccess": "تم تسجيل الاسترداد الجزئي، والجلسات المتبقية ما زالت صالحة",
+  "packages.balances.refund.partialNote": "استرداد جزئي: تبقى الجلسات المتبقية صالحة للاستخدام. استرداد كامل المبلغ المتبقي يُلغي الباقة ورصيدها.",
   "packages.balances.refund.error": "فشل تسجيل الاسترداد",
 }
