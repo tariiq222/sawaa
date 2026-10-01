@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Alert, AppState, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -14,7 +13,9 @@ import { useAppSelector } from '@/hooks/use-redux';
 import { useInitPackagePurchase, usePackageFamily } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { publicBranchesService } from '@/services/client';
-import { getPackagePurchaseAttemptKey, getPendingPackagePurchase, savePendingPackagePurchase } from '@/services/client/packages';
+import { getPendingPackagePurchase } from '@/services/client/packages';
+import { runPackageCheckout } from '@/lib/package-checkout';
+import { packagePurchaseErrorKey } from '@/lib/package-utils';
 import type { PublicBranchSummary } from '@/services/client';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 import { PackageBranchPicker } from '@/components/features/packages/PackageBranchPicker';
@@ -67,8 +68,16 @@ export default function PackageFamilyDetailScreen() {
     [query.data?.options, selectedId],
   );
 
+  // True while this screen owns an open checkout, so the foreground listener
+  // does not race the purchase flow's own navigation.
+  const checkoutInFlight = useRef(false);
+
   const recoverPending = useCallback(async () => {
+    if (checkoutInFlight.current) return;
     const pending = await getPendingPackagePurchase();
+    // The return screen clears this record once a checkout fails, is abandoned,
+    // or stays unconfirmed, so recovery cannot loop the client away from Buy.
+    if (checkoutInFlight.current) return;
     if (pending && pending.clientId === user?.id && pending.packageId === option?.id) {
       router.replace({ pathname: '/(client)/packages/return', params: {
         purchaseId: pending.purchaseId,
@@ -93,36 +102,20 @@ export default function PackageFamilyDetailScreen() {
   }, [recoverPending]);
 
   const handlePurchase = async () => {
-    if (!query.data || !option || !branchId || !user?.id || initPurchase.isPending) return;
-    const familyId = query.data.isStandalone ? undefined : query.data.id;
+    if (!query.data || !option || !branchId || !user?.id || initPurchase.isPending || checkoutInFlight.current) return;
+    const familyId = query.data.isStandalone ? '' : query.data.id;
+    checkoutInFlight.current = true;
     try {
-      const idempotencyKey = await getPackagePurchaseAttemptKey(user.id, option.id, familyId, branchId);
-      const result = await initPurchase.mutateAsync({
-        packageId: option.id,
-        ...(familyId ? { packageFamilyId: familyId } : {}),
-        branchId,
-        idempotencyKey,
-      });
-      await savePendingPackagePurchase({
-        purchaseId: result.purchaseId,
-        clientId: user.id,
-        packageId: option.id,
-        familyId: familyId ?? '',
-        branchId,
-      });
-      await WebBrowser.openBrowserAsync(result.redirectUrl);
+      const target = { clientId: user.id, packageId: option.id, familyId, branchId };
+      const result = await runPackageCheckout(initPurchase.mutateAsync, target);
       router.replace({
         pathname: '/(client)/packages/return',
-        params: {
-          purchaseId: result.purchaseId,
-          clientId: user.id,
-          packageId: option.id,
-          familyId: familyId ?? '',
-          branchId,
-        },
+        params: { purchaseId: result.purchaseId, ...target, signal: result.signal },
       });
-    } catch {
-      Alert.alert(t('packages.errorTitle'), t('packages.purchaseError'));
+    } catch (error) {
+      Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
+    } finally {
+      checkoutInFlight.current = false;
     }
   };
 

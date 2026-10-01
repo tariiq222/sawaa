@@ -7,6 +7,7 @@ import type {
   PackageFamily,
 } from '@sawaa/shared/types';
 
+import { PACKAGE_PAYMENT_POLL_INTERVAL_MS } from '@/lib/package-utils';
 import { clientPackagesService } from '@/services/client';
 
 import { clientBookingsKeys } from './useClientBookings';
@@ -41,12 +42,18 @@ export function usePackagePurchases() {
   });
 }
 
-export function usePackagePurchase(id: string | undefined) {
+/**
+ * Reads one purchase. While `poll` is true and the purchase is PENDING it
+ * refetches every few seconds; callers bound the polling by flipping `poll`
+ * off (a declined or abandoned checkout stays PENDING on the server).
+ */
+export function usePackagePurchase(id: string | undefined, options: { poll?: boolean } = {}) {
+  const poll = options.poll ?? true;
   return useQuery<ClientPackagePurchase>({
     queryKey: packageKeys.purchase(id ?? ''),
     queryFn: () => clientPackagesService.getPurchase(id as string),
     enabled: Boolean(id),
-    refetchInterval: (query) => query.state.data?.status === 'PENDING' ? 3000 : false,
+    refetchInterval: (query) => poll && query.state.data?.status === 'PENDING' ? PACKAGE_PAYMENT_POLL_INTERVAL_MS : false,
   });
 }
 
