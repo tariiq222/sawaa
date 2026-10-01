@@ -10,6 +10,7 @@ import request from 'supertest';
 import { createRealE2eApp } from '../../helpers/create-real-e2e-app';
 import { PrismaService } from '../../../src/infrastructure/database';
 import { EnrollInProgramHandler } from '../../../src/modules/bookings/enroll-in-program/enroll-in-program.handler';
+import { UpdateProgramHandler } from '../../../src/modules/bookings/update-program/update-program.handler';
 import { ClientTokenService } from '../../../src/modules/identity/shared/client-token.service';
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
@@ -126,6 +127,30 @@ describeRealE2e('program enrollment checkout concurrency (real PostgreSQL)', () 
       await prisma.client.deleteMany({ where: { id: ids.clientId } }).catch(() => undefined);
       await prisma.employee.deleteMany({ where: { id: ids.employeeId } }).catch(() => undefined);
       await prisma.branch.deleteMany({ where: { id: ids.branchId } }).catch(() => undefined);
+    }
+  });
+
+  it('refuses to lower capacity below the participants already enrolled', async () => {
+    const branchId = randomUUID();
+    const programId = randomUUID();
+    await prisma.branch.create({ data: { id: branchId, nameAr: `capacity-${branchId}`, isActive: true } });
+    await prisma.program.create({
+      data: {
+        id: programId, departmentId: randomUUID(), branchId, nameAr: `Capacity ${programId}`,
+        daysCount: 1, hoursPerDay: 1, minParticipants: 1, maxParticipants: 5, enrolledCount: 3,
+        price: 10_000, currency: 'SAR', status: 'OPEN', isPublic: true,
+      },
+    });
+    try {
+      const update = app.get(UpdateProgramHandler);
+      await expect(update.execute(programId, { maxParticipants: 2 } as never)).rejects.toThrow(/already enrolled/);
+      expect((await prisma.program.findUniqueOrThrow({ where: { id: programId } })).maxParticipants).toBe(5);
+
+      await update.execute(programId, { maxParticipants: 3 } as never);
+      expect((await prisma.program.findUniqueOrThrow({ where: { id: programId } })).maxParticipants).toBe(3);
+    } finally {
+      await prisma.program.deleteMany({ where: { id: programId } }).catch(() => undefined);
+      await prisma.branch.deleteMany({ where: { id: branchId } }).catch(() => undefined);
     }
   });
 });
