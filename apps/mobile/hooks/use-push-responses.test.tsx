@@ -39,10 +39,10 @@ it('opens the appointments tab for a booking type without an id', async () => {
   await tapFirst(responseWith({ notificationType: 'BOOKING_CANCELLED' }));
   expect(router.push).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
 });
-it('opens the chat tab for a conversation-scoped payload', async () => {
+it('opens the notifications list for a conversation-scoped payload', async () => {
   renderHook(() => usePushResponses('c1'));
   await tapFirst(responseWith({ conversationId: 'c-2' }));
-  expect(router.push).toHaveBeenCalledWith('/(client)/(tabs)/chat');
+  expect(router.push).toHaveBeenCalledWith('/(client)/notifications');
 });
 it('never navigates to a URL or malformed id supplied by the payload', async () => {
   renderHook(() => usePushResponses('c1'));

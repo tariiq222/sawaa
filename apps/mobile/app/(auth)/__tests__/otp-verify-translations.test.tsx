@@ -17,6 +17,7 @@ jest.mock('@/hooks/use-redux', () => ({ useAppDispatch: () => mockDispatch }));
 jest.mock('@/hooks/queries', () => ({
   useVerifyOtp: () => ({ mutateAsync: jest.fn() }),
   useRequestLoginOtp: () => ({ mutateAsync: jest.fn() }),
+  useRegister: () => ({ mutateAsync: jest.fn() }),
 }));
 jest.mock('@/services/auth', () => ({
   authService: { getProfile: jest.fn() },
@@ -45,15 +46,15 @@ describe('OtpVerifyScreen translations', () => {
   afterEach(async () => { await act(async () => { await i18n.changeLanguage('ar'); }); });
 
   it.each([
-    ['ar', 'رمز التحقق', 'الرمز المرسل إلى', 'تحقق', 'اضغط رجوع وأعد الإرسال إذا لم تستلم الرمز'],
-    ['en', 'Verification Code', 'Code sent to', 'Verify', "Go back and re-submit if you didn't receive the code."],
-  ])('renders translated OTP labels in %s', async (language, title, sentTo, submit, noResend) => {
+    ['ar', 'رمز التحقق', 'الرمز المرسل إلى', 'تحقق', 'إعادة الإرسال خلال 60 ثانية'],
+    ['en', 'Verification Code', 'Code sent to', 'Verify', 'Resend in 60 seconds'],
+  ])('renders translated OTP labels in %s', async (language, title, sentTo, submit, resendIn) => {
     await act(async () => { await i18n.changeLanguage(language as string); });
     const { getByText } = render(<OtpVerifyScreen />);
 
     expect(getByText(title as string)).toBeTruthy();
     expect(getByText(`${sentTo} t***@example.com`)).toBeTruthy();
     expect(getByText(submit as string)).toBeTruthy();
-    expect(getByText(noResend as string)).toBeTruthy();
+    expect(getByText(resendIn as string)).toBeTruthy();
   });
 });

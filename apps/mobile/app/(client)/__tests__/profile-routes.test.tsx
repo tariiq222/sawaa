@@ -67,7 +67,7 @@ describe('profile rows lead to purpose-specific pages', () => {
     expect(mockPush.mock.calls).toEqual([
       ['/(client)/packages'],
       ['/(client)/groups'],
-      ['/(client)/(tabs)/records'],
+      ['/(client)/records'],
     ]);
   });
 

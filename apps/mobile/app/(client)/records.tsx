@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 import {
@@ -25,11 +26,14 @@ import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import {
-  clientBookingsService,
-  type ClientBookingRow,
-} from '@/services/client';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { useClientBookings } from '@/hooks/queries';
+import { goBackOrHome } from '@/lib/navigation';
 import { resolveDeliveryType } from '@/types/booking-enums';
+
+// status filter is uppercased by the service layer; backend mobile DTO
+// validates the Prisma enum verbatim.
+const COMPLETED_PARAMS = { status: 'completed', limit: 50 } as const;
 
 function formatDate(iso: string, isRTL: boolean) {
   return new Date(iso).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
@@ -50,6 +54,7 @@ export default function RecordsScreen() {
   const colors = useSawaaColors();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const router = useRouter();
@@ -58,50 +63,26 @@ export default function RecordsScreen() {
   const f700 = getFontName(dir.locale, '700');
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
-  const [items, setItems] = useState<ClientBookingRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isPending, isError, refetch } = useClientBookings(COMPLETED_PARAMS);
+  const items = data?.items ?? [];
+  // Only a pull-to-refresh shows the spinner; background refetches stay quiet.
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      // status filter is uppercased by the service layer; backend mobile DTO
-      // validates the Prisma enum verbatim.
-      const res = await clientBookingsService.list({
-        status: 'completed',
-        limit: 50,
-      });
-      setItems(res.items);
-    } catch {
-      setError(dir.isRTL ? 'تعذّر تحميل السجلات' : 'Failed to load records');
-      setItems([]);
-    }
-  }, [dir.isRTL]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    load().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }, [load]);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   return (
     <AquaBackground>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 20, paddingBottom: 140 },
+          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -112,16 +93,18 @@ export default function RecordsScreen() {
           />
         }
       >
+        {/* A stack screen outside the tab group: a cold deep link has no history. */}
+        <ScreenHeader
+          title={t('records.title')}
+          onBack={() => goBackOrHome(router, '/(client)/(tabs)/account')}
+        />
         <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'السجلات' : 'Records'}
-          </Text>
           <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'جلساتك السابقة وملاحظاتها' : 'Your past sessions and notes'}
+            {t('records.subtitle')}
           </Text>
         </Animated.View>
 
-        {loading ? (
+        {isPending ? (
           <View style={styles.skeletonWrap}>
             {[0, 1, 2].map((i) => (
               <Glass
@@ -132,13 +115,15 @@ export default function RecordsScreen() {
               />
             ))}
           </View>
-        ) : error ? (
+        ) : isError ? (
           <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.empty}>
             <ClipboardList size={40} color={colors.accent.coral} strokeWidth={1.5} />
-            <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>{error}</Text>
-            <Pressable onPress={onRefresh} style={styles.retryBtn}>
+            <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>
+              {t('records.loadError')}
+            </Text>
+            <Pressable accessibilityRole="button" onPress={onRefresh} style={styles.retryBtn}>
               <Text style={[styles.retryText, { fontFamily: f600, fontWeight: '600' }]}>
-                {dir.isRTL ? 'إعادة المحاولة' : 'Retry'}
+                {t('common.retry')}
               </Text>
             </Pressable>
           </Animated.View>
@@ -146,12 +131,10 @@ export default function RecordsScreen() {
           <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.empty}>
             <CalendarCheck size={40} color={colors.ink[400]} strokeWidth={1.5} />
             <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>
-              {dir.isRTL ? 'لا توجد جلسات سابقة بعد' : 'No past sessions yet'}
+              {t('records.empty')}
             </Text>
             <Text style={[styles.emptyHint, { fontFamily: f400, fontWeight: '400' }]}>
-              {dir.isRTL
-                ? 'ستظهر هنا الجلسات المكتملة'
-                : 'Completed sessions will appear here'}
+              {t('records.emptyHint')}
             </Text>
           </Animated.View>
         ) : (
@@ -223,7 +206,7 @@ export default function RecordsScreen() {
                         ]}
                       >
                         <Text style={[styles.dateLabel, { fontFamily: f400, fontWeight: '400' }]}>
-                          {dir.isRTL ? 'التاريخ' : 'Date'}
+                          {t('records.date')}
                         </Text>
                         <Text style={[styles.dateValue, { fontFamily: f600, fontWeight: '600' }]}>
                           {formatDate(b.scheduledAt, dir.isRTL)}
@@ -236,7 +219,7 @@ export default function RecordsScreen() {
                         ]}
                       >
                         <Text style={[styles.dateLabel, { fontFamily: f400, fontWeight: '400' }]}>
-                          {dir.isRTL ? 'الوقت' : 'Time'}
+                          {t('records.time')}
                         </Text>
                         <Text style={[styles.dateValue, { fontFamily: f600, fontWeight: '600' }]}>
                           {formatTime(b.scheduledAt, dir.isRTL)}
@@ -260,7 +243,7 @@ export default function RecordsScreen() {
                               { fontFamily: f600, fontWeight: '600', color: colors.teal[700] },
                             ]}
                           >
-                            {dir.isRTL ? 'فيديو' : 'Video'}
+                            {t('records.video')}
                           </Text>
                         </View>
                       ) : null}
@@ -278,7 +261,6 @@ export default function RecordsScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 14 },
-  title: { fontSize: 26, color: colors.ink[900], paddingHorizontal: 4 },
   subtitle: {
     fontSize: 12.5,
     color: colors.ink[500],

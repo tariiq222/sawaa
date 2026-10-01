@@ -37,7 +37,6 @@
     "otp.submit": "Verify",
     "otp.submitting": "Verifying...",
     "otp.sentTo": "Code sent to",
-    "otp.registerNoResend": "Go back and re-submit if you didn't receive the code.",
     "otp.noAccount": "Don't have an account?",
     "otp.changeNumber": "Change number",
     "otp.createAccount": "Create Account",
@@ -700,13 +699,19 @@
     "backToBalance": "Back to package balance",
     "paymentPending": "Payment is processing",
     "paymentPendingDescription": "We are checking the payment with the server. You can return to your balance and check again.",
-    "paymentPolling": "This screen refreshes while payment remains pending.",
+    "paymentPolling": "We check the status automatically for a short time.",
     "paymentSuccess": "Package activated",
     "paymentSuccessDescription": "Your package credits are now available.",
     "paymentFailed": "Payment not completed",
-    "paymentFailedDescription": "The payment was not activated. You can return to the catalog and try again.",
+    "paymentFailedDescription": "The payment did not go through and the package is not active. You can try again.",
     "paymentError": "Payment status unavailable",
     "paymentErrorDescription": "We could not verify this payment. Return to your balance or retry the status check.",
+    "paymentUnconfirmed": "Payment not confirmed yet",
+    "paymentUnconfirmedDescription": "If you completed the payment, confirmation can take a few minutes, so check again later. If you did not complete it, you can try again.",
+    "checkAgain": "Check again",
+    "tryPaymentAgain": "Try payment again",
+    "purchaseConflict": "An earlier payment for this package is still open. Wait a few minutes, then try again with the same branch, or contact the center.",
+    "purchaseAlreadyPaid": "Payment for this package was received and is being activated. Check your package balance shortly.",
     "status": {
       "pending": "Payment pending",
       "active": "Active",
@@ -789,5 +794,15 @@
     "title": "Page not available",
     "message": "The link you opened no longer exists or is incorrect.",
     "back": "Go back"
+  },
+  "records": {
+    "title": "Records",
+    "subtitle": "Your past sessions and notes",
+    "loadError": "Failed to load records",
+    "empty": "No past sessions yet",
+    "emptyHint": "Completed sessions will appear here",
+    "date": "Date",
+    "time": "Time",
+    "video": "Video"
   }
 }

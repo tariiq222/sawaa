@@ -22,7 +22,7 @@ import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
-import { useVerifyOtp, useRequestLoginOtp } from '@/hooks/queries';
+import { useVerifyOtp, useRequestLoginOtp, useRegister } from '@/hooks/queries';
 import { authService, SessionSupersededError } from '@/services/auth';
 import { isSessionCurrent } from '@/services/native-session-state';
 import { decodeBookingReturn } from '@/features/booking/guest-booking-flow';
@@ -52,8 +52,18 @@ export default function OtpVerifyScreen() {
     maskedIdentifier: string;
     booking?: string;
     redirect?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
   }>();
-  const { identifier = '', purpose = 'register', maskedIdentifier = '' } = params;
+  const {
+    identifier = '',
+    purpose = 'register',
+    maskedIdentifier = '',
+    firstName = '',
+    lastName = '',
+    email = '',
+  } = params;
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const colors = useSawaaColors();
@@ -70,6 +80,7 @@ export default function OtpVerifyScreen() {
 
   const verifyOtp = useVerifyOtp();
   const requestLoginOtp = useRequestLoginOtp();
+  const register = useRegister();
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -149,10 +160,15 @@ export default function OtpVerifyScreen() {
   }, [otp, identifier, purpose, verifyOtp, dispatch, router, t, params.booking, params.redirect]);
 
   const handleResend = useCallback(async () => {
-    if (purpose !== 'login') return;
     setResendLoading(true);
     try {
-      await requestLoginOtp.mutateAsync({ identifier });
+      if (purpose === 'login') {
+        await requestLoginOtp.mutateAsync({ identifier });
+      } else {
+        // Re-submitting the same registration re-sends the register OTP for a
+        // signup that has not been verified yet.
+        await register.mutateAsync({ firstName, lastName, phone: identifier, email });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setCountdown(RESEND_COOLDOWN);
     } catch {
@@ -161,7 +177,7 @@ export default function OtpVerifyScreen() {
     } finally {
       setResendLoading(false);
     }
-  }, [purpose, identifier, requestLoginOtp, t]);
+  }, [purpose, identifier, firstName, lastName, email, requestLoginOtp, register, t]);
 
   // Auto-submit when all digits are filled
   useEffect(() => {
@@ -242,27 +258,21 @@ export default function OtpVerifyScreen() {
             />
 
             <View style={styles.resendRow}>
-              {purpose === 'login' ? (
-                countdown > 0 ? (
-                  <Text style={[styles.meta, { color: colors.ink[700], fontFamily: f400 }]}>
-                    {t('auth.otp.resendIn', { seconds: countdown })}
-                  </Text>
-                ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={handleResend}
-                    disabled={resendLoading}
-                    style={styles.linkTarget}
-                  >
-                    <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
-                      {resendLoading ? t('common.loading') : t('auth.otp.resend')}
-                    </Text>
-                  </Pressable>
-                )
-              ) : (
+              {countdown > 0 ? (
                 <Text style={[styles.meta, { color: colors.ink[700], fontFamily: f400 }]}>
-                  {t('auth.otp.registerNoResend')}
+                  {t('auth.otp.resendIn', { seconds: countdown })}
                 </Text>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleResend}
+                  disabled={resendLoading}
+                  style={styles.linkTarget}
+                >
+                  <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
+                    {resendLoading ? t('common.loading') : t('auth.otp.resend')}
+                  </Text>
+                </Pressable>
               )}
               <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.linkTarget}>
                 <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
