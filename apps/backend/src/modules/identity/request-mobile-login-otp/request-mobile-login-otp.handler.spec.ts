@@ -3,20 +3,25 @@ import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { RequestMobileLoginOtpHandler } from './request-mobile-login-otp.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 
-const prismaMock = { user: { findFirst: jest.fn() }, client: { findMany: jest.fn() } };
+const prismaMock = { user: { findFirst: jest.fn() }, client: { findMany: jest.fn() }, employee: { findFirst: jest.fn() } };
 const requestOtpMock = { execute: jest.fn() };
+const settingsMock = { get: jest.fn() };
 
 describe('RequestMobileLoginOtpHandler', () => {
   let handler: RequestMobileLoginOtpHandler;
 
   beforeEach(async () => {
     jest.resetAllMocks();
+    settingsMock.get.mockResolvedValue(false);
+    prismaMock.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     const moduleRef = await Test.createTestingModule({
       providers: [
         RequestMobileLoginOtpHandler,
         { provide: PrismaService, useValue: prismaMock },
         { provide: RequestOtpHandler, useValue: requestOtpMock },
+        { provide: PlatformSettingsService, useValue: settingsMock },
       ],
     }).compile();
     handler = moduleRef.get(RequestMobileLoginOtpHandler);
@@ -183,6 +188,43 @@ describe('RequestMobileLoginOtpHandler', () => {
 
     await expect(handler.execute({ identifier: 'shared@example.com' })).rejects.toThrow(/email belongs to another customer/i);
     expect(requestOtpMock.execute).not.toHaveBeenCalled();
+  });
+
+  it('does not send a code to a super-admin when two-factor is required, and keeps the generic response', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u-admin', role: 'ADMIN', isSuperAdmin: true, isActive: true,
+      phoneVerifiedAt: new Date(), emailVerifiedAt: null,
+    });
+    prismaMock.client.findMany.mockResolvedValue([]);
+    settingsMock.get.mockResolvedValue(true);
+
+    const result = await handler.execute({ identifier: '+966500000000' });
+    expect(result.maskedIdentifier).toBeDefined();
+    expect(requestOtpMock.execute).not.toHaveBeenCalled();
+  });
+
+  it('does not send a code to staff without an active practitioner record', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u-reception', role: 'RECEPTIONIST', isSuperAdmin: false, isActive: true,
+      phoneVerifiedAt: new Date(), emailVerifiedAt: null,
+    });
+    prismaMock.client.findMany.mockResolvedValue([]);
+    prismaMock.employee.findFirst.mockResolvedValue(null);
+
+    const result = await handler.execute({ identifier: '+966500000000' });
+    expect(result.maskedIdentifier).toBeDefined();
+    expect(requestOtpMock.execute).not.toHaveBeenCalled();
+  });
+
+  it('still sends a code to a super-admin when two-factor is not required', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u-admin', role: 'ADMIN', isSuperAdmin: true, isActive: true,
+      phoneVerifiedAt: new Date(), emailVerifiedAt: null,
+    });
+    prismaMock.client.findMany.mockResolvedValue([]);
+
+    await handler.execute({ identifier: '+966500000000' });
+    expect(requestOtpMock.execute).toHaveBeenCalled();
   });
 
   it('returns masked identifier shape for both channels', async () => {

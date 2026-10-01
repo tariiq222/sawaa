@@ -8,6 +8,8 @@ import { TokenService, TokenPair } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import { MobileOtpPurposeDto, VerifyMobileOtpDto } from './verify-mobile-otp.dto';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 
 const LOCKOUT_WINDOW_MINUTES = 10;
 export type VerifyMobileOtpCommand = VerifyMobileOtpDto;
@@ -30,6 +32,7 @@ export class VerifyMobileOtpHandler {
     private readonly clientTokens: ClientTokenService,
     private readonly cls: ClsService,
     private readonly rlsTransaction: RlsTransactionService,
+    private readonly settings: PlatformSettingsService,
   ) {}
 
   async execute(cmd: VerifyMobileOtpCommand): Promise<VerifyMobileOtpResult> {
@@ -104,6 +107,13 @@ export class VerifyMobileOtpHandler {
             data: { attempts: { increment: 1 }, ...(nextAttempts >= currentOtp.maxAttempts ? { lockedUntil: new Date(lockedNow.getTime() + LOCKOUT_WINDOW_MINUTES * 60 * 1000) } : {}) },
           });
           return { kind: 'wrong-code' as const };
+        }
+
+        // Checked only after the code matches, so the response cannot reveal a
+        // staff account's role or practitioner link, and before consumption.
+        if (cmd.purpose === MobileOtpPurposeDto.LOGIN && user && user.role !== 'CLIENT' &&
+            !await isMobileStaffEligible(tx, this.settings, user)) {
+          throw new UnauthorizedException('Invalid credentials');
         }
 
         const consumed = await tx.otpCode.updateMany({

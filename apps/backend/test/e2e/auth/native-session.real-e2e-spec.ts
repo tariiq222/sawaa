@@ -49,17 +49,20 @@ describeRealE2e('Native session refresh/logout — real Postgres e2e', () => {
       data: {
         email,
         name: 'Native Session E2E',
-        role: 'RECEPTIONIST',
+        role: 'EMPLOYEE',
         isActive: true,
       },
       select: { id: true },
     });
     userId = user.id;
+    // Staff mobile sessions are for practitioners linked to an active Employee.
+    await prisma.employee.create({ data: { userId, name: 'Native Session E2E' } });
   });
 
   afterAll(async () => {
     if (prisma && userId) {
       await prisma.refreshToken.deleteMany({ where: { userId } }).catch(() => undefined);
+      await prisma.employee.deleteMany({ where: { userId } }).catch(() => undefined);
       await prisma.user.deleteMany({ where: { id: userId } }).catch(() => undefined);
     }
     if (app) await app.close();
