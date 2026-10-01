@@ -145,6 +145,7 @@ describe('native session handlers', () => {
       expect.objectContaining({ id: 'user-1', tokenVersion: 4 }),
       { isSuperAdmin: false },
       tx,
+      'MOBILE',
     );
   });
 
