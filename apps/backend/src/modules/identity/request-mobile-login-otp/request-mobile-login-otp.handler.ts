@@ -4,6 +4,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import type { RequestMobileLoginOtpDto } from './request-mobile-login-otp.dto';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 
 export type RequestMobileLoginOtpCommand = RequestMobileLoginOtpDto;
 
@@ -16,6 +17,7 @@ export class RequestMobileLoginOtpHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly requestOtp: RequestOtpHandler,
+    private readonly settings: PlatformSettingsService,
   ) {}
 
   async execute(cmd: RequestMobileLoginOtpCommand): Promise<RequestMobileLoginOtpResult> {
@@ -25,7 +27,7 @@ export class RequestMobileLoginOtpHandler {
     const where = channel === 'EMAIL' ? { email: identifier } : { phone: identifier };
     const user = await this.prisma.user.findFirst({
       where,
-      select: { id: true, role: true, isActive: true, phoneVerifiedAt: true, emailVerifiedAt: true },
+      select: { id: true, role: true, isActive: true, isSuperAdmin: true, phoneVerifiedAt: true, emailVerifiedAt: true },
     });
 
     const linkedEmailClients = channel === 'EMAIL' && user?.role === 'CLIENT'
@@ -59,7 +61,11 @@ export class RequestMobileLoginOtpHandler {
       (client !== undefined && client.isActive && client.deletedAt === null &&
         channel === 'SMS');
 
-    if (shouldIssue) {
+    // Staff who cannot finish a mobile OTP login (see VerifyMobileOtpHandler)
+    // get the same generic response without a code.
+    const staffBlocked = shouldIssue && user !== null && user.role !== 'CLIENT' && await this.isStaffBlocked(user);
+
+    if (shouldIssue && !staffBlocked) {
       await this.requestOtp.execute({
         identifier,
         channel: channel === 'SMS' ? OtpChannel.SMS : OtpChannel.EMAIL,
@@ -68,6 +74,12 @@ export class RequestMobileLoginOtpHandler {
     }
 
     return { maskedIdentifier: maskIdentifier(identifier, channel) };
+  }
+
+  private async isStaffBlocked(user: { id: string; isSuperAdmin: boolean | null }): Promise<boolean> {
+    const practitioner = await this.prisma.employee.findFirst({ where: { userId: user.id, isActive: true }, select: { id: true } });
+    if (!practitioner) return true;
+    return user.isSuperAdmin === true && (await this.settings.get<boolean>('security.twoFactor.required')) === true;
   }
 }
 
