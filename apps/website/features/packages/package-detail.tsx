@@ -2,18 +2,20 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import type { PackageFamily } from '@sawaa/shared/types';
 import { useLocale, useT } from '@/features/locale/locale-provider';
 import { halalasToSar } from '@/lib/money';
+import { packageGrossPrice, type PublicPackageFamily } from './packages.api';
 
-export function PackageDetailFeature({ family }: { family: PackageFamily }) {
+export function PackageDetailFeature({ family }: { family: PublicPackageFamily }) {
   const locale = useLocale();
   const t = useT();
   const options = family.options.filter((option) => option.isActive && option.isPublic);
   const [selectedId, setSelectedId] = useState(options[0]?.id ?? '');
   const selected = options.find((option) => option.id === selectedId) ?? options[0];
   if (!selected) return <p role="status">{t('packages.noOptions')}</p>;
-  const money = `${halalasToSar(selected.price.finalPrice)} ${locale === 'ar' ? 'ر.س' : 'SAR'}`;
+  const vatRate = family.vatRate ?? 0;
+  const currency = locale === 'ar' ? 'ر.س' : 'SAR';
+  const money = `${halalasToSar(packageGrossPrice(selected.price.finalPrice, vatRate))} ${currency}`;
   const purchaseHref = `/packages/purchase?packageId=${encodeURIComponent(selected.id)}&packageFamilyId=${encodeURIComponent(family.id)}`;
 
   return (
@@ -56,12 +58,15 @@ export function PackageDetailFeature({ family }: { family: PackageFamily }) {
               />
               <span className="font-bold text-[var(--sw-secondary-700)]">{locale === 'ar' ? option.nameAr : option.nameEn || option.nameAr}</span>
             </span>
-            <span className="font-bold text-[var(--sw-primary-700)]">{halalasToSar(option.price.finalPrice)} {locale === 'ar' ? 'ر.س' : 'SAR'}</span>
+            <span className="font-bold text-[var(--sw-primary-700)]">{halalasToSar(packageGrossPrice(option.price.finalPrice, vatRate))} {currency}</span>
           </label>
         ))}
       </fieldset>
       <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
-        <p className="text-lg font-black text-[var(--sw-secondary-700)]">{money}</p>
+        <p className="text-lg font-black text-[var(--sw-secondary-700)]">
+          {money}
+          {vatRate > 0 && <span className="ms-2 text-xs font-medium text-[var(--sw-body)]">{t('packages.inclVat')}</span>}
+        </p>
         <Link href={purchaseHref} className="rounded-full bg-[var(--sw-primary-500)] px-6 py-3 font-bold text-[var(--on-primary)]">
           {t('packages.continue')}
         </Link>

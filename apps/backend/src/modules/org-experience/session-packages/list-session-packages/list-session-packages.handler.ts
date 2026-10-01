@@ -7,6 +7,7 @@ import { ComputePackagePriceService } from '../../compute-package-price.service'
 import { ListSessionPackagesDto } from './list-session-packages.dto';
 import { signMediaImageUrl } from '../../../media/media-image-url.helper';
 import { applyGroupedPackagePrice, decorateGroupedPackage } from '../package-group-catalog.helper';
+import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.handler';
 
 export type ListSessionPackagesCommand = ListSessionPackagesDto;
 
@@ -94,6 +95,8 @@ export class ListSessionPackagesHandler {
       ),
       { strict: false },
     );
+    // Prices are net; the sale invoice adds VAT at this rate (0 unless enabled).
+    const vatRate = (await resolveVatRate(this.prisma)).toNumber();
     const priced = await Promise.all(items.map(async (pkg, idx) => {
       const price = applyGroupedPackagePrice(pkg, prices[idx]);
       return {
@@ -105,6 +108,7 @@ export class ListSessionPackagesHandler {
       finalPrice: price.finalPrice,
       fullValue: price.fullValue,
       freeValue: price.freeValue,
+      vatRate,
       };
     }));
 

@@ -86,6 +86,7 @@ const PURCHASE_2 = {
 function buildPrisma() {
   return {
     packagePurchase: { findMany: jest.fn() },
+    invoice: { findMany: jest.fn().mockResolvedValue([]) },
     sessionPackage: { findMany: jest.fn() },
     service: { findMany: jest.fn() },
     employee: { findMany: jest.fn() },
@@ -302,6 +303,28 @@ describe('ListClientPackagePurchasesHandler', () => {
     expect(result[0].discountSnapshot).toBe(4_000);
     expect(result[0].amountPaid).toBe(36_000);
     expect(result[0].refundAmount).toBe(0);
+  });
+
+  it('reports the VAT-inclusive amount charged from the purchase invoice', async () => {
+    mockHappyPath();
+    prisma.invoice.findMany.mockResolvedValue([{ packagePurchaseId: PURCHASE_ID_1, vatAmt: PRISMA_DECIMAL(5_400), total: PRISMA_DECIMAL(41_400) }]);
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+
+    const result = await handler.execute({ clientId: CLIENT_ID });
+
+    const row = result.find((r) => r.id === PURCHASE_ID_1)!;
+    expect(row.amountPaid).toBe(36_000);
+    expect(row.vatAmount).toBe(5_400);
+    expect(row.totalCharged).toBe(41_400);
+  });
+
+  it('falls back to amountPaid when no invoice is linked', async () => {
+    mockHappyPath();
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const result = await handler.execute({ clientId: CLIENT_ID });
+    const row = result.find((r) => r.id === PURCHASE_ID_1)!;
+    expect(row.vatAmount).toBe(0);
+    expect(row.totalCharged).toBe(36_000);
   });
 
   it('applies the optional status filter at the prisma level', async () => {

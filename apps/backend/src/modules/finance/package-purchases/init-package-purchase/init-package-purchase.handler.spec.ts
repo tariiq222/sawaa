@@ -112,6 +112,7 @@ function buildTx() {
 
 function buildPrisma() {
   const prisma: Record<string, any> = {
+    organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
     $queryRaw: jest.fn().mockResolvedValue([{ id: INVOICE_ID }]),
     sessionPackage: { findFirst: jest.fn().mockResolvedValue(PACKAGE_ROW) },
     client: { findFirst: jest.fn().mockResolvedValue({ id: CLIENT_ID }) },
@@ -227,6 +228,39 @@ const cmd = () => ({
 
 describe("InitPackagePurchaseHandler", () => {
   afterEach(() => jest.clearAllMocks());
+
+  describe("VAT from OrganizationSettings", () => {
+    it("keeps amountPaid net and charges the gross invoice total when VAT is 15%", async () => {
+      const { handler, prisma, tx, moyasar } = buildHandler();
+      prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: "0.15" });
+
+      await handler.execute(cmd());
+
+      // 36000 × 0.15 = 5400 → gross 41400
+      expect(Number(tx.packagePurchase.create.mock.calls[0][0].data.amountPaid)).toBe(FINAL_PRICE);
+      const invoiceData = tx.invoice.create.mock.calls[0][0].data;
+      expect(Number(invoiceData.vatRate)).toBe(0.15);
+      expect(Number(invoiceData.vatAmt)).toBe(5_400);
+      expect(Number(invoiceData.total)).toBe(41_400);
+      expect(Number(tx.payment.create.mock.calls[0][0].data.amount)).toBe(41_400);
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
+        DEFAULT_ORG_ID,
+        expect.objectContaining({ amountHalalas: 41_400 }),
+      );
+    });
+
+    it("charges the net price when VAT is 0", async () => {
+      const { handler, tx, moyasar } = buildHandler();
+
+      await handler.execute(cmd());
+
+      expect(Number(tx.invoice.create.mock.calls[0][0].data.vatAmt)).toBe(0);
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
+        DEFAULT_ORG_ID,
+        expect.objectContaining({ amountHalalas: FINAL_PRICE }),
+      );
+    });
+  });
 
   describe("happy path — self-purchase init", () => {
     it("freezes the price, creates a PENDING purchase, an invoice + PENDING payment, and returns the Moyasar redirect", async () => {

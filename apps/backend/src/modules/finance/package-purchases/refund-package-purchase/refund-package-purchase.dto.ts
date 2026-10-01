@@ -4,7 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class RefundPackagePurchaseDto {
   @ApiProperty({
     description:
-      'Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount paid. ' +
+      'Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount charged (the invoice total, VAT-inclusive). ' +
       '0 records a cancellation with no money returned.',
     example: 50000,
   })

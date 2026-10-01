@@ -10,7 +10,7 @@ import {
   type AvailabilityDay,
   type PublicBranch,
 } from '@/features/booking/booking.api';
-import { bookClientPackageCredit, listClientPackagePurchases } from './packages.api';
+import { bookClientPackageCredit, listClientPackagePurchases, purchaseTotalCharged, type ClientPackagePurchaseRow } from './packages.api';
 import { halalasToSar } from '@/lib/money';
 
 interface CreditAvailability {
@@ -64,13 +64,13 @@ export function PackageBalanceFeature({
   branchId: initialBranchId,
   focusCreditId,
 }: {
-  purchases?: ClientPackagePurchase[];
+  purchases?: ClientPackagePurchaseRow[];
   branchId?: string;
   focusCreditId?: string;
 }) {
   const locale = useLocale();
   const t = useT();
-  const [purchases, setPurchases] = useState<ClientPackagePurchase[] | null>(initialPurchases ?? null);
+  const [purchases, setPurchases] = useState<ClientPackagePurchaseRow[] | null>(initialPurchases ?? null);
   const [branches, setBranches] = useState<PublicBranch[]>([]);
   const [branchId, setBranchId] = useState(initialBranchId ?? '');
   const [availability, setAvailability] = useState<Record<string, CreditAvailability>>({});
@@ -347,7 +347,7 @@ export function PackageBalanceFeature({
           )}
           <p className="mt-1 text-sm text-[var(--sw-body)]">{t('packages.purchaseStatus')}: {purchaseStatus(purchase.status, t)}</p>
           <p className="mt-1 text-sm text-[var(--sw-body)]">
-            {t('packages.amountPaid')}: {halalasToSar(purchase.amountPaid)} {locale === 'ar' ? 'ر.س' : 'SAR'}
+            {t('packages.amountPaid')}: {halalasToSar(purchaseTotalCharged(purchase))} {locale === 'ar' ? 'ر.س' : 'SAR'}
             {purchase.refundAmount > 0 ? ` · ${t('packages.refunded')}: ${halalasToSar(purchase.refundAmount)} ${locale === 'ar' ? 'ر.س' : 'SAR'}` : ''}
           </p>
           <div className="mt-5 space-y-4">

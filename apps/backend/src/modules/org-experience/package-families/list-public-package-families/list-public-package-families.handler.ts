@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../infrastructure/database';
 import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { decorateFamily, loadFamilyDisplayData } from '../package-family-catalog.helper';
+import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.handler';
 
 @Injectable()
 export class ListPublicPackageFamiliesHandler {
@@ -48,6 +49,8 @@ export class ListPublicPackageFamiliesHandler {
       updatedAt: option.updatedAt,
       options: [option],
     }, this.pricing, this.storage, this.bucket, true, display)));
-    return [...mappedFamilies, ...mappedStandalone];
+    // Prices are net; clients add VAT for display with the same rounding as invoices.
+    const vatRate = (await resolveVatRate(this.prisma)).toNumber();
+    return [...mappedFamilies, ...mappedStandalone].map((family) => ({ ...family, vatRate }));
   }
 }

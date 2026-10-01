@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../infrastructure/database';
 import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { decorateFamily, loadFamilyDisplayData } from '../package-family-catalog.helper';
+import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.handler';
 
 @Injectable()
 export class GetPublicPackageFamilyHandler {
@@ -12,6 +13,12 @@ export class GetPublicPackageFamilyHandler {
     this.bucket = config && typeof (config as any).getOrThrow === 'function' ? config.getOrThrow<string>('MINIO_BUCKET') : '';
   }
   async execute({ familyId }: { familyId: string }) {
+    // Prices are net; clients add VAT for display with the same rounding as invoices.
+    const vatRate = (await resolveVatRate(this.prisma)).toNumber();
+    return { ...(await this.load(familyId)), vatRate };
+  }
+
+  private async load(familyId: string) {
     const family = await this.prisma.packageFamily.findFirst({ where: { id: familyId, isActive: true, isPublic: true, archivedAt: null, options: { some: { isActive: true, isPublic: true, archivedAt: null } } }, include: { options: { where: { isActive: true, isPublic: true, archivedAt: null }, orderBy: { sortOrder: 'asc' }, include: { groups: { orderBy: { sortOrder: 'asc' }, include: { items: { orderBy: { sessionPosition: 'asc' }, include: { constraints: { include: { targets: true } } } } } }, items: { orderBy: { sortOrder: 'asc' }, include: { constraints: { include: { targets: true } } } } } } } });
     if (family) {
       const display = await loadFamilyDisplayData(this.prisma, [family]);

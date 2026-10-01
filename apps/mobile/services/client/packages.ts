@@ -9,6 +9,18 @@ import type { PackageFamily } from '@sawaa/shared/types';
 
 import api from '../api';
 
+/**
+ * Public package family as the API returns it. `vatRate` is the centre's VAT
+ * fraction (0 when VAT is off or the field is missing); option prices are NET.
+ */
+export type ClientPackageFamily = PackageFamily & { vatRate?: number };
+
+/**
+ * Client purchase row. `amountPaid` is NET; `vatAmount` and `totalCharged`
+ * (VAT-inclusive) are halalas. Missing values mean 0 VAT / `amountPaid`.
+ */
+export type ClientPackagePurchaseRow = ClientPackagePurchase & { vatAmount?: number; totalCharged?: number };
+
 const ATTEMPT_STORAGE_PREFIX = 'sawaa.package-purchase.attempt';
 const PENDING_PURCHASE_STORAGE_KEY = 'sawaa.package-purchase.pending';
 
@@ -100,13 +112,13 @@ export async function clearPendingPackagePurchase(): Promise<void> {
 }
 
 export const clientPackagesService = {
-  async listFamilies(): Promise<PackageFamily[]> {
-    const response = await api.get<PackageFamily[]>('/public/package-families');
+  async listFamilies(): Promise<ClientPackageFamily[]> {
+    const response = await api.get<ClientPackageFamily[]>('/public/package-families');
     return response.data;
   },
 
-  async getFamily(id: string): Promise<PackageFamily> {
-    const response = await api.get<PackageFamily>(`/public/package-families/${id}`);
+  async getFamily(id: string): Promise<ClientPackageFamily> {
+    const response = await api.get<ClientPackageFamily>(`/public/package-families/${id}`);
     return response.data;
   },
 
@@ -118,13 +130,13 @@ export const clientPackagesService = {
     return response.data;
   },
 
-  async listPurchases(): Promise<ClientPackagePurchase[]> {
-    const response = await api.get<ClientPackagePurchase[]>('/mobile/client/packages/purchases');
+  async listPurchases(): Promise<ClientPackagePurchaseRow[]> {
+    const response = await api.get<ClientPackagePurchaseRow[]>('/mobile/client/packages/purchases');
     return response.data;
   },
 
-  async getPurchase(id: string): Promise<ClientPackagePurchase> {
-    const response = await api.get<ClientPackagePurchase>(`/mobile/client/packages/purchases/${id}`);
+  async getPurchase(id: string): Promise<ClientPackagePurchaseRow> {
+    const response = await api.get<ClientPackagePurchaseRow>(`/mobile/client/packages/purchases/${id}`);
     return response.data;
   },
 

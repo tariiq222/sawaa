@@ -6,7 +6,7 @@
  * Phase 5 — manual refund modal for a session-package purchase. The
  * operator enters the refund amount in SAR (we convert to integer
  * halalas at submit) plus an optional note. The form defaults the
- * refund amount to the original `amountPaid` (full refund) and
+ * refund amount to the amount charged (`totalCharged`, VAT-inclusive; full refund) and
  * shows a clear warning that the action voids the remaining credits.
  *
  * Money flow:
@@ -19,7 +19,7 @@
  *     purchase is still REFUNDED + credits still voided.
  *
  * UX gates:
- *   - Refund amount required, integer SAR ≥ 0, ≤ amountPaid.
+ *   - Refund amount required, integer SAR ≥ 0, ≤ amount charged.
  *   - Notes optional, ≤1000 chars (matches the backend DTO).
  *   - Submit disabled while refunding or the amount is invalid.
  *   - Disabled for purchases that are already REFUNDED (defense).
@@ -65,6 +65,9 @@ export function RefundPackageForm({
 }: RefundPackageFormProps) {
   const { t, locale } = useLocale()
   const refundMut = useRefundPackagePurchase()
+  // amountPaid is the net package price; refunds are measured against what
+  // the client was actually charged (VAT-inclusive when VAT is enabled).
+  const charged = purchase.totalCharged ?? purchase.amountPaid
 
   // The operator types SAR; we convert to halalas at submit. Default
   // to the original amount paid (full refund). The parent remounts
@@ -72,8 +75,8 @@ export function RefundPackageForm({
   // the dialog shell), so the useState initialiser always re-runs
   // fresh — no manual reset effect is needed.
   const defaultSar = useMemo(
-    () => halalasToSar(purchase.amountPaid),
-    [purchase.amountPaid],
+    () => halalasToSar(charged),
+    [charged],
   )
   const [refundSar, setRefundSar] = useState<string>(
     defaultSar > 0 ? String(defaultSar) : "0",
@@ -96,7 +99,7 @@ export function RefundPackageForm({
   const isValid =
     Number.isFinite(refundAmountHalalas) &&
     refundAmountHalalas >= 0 &&
-    refundAmountHalalas <= purchase.amountPaid &&
+    refundAmountHalalas <= charged &&
     notes.length <= MAX_NOTES &&
     !refundMut.isPending
 
@@ -134,7 +137,7 @@ export function RefundPackageForm({
               label={t("packages.balances.refund.summary.amountPaid")}
               value={
                 <FormattedCurrency
-                  amount={purchase.amountPaid}
+                  amount={charged}
                   locale={locale}
                   decimals={2}
                 />
@@ -184,7 +187,7 @@ export function RefundPackageForm({
             <p className="text-xs text-muted-foreground">
               {t("packages.balances.refund.amountHelper").replace(
                 "{max}",
-                halalasToSar(purchase.amountPaid).toFixed(2),
+                halalasToSar(charged).toFixed(2),
               )}
             </p>
           </div>

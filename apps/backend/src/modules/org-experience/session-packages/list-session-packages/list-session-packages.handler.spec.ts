@@ -7,6 +7,7 @@ import { ListSessionPackagesHandler } from './list-session-packages.handler';
 
 function buildPrisma() {
   return {
+    organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
     sessionPackage: {
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),

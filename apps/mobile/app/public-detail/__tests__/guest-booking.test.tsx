@@ -10,6 +10,7 @@ let mockClinicId: string | undefined;
 let mockServiceId: string | undefined;
 let mockCategoryKind = 'CLINIC';
 let mockBookingMode = 'SERVICES';
+let mockPackageExtra: Record<string, unknown> = {};
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn() }),
@@ -38,14 +39,14 @@ jest.mock('@/hooks/queries', () => ({
   usePublicCatalog: () => ({ data: { categories: [{ id: 'clinic-42', kind: mockCategoryKind, bookingMode: mockBookingMode, nameAr: 'عيادة', nameEn: mockCategoryKind === 'SERVICE_GROUP' ? 'Assessments' : 'Clinic' }], services: [{ id: 'service-1', categoryId: 'clinic-42', nameAr: 'خدمة', nameEn: 'Service', price: 10000, isActive: true, isHidden: mockBookingMode === 'DIRECT' }] }, isLoading: false }),
   useTherapists: () => ({ data: [{ id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }], isLoading: false }),
   useTherapist: () => ({ data: { id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }, isLoading: false }),
-  usePackageFamily: () => ({ data: mockKind === 'package' ? { id: mockId, nameAr: 'باقة', nameEn: 'Package', options: [] } : null, isLoading: false }),
+  usePackageFamily: () => ({ data: mockKind === 'package' ? { id: mockId, nameAr: 'باقة', nameEn: 'Package', options: [], ...mockPackageExtra } : null, isLoading: false }),
   useGroupSession: () => ({ data: mockKind === 'program' ? { id: mockId, nameAr: 'برنامج', nameEn: 'Program', price: 10000 } : null, isLoading: false }),
 }));
 
 import PublicDetailScreen from '../[kind]/[id]';
 
 describe('public appointment discovery', () => {
-  beforeEach(() => { mockPush.mockClear(); mockSignedIn = false; mockKind = 'service'; mockId = 'service-1'; mockClinicId = undefined; mockServiceId = undefined; mockCategoryKind = 'CLINIC'; mockBookingMode = 'SERVICES'; });
+  beforeEach(() => { mockPush.mockClear(); mockSignedIn = false; mockKind = 'service'; mockId = 'service-1'; mockClinicId = undefined; mockServiceId = undefined; mockCategoryKind = 'CLINIC'; mockBookingMode = 'SERVICES'; mockPackageExtra = {}; });
 
   it('lets a guest choose a specialist and enter booking without signing in', () => {
     const screen = render(<PublicDetailScreen />);
@@ -132,5 +133,17 @@ describe('public appointment discovery', () => {
       params: { redirect: destination },
     });
     expect(decodeRedirect(mockPush.mock.calls[0][0].params.redirect)).toBe(destination);
+  });
+
+  it.each([
+    [0, 'Option · 360.00 SAR', false],
+    [0.15, 'Option · 414.00 SAR', true],
+  ])('shows package option prices with VAT rate %s', (vatRate, priceLine, showsNote) => {
+    mockKind = 'package';
+    mockId = 'package-1';
+    mockPackageExtra = { vatRate, options: [{ id: 'opt', nameAr: 'خيار', nameEn: 'Option', price: { finalPrice: 36000 } }] };
+    const screen = render(<PublicDetailScreen />);
+    expect(screen.getByText(priceLine)).toBeTruthy();
+    expect(Boolean(screen.queryByText('packages.vatIncluded'))).toBe(showsNote);
   });
 });

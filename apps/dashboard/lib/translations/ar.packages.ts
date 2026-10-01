@@ -226,6 +226,7 @@ export const arPackages: Record<string, string> = {
   "packages.sell.notesPlaceholder": "ملاحظات اختيارية (حتى 2000 حرف)",
   "packages.sell.price.subtotal": "المجموع قبل الخصم",
   "packages.sell.price.discount": "الخصم",
+  "packages.sell.price.vat": "الضريبة ({rate}%)",
   "packages.sell.price.total": "الإجمالي",
   "packages.sell.frozenPrice": "السعر المُجمَّد",
   "packages.sell.submit": "بيع الباقة",

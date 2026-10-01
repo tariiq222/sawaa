@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import type { PackageFamily } from '@sawaa/shared/types';
 import { useLocale, useT } from '@/features/locale/locale-provider';
 import { halalasToSar } from '@/lib/money';
 import { safeImageSrc } from '@/lib/image-url';
+import { packageGrossPrice, type PublicPackageFamily } from './packages.api';
 
 function localized(ar: string | null | undefined, en: string | null | undefined, locale: string) {
   return locale === 'ar' ? ar || en || '' : en || ar || '';
@@ -15,7 +15,7 @@ export function PackageCatalogFeature({
   families,
   loadFailed = false,
 }: {
-  families: PackageFamily[];
+  families: PublicPackageFamily[];
   loadFailed?: boolean;
 }) {
   const locale = useLocale();
@@ -81,7 +81,8 @@ export function PackageCatalogFeature({
                 {t('packages.from')}{' '}
                 {lowest === null
                   ? '—'
-                  : `${halalasToSar(lowest)} ${locale === 'ar' ? 'ر.س' : 'SAR'}`}
+                  : `${halalasToSar(packageGrossPrice(lowest, family.vatRate))} ${locale === 'ar' ? 'ر.س' : 'SAR'}`}
+                {lowest !== null && (family.vatRate ?? 0) > 0 ? ` (${t('packages.inclVat')})` : null}
                 {lowestSessions !== null
                   ? ` · ${lowestSessions} ${t(lowestSessions === 1 ? 'packages.sessionsUnit.one' : lowestSessions === 2 ? 'packages.sessionsUnit.two' : lowestSessions <= 10 ? 'packages.sessionsUnit.many' : 'packages.sessionsUnit.other')}`
                   : null}

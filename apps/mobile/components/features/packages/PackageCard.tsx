@@ -1,12 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
-import type { PackageFamily } from '@sawaa/shared/types';
 import { useTranslation } from 'react-i18next';
 
 import { SecondaryButton } from '@/components/ui/SecondaryButton';
 import { useDir } from '@/hooks/useDir';
 import { formatCurrencyAmount } from '@/lib/currency-display';
+import { packageGrossHalalas, packageVatRate } from '@/lib/package-vat';
+import type { ClientPackageFamily } from '@/services/client/packages';
 import { Glass } from '@/theme/components/Glass';
 import { getFontName } from '@/theme/fonts';
 import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
@@ -15,18 +16,20 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { packageHighlights } from './packageHighlights';
 
 /**
- * Package family card: name, lowest option price (integer halalas, no VAT),
+ * Package family card: name, lowest option price (integer halalas; VAT is
+ * added on top when the centre's `vatRate` is above 0, with a short note),
  * feature checks from real catalog fields and a buy action that opens the
  * family to choose an option and branch. There is no "most popular" flag in the
  * data, so every card uses the same secondary action.
  */
-export function PackageCard({ family, onPress }: { family: PackageFamily; onPress: () => void }) {
+export function PackageCard({ family, onPress }: { family: ClientPackageFamily; onPress: () => void }) {
   const { t } = useTranslation();
   const colors = useSawaaColors();
   const dir = useDir();
   const name = (dir.isRTL ? family.nameAr : family.nameEn ?? family.nameAr) ?? '';
   const description = (dir.isRTL ? family.descriptionAr : family.descriptionEn ?? family.descriptionAr) ?? null;
-  const lowest = family.options.reduce((min, option) => Math.min(min, option.price.finalPrice), Number.POSITIVE_INFINITY);
+  const vatRate = packageVatRate(family);
+  const lowest = family.options.reduce((min, option) => Math.min(min, packageGrossHalalas(option.price.finalPrice, vatRate)), Number.POSITIVE_INFINITY);
   const highlights = packageHighlights(family, dir.isRTL, t);
   return (
     <Glass radius={sawaaRadius.xl} style={styles.card} accessibilityLabel={name}>
@@ -39,6 +42,9 @@ export function PackageCard({ family, onPress }: { family: PackageFamily; onPres
           <Text style={[styles.price, { color: colors.teal[700], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}>
             {formatCurrencyAmount(lowest, 'SAR', dir.isRTL)}
           </Text>
+          {vatRate > 0 ? (
+            <Text style={[styles.priceCaption, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>{t('packages.vatIncluded')}</Text>
+          ) : null}
         </View>
       ) : null}
       {description ? (

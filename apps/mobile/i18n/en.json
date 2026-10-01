@@ -663,6 +663,8 @@
     "noPurchases": "Your purchased sessions will appear here.",
     "optionsCount": "{{count}} options",
     "startsFrom": "Starts from",
+    "vatIncluded": "Includes VAT",
+    "vatBreakdown": "{{net}} + VAT {{vat}}",
     "sessionsFrom": "From {{count}} sessions",
     "featureSessionsOf": "{{count}} sessions of {{service}}",
     "featurePractitioner": "With {{name}}",
