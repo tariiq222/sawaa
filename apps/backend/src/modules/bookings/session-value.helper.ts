@@ -46,7 +46,10 @@ export function resolveSessionValue(
 
   if (!purchase || siblingCredits.length === 0) return null;
 
-  const purchaseNet = Number(purchase.amountPaid) - Number(purchase.refundAmount ?? 0);
+  // Legacy credits only (no stored netValue): their purchase invoices predate
+  // VAT, so refundAmount is net here. Floor at 0 so over-refunds never value a
+  // session negatively.
+  const purchaseNet = Math.max(0, Number(purchase.amountPaid) - Number(purchase.refundAmount ?? 0));
   const shares = allocatePurchaseNet(
     purchaseNet,
     siblingCredits.map((c) => ({
