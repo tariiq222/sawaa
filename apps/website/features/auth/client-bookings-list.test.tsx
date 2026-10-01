@@ -89,7 +89,8 @@ describe('ClientBookingsList', () => {
     expect(await screen.findByText('جلسة لاحقة')).toBeTruthy();
     expect(getBookingsMock).toHaveBeenLastCalledWith(2, 50, 'upcoming');
     expect(screen.queryByRole('button', { name: 'عرض المزيد' })).toBeNull();
-  });
+    // Role queries over 50 rendered cards exceed the 5s default on CI runners.
+  }, 15_000);
 
   it('requests server filtering so more than 50 older bookings cannot hide upcoming', async () => {
     const all = [...Array.from({ length: 60 }, (_, i) => booking({ id: `past-${i}`, scheduledAt: PAST })), booking({ id: 'future', serviceNameAr: 'موعد قادم' })];
