@@ -13,9 +13,8 @@ on:
   workflow_dispatch:
 
 # Cancel in-progress runs when a new commit is pushed.
-# Title/body edits get their own group so they never cancel a real run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ (github.event.action == 'edited' && github.event.changes.base == null) && format('-edit-{0}', github.run_id) || '' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -30,8 +29,8 @@ jobs:
       contents: read
       pull-requests: read
     # `edited` is included so a PR retargeted to develop/main gets a fresh
-    # gate; other edits (title/body) are skipped.
-    if: github.event.action != 'edited' || github.event.changes.base != null
+    # gate. Every edit reruns the full gate on purpose: a skipped job would
+    # report success and could mask an earlier failure on the same SHA.
 
     env:
       # Backend unit tests + openapi:build-and-snapshot both load AppModule,
@@ -200,7 +199,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-    if: github.event.action != 'edited' || github.event.changes.base != null
 
     services:
       postgres:
