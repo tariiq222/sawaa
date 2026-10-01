@@ -8,6 +8,9 @@ import { SendEmailDto } from './send-email.dto';
 
 export type SendEmailCommand = SendEmailDto;
 
+/** `sent: false` means nothing was sent (missing or inactive template). */
+export type SendEmailResult = { sent: true } | { sent: false; reason: 'TEMPLATE_UNAVAILABLE' };
+
 @Injectable()
 export class SendEmailHandler {
   private readonly logger = new Logger(SendEmailHandler.name);
@@ -17,14 +20,14 @@ export class SendEmailHandler {
     private readonly emailFactory: EmailProviderFactory,
   ) {}
 
-  async execute(dto: SendEmailCommand): Promise<void> {
+  async execute(dto: SendEmailCommand): Promise<SendEmailResult> {
     const template = await this.prisma.emailTemplate.findFirst({
       where: { slug: dto.templateSlug },
     });
 
     if (!template || !template.isActive) {
       this.logger.warn(`Email template "${dto.templateSlug}" not found`);
-      return;
+      return { sent: false, reason: 'TEMPLATE_UNAVAILABLE' };
     }
 
     const html = this.interpolateHtml(template.htmlBody, dto.vars);
@@ -47,6 +50,7 @@ export class SendEmailHandler {
       this.logger.error(`Failed to send "${dto.templateSlug}" to ${dto.to}`, err);
       throw err;
     }
+    return { sent: true };
   }
 
   /**

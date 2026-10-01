@@ -10,6 +10,9 @@ import { SendSmsDto } from './send-sms.dto';
 
 export type SendSmsCommand = SendSmsDto;
 
+/** `sent: false` means nothing reached a provider (none configured). */
+export type SendSmsResult = { sent: true } | { sent: false; reason: 'NO_PROVIDER' };
+
 @Injectable()
 export class SendSmsHandler {
   private readonly logger = new Logger(SendSmsHandler.name);
@@ -19,7 +22,7 @@ export class SendSmsHandler {
     private readonly factory: SmsProviderFactory,
   ) {}
 
-  async execute(cmd: SendSmsCommand): Promise<void> {
+  async execute(cmd: SendSmsCommand): Promise<SendSmsResult> {
     const adapter = await this.factory.resolve();
     const bodyHash = createHash('sha256').update(cmd.body).digest('hex');
 
@@ -28,7 +31,7 @@ export class SendSmsHandler {
       this.logger.warn(
         `SMS skipped — no provider configured → ${cmd.phone}`,
       );
-      return;
+      return { sent: false, reason: 'NO_PROVIDER' };
     }
 
     try {
@@ -59,9 +62,10 @@ export class SendSmsHandler {
       });
       if (err instanceof SmsProviderNotConfiguredError) {
         this.logger.warn(message);
-        return;
+        return { sent: false, reason: 'NO_PROVIDER' };
       }
       throw err;
     }
+    return { sent: true };
   }
 }

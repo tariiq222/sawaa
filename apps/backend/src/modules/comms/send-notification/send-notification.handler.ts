@@ -87,7 +87,7 @@ export class SendNotificationHandler {
     }
 
     // ── 2b. STANDARD — best-effort (existing behavior) ────────────────────
-    const tasks: Promise<void>[] = [];
+    const tasks: Promise<unknown>[] = [];
 
     if (dto.channels.includes('push')) {
       const tokens = dto.fcmTokens ?? (dto.fcmToken ? [dto.fcmToken] : []);
