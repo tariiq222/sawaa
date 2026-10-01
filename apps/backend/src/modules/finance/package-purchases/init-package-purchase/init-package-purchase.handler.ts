@@ -268,7 +268,9 @@ export class InitPackagePurchaseHandler {
     const vat = computeVat(new Prisma.Decimal(price.finalPrice), vatRate);
     const charge = { vatRate, vatAmt: vat.vatAmtHalalas, total: vat.totalHalalas };
 
-    if (charge.total.lessThan(100)) {
+    // A keyed retry reuses its frozen invoice total (materializePending), so the
+    // current rate must not re-judge it against the gateway minimum.
+    if (!keyedPurchase && charge.total.lessThan(100)) {
       throw new BadRequestException(
         "This package cannot be purchased online (price below the gateway minimum)",
       );

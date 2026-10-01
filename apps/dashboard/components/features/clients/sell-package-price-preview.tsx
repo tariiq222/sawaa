@@ -30,7 +30,8 @@ export function SellPackagePricePreview({ pkg }: Props) {
   // The sale invoice adds VAT on top of the net price, rounded half-up to a
   // whole halala — the same math as the backend's computeVat.
   const vatRate = Number(pkg.vatRate) || 0
-  const vatAmount = Math.round(finalPrice * vatRate)
+  // Trim float noise (5000 × 0.0003 = 1.4999999999999998) before rounding.
+  const vatAmount = vatRate > 0 ? Math.round(Number((finalPrice * vatRate).toFixed(6))) : 0
   const total = finalPrice + vatAmount
 
   return (

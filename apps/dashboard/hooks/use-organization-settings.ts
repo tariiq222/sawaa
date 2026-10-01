@@ -163,8 +163,13 @@ export function useUpdateOrganizationSettings() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: UpdateOrganizationSettingsPayload) => updateOrganizationSettings(data),
-    onSuccess: () => {
+    onSuccess: (_result, data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.organizationSettings.all })
+      // Package prices carry vatRate; refresh them so the sell preview uses the new rate.
+      if (data.vatRate !== undefined) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
+        queryClient.invalidateQueries({ queryKey: queryKeys.packageFamilies.all })
+      }
     },
   })
 }

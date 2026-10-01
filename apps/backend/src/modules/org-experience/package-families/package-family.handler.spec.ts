@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { CreatePackageFamilyHandler } from './create-package-family/create-package-family.handler';
 import { UpdatePackageFamilyHandler } from './update-package-family/update-package-family.handler';
 import { ListPublicPackageFamiliesHandler } from './list-public-package-families/list-public-package-families.handler';
+import { ListPackageFamiliesHandler } from './list-package-families/list-package-families.handler';
 import { GetPublicPackageFamilyHandler } from './get-public-package-family/get-public-package-family.handler';
 import { ArchivePackageFamilyHandler } from './archive-package-family/archive-package-family.handler';
 
@@ -295,5 +296,23 @@ describe('public package family detail projection', () => {
 
     expect(result).toEqual(expect.objectContaining({ id: OPTION_5_ID, isStandalone: true }));
     expect(result.options).toEqual([expect.objectContaining({ id: OPTION_5_ID, familyId: null, groups: [], globalDiscount: { type: 'NONE', value: 0 } })]);
+  });
+
+  it('dashboard family list carries the VAT rate the sale invoice will add', async () => {
+    const prisma = {
+      organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15' }) },
+      packageFamily: {
+        findMany: jest.fn().mockResolvedValue([{
+          id: FAMILY_ID, nameAr: 'Family', isActive: true, isPublic: false, archivedAt: null,
+          options: [{ id: OPTION_5_ID, isActive: true, isPublic: false, archivedAt: null, groups: [], items: [] }],
+        }]),
+      },
+      sessionPackage: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const handler = construct(ListPackageFamiliesHandler, [prisma, {}, {}, {}]) as {
+      execute(): Promise<Array<{ id: string; vatRate: number }>>;
+    };
+    const result = await handler.execute();
+    expect(result[0]).toEqual(expect.objectContaining({ id: FAMILY_ID, vatRate: 0.15 }));
   });
 });

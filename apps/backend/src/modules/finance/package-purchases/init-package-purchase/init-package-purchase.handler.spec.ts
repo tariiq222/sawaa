@@ -569,6 +569,28 @@ describe("InitPackagePurchaseHandler", () => {
       );
     });
 
+    it("lets a keyed retry reuse its frozen gross total even when the current rate would put it below the gateway minimum", async () => {
+      // Net 90 halalas was accepted at 15% VAT (gross 104). VAT is now 0, so
+      // the current rate alone would compute 90 < 100.
+      const prisma = buildPrisma();
+      const fingerprint = selfPurchaseFingerprint(cmd());
+      prisma.packagePurchase.findUnique.mockResolvedValue({
+        id: PURCHASE_ID, requestFingerprint: fingerprint, status: PackagePurchaseStatus.PENDING,
+        subtotalSnapshot: new Prisma.Decimal(90), discountSnapshot: new Prisma.Decimal(0), amountPaid: new Prisma.Decimal(90),
+        creditSnapshot: [{ serviceId: SERVICE_ID, employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID, unitPriceSnapshot: 90, totalQuantity: 1, constraints: [] }],
+      });
+      prisma.packagePurchase.findFirst.mockResolvedValue({ id: PURCHASE_ID, idempotencyKey: cmd().idempotencyKey, requestFingerprint: fingerprint });
+      prisma.invoice.findFirst.mockResolvedValue({ id: INVOICE_ID, total: 104 });
+      prisma.invoice.findUnique.mockResolvedValue({ id: INVOICE_ID, total: 104, currency: "SAR", status: "DRAFT" });
+      prisma.payment.findFirst.mockResolvedValueOnce({ id: "old-pay", status: PaymentStatus.FAILED, gatewayRef: null }).mockResolvedValue(null);
+      prisma.payment.findUnique.mockResolvedValue({ status: PaymentStatus.FAILED, gatewayRef: null });
+      const moyasar = buildMoyasar();
+      const { handler } = buildHandler(prisma, buildPricing(), moyasar);
+
+      await expect(handler.execute(cmd())).resolves.toMatchObject({ purchaseId: PURCHASE_ID });
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(DEFAULT_ORG_ID, expect.objectContaining({ amountHalalas: 104 }));
+    });
+
     it("rejects a second checkout key while the same client/package still has a PENDING purchase", async () => {
       const prisma = buildPrisma();
       prisma.packagePurchase.findFirst.mockResolvedValue({

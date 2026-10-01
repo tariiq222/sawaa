@@ -26,12 +26,22 @@ export function halalasToSarNumber(halalas: number): number {
  *
  * Mirrors the backend invoice math (apps/backend/src/modules/finance/money.helper.ts
  * `computeVat`): vatAmt = round_half_up(net × vatRate); gross = net + vatAmt.
- * For positive amounts `Math.round` is round-half-up, so this stays in parity
- * with what the backend actually charges.
+ * For positive amounts `Math.round` is round-half-up; see `vatHalalas` for the
+ * float-noise guard that keeps it in parity with what the backend charges.
  *
  * @param halalas net amount in integer halalas
  * @param vatRate fractional rate, e.g. 0.15 = 15% (NOT a percentage)
  */
 export function grossWithVat(halalas: number, vatRate: number): number {
-  return halalas + Math.round(halalas * vatRate)
+  return halalas + vatHalalas(halalas, vatRate)
+}
+
+/**
+ * VAT in whole halalas: round_half_up(net × vatRate). The product is trimmed
+ * to 6 decimals first so float noise (5000 × 0.0003 = 1.4999999999999998)
+ * rounds like the backend's exact Decimal math (1.5 → 2).
+ */
+export function vatHalalas(halalas: number, vatRate: number): number {
+  if (!Number.isFinite(halalas) || !Number.isFinite(vatRate) || vatRate <= 0) return 0
+  return Math.round(Number((halalas * vatRate).toFixed(6)))
 }

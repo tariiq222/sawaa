@@ -104,7 +104,7 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
     [packages],
   )
   const familyChoices = useMemo(
-    () => families.flatMap((family) => family.options.filter((option) => option.isActive && !option.archivedAt).map((option) => ({ option, familyId: family.id, familyNameAr: family.nameAr, familyNameEn: family.nameEn }))),
+    () => families.flatMap((family) => family.options.filter((option) => option.isActive && !option.archivedAt).map((option) => ({ option: { ...option, vatRate: family.vatRate }, familyId: family.id, familyNameAr: family.nameAr, familyNameEn: family.nameEn }))),
     [families],
   )
 

@@ -31,6 +31,15 @@ describe("SellPackagePricePreview VAT", () => {
   })
 })
 
+describe("SellPackagePricePreview VAT rounding", () => {
+  it("rounds an exact half up like the backend (5000 × 0.03% → 2 halalas)", () => {
+    const p = { subtotal: 5_000, discountAmount: 0, finalPrice: 5_000, vatRate: 0.0003 } as unknown as SessionPackage
+    render(<SellPackagePricePreview pkg={p} />)
+    expect(screen.getByText("0.02")).toBeInTheDocument()
+    expect(screen.getByText("50.02")).toBeInTheDocument()
+  })
+})
+
 describe("RefundPackageForm amount charged", () => {
   it("defaults the refund to the VAT-inclusive amount charged", () => {
     const purchase = { id: "p1", amountPaid: 36_000, totalCharged: 41_400, vatAmount: 5_400, refundAmount: 0, credits: [] } as unknown as ClientPackagePurchase
