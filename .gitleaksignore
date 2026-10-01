@@ -27,9 +27,9 @@
 # Verified prose-only false positive: documentation says JWT/encryption keys.
 55b03c013708476062630da8e35d0f1a535d776e:docker/openship/README.md:generic-api-key:57
 
-# Disposable Woodpecker CI fixtures copied byte-for-byte from existing CI.
-# Their current replacement generates process-local random keys; these exact
-# historical matches contain no provider-issued secret. No legacy real keys allowed.
+# Disposable fixtures from the removed Woodpecker CI config, kept because the
+# file remains in Git history. These exact historical matches contain no
+# provider-issued secret. No legacy real keys allowed.
 e3ddb275291d14094ff4ba5e1e495c9794183019:.woodpecker/ci.yml:generic-api-key:19
 e3ddb275291d14094ff4ba5e1e495c9794183019:.woodpecker/ci.yml:generic-api-key:22
 e3ddb275291d14094ff4ba5e1e495c9794183019:.woodpecker/ci.yml:generic-api-key:23
