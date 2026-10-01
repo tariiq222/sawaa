@@ -6,8 +6,8 @@
 #
 # Every ecosystem targets `develop`: the deployment policy forbids PRs straight
 # into `main` (docs/operations/deployment-policy.md). There is no
-# github-actions ecosystem because GitHub Actions is disabled for this repo
-# (CI runs on local Woodpecker), so workflow bumps would only pile up PRs.
+# github-actions ecosystem because GitHub Actions is disabled for this repo,
+# so workflow bumps would only pile up PRs.
 
 version: 2
 
