@@ -155,7 +155,7 @@ describe('SmsDlrHandler', () => {
           .fn()
           .mockResolvedValueOnce({ count: 0 })
           .mockResolvedValueOnce({ count: 1 }),
-        count: jest.fn().mockResolvedValue(0),
+        findFirst: jest.fn().mockResolvedValueOnce(null),
       },
     };
     const prisma = {
@@ -200,7 +200,7 @@ describe('SmsDlrHandler', () => {
       webhookEvent: { create: jest.fn().mockResolvedValue({ id: 'evt-1' }) },
       smsDelivery: {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-        count: jest.fn().mockResolvedValue(1),
+        findFirst: jest.fn().mockResolvedValue({ status: 'DELIVERED' }),
       },
     };
     const prisma = {
@@ -220,6 +220,33 @@ describe('SmsDlrHandler', () => {
     expect(tx.smsDelivery.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { providerMessageId: 'm-org-a', status: { in: ['QUEUED', 'SENT', 'UNKNOWN'] } },
     }));
+  });
+
+  it('applies the receipt when the delivery row appears right after the first update', async () => {
+    const creds = buildCreds();
+    const ciphertext = creds.encrypt({ appSid: 'a', apiKey: 'b' }, DEFAULT_ORG_ID);
+    const tx = {
+      webhookEvent: { create: jest.fn().mockResolvedValue({ id: 'evt-1' }) },
+      smsDelivery: {
+        updateMany: jest.fn().mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 }),
+        findFirst: jest.fn().mockResolvedValue({ status: 'SENT' }),
+      },
+    };
+    const prisma = {
+      organizationSmsConfig: {
+        findFirst: jest.fn().mockResolvedValue({ provider: 'UNIFONIC', credentialsCiphertext: ciphertext, webhookSecret }),
+      },
+    };
+    const handler = new SmsDlrHandler(
+      prisma as never,
+      new SmsProviderFactory(prisma as never, creds),
+      buildCls() as never,
+      buildTransaction(tx) as never,
+    );
+
+    await expect(handler.execute({ provider: 'UNIFONIC', organizationId: DEFAULT_ORG_ID, rawBody, signature: sig }))
+      .resolves.toEqual({});
+    expect(tx.smsDelivery.updateMany).toHaveBeenCalledTimes(2);
   });
 
   it('skips a concurrent duplicate when the transactional claim loses P2002', async () => {

@@ -108,29 +108,38 @@ export class SmsDlrHandler {
           // Receipts can arrive out of order. Only move a delivery forward
           // (QUEUED → SENT/UNKNOWN → FAILED → DELIVERED); a late FAILED must
           // not overwrite a DELIVERED row.
-          const updated = await tx.smsDelivery.updateMany({
-            where: {
-              providerMessageId: parsed.providerMessageId,
-              status: { in: [...statusesBefore(parsed.status)] },
-            },
-            data: {
-              status: parsed.status,
-              errorCode: parsed.errorCode,
-              errorMessage: parsed.errorMessage,
-              deliveredAt:
-                parsed.status === 'DELIVERED' ? new Date() : undefined,
-            },
-          });
-          if (updated.count === 0) {
-            const exists = await tx.smsDelivery.count({
-              where: { providerMessageId: parsed.providerMessageId },
+          const applyReceipt = () =>
+            tx.smsDelivery.updateMany({
+              where: {
+                providerMessageId: parsed.providerMessageId,
+                status: { in: [...statusesBefore(parsed.status)] },
+              },
+              data: {
+                status: parsed.status,
+                errorCode: parsed.errorCode,
+                errorMessage: parsed.errorMessage,
+                deliveredAt:
+                  parsed.status === 'DELIVERED' ? new Date() : undefined,
+              },
             });
-            if (exists === 0) {
+          let updated = await applyReceipt();
+          if (updated.count === 0) {
+            const current = await tx.smsDelivery.findFirst({
+              where: { providerMessageId: parsed.providerMessageId },
+              select: { status: true },
+            });
+            if (!current) {
               throw new Error(
                 `SMS delivery not found for provider message ${parsed.providerMessageId}`,
               );
             }
-            stale = true;
+            // The row may have been inserted by the sender right after the
+            // first update ran; if it is still eligible, apply the receipt now
+            // instead of committing the dedup claim as stale.
+            if (statusesBefore(parsed.status).includes(current.status)) {
+              updated = await applyReceipt();
+            }
+            if (updated.count === 0) stale = true;
           }
         });
         if (stale) {
