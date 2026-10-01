@@ -25,7 +25,7 @@ describe('suspended screen escape route', () => {
 
     fireEvent.press(screen.getByLabelText('suspended.continueAsGuest'));
 
-    expect(mockReplace).toHaveBeenCalledWith('/home');
+    expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     expect(mockLogout).not.toHaveBeenCalled();
   });
 });

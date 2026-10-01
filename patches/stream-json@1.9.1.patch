@@ -1,0 +1,49 @@
+diff --git a/filters/FilterBase.js b/filters/FilterBase.js
+--- a/filters/FilterBase.js
++++ b/filters/FilterBase.js
+@@ -1,6 +1,11 @@
+ 'use strict';
+ 
+ const {Transform} = require('stream');
++
++// Backport the path-depth bound from stream-json 3.5.0 without changing its CJS/Transform API.
++const DEFAULT_MAX_DEPTH = 1024;
++// Depth alone does not bound repeated joins of a long ancestor key.
++const DEFAULT_MAX_PATH_LENGTH = 16 * 1024;
+ 
+ class FilterBase extends Transform {
+   static stringFilter(string, separator) {
+@@ -25,9 +30,12 @@
+     super(Object.assign({}, options, {writableObjectMode: true, readableObjectMode: true}));
+     this._transform = this._check;
+     this._stack = [];
++    this._maxDepth = options && options.maxDepth != null ? options.maxDepth : DEFAULT_MAX_DEPTH;
++    this._maxPathLength = options && options.maxPathLength != null ? options.maxPathLength : DEFAULT_MAX_PATH_LENGTH;
+ 
+     const filter = options && options.filter,
+       separator = (options && options.pathSeparator) || '.';
++    this._pathSeparatorLength = String(separator).length;
+     if (typeof filter == 'string') {
+       this._filter = FilterBase.stringFilter(filter, separator);
+     } else if (typeof filter == 'function') {
+@@ -86,6 +94,20 @@
+         break;
+     }
+     this._previousToken = chunk.name;
++    // Bound the path before a filter joins/copies it. Emit a normal stream error.
++    if (this._stack.length > this._maxDepth) {
++      return callback(new RangeError(`filter: JSON nesting depth exceeds maxDepth (${this._maxDepth})`));
++    }
++    // Bound total path characters before joins/scans, including ancestor keys
++    // and separators. String length is constant-time; depth is already bounded.
++    let pathLength = Math.max(0, this._stack.length - 1) * this._pathSeparatorLength;
++    for (const key of this._stack) {
++      pathLength += key == null ? 0 : String(key).length;
++      if (pathLength > this._maxPathLength) break;
++    }
++    if (pathLength > this._maxPathLength) {
++      return callback(new RangeError(`filter: JSON path length exceeds maxPathLength (${this._maxPathLength})`));
++    }
+     // check, if we allow a chunk
+     if (this._checkChunk(chunk)) {
+       return callback(null);

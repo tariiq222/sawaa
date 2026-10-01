@@ -44,7 +44,7 @@ describe('unmatched route screen', () => {
 
     fireEvent.press(screen.getByLabelText('notFound.back'));
 
-    expect(mockReplace).toHaveBeenCalledWith('/home');
+    expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     expect(mockBack).not.toHaveBeenCalled();
   });
 

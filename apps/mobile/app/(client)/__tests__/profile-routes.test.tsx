@@ -2,8 +2,8 @@ import React from 'react';
 jest.mock('@/theme/useTheme', () => ({
   useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', setThemeMode: jest.fn(), isRTL: true, language: 'ar' }),
 }));
-import { fireEvent, render } from '@testing-library/react-native';
-import { Linking, StyleSheet } from 'react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert, Linking, StyleSheet } from 'react-native';
 
 jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
@@ -11,8 +11,9 @@ jest.mock('react-native-reanimated', () => {
 });
 const mockBack = jest.fn();
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 let mockContactPhone: string | null = null;
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, push: mockPush }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, push: mockPush, replace: mockReplace }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', textAlign: 'right' }) }));
@@ -22,19 +23,44 @@ jest.mock('@/theme/sawaa', () => {
   return { ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: View };
 });
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light') }));
-jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
+jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').Pressable }));
 jest.mock('@/hooks/use-redux', () => ({
+  useAppDispatch: () => jest.fn(),
   useAppSelector: () => ({ firstName: 'نورة', lastName: 'ا', email: 'n@example.com' }),
 }));
-jest.mock('@/services/auth', () => ({ authService: { logout: jest.fn() } }));
+jest.mock('@/services/auth', () => ({ authService: { logout: jest.fn().mockResolvedValue(undefined) } }));
 jest.mock('@/hooks/queries', () => ({ useSummary: () => ({ data: null }), useBranding: () => ({ data: { contactPhone: mockContactPhone } }) }));
 jest.mock('@/constants/config', () => ({ PRIVACY_POLICY_URL: 'https://example.com' }));
 jest.mock('@/components/features/settings/DeleteAccountButton', () => ({ DeleteAccountButton: () => null }));
 
+jest.mock('@react-navigation/native', () => ({ useFocusEffect: jest.fn() }));
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
+jest.mock('@/components/features/auth/UnverifiedEmailBanner', () => ({ UnverifiedEmailBanner: () => null }));
+jest.mock('@/stores/slices/auth-slice', () => ({ logout: () => ({ type: 'auth/logout' }), setUser: jest.fn() }));
+jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), NotificationFeedbackType: { Success: 'success' } }));
+
 import ProfileScreen from '../profile';
+import EmployeeProfileScreen from '../../(employee)/(tabs)/profile';
 
 describe('profile rows lead to purpose-specific pages', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it('returns to guest browsing after signing out', async () => {
+    const screen = render(<ProfileScreen />);
+    fireEvent.press(screen.getByText('profile.signOut'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(guest)/home'));
+  });
+
+  it('returns staff to guest browsing after confirmed sign-out', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const screen = render(<EmployeeProfileScreen />);
+    fireEvent.press(screen.getByLabelText('auth.logout'));
+    const confirm = alert.mock.calls[0][2]?.find((button) => button.style === 'destructive');
+    expect(confirm).toBeDefined();
+    await act(async () => { await confirm?.onPress?.(); });
+    expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
+    alert.mockRestore();
+  });
 
   it('keeps preferences in settings and leaves one entry per care destination', () => {
     const screen = render(<ProfileScreen />);

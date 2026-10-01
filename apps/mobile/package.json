@@ -40,7 +40,8 @@
       }
     },
     "moduleNameMapper": {
-      "^immer$": "<rootDir>/node_modules/.pnpm/node_modules/immer/dist/cjs/index.js"
+      "^immer$": "<rootDir>/node_modules/.pnpm/node_modules/immer/dist/cjs/index.js",
+      "^uuid$": "<rootDir>/node_modules/.pnpm/node_modules/uuid/dist/cjs/index.js"
     }
   },
   "dependencies": {
@@ -125,7 +126,8 @@
   "pnpm": {
     "patchedDependencies": {
       "metro@0.83.7": "patches/metro@0.83.7.patch",
-      "expo-router@55.0.18": "patches/expo-router@55.0.18.patch"
+      "expo-router@55.0.18": "patches/expo-router@55.0.18.patch",
+      "decode-uri-component@0.2.2": "patches/decode-uri-component@0.2.2.patch"
     },
     "overrides": {
       "@grpc/grpc-js@<1.14.5": "1.14.5",
@@ -135,7 +137,9 @@
       "@expo/xcpretty>js-yaml": "4.3.2",
       "@istanbuljs/load-nyc-config>js-yaml": "3.15.2",
       "brace-expansion@<1.1.19": "1.1.21",
-      "brace-expansion@>=5.0.0 <5.0.11": "5.0.12"
+      "brace-expansion@>=5.0.0 <5.0.11": "5.0.12",
+      "uuid@<11.1.1": "11.1.1",
+      "moment@<2.31.0": "2.31.0"
     }
   }
 }

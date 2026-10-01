@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 
 let mockCanGoBack = true;
 const mockBack = jest.fn();
@@ -68,6 +69,12 @@ jest.mock('@/hooks/queries', () => ({
 }));
 
 import LoginScreen from '../login';
+import { getStateFromPath } from 'expo-router/build/fork/getStateFromPath';
+
+type HomeRouteParams = {
+  '(client)': NavigatorScreenParams<{ '(tabs)': NavigatorScreenParams<{ home: undefined }> }>;
+  '(guest)': NavigatorScreenParams<{ home: undefined }>;
+};
 
 describe('login screen escape routes', () => {
   beforeEach(() => {
@@ -90,7 +97,7 @@ describe('login screen escape routes', () => {
 
     fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
 
-    expect(mockReplace).toHaveBeenCalledWith('/home');
+    expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     expect(mockBack).not.toHaveBeenCalled();
   });
 
@@ -99,6 +106,15 @@ describe('login screen escape routes', () => {
 
     fireEvent.press(screen.getByText('auth.login.continueAsGuest'));
 
-    expect(mockReplace).toHaveBeenCalledWith('/home');
+    // Both homes share /home: resolve the consumer's actual destination using
+    // Expo's group-aware matcher, so a bare path cannot silently select client.
+    const state = getStateFromPath<HomeRouteParams>(mockReplace.mock.calls[0][0], {
+      screens: {
+        '(client)': { path: '(client)', screens: { '(tabs)': { path: '(tabs)', screens: { home: 'home' } } } },
+        '(guest)': { path: '(guest)', screens: { home: 'home' } },
+      },
+    });
+    expect(state?.routes[0].name).toBe('(guest)');
+    expect(state?.routes[0].state?.routes[0].name).toBe('home');
   });
 });

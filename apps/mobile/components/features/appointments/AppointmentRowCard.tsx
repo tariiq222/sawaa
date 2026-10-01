@@ -8,6 +8,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { useDir } from '@/hooks/useDir';
 import { formatDayMonth, formatTimeOfDay } from '@/lib/session-format';
 import { STATUS_LABEL_MAP } from '@/lib/status-helpers';
+import { getBookingServiceName } from '@/lib/booking-service-name';
 import type { ClientBookingRow } from '@/services/client/bookings';
 import { hasZoomMeetingAccess } from '@/types/booking-enums';
 import { Glass } from '@/theme/components/Glass';
@@ -22,7 +23,7 @@ interface AppointmentRowCardProps {
   showJoin: boolean;
 }
 
-/** Appointment card of the appointments tab: date box, time, therapist, status and (when allowed) join. */
+/** Appointment card of the appointments tab: date box, time, service, therapist, status and (when allowed) join. */
 export function AppointmentRowCard({ booking: b, onPress, showJoin }: AppointmentRowCardProps) {
   const colors = useSawaaColors();
   const dir = useDir();
@@ -31,6 +32,7 @@ export function AppointmentRowCard({ booking: b, onPress, showJoin }: Appointmen
   const therapistName = (dir.isRTL
     ? b.employee?.nameAr ?? b.employee?.nameEn
     : b.employee?.nameEn ?? b.employee?.nameAr) ?? '—';
+  const serviceName = getBookingServiceName(b, dir.isRTL);
   const time = formatTimeOfDay(b.scheduledAt, dir.isRTL) ?? t('appointments.toBeScheduled');
   const statusKey = STATUS_LABEL_MAP[b.status];
   const statusLabel = statusKey ? t(statusKey) : '—';
@@ -43,7 +45,7 @@ export function AppointmentRowCard({ booking: b, onPress, showJoin }: Appointmen
         onPress={onPress}
         style={[styles.top, { flexDirection: dir.row }]}
         accessibilityRole="button"
-        accessibilityLabel={t('appointments.cardA11y', { name: therapistName, date: dateText, time, status: statusLabel })}
+        accessibilityLabel={[serviceName, t('appointments.cardA11y', { name: therapistName, date: dateText, time, status: statusLabel })].filter(Boolean).join(', ')}
         accessibilityHint={t('a11y.cardOpenAppointment')}
         testID={`appt-${b.id}`}
       >
@@ -52,6 +54,11 @@ export function AppointmentRowCard({ booking: b, onPress, showJoin }: Appointmen
           <Text numberOfLines={1} style={[styles.time, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}>
             {time}
           </Text>
+          {serviceName ? (
+            <Text testID="appointment-service-name" numberOfLines={2} style={[styles.name, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '500'), textAlign: dir.textAlign }]}>
+              {serviceName}
+            </Text>
+          ) : null}
           <Text numberOfLines={1} style={[styles.name, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>
             {t('appointments.with', { name: therapistName })}
           </Text>

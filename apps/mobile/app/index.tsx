@@ -92,7 +92,7 @@ export default function IndexScreen() {
     if (hydrating) return;
 
     if (!token || !user) {
-      router.replace('/home');
+      router.replace('/(guest)/home');
       return;
     }
 
