@@ -95,7 +95,7 @@ describe('operational invariant: VAT', () => {
 
   it('no shipped source in any app hardcodes a 15% VAT rate (code, copy, Swagger or fallbacks)', () => {
     const offenders = shippedSources()
-      .filter(({ text }) => FIFTEEN_PERCENT.test(withoutCssColours(asciiDigits(text))))
+      .filter(({ text }) => hardcodesFifteenPercent(withoutCssColours(asciiDigits(text))))
       .map((f) => f.path);
     expect(offenders).toEqual([]);
   });
@@ -171,8 +171,21 @@ describe('operational invariant: staff notifications keep organizationId', () =>
   });
 });
 
-// 0.15, the shorthand .15, or 15% / 15 % — but not 1.15, v0.15.2 or 0.155.
-const FIFTEEN_PERCENT = /(?<![\w.])0?\.15(?![\w.])|\b15\s?%/;
+/**
+ * Every numeric token, parsed by value: a fraction equal to 0.15 (0.15, .15,
+ * 0.150, 15e-2, 1.5e-1) or a percentage equal to 15 (15%, 15 %, 15.0%).
+ * Tokens that are part of a longer dotted/identifier run (v0.15.2, x15) are
+ * not numbers and are skipped.
+ */
+const NUMERIC_TOKEN = /(?<![\w.])(\d*\.?\d+(?:[eE][+-]?\d+)?)(?![\w.])(\s?%)?/g;
+
+function hardcodesFifteenPercent(text: string): boolean {
+  for (const [, digits, percent] of text.matchAll(NUMERIC_TOKEN)) {
+    const value = Number(digits);
+    if (percent ? value === 15 : value === 0.15) return true;
+  }
+  return false;
+}
 
 /**
  * Arabic copy writes the rate as ١٥٪ or ٠٫١٥ (also Persian ۱۵٪). Fold Arabic-
