@@ -187,6 +187,11 @@ const SKIPPED_DIRS = new Set([
 ]);
 const TEST_FILE = /\.(spec|test|e2e-spec)\.[cm]?[jt]sx?$|\.d\.ts$/;
 
+/** The string values of every `content:` declaration in a stylesheet. */
+function cssContentStrings(css: string): string {
+  return [...css.matchAll(/\bcontent\s*:\s*(["'])((?:\\.|(?!\1).)*)\1/g)].map((m) => m[2]).join('\n');
+}
+
 /** Source and copy that ships to users from every app and shared package. */
 function shippedSources(): Array<{ path: string; text: string }> {
   const out: Array<{ path: string; text: string }> = [];
@@ -197,6 +202,10 @@ function shippedSources(): Array<{ path: string; text: string }> {
       for (const child of readdirSync(full)) visit(join(full, child));
     } else if (/\.([cm]?[jt]sx?|json)$/.test(name) && !TEST_FILE.test(name)) {
       out.push({ path: full.slice(REPO_ROOT.length + 1), text: readFileSync(full, 'utf8') });
+    } else if (/\.(s?css)$/.test(name)) {
+      // Stylesheets ship copy only through `content:` strings; percentages in
+      // gradients, sizes and colours are visual and stay out of the scan.
+      out.push({ path: full.slice(REPO_ROOT.length + 1), text: cssContentStrings(readFileSync(full, 'utf8')) });
     }
   };
   for (const root of SHIPPED_ROOTS) visit(join(REPO_ROOT, root));
