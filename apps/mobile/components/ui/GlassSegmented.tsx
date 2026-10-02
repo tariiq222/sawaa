@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Glass } from '@/theme/components/Glass';
 import { useTheme } from '@/theme/useTheme';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 
@@ -32,18 +32,21 @@ export function GlassSegmented<T extends string>({
   size?: 'sm' | 'md';
   appearance?: 'default' | 'navigation';
 }) {
-  const { theme } = useTheme();
+  const { theme, scheme } = useTheme();
   const colors = useSawaaColors();
   const dir = useDir();
   const f600 = getFontName(dir.locale, '600');
   const styles = createStyles(colors, size);
+  // A neutral grey rail reads as foreign on the aqua page; use the same
+  // teal tint as the brand pills in light mode. The dark rail is already teal-toned.
+  const railColor = scheme === 'dark' ? theme.colors.surfaceHigh : withAlpha(colors.teal[500], 0.14);
 
   return (
     <Glass variant={appearance === 'navigation' ? 'strong' : 'regular'} radius={sawaaRadius.pill}>
       <View
         style={[
           styles.track,
-          { flexDirection: dir.row, backgroundColor: theme.colors.surfaceHigh },
+          { flexDirection: dir.row, backgroundColor: railColor },
         ]}
       >
         {options.map((option) => {
@@ -82,7 +85,7 @@ export function GlassSegmented<T extends string>({
                     {
                       backgroundColor: isActive
                         ? theme.colors.primarySelectionForeground
-                        : theme.colors.surfaceHigh,
+                        : theme.colors.surface,
                     },
                   ]}
                 >

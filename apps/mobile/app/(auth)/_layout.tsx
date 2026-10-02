@@ -1,13 +1,16 @@
 import { Stack } from 'expo-router';
 
+import { useStackDirectionOptions } from '@/hooks/useStackDirectionOptions';
+
 export default function AuthLayout() {
+  const stackDirection = useStackDirectionOptions();
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: 'slide_from_right',
         gestureEnabled: true,
         gestureDirection: 'horizontal',
+        ...stackDirection,
       }}
     />
   );
