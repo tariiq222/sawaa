@@ -134,13 +134,14 @@ export class RefundPaymentHandler {
       });
       const currentInvoice = await tx.invoice.findUniqueOrThrow({
         where: { id: refundReq.invoiceId },
-        select: { total: true, vatAmt: true, refundedAmount: true },
+        select: { total: true, vatAmt: true, refundedAmount: true, refundedVatAmt: true },
       });
       const refundAmount = decimalToHalalas(refundReq.amount);
       const accounting = computeRefundAccounting({
         invoiceTotal: currentInvoice.total,
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
+        alreadyRefundedVatAmt: currentInvoice.refundedVatAmt,
         thisRefundAmount: refundAmount,
       });
       // Mirror the invoice's REFUNDED / PARTIALLY_REFUNDED outcome onto the
@@ -258,11 +259,13 @@ export class RefundPaymentHandler {
         bookingId: true,
         clientId: true,
         currency: true,
-        // total/vatAmt/refundedAmount only needed for the off-gateway path,
-        // where the refund is settled fully inside this transaction.
+        // total/vatAmt/refundedAmount/refundedVatAmt only needed for the
+        // off-gateway path, where the refund is settled fully inside this
+        // transaction.
         total: true,
         vatAmt: true,
         refundedAmount: true,
+        refundedVatAmt: true,
       },
     });
 
@@ -301,6 +304,7 @@ export class RefundPaymentHandler {
         invoiceTotal: invoice.total,
         invoiceVatAmt: invoice.vatAmt,
         alreadyRefundedAmount: invoice.refundedAmount,
+        alreadyRefundedVatAmt: invoice.refundedVatAmt,
         thisRefundAmount: refundAmount,
       });
       await tx.refundRequest.create({
@@ -797,6 +801,7 @@ export class RefundPaymentHandler {
           total: true,
           vatAmt: true,
           refundedAmount: true,
+          refundedVatAmt: true,
           id: true,
           bookingId: true,
           currency: true,
@@ -806,6 +811,7 @@ export class RefundPaymentHandler {
         invoiceTotal: currentInvoice.total,
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
+        alreadyRefundedVatAmt: currentInvoice.refundedVatAmt,
         thisRefundAmount: input.refundAmount,
       });
       const paymentStatus = accounting.newInvoiceStatus === 'REFUNDED'

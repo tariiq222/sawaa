@@ -783,6 +783,33 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
   // REFUND FLOW — happy path + over-refund rejection
   // ═══════════════════════════════════════════════════════════════════════════
 
+  describe("Refund VAT accumulates across partial cash refunds", () => {
+    it("three partial manual refunds refund exactly the invoice VAT", async () => {
+      // subtotal 10000 + 15% VAT 1500 = 11500, paid in cash (off-gateway).
+      const invoice = await seedIssuedInvoice({ subtotalHalalas: 10_000, vatRate: 0.15 });
+      const pay = await withAuth(ctx.authToken)(api().post("/api/v1/dashboard/finance/payments"))
+        .send({ invoiceId: invoice.id, amount: 11_500, method: "CASH" });
+      expect(pay.status).toBe(201);
+      const paymentId = pay.body.id ?? pay.body.payment?.id;
+      expect(paymentId).toBeTruthy();
+      // Track it so cleanup removes refunds + payment before the invoices.
+      ctx.paymentIds.push(paymentId);
+
+      // Proportional shares alone would give 131 + 684 + 684 = 1499.
+      for (const amount of [1_007, 5_246, 5_247]) {
+        const res = await withAuth(ctx.authToken)(
+          api().patch(`/api/v1/dashboard/finance/payments/${paymentId}/manual-refund`),
+        ).send({ amount, reason: "partial cash refund" });
+        expect(res.status).toBe(200);
+      }
+
+      const after = await prisma.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
+      expect(after.status).toBe("REFUNDED");
+      expect(Number(after.refundedAmount)).toBe(11_500);
+      expect(Number(after.refundedVatAmt)).toBe(1_500);
+    });
+  });
+
   describe("Refund: happy path + over-refund rejection", () => {
     async function seedCompletedPaymentWithGatewayRef(amount: number) {
       const invoice = await seedIssuedInvoice({

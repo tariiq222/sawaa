@@ -83,7 +83,7 @@ export class ManualRefundPaymentHandler {
 
         const invoice = await tx.invoice.findUniqueOrThrow({
           where: { id: row.invoiceId },
-          select: { id: true, bookingId: true, clientId: true, currency: true, total: true, vatAmt: true, refundedAmount: true },
+          select: { id: true, bookingId: true, clientId: true, currency: true, total: true, vatAmt: true, refundedAmount: true, refundedVatAmt: true },
         });
 
         const fullAmount = decimalToHalalas(row.amount);
@@ -103,6 +103,7 @@ export class ManualRefundPaymentHandler {
           invoiceTotal: invoice.total,
           invoiceVatAmt: invoice.vatAmt,
           alreadyRefundedAmount: invoice.refundedAmount,
+          alreadyRefundedVatAmt: invoice.refundedVatAmt,
           thisRefundAmount: requestedAmount,
         });
 

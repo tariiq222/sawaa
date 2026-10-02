@@ -21,6 +21,7 @@ const baseInvoice = {
   total: dec(20000),
   vatAmt: dec(0),
   refundedAmount: dec(0),
+  refundedVatAmt: dec(0),
 };
 
 function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOverrides: Partial<typeof baseInvoice> = {}) {
@@ -107,6 +108,30 @@ describe('ManualRefundPaymentHandler', () => {
     expect(tx.refundRequest.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ amount: 15000 }) }),
     );
+  });
+
+  it('accumulates refunded VAT across partial refunds instead of overwriting it', async () => {
+    // Invoice 23000 = 20000 + 3000 VAT. A first partial of 11500 already
+    // refunded 1500 VAT; refunding the remaining 11500 must total 3000 VAT.
+    const { handler, tx } = build(
+      { amount: dec(23000), refundedAmount: dec(11500) },
+      { total: dec(23000), vatAmt: dec(3000), refundedAmount: dec(11500), refundedVatAmt: dec(1500) },
+    );
+    await handler.execute({ paymentId: 'pay-1', reason: 'second half' });
+    expect(tx.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'REFUNDED', refundedAmount: 23000, refundedVatAmt: 3000 }),
+    }));
+  });
+
+  it('records only this partial refund\'s VAT share on a first partial', async () => {
+    const { handler, tx } = build(
+      { amount: dec(23000) },
+      { total: dec(23000), vatAmt: dec(3000) },
+    );
+    await handler.execute({ paymentId: 'pay-1', reason: 'first half', amount: 11500 });
+    expect(tx.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'PARTIALLY_REFUNDED', refundedVatAmt: 1500 }),
+    }));
   });
 
   it('rejects a second in-flight refund', async () => {
