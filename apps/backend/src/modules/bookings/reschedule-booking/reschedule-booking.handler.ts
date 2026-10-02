@@ -13,6 +13,10 @@ function mapDbConflict(err: unknown): never {
   throw err;
 }
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { retrySerializableTransaction } from '../../../common/database/person-reference-lock.helper';
+
+/** Enough attempts for a small burst of reschedules queued on one client lock. */
+export const RESCHEDULE_TX_ATTEMPTS = 4;
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { RescheduleBookingDto } from './reschedule-booking.dto';
 import { fetchBookingOrFail, updateBookingAtomically, hashToInt32 } from '../booking-lifecycle.helper';
@@ -22,7 +26,7 @@ import { BookingZoomRescheduleRequestedEvent } from '../events/booking-zoom-resc
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { assertTransition } from '../booking-state-machine';
-import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
+import { ACTIVE_BOOKING_STATUSES, STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 
 export type RescheduleBookingCommand = Omit<RescheduleBookingDto, 'newScheduledAt'> & {
   bookingId: string;
@@ -46,7 +50,7 @@ export class RescheduleBookingHandler {
   async execute(cmd: RescheduleBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING, BookingStatus.CONFIRMED], 'rescheduled');
     // RESCHEDULE is a self-loop: status stays the same (PENDING or CONFIRMED)
-    const nextStatus = assertTransition(booking.status, 'RESCHEDULE');
+    assertTransition(booking.status, 'RESCHEDULE');
     if (cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');
     }
@@ -59,15 +63,6 @@ export class RescheduleBookingHandler {
     const settings = await this.settingsHandler.execute({
       branchId: booking.branchId,
     });
-
-    const rescheduleCount = await this.prisma.bookingStatusLog.count({
-      where: { bookingId: cmd.bookingId, reason: 'rescheduled' },
-    });
-    if (rescheduleCount >= settings.maxReschedulesPerBooking) {
-      throw new BadRequestException(
-        `Maximum reschedules (${settings.maxReschedulesPerBooking}) reached for this booking`,
-      );
-    }
 
     if (
       booking.packageCreditId &&
@@ -97,7 +92,35 @@ export class RescheduleBookingHandler {
 
     // Serialize conflict check + update + status log inside one transaction.
     const zoomSyncEventId = booking.zoomMeetingId ? randomUUID() : null;
-    const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
+    // A concurrent reschedule of the same booking aborts the other Serializable
+    // transactions; retry with a fresh snapshot so each loser gets the real
+    // outcome (e.g. the reschedule limit) instead of a 500. Requests queued on
+    // the client lock abort one after another, so allow several attempts.
+    const [updated] = await retrySerializableTransaction(() => this.rlsTransaction.withTransaction(async (tx) => {
+        // Lock order shared with the client reschedule and create-booking:
+        // client, then booking row, then employee/slot. A different order
+        // lets a staff and a client reschedule of the same booking deadlock.
+        if (booking.clientId) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(booking.clientId)}::int)`;
+        }
+
+        // Lock the booking row, then re-read it: a retried attempt must build
+        // on the status, time and Zoom revision committed by the transaction
+        // it lost to, not on the snapshot loaded before the first attempt.
+        await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`;
+        const locked = await tx.booking.findUnique({
+          where: { id: cmd.bookingId },
+          select: { status: true, scheduledAt: true, durationMins: true, zoomSyncRevision: true },
+        });
+        if (!locked) throw new BadRequestException(`Booking ${cmd.bookingId} not found`);
+        // The duration, end time, availability check and slot lock above were
+        // derived from the pre-transaction snapshot. If a concurrent reschedule
+        // changed the duration, writing ours would silently revert it.
+        if (cmd.newDurationMins == null && locked.durationMins !== booking.durationMins) {
+          throw new ConflictException('Booking was changed concurrently; reload and try again');
+        }
+        const nextStatus = assertTransition(locked.status, 'RESCHEDULE');
+
         // Parity with create-booking (CR-5): acquire an advisory lock scoped to
         // employee + new slot window BEFORE the conflict check so a concurrent
         // create/reschedule on the same slot cannot both see "no conflict" and
@@ -105,6 +128,34 @@ export class RescheduleBookingHandler {
         const lockKey1 = hashToInt32(`${booking.employeeId}`);
         const lockKey2 = hashToInt32(`${newScheduledAt.toISOString()}:${newEndsAt.toISOString()}`);
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
+
+        const rescheduleCount = await tx.bookingStatusLog.count({
+          where: { bookingId: cmd.bookingId, reason: 'rescheduled' },
+        });
+        if (rescheduleCount >= settings.maxReschedulesPerBooking) {
+          throw new BadRequestException(
+            `Maximum reschedules (${settings.maxReschedulesPerBooking}) reached for this booking`,
+          );
+        }
+
+        // The client must not end up with two overlapping active appointments
+        // (same rule as create-booking and client reschedule).
+        if (booking.clientId) {
+          const clientConflict = await tx.booking.findFirst({
+            where: {
+              clientId: booking.clientId,
+              id: { not: cmd.bookingId },
+              status: { in: [...ACTIVE_BOOKING_STATUSES] },
+              isHistoricalImport: false,
+              scheduledAt: { lt: newEndsAt },
+              endsAt: { gt: newScheduledAt },
+            },
+            select: { id: true },
+          });
+          if (clientConflict) {
+            throw new ConflictException('Client already has an overlapping appointment');
+          }
+        }
 
         // Parity with create-booking: respect the branch bufferMinutes when
         // looking for overlaps so a rescheduled booking cannot land inside
@@ -127,11 +178,11 @@ export class RescheduleBookingHandler {
           throw new ConflictException('Employee already has a booking in the new time slot');
         }
 
-        const revision = booking.zoomMeetingId ? (booking.zoomSyncRevision ?? 0) + 1 : null;
+        const revision = booking.zoomMeetingId ? (locked.zoomSyncRevision ?? 0) + 1 : null;
         const writes: Array<Promise<unknown> | Prisma.PrismaPromise<unknown>> = [
           updateBookingAtomically(tx, {
             bookingId: cmd.bookingId,
-            currentStatus: booking.status,
+            currentStatus: locked.status,
             actionLabel: 'rescheduled',
             data: {
               scheduledAt: newScheduledAt,
@@ -166,7 +217,7 @@ export class RescheduleBookingHandler {
           tx.bookingStatusLog.create({
             data: {
               bookingId: cmd.bookingId,
-              fromStatus: booking.status,
+              fromStatus: locked.status,
               toStatus: nextStatus,
               changedBy: cmd.changedBy,
               reason: 'rescheduled',
@@ -185,7 +236,7 @@ export class RescheduleBookingHandler {
               entityId: cmd.bookingId,
               description: 'Booking rescheduled',
               metadata: {
-                fromScheduledAt: booking.scheduledAt.toISOString(),
+                fromScheduledAt: locked.scheduledAt.toISOString(),
                 toScheduledAt: newScheduledAt.toISOString(),
                 durationMins,
               },
@@ -225,7 +276,7 @@ export class RescheduleBookingHandler {
           }));
         }
         return Promise.all(writes);
-    }, { isolationLevel: 'Serializable' }).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, ...unknown[]];
+    }, { isolationLevel: 'Serializable' }), RESCHEDULE_TX_ATTEMPTS).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, ...unknown[]];
 
     return updated;
   }

@@ -162,6 +162,19 @@ describe('ConfirmOperationHandler', () => {
     ]);
   });
 
+  it('retries the whole transaction on a serialization conflict instead of recording FAILED', async () => {
+    const { handler, rls, createBooking } = harness();
+    createBooking.execute.mockRejectedValueOnce(Object.assign(new Error('could not serialize'), { code: 'P2034' }));
+
+    const result = await handler.execute({
+      operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0,
+    });
+
+    expect(rls.withTransaction).toHaveBeenCalledTimes(2);
+    expect(createBooking.execute).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ status: ChatOperationStatus.SUCCEEDED, bookingId: 'booking-1' });
+  });
+
   it('requires the separate acknowledgement before confirming an additional booking', async () => {
     const { handler, createBooking } = harness({
       status: ChatOperationStatus.AWAITING_EXISTING_BOOKING_ACK,
