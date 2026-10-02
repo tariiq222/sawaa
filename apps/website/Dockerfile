@@ -13,6 +13,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY patches/ ./patches/
 COPY apps/website/package.json         ./apps/website/
 COPY packages/shared/package.json      ./packages/shared/
 COPY packages/api-client/package.json  ./packages/api-client/
@@ -27,6 +28,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY patches/ ./patches/
 COPY packages/shared/package.json      ./packages/shared/
 COPY packages/api-client/package.json  ./packages/api-client/
 COPY apps/website/package.json         ./apps/website/
