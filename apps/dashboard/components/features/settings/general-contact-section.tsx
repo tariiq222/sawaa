@@ -38,7 +38,7 @@ const EMPTY_FORM: FormState = {
   vatRatePercent: "0",
 }
 
-/** Stored as a fraction (0.15); edited as a percentage (15). */
+/** Stored as a fraction; edited as a percentage. */
 function toPercent(rate: number | null | undefined): string {
   return String(Math.round((rate ?? 0) * 10000) / 100)
 }
@@ -197,4 +197,3 @@ export function GeneralContactSection() {
     </Card>
   )
 }
-

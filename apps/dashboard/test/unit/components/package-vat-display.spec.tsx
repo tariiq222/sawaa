@@ -97,4 +97,3 @@ describe("PurchaseCard refunded amount", () => {
     expect(screen.getByText(/packages\.balances\.refundAmount/)).toBeInTheDocument()
   })
 })
-

@@ -1,7 +1,7 @@
 /**
  * VAT helpers for package prices. Option prices on the public package API are
- * NET integer halalas; the family carries the centre's `vatRate` (a fraction,
- * e.g. 0 or 0.15). The invoice and the Moyasar charge are
+ * NET integer halalas; the family carries the centre's `vatRate` as a fraction.
+ * The invoice and the Moyasar charge are
  * `net + round_half_up(net × vatRate)`, matching the backend `computeVat`.
  */
 

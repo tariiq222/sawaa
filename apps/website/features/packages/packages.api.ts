@@ -12,7 +12,7 @@ import { getApiBase } from '@/lib/api-base';
 
 /**
  * Public package family as returned by `/public/package-families`. Option
- * prices stay NET; `vatRate` (fraction, e.g. 0 or 0.15) is the centre's current
+ * prices stay NET; `vatRate` (fraction) is the centre's current
  * VAT setting that is added on top at checkout. Older cached responses may
  * omit it — treat a missing value as 0.
  */
