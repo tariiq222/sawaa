@@ -95,7 +95,7 @@ describe('operational invariant: VAT', () => {
 
   it('no shipped source in any app hardcodes a 15% VAT rate (code, copy, Swagger or fallbacks)', () => {
     const offenders = shippedSources()
-      .filter(({ text }) => FIFTEEN_PERCENT.test(withoutCssColours(text)))
+      .filter(({ text }) => FIFTEEN_PERCENT.test(withoutCssColours(asciiDigits(text))))
       .map((f) => f.path);
     expect(offenders).toEqual([]);
   });
@@ -119,6 +119,16 @@ describe('operational invariant: single-tenant SMS dispatch', () => {
       .filter(({ path, text }) => !allowed.has(path) && /\b(UnifonicAdapter|TaqnyatAdapter|NoOpAdapter)\b/.test(text))
       .map((f) => f.path);
     expect(offenders).toEqual([]);
+  });
+
+  it('the only SMS sent outside the factory is OTP delivery through Authentica', () => {
+    // OTP codes go through the dedicated Authentica OTP service, not the
+    // clinic's bulk SMS provider; that one path is the documented exception.
+    // Any other caller of Authentica's sendOtp is a new bypass.
+    const callers = productionSources()
+      .filter(({ path, text }) => path !== 'infrastructure/authentica/authentica.client.ts' && /\.sendOtp\(/.test(text))
+      .map((f) => f.path);
+    expect(callers).toEqual(['modules/comms/notification-channel/sms-channel.adapter.ts']);
   });
 
   it('every SMS dispatch surface sends through SmsProviderFactory.resolve()', () => {
@@ -163,6 +173,19 @@ describe('operational invariant: staff notifications keep organizationId', () =>
 
 // 0.15, the shorthand .15, or 15% / 15 % — but not 1.15, v0.15.2 or 0.155.
 const FIFTEEN_PERCENT = /(?<![\w.])0?\.15(?![\w.])|\b15\s?%/;
+
+/**
+ * Arabic copy writes the rate as ١٥٪ or ٠٫١٥ (also Persian ۱۵٪). Fold Arabic-
+ * Indic and Extended Arabic-Indic digits, the Arabic percent sign and the
+ * Arabic decimal separator to ASCII so one pattern covers every spelling.
+ */
+function asciiDigits(text: string): string {
+  return text
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/\u066A/g, '%')
+    .replace(/\u066B/g, '.');
+}
 
 /** CSS colour functions legitimately carry 0.15 / 15% alpha values. */
 function withoutCssColours(text: string): string {
