@@ -40,7 +40,7 @@ export default function SuspendedScreen() {
           {t('suspended.message')}
         </Text>
         <View style={styles.actions}>
-          <PrimaryButton label={t('suspended.contactAdmin')} onPress={handleLogout} fontFamily={f700} />
+          <PrimaryButton label={t('auth.logout')} onPress={handleLogout} fontFamily={f700} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('suspended.continueAsGuest')}
