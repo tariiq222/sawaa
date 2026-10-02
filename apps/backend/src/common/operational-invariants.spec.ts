@@ -119,7 +119,10 @@ describe('operational invariant: staff notifications keep organizationId', () =>
   // organizationId, so dropping it from a publisher silently kills staff
   // notifications. Keeping the field required makes every publisher that
   // omits it a compile error; these assertions fail tsc if it turns optional.
-  type IsRequired<T, K extends keyof T> = {} extends Pick<T, K> ? false : true;
+  // Required key AND a value that cannot be undefined or null.
+  type IsRequired<T, K extends keyof T> = {} extends Pick<T, K>
+    ? false
+    : undefined extends T[K] ? false : null extends T[K] ? false : true;
 
   it('organizationId is required on every staff-notified event payload', () => {
     const required: [
@@ -148,6 +151,7 @@ const SHIPPED_ROOTS = [
   'apps/mobile',
   'packages/shared',
   'packages/api-client/src',
+  'packages/ui',
 ];
 const SKIPPED_DIRS = new Set([
   'node_modules', '.next', '.expo', '.turbo', 'dist', 'build', 'coverage', 'out',
