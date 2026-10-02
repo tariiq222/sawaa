@@ -30,14 +30,14 @@ const TONES: readonly Tone[] = [
     ring: 'color-mix(in srgb, var(--primary) 18%, transparent)',
   },
   {
-    bg: 'color-mix(in srgb, var(--sw-home-sand) 24%, white)',
-    text: 'color-mix(in srgb, var(--sw-home-sand) 58%, var(--sw-home-midnight))',
+    bg: 'var(--sw-feature-sand-bg)',
+    text: 'var(--sw-feature-sand-text)',
     ring: 'color-mix(in srgb, var(--sw-home-sand) 25%, transparent)',
   },
   {
-    bg: 'color-mix(in srgb, var(--sw-home-midnight) 8%, white)',
-    text: 'var(--sw-home-midnight)',
-    ring: 'color-mix(in srgb, var(--sw-home-midnight) 12%, transparent)',
+    bg: 'var(--sw-feature-midnight-bg)',
+    text: 'var(--sw-feature-midnight-text)',
+    ring: 'var(--sw-feature-midnight-ring)',
   },
 ];
 
