@@ -107,6 +107,10 @@ docs/*
 !docs/performance/
 docs/performance/*
 !docs/performance/capacity-runbook.md
+!docs/audits/
+!docs/audits/**
+# Contains a QA login in clear text — keep local only
+docs/audits/2026-06-29-website-integration-audit.md
 .superpowers/
 _archived_dashboard/
 
