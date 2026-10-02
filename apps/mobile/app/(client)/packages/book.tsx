@@ -43,7 +43,7 @@ export default function PackageBookScreen() {
   const [branchLoading, setBranchLoading] = useState(true);
   const [branchError, setBranchError] = useState(false);
   const [dayIdx, setDayIdx] = useState(0);
-  const [slotIdx, setSlotIdx] = useState<number | null>(null);
+  const [selection, setSelection] = useState<{ slot: Slot; branchId?: string; date: string } | null>(null);
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
@@ -81,9 +81,17 @@ export default function PackageBookScreen() {
   useEffect(() => { void loadBranches(); }, [loadBranches]);
 
   const slots = (slotsQuery.data ?? []) as Slot[];
-  const selectedSlot = slotIdx == null ? undefined : slots[slotIdx];
+  const selectedDate = dateOnly(days[dayIdx]);
+  const slotIdx = selection?.branchId === branchId && selection?.date === selectedDate
+    ? slots.findIndex((slot) => slot.startTime === selection.slot.startTime && slot.endTime === selection.slot.endTime)
+    : -1;
+  const selectedSlot = slotIdx < 0 ? undefined : slots[slotIdx];
+
+  useEffect(() => {
+    if (selection && !slotsQuery.isLoading && !slotsQuery.isError && !selectedSlot) setSelection(null);
+  }, [selection, selectedSlot, slotsQuery.isLoading, slotsQuery.isError]);
   const handleBook = async () => {
-    if (!params.creditId || !branchId || !selectedSlot || book.isPending) return;
+    if (!params.creditId || !branchId || !selectedSlot || slotsQuery.isError || book.isPending) return;
     try {
       await book.mutateAsync({
         creditId: params.creditId,
@@ -114,13 +122,13 @@ export default function PackageBookScreen() {
           <Text style={[styles.warning, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.locked.support')}</Text>
         ) : (
           <>
-            <DaySelector days={days} dayIdx={dayIdx} onSelect={(index) => { setDayIdx(index); setSlotIdx(null); }} dir={dir} f500={f600} f700={f700} />
+            <DaySelector days={days} dayIdx={dayIdx} onSelect={(index) => { setDayIdx(index); setSelection(null); }} dir={dir} f500={f600} f700={f700} />
             <PackageBranchPicker
               branches={branches}
               branchId={branchId}
               loading={branchLoading}
               error={branchError}
-              onSelect={setBranchId}
+              onSelect={(id) => { setBranchId(id); setSelection(null); }}
               onRetry={() => { void loadBranches(); }}
               dir={dir}
               f400={f400}
@@ -132,14 +140,14 @@ export default function PackageBookScreen() {
               loading={slotsQuery.isLoading}
               error={slotsQuery.isError ? t('packages.slotsError') : null}
               slots={slots}
-              selectedIdx={slotIdx}
-              onSelect={setSlotIdx}
+              selectedIdx={slotIdx < 0 ? null : slotIdx}
+              onSelect={(index) => { setSelection({ slot: slots[index], branchId, date: selectedDate }); }}
               dir={dir}
               f500={f600}
               f600={f600}
               onRetry={() => { void slotsQuery.refetch(); }}
             />
-            <PackageBookingAction enabled={Boolean(selectedSlot && branchId)} pending={book.isPending} onPress={handleBook} fontFamily={f700} />
+            <PackageBookingAction enabled={Boolean(selectedSlot && branchId && !slotsQuery.isError)} pending={book.isPending} onPress={handleBook} fontFamily={f700} />
           </>
         )}
       </ScrollView>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace, back: jest.fn() }) }));
@@ -19,6 +19,13 @@ import SuspendedScreen from '../suspended';
 
 describe('suspended screen escape route', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it('labels the logout action honestly and returns to login', async () => {
+    const screen = render(<SuspendedScreen />);
+    await act(async () => { fireEvent.press(screen.getByRole('button', { name: 'auth.logout' })); });
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+  });
 
   it('lets the user keep browsing without a signed-in session', () => {
     const screen = render(<SuspendedScreen />);

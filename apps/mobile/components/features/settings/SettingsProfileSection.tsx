@@ -19,6 +19,7 @@ import { sawaaRadius, withAlpha } from '@/theme/sawaa';
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
 import { useAppDispatch, useAppSelector } from '@/hooks/use-redux';
+import { splitName } from '@/types/auth';
 import { setUser } from '@/stores/slices/auth-slice';
 import { clientProfileService } from '@/services/client';
 
@@ -50,9 +51,10 @@ export function SettingsProfileSection() {
   const user = useAppSelector((s) => s.auth.user);
   const [saving, setSaving] = useState(false);
 
-  const initialName = user
+  const emailReadOnly = Boolean(user?.email);
+  const initialName = user?.name ?? (user
     ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
-    : '';
+    : '');
 
   const {
     control,
@@ -81,25 +83,27 @@ export function SettingsProfileSection() {
     if (!user) return;
     setSaving(true);
     try {
-      await clientProfileService.updateProfile({
+      const profile = await clientProfileService.updateProfile({
         name: values.name,
         phone: values.phone ? values.phone : null,
-        email: values.email ? values.email : null,
+        ...(!emailReadOnly ? { email: values.email || null } : {}),
       });
-      const [firstName, ...rest] = values.name.split(/\s+/);
-      const lastName = rest.join(' ');
+      const name = profile.name ?? '';
+      const { firstName, lastName } = splitName(name);
+      const savedValues = { name, phone: profile.phone ?? '', email: profile.email ?? '' };
       dispatch(
         setUser({
           ...user,
-          firstName: firstName ?? user.firstName,
-          lastName: lastName || user.lastName,
-          phone: values.phone || null,
-          email: values.email || user.email,
+          name,
+          firstName,
+          lastName,
+          phone: profile.phone,
+          email: profile.email ?? '',
         }),
       );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('settings.profileSaved'));
-      reset(values);
+      reset(savedValues);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('settings.profileSaveError'));
@@ -169,7 +173,8 @@ export function SettingsProfileSection() {
           render={({ field: { value, onChange, onBlur } }) => (
             <TextInput
               value={value ?? ''}
-              onChangeText={onChange}
+              editable={!emailReadOnly}
+              onChangeText={emailReadOnly ? undefined : onChange}
               onBlur={onBlur}
               accessibilityLabel={t('settings.email')}
               placeholder="you@example.com"
@@ -181,6 +186,12 @@ export function SettingsProfileSection() {
           )}
         />
       </Field>
+
+      {emailReadOnly ? (
+        <ThemedText variant="caption" color={theme.colors.textMuted}>
+          {t('settings.emailReadOnly')}
+        </ThemedText>
+      ) : null}
 
       <Pressable
         onPress={onSave}

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { uuid } from 'expo-modules-core';
 import type {
   BookMyPackageCreditInput,
   ClientPackagePurchase,
@@ -30,17 +31,11 @@ export function packagePurchaseAttemptStorageKey(
 }
 
 function newAttemptId(): string {
-  const nativeUuid = globalThis.crypto?.randomUUID?.();
-  if (nativeUuid) return nativeUuid;
-  if (typeof globalThis.crypto?.getRandomValues !== 'function') {
+  try {
+    return uuid.v4();
+  } catch {
     throw new Error('Secure random generation is required for package purchases');
   }
-  const bytes = new Uint8Array(16);
-  globalThis.crypto.getRandomValues(bytes);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 /**
@@ -112,7 +107,7 @@ export const clientPackagesService = {
 
   async initPurchase(input: InitPackagePurchaseInput): Promise<InitPackagePurchaseResponse> {
     const response = await api.post<InitPackagePurchaseResponse>(
-      '/public/payments/package-purchases/init',
+      '/mobile/client/payments/package-purchases/init',
       input,
     );
     return response.data;
