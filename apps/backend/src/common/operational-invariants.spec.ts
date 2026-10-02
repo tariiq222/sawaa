@@ -108,6 +108,32 @@ describe('operational invariant: single-tenant SMS dispatch', () => {
     expect(takesNoArguments).toBe(true);
   });
 
+  it('SMS adapters are constructed only by SmsProviderFactory', () => {
+    const allowed = new Set([
+      'infrastructure/sms/sms-provider.factory.ts',
+      'infrastructure/sms/unifonic.adapter.ts',
+      'infrastructure/sms/taqnyat.adapter.ts',
+      'infrastructure/sms/no-op.adapter.ts',
+    ]);
+    const offenders = productionSources()
+      .filter(({ path, text }) => !allowed.has(path) && /\b(UnifonicAdapter|TaqnyatAdapter|NoOpAdapter)\b/.test(text))
+      .map((f) => f.path);
+    expect(offenders).toEqual([]);
+  });
+
+  it('every SMS dispatch surface sends through SmsProviderFactory.resolve()', () => {
+    const surfaces = [
+      'modules/comms/send-sms/send-sms.handler.ts',
+      'modules/comms/notification-outbox/notification-channel-sender.ts',
+      'modules/comms/org-sms-config/test-sms-config.handler.ts',
+      'modules/comms/sms-dlr/sms-dlr.handler.ts',
+    ];
+    const sources = new Map(productionSources().map((f) => [f.path, f.text]));
+    for (const path of surfaces) {
+      expect([path, /\.resolve\(\)/.test(sources.get(path) ?? '')]).toEqual([path, true]);
+    }
+  });
+
   it('no production source reintroduces forCurrentTenant', () => {
     const offenders = productionSources().filter(({ text }) => text.includes('forCurrentTenant'));
     expect(offenders.map((f) => f.path)).toEqual([]);
@@ -135,7 +161,8 @@ describe('operational invariant: staff notifications keep organizationId', () =>
   });
 });
 
-const FIFTEEN_PERCENT = /\b0\.15\b|\b15\s?%/;
+// 0.15, the shorthand .15, or 15% / 15 % — but not 1.15, v0.15.2 or 0.155.
+const FIFTEEN_PERCENT = /(?<![\w.])0?\.15(?![\w.])|\b15\s?%/;
 
 /** CSS colour functions legitimately carry 0.15 / 15% alpha values. */
 function withoutCssColours(text: string): string {
