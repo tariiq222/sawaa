@@ -30,7 +30,7 @@ export function halalasToSarNumber(halalas: number): number {
  * with what the backend actually charges.
  *
  * @param halalas net amount in integer halalas
- * @param vatRate fractional rate, e.g. 0.15 = 15% (NOT a percentage)
+ * @param vatRate fraction of 1, 0 when VAT is off (NOT a percentage)
  */
 export function grossWithVat(halalas: number, vatRate: number): number {
   return halalas + Math.round(halalas * vatRate)

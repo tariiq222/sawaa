@@ -12,7 +12,7 @@ interface BookingSummaryProps {
   /** Net subtotal in halalas (pre-VAT) — the component renders the gross total. */
   totalHalalat: number;
   /**
-   * Fractional org VAT rate (0.15 = 15%). Display-only: the total is shown
+   * Fractional org VAT rate (a fraction of 1, 0 when VAT is off). Display-only: the total is shown
    * VAT-inclusive when > 0; the backend computes the real invoice.
    */
   vatRate?: number;

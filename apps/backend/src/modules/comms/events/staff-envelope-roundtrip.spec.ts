@@ -6,7 +6,7 @@
  * field fails here instead of silently stopping staff notifications.
  */
 import { DEFAULT_ORG_ID } from '../../../common/constants';
-import { PaymentCompletedEvent } from '../../finance/events/payment-completed.event';
+import { PaymentCompletedEvent, type PaymentCompletedPayload } from '../../finance/events/payment-completed.event';
 import { ClientEnrolledEvent } from '../../people/events/client-enrolled.event';
 import { OnPaymentCompletedStaffHandler } from './on-payment-completed-staff.handler';
 import { OnClientEnrolledStaffHandler } from './on-client-enrolled-staff.handler';
@@ -48,7 +48,10 @@ describe('staff notification envelopes survive the event bus', () => {
   it('a payload without organizationId notifies nobody (the failure mode this guards)', async () => {
     const { notify, staffTargets } = deps();
     const handler = new OnPaymentCompletedStaffHandler(notify as never, staffTargets as never);
-    const envelope = new PaymentCompletedEvent({ paymentId: 'p1', invoiceId: 'i1', bookingId: null, amount: 1, currency: 'SAR' }).toEnvelope();
+    // The type now requires organizationId; this simulates a job queued by an
+    // older build that omitted it.
+    const legacyPayload = { paymentId: 'p1', invoiceId: 'i1', bookingId: null, amount: 1, currency: 'SAR' };
+    const envelope = new PaymentCompletedEvent(legacyPayload as PaymentCompletedPayload).toEnvelope();
 
     await handler.handle(viaQueue(envelope) as never);
 

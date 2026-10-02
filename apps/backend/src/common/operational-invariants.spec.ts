@@ -13,7 +13,11 @@ import { AiProviderCredentialsService } from '../infrastructure/ai/ai-provider-c
 import { decryptSecret } from '../infrastructure/crypto/secret-crypto';
 import { SmsProviderFactory } from '../infrastructure/sms/sms-provider.factory';
 import { DEFAULT_VAT_RATE } from '../modules/finance/create-invoice/create-invoice.handler';
-import { DEFAULT_ORG_ID } from './constants';
+import type { PaymentCompletedPayload } from '../modules/finance/events/payment-completed.event';
+import type { BookingCancelledPayload } from '../modules/bookings/events/booking-cancelled.event';
+import type { BookingCreatedPayload } from '../modules/bookings/events/booking-created.event';
+import type { ClientEnrolledPayload } from '../modules/people/events/client-enrolled.event';
+import { DEFAULT_ORG_ID, SINGLE_TENANT_CONTEXT_ID } from './constants';
 
 // Test-only keys (not secrets): 32 bytes of 0x07.
 const TEST_KEY_BASE64 = Buffer.alloc(32, 7).toString('base64');
@@ -68,6 +72,10 @@ describe('operational invariant: provider credentials stay decryptable', () => {
     expect(new AiProviderCredentialsService(cfg).decrypt(GOLDEN.ai)).toBe('sk-or-test');
   });
 
+  it('SINGLE_TENANT_CONTEXT_ID stays an alias of DEFAULT_ORG_ID (guards and credential factories use it)', () => {
+    expect(SINGLE_TENANT_CONTEXT_ID).toBe(DEFAULT_ORG_ID);
+  });
+
   it('platform settings secrets are bound to the PLATFORM_SETTINGS_KEY env var', () => {
     const previous = process.env.PLATFORM_SETTINGS_KEY;
     process.env.PLATFORM_SETTINGS_KEY = TEST_PLATFORM_KEY_HEX;
@@ -85,15 +93,19 @@ describe('operational invariant: VAT', () => {
     expect(DEFAULT_VAT_RATE).toBe(0);
   });
 
-  it('no production source hardcodes a 15% VAT rate (code, copy, Swagger or fallbacks)', () => {
-    const offenders = productionSources().filter(({ text }) => /\b0\.15\b|\b15\s?%/.test(text));
-    expect(offenders.map((f) => f.path)).toEqual([]);
+  it('no shipped source in any app hardcodes a 15% VAT rate (code, copy, Swagger or fallbacks)', () => {
+    const offenders = shippedSources()
+      .filter(({ text }) => FIFTEEN_PERCENT.test(withoutCssColours(text)))
+      .map((f) => f.path);
+    expect(offenders).toEqual([]);
   });
 });
 
 describe('operational invariant: single-tenant SMS dispatch', () => {
   it('SmsProviderFactory.resolve takes no tenant argument', () => {
-    expect(SmsProviderFactory.prototype.resolve.length).toBe(0);
+    // Compile-time: an added parameter, optional or defaulted, fails tsc here.
+    const takesNoArguments: Parameters<SmsProviderFactory['resolve']> extends [] ? true : false = true;
+    expect(takesNoArguments).toBe(true);
   });
 
   it('no production source reintroduces forCurrentTenant', () => {
@@ -105,41 +117,59 @@ describe('operational invariant: single-tenant SMS dispatch', () => {
 describe('operational invariant: staff notifications keep organizationId', () => {
   // comms/events/on-*-staff handlers return early when the payload has no
   // organizationId, so dropping it from a publisher silently kills staff
-  // notifications. The field is optional in the payload types, so the
-  // compiler cannot catch it — this scan does.
-  const GUARDED_EVENTS = ['PaymentCompletedEvent', 'BookingCancelledEvent', 'BookingCreatedEvent', 'ClientEnrolledEvent'];
+  // notifications. Keeping the field required makes every publisher that
+  // omits it a compile error; these assertions fail tsc if it turns optional.
+  type IsRequired<T, K extends keyof T> = {} extends Pick<T, K> ? false : true;
 
-  it('every publisher of a staff-notified event passes organizationId', () => {
-    const missing: string[] = [];
-    let found = 0;
-    for (const { path, text } of productionSources()) {
-      for (const eventName of GUARDED_EVENTS) {
-        const marker = `new ${eventName}(`;
-        let index = text.indexOf(marker);
-        while (index !== -1) {
-          found += 1;
-          const args = balancedArgs(text, index + marker.length - 1);
-          if (!args.includes('organizationId')) missing.push(`${path}: ${eventName}`);
-          index = text.indexOf(marker, index + marker.length);
-        }
-      }
-    }
-    expect(found).toBeGreaterThan(0);
-    expect(missing).toEqual([]);
+  it('organizationId is required on every staff-notified event payload', () => {
+    const required: [
+      IsRequired<PaymentCompletedPayload, 'organizationId'>,
+      IsRequired<BookingCancelledPayload, 'organizationId'>,
+      IsRequired<BookingCreatedPayload, 'organizationId'>,
+      IsRequired<ClientEnrolledPayload, 'organizationId'>,
+    ] = [true, true, true, true];
+    expect(required).toEqual([true, true, true, true]);
   });
 });
 
-/** Text between the parenthesis at `open` and its matching close. */
-function balancedArgs(text: string, open: number): string {
-  let depth = 0;
-  for (let i = open; i < text.length; i += 1) {
-    if (text[i] === '(') depth += 1;
-    else if (text[i] === ')') {
-      depth -= 1;
-      if (depth === 0) return text.slice(open + 1, i);
+const FIFTEEN_PERCENT = /\b0\.15\b|\b15\s?%/;
+
+/** CSS colour functions legitimately carry 0.15 / 15% alpha values. */
+function withoutCssColours(text: string): string {
+  return text.replace(/\b(?:rgba?|hsla?|color-mix)\((?:[^()]|\([^()]*\))*\)/g, '');
+}
+
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
+const SHIPPED_ROOTS = [
+  'apps/backend/src',
+  'apps/backend/openapi.json',
+  'apps/dashboard',
+  'apps/website',
+  'apps/mobile',
+  'packages/shared',
+  'packages/api-client/src',
+];
+const SKIPPED_DIRS = new Set([
+  'node_modules', '.next', '.expo', '.turbo', 'dist', 'build', 'coverage', 'out',
+  'ios', 'android', 'test', 'tests', 'e2e', '__tests__', '__mocks__', 'test-results',
+  'playwright-report',
+]);
+const TEST_FILE = /\.(spec|test|e2e-spec)\.[cm]?[jt]sx?$|\.d\.ts$/;
+
+/** Source and copy that ships to users from every app and shared package. */
+function shippedSources(): Array<{ path: string; text: string }> {
+  const out: Array<{ path: string; text: string }> = [];
+  const visit = (full: string) => {
+    const name = full.slice(full.lastIndexOf('/') + 1);
+    if (statSync(full).isDirectory()) {
+      if (SKIPPED_DIRS.has(name)) return;
+      for (const child of readdirSync(full)) visit(join(full, child));
+    } else if (/\.(tsx?|json)$/.test(name) && !TEST_FILE.test(name)) {
+      out.push({ path: full.slice(REPO_ROOT.length + 1), text: readFileSync(full, 'utf8') });
     }
-  }
-  return text.slice(open + 1);
+  };
+  for (const root of SHIPPED_ROOTS) visit(join(REPO_ROOT, root));
+  return out;
 }
 
 function productionSources(): Array<{ path: string; text: string }> {
