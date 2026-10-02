@@ -95,7 +95,7 @@ describe('operational invariant: VAT', () => {
 
   it('no shipped source in any app hardcodes a 15% VAT rate (code, copy, Swagger or fallbacks)', () => {
     const offenders = shippedSources()
-      .filter(({ text }) => hardcodesFifteenPercent(withoutCssColours(asciiDigits(text))))
+      .filter(({ text }) => hardcodesFifteenPercent(asciiDigits(text)))
       .map((f) => f.path);
     expect(offenders).toEqual([]);
   });
@@ -108,16 +108,25 @@ describe('operational invariant: single-tenant SMS dispatch', () => {
     expect(takesNoArguments).toBe(true);
   });
 
-  it('SMS adapters are constructed only by SmsProviderFactory', () => {
-    const allowed = new Set([
-      'infrastructure/sms/sms-provider.factory.ts',
-      'infrastructure/sms/unifonic.adapter.ts',
-      'infrastructure/sms/taqnyat.adapter.ts',
-      'infrastructure/sms/no-op.adapter.ts',
-    ]);
-    const offenders = productionSources()
-      .filter(({ path, text }) => !allowed.has(path) && /\b(UnifonicAdapter|TaqnyatAdapter|NoOpAdapter)\b/.test(text))
+  it('SMS providers live in infrastructure/sms and are constructed only by SmsProviderFactory', () => {
+    // Discovered, not listed: a provider added tomorrow is covered too.
+    const sources = productionSources();
+    const SMS_DIR = 'infrastructure/sms/';
+    const FACTORY = 'infrastructure/sms/sms-provider.factory.ts';
+    const implementsProvider = /class\s+(\w+)[^{]*\bimplements\b[^{]*\bSmsProvider\b/g;
+
+    const outsideSmsDir = sources
+      .filter(({ path, text }) => !path.startsWith(SMS_DIR) && text.match(implementsProvider))
       .map((f) => f.path);
+    expect(outsideSmsDir).toEqual([]);
+
+    const providers = sources.flatMap(({ path, text }) =>
+      [...text.matchAll(implementsProvider)].map((m) => ({ name: m[1], path })));
+    expect(providers.length).toBeGreaterThan(0);
+    const offenders = sources.flatMap(({ path, text }) =>
+      providers
+        .filter((p) => path !== p.path && path !== FACTORY && new RegExp(String.raw`\b${p.name}\b`).test(text))
+        .map((p) => `${path} references ${p.name}`));
     expect(offenders).toEqual([]);
   });
 
@@ -172,19 +181,42 @@ describe('operational invariant: staff notifications keep organizationId', () =>
 });
 
 /**
- * Every numeric token, parsed by value: a fraction equal to 0.15 (0.15, .15,
- * 0.150, 15e-2, 1.5e-1) or a percentage equal to 15 (15%, 15 %, 15.0%).
- * Tokens that are part of a longer dotted/identifier run (v0.15.2, x15) are
- * not numbers and are skipped.
+ * A 15% rate is only prohibited where it is a VAT rate, so the scan looks at
+ * lines in a VAT context: the line itself or its close neighbours mention
+ * VAT/tax (English or Arabic). Opacity, animation and discount values that
+ * happen to equal 0.15 or 15% elsewhere are not VAT and are left alone.
+ *
+ * Within that context a value counts however it is spelled: a fraction equal
+ * to 0.15 (0.15, .15, 0.150, 15e-2), a percentage equal to 15 (15%, 15.0%),
+ * or a simple constant quotient/product equal to 0.15 (15 / 100, 3 / 20,
+ * 15 * 0.01). Tokens inside a longer dotted/identifier run (v0.15.2, x15)
+ * are not numbers and are skipped.
  */
-const NUMERIC_TOKEN = /(?<![\w.])(\d*\.?\d+(?:[eE][+-]?\d+)?)(?![\w.])(\s?%)?/g;
+const VAT_CONTEXT = /vat|tax|ضريب/i;
+const VAT_CONTEXT_LINES = 3;
+const NUMBER = String.raw`\d*\.?\d+(?:[eE][+-]?\d+)?`;
+const NUMERIC_TOKEN = new RegExp(String.raw`(?<![\w.])(${NUMBER})(?![\w.])(\s?%)?`, 'g');
+const CONSTANT_BINARY = new RegExp(String.raw`(?<![\w.])(${NUMBER})\s*([/*])\s*(${NUMBER})(?![\w.])`, 'g');
 
-function hardcodesFifteenPercent(text: string): boolean {
-  for (const [, digits, percent] of text.matchAll(NUMERIC_TOKEN)) {
+function isFifteenPercentValue(line: string): boolean {
+  for (const [, digits, percent] of line.matchAll(NUMERIC_TOKEN)) {
     const value = Number(digits);
     if (percent ? value === 15 : value === 0.15) return true;
   }
+  for (const [, left, operator, right] of line.matchAll(CONSTANT_BINARY)) {
+    const value = operator === '/' ? Number(left) / Number(right) : Number(left) * Number(right);
+    if (Math.abs(value - 0.15) < 1e-9) return true;
+  }
   return false;
+}
+
+function hardcodesFifteenPercent(text: string): boolean {
+  const lines = text.split('\n');
+  return lines.some((line, index) => {
+    if (!isFifteenPercentValue(line)) return false;
+    const from = Math.max(0, index - VAT_CONTEXT_LINES);
+    return lines.slice(from, index + VAT_CONTEXT_LINES + 1).some((near) => VAT_CONTEXT.test(near));
+  });
 }
 
 /**
@@ -198,11 +230,6 @@ function asciiDigits(text: string): string {
     .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .replace(/\u066A/g, '%')
     .replace(/\u066B/g, '.');
-}
-
-/** CSS colour functions legitimately carry 0.15 / 15% alpha values. */
-function withoutCssColours(text: string): string {
-  return text.replace(/\b(?:rgba?|hsla?|color-mix)\((?:[^()]|\([^()]*\))*\)/g, '');
 }
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..');

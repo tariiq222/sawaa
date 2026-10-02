@@ -19,6 +19,7 @@ import { RedisService } from '../../../src/infrastructure/cache/redis.service';
 import { VerifyDashboardOtpHandler } from '../../../src/modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
 import { PerformPasswordResetHandler } from '../../../src/modules/identity/user-password-reset/perform-password-reset/perform-password-reset.handler';
 import { VerifyEmailHandler } from '../../../src/modules/identity/verify-email/verify-email.handler';
+import { getRealE2eDatabaseUrl } from '../../helpers/create-real-e2e-app';
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
 
@@ -62,7 +63,8 @@ describeRealE2e('Single-use credentials under concurrency — real-DB e2e', () =
   let userId: string;
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = process.env.REAL_E2E_DATABASE_URL!;
+    // Fail closed unless the URL names a test-only database.
+    process.env.DATABASE_URL = getRealE2eDatabaseUrl();
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication();
     await app.init();

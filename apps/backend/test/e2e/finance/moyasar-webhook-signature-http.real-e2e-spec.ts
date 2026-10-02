@@ -26,6 +26,7 @@ import { MoyasarCredentialsService } from '../../../src/infrastructure/payments/
 import { configureHttpContract } from '../../../src/common/bootstrap/configure-http-contract';
 import { csrfMiddleware } from '../../../src/common/middleware/csrf.middleware';
 import { shouldBypassCsrf } from '../../../src/common/middleware/csrf-policy';
+import { getRealE2eDatabaseUrl } from '../../helpers/create-real-e2e-app';
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
 
@@ -81,7 +82,8 @@ describeRealE2e('Moyasar webhook HMAC signature over HTTP — real-DB e2e', () =
   }
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = process.env.REAL_E2E_DATABASE_URL!;
+    // Fail closed unless the URL names a test-only database.
+    process.env.DATABASE_URL = getRealE2eDatabaseUrl();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] })
       // The re-fetch is authoritative; report a paid payment matching the invoice.
