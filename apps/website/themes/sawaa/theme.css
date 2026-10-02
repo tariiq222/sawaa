@@ -72,6 +72,13 @@
   --sw-home-ivory: #FBF6ED;
   --sw-home-white: #FFFFFF;
 
+  /* Feature card tones (home "why Sawaa" cards); dark overrides below */
+  --sw-feature-sand-bg: color-mix(in srgb, var(--sw-home-sand) 24%, white);
+  --sw-feature-sand-text: color-mix(in srgb, var(--sw-home-sand) 58%, var(--sw-home-midnight));
+  --sw-feature-midnight-bg: color-mix(in srgb, var(--sw-home-midnight) 8%, white);
+  --sw-feature-midnight-text: var(--sw-home-midnight);
+  --sw-feature-midnight-ring: color-mix(in srgb, var(--sw-home-midnight) 12%, transparent);
+
   /* ═══ Status tokens (used by auth forms + bookings) ═══ */
   --error:   #D92D20;
   --sw-error: var(--error);
@@ -586,6 +593,11 @@ html[data-theme='dark'] .theme-sawaa-tokens {
     --sw-body: #C1D6D2;
     --sw-home-ivory: #102D2B;
     --sw-home-white: #0C2424;
+    --sw-feature-sand-bg: color-mix(in srgb, var(--sw-home-sand) 14%, #0C2424);
+    --sw-feature-sand-text: #E6CF9F;
+    --sw-feature-midnight-bg: #17363A;
+    --sw-feature-midnight-text: #C9DEE8;
+    --sw-feature-midnight-ring: color-mix(in srgb, #C9DEE8 14%, transparent);
     --surface: #0C2424;
     --background: #0A1F1E;
     --foreground: #E8F4F2;

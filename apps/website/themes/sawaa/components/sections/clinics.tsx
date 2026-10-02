@@ -279,7 +279,7 @@ export function Clinics({ clinics, intro }: Props) {
             className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[0.8125rem] font-bold transition-all hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-700)',
-              color: '#fff',
+              color: 'var(--sw-primary-700-foreground)',
               boxShadow: 'var(--sw-shadow-sm)',
             }}
           >
