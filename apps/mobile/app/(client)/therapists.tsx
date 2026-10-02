@@ -1,16 +1,18 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Chip } from '@/components/ui/Chip';
 import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
 import { TherapistCard } from '@/components/features/directory/TherapistCard';
 import { useDir } from '@/hooks/useDir';
-import { useClinics, useTherapists } from '@/hooks/queries';
+import { useClinics, useServicePriceFloors, useTherapists } from '@/hooks/queries';
+import { bookingStep, stepsAfterSkip } from '@/features/booking/booking-entry';
 import { applyTherapistFilters, type TherapistChip } from '@/features/therapists/therapistsFilter';
 import type { PublicEmployeeItem } from '@/services/client/employees';
 import { getFontName } from '@/theme/fonts';
@@ -28,7 +30,7 @@ const CHIPS: Array<{ key: Exclude<TherapistChip, null>; labelKey: string }> = [
 export default function TherapistsListScreen() {
   const colors = useSawaaColors();
   const router = useRouter();
-  const { clinicId, serviceId } = useLocalSearchParams<{ clinicId?: string; serviceId?: string }>();
+  const { clinicId, serviceId, steps } = useLocalSearchParams<{ clinicId?: string; serviceId?: string; steps?: string }>();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -67,15 +69,48 @@ export default function TherapistsListScreen() {
     [list, query, activeChip],
   );
 
-  const renderItem = useCallback(({ item }: { item: PublicEmployeeItem }) => (
-    <TherapistCard
-      item={item}
-      onPress={() => router.push({
-        pathname: '/(client)/employee/[id]',
-        params: { id: item.slug ?? item.id, ...(clinicId ? { clinicId } : {}), ...(serviceId ? { serviceId } : {}) },
-      })}
-    />
-  ), [router, clinicId, serviceId]);
+  const listIds = useMemo(() => (serviceId ? list.map((therapist) => therapist.id) : []), [list, serviceId]);
+  const priceFloors = useServicePriceFloors(serviceId, listIds);
+
+  const timeStepParams = useCallback((employeeId: string, nextSteps: string | undefined) => ({
+    serviceId: serviceId as string,
+    employeeId,
+    ...(clinicId ? { clinicId } : {}),
+    ...(nextSteps ? { steps: nextSteps } : {}),
+  }), [clinicId, serviceId]);
+
+  // One matching therapist: nothing to choose, go straight to the time step.
+  const focused = useIsFocused();
+  const skipped = useRef(false);
+  useEffect(() => {
+    if (!serviceId || !focused || skipped.current || loading || directoryFailed || list.length !== 1) return;
+    skipped.current = true;
+    router.replace({
+      pathname: '/(client)/booking/[serviceId]',
+      params: timeStepParams(list[0].id, stepsAfterSkip(steps)),
+    });
+  }, [serviceId, focused, loading, directoryFailed, list, router, steps, timeStepParams]);
+
+  const renderItem = useCallback(({ item }: { item: PublicEmployeeItem }) => {
+    const openProfile = () => router.push({
+      pathname: '/(client)/employee/[id]',
+      params: {
+        id: item.slug ?? item.id,
+        ...(clinicId ? { clinicId } : {}),
+        ...(serviceId ? { serviceId } : {}),
+        ...(serviceId && steps ? { steps } : {}),
+      },
+    });
+    if (!serviceId) return <TherapistCard item={item} onPress={openProfile} />;
+    return (
+      <TherapistCard
+        item={item}
+        onPress={() => router.push({ pathname: '/(client)/booking/[serviceId]', params: timeStepParams(item.id, steps) })}
+        onViewProfile={openProfile}
+        servicePrice={priceFloors[item.id] ?? null}
+      />
+    );
+  }, [router, clinicId, serviceId, steps, priceFloors, timeStepParams]);
 
   const screenTitle = selectedClinic
     ? (dir.isRTL ? selectedClinic.nameAr : (selectedClinic.nameEn ?? selectedClinic.nameAr))
@@ -92,7 +127,15 @@ export default function TherapistsListScreen() {
 
   const ListHeader = (
     <View style={styles.header}>
-      <ScreenHeader title={screenTitle} onBack={() => router.back()} />
+      {serviceId && steps ? (
+        <BookingStepHeader
+          {...bookingStep('therapist', steps)}
+          title={t('booking.chooseTherapist')}
+          onBack={() => router.back()}
+        />
+      ) : (
+        <ScreenHeader title={screenTitle} onBack={() => router.back()} />
+      )}
       <DirectorySearch
         value={query}
         onChangeText={setQuery}

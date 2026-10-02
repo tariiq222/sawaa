@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -93,6 +93,7 @@ async function renderIn(language: 'ar' | 'en') {
 
 describe('clinic detail renders catalog data, not placeholders', () => {
   beforeEach(() => {
+    mockPush.mockClear();
     mockAuthToken = 'client-token';
     mockParams = { id: 'clinic-1' };
     mockClinics.data = [clinic];
@@ -188,7 +189,7 @@ describe('clinic detail renders catalog data, not placeholders', () => {
     fireEvent.press(view.getByText('جلسة إرشاد'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/therapists',
-      params: { clinicId: 'clinic-1', serviceId: 's1' },
+      params: { clinicId: 'clinic-1', serviceId: 's1', steps: '4' },
     });
   });
 
@@ -196,6 +197,7 @@ describe('clinic detail renders catalog data, not placeholders', () => {
     const view = await renderIn('en');
     fireEvent.press(view.getByText(i18n.getFixedT('en')('clinics.specialistsTab')));
     expect(view.getByText('Sara')).toBeTruthy();
+    expect(view.queryByRole('link', { name: i18n.getFixedT('en')('therapists.viewProfile') })).toBeNull();
     fireEvent.press(view.getByText('Sara'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/employee/[id]',
@@ -229,7 +231,7 @@ describe('clinic detail renders catalog data, not placeholders', () => {
     fireEvent.press(view.getByText('Counseling session'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-list/[kind]',
-      params: { kind: 'therapists', clinicId: 'clinic-1', serviceId: 's1' },
+      params: { kind: 'therapists', clinicId: 'clinic-1', serviceId: 's1', steps: '4' },
     });
   });
 
@@ -242,6 +244,130 @@ describe('clinic detail renders catalog data, not placeholders', () => {
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-detail/[kind]/[id]',
       params: { kind: 'therapist', id: 'sara', clinicId: 'clinic-1' },
+    });
+  });
+
+  describe('default tab', () => {
+    const t = i18n.getFixedT('en');
+    const about = 'A calm space for families.';
+
+    it('opens a SERVICES clinic on its services, not the description, and About comes last', async () => {
+      mockClinics.data = [{ ...clinic, descriptionEn: about }];
+      const view = await renderIn('en');
+      expect(view.getByText('Counseling session')).toBeTruthy();
+      expect(view.queryByText(about)).toBeNull();
+      const tabs = view.getAllByRole('tab');
+      ['employeeProfile.services', 'clinics.specialistsTab', 'employeeProfile.about'].forEach((key, index) => {
+        expect(within(tabs[index]).getByText(t(key))).toBeTruthy();
+      });
+      fireEvent.press(view.getByRole('tab', { name: t('employeeProfile.about') }));
+      expect(view.getByText(about)).toBeTruthy();
+    });
+
+    it('opens a DIRECT clinic on its therapists, and About is the second tab', async () => {
+      mockClinics.data = [{ ...clinic, bookingMode: 'DIRECT', directServiceId: 'direct-1', descriptionEn: about }];
+      const view = await renderIn('en');
+      expect(view.getByText('Sara')).toBeTruthy();
+      expect(view.queryByText(about)).toBeNull();
+      const tabs = view.getAllByRole('tab');
+      expect(tabs).toHaveLength(2);
+      expect(within(tabs[1]).getByText(t('employeeProfile.about'))).toBeTruthy();
+      fireEvent.press(view.getByRole('tab', { name: t('employeeProfile.about') }));
+      expect(view.getByText(about)).toBeTruthy();
+      expect(view.queryByText('Sara')).toBeNull();
+    });
+  });
+
+  describe('practitioner cards in a DIRECT clinic', () => {
+    const tabLabel = () => i18n.getFixedT('en')('clinics.specialistsTab');
+    const profileLink = () => ({ name: i18n.getFixedT('en')('therapists.viewProfile') });
+    beforeEach(() => {
+      mockClinics.data = [{ ...clinic, bookingMode: 'DIRECT', directServiceId: 'direct-1' }];
+    });
+
+    it('sends a signed-in client straight to the time step', async () => {
+      const view = await renderIn('en');
+      fireEvent.press(view.getByText(tabLabel()));
+      fireEvent.press(view.getByText('Sara'));
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(client)/booking/[serviceId]',
+        params: { serviceId: 'direct-1', employeeId: 'employee-1', clinicId: 'clinic-1', steps: '2' },
+      });
+    });
+
+    it('sends a guest straight to the public time step', async () => {
+      mockAuthToken = null;
+      const view = await renderIn('en');
+      fireEvent.press(view.getByText(tabLabel()));
+      fireEvent.press(view.getByText('Sara'));
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/public-booking/[serviceId]',
+        params: { serviceId: 'direct-1', employeeId: 'employee-1', clinicId: 'clinic-1', steps: '2' },
+      });
+    });
+
+    it('opens the profile from the View profile link', async () => {
+      const view = await renderIn('en');
+      fireEvent.press(view.getByText(tabLabel()));
+      fireEvent.press(view.getByRole('link', profileLink()));
+      expect(mockPush).toHaveBeenCalledTimes(1);
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(client)/employee/[id]',
+        params: { id: 'sara', clinicId: 'clinic-1' },
+      });
+    });
+
+    it('keeps the profile as the card action, without a link, when the internal service is missing', async () => {
+      mockClinics.data = [{ ...clinic, bookingMode: 'DIRECT', directServiceId: null }];
+      const view = await renderIn('en');
+      fireEvent.press(view.getByText(tabLabel()));
+      expect(view.queryByRole('link', profileLink())).toBeNull();
+      fireEvent.press(view.getByText('Sara'));
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(client)/employee/[id]',
+        params: { id: 'sara', clinicId: 'clinic-1' },
+      });
+    });
+  });
+
+  describe('booking button', () => {
+    const t = i18n.getFixedT('en');
+
+    it('starts a SERVICES clinic at the service step', async () => {
+      const view = await renderIn('en');
+      fireEvent.press(view.getByText(t('employeeProfile.bookAppointment')));
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(client)/booking/service',
+        params: { clinicId: 'clinic-1', steps: '4' },
+      });
+    });
+
+    it('sends a guest to the public service step', async () => {
+      mockAuthToken = null;
+      const view = await renderIn('en');
+      fireEvent.press(view.getByText(t('employeeProfile.bookAppointment')));
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/public-booking/service',
+        params: { clinicId: 'clinic-1', steps: '4' },
+      });
+    });
+
+    it('skips to the therapist list with the hidden service for a DIRECT clinic', async () => {
+      mockClinics.data = [{ ...clinic, bookingMode: 'DIRECT', directServiceId: 'direct-1' }];
+      const view = await renderIn('en');
+      fireEvent.press(view.getByText(t('employeeProfile.bookAppointment')));
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(client)/therapists',
+        params: { clinicId: 'clinic-1', serviceId: 'direct-1', steps: '3' },
+      });
+    });
+
+    it('does not navigate and explains a DIRECT clinic without its internal service', async () => {
+      mockClinics.data = [{ ...clinic, bookingMode: 'DIRECT', directServiceId: null }];
+      const view = await renderIn('en');
+      expect(view.getByText(t('clinics.bookingSetupMissing'))).toBeTruthy();
+      fireEvent.press(view.getByText(t('employeeProfile.bookAppointment')));
+      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 });

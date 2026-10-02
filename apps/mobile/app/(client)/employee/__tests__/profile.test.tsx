@@ -141,29 +141,44 @@ describe('EmployeeProfileScreen', () => {
     });
   });
 
-  it('opens on the about tab when there is a bio and switches to the services tab', () => {
+  it('opens on the about tab when there is a bio and nothing to choose, and switches to the services tab', () => {
     mockEmployee.publicBioEn = 'Works with families.';
+    mockRouteParams = { id: 'dr-example', serviceId: 'service-a' };
     const screen = render(<EmployeeProfileScreen />);
     expect(screen.getByText('Works with families.')).toBeTruthy();
-    expect(screen.queryByText('Family session')).toBeNull();
+    expect(screen.queryByText('Individual session')).toBeNull();
     fireEvent.press(screen.getByRole('tab', { name: 'employeeProfile.services' }));
-    expect(screen.getByText('Family session')).toBeTruthy();
+    expect(screen.getByText('Individual session')).toBeTruthy();
     expect(screen.queryByText('Works with families.')).toBeNull();
   });
 
-  it('never starts booking until one of several services is chosen, and says so', () => {
+  it('opens on services with a disabled choose-to-continue button until one of several services is chosen', () => {
     mockEmployee.publicBioEn = 'Works with families.';
     const screen = render(<EmployeeProfileScreen />);
     expect(screen.getByText('employeeProfile.selectBookingOption')).toBeTruthy();
-    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
+    // A choice is needed, so the profile opens on the services tab even with a bio.
+    expect(screen.queryByText('Works with families.')).toBeNull();
+    expect(screen.queryByText('employeeProfile.bookAppointment')).toBeNull();
+    fireEvent.press(screen.getByText('employeeProfile.chooseToContinue'));
     expect(mockPush).not.toHaveBeenCalled();
-    // The action sends the client to the services tab to choose.
-    expect(screen.getByText('Individual session')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'employeeProfile.chooseToContinue' }).props.accessibilityState?.disabled).toBe(true);
     fireEvent.press(screen.getByText('Individual session'));
+    // The chosen row stays visible and the button now books.
+    expect(screen.getByText('Individual session')).toBeTruthy();
     fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
       params: { serviceId: 'service-a', employeeId: 'employee-uuid', clinicId: 'clinic-1' },
+    });
+  });
+
+  it('forwards steps from the therapist step to the time step', () => {
+    mockRouteParams = { id: 'dr-example', serviceId: 'service-a', clinicId: 'clinic-1', steps: '4' };
+    const screen = render(<EmployeeProfileScreen />);
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/[serviceId]',
+      params: { serviceId: 'service-a', employeeId: 'employee-uuid', clinicId: 'clinic-1', steps: '4' },
     });
   });
 });

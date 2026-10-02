@@ -10,9 +10,10 @@ export interface BookingReturn {
   durationOptionId?: string;
   amount: string;
   currency: string;
+  steps?: string;
 }
 
-export function bookingStepPath(step: 'schedule' | 'confirm', signedIn: boolean): string {
+export function bookingStepPath(step: 'service' | 'schedule' | 'confirm', signedIn: boolean): string {
   return signedIn ? `/(client)/booking/${step}` : `/public-booking/${step}`;
 }
 
@@ -62,6 +63,7 @@ export function decodeBookingReturn(value: string | undefined): BookingReturn | 
       ...(row.durationOptionId ? { durationOptionId: row.durationOptionId as string } : {}),
       amount: row.amount as string,
       currency: row.currency as string,
+      ...(typeof row.steps === 'string' && row.steps.length > 0 ? { steps: row.steps } : {}),
     };
   } catch {
     return null;

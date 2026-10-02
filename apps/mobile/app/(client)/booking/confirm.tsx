@@ -5,7 +5,7 @@ import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { Calendar, ChevronLeft, ChevronRight, Clock, Stethoscope, Video } from 'lucide-react-native';
+import { Building2, Calendar, ChevronLeft, ChevronRight, Clock, Stethoscope, UserRound, Video } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import {
   AquaBackground,
@@ -24,9 +24,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
+import { bookingStep } from '@/features/booking/booking-entry';
 import { encodeBookingReturn } from '@/features/booking/guest-booking-flow';
 import { useReduceMotion } from '@/hooks/useA11y';
-import { useCatalogDepartments, usePublicCatalog } from '@/hooks/queries';
+import { useCatalogDepartments, useClinics, usePublicCatalog, useTherapists } from '@/hooks/queries';
+import { therapistDisplay } from '@/components/features/directory/TherapistCard';
 import { resolveConfirmCatalogSelection, resolveConfirmPrice } from '@/features/booking/confirm-catalog';
 import { formatConfirmDate, formatConfirmTime } from '@/features/booking/confirm-format';
 import { useBookingPayment } from '@/features/booking/use-booking-payment';
@@ -41,7 +43,7 @@ import type { DeliveryType } from '@/types/booking-enums';
 export default function BookingConfirmScreen() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { clinicId, serviceId, employeeId, branchId, deliveryType, scheduledAt, durationOptionId, chargedPrice, currency } = useLocalSearchParams<{
+  const { clinicId, serviceId, employeeId, branchId, deliveryType, scheduledAt, durationOptionId, chargedPrice, currency, steps } = useLocalSearchParams<{
     clinicId?: string;
     serviceId?: string;
     employeeId?: string;
@@ -51,6 +53,7 @@ export default function BookingConfirmScreen() {
     durationOptionId?: string;
     chargedPrice?: string;
     currency?: string;
+    steps?: string;
   }>();
   const { t } = useTranslation();
   const router = useRouter();
@@ -62,6 +65,8 @@ export default function BookingConfirmScreen() {
     const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
+  const clinicsQuery = useClinics();
+  const therapistsQuery = useTherapists();
   const catalogQuery = usePublicCatalog(Boolean(serviceId));
   const departmentsQuery = useCatalogDepartments(Boolean(!clinicId && serviceId));
   const resolved = useMemo(() => resolveConfirmCatalogSelection(
@@ -84,8 +89,6 @@ export default function BookingConfirmScreen() {
   );
   const selectedDeliveryType = deliveryType ?? 'in_person';
   const isOnline = selectedDeliveryType === 'online';
-  const kindAr = isOnline ? 'استشارة عن بُعد' : 'موعد عيادة';
-  const kindEn = isOnline ? 'Remote consultation' : 'In-clinic visit';
   // Prefer the practitioner's charged price (integer halalas) selected in the
   // previous step — this is the price the backend will actually invoice.
   const { subtotal, total } = resolveConfirmPrice(service, directClinic, chargedPrice);
@@ -119,6 +122,7 @@ export default function BookingConfirmScreen() {
         durationOptionId,
         amount: String(total),
         currency: currency ?? service?.currency ?? 'SAR',
+        ...(steps ? { steps } : {}),
       }) },
     });
   };
@@ -127,9 +131,15 @@ export default function BookingConfirmScreen() {
     : service
       ? (dir.isRTL ? service.nameAr : (service.nameEn ?? service.nameAr))
       : null;
+  const clinic = clinicId ? clinicsQuery.data?.find((entry) => entry.id === clinicId) : undefined;
+  const clinicName = clinic ? (dir.isRTL ? clinic.nameAr : (clinic.nameEn ?? clinic.nameAr)) : null;
+  const therapist = employeeId ? therapistsQuery.data?.find((entry) => entry.id === employeeId) : undefined;
+  const specialistName = therapist ? therapistDisplay(therapist, dir.isRTL, t('therapists.unknownName')).name : null;
   const infoRows = [
     ...(serviceName ? [{ icon: Stethoscope, label: dir.isRTL ? 'الخدمة' : 'Service', value: serviceName }] : []),
-    { icon: isOnline ? Video : Stethoscope, label: t('booking.visitType'), value: dir.isRTL ? kindAr : kindEn },
+    ...(clinicName && !directClinic ? [{ icon: Building2, label: t('booking.clinic'), value: clinicName }] : []),
+    ...(specialistName ? [{ icon: UserRound, label: t('booking.specialist'), value: specialistName }] : []),
+    { icon: isOnline ? Video : Building2, label: t('booking.visitType'), value: t(isOnline ? 'booking.online' : 'booking.inPerson') },
     { icon: Calendar, label: dir.isRTL ? 'التاريخ' : 'Date', value: scheduledDate ? formatConfirmDate(scheduledDate, dir.isRTL) : '—' },
     { icon: Clock, label: dir.isRTL ? 'الوقت' : 'Time', value: scheduledDate ? formatConfirmTime(scheduledDate, dir.isRTL) : '—' },
   ];
@@ -141,7 +151,7 @@ export default function BookingConfirmScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={2} title={t('booking.confirmBooking')} onBack={() => goBackOrHome(router)} />
+          <BookingStepHeader {...bookingStep('confirm', steps)} title={t('booking.confirmBooking')} onBack={() => goBackOrHome(router)} />
         </Animated.View>
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(120).duration(600).easing(Easing.out(Easing.cubic))}>
           {loading ? (

@@ -8,13 +8,14 @@ let mockKind = 'service';
 let mockId = 'service-1';
 let mockClinicId: string | undefined;
 let mockServiceId: string | undefined;
+let mockSteps: string | undefined;
 let mockCategoryKind = 'CLINIC';
 let mockBookingMode = 'SERVICES';
 let mockPackageExtra: Record<string, unknown> = {};
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn() }),
-  useLocalSearchParams: () => ({ kind: mockKind, id: mockId, clinicId: mockClinicId, serviceId: mockServiceId }),
+  useLocalSearchParams: () => ({ kind: mockKind, id: mockId, clinicId: mockClinicId, serviceId: mockServiceId, steps: mockSteps }),
 }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
@@ -46,7 +47,7 @@ jest.mock('@/hooks/queries', () => ({
 import PublicDetailScreen from '../[kind]/[id]';
 
 describe('public appointment discovery', () => {
-  beforeEach(() => { mockPush.mockClear(); mockSignedIn = false; mockKind = 'service'; mockId = 'service-1'; mockClinicId = undefined; mockServiceId = undefined; mockCategoryKind = 'CLINIC'; mockBookingMode = 'SERVICES'; mockPackageExtra = {}; });
+  beforeEach(() => { mockPush.mockClear(); mockSignedIn = false; mockKind = 'service'; mockId = 'service-1'; mockClinicId = undefined; mockServiceId = undefined; mockSteps = undefined; mockCategoryKind = 'CLINIC'; mockBookingMode = 'SERVICES'; mockPackageExtra = {}; });
 
   it('lets a guest choose a specialist and enter booking without signing in', () => {
     const screen = render(<PublicDetailScreen />);
@@ -81,6 +82,16 @@ describe('public appointment discovery', () => {
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
       params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
+    });
+  });
+
+  it('forwards steps from the therapist step to the guest time step', () => {
+    mockKind = 'therapist'; mockId = 'employee-1'; mockClinicId = 'clinic-42'; mockServiceId = 'service-1'; mockSteps = '4';
+    const screen = render(<PublicDetailScreen />);
+    fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/public-booking/[serviceId]',
+      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42', steps: '4' },
     });
   });
 

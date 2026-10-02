@@ -165,16 +165,18 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.replace('/(guest)/home');
-            }}
-            accessibilityRole="button"
-            style={styles.secondary}
-          >
-            <Text style={[styles.secondaryText, { fontFamily: f700 }]}>{t('auth.login.continueAsGuest')}</Text>
-          </Pressable>
+          {booking ? null : (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.replace('/(guest)/home');
+              }}
+              accessibilityRole="button"
+              style={styles.secondary}
+            >
+              <Text style={[styles.secondaryText, { fontFamily: f700 }]}>{t('auth.login.continueAsGuest')}</Text>
+            </Pressable>
+          )}
 
           <Pressable
             onPress={() => {

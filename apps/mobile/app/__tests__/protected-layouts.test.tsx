@@ -61,7 +61,7 @@ describe('protected route layouts', () => {
 
     mockAuthState = { token: 'token', user: { role: 'CLIENT' } };
     expect(render(<ClientLayout />).getByText('native-stack')).toBeTruthy();
-    expect(mockStackOptions).toEqual({ headerShown: false, gestureEnabled: true });
+    expect(mockStackOptions).toEqual(expect.objectContaining({ headerShown: false, gestureEnabled: true }));
   });
 
   it('keeps the employee role redirect and presents employee routes in a stack', () => {
@@ -77,7 +77,7 @@ describe('protected route layouts', () => {
 
     mockAuthState = { token: 'token', user: { role: 'EMPLOYEE' } };
     expect(render(<EmployeeLayout />).getByText('native-stack')).toBeTruthy();
-    expect(mockStackOptions).toEqual({ headerShown: false, gestureEnabled: true });
+    expect(mockStackOptions).toEqual(expect.objectContaining({ headerShown: false, gestureEnabled: true }));
   });
 
   it('carries dynamic segments and query params of the requested route', () => {

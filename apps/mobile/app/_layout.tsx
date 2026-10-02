@@ -1,11 +1,12 @@
 import * as Sentry from '@sentry/react-native';
 import { useEffect } from 'react';
 import { I18nManager } from 'react-native';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { fontAssets } from '@/theme/fonts';
 import { BrandLaunch } from '@/components/BrandLaunch';
+import { useStackDirectionOptions } from '@/hooks/useStackDirectionOptions';
 
 // Localized screens own row order and physical text alignment. Keep the native
 // layout basis stable rather than applying RTL twice on Arabic devices.
@@ -44,10 +45,11 @@ function PushBootstrap() {
 
 function RootContent() {
   const { scheme } = useTheme();
+  const stackDirection = useStackDirectionOptions();
 
   return (
     <SafeAreaProvider style={{ flex: 1, direction: 'ltr' }}>
-      <Slot />
+      <Stack screenOptions={{ headerShown: false, gestureEnabled: true, ...stackDirection }} />
       <BrandLaunch />
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </SafeAreaProvider>

@@ -13,6 +13,7 @@ let mockNoData = false;
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
+  useIsFocused: () => true,
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => mockCanGoBack, push: mockPush }),
 }));
@@ -31,6 +32,7 @@ jest.mock('@/theme/components/Glass', () => ({
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light') }));
 jest.mock('@/hooks/queries', () => ({
+  useServicePriceFloors: () => ({}),
   useClinics: () => ({ data: mockNoData ? undefined : mockClinics, isLoading: false, isError: mockFailed.includes('clinics'), refetch: mockRefetch.clinics }),
   useTherapists: () => ({ data: mockNoData ? undefined : mockTherapists, isLoading: false, isError: mockFailed.includes('therapists'), refetch: mockRefetch.therapists }),
   useGroupSessions: () => ({ data: mockNoData ? undefined : [], isLoading: false, isError: mockFailed.includes('programs'), refetch: mockRefetch.programs }),
@@ -66,8 +68,8 @@ it('keeps clinic and selected service context when opening a guest practitioner 
   mockPush.mockClear();
   const screen = render(<PublicListScreen />);
   const { fireEvent } = require('@testing-library/react-native');
-  fireEvent.press(screen.getByRole('button', { name: 'سارة' }));
   expect(screen.getByText('أخصائية إرشاد تربوي وأسري')).toBeTruthy();
+  fireEvent.press(screen.getByRole('link', { name: 'therapists.viewProfile' }));
   expect(mockPush).toHaveBeenCalledWith({
     pathname: '/public-detail/[kind]/[id]',
     params: { kind: 'therapist', id: 'sara', clinicId: 'clinic-1', serviceId: 'service-1' },

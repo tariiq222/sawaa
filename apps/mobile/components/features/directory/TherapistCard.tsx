@@ -19,6 +19,10 @@ export function therapistDisplay(item: PublicEmployeeItem, isRTL: boolean, unkno
 interface TherapistCardProps {
   item: PublicEmployeeItem;
   onPress: () => void;
+  /** Overrides `minServicePrice`: the price for the selected service; `null` hides the price. */
+  servicePrice?: { price: number; currency: string } | null;
+  /** Adds a separate «View profile» link (booking therapist step). */
+  onViewProfile?: () => void;
   /** Hide price and availability (used where only identity matters, e.g. clinic practitioners). */
   compact?: boolean;
 }
@@ -28,11 +32,15 @@ interface TherapistCardProps {
  * the lowest service price. Delivery types and next-appointment times are not
  * part of the public directory payload, so they are not rendered.
  */
-export function TherapistCard({ item, onPress, compact = false }: TherapistCardProps) {
+export function TherapistCard({ item, onPress, servicePrice, onViewProfile, compact = false }: TherapistCardProps) {
   const { t } = useTranslation();
   const dir = useDir();
   const { name, subtitle } = therapistDisplay(item, dir.isRTL, t('therapists.unknownName'));
-  const hasPrice = !compact && typeof item.minServicePrice === 'number' && item.minServicePrice > 0;
+  const price = servicePrice !== undefined
+    ? servicePrice?.price
+    : item.minServicePrice;
+  const currency = servicePrice?.currency ?? 'SAR';
+  const hasPrice = !compact && typeof price === 'number' && price > 0;
   return (
     <DirectoryCard
       title={name}
@@ -40,9 +48,10 @@ export function TherapistCard({ item, onPress, compact = false }: TherapistCardP
       imageUri={item.publicImageUrl}
       pills={!compact && item.isAvailableToday ? [{ label: t('therapists.availableToday') }] : []}
       meta={hasPrice
-        ? { icon: Banknote, text: t('therapists.fromPrice', { price: formatCurrencyAmount(item.minServicePrice as number, 'SAR', dir.isRTL) }) }
+        ? { icon: Banknote, text: t('therapists.fromPrice', { price: formatCurrencyAmount(price as number, currency, dir.isRTL) }) }
         : null}
       onPress={onPress}
+      secondaryAction={onViewProfile ? { label: t('therapists.viewProfile'), onPress: onViewProfile } : null}
       testID={`therapist-${item.id}`}
     />
   );

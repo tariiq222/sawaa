@@ -37,7 +37,7 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
   const roles = getSawaaRoles(scheme);
   const selectedDay = days[dayIdx ?? 0];
   const monthLabel = dir.isRTL
-    ? `${MONTHS_AR[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`
+    ? `${MONTHS_AR[selectedDay.getMonth()]} ${selectedDay.getFullYear().toLocaleString('ar-SA', { useGrouping: false })}`
     : `${MONTHS_EN[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`;
 
   return (

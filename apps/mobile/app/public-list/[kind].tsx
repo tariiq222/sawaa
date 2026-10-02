@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { ClinicCard, filterClinics } from '@/components/features/directory/ClinicCard';
 import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
 import { ServiceRow } from '@/components/features/directory/ServiceRow';
 import { TherapistCard } from '@/components/features/directory/TherapistCard';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { useClinics, useTherapists, useGroupSessions, usePackageFamilies } from '@/hooks/queries';
+import { useClinics, useTherapists, useGroupSessions, usePackageFamilies, useServicePriceFloors } from '@/hooks/queries';
+import { bookingStep, stepsAfterSkip } from '@/features/booking/booking-entry';
 import { useDir } from '@/hooks/useDir';
 import { applyTherapistFilters } from '@/features/therapists/therapistsFilter';
 import type { ClinicEntry } from '@/lib/clinics';
@@ -27,7 +29,7 @@ type Entry =
   | { key: string; kind: 'package' | 'program'; id: string; title: string; subtitle: string | null };
 
 export default function PublicListScreen() {
-  const { kind, clinicId, serviceId } = useLocalSearchParams<{ kind?: string; clinicId?: string; serviceId?: string }>();
+  const { kind, clinicId, serviceId, steps } = useLocalSearchParams<{ kind?: string; clinicId?: string; serviceId?: string; steps?: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const dir = useDir();
@@ -41,10 +43,11 @@ export default function PublicListScreen() {
   const families = usePackageFamilies();
   const selectedClinic = clinics.data?.find((clinic) => clinic.id === clinicId);
   const serviceMatchesClinic = !clinicId || !serviceId || selectedClinic?.serviceIds.includes(serviceId) === true;
-  const visibleTherapists = therapists.data?.filter((person) =>
+  const therapistData = therapists.data;
+  const visibleTherapists = useMemo(() => (therapistData ?? []).filter((person) =>
     serviceMatchesClinic
     && (!clinicId || (selectedClinic != null && person.serviceIds.some((id) => selectedClinic.serviceIds.includes(id))))
-    && (!serviceId || person.serviceIds.includes(serviceId))) ?? [];
+    && (!serviceId || person.serviceIds.includes(serviceId))), [therapistData, serviceMatchesClinic, clinicId, selectedClinic, serviceId]);
   const searchable = kind === 'clinics' || kind === 'therapists';
 
   const entries: Entry[] = (() => {
@@ -89,6 +92,31 @@ export default function PublicListScreen() {
   };
   const title = kind === 'clinics' ? t('clinics.title') : kind === 'therapists' ? t('guest.therapists') : kind === 'packages' ? t('guest.packages') : t('guest.programs');
 
+  const therapistStep = kind === 'therapists' && Boolean(serviceId);
+  const priceFloors = useServicePriceFloors(
+    therapistStep ? serviceId : undefined,
+    useMemo(() => (therapistStep ? visibleTherapists.map((person) => person.id) : []), [therapistStep, visibleTherapists]),
+  );
+  const timeStepParams = useCallback((employeeId: string, nextSteps: string | undefined) => ({
+    serviceId: serviceId as string,
+    employeeId,
+    ...(clinicId ? { clinicId } : {}),
+    ...(nextSteps ? { steps: nextSteps } : {}),
+  }), [clinicId, serviceId]);
+
+  // One matching therapist: nothing to choose, go straight to the time step.
+  const focused = useIsFocused();
+  const skipped = useRef(false);
+  const onlyTherapistId = visibleTherapists.length === 1 ? visibleTherapists[0].id : null;
+  useEffect(() => {
+    if (!therapistStep || !focused || skipped.current || loading || loadError || !onlyTherapistId) return;
+    skipped.current = true;
+    router.replace({
+      pathname: '/public-booking/[serviceId]',
+      params: timeStepParams(onlyTherapistId, stepsAfterSkip(steps)),
+    });
+  }, [therapistStep, focused, loading, loadError, onlyTherapistId, router, steps, timeStepParams]);
+
   const openDetail = (detailKind: string, id: string, extra: Record<string, string> = {}) =>
     router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: detailKind, id, ...extra } });
 
@@ -103,13 +131,18 @@ export default function PublicListScreen() {
     }
     if (item.kind === 'therapist') {
       const therapist = item.therapist;
+      const openProfile = () => openDetail('therapist', therapist.slug ?? therapist.id, {
+        ...(clinicId ? { clinicId } : {}),
+        ...(serviceId ? { serviceId } : {}),
+        ...(therapistStep && steps ? { steps } : {}),
+      });
+      if (!therapistStep) return <TherapistCard item={therapist} onPress={openProfile} />;
       return (
         <TherapistCard
           item={therapist}
-          onPress={() => openDetail('therapist', therapist.slug ?? therapist.id, {
-            ...(clinicId ? { clinicId } : {}),
-            ...(serviceId ? { serviceId } : {}),
-          })}
+          onPress={() => router.push({ pathname: '/public-booking/[serviceId]', params: timeStepParams(therapist.id, steps) })}
+          onViewProfile={openProfile}
+          servicePrice={priceFloors[therapist.id] ?? null}
         />
       );
     }
@@ -127,7 +160,15 @@ export default function PublicListScreen() {
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={(
           <View style={styles.header}>
-            <ScreenHeader title={title} onBack={() => goBackOrHome(router)} />
+            {therapistStep && steps ? (
+              <BookingStepHeader
+                {...bookingStep('therapist', steps)}
+                title={t('booking.chooseTherapist')}
+                onBack={() => goBackOrHome(router)}
+              />
+            ) : (
+              <ScreenHeader title={title} onBack={() => goBackOrHome(router)} />
+            )}
             {searchable ? (
               <DirectorySearch
                 value={query}

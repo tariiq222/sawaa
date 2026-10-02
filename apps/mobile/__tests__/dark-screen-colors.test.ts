@@ -26,6 +26,7 @@ const backgroundExceptions = new Set([
   '(guest)/home.tsx',
   '(client)/(tabs)/account.tsx',
   'public-booking/[serviceId].tsx',
+  'public-booking/service.tsx',
   'public-booking/schedule.tsx',
   'public-booking/confirm.tsx',
   'public-clinic/[id].tsx',

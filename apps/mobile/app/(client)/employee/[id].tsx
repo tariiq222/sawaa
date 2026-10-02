@@ -6,7 +6,7 @@ import { usePublicCatalog, useTherapist } from '@/hooks/queries';
 import { AquaBackground } from '@/theme/sawaa';
 
 export default function EmployeeProfileScreen() {
-  const { id, clinicId, serviceId } = useLocalSearchParams<{ id: string; clinicId?: string; serviceId?: string }>();
+  const { id, clinicId, serviceId, steps } = useLocalSearchParams<{ id: string; clinicId?: string; serviceId?: string; steps?: string }>();
   const router = useRouter();
   const { data: employee, isLoading: employeeLoading } = useTherapist(id);
   const { data: catalog, isLoading: catalogLoading } = usePublicCatalog();
@@ -20,7 +20,7 @@ export default function EmployeeProfileScreen() {
     const bookingClinicId = clinicId ?? selectedClinic?.id;
     router.push({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: selectedServiceId, employeeId, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}) },
+      params: { serviceId: selectedServiceId, employeeId, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}), ...(steps ? { steps } : {}) },
     });
   };
 

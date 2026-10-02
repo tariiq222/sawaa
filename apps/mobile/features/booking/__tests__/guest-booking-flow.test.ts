@@ -5,6 +5,8 @@ describe('guest booking continuation', () => {
     expect(bookingStepPath('schedule', false)).toBe('/public-booking/schedule');
     expect(bookingStepPath('confirm', false)).toBe('/public-booking/confirm');
     expect(bookingStepPath('schedule', true)).toBe('/(client)/booking/schedule');
+    expect(bookingStepPath('service', false)).toBe('/public-booking/service');
+    expect(bookingStepPath('service', true)).toBe('/(client)/booking/service');
   });
 
   it('carries the selected appointment through login and OTP', () => {
@@ -53,5 +55,15 @@ describe('guest booking continuation', () => {
       serviceId: 'a', employeeId: 'b', branchId: 'c', deliveryType: 'other',
       scheduledAt: 'bad', amount: '0', currency: 'SAR',
     }))).toBeNull();
+  });
+  it('keeps the steps param through encode and decode, dropping a non-string value', () => {
+    const booking = {
+      serviceId: 's', employeeId: 'e', branchId: 'b', deliveryType: 'in_person' as const,
+      scheduledAt: '2026-10-01T10:00:00.000Z', amount: '100', currency: 'SAR',
+    };
+    expect(decodeBookingReturn(encodeBookingReturn({ ...booking, steps: '4' }))?.steps).toBe('4');
+    const decoded = decodeBookingReturn(JSON.stringify({ ...booking, steps: 4 }));
+    expect(decoded).not.toBeNull();
+    expect(decoded).not.toHaveProperty('steps');
   });
 });
