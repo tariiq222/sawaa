@@ -14,6 +14,9 @@ function mapDbConflict(err: unknown): never {
 }
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { retrySerializableTransaction } from '../../../common/database/person-reference-lock.helper';
+
+/** Enough attempts for a small burst of reschedules queued on one client lock. */
+export const RESCHEDULE_TX_ATTEMPTS = 4;
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { RescheduleBookingDto } from './reschedule-booking.dto';
 import { fetchBookingOrFail, updateBookingAtomically, hashToInt32 } from '../booking-lifecycle.helper';
@@ -89,9 +92,10 @@ export class RescheduleBookingHandler {
 
     // Serialize conflict check + update + status log inside one transaction.
     const zoomSyncEventId = booking.zoomMeetingId ? randomUUID() : null;
-    // A concurrent reschedule of the same booking aborts one Serializable
-    // transaction; retry it once with a fresh snapshot so the loser gets the
-    // real outcome (e.g. the reschedule limit) instead of a 500.
+    // A concurrent reschedule of the same booking aborts the other Serializable
+    // transactions; retry with a fresh snapshot so each loser gets the real
+    // outcome (e.g. the reschedule limit) instead of a 500. Requests queued on
+    // the client lock abort one after another, so allow several attempts.
     const [updated] = await retrySerializableTransaction(() => this.rlsTransaction.withTransaction(async (tx) => {
         // Lock order shared with the client reschedule and create-booking:
         // client, then booking row, then employee/slot. A different order
@@ -106,9 +110,15 @@ export class RescheduleBookingHandler {
         await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`;
         const locked = await tx.booking.findUnique({
           where: { id: cmd.bookingId },
-          select: { status: true, scheduledAt: true, zoomSyncRevision: true },
+          select: { status: true, scheduledAt: true, durationMins: true, zoomSyncRevision: true },
         });
         if (!locked) throw new BadRequestException(`Booking ${cmd.bookingId} not found`);
+        // The duration, end time, availability check and slot lock above were
+        // derived from the pre-transaction snapshot. If a concurrent reschedule
+        // changed the duration, writing ours would silently revert it.
+        if (cmd.newDurationMins == null && locked.durationMins !== booking.durationMins) {
+          throw new ConflictException('Booking was changed concurrently; reload and try again');
+        }
         const nextStatus = assertTransition(locked.status, 'RESCHEDULE');
 
         // Parity with create-booking (CR-5): acquire an advisory lock scoped to
@@ -266,7 +276,7 @@ export class RescheduleBookingHandler {
           }));
         }
         return Promise.all(writes);
-    }, { isolationLevel: 'Serializable' })).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, ...unknown[]];
+    }, { isolationLevel: 'Serializable' }), RESCHEDULE_TX_ATTEMPTS).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, ...unknown[]];
 
     return updated;
   }

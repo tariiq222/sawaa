@@ -530,6 +530,24 @@ describe('RescheduleBookingHandler', () => {
     }));
   });
 
+  it('10c. refuses to write a stale duration when a concurrent reschedule changed it', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking({ durationMins: 60 }));
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue(makeBooking({ durationMins: 90 }));
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      buildAvailabilityHandler() as never,
+    );
+
+    await expect(
+      handler.execute({ bookingId: 'book-1', newScheduledAt: futureDate, changedBy: 'user-1' }),
+    ).rejects.toThrow(ConflictException);
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+  });
+
   it('10b. locks client, then booking row, then employee/slot (same order as the client reschedule)', async () => {
     (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking({ clientId: 'client-a' }));
     const prisma = buildPrisma();

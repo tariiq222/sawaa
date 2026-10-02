@@ -1,4 +1,5 @@
 import { retrySerializableTransaction } from '../../../common/database/person-reference-lock.helper';
+import { RESCHEDULE_TX_ATTEMPTS } from '../reschedule-booking/reschedule-booking.handler';
 import {
   BadRequestException,
   ConflictException,
@@ -253,7 +254,10 @@ export class ClientRescheduleBookingHandler {
 
     const result = cmd.transaction
       ? await mutate(cmd.transaction)
-      : await retrySerializableTransaction(() => this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' }));
+      : await retrySerializableTransaction(
+        () => this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' }),
+        RESCHEDULE_TX_ATTEMPTS,
+      );
     return cmd.transaction ? result : { booking: result.booking };
   }
 

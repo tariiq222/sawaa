@@ -752,6 +752,23 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			).toBe(3);
 		});
 
+		it("Scenario 7d — A burst of three concurrent reschedules within the limit all succeed", async () => {
+			const createRes = await createBooking({
+				scheduledAt: daysFromNow(3, 9, 0).toISOString(),
+			});
+			expect(createRes.status).toBe(201);
+			const bookingId = createRes.body.id;
+			// All three queue on the same client lock; each loser must be retried,
+			// not surfaced as a database error.
+			const results = await Promise.all(
+				[11, 13, 15].map((hour) => rescheduleBooking(bookingId, daysFromNow(3, hour, 0))),
+			);
+			expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
+			expect(
+				await prisma.bookingStatusLog.count({ where: { bookingId, reason: "rescheduled" } }),
+			).toBe(3);
+		});
+
 		it("Scenario 7c — Staff reschedule cannot overlap another appointment of the same client", async () => {
 			// Same client, different practitioners, so only the client overlaps.
 			const first = await createBooking({ employeeId: ctx.employee2Id, scheduledAt: tomorrow(19, 0).toISOString() });
