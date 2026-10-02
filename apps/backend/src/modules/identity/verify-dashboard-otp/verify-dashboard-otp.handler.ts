@@ -142,10 +142,15 @@ export class VerifyDashboardOtpHandler {
       await this.twoFactorChallenges.assertValid(cmd.twoFactorChallenge, user.id, identifier);
     }
 
-    await this.prisma.otpCode.update({
-      where: { id: otpRecord.id },
+    // Conditional consume: of two concurrent verifications of the same code
+    // only one matches consumedAt: null, so only one receives a session.
+    const consumed = await this.prisma.otpCode.updateMany({
+      where: { id: otpRecord.id, consumedAt: null, expiresAt: { gt: new Date() } },
       data: { consumedAt: new Date() },
     });
+    if (consumed.count === 0) {
+      throw new BadRequestException('Invalid or expired code');
+    }
 
     if (requiresTwoFactor) {
       await this.twoFactorChallenges.consume(cmd.twoFactorChallenge, user.id, identifier);

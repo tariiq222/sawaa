@@ -1,0 +1,292 @@
+/**
+ * Guards for the operational safety rules in the root CLAUDE.md. Each test
+ * here fails when a load-bearing invariant changes, not when behaviour is
+ * refactored. Read CLAUDE.md before "fixing" a failure in this file.
+ */
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { ZoomCredentialsService } from '../infrastructure/zoom/zoom-credentials.service';
+import { SmsCredentialsService } from '../infrastructure/sms/sms-credentials.service';
+import { EmailCredentialsService } from '../infrastructure/email/email-credentials.service';
+import { MoyasarCredentialsService } from '../infrastructure/payments/moyasar-credentials.service';
+import { AiProviderCredentialsService } from '../infrastructure/ai/ai-provider-credentials.service';
+import { decryptSecret } from '../infrastructure/crypto/secret-crypto';
+import { SmsProviderFactory } from '../infrastructure/sms/sms-provider.factory';
+import { DEFAULT_VAT_RATE } from '../modules/finance/create-invoice/create-invoice.handler';
+import type { PaymentCompletedPayload } from '../modules/finance/events/payment-completed.event';
+import type { BookingCancelledPayload } from '../modules/bookings/events/booking-cancelled.event';
+import type { BookingCreatedPayload } from '../modules/bookings/events/booking-created.event';
+import type { ClientEnrolledPayload } from '../modules/people/events/client-enrolled.event';
+import { DEFAULT_ORG_ID, SINGLE_TENANT_CONTEXT_ID } from './constants';
+
+// Test-only keys (not secrets): 32 bytes of 0x07.
+const TEST_KEY_BASE64 = Buffer.alloc(32, 7).toString('base64');
+const TEST_PLATFORM_KEY_HEX = '07'.repeat(32);
+const cfg = { get: () => TEST_KEY_BASE64 } as never;
+
+/*
+ * Ciphertexts produced once by the current code with the test keys above and
+ * DEFAULT_ORG_ID. If any of these stop decrypting, every credential stored in
+ * production has become undecryptable too: DEFAULT_ORG_ID, an HKDF salt, the
+ * AAD, the envelope layout or the key derivation changed. Revert that change.
+ */
+const GOLDEN = {
+  "zoom": "ZfTd7e5VxiOvc/Eqz8M7kIMfUf3f35Zrt16IkWZ0ik6fHe/HdbSoMGDiPbqp9xx00Rrit3dbFIV2df8t1+wh/t2I5L1PNVxUrQZ6l4z27HBajqM9mFRybwY3m9TXP2LX9w==",
+  "sms": "lRS0QF52K9JXzAx4/Lti/gzH8o05ZFjgpi75BfTnZVEAxyDOleFej9cbQOQgVzJ5LwCUxtbVCu5B8rLrNADVBUFUdu+5fV9Q8cy83HWMzig=",
+  "email": "t7RRDLXU3n/y52GEmnl6+wvsKyvuttGWwPeQSt1hhsv6ynfq4h3cDdnDH1h4MeJGN+5Z9zFAZARs8Kg/F5bcVAikT4lx7bVIpzifMmfYk0pzML3mODWlQA==",
+  "moyasar": "yP8sNaRzPTcRXAM0NGJkXFzZ0xbp84G4+dFINJWAphNTRzxlDaAkacFxz5P3pclSiYOY",
+  "ai": "v1.O3xbIMxQimdMKlBZbcn5be+dd6Pi9XmJ1lyC/T8gaR8B4yAPxys=",
+  "platform": "f6036fb7a1f579d710e91dad9c5595739c72c36f3b101ab7196091f071039c808c57c6a3050544c0732b11"
+} as const;
+
+describe('operational invariant: provider credentials stay decryptable', () => {
+  it('Zoom credentials (HKDF info = DEFAULT_ORG_ID)', () => {
+    const svc = new ZoomCredentialsService(cfg);
+    expect(svc.decrypt(GOLDEN.zoom, DEFAULT_ORG_ID)).toEqual({ zoomAccountId: 'acc', zoomClientId: 'cli', zoomClientSecret: 'sec' });
+    expect(() => svc.decrypt(GOLDEN.zoom, 'another-org')).toThrow();
+  });
+
+  it('SMS credentials (HKDF info = DEFAULT_ORG_ID)', () => {
+    const svc = new SmsCredentialsService(cfg);
+    expect(svc.decrypt(GOLDEN.sms, DEFAULT_ORG_ID)).toEqual({ appSid: 'sid-1', apiKey: 'secret', sender: 'TEST' });
+    expect(() => svc.decrypt(GOLDEN.sms, 'another-org')).toThrow();
+  });
+
+  it('Email credentials (HKDF info = DEFAULT_ORG_ID)', () => {
+    const svc = new EmailCredentialsService(cfg);
+    expect(svc.decrypt(GOLDEN.email, DEFAULT_ORG_ID)).toEqual({ host: 'smtp.example.com', port: 587, user: 'u', pass: 'p' });
+    expect(() => svc.decrypt(GOLDEN.email, 'another-org')).toThrow();
+  });
+
+  it('Moyasar credentials (HKDF info = DEFAULT_ORG_ID)', () => {
+    const svc = new MoyasarCredentialsService(cfg);
+    expect(svc.decrypt(GOLDEN.moyasar, DEFAULT_ORG_ID)).toEqual({ secretKey: 'sk_test' });
+    expect(() => svc.decrypt(GOLDEN.moyasar, 'another-org')).toThrow();
+  });
+
+  it('a ciphertext from one provider never decrypts as another (distinct HKDF salts)', () => {
+    expect(() => new SmsCredentialsService(cfg).decrypt(GOLDEN.zoom, DEFAULT_ORG_ID)).toThrow();
+  });
+
+  it('AI provider key (AES-GCM AAD = DEFAULT_ORG_ID)', () => {
+    expect(new AiProviderCredentialsService(cfg).decrypt(GOLDEN.ai)).toBe('sk-or-test');
+  });
+
+  it('SINGLE_TENANT_CONTEXT_ID stays an alias of DEFAULT_ORG_ID (guards and credential factories use it)', () => {
+    expect(SINGLE_TENANT_CONTEXT_ID).toBe(DEFAULT_ORG_ID);
+  });
+
+  it('platform settings secrets are bound to the PLATFORM_SETTINGS_KEY env var', () => {
+    const previous = process.env.PLATFORM_SETTINGS_KEY;
+    process.env.PLATFORM_SETTINGS_KEY = TEST_PLATFORM_KEY_HEX;
+    try {
+      expect(decryptSecret(GOLDEN.platform)).toBe('platform-secret');
+    } finally {
+      if (previous === undefined) delete process.env.PLATFORM_SETTINGS_KEY;
+      else process.env.PLATFORM_SETTINGS_KEY = previous;
+    }
+  });
+});
+
+describe('operational invariant: VAT', () => {
+  it('DEFAULT_VAT_RATE stays 0 — the center is not VAT-registered', () => {
+    expect(DEFAULT_VAT_RATE).toBe(0);
+  });
+
+  it('no shipped source in any app hardcodes a 15% VAT rate (code, copy, Swagger or fallbacks)', () => {
+    const offenders = shippedSources()
+      .filter(({ text }) => hardcodesFifteenPercent(asciiDigits(text)))
+      .map((f) => f.path);
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('operational invariant: single-tenant SMS dispatch', () => {
+  it('SmsProviderFactory.resolve takes no tenant argument', () => {
+    // Compile-time: an added parameter, optional or defaulted, fails tsc here.
+    const takesNoArguments: Parameters<SmsProviderFactory['resolve']> extends [] ? true : false = true;
+    expect(takesNoArguments).toBe(true);
+  });
+
+  it('SMS providers live in infrastructure/sms and are constructed only by SmsProviderFactory', () => {
+    // Discovered, not listed: a provider added tomorrow is covered too.
+    const sources = productionSources();
+    const SMS_DIR = 'infrastructure/sms/';
+    const FACTORY = 'infrastructure/sms/sms-provider.factory.ts';
+    const implementsProvider = /class\s+(\w+)[^{]*\bimplements\b[^{]*\bSmsProvider\b/g;
+
+    const outsideSmsDir = sources
+      .filter(({ path, text }) => !path.startsWith(SMS_DIR) && text.match(implementsProvider))
+      .map((f) => f.path);
+    expect(outsideSmsDir).toEqual([]);
+
+    const providers = sources.flatMap(({ path, text }) =>
+      [...text.matchAll(implementsProvider)].map((m) => ({ name: m[1], path })));
+    expect(providers.length).toBeGreaterThan(0);
+    const offenders = sources.flatMap(({ path, text }) =>
+      providers
+        .filter((p) => path !== p.path && path !== FACTORY && new RegExp(String.raw`\b${p.name}\b`).test(text))
+        .map((p) => `${path} references ${p.name}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it('the only SMS sent outside the factory is OTP delivery through Authentica', () => {
+    // OTP codes go through the dedicated Authentica OTP service, not the
+    // clinic's bulk SMS provider; that one path is the documented exception.
+    // Any other caller of Authentica's sendOtp is a new bypass.
+    const callers = productionSources()
+      .filter(({ path, text }) => path !== 'infrastructure/authentica/authentica.client.ts' && /\.sendOtp\(/.test(text))
+      .map((f) => f.path);
+    expect(callers).toEqual(['modules/comms/notification-channel/sms-channel.adapter.ts']);
+  });
+
+  it('every SMS dispatch surface sends through SmsProviderFactory.resolve()', () => {
+    const surfaces = [
+      'modules/comms/send-sms/send-sms.handler.ts',
+      'modules/comms/notification-outbox/notification-channel-sender.ts',
+      'modules/comms/org-sms-config/test-sms-config.handler.ts',
+      'modules/comms/sms-dlr/sms-dlr.handler.ts',
+    ];
+    const sources = new Map(productionSources().map((f) => [f.path, f.text]));
+    for (const path of surfaces) {
+      expect([path, /\.resolve\(\)/.test(sources.get(path) ?? '')]).toEqual([path, true]);
+    }
+  });
+
+  it('no production source reintroduces forCurrentTenant', () => {
+    const offenders = productionSources().filter(({ text }) => text.includes('forCurrentTenant'));
+    expect(offenders.map((f) => f.path)).toEqual([]);
+  });
+});
+
+describe('operational invariant: staff notifications keep organizationId', () => {
+  // comms/events/on-*-staff handlers return early when the payload has no
+  // organizationId, so dropping it from a publisher silently kills staff
+  // notifications. Keeping the field required makes every publisher that
+  // omits it a compile error; these assertions fail tsc if it turns optional.
+  // Required key AND a value that cannot be undefined or null.
+  type IsRequired<T, K extends keyof T> = {} extends Pick<T, K>
+    ? false
+    : undefined extends T[K] ? false : null extends T[K] ? false : true;
+
+  it('organizationId is required on every staff-notified event payload', () => {
+    const required: [
+      IsRequired<PaymentCompletedPayload, 'organizationId'>,
+      IsRequired<BookingCancelledPayload, 'organizationId'>,
+      IsRequired<BookingCreatedPayload, 'organizationId'>,
+      IsRequired<ClientEnrolledPayload, 'organizationId'>,
+    ] = [true, true, true, true];
+    expect(required).toEqual([true, true, true, true]);
+  });
+});
+
+/**
+ * A 15% rate is only prohibited where it is a VAT rate, so the scan looks at
+ * lines in a VAT context: the line itself or its close neighbours mention
+ * VAT/tax (English or Arabic). Opacity, animation and discount values that
+ * happen to equal 0.15 or 15% elsewhere are not VAT and are left alone.
+ *
+ * Within that context a value counts however it is spelled: a fraction equal
+ * to 0.15 (0.15, .15, 0.150, 15e-2), a percentage equal to 15 (15%, 15.0%),
+ * or a simple constant quotient/product equal to 0.15 (15 / 100, 3 / 20,
+ * 15 * 0.01). Tokens inside a longer dotted/identifier run (v0.15.2, x15)
+ * are not numbers and are skipped.
+ */
+const VAT_CONTEXT = /vat|tax|ضريب/i;
+const VAT_CONTEXT_LINES = 3;
+const NUMBER = String.raw`\d*\.?\d+(?:[eE][+-]?\d+)?`;
+const NUMERIC_TOKEN = new RegExp(String.raw`(?<![\w.])(${NUMBER})(?![\w.])(\s?%)?`, 'g');
+const CONSTANT_BINARY = new RegExp(String.raw`(?<![\w.])(${NUMBER})\s*([/*])\s*(${NUMBER})(?![\w.])`, 'g');
+
+function isFifteenPercentValue(line: string): boolean {
+  for (const [, digits, percent] of line.matchAll(NUMERIC_TOKEN)) {
+    const value = Number(digits);
+    if (percent ? value === 15 : value === 0.15) return true;
+  }
+  for (const [, left, operator, right] of line.matchAll(CONSTANT_BINARY)) {
+    const value = operator === '/' ? Number(left) / Number(right) : Number(left) * Number(right);
+    if (Math.abs(value - 0.15) < 1e-9) return true;
+  }
+  return false;
+}
+
+function hardcodesFifteenPercent(text: string): boolean {
+  const lines = text.split('\n');
+  return lines.some((line, index) => {
+    if (!isFifteenPercentValue(line)) return false;
+    const from = Math.max(0, index - VAT_CONTEXT_LINES);
+    return lines.slice(from, index + VAT_CONTEXT_LINES + 1).some((near) => VAT_CONTEXT.test(near));
+  });
+}
+
+/**
+ * Arabic copy writes the rate as ١٥٪ or ٠٫١٥ (also Persian ۱۵٪). Fold Arabic-
+ * Indic and Extended Arabic-Indic digits, the Arabic percent sign and the
+ * Arabic decimal separator to ASCII so one pattern covers every spelling.
+ */
+function asciiDigits(text: string): string {
+  return text
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/\u066A/g, '%')
+    .replace(/\u066B/g, '.');
+}
+
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
+const SHIPPED_ROOTS = [
+  'apps/backend/src',
+  'apps/backend/openapi.json',
+  'apps/dashboard',
+  'apps/website',
+  'apps/mobile',
+  'packages/shared',
+  'packages/api-client/src',
+  'packages/ui',
+];
+const SKIPPED_DIRS = new Set([
+  'node_modules', '.next', '.expo', '.turbo', 'dist', 'build', 'coverage', 'out',
+  'ios', 'android', 'test', 'tests', 'e2e', '__tests__', '__mocks__', 'test-results',
+  'playwright-report',
+]);
+const TEST_FILE = /\.(spec|test|e2e-spec)\.[cm]?[jt]sx?$|\.d\.ts$/;
+
+/** The string values of every `content:` declaration in a stylesheet. */
+function cssContentStrings(css: string): string {
+  return [...css.matchAll(/\bcontent\s*:\s*(["'])((?:\\.|(?!\1).)*)\1/g)].map((m) => m[2]).join('\n');
+}
+
+/** Source and copy that ships to users from every app and shared package. */
+function shippedSources(): Array<{ path: string; text: string }> {
+  const out: Array<{ path: string; text: string }> = [];
+  const visit = (full: string) => {
+    const name = full.slice(full.lastIndexOf('/') + 1);
+    if (statSync(full).isDirectory()) {
+      if (SKIPPED_DIRS.has(name)) return;
+      for (const child of readdirSync(full)) visit(join(full, child));
+    } else if (/\.([cm]?[jt]sx?|json)$/.test(name) && !TEST_FILE.test(name)) {
+      out.push({ path: full.slice(REPO_ROOT.length + 1), text: readFileSync(full, 'utf8') });
+    } else if (/\.(s?css)$/.test(name)) {
+      // Stylesheets ship copy only through `content:` strings; percentages in
+      // gradients, sizes and colours are visual and stay out of the scan.
+      out.push({ path: full.slice(REPO_ROOT.length + 1), text: cssContentStrings(readFileSync(full, 'utf8')) });
+    }
+  };
+  for (const root of SHIPPED_ROOTS) visit(join(REPO_ROOT, root));
+  return out;
+}
+
+function productionSources(): Array<{ path: string; text: string }> {
+  const root = join(__dirname, '..');
+  const out: Array<{ path: string; text: string }> = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else if (name.endsWith('.ts') && !name.endsWith('.spec.ts') && !name.endsWith('.d.ts')) {
+        out.push({ path: full.slice(root.length + 1), text: readFileSync(full, 'utf8') });
+      }
+    }
+  };
+  walk(root);
+  return out;
+}

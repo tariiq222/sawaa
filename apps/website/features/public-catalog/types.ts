@@ -69,7 +69,7 @@ export interface PublicCatalog {
   categories: PublicServiceCategory[];
   services: PublicService[];
   /**
-   * Org VAT rate as a fraction (0.15 = 15%). Optional for tolerance: older
+   * Org VAT rate as a fraction of 1 (0 when VAT is off). Optional for tolerance: older
    * cached responses may lack the field — always read with `?? 0`.
    */
   vatRate?: number;

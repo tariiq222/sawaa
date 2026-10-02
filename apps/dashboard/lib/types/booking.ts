@@ -78,7 +78,7 @@ export interface HistoricalBookingPayment {
 export interface BookingInvoice {
   id: string
   subtotal: number    // halalas, net before VAT/discount
-  vatRate: number     // fractional rate, e.g. 0.15
+  vatRate: number     // fraction of 1 (0 when VAT is off)
   total: number       // halalas, after discount
   outstanding: number // halalas, total minus completed payments
   status: string      // Prisma InvoiceStatus

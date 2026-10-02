@@ -48,15 +48,20 @@ export class PerformPasswordResetHandler {
 
     await this.rlsTransaction.withTransaction(async (tx) => {
       // bypassRls: pre-auth flow — caller has only the reset token, no tenant context.
+      // Consume first and conditionally: a concurrent request with the same
+      // link matches no row and rolls back without touching the password.
+      const consumed = await tx.passwordResetToken.updateMany({
+        where: { id: record.id, consumedAt: null, expiresAt: { gt: now } },
+        data: { consumedAt: now },
+      });
+      if (consumed.count === 0) {
+        throw new UnauthorizedException(REJECT_MSG);
+      }
       await tx.user.update({
         where: { id: record.userId },
         // Bump tokenVersion in the same update so any access token issued before
         // the reset (valid ~15 min) is immediately invalidated by the JWT strategy.
         data: { passwordHash, tokenVersion: { increment: 1 } },
-      });
-      await tx.passwordResetToken.update({
-        where: { id: record.id },
-        data: { consumedAt: now },
       });
       await tx.refreshToken.updateMany({
         where: { userId: record.userId, revokedAt: null },

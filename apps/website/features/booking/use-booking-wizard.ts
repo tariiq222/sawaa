@@ -109,7 +109,7 @@ export function useBookingWizard() {
   });
   const services = catalog.services;
   const categories = catalog.categories;
-  // Fractional org VAT rate (0.15 = 15%) — display-only: the backend computes
+  // Fractional org VAT rate (a fraction of 1, 0 when VAT is off) — display-only: the backend computes
   // the real invoice; we just show gross amounts so the customer isn't surprised.
   const vatRate = catalog.vatRate ?? 0;
 

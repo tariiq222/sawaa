@@ -1,0 +1,13 @@
+# Temporary exception — remove when node-forge ships a fix and the lockfiles are bumped.
+#
+# CVE-2026-85393 (GHSA-86w9-cpqp-85rv), node-forge <= 1.4.0, no patched version
+# as of 2026-10-02: RSA PKCS#1 v1.5 signature *verification* accepts forged
+# signatures for low-exponent keys.
+#
+# Not reachable here:
+#   - backend: only via firebase-admin, which calls forge.pki.privateKeyFromPem
+#     to validate the service-account key format. No signature verification.
+#   - mobile: only via @expo/cli and @expo/code-signing-certificates (developer
+#     tooling, not shipped in the app bundle).
+# No app code imports node-forge directly.
+CVE-2026-85393

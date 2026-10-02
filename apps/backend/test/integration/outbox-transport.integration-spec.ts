@@ -14,6 +14,7 @@ import { OutboxPublisherCron } from '../../src/modules/ops/cron-tasks/outbox-pub
 import { PaymentCompletedEventHandler } from '../../src/modules/bookings/payment-completed-handler/payment-completed.handler';
 import { PaymentCompletedEvent, type PaymentCompletedPayload } from '../../src/modules/finance/events/payment-completed.event';
 import { AppMetricsService } from '../../src/infrastructure/telemetry/app-metrics.service';
+import { DEFAULT_ORG_ID } from '../../src/common/constants';
 
 const PAYMENT_EVENT = 'finance.payment.completed';
 const PAYMENT_CONSUMER = 'bookings.payment-completed-confirm.v1';
@@ -200,6 +201,7 @@ describe('real outbox publisher and payment consumer transport', () => {
       bookingId,
       amount: 100,
       currency: 'SAR',
+      organizationId: DEFAULT_ORG_ID,
     } satisfies PaymentCompletedPayload);
     await prisma.$transaction(async (tx) => {
       await tx.booking.create({

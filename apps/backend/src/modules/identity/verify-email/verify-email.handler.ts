@@ -45,10 +45,13 @@ export class VerifyEmailHandler {
       const now = new Date();
       await this.rlsTransaction.withTransaction(async (tx) => {
         // bypassRls: email verification is a pre-auth flow with no tenant context
-        await tx.emailVerificationToken.update({
-          where: { id: record.id },
+        const consumed = await tx.emailVerificationToken.updateMany({
+          where: { id: record.id, consumedAt: null },
           data: { consumedAt: now },
         });
+        if (consumed.count === 0) {
+          throw new BadRequestException('Invalid or used verification link');
+        }
         await tx.user.update({
           where: { id: record.userId },
           data: { emailVerifiedAt: now },

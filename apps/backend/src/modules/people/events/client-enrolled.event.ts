@@ -5,7 +5,8 @@ export interface ClientEnrolledPayload {
   name: string;
   phone?: string;
   email?: string;
-  organizationId?: string;
+  // Required: comms staff handlers drop the notification without it.
+  organizationId: string;
 }
 
 /**

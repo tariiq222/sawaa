@@ -729,6 +729,57 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			expect(fourth.status).toBe(400);
 			expect(fourth.body.message).toMatch(/Maximum reschedules/);
 		});
+
+		it("Scenario 7b — Two concurrent reschedules cannot both pass the limit", async () => {
+			const createRes = await createBooking({
+				scheduledAt: daysFromNow(3, 17, 0).toISOString(),
+			});
+			expect(createRes.status).toBe(201);
+			const bookingId = createRes.body.id;
+			// Use 2 of 3 reschedules, then race two requests for the last one.
+			for (const hour of [18, 19]) {
+				expect((await rescheduleBooking(bookingId, daysFromNow(3, hour, 0))).status).toBe(200);
+			}
+			const [a, b] = await Promise.all([
+				rescheduleBooking(bookingId, daysFromNow(3, 20, 0)),
+				rescheduleBooking(bookingId, daysFromNow(3, 21, 0)),
+			]);
+			const statuses = [a.status, b.status].sort();
+			if (statuses[0] !== 200 || statuses[1] !== 400) console.log("7b", a.status, JSON.stringify(a.body), b.status, JSON.stringify(b.body));
+			expect(statuses).toEqual([200, 400]);
+			expect(
+				await prisma.bookingStatusLog.count({ where: { bookingId, reason: "rescheduled" } }),
+			).toBe(3);
+		});
+
+		it("Scenario 7d — A burst of three concurrent reschedules within the limit all succeed", async () => {
+			const createRes = await createBooking({
+				scheduledAt: daysFromNow(3, 9, 0).toISOString(),
+			});
+			expect(createRes.status).toBe(201);
+			const bookingId = createRes.body.id;
+			// All three queue on the same client lock; each loser must be retried,
+			// not surfaced as a database error.
+			const results = await Promise.all(
+				[11, 13, 15].map((hour) => rescheduleBooking(bookingId, daysFromNow(3, hour, 0))),
+			);
+			expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
+			expect(
+				await prisma.bookingStatusLog.count({ where: { bookingId, reason: "rescheduled" } }),
+			).toBe(3);
+		});
+
+		it("Scenario 7c — Staff reschedule cannot overlap another appointment of the same client", async () => {
+			// Same client, different practitioners, so only the client overlaps.
+			const first = await createBooking({ employeeId: ctx.employee2Id, scheduledAt: tomorrow(19, 0).toISOString() });
+			const second = await createBooking({ scheduledAt: tomorrow(21, 0).toISOString() });
+			expect(first.status).toBe(201);
+			expect(second.status).toBe(201);
+
+			const res = await rescheduleBooking(second.body.id, tomorrow(19, 0));
+			expect(res.status).toBe(409);
+			expect(res.body.message).toMatch(/Client already has an overlapping appointment/);
+		});
 	});
 
 	// ═══════════════════════════════════════════════════════════════════════════

@@ -8,7 +8,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 describe('VerifyEmailHandler', () => {
   let handler: VerifyEmailHandler;
   let prisma: {
-    emailVerificationToken: { findFirst: jest.Mock; update: jest.Mock };
+    emailVerificationToken: { findFirst: jest.Mock; updateMany: jest.Mock };
     user: { update: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -22,7 +22,7 @@ describe('VerifyEmailHandler', () => {
     prisma = {
       emailVerificationToken: {
         findFirst: jest.fn(),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       user: { update: jest.fn().mockResolvedValue({}) },
       $transaction: jest.fn().mockImplementation(async (fn) => fn(prisma)),
@@ -54,6 +54,15 @@ describe('VerifyEmailHandler', () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
+  it('rejects when a concurrent request already consumed the token', async () => {
+    prisma.emailVerificationToken.findFirst.mockResolvedValue({
+      id: 't1', userId: 'u1', tokenHash, tokenSelector, expiresAt: new Date(Date.now() + 60_000), consumedAt: null,
+    });
+    prisma.emailVerificationToken.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(handler.execute({ token: rawToken })).rejects.toThrow(BadRequestException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
   it('rejects expired token', async () => {
     prisma.emailVerificationToken.findFirst.mockResolvedValue({
       id: 't1',
@@ -65,7 +74,7 @@ describe('VerifyEmailHandler', () => {
     });
     await expect(handler.execute({ token: rawToken })).rejects.toThrow(BadRequestException);
     expect(prisma.user.update).not.toHaveBeenCalled();
-    expect(prisma.emailVerificationToken.update).not.toHaveBeenCalled();
+    expect(prisma.emailVerificationToken.updateMany).not.toHaveBeenCalled();
   });
 
   it('rejects already-consumed token', async () => {
@@ -96,8 +105,8 @@ describe('VerifyEmailHandler', () => {
     const result = await handler.execute({ token: rawToken });
 
     expect(result).toEqual({ success: true });
-    expect(prisma.emailVerificationToken.update).toHaveBeenCalledWith({
-      where: { id: 't1' },
+    expect(prisma.emailVerificationToken.updateMany).toHaveBeenCalledWith({
+      where: { id: 't1', consumedAt: null },
       data: { consumedAt: expect.any(Date) },
     });
     expect(prisma.user.update).toHaveBeenCalledWith({
