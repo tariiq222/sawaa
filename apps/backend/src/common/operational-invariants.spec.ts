@@ -164,7 +164,7 @@ function shippedSources(): Array<{ path: string; text: string }> {
     if (statSync(full).isDirectory()) {
       if (SKIPPED_DIRS.has(name)) return;
       for (const child of readdirSync(full)) visit(join(full, child));
-    } else if (/\.(tsx?|json)$/.test(name) && !TEST_FILE.test(name)) {
+    } else if (/\.([cm]?[jt]sx?|json)$/.test(name) && !TEST_FILE.test(name)) {
       out.push({ path: full.slice(REPO_ROOT.length + 1), text: readFileSync(full, 'utf8') });
     }
   };
