@@ -75,7 +75,7 @@ describe('VerifyDashboardOtpHandler', () => {
       providers: [
         VerifyDashboardOtpHandler,
         { provide: PrismaService, useValue: {
-          otpCode: { findFirst: jest.fn(), update: jest.fn() },
+          otpCode: { findFirst: jest.fn(), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
           user: { findFirst: jest.fn() },
           // P1-8: handler now loads DB system-role permissions for the user's
           // built-in role (mirrors JwtStrategy). Default to none → BUILT_IN map.
@@ -169,6 +169,20 @@ describe('VerifyDashboardOtpHandler', () => {
     prisma.user.findFirst.mockResolvedValue(createUser({ isActive: false }));
 
     await expect(handler.execute({ identifier: 'test@test.com', code: '123456' })).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('issues no session when a concurrent verification already consumed the code', async () => {
+    prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    prisma.otpCode.updateMany.mockResolvedValueOnce({ count: 0 });
+    prisma.user.findFirst.mockResolvedValue(createUser());
+
+    await expect(handler.execute({ identifier: 'test@test.com', code: '123456' })).rejects.toThrow(BadRequestException);
+    expect(prisma.otpCode.updateMany).toHaveBeenCalledWith({
+      where: { id: 'otp-1', consumedAt: null, expiresAt: { gt: expect.any(Date) } },
+      data: { consumedAt: expect.any(Date) },
+    });
+    expect(tokens.issueTokenPair).not.toHaveBeenCalled();
   });
 
   it('should return tokens and user on success with email channel', async () => {
