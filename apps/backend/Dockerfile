@@ -33,8 +33,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
  && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
-# Copy only manifests — this layer is cached until any package.json/lockfile changes
+# Copy manifests and dependency patches before installing from the lockfile.
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY patches/ ./patches/
 COPY apps/backend/package.json             ./apps/backend/
 COPY packages/shared/package.json          ./packages/shared/
 COPY packages/api-client/package.json      ./packages/api-client/
@@ -51,6 +52,7 @@ RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
 # Copy manifests + lockfile so pnpm install is a cache hit when nothing changed
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY patches/ ./patches/
 COPY packages/shared/package.json          ./packages/shared/
 COPY packages/api-client/package.json      ./packages/api-client/
 COPY packages/ui/package.json              ./packages/ui/
@@ -93,6 +95,7 @@ RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 COPY --from=shared-build /app/node_modules ./node_modules
 COPY --from=shared-build /app/packages     ./packages
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY patches/ ./patches/
 # Keep the dependency layer keyed to manifests and the lockfile, not backend source.
 COPY apps/backend/package.json ./apps/backend/
 
