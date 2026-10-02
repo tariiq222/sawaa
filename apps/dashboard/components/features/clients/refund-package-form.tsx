@@ -6,8 +6,8 @@
  * Phase 5 — manual refund modal for a session-package purchase. The
  * operator enters the refund amount in SAR (we convert to integer
  * halalas at submit) plus an optional note. The form defaults the
- * refund amount to the original `amountPaid` (full refund) and
- * shows a clear warning that the action voids the remaining credits.
+ * refund amount to the amount charged (`totalCharged`, VAT-inclusive; full refund) and
+ * warns that a full refund voids the remaining credits (a partial refund keeps them).
  *
  * Money flow:
  *   - The backend stores money in integer halalas (RefundPackagePurchaseDto
@@ -19,7 +19,7 @@
  *     purchase is still REFUNDED + credits still voided.
  *
  * UX gates:
- *   - Refund amount required, integer SAR ≥ 0, ≤ amountPaid.
+ *   - Refund amount required, integer SAR ≥ 0, ≤ amount charged.
  *   - Notes optional, ≤1000 chars (matches the backend DTO).
  *   - Submit disabled while refunding or the amount is invalid.
  *   - Disabled for purchases that are already REFUNDED (defense).
@@ -65,6 +65,11 @@ export function RefundPackageForm({
 }: RefundPackageFormProps) {
   const { t, locale } = useLocale()
   const refundMut = useRefundPackagePurchase()
+  // amountPaid is the net package price; refunds are measured against what
+  // the client was actually charged (VAT-inclusive when VAT is enabled).
+  const charged = purchase.totalCharged ?? purchase.amountPaid
+  // Earlier partial refunds reduce what can still be returned.
+  const refundable = Math.max(0, charged - (purchase.refundAmount ?? 0))
 
   // The operator types SAR; we convert to halalas at submit. Default
   // to the original amount paid (full refund). The parent remounts
@@ -72,8 +77,8 @@ export function RefundPackageForm({
   // the dialog shell), so the useState initialiser always re-runs
   // fresh — no manual reset effect is needed.
   const defaultSar = useMemo(
-    () => halalasToSar(purchase.amountPaid),
-    [purchase.amountPaid],
+    () => halalasToSar(refundable),
+    [refundable],
   )
   const [refundSar, setRefundSar] = useState<string>(
     defaultSar > 0 ? String(defaultSar) : "0",
@@ -93,10 +98,17 @@ export function RefundPackageForm({
     return sarToHalalas(refundAmountSar)
   }, [refundAmountSar])
 
+  // Mirrors the backend: a refund that returns everything still refundable
+  // (or a zero-money cancellation) ends the purchase and voids its credits;
+  // anything less is partial and keeps the remaining credits usable.
+  const isFullRefund =
+    Number.isFinite(refundAmountHalalas) &&
+    (refundAmountHalalas === 0 || refundAmountHalalas >= refundable)
+
   const isValid =
     Number.isFinite(refundAmountHalalas) &&
     refundAmountHalalas >= 0 &&
-    refundAmountHalalas <= purchase.amountPaid &&
+    refundAmountHalalas <= refundable &&
     notes.length <= MAX_NOTES &&
     !refundMut.isPending
 
@@ -110,7 +122,9 @@ export function RefundPackageForm({
           notes: notes.trim() || undefined,
         },
       })
-      toast.success(t("packages.balances.refund.success"))
+      toast.success(
+        t(isFullRefund ? "packages.balances.refund.success" : "packages.balances.refund.partialSuccess"),
+      )
       onRefunded?.()
       onClose()
     } catch (err) {
@@ -134,7 +148,7 @@ export function RefundPackageForm({
               label={t("packages.balances.refund.summary.amountPaid")}
               value={
                 <FormattedCurrency
-                  amount={purchase.amountPaid}
+                  amount={charged}
                   locale={locale}
                   decimals={2}
                 />
@@ -146,8 +160,13 @@ export function RefundPackageForm({
             />
           </div>
 
-          {/* ── Warning when the purchase still has remaining credits ── */}
-          {!isAlreadyRefunded && (
+          {/* ── Full refund voids remaining credits; a partial one keeps them ── */}
+          {!isAlreadyRefunded && !isFullRefund && (
+            <p className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
+              {t("packages.balances.refund.partialNote")}
+            </p>
+          )}
+          {!isAlreadyRefunded && isFullRefund && (
             <div
               className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3 text-warning"
               role="alert"
@@ -184,7 +203,7 @@ export function RefundPackageForm({
             <p className="text-xs text-muted-foreground">
               {t("packages.balances.refund.amountHelper").replace(
                 "{max}",
-                halalasToSar(purchase.amountPaid).toFixed(2),
+                halalasToSar(refundable).toFixed(2),
               )}
             </p>
           </div>

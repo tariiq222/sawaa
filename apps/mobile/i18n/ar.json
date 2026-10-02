@@ -667,6 +667,8 @@
     "noPurchases": "ستظهر جلساتك المشتراة هنا.",
     "optionsCount": "{{count}} خيارات",
     "startsFrom": "تبدأ من",
+    "vatIncluded": "شامل الضريبة",
+    "vatBreakdown": "{{net}} + ضريبة القيمة المضافة {{vat}}",
     "sessionsFrom": "تبدأ من {{count}} جلسة",
     "featureSessionsOf": "{{count}} جلسة من نوع {{service}}",
     "featurePractitioner": "مع {{name}}",

@@ -18,6 +18,7 @@ import { runPackageCheckout } from '@/lib/package-checkout';
 import { packagePurchaseErrorKey } from '@/lib/package-utils';
 import type { PublicBranchSummary } from '@/services/client';
 import { formatCurrencyAmount } from '@/lib/currency-display';
+import { packageGrossHalalas, packageVatHalalas, packageVatRate } from '@/lib/package-vat';
 import { PackageBranchPicker } from '@/components/features/packages/PackageBranchPicker';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -119,6 +120,7 @@ export default function PackageFamilyDetailScreen() {
     }
   };
 
+  const vatRate = packageVatRate(query.data);
   const purchaseDisabled = initPurchase.isPending || !option || !branchId || !user?.id;
   const optionName = (candidate: { nameAr: string; nameEn?: string | null }) => (dir.isRTL ? candidate.nameAr : candidate.nameEn ?? candidate.nameAr);
 
@@ -150,6 +152,7 @@ export default function PackageFamilyDetailScreen() {
             <SectionHeader title={t('packages.chooseOption')} />
             {query.data.options.map((candidate) => {
               const selected = candidate.id === option?.id;
+              const net = candidate.price.finalPrice;
               return (
                 <Glass
                   key={candidate.id}
@@ -161,8 +164,16 @@ export default function PackageFamilyDetailScreen() {
                 >
                   <View style={[styles.optionRow, { flexDirection: dir.row }]}>
                     <Text style={[styles.optionName, { color: colors.ink[900], fontFamily: f700 }]}>{optionName(candidate)}</Text>
-                    <Text style={[styles.optionPrice, { color: colors.teal[700], fontFamily: f700 }]}>{formatCurrencyAmount(candidate.price.finalPrice, 'SAR', dir.isRTL)}</Text>
+                    <Text style={[styles.optionPrice, { color: colors.teal[700], fontFamily: f700 }]}>{formatCurrencyAmount(packageGrossHalalas(net, vatRate), 'SAR', dir.isRTL)}</Text>
                   </View>
+                  {vatRate > 0 ? (
+                    <Text style={[styles.vatNote, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                      {t('packages.vatIncluded')} · {t('packages.vatBreakdown', {
+                        net: formatCurrencyAmount(net, 'SAR', dir.isRTL),
+                        vat: formatCurrencyAmount(packageVatHalalas(net, vatRate), 'SAR', dir.isRTL),
+                      })}
+                    </Text>
+                  ) : null}
                   <Text style={[styles.optionCount, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
                     {t('packages.sessionCount', { count: candidate.sessionCount })}
                   </Text>
@@ -236,6 +247,7 @@ const styles = StyleSheet.create({
   optionName: { flex: 1, fontSize: 16 },
   optionPrice: { fontSize: 16 },
   optionCount: { fontSize: 14, marginTop: sawaaSpacing.xs },
+  vatNote: { fontSize: sawaaType.caption.fontSize, marginTop: sawaaSpacing.xs },
   groupDetail: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: sawaaSpacing.sm, paddingTop: sawaaSpacing.sm, gap: sawaaSpacing.xs },
   groupLabel: { fontSize: sawaaType.caption.fontSize + 1 },
   groupMeta: { fontSize: sawaaType.caption.fontSize, lineHeight: 18 },

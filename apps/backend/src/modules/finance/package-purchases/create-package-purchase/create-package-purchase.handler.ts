@@ -10,6 +10,8 @@ import { PrismaService, RlsTransactionService } from '../../../../infrastructure
 import { EventBusService } from '../../../../infrastructure/events';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
 import { ProcessPaymentHandler } from '../../process-payment/process-payment.handler';
+import { resolveVatRate } from '../../create-invoice/create-invoice.handler';
+import { computeVat } from '../../money.helper';
 import { buildCreditConstraintCreate } from '../build-credit-constraints.helper';
 import { resolvePackageGroupOfferings } from '../../../org-experience/session-packages/package-group-offering.helper';
 import { decorateGroupedPackage } from '../../../org-experience/session-packages/package-group-catalog.helper';
@@ -194,6 +196,12 @@ export class CreatePackagePurchaseHandler {
     // transaction. A payment failure therefore rolls the ACTIVE purchase and
     // its spendable credits back with the invoice.
     const createSale = () => this.rlsTransaction.withTransaction(async (tx) => {
+      // VAT sits on top of the net package price, like booking invoices.
+      // amountPaid stays NET (the credit-valuation basis); the invoice and the
+      // collected payment are GROSS.
+      const vatRate = await resolveVatRate(tx);
+      const vat = computeVat(new Prisma.Decimal(price.finalPrice), vatRate);
+      const grossTotal = vat.totalHalalas.toNumber();
       const purchase = await tx.packagePurchase.create({
         data: {
           idempotencyKey: dto.idempotencyKey,
@@ -246,9 +254,9 @@ export class CreatePackagePurchaseHandler {
         });
       }
 
-      // Single invoice for the full finalPrice. VAT = 0 — center is not
-      // VAT-registered. status=DRAFT ("awaiting payment") so ProcessPaymentHandler
-      // stamps issuedAt and flips it to PAID when it inserts the payment row.
+      // Single invoice for the full package. VAT follows OrganizationSettings
+      // (0 unless enabled). status=DRAFT ("awaiting payment") so
+      // ProcessPaymentHandler stamps issuedAt and flips it to PAID.
       const invoice = await tx.invoice.create({
         data: {
           branchId: dto.branchId,
@@ -261,20 +269,20 @@ export class CreatePackagePurchaseHandler {
           packagePurchaseId: purchase.id,
           subtotal: new Prisma.Decimal(price.subtotal),
           discountAmt: new Prisma.Decimal(price.discountAmount),
-          vatRate: new Prisma.Decimal(0),
-          vatAmt: new Prisma.Decimal(0),
-          total: new Prisma.Decimal(price.finalPrice),
-          status: groupedSnapshot && price.finalPrice === 0 ? 'PAID' : 'DRAFT',
-          ...(groupedSnapshot && price.finalPrice === 0 && { issuedAt: new Date(), paidAt: new Date() }),
+          vatRate,
+          vatAmt: vat.vatAmtHalalas,
+          total: vat.totalHalalas,
+          status: groupedSnapshot && grossTotal === 0 ? 'PAID' : 'DRAFT',
+          ...(groupedSnapshot && grossTotal === 0 && { issuedAt: new Date(), paidAt: new Date() }),
           notes: dto.notes ?? null,
         },
       });
 
-      const payment = groupedSnapshot && price.finalPrice === 0
+      const payment = groupedSnapshot && grossTotal === 0
         ? null
         : await this.processPayment.execute({
             invoiceId: invoice.id,
-            amount: price.finalPrice,
+            amount: grossTotal,
             method: dto.method,
             // Deterministic idempotency key per purchase — replaying this exact sale
             // (dashboard retry, double-click) collapses to the existing Payment row.
@@ -282,7 +290,7 @@ export class CreatePackagePurchaseHandler {
             transaction: tx,
           });
 
-      return { purchase, invoiceId: invoice.id, payment };
+      return { purchase, invoiceId: invoice.id, invoiceTotal: grossTotal, payment };
     });
 
     let sale: Awaited<ReturnType<typeof createSale>>;
@@ -312,7 +320,7 @@ export class CreatePackagePurchaseHandler {
       return this.replaySale(winner);
     }
 
-    const { purchase, invoiceId, payment } = sale;
+    const { purchase, invoiceId, invoiceTotal, payment } = sale;
 
     // 8. Publish outside the transaction (consistent with the rest of the
     // finance cluster — events must only fire for committed work).
@@ -326,7 +334,7 @@ export class CreatePackagePurchaseHandler {
         bookingId: null,
         packagePurchaseId: purchase.id,
         clientId: dto.clientId,
-        total: price.finalPrice,
+        total: invoiceTotal,
       },
     });
 

@@ -1,14 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BookMyPackageCreditInput,
-  ClientPackagePurchase,
   InitPackagePurchaseInput,
   InitPackagePurchaseResponse,
-  PackageFamily,
 } from '@sawaa/shared/types';
 
 import { PACKAGE_PAYMENT_POLL_INTERVAL_MS } from '@/lib/package-utils';
 import { clientPackagesService } from '@/services/client';
+import type { ClientPackageFamily, ClientPackagePurchaseRow } from '@/services/client/packages';
 
 import { clientBookingsKeys } from './useClientBookings';
 
@@ -21,14 +20,14 @@ export const packageKeys = {
 };
 
 export function usePackageFamilies() {
-  return useQuery<PackageFamily[]>({
+  return useQuery<ClientPackageFamily[]>({
     queryKey: packageKeys.families(),
     queryFn: () => clientPackagesService.listFamilies(),
   });
 }
 
 export function usePackageFamily(id: string | undefined) {
-  return useQuery<PackageFamily>({
+  return useQuery<ClientPackageFamily>({
     queryKey: packageKeys.family(id ?? ''),
     queryFn: () => clientPackagesService.getFamily(id as string),
     enabled: Boolean(id),
@@ -36,7 +35,7 @@ export function usePackageFamily(id: string | undefined) {
 }
 
 export function usePackagePurchases() {
-  return useQuery<ClientPackagePurchase[]>({
+  return useQuery<ClientPackagePurchaseRow[]>({
     queryKey: packageKeys.purchases(),
     queryFn: () => clientPackagesService.listPurchases(),
   });
@@ -49,7 +48,7 @@ export function usePackagePurchases() {
  */
 export function usePackagePurchase(id: string | undefined, options: { poll?: boolean } = {}) {
   const poll = options.poll ?? true;
-  return useQuery<ClientPackagePurchase>({
+  return useQuery<ClientPackagePurchaseRow>({
     queryKey: packageKeys.purchase(id ?? ''),
     queryFn: () => clientPackagesService.getPurchase(id as string),
     enabled: Boolean(id),

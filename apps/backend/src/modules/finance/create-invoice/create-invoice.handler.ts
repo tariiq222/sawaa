@@ -13,14 +13,15 @@ import { computeVat } from '../money.helper';
 /** Used when no OrganizationSettings row exists. The center is not VAT-registered. */
 export const DEFAULT_VAT_RATE = 0;
 
-type VatSettingsReader = { organizationSettings: Pick<Prisma.TransactionClient['organizationSettings'], 'findFirst'> };
+export type VatSettingsReader = { organizationSettings: Pick<Prisma.TransactionClient['organizationSettings'], 'findFirst'> };
 
 /**
  * The single source of the VAT rate for every invoice: OrganizationSettings.vatRate
  * (a fraction of 1), falling back to DEFAULT_VAT_RATE.
  */
 export async function resolveVatRate(db: VatSettingsReader): Promise<Prisma.Decimal> {
-  const settings = await db.organizationSettings.findFirst({ where: {}, select: { vatRate: true } });
+  // Same row the settings screen edits (latest by createdAt).
+  const settings = await db.organizationSettings.findFirst({ where: {}, orderBy: { createdAt: 'desc' }, select: { vatRate: true } });
   return new Prisma.Decimal(settings?.vatRate?.toString() ?? DEFAULT_VAT_RATE.toString());
 }
 

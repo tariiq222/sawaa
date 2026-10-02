@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import type { ClientPackagePurchase, PackageFamily, PackageFamilyOption } from '@sawaa/shared/types';
+import type { ClientPackagePurchase, PackageFamilyOption } from '@sawaa/shared/types';
 import { useCurrentClient } from '@/features/auth/public';
 import { useLocale, useT } from '@/features/locale/locale-provider';
 import { getPublicBranches, type PublicBranch } from '@/features/booking/booking.api';
-import { getClientPackagePurchase, initClientPackagePurchase } from './packages.api';
+import { getClientPackagePurchase, initClientPackagePurchase, packageGrossPrice, type PublicPackageFamily } from './packages.api';
 import { halalasToSar } from '@/lib/money';
 
 export function getPackagePurchaseIdempotencyKey(familyId: string, packageId: string, branchId: string, clientId = 'anonymous'): string {
@@ -58,7 +58,7 @@ export function clearPackagePurchaseAttempt(purchase: ClientPackagePurchase): vo
   }
 }
 
-export function PackagePurchaseFeature({ family, packageId }: { family: PackageFamily; packageId: string }) {
+export function PackagePurchaseFeature({ family, packageId }: { family: PublicPackageFamily; packageId: string }) {
   const locale = useLocale();
   const t = useT();
   const branchLoadError = t('packages.branchLoadError');
@@ -88,6 +88,8 @@ export function PackagePurchaseFeature({ family, packageId }: { family: PackageF
   if (!selected) return <p role="alert">{t('packages.optionUnavailable')}</p>;
   const selectedOption = selected;
   const currentClient = client;
+  const vatRate = family.vatRate ?? 0;
+  const currency = locale === 'ar' ? 'ر.س' : 'SAR';
 
   async function submit() {
     if (!branchId) { setError(t('packages.chooseBranch')); return; }
@@ -107,7 +109,12 @@ export function PackagePurchaseFeature({ family, packageId }: { family: PackageF
     <section className="mx-auto max-w-xl rounded-3xl bg-[var(--surface)] p-6 shadow-[var(--sw-shadow-sm)] sm:p-8">
       <h1 className="text-2xl font-black text-[var(--sw-secondary-700)]">{locale === 'ar' ? family.nameAr : family.nameEn || family.nameAr}</h1>
       <p className="mt-2 text-sm text-[var(--sw-body)]">{locale === 'ar' ? selected.nameAr : selected.nameEn || selected.nameAr}</p>
-      <p className="mt-5 text-2xl font-black text-[var(--sw-primary-700)]">{halalasToSar(selected.price.finalPrice)} {locale === 'ar' ? 'ر.س' : 'SAR'}</p>
+      <p className="mt-5 text-2xl font-black text-[var(--sw-primary-700)]">{halalasToSar(packageGrossPrice(selected.price.finalPrice, vatRate))} {currency}</p>
+      {vatRate > 0 && (
+        <p className="mt-1 text-xs text-[var(--sw-body)]">
+          {t('packages.inclVat')} · {t('packages.netPrice')}: {halalasToSar(selected.price.finalPrice)} {currency} · {t('packages.vat')}: {halalasToSar(packageGrossPrice(selected.price.finalPrice, vatRate) - selected.price.finalPrice)} {currency}
+        </p>
+      )}
       {branches.length > 1 && <label className="mt-6 block text-sm font-bold">{t('packages.branch')}<select value={branchId} onChange={(event) => setBranchId(event.target.value)} className="mt-2 block w-full rounded-xl border border-[var(--sw-neutral-200)] p-3"><option value="">{t('packages.chooseBranch')}</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{locale === 'ar' ? branch.nameAr : branch.nameEn || branch.nameAr}</option>)}</select></label>}
       {error && <p role="alert" className="mt-4 text-sm text-[var(--error)]">{error}</p>}
       <button type="button" onClick={() => void submit()} disabled={submitting || !branchId} className="mt-7 w-full rounded-full bg-[var(--sw-primary-500)] px-6 py-3 font-bold text-[var(--on-primary)] disabled:opacity-50">{submitting ? t('packages.redirecting') : t('packages.pay')}</button>

@@ -12,6 +12,7 @@ import { useDir } from '@/hooks/useDir';
 import { usePackagePurchases } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/package-utils';
+import { purchaseChargedHalalas } from '@/lib/package-vat';
 import { PackageCreditCard } from '@/components/features/packages/PackageCreditCard';
 import { BackButton } from '@/components/ui/BackButton';
 
@@ -50,7 +51,7 @@ export default function PackagePurchasesScreen() {
             </Text>
             <View style={[styles.purchaseMeta, { flexDirection: dir.row }]}>
               <Text style={[styles.metaText, { fontFamily: f400 }]}>{t(`packages.status.${purchase.status.toLowerCase()}`)}</Text>
-              <Text style={[styles.metaText, { fontFamily: f600 }]}>{formatHalalas(purchase.amountPaid, dir.locale)}</Text>
+              <Text style={[styles.metaText, { fontFamily: f600 }]}>{formatHalalas(purchaseChargedHalalas(purchase), dir.locale)}</Text>
             </View>
             {purchase.refundAmount > 0 ? (
               <Text style={[styles.refund, { fontFamily: f400 }]}>{t('packages.refund', { amount: formatHalalas(purchase.refundAmount, dir.locale) })}</Text>

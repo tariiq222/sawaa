@@ -280,6 +280,8 @@ export const arSettings: Record<string, string> = {
   "settings.entity.businessRegistration": "السجل التجاري",
   "settings.entity.vatRegistration": "رقم التسجيل الضريبي",
   "settings.entity.vatRate": "نسبة الضريبة %",
+  "settings.entity.vatRateHint": "صفر يعني لا ضريبة. النسبة تنطبق على الفواتير الجديدة فقط.",
+  "settings.entity.vatRateInvalid": "أدخل نسبة بين 0 و100",
   "settings.entity.sellerAddress": "عنوان البائع",
   "settings.entity.organizationCity": "المدينة",
   "settings.entity.postalCode": "الرمز البريدي",

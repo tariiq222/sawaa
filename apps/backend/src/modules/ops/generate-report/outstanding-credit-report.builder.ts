@@ -45,6 +45,7 @@ export async function buildOutstandingCreditReport(
   const purchases = await prisma.packagePurchase.findMany({
     where: { status: PackagePurchaseStatus.ACTIVE },
     select: {
+      id: true,
       amountPaid: true,
       refundAmount: true,
       credits: {
@@ -59,6 +60,17 @@ export async function buildOutstandingCreditReport(
     },
   });
 
+  // amountPaid is the NET price, while refundAmount accumulates GROSS money
+  // returned (invoice total basis, VAT-inclusive when VAT is enabled). Remove
+  // the refunded VAT so both sides of "paid minus refunds" are net.
+  const invoices = purchases.length
+    ? await prisma.invoice.findMany({
+        where: { packagePurchaseId: { in: purchases.map((purchase) => purchase.id) } },
+        select: { packagePurchaseId: true, refundedVatAmt: true },
+      })
+    : [];
+  const refundedVatByPurchase = new Map(invoices.map((invoice) => [invoice.packagePurchaseId, Number(invoice.refundedVatAmt ?? 0)]));
+
   let outstandingLiability = 0;
   let outstandingSessions = 0;
   let creditCount = 0;
@@ -67,7 +79,10 @@ export async function buildOutstandingCreditReport(
   for (const purchase of purchases) {
     const purchaseNet = Math.max(
       0,
-      Math.round(Number(purchase.amountPaid) - Number(purchase.refundAmount ?? 0)),
+      Math.round(
+        Number(purchase.amountPaid)
+          - (Number(purchase.refundAmount ?? 0) - (refundedVatByPurchase.get(purchase.id) ?? 0)),
+      ),
     );
     const fallbackShares = allocatePurchaseNet(
       purchaseNet,

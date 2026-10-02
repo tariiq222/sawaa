@@ -93,3 +93,34 @@ it.each([['details', Detail], ['catalog', Index], ['balance', Purchases], ['book
   view.rerender(<Component />);
   expect(screen.getByRole('button', { name: 'a11y.buttonBack' })).toBeTruthy();
 });
+
+const vatFamily = (vatRate?: number) => ({
+  id: 'family', nameAr: 'باقة', nameEn: 'Care package', descriptionAr: null, descriptionEn: null, isStandalone: false, imageUrl: null,
+  ...(vatRate === undefined ? {} : { vatRate }),
+  options: [{ id: 'opt', nameAr: 'خيار', nameEn: 'Option', sessionCount: 4, price: { finalPrice: 36000 }, displayGroups: [] }],
+});
+
+it.each([[undefined], [0]] as const)('details keeps the net price without a VAT note when vatRate is %s', async (vatRate) => {
+  mockQuery.data = vatFamily(vatRate);
+  await renderScreen(Detail);
+  expect(screen.getByText('360.00 SAR')).toBeTruthy();
+  expect(screen.queryByText(/packages\.vatIncluded/)).toBeNull();
+});
+
+it('details shows the VAT-inclusive price and a net + VAT breakdown when vatRate is above 0', async () => {
+  mockQuery.data = vatFamily(0.15);
+  await renderScreen(Detail);
+  expect(screen.getByText('414.00 SAR')).toBeTruthy();
+  expect(screen.queryByText('360.00 SAR')).toBeNull();
+  expect(screen.getByText(/packages\.vatIncluded/)).toBeTruthy();
+});
+
+it('balance shows the VAT-inclusive charged total, falling back to amountPaid', async () => {
+  const row = (id: string, extra: Record<string, number>) => ({
+    id, status: 'ACTIVE', packageNameAr: id, packageNameEn: id, offerSnapshot: null, amountPaid: 36000, refundAmount: 0, credits: [], ...extra,
+  });
+  mockQuery.data = [row('with-vat', { vatAmount: 5400, totalCharged: 41400 }), row('legacy', {})];
+  await renderScreen(Purchases);
+  expect(screen.getByText('414.00 SAR')).toBeTruthy();
+  expect(screen.getByText('360.00 SAR')).toBeTruthy();
+});

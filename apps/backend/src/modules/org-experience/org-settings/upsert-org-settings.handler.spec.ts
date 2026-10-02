@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
+import { CacheService } from '../../../infrastructure/cache';
 import { PrismaService } from '../../../infrastructure/database';
 import { TENANT_CLS_KEY } from '../../../common/constants';
 import { UpsertOrgSettingsHandler } from './upsert-org-settings.handler';
@@ -9,18 +10,21 @@ describe('UpsertOrgSettingsHandler', () => {
   let handler: UpsertOrgSettingsHandler;
   let prisma: any;
   let cls: any;
+  let cache: any;
 
   beforeEach(async () => {
     prisma = {
       organizationSettings: { findFirst: jest.fn(), update: jest.fn(), create: jest.fn() },
     };
     cls = { get: jest.fn() };
+    cache = { invalidatePrefix: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       providers: [
         UpsertOrgSettingsHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: ClsService, useValue: cls },
+        { provide: CacheService, useValue: cache },
       ],
     }).compile();
 
@@ -100,5 +104,21 @@ describe('UpsertOrgSettingsHandler', () => {
       where: { id: 's1' },
       data: expect.objectContaining({ paymentBankTransferEnabled: true }),
     }));
+  });
+
+  it('refreshes the cached public catalog when the VAT rate changes', async () => {
+    cls.get.mockReturnValue({ isSuperAdmin: true });
+    prisma.organizationSettings.findFirst.mockResolvedValue({ id: 's1' });
+    prisma.organizationSettings.update.mockResolvedValue({ id: 's1', vatRate: 0.15 });
+    await handler.execute({ vatRate: 0.15 } as never);
+    expect(cache.invalidatePrefix).toHaveBeenCalledWith('ref:public-catalog');
+  });
+
+  it('leaves the catalog cache alone when VAT is not part of the update', async () => {
+    cls.get.mockReturnValue({ isSuperAdmin: false });
+    prisma.organizationSettings.findFirst.mockResolvedValue({ id: 's1' });
+    prisma.organizationSettings.update.mockResolvedValue({ id: 's1' });
+    await handler.execute({ contactEmail: 'a@b.sa' } as never);
+    expect(cache.invalidatePrefix).not.toHaveBeenCalled();
   });
 });

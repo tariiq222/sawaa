@@ -43,4 +43,17 @@ describe('PackageCard', () => {
     expect(screen.getByText('packages.sessionCount 6')).toBeTruthy();
     expect(screen.queryByText(/popular|valid/i)).toBeNull();
   });
+
+  it('keeps the net price and shows no VAT note when vatRate is 0', () => {
+    const screen = render(<PackageCard family={{ ...base, vatRate: 0, options: [option('only', 6, 36000)] }} onPress={jest.fn()} />);
+    expect(screen.getByText('360.00 SAR')).toBeTruthy();
+    expect(screen.queryByText('packages.vatIncluded')).toBeNull();
+  });
+
+  it('shows the VAT-inclusive price with a short note when vatRate is above 0', () => {
+    const screen = render(<PackageCard family={{ ...base, vatRate: 0.15, options: [option('only', 6, 36000)] }} onPress={jest.fn()} />);
+    expect(screen.getByText('414.00 SAR')).toBeTruthy();
+    expect(screen.queryByText('360.00 SAR')).toBeNull();
+    expect(screen.getByText('packages.vatIncluded')).toBeTruthy();
+  });
 });

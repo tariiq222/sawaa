@@ -17,6 +17,7 @@ import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { Glass } from '@/theme/components/Glass';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { formatHalalas } from '@/lib/package-utils';
+import { packageGrossHalalas, packageVatRate } from '@/lib/package-vat';
 import { goBackOrHome, loginRedirectHref } from '@/lib/navigation';
 
 type PublicKind = 'service' | 'package' | 'program' | 'therapist';
@@ -105,9 +106,12 @@ export default function PublicDetailScreen() {
             ) : null}
             {family.data && type === 'package' ? family.data.options.map((option) => (
               <Text key={option.id} style={text}>
-                {dir.isRTL ? option.nameAr : option.nameEn ?? option.nameAr} · {formatHalalas(option.price.finalPrice, dir.locale)}
+                {dir.isRTL ? option.nameAr : option.nameEn ?? option.nameAr} · {formatHalalas(packageGrossHalalas(option.price.finalPrice, packageVatRate(family.data)), dir.locale)}
               </Text>
             )) : null}
+            {family.data && type === 'package' && packageVatRate(family.data) > 0 ? (
+              <Text style={text}>{t('packages.vatIncluded')}</Text>
+            ) : null}
           </Glass>
         ) : null}
         {type === 'service' && service ? (

@@ -6,6 +6,7 @@ import { Card, CardContent, Button, Input, Skeleton } from "@sawaa/ui"
 import { useOrganizationSettings, useUpdateOrganizationSettings } from "@/hooks/use-organization-settings"
 import { useLocale } from "@/components/locale-provider"
 import { FormField } from "@/components/features/shared/form-section"
+import { useAuth } from "@/components/providers/auth-provider"
 
 type FormState = {
   contactEmail: string
@@ -19,6 +20,7 @@ type FormState = {
   sellerAddress: string
   organizationCity: string
   postalCode: string
+  vatRatePercent: string
 }
 
 const EMPTY_FORM: FormState = {
@@ -33,10 +35,25 @@ const EMPTY_FORM: FormState = {
   sellerAddress: "",
   organizationCity: "",
   postalCode: "",
+  vatRatePercent: "0",
+}
+
+/** Stored as a fraction (0.15); edited as a percentage (15). */
+function toPercent(rate: number | null | undefined): string {
+  return String(Math.round((rate ?? 0) * 10000) / 100)
+}
+
+function toFraction(percent: string): number | null {
+  const value = Number(percent)
+  if (percent.trim() === "" || !Number.isFinite(value) || value < 0 || value > 100) return null
+  return Math.round(value * 100) / 10000
 }
 
 export function GeneralContactSection() {
   const { t } = useLocale()
+  // The backend accepts vatRate only from a super-admin.
+  const { user } = useAuth()
+  const canEditVat = user?.isSuperAdmin === true
   const { data: settings, isLoading } = useOrganizationSettings()
   const update = useUpdateOrganizationSettings()
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
@@ -56,6 +73,7 @@ export function GeneralContactSection() {
       sellerAddress: settings.sellerAddress ?? "",
       organizationCity: settings.organizationCity ?? "",
       postalCode: settings.postalCode ?? "",
+      vatRatePercent: toPercent(settings.vatRate),
     })
   }, [settings])
 
@@ -64,6 +82,11 @@ export function GeneralContactSection() {
   }
 
   const handleSave = () => {
+    const vatRate = canEditVat ? toFraction(form.vatRatePercent) : undefined
+    if (vatRate === null) {
+      toast.error(t("settings.entity.vatRateInvalid"))
+      return
+    }
     update.mutate(
       {
         contactEmail: form.contactEmail || null,
@@ -77,6 +100,7 @@ export function GeneralContactSection() {
         sellerAddress: form.sellerAddress || null,
         organizationCity: form.organizationCity,
         postalCode: form.postalCode || null,
+        ...(vatRate !== undefined && { vatRate }),
       },
       {
         onSuccess: () => toast.success(t("settings.saved")),
@@ -136,6 +160,21 @@ export function GeneralContactSection() {
             <Input value={form.vatRegistrationNumber} onChange={setField("vatRegistrationNumber")} dir="ltr" />
             <p className="text-xs text-muted-foreground">{t("settings.entity.vatHint")}</p>
           </FormField>
+          {canEditVat && (
+            <FormField label={t("settings.entity.vatRate")}>
+              <Input
+                value={form.vatRatePercent}
+                onChange={setField("vatRatePercent")}
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                inputMode="decimal"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground">{t("settings.entity.vatRateHint")}</p>
+            </FormField>
+          )}
           <FormField label={t("settings.entity.organizationCity")}>
             <Input value={form.organizationCity} onChange={setField("organizationCity")} dir="rtl" />
           </FormField>

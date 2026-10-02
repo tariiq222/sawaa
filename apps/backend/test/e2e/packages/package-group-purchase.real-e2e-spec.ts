@@ -196,6 +196,43 @@ describeRealE2e('grouped package purchase snapshots (real DB)', () => {
     expect(await prisma.packageCredit.count({ where: { purchaseId: pending.purchaseId } })).toBe(issuedBeforeDuplicate);
   });
 
+  it('charges net + VAT online when VAT is enabled and still activates on the gross payment', async () => {
+    const vatClientId = randomUUID();
+    zeroClientIds.push(vatClientId);
+    await prisma.client.create({ data: { id: vatClientId, name: `group-purchase-vat-${vatClientId}`, phone: `05${vatClientId.replaceAll('-', '').slice(0, 8)}` } });
+    const existing = await prisma.organizationSettings.findFirst({ orderBy: { createdAt: 'desc' } });
+    const settingsId = existing
+      ? (await prisma.organizationSettings.update({ where: { id: existing.id }, data: { vatRate: '0.15' } })).id
+      : (await prisma.organizationSettings.create({ data: { vatRate: '0.15' } })).id;
+    try {
+      gatewayCreateCheckout.mockClear();
+      const pending = await initPackagePurchase.execute({
+        packageId: ids.packageId, branchId: ids.branchId, clientId: vatClientId, idempotencyKey: randomUUID(),
+      });
+      zeroPurchaseIds.push(pending.purchaseId);
+
+      const purchase = await prisma.packagePurchase.findUniqueOrThrow({ where: { id: pending.purchaseId } });
+      const net = Number(purchase.amountPaid);
+      const vat = Math.round(net * 0.15);
+      const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id: pending.invoiceId } });
+      expect(Number(invoice.vatAmt)).toBe(vat);
+      expect(Number(invoice.total)).toBe(net + vat);
+      expect(Number((await prisma.payment.findUniqueOrThrow({ where: { id: pending.paymentId } })).amount)).toBe(net + vat);
+      expect(gatewayCreateCheckout).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ amountHalalas: net + vat }));
+
+      await activatePackagePurchase.handle({ payload: {
+        packagePurchaseId: pending.purchaseId, paymentId: pending.paymentId, invoiceId: pending.invoiceId,
+        bookingId: null, amount: net + vat, currency: 'SAR',
+      } } as never);
+      const activated = await prisma.packagePurchase.findUniqueOrThrow({ where: { id: pending.purchaseId }, include: { credits: true } });
+      expect(activated.status).toBe('ACTIVE');
+      expect(activated.credits.length).toBeGreaterThan(0);
+    } finally {
+      if (existing) await prisma.organizationSettings.update({ where: { id: settingsId }, data: { vatRate: existing.vatRate } });
+      else await prisma.organizationSettings.delete({ where: { id: settingsId } });
+    }
+  });
+
   it.each(['full-discount', 'zero-prices'])('issues zero-value rights without a fake payment: %s', async (variant) => {
     const zeroClientId = randomUUID();
     zeroClientIds.push(zeroClientId);

@@ -87,6 +87,56 @@ const cmd = (over: Record<string, unknown> = {}) => ({
 describe('RefundPackagePurchaseHandler', () => {
   afterEach(() => jest.clearAllMocks());
 
+  describe('with VAT on the invoice (net amountPaid 36000, gross total 41400)', () => {
+    function vatTx(refunded: { amount: number; vat: number } = { amount: 0, vat: 0 }) {
+      const tx = buildTx({ purchaseRow: activePurchase({ amountPaid: 36_000, refundAmount: refunded.amount }) });
+      tx.invoice.findFirst.mockResolvedValue({
+        id: INVOICE_ID, total: 41_400, vatAmt: 5_400,
+        refundedAmount: refunded.amount, refundedVatAmt: refunded.vat,
+        currency: 'SAR', clientId: CLIENT_ID,
+        payments: [{ id: PAYMENT_ID, refundedAmount: refunded.amount }],
+      });
+      return tx;
+    }
+
+    it('allows refunding the gross total and treats it as a full refund', async () => {
+      const tx = vatTx();
+      const { handler } = buildHandler({ tx });
+      await handler.execute(cmd({ refundAmount: 41_400 }));
+
+      expect(tx.packagePurchase.updateMany.mock.calls[0][0].data.status).toBe(PackagePurchaseStatus.REFUNDED);
+      expect(tx.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'REFUNDED', refundedAmount: 41_400, refundedVatAmt: 5_400 }),
+      }));
+    });
+
+    it('treats a net-sized refund as partial, keeping credits', async () => {
+      const tx = vatTx();
+      const { handler } = buildHandler({ tx });
+      await handler.execute(cmd({ refundAmount: 36_000 }));
+
+      expect(tx.packagePurchase.updateMany.mock.calls[0][0].data.status).toBe(PackagePurchaseStatus.ACTIVE);
+      expect(tx.$executeRaw).not.toHaveBeenCalled();
+    });
+
+    it('accumulates refunded VAT across partial refunds and closes it exactly on the last one', async () => {
+      // First partial already refunded 20700 gross carrying 2700 VAT.
+      const tx = vatTx({ amount: 20_700, vat: 2_700 });
+      const { handler } = buildHandler({ tx });
+      await handler.execute(cmd({ refundAmount: 20_700 }));
+
+      expect(tx.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ refundedAmount: 41_400, refundedVatAmt: 5_400, status: 'REFUNDED' }),
+      }));
+    });
+
+    it('rejects a refund above the gross outstanding balance', async () => {
+      const tx = vatTx();
+      const { handler } = buildHandler({ tx });
+      await expect(handler.execute(cmd({ refundAmount: 41_401 }))).rejects.toThrow(BadRequestException);
+    });
+  });
+
   it('404 when the purchase does not exist', async () => {
     const tx = buildTx({ purchaseRow: null });
     const { handler } = buildHandler({ tx });

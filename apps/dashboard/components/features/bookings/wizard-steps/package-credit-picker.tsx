@@ -6,6 +6,7 @@ import { Button } from "@sawaa/ui"
 
 import { useLocale } from "@/components/locale-provider"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
+import { grossWithVat } from "@/lib/money"
 import {
   PaymentMethodPicker,
   resolveActiveMethod,
@@ -119,7 +120,10 @@ export function CatalogCard({
   locale,
   itemsCountLabel,
 }: CatalogCardProps): JSX.Element {
-  const finalPriceHalalas = Number(pkg.finalPrice) || 0
+  const { t } = useLocale()
+  // The sale invoice adds VAT on top of the net finalPrice (0 unless enabled).
+  const vatRate = Number(pkg.vatRate) || 0
+  const totalHalalas = grossWithVat(Number(pkg.finalPrice) || 0, vatRate)
   return (
     <WizardCard selected={selected} onClick={onToggle} className="px-4 py-3.5">
       <div className="flex items-start gap-3 text-start">
@@ -134,7 +138,10 @@ export function CatalogCard({
             {itemsCountLabel}
           </span>
           <span className="text-xs font-semibold text-foreground tabular-nums">
-            <FormattedCurrency amount={finalPriceHalalas} locale={locale} decimals={2} />
+            <FormattedCurrency amount={totalHalalas} locale={locale} decimals={2} />
+            {vatRate > 0 && (
+              <span className="ms-1 font-normal text-muted-foreground">{t("packages.sell.price.inclVat")}</span>
+            )}
           </span>
         </div>
       </div>

@@ -71,6 +71,7 @@ function buildPrisma() {
   const invoice = { findUnique: jest.fn() };
   const payment = { findFirst: jest.fn() };
   const tx = {
+    organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
     sessionPackage: { findFirst: jest.fn() },
     client: { findFirst: jest.fn() },
     packagePurchase: {
@@ -362,6 +363,26 @@ describe('CreatePackagePurchaseHandler', () => {
       expect(invoiceData.employeeId).toBe(EMPLOYEE_ID);
       expect(invoiceData.status).toBe('DRAFT');
       expect(invoiceData.issuedAt ?? null).toBeNull();
+    });
+
+    it('adds VAT on top when the setting is 15%: gross invoice and collected payment, net amountPaid', async () => {
+      mockHappyPath(prisma);
+      const { handler, tx, processPayment, eventBus } = buildHandler(prisma);
+      tx.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
+
+      await handler.execute(validDto());
+
+      const gross = FINAL_PRICE_HALALAS + Math.round(FINAL_PRICE_HALALAS * 0.15);
+      const invoiceData = tx.invoice.create.mock.calls[0][0].data;
+      expect(Number(invoiceData.vatRate)).toBe(0.15);
+      expect(Number(invoiceData.vatAmt)).toBe(gross - FINAL_PRICE_HALALAS);
+      expect(Number(invoiceData.total)).toBe(gross);
+      expect(Number(tx.packagePurchase.create.mock.calls[0][0].data.amountPaid)).toBe(FINAL_PRICE_HALALAS);
+      expect(processPayment.execute.mock.calls[0][0].amount).toBe(gross);
+      expect(eventBus.publishOptional).toHaveBeenCalledWith(
+        'finance.invoice.created',
+        expect.objectContaining({ payload: expect.objectContaining({ total: gross }) }),
+      );
     });
 
     it('records the manual payment via ProcessPaymentHandler for the full finalPrice, making the invoice PAID', async () => {

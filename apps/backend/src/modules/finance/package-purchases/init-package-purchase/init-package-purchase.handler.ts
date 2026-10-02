@@ -18,6 +18,8 @@ import {
 } from "../../../../infrastructure/database";
 import { ComputePackagePriceService } from "../../../org-experience/compute-package-price.service";
 import { MoyasarApiClient } from "../../moyasar-api/moyasar-api.client";
+import { resolveVatRate } from "../../create-invoice/create-invoice.handler";
+import { computeVat } from "../../money.helper";
 import { DEFAULT_ORG_ID } from "../../../../common/constants";
 import { InitPackagePurchaseDto } from "./init-package-purchase.dto";
 import {
@@ -259,7 +261,16 @@ export class InitPackagePurchaseHandler {
       }
     }
 
-    if (price.finalPrice < 100) {
+    // VAT sits on top of the net package price, like booking invoices.
+    // amountPaid stays NET (the credit-valuation basis); the invoice and the
+    // gateway charge are GROSS. A keyed retry reuses its stored invoice total.
+    const vatRate = await resolveVatRate(this.prisma);
+    const vat = computeVat(new Prisma.Decimal(price.finalPrice), vatRate);
+    const charge = { vatRate, vatAmt: vat.vatAmtHalalas, total: vat.totalHalalas };
+
+    // A keyed retry reuses its frozen invoice total (materializePending), so the
+    // current rate must not re-judge it against the gateway minimum.
+    if (!keyedPurchase && charge.total.lessThan(100)) {
       throw new BadRequestException(
         "This package cannot be purchased online (price below the gateway minimum)",
       );
@@ -270,6 +281,7 @@ export class InitPackagePurchaseHandler {
       await this.materializePending(
         cmd,
         price,
+        charge,
         creditSnapshot,
         requestFingerprint,
         offerSnapshot,
@@ -342,6 +354,7 @@ export class InitPackagePurchaseHandler {
   private async materializePending(
     cmd: InitPackagePurchaseCommand,
     price: { subtotal: number; discountAmount: number; finalPrice: number },
+    charge: { vatRate: Prisma.Decimal; vatAmt: Prisma.Decimal; total: Prisma.Decimal },
     creditSnapshot: PackageCreditSnapshotItem[] | GroupedPackagePurchaseSnapshot,
     requestFingerprint: string,
     offerSnapshot: ReturnType<typeof buildPackageOfferSnapshot>,
@@ -512,10 +525,10 @@ export class InitPackagePurchaseHandler {
             packagePurchaseId: purchase.id,
             subtotal: new Prisma.Decimal(price.subtotal),
             discountAmt: new Prisma.Decimal(price.discountAmount),
-            // VAT = 0 — the center is not VAT-registered (CLAUDE.md).
-            vatRate: new Prisma.Decimal(0),
-            vatAmt: new Prisma.Decimal(0),
-            total: new Prisma.Decimal(price.finalPrice),
+            // VAT follows OrganizationSettings.vatRate (0 unless enabled).
+            vatRate: charge.vatRate,
+            vatAmt: charge.vatAmt,
+            total: charge.total,
             // DRAFT ("awaiting payment") until the Moyasar webhook confirms the
             // first COMPLETED payment, which stamps issuedAt and flips it to PAID.
             status: "DRAFT",
@@ -526,7 +539,7 @@ export class InitPackagePurchaseHandler {
         const payment = await tx.payment.create({
           data: {
             invoiceId: invoice.id,
-            amount: new Prisma.Decimal(price.finalPrice),
+            amount: charge.total,
             currency: "SAR",
             method: PaymentMethod.ONLINE_CARD,
             status: PaymentStatus.PENDING,
@@ -539,7 +552,7 @@ export class InitPackagePurchaseHandler {
           purchaseId: purchase.id,
           invoiceId: invoice.id,
           paymentId: payment.id,
-          amountHalalas: price.finalPrice,
+          amountHalalas: charge.total.toNumber(),
         };
       });
     } catch (error) {
@@ -566,6 +579,7 @@ export class InitPackagePurchaseHandler {
       return this.materializePending(
         cmd,
         price,
+        charge,
         creditSnapshot,
         requestFingerprint,
         offerSnapshot,

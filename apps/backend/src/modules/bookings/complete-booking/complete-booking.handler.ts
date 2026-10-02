@@ -70,6 +70,8 @@ export class CompleteBookingHandler {
         if (!existing) {
           const orgSettings = await tx.organizationSettings.findFirst({
             where: {},
+            // Same row the settings screen edits and invoices read (latest).
+            orderBy: { createdAt: 'desc' },
             select: { vatRate: true },
           });
           const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0');

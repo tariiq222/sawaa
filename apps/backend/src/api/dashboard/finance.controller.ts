@@ -553,7 +553,7 @@ export class DashboardFinanceController {
   @ApiOperation({ summary: 'Manually refund a session-package purchase (marks REFUNDED, voids credits, records the refund)' })
   @ApiParam({ name: 'purchaseId', description: 'Package purchase UUID', example: '00000000-0000-4000-a000-000000000007' })
   @ApiOkResponse({ description: 'Purchase marked REFUNDED, credits voided, refund recorded' })
-  @ApiResponse({ status: 400, description: 'Already refunded or refundAmount outside [0, amountPaid]', type: ApiErrorDto })
+  @ApiResponse({ status: 400, description: 'Already refunded or refundAmount outside [0, amount charged (invoice total)]', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Package purchase not found', type: ApiErrorDto })
   @HttpCode(HttpStatus.OK)
   refundPackagePurchaseEndpoint(

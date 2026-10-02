@@ -282,6 +282,8 @@ export const enSettings: Record<string, string> = {
   "settings.entity.businessRegistration": "Business Registration (CR)",
   "settings.entity.vatRegistration": "VAT Registration Number",
   "settings.entity.vatRate": "VAT Rate %",
+  "settings.entity.vatRateHint": "0 means no VAT. The rate applies to new invoices only.",
+  "settings.entity.vatRateInvalid": "Enter a rate between 0 and 100",
   "settings.entity.sellerAddress": "Seller Address",
   "settings.entity.organizationCity": "City",
   "settings.entity.postalCode": "Postal Code",

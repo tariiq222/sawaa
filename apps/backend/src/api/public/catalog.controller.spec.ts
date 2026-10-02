@@ -138,6 +138,7 @@ describe('PublicCatalogController (e2e)', () => {
 
       expect(mockPrisma.organizationSettings.findFirst).toHaveBeenCalledWith({
         where: {},
+        orderBy: { createdAt: 'desc' },
         select: { vatRate: true },
       });
       expect(res.body.vatRate).toBe(0.15);

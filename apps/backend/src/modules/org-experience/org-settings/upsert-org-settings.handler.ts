@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/com
 import { Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { TENANT_CLS_KEY } from '../../../common/constants';
 import { UpsertOrgSettingsDto } from './upsert-org-settings.dto';
 import { getValidBankTransferAccounts, isClientBankTransferEnabled } from './bank-transfer-settings';
@@ -11,6 +12,7 @@ export class UpsertOrgSettingsHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cls: ClsService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: UpsertOrgSettingsDto) {
@@ -49,12 +51,11 @@ export class UpsertOrgSettingsHandler {
     ) {
       throw new BadRequestException('Every bank transfer account must include a valid Saudi IBAN and account details');
     }
-    if (existing) {
-      return this.prisma.organizationSettings.update({
-        where: { id: existing.id },
-        data,
-      });
-    }
-    return this.prisma.organizationSettings.create({ data });
+    const saved = existing
+      ? await this.prisma.organizationSettings.update({ where: { id: existing.id }, data })
+      : await this.prisma.organizationSettings.create({ data });
+    // The cached public service catalog carries vatRate; refresh it on change.
+    if (dto.vatRate !== undefined) await this.cache.invalidatePrefix('ref:public-catalog');
+    return saved;
   }
 }

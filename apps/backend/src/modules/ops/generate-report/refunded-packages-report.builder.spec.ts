@@ -59,6 +59,7 @@ function makePrisma(fixtures: {
   requests?: any[];
   display?: any[];
   candidates?: any[];
+  invoices?: any[];
 } = {}) {
   const {
     dated = [],
@@ -67,6 +68,7 @@ function makePrisma(fixtures: {
     requests = [],
     display = [],
     candidates = [],
+    invoices = [],
   } = fixtures;
 
   const client: any = {
@@ -80,6 +82,9 @@ function makePrisma(fixtures: {
       },
     refundRequest: {
       findMany: jest.fn().mockResolvedValue(requests),
+    },
+    invoice: {
+      findMany: jest.fn().mockResolvedValue(invoices),
     },
     packagePurchase: {
       findMany: jest.fn().mockImplementation(({ where }: any) => {
@@ -558,5 +563,16 @@ describe('buildRefundedPackagesReport', () => {
       });
       expect(result.totalRefunded).toBe(700);
     });
+  });
+
+  it('reports the VAT-inclusive amount charged from the invoice, not the net amountPaid', async () => {
+    const prisma = makePrisma({
+      dated: [{ id: 'ev-1', purchaseId: 'p-1', amount: new Prisma.Decimal(41_400), source: 'LIVE', refundType: 'FULL', occurredAt: new Date('2026-01-10'), notes: null }],
+      display: [{ id: 'p-1', packageId: 'pkg-1', clientId: 'c-1', amountPaid: new Prisma.Decimal(36_000) }],
+      invoices: [{ packagePurchaseId: 'p-1', total: new Prisma.Decimal(41_400) }],
+    });
+    const result: any = await buildRefundedPackagesReport(prisma, { from: new Date('2026-01-01'), to: new Date('2026-01-31') });
+    expect(result.items[0].amountPaid).toBe(41_400);
+    expect(result.items[0].refundAmount).toBe(41_400);
   });
 });

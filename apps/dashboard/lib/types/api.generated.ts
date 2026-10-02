@@ -10511,7 +10511,7 @@ export interface components {
              */
             notes?: string;
             /**
-             * @description Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount paid. 0 records a cancellation with no money returned.
+             * @description Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount charged (the invoice total, VAT-inclusive). 0 records a cancellation with no money returned.
              * @example 50000
              */
             refundAmount: number;
@@ -18829,7 +18829,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Already refunded or refundAmount outside [0, amountPaid] */
+            /** @description Already refunded or refundAmount outside [0, amount charged (invoice total)] */
             400: {
                 headers: {
                     [name: string]: unknown;
