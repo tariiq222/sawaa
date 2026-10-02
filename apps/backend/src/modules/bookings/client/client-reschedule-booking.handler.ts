@@ -58,7 +58,8 @@ export class ClientRescheduleBookingHandler {
       : randomUUID();
 
     const mutate = async (tx: Prisma.TransactionClient): Promise<RescheduleResult> => {
-      // Global booking lock order: client, then employee/slot, then booking mutation.
+      // Global booking lock order: client, then booking row, then employee/slot
+      // (shared with the staff reschedule so the two cannot deadlock).
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(cmd.clientId)}::int)`;
 
       const booking = await tx.booking.findUnique({ where: { id: cmd.bookingId } });

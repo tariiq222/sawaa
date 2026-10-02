@@ -14,7 +14,7 @@ jest.mock('../booking-lifecycle.helper', () => ({
   fetchBookingOrFail: jest.fn(),
 }));
 
-import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { fetchBookingOrFail, hashToInt32 } from '../booking-lifecycle.helper';
 
 const buildSettingsHandler = (overrides = {}) => ({
   execute: jest.fn().mockResolvedValue({
@@ -503,6 +503,60 @@ describe('RescheduleBookingHandler', () => {
     expect(prisma.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ eventType: 'bookings.zoom.reschedule_requested', status: 'PENDING_V2' }),
     }));
+  });
+
+  it('10a. derives the Zoom revision from the locked row, not the pre-transaction snapshot', async () => {
+    // Simulates a retry after losing to a concurrent reschedule: the snapshot
+    // loaded before the transaction still says revision 1, the row says 4.
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(
+      makeBooking({ zoomMeetingId: 'zoom-123', zoomSyncRevision: 1 }),
+    );
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue(
+      makeBooking({ zoomMeetingId: 'zoom-123', zoomSyncRevision: 4 }),
+    );
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      buildAvailabilityHandler() as never,
+    );
+
+    await handler.execute({ bookingId: 'book-1', newScheduledAt: futureDate, changedBy: 'user-1' });
+
+    expect(prisma.bookingZoomSync.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ revision: 5 }),
+    }));
+  });
+
+  it('10b. locks client, then booking row, then employee/slot (same order as the client reschedule)', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking({ clientId: 'client-a' }));
+    const prisma = buildPrisma();
+    const order: string[] = [];
+    const queryRaw = prisma.$queryRaw as jest.Mock;
+    const originalQueryRaw = queryRaw.getMockImplementation()!;
+    (prisma.$executeRaw as jest.Mock).mockImplementation(async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      order.push(values.length === 2 && strings.join('').includes('pg_advisory_xact_lock') ? `advisory` : 'execute');
+    });
+    queryRaw.mockImplementation(async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      if (strings.join('').includes('FOR UPDATE')) order.push('booking-row');
+      return originalQueryRaw(strings, ...values);
+    });
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      buildAvailabilityHandler() as never,
+    );
+
+    await handler.execute({ bookingId: 'book-1', newScheduledAt: futureDate, changedBy: 'user-1' });
+
+    expect(order).toEqual(['advisory', 'booking-row', 'advisory']);
+    const [clientLock, slotLock] = (prisma.$executeRaw as jest.Mock).mock.calls;
+    expect(clientLock.slice(1)).toEqual([hashToInt32('client_booking'), hashToInt32('client-a')]);
+    expect(slotLock.slice(1)[0]).toBe(hashToInt32(makeBooking().employeeId));
   });
 
   it('11. skips zoom updateMeeting when booking has no zoomMeetingId', async () => {

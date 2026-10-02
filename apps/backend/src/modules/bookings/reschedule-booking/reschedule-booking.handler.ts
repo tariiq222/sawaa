@@ -47,7 +47,7 @@ export class RescheduleBookingHandler {
   async execute(cmd: RescheduleBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING, BookingStatus.CONFIRMED], 'rescheduled');
     // RESCHEDULE is a self-loop: status stays the same (PENDING or CONFIRMED)
-    const nextStatus = assertTransition(booking.status, 'RESCHEDULE');
+    assertTransition(booking.status, 'RESCHEDULE');
     if (cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');
     }
@@ -93,6 +93,24 @@ export class RescheduleBookingHandler {
     // transaction; retry it once with a fresh snapshot so the loser gets the
     // real outcome (e.g. the reschedule limit) instead of a 500.
     const [updated] = await retrySerializableTransaction(() => this.rlsTransaction.withTransaction(async (tx) => {
+        // Lock order shared with the client reschedule and create-booking:
+        // client, then booking row, then employee/slot. A different order
+        // lets a staff and a client reschedule of the same booking deadlock.
+        if (booking.clientId) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(booking.clientId)}::int)`;
+        }
+
+        // Lock the booking row, then re-read it: a retried attempt must build
+        // on the status, time and Zoom revision committed by the transaction
+        // it lost to, not on the snapshot loaded before the first attempt.
+        await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`;
+        const locked = await tx.booking.findUnique({
+          where: { id: cmd.bookingId },
+          select: { status: true, scheduledAt: true, zoomSyncRevision: true },
+        });
+        if (!locked) throw new BadRequestException(`Booking ${cmd.bookingId} not found`);
+        const nextStatus = assertTransition(locked.status, 'RESCHEDULE');
+
         // Parity with create-booking (CR-5): acquire an advisory lock scoped to
         // employee + new slot window BEFORE the conflict check so a concurrent
         // create/reschedule on the same slot cannot both see "no conflict" and
@@ -101,9 +119,6 @@ export class RescheduleBookingHandler {
         const lockKey2 = hashToInt32(`${newScheduledAt.toISOString()}:${newEndsAt.toISOString()}`);
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
 
-        // Lock the booking row before counting so two concurrent reschedules
-        // of the same booking cannot both pass the limit.
-        await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`;
         const rescheduleCount = await tx.bookingStatusLog.count({
           where: { bookingId: cmd.bookingId, reason: 'rescheduled' },
         });
@@ -153,11 +168,11 @@ export class RescheduleBookingHandler {
           throw new ConflictException('Employee already has a booking in the new time slot');
         }
 
-        const revision = booking.zoomMeetingId ? (booking.zoomSyncRevision ?? 0) + 1 : null;
+        const revision = booking.zoomMeetingId ? (locked.zoomSyncRevision ?? 0) + 1 : null;
         const writes: Array<Promise<unknown> | Prisma.PrismaPromise<unknown>> = [
           updateBookingAtomically(tx, {
             bookingId: cmd.bookingId,
-            currentStatus: booking.status,
+            currentStatus: locked.status,
             actionLabel: 'rescheduled',
             data: {
               scheduledAt: newScheduledAt,
@@ -192,7 +207,7 @@ export class RescheduleBookingHandler {
           tx.bookingStatusLog.create({
             data: {
               bookingId: cmd.bookingId,
-              fromStatus: booking.status,
+              fromStatus: locked.status,
               toStatus: nextStatus,
               changedBy: cmd.changedBy,
               reason: 'rescheduled',
@@ -211,7 +226,7 @@ export class RescheduleBookingHandler {
               entityId: cmd.bookingId,
               description: 'Booking rescheduled',
               metadata: {
-                fromScheduledAt: booking.scheduledAt.toISOString(),
+                fromScheduledAt: locked.scheduledAt.toISOString(),
                 toScheduledAt: newScheduledAt.toISOString(),
                 durationMins,
               },
