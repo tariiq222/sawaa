@@ -526,6 +526,7 @@
     "fullName": "Full Name",
     "fullNamePlaceholder": "Enter your full name",
     "phone": "Phone",
+    "emailReadOnly": "This email is linked to your account and cannot be changed here.",
     "email": "Email",
     "saveProfile": "Save Changes",
     "profileSaved": "Profile updated",
@@ -762,6 +763,7 @@
     "rateStars": "Rate {{count}} stars"
   },
   "guest": {
+    "loadError": "Unable to load the list. Please try again.",
     "chooseClinicOrService": "Choose a clinic or service",
     "visitorAccount": "Guest space",
     "accountIntro": "Explore clinics, specialists, and packages without signing in.",

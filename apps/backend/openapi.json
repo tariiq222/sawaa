@@ -36828,6 +36828,107 @@
         ]
       }
     },
+    "/api/v1/mobile/client/payments/package-purchases/init": {
+      "post": {
+        "operationId": "MobileClientPaymentsController_initPackagePurchaseEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitPackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "invoiceId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "paymentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "purchaseId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "redirectUrl": {
+                      "example": "https://checkout.moyasar.com/pay/payment-id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "purchaseId",
+                    "invoiceId",
+                    "paymentId",
+                    "redirectUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Package purchase initialized (PENDING until the Moyasar payment completes)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initialize a Moyasar payment to self-purchase a session package",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
     "/api/v1/mobile/client/portal/home": {
       "get": {
         "operationId": "MobileClientHomeController_home_v1",

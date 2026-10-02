@@ -6,6 +6,7 @@ import { ListPaymentsHandler } from '../../../modules/finance/list-payments/list
 import { GetInvoiceHandler } from '../../../modules/finance/get-invoice/get-invoice.handler';
 import { BankTransferUploadHandler } from '../../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { InitClientPaymentHandler } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
+import { InitPackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { GetClientBankTransferSettingsHandler } from '../../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
 
@@ -26,6 +27,7 @@ describe('MobileClientPaymentsController (e2e)', () => {
         { provide: GetInvoiceHandler, useValue: mockGetInvoice },
         { provide: BankTransferUploadHandler, useValue: mockBankTransfer },
         { provide: InitClientPaymentHandler, useValue: mockInitPayment },
+        { provide: InitPackagePurchaseHandler, useValue: { execute: jest.fn() } },
         { provide: GetClientBankTransferSettingsHandler, useValue: mockGetBankTransferSettings },
       ],
     })

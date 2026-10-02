@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -79,6 +79,14 @@ export default function PublicListScreen() {
   const loading = kind === 'clinics' ? clinics.isLoading
     : kind === 'therapists' ? therapists.isLoading || Boolean(clinicId && clinics.isLoading)
       : kind === 'packages' ? families.isLoading : programs.isLoading;
+  const activeQuery = kind === 'clinics' ? clinics : kind === 'therapists' ? therapists
+    : kind === 'packages' ? families : programs;
+  const needsClinicContext = kind === 'therapists' && Boolean(clinicId);
+  const loadError = valid && (activeQuery.isError || (needsClinicContext && clinics.isError));
+  const retry = () => {
+    void activeQuery.refetch();
+    if (needsClinicContext) void clinics.refetch();
+  };
   const title = kind === 'clinics' ? t('clinics.title') : kind === 'therapists' ? t('guest.therapists') : kind === 'packages' ? t('guest.packages') : t('guest.programs');
 
   const openDetail = (detailKind: string, id: string, extra: Record<string, string> = {}) =>
@@ -130,9 +138,19 @@ export default function PublicListScreen() {
               />
             ) : null}
             {valid && loading ? <ActivityIndicator color={colors.teal[700]} /> : null}
+            {loadError ? (
+              <View style={styles.error}>
+                <Text style={[styles.errorText, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400') }]}>
+                  {t('guest.loadError')}
+                </Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={t('common.retry')} onPress={retry} style={styles.retry}>
+                  <Text style={{ color: colors.teal[700], fontFamily: getFontName(dir.locale, '700') }}>{t('common.retry')}</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         )}
-        ListEmptyComponent={!loading ? (
+        ListEmptyComponent={!loading && !loadError ? (
           <Text style={[styles.empty, { color: colors.ink[500], fontFamily: getFontName(dir.locale, '400') }]}>{t('guest.empty')}</Text>
         ) : null}
         renderItem={renderItem}
@@ -149,5 +167,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, flexGrow: 1 },
   header: { gap: sawaaSpacing.md, marginBottom: sawaaSpacing.xl },
   separator: { height: sawaaSpacing.md },
+  error: { alignItems: 'center', gap: sawaaSpacing.sm },
+  errorText: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  retry: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: sawaaSpacing.md },
   empty: { fontSize: 15, lineHeight: 22, textAlign: 'center', padding: sawaaSpacing['2xl'] },
 });
