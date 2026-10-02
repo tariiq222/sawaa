@@ -267,7 +267,10 @@ describe('RescheduleBookingHandler', () => {
   it('6. throws ConflictException when conflict found inside transaction', async () => {
     (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());
     const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue({ id: 'conflict-booking' });
+    // First lookup = client overlap (none), second = employee conflict.
+    prisma.booking.findFirst = jest.fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'conflict-booking' });
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
@@ -284,6 +287,26 @@ describe('RescheduleBookingHandler', () => {
         changedBy: 'user-1',
       }),
     ).rejects.toThrow('Employee already has a booking in the new time slot');
+  });
+
+  it('6a. rejects a new time that overlaps another active appointment of the same client', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValueOnce({ id: 'client-other-booking' });
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+      buildAvailabilityHandler() as never,
+    );
+
+    await expect(
+      handler.execute({ bookingId: 'book-1', newScheduledAt: futureDate, changedBy: 'user-1' }),
+    ).rejects.toThrow('Client already has an overlapping appointment');
+    expect(prisma.booking.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ clientId: makeBooking().clientId, id: { not: 'book-1' } }),
+    }));
   });
 
   it('6b. acquires pg_advisory_xact_lock before the in-transaction conflict check', async () => {

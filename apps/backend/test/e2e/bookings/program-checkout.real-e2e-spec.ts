@@ -153,4 +153,49 @@ describeRealE2e('program enrollment checkout concurrency (real PostgreSQL)', () 
       await prisma.branch.deleteMany({ where: { id: branchId } }).catch(() => undefined);
     }
   });
+
+  it('gives the last seat to exactly one of two different clients enrolling at once', async () => {
+    const ids = {
+      branchId: randomUUID(), employeeId: randomUUID(), programId: randomUUID(),
+      clientA: randomUUID(), clientB: randomUUID(),
+    };
+    await prisma.branch.create({ data: { id: ids.branchId, nameAr: `seat-${ids.branchId}`, isActive: true } });
+    await prisma.employee.create({ data: { id: ids.employeeId, name: `seat-${ids.employeeId}`, isActive: true } });
+    await prisma.client.createMany({ data: [
+      { id: ids.clientA, name: `seat-a-${ids.clientA}`, isActive: true },
+      { id: ids.clientB, name: `seat-b-${ids.clientB}`, isActive: true },
+    ] });
+    await prisma.program.create({
+      data: {
+        id: ids.programId, departmentId: randomUUID(), branchId: ids.branchId, nameAr: `Seat ${ids.programId}`,
+        daysCount: 1, hoursPerDay: 1, minParticipants: 1, maxParticipants: 1, enrolledCount: 0,
+        price: 10_000, currency: 'SAR', status: 'OPEN', isPublic: true,
+      },
+    });
+    await prisma.programSupervisor.create({ data: { programId: ids.programId, employeeId: ids.employeeId } });
+
+    try {
+      const handler = app.get(EnrollInProgramHandler);
+      const attempts = await Promise.allSettled([
+        handler.execute({ programId: ids.programId, clientId: ids.clientA }),
+        handler.execute({ programId: ids.programId, clientId: ids.clientB }),
+      ]);
+
+      expect(attempts.filter((a) => a.status === 'fulfilled')).toHaveLength(1);
+      expect(attempts.filter((a) => a.status === 'rejected')).toHaveLength(1);
+      expect(await prisma.programEnrollment.count({ where: { programId: ids.programId } })).toBe(1);
+      expect(await prisma.program.findUniqueOrThrow({ where: { id: ids.programId }, select: { enrolledCount: true } }))
+        .toEqual({ enrolledCount: 1 });
+    } finally {
+      const bookings = await prisma.booking.findMany({ where: { programId: ids.programId }, select: { id: true } }).catch(() => [] as Array<{ id: string }>);
+      await prisma.invoice.deleteMany({ where: { bookingId: { in: bookings.map((b) => b.id) } } }).catch(() => undefined);
+      await prisma.programEnrollment.deleteMany({ where: { programId: ids.programId } }).catch(() => undefined);
+      await prisma.booking.deleteMany({ where: { programId: ids.programId } }).catch(() => undefined);
+      await prisma.programSupervisor.deleteMany({ where: { programId: ids.programId } }).catch(() => undefined);
+      await prisma.program.deleteMany({ where: { id: ids.programId } }).catch(() => undefined);
+      await prisma.client.deleteMany({ where: { id: { in: [ids.clientA, ids.clientB] } } }).catch(() => undefined);
+      await prisma.employee.deleteMany({ where: { id: ids.employeeId } }).catch(() => undefined);
+      await prisma.branch.deleteMany({ where: { id: ids.branchId } }).catch(() => undefined);
+    }
+  });
 });

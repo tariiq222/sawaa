@@ -1,3 +1,4 @@
+import { retrySerializableTransaction } from '../../../common/database/person-reference-lock.helper';
 import {
   BadRequestException,
   ConflictException,
@@ -93,6 +94,9 @@ export class ClientRescheduleBookingHandler {
         );
       }
 
+      // Lock the booking row before counting so two concurrent reschedules
+      // of the same booking cannot both pass the limit.
+      await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`;
       const rescheduleCount = await tx.bookingStatusLog.count({
         where: { bookingId: cmd.bookingId, reason: 'rescheduled' },
       });
@@ -248,7 +252,7 @@ export class ClientRescheduleBookingHandler {
 
     const result = cmd.transaction
       ? await mutate(cmd.transaction)
-      : await this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' });
+      : await retrySerializableTransaction(() => this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' }));
     return cmd.transaction ? result : { booking: result.booking };
   }
 
