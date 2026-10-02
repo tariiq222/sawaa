@@ -6,12 +6,14 @@ const mockTherapists = { data: undefined as unknown, isLoading: false, isError: 
 const mockClinics = { data: undefined as unknown, isLoading: false, isError: false, refetch: jest.fn() };
 
 jest.mock('expo-router', () => ({
+  useIsFocused: () => true,
   useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
   useLocalSearchParams: () => mockParams,
 }));
 jest.mock('@/hooks/queries', () => ({
   useTherapists: () => mockTherapists,
   useClinics: () => mockClinics,
+  useServicePriceFloors: () => ({}),
 }));
 jest.mock('@/hooks/useA11y', () => ({
   useReduceMotion: () => true,

@@ -36,22 +36,32 @@ import {
   toMobileDeliveryType,
   type PractitionerBookingOption,
 } from '@/features/booking/booking-options';
+import { bookingStep } from '@/features/booking/booking-entry';
 import { bookingStepPath } from '@/features/booking/guest-booking-flow';
 /**
  * Step 1 of 2: duration, visit type and time on one page. The visitor picks a
  * priced option, availability loads for exactly that option, and the CTA
  * carries the full selection into the review + payment page.
  */
+const ARABIC_INDIC_ZERO = 0x0660;
+
+/** True when the label already states the duration in Latin or Arabic-Indic digits. */
+function repeatsDuration(label: string, durationMins: number): boolean {
+  const latin = label.replace(/[\u0660-\u0669]/g, (digit) => String(digit.charCodeAt(0) - ARABIC_INDIC_ZERO));
+  return new RegExp(`(^|\\D)${durationMins}(\\D|$)`).test(latin);
+}
+
 export default function BookingTypeScreen() {
   const colors = useSawaaColors();
   const { scheme } = useTheme();
   const roles = getSawaaRoles(scheme);
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { clinicId, serviceId, employeeId, branchId: branchParam } = useLocalSearchParams<{
+  const { clinicId, serviceId, employeeId, branchId: branchParam, steps } = useLocalSearchParams<{
     clinicId?: string;
     serviceId: string;
     employeeId?: string;
     branchId?: string;
+    steps?: string;
   }>();
   const { t } = useTranslation();
   const router = useRouter();
@@ -122,23 +132,19 @@ export default function BookingTypeScreen() {
         durationOptionId: selected.durationOptionId,
         chargedPrice: String(selected.price),
         currency: selected.currency,
+        ...(steps ? { steps } : {}),
       },
     });
   };
   const iconFor = (deliveryType: 'IN_PERSON' | 'ONLINE') =>
     deliveryType === 'ONLINE' ? Video : Building2;
-  const labelFor = (opt: PractitionerBookingOption) => {
-    if (opt.label) return opt.label;
-    return opt.deliveryType === 'ONLINE'
-      ? dir.isRTL ? 'استشارة عن بُعد' : 'Remote consultation'
-      : dir.isRTL ? 'موعد عيادة' : 'In-clinic visit';
-  };
+  const labelFor = (opt: PractitionerBookingOption) =>
+    t(opt.deliveryType === 'ONLINE' ? 'booking.online' : 'booking.inPerson');
   const descFor = (opt: PractitionerBookingOption) => {
-    const mins = dir.isRTL ? `${opt.durationMins} دقيقة` : `${opt.durationMins} min`;
-    const channel = opt.deliveryType === 'ONLINE'
-      ? dir.isRTL ? 'أونلاين' : 'Online'
-      : dir.isRTL ? 'حضوري' : 'In-person';
-    return `${mins} · ${channel}`;
+    const count = dir.isRTL ? opt.durationMins.toLocaleString('ar-SA') : String(opt.durationMins);
+    const mins = t('booking.minutes', { count });
+    // The backend label often just repeats the duration («60 دقيقة»); only show it when it adds something.
+    return opt.label && !repeatsDuration(opt.label, opt.durationMins) ? `${mins} · ${opt.label}` : mins;
   };
   const tzLabel = t('booking.yourLocalTime');
   const noOpenings = slots.availabilityByDate && !Object.values(slots.availabilityByDate).some(Boolean);
@@ -152,7 +158,7 @@ export default function BookingTypeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={1} title={dir.isRTL ? 'اختر المدة والوقت' : 'Choose duration and time'} onBack={() => goBackOrHome(router)} />
+          <BookingStepHeader {...bookingStep('time', steps)} title={t('booking.chooseAppointment')} onBack={() => goBackOrHome(router)} />
         </Animated.View>
 
         {loading ? (
@@ -255,7 +261,9 @@ export default function BookingTypeScreen() {
 
                 {slots.dayIdx != null ? (
                   <>
-                    <SectionHeader title={dir.isRTL ? 'الوقت' : 'Time'} />
+                    <View style={styles.timeHeader}>
+                      <SectionHeader title={dir.isRTL ? 'الوقت' : 'Time'} />
+                    </View>
                     <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign }]}>{tzLabel}</Text>
                     {slots.loading || slots.error || slots.slots.length > 0 ? (
                       <TimeSlotsGrid
@@ -322,5 +330,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     color: colors.teal[700],
     fontVariant: ['tabular-nums'],
   },
+  timeHeader: { marginTop: sawaaSpacing.lg },
   tz: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, color: colors.ink[500] },
 });

@@ -3,6 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
 let mockCanGoBack = true;
+let mockParams: Record<string, string> = {};
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
@@ -13,7 +14,7 @@ jest.mock('expo-router', () => ({
     push: mockPush,
     canGoBack: () => mockCanGoBack,
   }),
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockParams,
 }));
 
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -80,6 +81,7 @@ describe('login screen escape routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCanGoBack = true;
+    mockParams = {};
   });
 
   it('exposes a back control that returns to the previous screen', () => {
@@ -116,5 +118,22 @@ describe('login screen escape routes', () => {
     });
     expect(state?.routes[0].name).toBe('(guest)');
     expect(state?.routes[0].state?.routes[0].name).toBe('home');
+  });
+
+  it('shows guest, forgot-password and review links when opened without a booking', () => {
+    const screen = render(<LoginScreen />);
+
+    expect(screen.getByText('auth.login.continueAsGuest')).toBeTruthy();
+    expect(screen.getByText('auth.forgotPassword.linkLabel')).toBeTruthy();
+    expect(screen.getByText('auth.review.link')).toBeTruthy();
+  });
+
+  it('hides continue as guest but keeps the other links when opened from a booking', () => {
+    mockParams = { booking: 'booking-token' };
+    const screen = render(<LoginScreen />);
+
+    expect(screen.queryByText('auth.login.continueAsGuest')).toBeNull();
+    expect(screen.getByText('auth.forgotPassword.linkLabel')).toBeTruthy();
+    expect(screen.getByText('auth.review.link')).toBeTruthy();
   });
 });

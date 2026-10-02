@@ -9,6 +9,8 @@ import { getCategoryBookingServices } from '@sawaa/shared/catalog';
 import { ClinicProfileHeader } from '@/components/features/directory/ClinicProfileHeader';
 import { ServiceRow } from '@/components/features/directory/ServiceRow';
 import { TherapistCard } from '@/components/features/directory/TherapistCard';
+import { bookingStepPath } from '@/features/booking/guest-booking-flow';
+import { clinicBookingEntry } from '@/features/booking/booking-entry';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
@@ -68,11 +70,12 @@ export default function ClinicDetailScreen() {
   // DIRECT clinics are booked through their hidden internal service, so they have no services tab.
   const hasServicesTab = clinic?.bookingMode === 'SERVICES';
   const tabs = [
-    { value: 'about' as const, label: t('employeeProfile.about') },
     ...(hasServicesTab ? [{ value: 'services' as const, label: t('employeeProfile.services') }] : []),
     { value: 'therapists' as const, label: t('clinics.specialistsTab') },
+    { value: 'about' as const, label: t('employeeProfile.about') },
   ];
-  const activeTab: ClinicTab = tab ?? (description ? 'about' : hasServicesTab ? 'services' : 'therapists');
+  // Open on what the visitor came for; the description is one tap away.
+  const activeTab: ClinicTab = tab ?? (hasServicesTab ? 'services' : 'therapists');
 
   const requestState = (loading: boolean, failed: boolean, emptyLabel: string, retry: () => unknown) => {
     const style = [styles.body, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }];
@@ -96,7 +99,25 @@ export default function ClinicDetailScreen() {
     if (!clinic) return;
     router.push({
       pathname: signedIn ? '/(client)/therapists' : '/public-list/[kind]',
-      params: { ...(!signedIn ? { kind: 'therapists' } : {}), clinicId: clinic.id, ...(serviceId ? { serviceId } : {}) },
+      params: { ...(!signedIn ? { kind: 'therapists' } : {}), clinicId: clinic.id, ...(serviceId ? { serviceId } : {}), steps: '4' },
+    });
+  };
+
+  const entry = clinic ? clinicBookingEntry(clinic) : null;
+  const startBooking = () => {
+    if (!clinic || !entry || entry.kind === 'misconfigured') return;
+    if (entry.kind === 'service') {
+      router.push({ pathname: bookingStepPath('service', signedIn), params: { clinicId: clinic.id, steps: String(entry.steps) } });
+      return;
+    }
+    router.push({
+      pathname: signedIn ? '/(client)/therapists' : '/public-list/[kind]',
+      params: {
+        ...(!signedIn ? { kind: 'therapists' } : {}),
+        clinicId: clinic.id,
+        serviceId: entry.serviceId,
+        steps: String(entry.steps),
+      },
     });
   };
 
@@ -128,19 +149,30 @@ export default function ClinicDetailScreen() {
     }
     return (
       <View style={styles.list}>
-        {therapists.map((therapist) => (
-          <TherapistCard
-            key={therapist.id}
-            item={therapist}
-            compact
-            onPress={() => router.push({
-              pathname: signedIn ? '/(client)/employee/[id]' : '/public-detail/[kind]/[id]',
-              params: signedIn
-                ? { id: therapist.slug ?? therapist.id, clinicId: clinic?.id }
-                : { kind: 'therapist', id: therapist.slug ?? therapist.id, clinicId: clinic?.id },
-            })}
-          />
-        ))}
+        {therapists.map((therapist) => {
+          const openProfile = () => router.push({
+            pathname: signedIn ? '/(client)/employee/[id]' : '/public-detail/[kind]/[id]',
+            params: signedIn
+              ? { id: therapist.slug ?? therapist.id, clinicId: clinic?.id }
+              : { kind: 'therapist', id: therapist.slug ?? therapist.id, clinicId: clinic?.id },
+          });
+          // A direct clinic has one fixed service: the card goes straight to the time step.
+          if (clinic && entry?.kind === 'therapist') {
+            return (
+              <TherapistCard
+                key={therapist.id}
+                item={therapist}
+                compact
+                onPress={() => router.push({
+                  pathname: signedIn ? '/(client)/booking/[serviceId]' : '/public-booking/[serviceId]',
+                  params: { serviceId: entry.serviceId, employeeId: therapist.id, clinicId: clinic.id, steps: '2' },
+                })}
+                onViewProfile={openProfile}
+              />
+            );
+          }
+          return <TherapistCard key={therapist.id} item={therapist} compact onPress={openProfile} />;
+        })}
         {therapists.length === 0 ? requestState(therapistsQuery.isLoading, therapistsQuery.isError, t('therapists.empty'), therapistsQuery.refetch) : null}
       </View>
     );
@@ -195,20 +227,19 @@ export default function ClinicDetailScreen() {
         {renderBody()}
       </ScrollView>
 
-      {clinic ? (
+      {clinic && entry ? (
         <FloatingCta>
+          {entry.kind === 'misconfigured' ? (
+            <Text style={[styles.body, { color: colors.ink[500], fontFamily: f400, textAlign: 'center' }]}>
+              {t('clinics.bookingSetupMissing')}
+            </Text>
+          ) : null}
           <PrimaryButton
             label={t('employeeProfile.bookAppointment')}
             fontFamily={getFontName(dir.locale, '700')}
             icon={<CalendarPlus size={22} color={getSawaaRoles(scheme).action.foreground} strokeWidth={1.75} />}
-            onPress={() => router.push({
-              pathname: signedIn ? '/(client)/therapists' : '/public-list/[kind]',
-              params: {
-                ...(!signedIn ? { kind: 'therapists' } : {}),
-                clinicId: clinic.id,
-                ...(clinic.bookingMode === 'DIRECT' && clinic.directServiceId ? { serviceId: clinic.directServiceId } : {}),
-              },
-            })}
+            disabled={entry.kind === 'misconfigured'}
+            onPress={startBooking}
           />
         </FloatingCta>
       ) : null}

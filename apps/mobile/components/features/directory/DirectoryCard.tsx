@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react-native';
 
 import { Pill, type PillTone } from '@/components/ui/Pill';
@@ -25,6 +25,8 @@ export interface DirectoryCardProps {
   /** One quiet line under the pills, e.g. "available today" or a price. */
   meta?: { icon: LucideIcon; text: string } | null;
   onPress: () => void;
+  /** Separately pressable link under the card text (e.g. "View profile"); does not trigger `onPress`. */
+  secondaryAction?: { label: string; onPress: () => void; accessibilityLabel?: string } | null;
   accessibilityLabel?: string;
   testID?: string;
 }
@@ -34,7 +36,7 @@ export interface DirectoryCardProps {
  * square 88pt photo slot on the start side, text column, chevron on the end side.
  */
 export function DirectoryCard({
-  title, subtitle, imageUri, placeholderIcon, pills = [], meta, onPress, accessibilityLabel, testID,
+  title, subtitle, imageUri, placeholderIcon, pills = [], meta, onPress, secondaryAction, accessibilityLabel, testID,
 }: DirectoryCardProps) {
   const colors = useSawaaColors();
   const dir = useDir();
@@ -72,6 +74,19 @@ export function DirectoryCard({
               <Text numberOfLines={1} style={[styles.metaText, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400') }]}>{meta.text}</Text>
             </View>
           ) : null}
+          {secondaryAction ? (
+            <Pressable
+              onPress={secondaryAction.onPress}
+              accessibilityRole="link"
+              accessibilityLabel={secondaryAction.accessibilityLabel ?? secondaryAction.label}
+              hitSlop={sawaaSpacing.sm}
+              style={[styles.link, { alignSelf: dir.isRTL ? 'flex-end' : 'flex-start' }]}
+            >
+              <Text style={[styles.linkText, { color: colors.teal[700], fontFamily: getFontName(dir.locale, '600') }]}>
+                {secondaryAction.label}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
         <Forward size={18} color={colors.ink[500]} strokeWidth={1.75} />
       </View>
@@ -87,5 +102,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, lineHeight: 20 },
   pills: { flexWrap: 'wrap', gap: 6 },
   meta: { alignItems: 'center', gap: 6 },
+  link: { minHeight: 44, justifyContent: 'center' },
+  linkText: { fontSize: 14, textDecorationLine: 'underline' },
   metaText: { flexShrink: 1, fontSize: 13 },
 });

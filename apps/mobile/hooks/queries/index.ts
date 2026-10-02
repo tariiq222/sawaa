@@ -4,6 +4,7 @@ export { useBooking } from './useBooking';
 export { useTherapists, therapistKeys } from './useTherapists';
 export { useClinics, clinicKeys } from './useClinics';
 export { useTherapist } from './useTherapist';
+export { useServicePriceFloors } from './useServicePriceFloors';
 export { useSlots } from './useSlots';
 export { useNotifications, notificationKeys } from './useNotifications';
 export { useCancelBooking, useRateBooking } from './useBookingMutations';

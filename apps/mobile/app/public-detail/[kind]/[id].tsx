@@ -23,7 +23,7 @@ import { goBackOrHome, loginRedirectHref } from '@/lib/navigation';
 type PublicKind = 'service' | 'package' | 'program' | 'therapist';
 
 export default function PublicDetailScreen() {
-  const { kind, id, clinicId, serviceId } = useLocalSearchParams<{ kind?: string; id?: string; clinicId?: string; serviceId?: string }>();
+  const { kind, id, clinicId, serviceId, steps } = useLocalSearchParams<{ kind?: string; id?: string; clinicId?: string; serviceId?: string; steps?: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const dir = useDir();
@@ -51,7 +51,7 @@ export default function PublicDetailScreen() {
     const bookingClinicId = clinicId ?? (category && (category.kind ?? 'CLINIC') === 'CLINIC' ? category.id : undefined);
     router.push({
       pathname: signedIn ? '/(client)/booking/[serviceId]' : '/public-booking/[serviceId]',
-      params: { serviceId: selectedServiceId, employeeId, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}) },
+      params: { serviceId: selectedServiceId, employeeId, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}), ...(steps ? { steps } : {}) },
     });
   };
 

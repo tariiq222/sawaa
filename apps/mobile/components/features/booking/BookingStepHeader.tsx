@@ -8,22 +8,21 @@ import { getFontName } from '@/theme/fonts';
 import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
-const AR_DIGITS = ['١', '٢'] as const;
-const TOTAL_STEPS = 2;
-
 interface BookingStepHeaderProps {
-  /** 1-based step within the 2-step booking flow. */
-  step: 1 | 2;
+  /** 1-based step within the booking flow. */
+  step: number;
+  total: number;
   title: string;
   onBack: () => void;
 }
 
-/** Booking-wizard header: back + centred title, two progress segments and the step counter. */
-export function BookingStepHeader({ step, title, onBack }: BookingStepHeaderProps) {
+/** Booking-wizard header: back + centred title, progress segments and the step counter. */
+export function BookingStepHeader({ step, total, title, onBack }: BookingStepHeaderProps) {
   const colors = useSawaaColors();
   const { t } = useTranslation();
   const dir = useDir();
-  const stepText = t('booking.stepOfTwo', { step: dir.isRTL ? AR_DIGITS[step - 1] : step });
+  const fmt = (n: number) => (dir.isRTL ? n.toLocaleString('ar-SA') : String(n));
+  const stepText = t('booking.stepOf', { step: fmt(step), total: fmt(total) });
 
   return (
     <View style={{ gap: sawaaSpacing.md }}>
@@ -31,12 +30,12 @@ export function BookingStepHeader({ step, title, onBack }: BookingStepHeaderProp
       <View
         style={[styles.segments, { flexDirection: dir.row }]}
         accessibilityRole="progressbar"
-        accessibilityValue={{ min: 1, max: TOTAL_STEPS, now: step }}
+        accessibilityValue={{ min: 1, max: total, now: step }}
       >
-        {[1, 2].map((n) => (
+        {Array.from({ length: total }, (_, i) => (
           <View
-            key={n}
-            style={[styles.segment, { backgroundColor: n <= step ? colors.teal[700] : withAlpha(colors.teal[700], 0.14) }]}
+            key={i}
+            style={[styles.segment, { backgroundColor: i < step ? colors.teal[700] : withAlpha(colors.teal[700], 0.14) }]}
           />
         ))}
       </View>

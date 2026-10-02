@@ -7,6 +7,12 @@ const mockRetryMethods = jest.fn();
 let mockMethodsLoading = false;
 let mockMethodsError = false;
 let mockCatalogError = false;
+let mockHeaderProps: unknown;
+const mockClinics = [
+  { id: 'clinic-1', nameAr: 'عيادة الرشد', nameEn: 'Growth Clinic' },
+  { id: 'clinic-2', nameAr: 'عيادة أخرى', nameEn: 'Other Clinic' },
+];
+const mockTherapists = [{ id: 'employee-1', nameAr: 'د. سارة', nameEn: 'Dr. Sara' }];
 let mockPaymentMethods = { moyasarEnabled: true, atClinicEnabled: true };
 (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = false;
 const mockCatalog = {
@@ -30,6 +36,7 @@ let mockRouteParams: {
   scheduledAt: string;
   chargedPrice?: string;
   currency: string;
+  steps?: string;
 } = {
   clinicId: 'clinic-1', serviceId: 'direct-service', employeeId: 'employee-1',
   branchId: 'branch-1', deliveryType: 'in_person', scheduledAt: '2026-10-01T10:00:00.000Z',
@@ -48,7 +55,7 @@ jest.mock('react-native-reanimated', () => {
 });
 jest.mock('lucide-react-native', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
-  return { Calendar: NativeView, ChevronLeft: NativeView, ChevronRight: NativeView, Clock: NativeView, Video: NativeView, Stethoscope: NativeView, CreditCard: NativeView, Apple: NativeView, Banknote: NativeView, Building2: NativeView, Check: NativeView };
+  return { Calendar: NativeView, ChevronLeft: NativeView, ChevronRight: NativeView, Clock: NativeView, Video: NativeView, Stethoscope: NativeView, CreditCard: NativeView, Apple: NativeView, Banknote: NativeView, Building2: NativeView, UserRound: NativeView, Check: NativeView };
 });
 jest.mock('react-i18next', () => ({
   __esModule: true,
@@ -61,6 +68,8 @@ jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => (globalThis as { _
 jest.mock('@/hooks/queries', () => ({
   useCatalogDepartments: () => ({ data: [], isLoading: false, isError: false, refetch: jest.fn() }),
   usePublicCatalog: () => ({ data: mockCatalog, isLoading: false, isError: mockCatalogError, refetch: jest.fn() }),
+  useClinics: () => ({ data: mockClinics }),
+  useTherapists: () => ({ data: mockTherapists }),
   useBankTransferSettings: () => ({ data: undefined, refetch: jest.fn() }),
   usePublicPaymentMethods: () => ({ data: mockPaymentMethods, isLoading: mockMethodsLoading, isError: mockMethodsError, refetch: mockRetryMethods }),
 }));
@@ -103,7 +112,9 @@ jest.mock('@/theme/components/Glass', () => {
       <Pressable onPress={onPress}>{children}</Pressable>,
   };
 });
-jest.mock('@/components/features/booking/BookingStepHeader', () => ({ BookingStepHeader: () => null }));
+jest.mock('@/components/features/booking/BookingStepHeader', () => ({
+  BookingStepHeader: (props: unknown) => { mockHeaderProps = props; return null; },
+}));
 jest.mock('@/components/ui/EmptyState', () => {
   const { Text, Pressable } = require('react-native') as typeof import('react-native');
   return { EmptyState: ({ title, actionLabel, onAction }: { title: string; actionLabel?: string; onAction?: () => void }) => <><Text>{title}</Text>{onAction ? <Pressable onPress={onAction}><Text>{actionLabel}</Text></Pressable> : null}</> };
@@ -130,6 +141,7 @@ describe('BookingConfirmScreen direct clinic service', () => {
     mockMethodsLoading = false;
     mockMethodsError = false;
     mockCatalogError = false;
+    mockHeaderProps = undefined;
     mockRetryMethods.mockClear();
     (globalThis as { __mockSignedIn?: boolean }).__mockSignedIn = false;
     mockPaymentMethods = { moyasarEnabled: true, atClinicEnabled: true };
@@ -253,6 +265,36 @@ describe('BookingConfirmScreen direct clinic service', () => {
     fireEvent.press(screen.getByText('Pay at the center'));
     fireEvent.press(screen.getByText(/^Pay .*450/));
     await waitFor(() => expect(mockBookingCreate).toHaveBeenCalledWith(expect.objectContaining({ payAtClinic: true })));
+  });
+  it('shows the specialist and omits the clinic row when the service row already names the direct clinic', () => {
+    const screen = render(<BookingConfirmScreen />);
+    expect(screen.getByText('booking.specialist')).toBeTruthy();
+    expect(screen.getByText('Dr. Sara')).toBeTruthy();
+    expect(screen.queryByText('booking.clinic')).toBeNull();
+    expect(screen.getAllByText('Growth Clinic')).toHaveLength(1);
+  });
+
+  it('shows clinic and specialist rows for a services-mode clinic', () => {
+    mockRouteParams = { ...mockRouteParams, clinicId: 'clinic-2', serviceId: 'other-service' };
+    const screen = render(<BookingConfirmScreen />);
+    expect(screen.getByText('booking.clinic')).toBeTruthy();
+    expect(screen.getByText('Other Clinic')).toBeTruthy();
+    expect(screen.getByText('Wrong service')).toBeTruthy();
+    expect(screen.getByText('Dr. Sara')).toBeTruthy();
+  });
+
+  it('omits the specialist row when the therapist cannot be resolved', () => {
+    mockRouteParams = { ...mockRouteParams, employeeId: 'unknown' };
+    const screen = render(<BookingConfirmScreen />);
+    expect(screen.queryByText('booking.specialist')).toBeNull();
+  });
+
+  it('numbers the header from steps and forwards steps through sign-in', () => {
+    mockRouteParams = { ...mockRouteParams, steps: '3' };
+    const screen = render(<BookingConfirmScreen />);
+    expect(mockHeaderProps).toMatchObject({ step: 3, total: 3 });
+    fireEvent.press(screen.getByText('Sign in or register to continue'));
+    expect(JSON.parse(mockPush.mock.calls[0][0].params.booking)).toMatchObject({ steps: '3' });
   });
 
 });

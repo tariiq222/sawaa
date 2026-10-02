@@ -71,9 +71,10 @@ export function TherapistProfileView({
   const selectedServiceId = services.some((service) => service.id === chosenServiceId)
     ? chosenServiceId
     : services.length === 1 ? services[0].id : null;
-  // Without a bio there is nothing to read on the first tab, so open on services.
-  const activeTab: ProfileTab = tab ?? (bio ? 'about' : 'services');
   const bookable = Boolean(employee?.isBookable) && services.length > 0;
+  const needsChoice = bookable && !selectedServiceId;
+  // Open on services when a choice is required (or there is no bio to read).
+  const activeTab: ProfileTab = tab ?? (needsChoice || !bio ? 'services' : 'about');
 
   const nameOf = (nameAr: string, nameEn: string | null) => (dir.isRTL ? nameAr : nameEn) ?? nameAr;
   const clinicNames = clinics.map(({ category }) => nameOf(category.nameAr, category.nameEn));
@@ -91,7 +92,11 @@ export function TherapistProfileView({
       title={title ?? nameOf(service.nameAr, service.nameEn)}
       subtitle={(dir.isRTL ? service.descriptionAr : service.descriptionEn ?? service.descriptionAr) ?? null}
       selected={service.id === selectedServiceId}
-      onPress={() => setChosenServiceId(service.id)}
+      onPress={() => {
+        setChosenServiceId(service.id);
+        // Keep the list on screen: once a row is chosen the default tab would flip to About.
+        setTab((current) => current ?? 'services');
+      }}
       testID={`employee-service-${service.id}`}
     />
   );
@@ -141,17 +146,13 @@ export function TherapistProfileView({
     </View>
   );
 
-  const needsChoice = bookable && !selectedServiceId;
   const hint = !employee?.isBookable
     ? t('employeeProfile.unavailable')
     : needsChoice ? t('employeeProfile.selectBookingOption') : bookable ? t('employeeProfile.priceAtNextStep') : null;
 
   const onCta = () => {
     if (!bookable || !employee) return;
-    if (!selectedServiceId) {
-      setTab('services');
-      return;
-    }
+    if (!selectedServiceId) return;
     onBook(selectedServiceId, employee.id);
   };
 
@@ -195,10 +196,10 @@ export function TherapistProfileView({
         <FloatingCta>
           {hint ? <Text style={[styles.hint, { color: colors.ink[700], fontFamily: f400 }]}>{hint}</Text> : null}
           <PrimaryButton
-            label={t('employeeProfile.bookAppointment')}
+            label={needsChoice ? t('employeeProfile.chooseToContinue') : t('employeeProfile.bookAppointment')}
             fontFamily={f700}
             icon={<CalendarPlus size={22} color={getSawaaRoles(scheme).action.foreground} strokeWidth={1.75} />}
-            disabled={!bookable}
+            disabled={!bookable || needsChoice}
             onPress={onCta}
           />
         </FloatingCta>
