@@ -9,7 +9,7 @@ describe('PerformPasswordResetHandler', () => {
   let handler: PerformPasswordResetHandler;
   let prisma: {
     $transaction: jest.Mock;
-    passwordResetToken: { findFirst: jest.Mock; update: jest.Mock };
+    passwordResetToken: { findFirst: jest.Mock; updateMany: jest.Mock };
     user: { update: jest.Mock; findUnique: jest.Mock };
     refreshToken: { updateMany: jest.Mock };
   };
@@ -21,7 +21,7 @@ describe('PerformPasswordResetHandler', () => {
   beforeEach(async () => {
     prisma = {
       $transaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
-      passwordResetToken: { findFirst: jest.fn(), update: jest.fn().mockResolvedValue({}) },
+      passwordResetToken: { findFirst: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       user: { update: jest.fn().mockResolvedValue({}), findUnique: jest.fn().mockResolvedValue({ passwordHash: 'old' }) },
       refreshToken: { updateMany: jest.fn().mockResolvedValue({}) },
     };
@@ -56,6 +56,16 @@ describe('PerformPasswordResetHandler', () => {
     await expect(handler.execute({ token: rawToken, newPassword: 'newpass12' })).rejects.toThrow(UnauthorizedException);
   });
 
+  it('rejects without changing the password when a concurrent request already used the link', async () => {
+    prisma.passwordResetToken.findFirst.mockResolvedValue({
+      id: 't1', userId: 'u1', tokenHash, expiresAt: new Date(Date.now() + 60_000), consumedAt: null,
+    });
+    prisma.passwordResetToken.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(handler.execute({ token: rawToken, newPassword: 'newpass12' })).rejects.toThrow(UnauthorizedException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+  });
+
   it('updates password, marks token consumed, revokes all refresh tokens', async () => {
     prisma.passwordResetToken.findFirst.mockResolvedValue({
       id: 't1', userId: 'u1', tokenHash, expiresAt: new Date(Date.now() + 60_000), consumedAt: null,
@@ -66,7 +76,10 @@ describe('PerformPasswordResetHandler', () => {
       where: { id: 'u1' },
       data: { passwordHash: 'hashed-pw', tokenVersion: { increment: 1 } },
     });
-    expect(prisma.passwordResetToken.update).toHaveBeenCalledWith({ where: { id: 't1' }, data: { consumedAt: expect.any(Date) } });
+    expect(prisma.passwordResetToken.updateMany).toHaveBeenCalledWith({
+      where: { id: 't1', consumedAt: null, expiresAt: { gt: expect.any(Date) } },
+      data: { consumedAt: expect.any(Date) },
+    });
     expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
       where: { userId: 'u1', revokedAt: null },
       data: { revokedAt: expect.any(Date) },
