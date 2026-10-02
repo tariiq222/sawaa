@@ -141,7 +141,7 @@ export class PublicCatalogDto {
 
   @ApiProperty({
     example: 0,
-    description: 'Fractional VAT rate (0.15 = 15%); 0 when the center is not VAT-registered or settings are missing',
+    description: 'VAT rate as a fraction of 1 from organization settings; 0 when the center is not VAT-registered or settings are missing',
   })
   vatRate!: number;
 }

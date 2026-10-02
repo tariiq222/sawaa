@@ -17,7 +17,7 @@ type VatSettingsReader = { organizationSettings: Pick<Prisma.TransactionClient['
 
 /**
  * The single source of the VAT rate for every invoice: OrganizationSettings.vatRate
- * (a fraction, e.g. 0 or 0.15), falling back to DEFAULT_VAT_RATE.
+ * (a fraction of 1), falling back to DEFAULT_VAT_RATE.
  */
 export async function resolveVatRate(db: VatSettingsReader): Promise<Prisma.Decimal> {
   const settings = await db.organizationSettings.findFirst({ where: {}, select: { vatRate: true } });
