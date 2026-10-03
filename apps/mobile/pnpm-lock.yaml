@@ -17,6 +17,9 @@ overrides:
   moment@<2.31.0: 2.31.0
 
 patchedDependencies:
+  braces@3.0.3:
+    hash: 5ff64a80fb35bdbcf20ba29fc763f946a363cfc4c22bb7792209224f79956f57
+    path: patches/braces@3.0.3.patch
   decode-uri-component@0.2.2:
     hash: 0d0e80a6c28f2c4ad80ebac5ad3a5a3e35edd8117beb531359179675072dbdbe
     path: patches/decode-uri-component@0.2.2.patch
@@ -8845,7 +8848,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  braces@3.0.3:
+  braces@3.0.3(patch_hash=5ff64a80fb35bdbcf20ba29fc763f946a363cfc4c22bb7792209224f79956f57):
     dependencies:
       fill-range: 7.1.1
 
@@ -11294,7 +11297,7 @@ snapshots:
 
   micromatch@4.0.8:
     dependencies:
-      braces: 3.0.3
+      braces: 3.0.3(patch_hash=5ff64a80fb35bdbcf20ba29fc763f946a363cfc4c22bb7792209224f79956f57)
       picomatch: 2.3.2
 
   mime-db@1.52.0: {}

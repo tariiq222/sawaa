@@ -65,8 +65,18 @@ export class RegisterMobileUserHandler {
       if (!pending) {
         throw new ConflictException('Account already exists');
       }
-      await this.prisma.user.update({
-        where: { id: pending.id },
+      // OTP verification can activate this account after the eligibility read.
+      // Recheck the full pending state atomically with the identity write.
+      const updated = await this.prisma.user.updateMany({
+        where: {
+          id: pending.id,
+          phone,
+          role: 'CLIENT',
+          isActive: false,
+          isSuperAdmin: false,
+          phoneVerifiedAt: null,
+          passwordHash: null,
+        },
         data: {
           firstName: cmd.firstName,
           lastName: cmd.lastName,
@@ -74,6 +84,9 @@ export class RegisterMobileUserHandler {
           email,
         },
       });
+      if (updated.count !== 1) {
+        throw new ConflictException('Account already exists');
+      }
       userId = pending.id;
     }
 
