@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,19 +8,17 @@ import { useTranslation } from 'react-i18next';
 import {
   Building2,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   MapPin,
   Video,
-  XCircle,
 } from 'lucide-react-native';
 
 import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { useBooking, useCancelBooking } from '@/hooks/queries';
+import { useBooking } from '@/hooks/queries';
+import { BookingCancellation } from '@/components/features/BookingCancellation';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
 import { DateBox } from '@/components/ui/DateBox';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -45,9 +43,6 @@ export default function AppointmentDetailScreen() {
   const f500 = getFontName(dir.locale, '500');
   const f700 = getFontName(dir.locale, '700');
   const { data: booking, isLoading, isError, refetch } = useBooking(id);
-  const cancelMutation = useCancelBooking();
-  const cancelling = cancelMutation.isPending;
-  const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
   const therapistName = booking
     ? (dir.isRTL
@@ -97,44 +92,6 @@ export default function AppointmentDetailScreen() {
     },
     ...(isOnline ? [] : [{ icon: MapPin, label: t('appointments.location'), value: branchLocation }]),
   ];
-
-  const askCancel = () => {
-    if (!id || cancelling) return;
-    Alert.alert(
-      t('appointments.cancelAppointment'),
-      t('appointments.cancelConfirmMessage'),
-      [
-        { text: t('common.back'), style: 'cancel' },
-        {
-          text: t('appointments.cancelAppointment'),
-          style: 'destructive',
-          onPress: () => {
-            cancelMutation.mutate(
-              { id, reason: t('appointments.cancelReason') },
-              {
-                onSuccess: (result) => {
-                  if (result.status === 'cancel_requested') {
-                    Alert.alert(
-                      t('appointments.cancellationRequestedTitle'),
-                      t('appointments.cancellationRequestedMessage'),
-                    );
-                    return;
-                  }
-                  handleBack();
-                },
-                onError: (err) => {
-                  Alert.alert(
-                    t('appointments.cancelFailed'),
-                    err instanceof Error ? err.message : String(err),
-                  );
-                },
-              },
-            );
-          },
-        },
-      ],
-    );
-  };
 
   if (isLoading || isError || !booking) {
     return (
@@ -225,25 +182,7 @@ export default function AppointmentDetailScreen() {
           />
         ) : null}
 
-        {canCancel ? (
-          <Animated.View entering={FadeInDown.delay(160).duration(500).easing(Easing.out(Easing.cubic))}>
-            <Glass variant="base" radius={sawaaRadius.lg}>
-              <Pressable
-                onPress={askCancel}
-                disabled={cancelling}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: cancelling, busy: cancelling }}
-                style={[styles.actionRow, { flexDirection: dir.row }]}
-              >
-                <XCircle size={22} color={colors.accent.coral} strokeWidth={1.75} />
-                <Text style={[styles.actionText, { color: colors.ink[900], fontFamily: f500, textAlign: dir.textAlign }]}>
-                  {cancelling ? t('appointments.cancelling') : t('appointments.cancelAppointment')}
-                </Text>
-                <Chevron size={18} color={colors.ink[400]} strokeWidth={1.75} />
-              </Pressable>
-            </Glass>
-          </Animated.View>
-        ) : null}
+        <BookingCancellation bookingId={booking.id} canCancel={canCancel} persistedRefund={booking.cancellationRefund} />
       </ScrollView>
     </AquaBackground>
   );
@@ -258,6 +197,4 @@ const styles = StyleSheet.create({
   therapist: { fontSize: 14, lineHeight: 20 },
   section: { gap: sawaaSpacing.sm },
   hint: { fontSize: 13, lineHeight: 18, paddingHorizontal: sawaaSpacing.xs },
-  actionRow: { alignItems: 'center', gap: sawaaSpacing.md, paddingHorizontal: sawaaSpacing.lg, minHeight: 56 },
-  actionText: { flex: 1, fontSize: 16 },
 });

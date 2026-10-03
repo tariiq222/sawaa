@@ -43,7 +43,7 @@ import { DeleteCouponHandler } from '../../modules/finance/coupons/delete-coupon
 import { GetPaymentStatsHandler } from '../../modules/finance/get-payment-stats/get-payment-stats.handler';
 import { RefundPaymentHandler } from '../../modules/finance/refund-payment/refund-payment.handler';
 import { ManualRefundPaymentHandler } from '../../modules/finance/refund-payment/manual-refund-payment.handler';
-import { RefundPaymentDto } from '../../modules/finance/refund-payment/refund-payment.dto';
+import { RefundPaymentDto, ManualRefundPaymentDto } from '../../modules/finance/refund-payment/refund-payment.dto';
 import { VerifyPaymentHandler } from '../../modules/finance/verify-payment/verify-payment.handler';
 import { VerifyPaymentDto } from '../../modules/finance/verify-payment/verify-payment.dto';
 import {
@@ -421,7 +421,7 @@ export class DashboardFinanceController {
   manualRefundPaymentEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @UserId() userId: string,
-    @Body() body: RefundPaymentDto,
+    @Body() body: ManualRefundPaymentDto,
   ) {
     return this.manualRefundPayment.execute({ paymentId: id, performedBy: userId, ...body });
   }

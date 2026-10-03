@@ -15,7 +15,7 @@ function buildZoom() {
 }
 
 function buildHandler(clsOverride?: ReturnType<typeof buildCls>, zoomOverride?: ReturnType<typeof buildZoom>) {
-  const prisma = buildPrisma();
+  const prisma = { ...buildPrisma(), outboxEvent: { create: jest.fn(), upsert: jest.fn().mockResolvedValue({}) } };
   const eb = {
     subscribe: jest.fn(),
     publish: jest.fn().mockResolvedValue(undefined),
@@ -209,11 +209,9 @@ describe('PaymentCompletedEventHandler', () => {
 
       await getSubscriber()(makeEnvelope());
 
-      expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          aggregateId: 'book-1',
-          eventType: 'bookings.zoom.create_requested',
-        }),
+      expect(prisma.outboxEvent.upsert).toHaveBeenCalledWith({
+        where: { id: expect.any(String) }, update: {},
+        create: expect.objectContaining({ aggregateId: 'book-1', eventType: 'bookings.zoom.create_requested' }),
       });
       expect(zoom.execute).not.toHaveBeenCalled();
     });
@@ -229,7 +227,7 @@ describe('PaymentCompletedEventHandler', () => {
 
       await getSubscriber()(makeEnvelope());
 
-      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+      expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
       expect(zoom.execute).not.toHaveBeenCalled();
     });
 
@@ -244,8 +242,79 @@ describe('PaymentCompletedEventHandler', () => {
 
       await expect(getSubscriber()(makeEnvelope())).resolves.toBeUndefined();
       expect(prisma.booking.updateMany).toHaveBeenCalled();
-      expect(prisma.outboxEvent.create).toHaveBeenCalled();
+      expect(prisma.outboxEvent.upsert).toHaveBeenCalled();
       expect(zoom.execute).not.toHaveBeenCalled();
     });
   });
+});
+
+
+describe('durable operational confirmation', () => {
+  it('writes the online request once across a duplicate event and preserves money', async () => {
+    const { prisma, getSubscriber, eb } = buildHandler();
+    const booking = { ...mockBooking, status: BookingStatus.DEPOSIT_PAID, deliveryType: DeliveryType.ONLINE };
+    prisma.booking.findFirst = jest.fn().mockResolvedValueOnce(booking).mockResolvedValueOnce({ ...booking, status: BookingStatus.CONFIRMED });
+    await getSubscriber()(makeEnvelope());
+    await getSubscriber()(makeEnvelope());
+    expect(prisma.outboxEvent.upsert).toHaveBeenCalledTimes(1);
+    expect(prisma.outboxEvent.upsert).toHaveBeenCalledWith({
+      where: { id: expect.any(String) }, update: {},
+      create: expect.objectContaining({ eventType: 'bookings.zoom.create_requested', aggregateId: 'book-1', status: 'PENDING_V2', deliveryLane: 'PENDING_V2' }),
+    });
+    expect(prisma.booking.updateMany.mock.calls[0][0].data).toEqual({ status: BookingStatus.CONFIRMED, confirmedAt: expect.any(Date) });
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+    expect(prisma.payment.findFirst).not.toHaveBeenCalled();
+    expect(eb.publish).not.toHaveBeenCalled();
+  });
+  it.each([BookingStatus.CANCELLED, BookingStatus.COMPLETED, BookingStatus.EXPIRED, BookingStatus.NO_SHOW])('does not provision after terminal %s', async (status) => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status, deliveryType: DeliveryType.ONLINE });
+    await getSubscriber()(makeEnvelope());
+    expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
+  });
+  it('does not provision an in-person appointment', async () => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, deliveryType: DeliveryType.IN_PERSON });
+    await getSubscriber()(makeEnvelope());
+    expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
+  });
+  it('does not write audit or provisioning after a failed status CAS', async () => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, deliveryType: DeliveryType.ONLINE });
+    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
+    await expect(getSubscriber()(makeEnvelope())).rejects.toThrow();
+    expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('deposit balance settlement', () => {
+  it.each([true, false])('preserves confirmation time and handles prior Zoom request = %s', async (exists) => {
+    const { prisma, getSubscriber } = buildHandler();
+    const confirmedAt = new Date('2026-01-01');
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.DEPOSIT_PAID, confirmedAt, deliveryType: DeliveryType.ONLINE });
+    const rows = new Map<string, unknown>();
+    const { BookingZoomCreateRequestedEvent } = await import('../events/booking-zoom-create-requested.event');
+    const event = new BookingZoomCreateRequestedEvent({ organizationId: 'org', bookingId: 'book-1' });
+    const prior = { id: event.eventId, status: 'PUBLISHED' };
+    if (exists) rows.set(event.eventId, prior);
+    prisma.outboxEvent.upsert.mockImplementation(async (args) => {
+      if (!rows.has(args.where.id)) rows.set(args.where.id, args.create);
+      return rows.get(args.where.id);
+    });
+    await getSubscriber()(makeEnvelope());
+    expect(rows.size).toBe(1);
+    expect(prisma.outboxEvent.upsert).toHaveBeenCalled();
+    expect(prisma.booking.updateMany.mock.calls[0][0].data.confirmedAt).toEqual(confirmedAt);
+    if (exists) expect(rows.get(event.eventId)).toBe(prior);
+  });
+});
+
+it('retains an existing confirmation timestamp and meeting without reprovisioning', async () => {
+  const { prisma, getSubscriber } = buildHandler();
+  const confirmedAt = new Date('2026-01-01');
+  prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, confirmedAt, zoomMeetingId: 'existing-meeting', deliveryType: DeliveryType.ONLINE });
+  await getSubscriber()(makeEnvelope());
+  expect(prisma.booking.updateMany.mock.calls[0][0].data.confirmedAt).toEqual(confirmedAt);
+  expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
 });

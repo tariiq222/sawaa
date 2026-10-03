@@ -3,15 +3,8 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, Button, Skeleton } from "@sawaa/ui"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@sawaa/ui"
 import { useBookingSettings, useBookingSettingsMutation } from "@/hooks/use-organization-settings"
-import type { RefundType } from "@/lib/api/booking-settings"
+import { CancellationPolicyForm } from "./cancellation-policy-form"
 import { toastApiError } from "@/lib/mutation-helpers"
 import { SettingsTabSidebar } from "./settings-tab-sidebar"
 import { NumberRow, SwitchRow } from "./setting-row"
@@ -62,39 +55,11 @@ export function resolveAutomationDelay(
   return n
 }
 
-function RefundSelect({
-  value,
-  onChange,
-  t,
-}: {
-  value: RefundType
-  onChange: (value: RefundType) => void
-  t: (key: string) => string
-}) {
-  return (
-    <Select value={value} onValueChange={(next) => onChange(next as RefundType)}>
-      <SelectTrigger className="w-40 shrink-0">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="FULL">{t("settings.refundFull")}</SelectItem>
-        <SelectItem value="PARTIAL">{t("settings.refundPartial")}</SelectItem>
-        <SelectItem value="NONE">{t("settings.refundNone")}</SelectItem>
-      </SelectContent>
-    </Select>
-  )
-}
-
 export function CancellationTab({ t }: Props) {
   const { data: settings, isLoading } = useBookingSettings()
   const mutation = useBookingSettingsMutation()
 
   const [activeTab, setActiveTab] = useState<TabId>("refunds")
-  const [cancelHours, setCancelHours] = useState("24")
-  const [freeRefund, setFreeRefund] = useState<RefundType>("FULL")
-  const [latePercent, setLatePercent] = useState("0")
-  const [requireApproval, setRequireApproval] = useState(false)
-  const [autoRefund, setAutoRefund] = useState(true)
   const [rescheduleBefore, setRescheduleBefore] = useState("24")
   const [maxReschedules, setMaxReschedules] = useState("3")
   const [autoComplete, setAutoComplete] = useState("2")
@@ -109,11 +74,6 @@ export function CancellationTab({ t }: Props) {
     if (!settings) return
     // Seed editable form fields from server settings; user edits locally and saves explicitly.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCancelHours(String(settings.freeCancelBeforeHours ?? 24))
-    setFreeRefund(settings.freeCancelRefundType ?? "FULL")
-    setLatePercent(String(settings.lateCancelRefundPercent ?? 0))
-    setRequireApproval(settings.requireCancelApproval ?? false)
-    setAutoRefund(settings.autoRefundOnCancel ?? true)
     setRescheduleBefore(String(settings.clientRescheduleMinHoursBefore ?? 24))
     setMaxReschedules(String(settings.maxReschedulesPerBooking ?? 3))
     const hours = settings.autoCompleteAfterHours ?? 2
@@ -164,44 +124,7 @@ export function CancellationTab({ t }: Props) {
 
         <div className="flex flex-1 flex-col overflow-y-auto bg-surface-muted/50 p-5">
           {activeTab === "refunds" && (
-            <div className="flex h-full flex-col gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                  <NumberRow label={t("settings.cancelHours")} desc={t("settings.cancelHoursDesc")} value={cancelHours} onChange={setCancelHours} unit="h" />
-                </CardContent></Card>
-                <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                  <div className="flex items-center justify-between gap-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">{t("settings.freeRefundType")}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{t("settings.freeRefundTypeDesc")}</p>
-                    </div>
-                    <RefundSelect value={freeRefund} onChange={setFreeRefund} t={t} />
-                  </div>
-                </CardContent></Card>
-                {freeRefund === "PARTIAL" && (
-                  <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                    <NumberRow label={t("settings.lateRefundPercent")} desc={t("settings.lateRefundPercentDesc")} value={latePercent} onChange={setLatePercent} unit="%" max={100} />
-                  </CardContent></Card>
-                )}
-                <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                  <SwitchRow label={t("settings.requireCancelApproval")} desc={t("settings.requireCancelApprovalDesc")} checked={requireApproval} onChange={setRequireApproval} />
-                </CardContent></Card>
-                <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                  <SwitchRow label={t("settings.autoRefund")} desc={t("settings.autoRefundDesc")} checked={autoRefund} onChange={setAutoRefund} />
-                </CardContent></Card>
-              </div>
-              <div className="mt-auto flex justify-end pt-2">
-                <Button size="sm" disabled={mutation.isPending} onClick={() => save({
-                  freeCancelBeforeHours: Number(cancelHours) || 24,
-                  freeCancelRefundType: freeRefund,
-                  lateCancelRefundPercent: Number(latePercent) || 0,
-                  requireCancelApproval: requireApproval,
-                  autoRefundOnCancel: autoRefund,
-                })}>
-                  {t("settings.save")}
-                </Button>
-              </div>
-            </div>
+            <CancellationPolicyForm settings={settings} t={t} save={save} pending={mutation.isPending} />
           )}
 
           {activeTab === "rescheduling" && (

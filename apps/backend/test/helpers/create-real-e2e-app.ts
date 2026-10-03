@@ -36,7 +36,9 @@ export async function createRealE2eApp(): Promise<{
   configureHttpContract(app, "production");
 
   try {
-    await app.init();
+    // Keep one server for the suite; otherwise Supertest starts and closes a
+    // temporary listener per request, including requests issued concurrently.
+    await app.listen(0, "127.0.0.1");
     const prisma = app.get(PrismaService);
     await prisma.$queryRaw`SELECT 1`;
 

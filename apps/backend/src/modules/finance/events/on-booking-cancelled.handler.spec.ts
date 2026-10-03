@@ -1,3 +1,4 @@
+import { CancellationRefundIntentService } from '../cancellation-refund/cancellation-refund-intent.service';
 import { Test } from '@nestjs/testing';
 import { OnBookingCancelledRefundHandler } from './on-booking-cancelled.handler';
 import { RefundPaymentHandler } from '../refund-payment/refund-payment.handler';
@@ -17,6 +18,7 @@ describe('OnBookingCancelledRefundHandler', () => {
     const module = await Test.createTestingModule({
       providers: [
         OnBookingCancelledRefundHandler,
+        { provide: CancellationRefundIntentService, useValue: { execute: jest.fn() } },
         { provide: RefundPaymentHandler, useValue: refund },
         { provide: EventBusService, useValue: eventBus },
       ],
@@ -93,4 +95,13 @@ describe('OnBookingCancelledRefundHandler', () => {
       expect.any(Function),
     );
   });
+});
+
+
+it('routes center cancellation through durable intents even with legacy NONE metadata', async () => {
+  const execute = jest.fn();
+  const handler = new OnBookingCancelledRefundHandler({} as never, {} as never, { execute } as never);
+  const centerCancellation = { version: 1, initiatedBy: 'CENTER', refund: { refundAmount: 5000 }, allocations: [] };
+  await handler.handle({ eventId: 'event', payload: { bookingId: 'b', clientId: 'c', refundType: 'NONE', paymentId: null, centerCancellation } } as never);
+  expect(execute).toHaveBeenCalledWith('event', 'b', 'c', centerCancellation);
 });

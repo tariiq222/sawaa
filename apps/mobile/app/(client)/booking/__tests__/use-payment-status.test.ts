@@ -222,6 +222,11 @@ describe('resolveConfirmedPhase', () => {
     expect(resolveConfirmedPhase('confirmed', true, true, 'completed')).toBe('confirmed');
   });
 
+  it.each(['confirmed', 'pending', 'failed'] as const)('recognizes a deposit-confirmed appointment while payment is %s', (phase) => {
+    expect(resolveConfirmedPhase(phase, true, true, 'DEPOSIT_PAID')).toBe('confirmed');
+    expect(resolveConfirmedPhase(phase, true, false, 'DEPOSIT_PAID')).toBe(phase === 'confirmed' ? 'pending' : phase);
+  });
+
   it('does not require a booking when there is no invoice (pay-at-clinic)', () => {
     expect(resolveConfirmedPhase('confirmed', false, false, undefined)).toBe('confirmed');
   });

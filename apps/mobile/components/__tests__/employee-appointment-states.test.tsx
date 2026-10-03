@@ -316,6 +316,18 @@ describe('employee appointment detail states', () => {
       expect(screen.queryByText('appointments.requestCancel')).toBeNull();
     });
 
+    it('shows start session for a deposit-confirmed appointment', () => {
+      mockData = { ...mockData!, status: 'deposit_paid' };
+      const screen = render(<EmployeeAppointmentDetail />);
+      expect(screen.getByText('doctor.startSession')).toBeTruthy();
+    });
+
+    it('shows completion for a checked-in deposit-confirmed appointment', () => {
+      mockData = { ...mockData!, status: 'deposit_paid', checkedInAt: '2026-09-27T09:55:00Z' };
+      const screen = render(<EmployeeAppointmentDetail />);
+      expect(screen.getByText('doctor.markCompleted')).toBeTruthy();
+    });
+
     it('shows start session for confirmed unchecked-in bookings', () => {
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.getByText('doctor.startSession')).toBeTruthy();

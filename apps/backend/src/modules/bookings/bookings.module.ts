@@ -1,3 +1,7 @@
+import { ProgramCancelledResultHandler } from './cancel-program/program-cancelled-result.handler';
+import { ClientCancellationOutcomeHandler } from './client/client-cancellation-outcome.handler';
+import { ClientCancellationZoomHandler } from './client/client-cancellation-zoom.handler';
+import { ClientCancellationPreviewHandler } from './client/client-cancellation-preview.handler';
 import { Module, OnModuleInit } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
@@ -22,7 +26,7 @@ import { ListBookingStatusLogHandler } from './list-booking-status-log/list-book
 import { GetBookingTimelineHandler } from './get-booking-timeline/get-booking-timeline.handler';
 import { PaymentCompletedEventHandler } from './payment-completed-handler/payment-completed.handler';
 import { DepositPaidEventHandler } from './deposit-paid-handler/deposit-paid.handler';
-import { RefundCompletedEventHandler } from './refund-completed-handler/refund-completed.handler';
+import { RefundCompletedCompatibilityHandler } from './refund-completed-handler/refund-completed.handler';
 import { GetBookingSettingsHandler } from './get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from './upsert-booking-settings/upsert-booking-settings.handler';
 import { RequestCancelBookingHandler } from './request-cancel-booking/request-cancel-booking.handler';
@@ -70,6 +74,9 @@ import { GetEmployeeMeetingStartHandler } from './get-employee-meeting-start/get
 import { EmployeeAvailabilityQueryHandler } from './employee-availability-query.handler';
 
 const handlers = [
+  ClientCancellationPreviewHandler,
+  ClientCancellationOutcomeHandler,
+  ClientCancellationZoomHandler,
   CreateBookingHandler,
   CreateEmployeeBookingHandler,
   CancelBookingHandler,
@@ -114,6 +121,7 @@ const handlers = [
   PublishProgramHandler,
   ScheduleProgramHandler,
   CancelProgramHandler,
+  ProgramCancelledResultHandler,
   ListPublicProgramsHandler,
   GetPublicProgramHandler,
   BookFromCreditHandler,
@@ -139,22 +147,24 @@ const handlers = [
     FinanceModule,
   ],
   controllers: [DashboardBookingsController, DashboardProgramsController],
-  providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
+  providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedCompatibilityHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler, RestoreNoShowBookingHandler, GetClientPortalSummaryHandler, ListClientUpcomingBookingsHandler, GetClientBookingForActionHandler, EmployeeAvailabilityQueryHandler],
 })
 export class BookingsModule implements OnModuleInit {
   constructor(
+    private readonly clientCancellationZoomHandler: ClientCancellationZoomHandler,
     private readonly paymentCompletedHandler: PaymentCompletedEventHandler,
     private readonly depositPaidHandler: DepositPaidEventHandler,
-    private readonly refundCompletedHandler: RefundCompletedEventHandler,
+    private readonly refundCompletedCompatibilityHandler: RefundCompletedCompatibilityHandler,
     private readonly bookingZoomRescheduleHandler: BookingZoomRescheduleHandler,
     private readonly bookingZoomCreateRequestedHandler: BookingZoomCreateRequestedHandler,
   ) {}
 
   onModuleInit(): void {
+    this.clientCancellationZoomHandler.register();
     this.paymentCompletedHandler.register();
     this.depositPaidHandler.register();
-    this.refundCompletedHandler.register();
+    this.refundCompletedCompatibilityHandler.register();
     this.bookingZoomRescheduleHandler.register();
     this.bookingZoomCreateRequestedHandler.register();
   }

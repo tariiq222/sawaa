@@ -92,3 +92,34 @@ describe('useExistingBookingCheckout', () => {
     expect(mockedPayments.getInvoice).not.toHaveBeenCalled();
   });
 });
+
+describe('deposit balance refresh', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('refreshes an unresolved balance payment through settlement and then stops', async () => {
+    mockedBookings.getById.mockResolvedValue({ ...booking, status: 'deposit_paid' });
+    mockedPayments.getInvoice.mockResolvedValue({ ...invoice, status: 'PARTIALLY_PAID', payments: [{ id: 'balance', status: 'PENDING' }] });
+    const { result, unmount } = renderHook(() => useExistingBookingCheckout({ bookingId: 'booking-1' }));
+    await act(async () => {});
+    expect(result.current.phase).toBe('deposit_confirmed');
+    mockedPayments.getInvoice.mockResolvedValue(invoice);
+    await act(async () => { jest.advanceTimersByTime(3000); });
+    expect(result.current.phase).toBe('success');
+    expect(mockedBookings.getById).toHaveBeenCalledTimes(2);
+    await act(async () => { jest.advanceTimersByTime(30000); });
+    expect(mockedBookings.getById).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+
+  it('does not poll an idle unpaid balance with only a settled deposit', async () => {
+    mockedBookings.getById.mockResolvedValue({ ...booking, status: 'deposit_paid' });
+    mockedPayments.getInvoice.mockResolvedValue({ ...invoice, status: 'PARTIALLY_PAID' });
+    const { result, unmount } = renderHook(() => useExistingBookingCheckout({ bookingId: 'booking-1' }));
+    await act(async () => {});
+    expect(result.current.phase).toBe('deposit_confirmed');
+    await act(async () => { jest.advanceTimersByTime(30000); });
+    expect(mockedBookings.getById).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+});

@@ -78,7 +78,7 @@ describe('BookingNoShowCron', () => {
     expect(handler.execute).toHaveBeenCalledTimes(2);
   });
 
-  it('queries only CONFIRMED bookings with no check-in, defaulting to endsAt cutoff', async () => {
+  it('queries confirmed and deposit-paid bookings with no check-in, defaulting to endsAt cutoff', async () => {
     const prisma = buildPrisma();
     const handler = buildNoShowHandler();
     const cron = new BookingNoShowCron(prisma as never, handler as never);
@@ -86,7 +86,7 @@ describe('BookingNoShowCron', () => {
     await cron.execute();
 
     const call = (prisma.booking.findMany as jest.Mock).mock.calls[0][0];
-    expect(call.where.status).toBe(BookingStatus.CONFIRMED);
+    expect(call.where.status).toEqual({ in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] });
     expect(call.where.checkedInAt).toBeNull();
     expect(call.where.autoNoShowSuppressedAt).toBeNull();
     expect(call.where.isHistoricalImport).toBe(false);

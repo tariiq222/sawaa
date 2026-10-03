@@ -68,6 +68,12 @@ describe('OnBookingCancelledHandler', () => {
     }));
   });
 
+  it('renders client processing details on the legacy path with stable event identity', async () => {
+    pushTargets.execute.mockResolvedValue({ pushEnabled: false, tokens: [] });
+    await handler.handle({ eventId: 'event-client-1', payload: { bookingId: 'b1', clientId: 'c1', employeeId: 'e1', reason: 'CLIENT_REQUESTED', clientCancellation: { version: 1, initiatedBy: 'CLIENT', refund: { status: 'PROCESSING', refundAmount: 5000, pendingRefundAmount: 0, currency: 'SAR' } } } } as any);
+    expect(notify.execute).toHaveBeenCalledWith(expect.objectContaining({ body: 'تم إلغاء موعدك. استرداد 50.00 SAR قيد المعالجة.', notificationId: expect.any(String), emailVars: expect.objectContaining({ reason: 'تم إلغاء موعدك. استرداد 50.00 SAR قيد المعالجة.' }) }));
+  });
+
   it('should capture exception on error', async () => {
     pushTargets.execute.mockRejectedValue(new Error('fail'));
     await handler.handle({ payload: { bookingId: 'b1', clientId: 'c1', employeeId: 'e1', reason: 'sick' } } as any);

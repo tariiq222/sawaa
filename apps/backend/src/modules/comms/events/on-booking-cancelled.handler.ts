@@ -1,3 +1,7 @@
+import type { StaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
+import { stableEventId } from '../../../common/events';
+import { clientCancellationBody, centerCancellationBody } from './client-cancellation-copy';
+import type { ClientCancellationIntent } from '../../bookings/client/client-cancellation-policy';
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import * as Sentry from '@sentry/node';
 import { NotificationType, RecipientType } from '@prisma/client';
@@ -11,6 +15,8 @@ import { NotificationOutboxConfig } from '../notification-outbox/notification-ou
 import { NOTIFICATION_OUTBOX_CONSUMERS, NOTIFICATION_OUTBOX_PAYLOAD_VERSION, notificationSourceKey } from '../notification-outbox/notification-outbox.types';
 
 interface BookingCancelledPayload {
+  clientCancellation?: ClientCancellationIntent;
+  centerCancellation?: StaffCancellationIntent;
   bookingId: string;
   clientId: string;
   employeeId: string;
@@ -47,14 +53,15 @@ export class OnBookingCancelledHandler {
     if (await this.routeV2(envelope)) return;
     try {
       const { pushEnabled, tokens } = await this.pushTargets.execute({ clientId: payload.clientId });
-      const channels: Array<'in-app' | 'push' | 'email' | 'sms'> = ['in-app', 'email'];
+      const channels: Array<'in-app' | 'push' | 'email' | 'sms'> = payload.centerCancellation ? ['in-app'] : ['in-app', 'email'];
       if (pushEnabled && tokens.length > 0) channels.push('push');
       await this.notify.execute({
         recipientId: payload.clientId,
         recipientType: RecipientType.CLIENT,
         type: NotificationType.BOOKING_CANCELLED,
-        title: 'تم إلغاء الموعد',
-        body: 'نأسف، تم إلغاء موعدك.',
+        title: payload.centerCancellation ? 'تم إلغاء البرنامج' : 'تم إلغاء الموعد',
+        body: payload.centerCancellation ? centerCancellationBody(payload.centerCancellation) : clientCancellationBody(payload.clientCancellation),
+        ...(envelope.eventId ? { notificationId: stableEventId(`${envelope.eventId}:comms.booking-cancelled-client`) } : {}),
         channels,
         fcmTokens: tokens,
         recipientEmail: payload.clientEmail,
@@ -62,7 +69,7 @@ export class OnBookingCancelledHandler {
         emailVars: {
           client_name: payload.clientName ?? '',
           booking_id: payload.bookingId,
-          reason: payload.reason,
+          reason: payload.centerCancellation ? centerCancellationBody(payload.centerCancellation) : payload.clientCancellation ? clientCancellationBody(payload.clientCancellation) : payload.reason,
         },
       });
     } catch (err) {
@@ -71,6 +78,7 @@ export class OnBookingCancelledHandler {
         err,
       );
       Sentry.captureException(err, { tags: { event: 'bookings.booking.cancelled', bookingId: payload.bookingId } });
+      if (payload.clientCancellation || payload.centerCancellation) throw err;
     }
   }
 
@@ -86,7 +94,7 @@ export class OnBookingCancelledHandler {
     const intentId = await this.capture.execute({
       sourceKey, consumerKey, payloadVersion: NOTIFICATION_OUTBOX_PAYLOAD_VERSION,
       occurredAt: new Date(envelope.occurredAt),
-      payload: { kind: 'booking-cancelled-client', bookingId: payload.bookingId, clientId: payload.clientId, reason: payload.reason, clientName: payload.clientName, clientPhone: payload.clientPhone, clientEmail: payload.clientEmail },
+      payload: { centerCancellation: payload.centerCancellation, clientCancellation: payload.clientCancellation, kind: 'booking-cancelled-client', bookingId: payload.bookingId, clientId: payload.clientId, reason: payload.reason, clientName: payload.clientName, clientPhone: payload.clientPhone, clientEmail: payload.clientEmail },
     });
     await this.materialize.execute(intentId);
     return true;

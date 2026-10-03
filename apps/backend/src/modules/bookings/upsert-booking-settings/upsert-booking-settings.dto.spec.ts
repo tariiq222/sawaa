@@ -108,3 +108,18 @@ describe('UpsertBookingSettingsDto', () => {
     });
   });
 });
+
+describe('client cancellation fields', () => {
+  it.each([
+    ['clientCancelCutoffMode', 'UNKNOWN'],
+    ['clientCancelBeforeHours', -1], ['clientCancelBeforeHours', 0.5],
+    ['earlyCancelRefundPercent', -1], ['earlyCancelRefundPercent', 101], ['earlyCancelRefundPercent', 1.5],
+    ['clientCancellationPolicyEnabled', null], ['clientCancellationPolicyEnabled', 'yes'],
+  ])('rejects %s = %j', async (field, value) => {
+    expect((await validateDto({ [field]: value })).some((e) => e.property === field)).toBe(true);
+  });
+  it('accepts zero values and nullable unconfigured fields', async () => {
+    expect(await validateDto({ clientCancelCutoffMode: 'BEFORE_START', clientCancelBeforeHours: 0, earlyCancelRefundPercent: 0 })).toHaveLength(0);
+    expect(await validateDto({ clientCancelCutoffMode: null, clientCancelBeforeHours: null, earlyCancelRefundPercent: null })).toHaveLength(0);
+  });
+});

@@ -59,13 +59,11 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
   const bookedParts = isoToClinicParts(booking.createdAt)
   const bookedAt = bookedParts.date ? `${formatDate(bookedParts.date)} - ${bookedParts.time}` : "—"
 
-  // Mirrors RESCHEDULE.from in booking-state-machine.ts, which accepts PENDING
-  // and CONFIRMED only. Payment holds (awaiting_payment / pending_group_fill)
-  // and deposit_paid are not reschedulable — offering the tab there only leads
-  // to a rejected request.
+  // Mirrors RESCHEDULE.from: pending and operationally confirmed appointments.
+  // Payment holds remain ineligible until confirmed.
   const canReschedule =
     !booking.isHistoricalImport &&
-    (booking.status === "pending" || booking.status === "confirmed")
+    ["pending", "confirmed", "deposit_paid"].includes(booking.status)
   // Show the invoice tab whenever a booking still owes money (an invoice OR a
   // payable booking with no invoice yet). Mirrors PaymentStatusCell so the
   // collect action surfaces everywhere staff look at the booking.

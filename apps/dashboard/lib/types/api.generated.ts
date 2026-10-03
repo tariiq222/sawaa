@@ -3052,8 +3052,25 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Cancel a program (cascades to enrollments, no automatic refund) */
+        /** Cancel a program and queue participant refunds from the confirmed preview */
         patch: operations["DashboardProgramsController_cancel_v1"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/programs/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview participant refunds for center cancellation */
+        get: operations["DashboardProgramsController_cancellationPreview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/dashboard/programs/{id}/enrollments": {
@@ -3412,6 +3429,23 @@ export interface paths {
         head?: never;
         /** Cancel a booking */
         patch: operations["MobileClientBookingsController_cancelBooking_v1"];
+        trace?: never;
+    };
+    "/api/v1/mobile/client/bookings/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview client cancellation eligibility and refund terms */
+        get: operations["MobileClientBookingsController_cancellationPreviewEndpoint_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/mobile/client/bookings/{id}/join": {
@@ -4527,6 +4561,23 @@ export interface paths {
         head?: never;
         /** Cancel a client booking */
         patch: operations["PublicMeController_cancelBookingEndpoint_v1"];
+        trace?: never;
+    };
+    "/api/v1/public/me/bookings/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview client cancellation eligibility and refund terms */
+        get: operations["PublicMeController_cancellationPreviewEndpoint_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/public/me/bookings/{id}/invoice": {
@@ -5920,9 +5971,41 @@ export interface components {
          * @enum {string}
          */
         CancellationReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER";
+        CancellationRefundSummaryDto: {
+            /** @description Already refunded amount in halalas */
+            alreadyRefundedAmount: number;
+            /** @example SAR */
+            currency: string;
+            /**
+             * @description Whether the refund needs no action, provider processing, or staff review
+             * @enum {string}
+             */
+            execution: "NONE" | "AUTOMATIC" | "REVIEW";
+            /** @description Captured original amount in halalas */
+            paidAmount: number;
+            /** @description Reserved pending amount in halalas */
+            pendingRefundAmount: number;
+            /** @description New remaining refund entitlement in halalas */
+            refundAmount: number;
+            /** @description Policy percentage for the applicable cancellation window */
+            refundPercent: number;
+            /**
+             * @description Expected financial outcome if the client confirms cancellation; pending states do not mean money has been returned
+             * @enum {string}
+             */
+            status: "NOT_APPLICABLE" | "NO_REFUND" | "PENDING_REVIEW" | "PROCESSING" | "CREDIT_RETURNED";
+            /**
+             * @description Refund policy window relative to the configured early cancellation threshold
+             * @enum {string}
+             */
+            window: "EARLY" | "LATE";
+        };
         CancelProgramDto: {
+            /** @description Token from the current cancellation preview */
+            quoteToken: string;
             /** @description Reason for cancelling the program */
             reason: string;
+            refunds?: components["schemas"]["ProgramParticipantRefundDto"][];
         };
         CatalogCategoryDto: {
             /**
@@ -6321,8 +6404,40 @@ export interface components {
             status: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
         };
         ClientCancelBookingDto: {
+            /** @description Opaque cancellation preview token; refresh preview after conflict */
+            quoteToken?: string;
             /** @description Reason for cancellation */
             reason?: string;
+            /**
+             * Format: uuid
+             * @description Stable UUID for retrying the same cancellation
+             */
+            sourceActionId?: string;
+        };
+        /**
+         * @description Client cancellation eligibility cutoff
+         * @enum {string}
+         */
+        ClientCancelCutoffMode: "BEFORE_START" | "BEFORE_CHECK_IN";
+        ClientCancellationPreviewDto: {
+            /** @description Current eligibility to cancel this appointment directly */
+            canCancel: boolean;
+            /**
+             * Format: date-time
+             * @description Effective cancellation deadline, or null when no valid deadline is configured
+             */
+            cutoffAt: string | null;
+            /** @description Whether the new client cancellation policy is explicitly enabled */
+            policyEnabled: boolean;
+            /** @description Opaque effective terms fingerprint */
+            quoteToken: string;
+            /**
+             * @description Eligibility decision or reason cancellation is unavailable
+             * @enum {string}
+             */
+            reasonCode: "ALLOWED" | "POLICY_NOT_CONFIGURED" | "CUTOFF_PASSED" | "ATTENDED" | "FINAL_STATE" | "HISTORICAL" | "GROUP_STAFF_ONLY";
+            /** @description Financial terms shown to the client before cancellation confirmation */
+            refund: components["schemas"]["CancellationRefundSummaryDto"];
         };
         ClientChatConversationCursorMetaDto: {
             hasMore: boolean;
@@ -9586,6 +9701,23 @@ export interface components {
             /** @description Mailchimp Transactional (Mandrill) API key */
             apiKey: string;
         };
+        ManualRefundPaymentDto: {
+            /**
+             * @description Partial refund amount in integer halalas (1 SAR = 100); omit to refund the full amount
+             * @example 5000
+             */
+            amount?: number;
+            /**
+             * @description Reason for the refund
+             * @example Service not delivered
+             */
+            reason: string;
+            /**
+             * Format: uuid
+             * @description Existing pending cash/bank-transfer refund request to settle; retries return the existing completion
+             */
+            refundRequestId?: string;
+        };
         MarkConversationReadDto: {
             /**
              * @description Owned message UUID through which messages are marked read
@@ -9611,11 +9743,18 @@ export interface components {
              * @example Change of plans
              */
             cancelNotes?: string;
+            /** @description Cancellation preview fingerprint */
+            quoteToken?: string;
             /**
              * @description Reason for cancellation
              * @example CLIENT_REQUESTED
              */
             reason: components["schemas"]["CancellationReason"];
+            /**
+             * Format: uuid
+             * @description Stable UUID for this cancellation attempt
+             */
+            sourceActionId?: string;
         };
         MobileCreateBookingDto: {
             /**
@@ -10250,6 +10389,39 @@ export interface components {
              */
             subject: "Booking" | "Branch" | "Category" | "Client" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
         };
+        PersistedCancellationRefundDto: {
+            /** @description Already refunded amount in halalas */
+            alreadyRefundedAmount: number;
+            /** @description Ledger-confirmed refunded amount toward this cancellation, in halalas */
+            completedAmount: number;
+            /** @example SAR */
+            currency: string;
+            /**
+             * @description Whether the refund needs no action, provider processing, or staff review
+             * @enum {string}
+             */
+            execution: "NONE" | "AUTOMATIC" | "REVIEW";
+            /** @description Failed or denied request amount, in halalas */
+            failedAmount: number;
+            /** @description Captured original amount in halalas */
+            paidAmount: number;
+            /** @description Reserved pending amount in halalas */
+            pendingRefundAmount: number;
+            /** @description New remaining refund entitlement in halalas */
+            refundAmount: number;
+            /** @description Policy percentage for the applicable cancellation window */
+            refundPercent: number;
+            /**
+             * @description Persisted cancellation refund outcome derived from confirmed ledger entries and request states
+             * @enum {string}
+             */
+            status: "NOT_APPLICABLE" | "NO_REFUND" | "PENDING_REVIEW" | "PROCESSING" | "CREDIT_RETURNED" | "COMPLETED" | "FAILED";
+            /**
+             * @description Refund policy window relative to the configured early cancellation threshold
+             * @enum {string}
+             */
+            window: "EARLY" | "LATE";
+        };
         PreviewEmailTemplateDto: {
             /**
              * @description Template variable values for the preview render
@@ -10283,6 +10455,46 @@ export interface components {
             invoiceId: string;
             /** @description Payment method used */
             method: components["schemas"]["PaymentMethod"];
+        };
+        ProgramCancellationParticipantDto: {
+            alreadyRefundedAmount: number;
+            bookingId: string;
+            bookingNumber: number;
+            clientId: string;
+            clientName: string;
+            currency: string;
+            maxRefundAmount: number;
+            /** @description Captured amount in integer halalas */
+            paidAmount: number;
+            pendingRefundAmount: number;
+            refundAmount: number | null;
+            status: string;
+        };
+        ProgramCancellationParticipantResultDto: {
+            bookingId: string;
+            currency: string;
+            refundAmount: number;
+            /** @enum {string} */
+            refundStatus: "PENDING_REVIEW" | "PROCESSING" | "NO_REFUND";
+        };
+        ProgramCancellationPreviewDto: {
+            hasStarted: boolean;
+            participants: components["schemas"]["ProgramCancellationParticipantDto"][];
+            programId: string;
+            quoteToken: string;
+        };
+        ProgramCancellationResultDto: {
+            cancelledEnrollments: number;
+            id: string;
+            participants: components["schemas"]["ProgramCancellationParticipantResultDto"][];
+            skippedEnrollments: number;
+            status: string;
+        };
+        ProgramParticipantRefundDto: {
+            /** @description Additional refund in integer halalas */
+            amount: number;
+            /** Format: uuid */
+            bookingId: string;
         };
         PublicBrandingDto: {
             /**
@@ -11926,11 +12138,19 @@ export interface components {
              * @example 15
              */
             bufferMinutes?: number;
+            /** @description Minimum hours before start to allow client cancellation; 0 is valid */
+            clientCancelBeforeHours?: number | null;
+            /** @description Client cancellation eligibility cutoff */
+            clientCancelCutoffMode?: components["schemas"]["ClientCancelCutoffMode"] | null;
+            /** @description Enable the explicitly configured immediate client cancellation policy */
+            clientCancellationPolicyEnabled?: boolean;
             /**
              * @description Minimum hours before booking start that a client may reschedule
              * @example 24
              */
             clientRescheduleMinHoursBefore?: number;
+            /** @description Independent early cancellation partial refund percentage */
+            earlyCancelRefundPercent?: number | null;
             /**
              * @description Hours before booking start that free cancellation is allowed
              * @example 24
@@ -19081,7 +19301,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RefundPaymentDto"];
+                "application/json": components["schemas"]["ManualRefundPaymentDto"];
             };
         };
         responses: {
@@ -28840,7 +29060,66 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramCancellationResultDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardProgramsController_cancellationPreview_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramCancellationPreviewDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29895,7 +30174,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        cancellationRefund?: components["schemas"]["PersistedCancellationRefundDto"];
+                    } & {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -29961,13 +30244,19 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Booking cancelled */
+            /** @description Booking cancelled; enabled policy includes refund and requiresApproval */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        booking?: Record<string, never>;
+                        refund?: components["schemas"]["CancellationRefundSummaryDto"];
+                        requiresApproval?: boolean;
+                    } & {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -29999,6 +30288,70 @@ export interface operations {
             };
             /** @description Booking not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Cancellation terms changed; refresh the preview */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientBookingsController_cancellationPreviewEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientCancellationPreviewDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33999,7 +34352,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        cancellationRefund?: components["schemas"]["PersistedCancellationRefundDto"];
+                    } & {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -34067,7 +34424,84 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        booking: Record<string, never>;
+                        refund?: components["schemas"]["CancellationRefundSummaryDto"];
+                        requiresApproval: boolean;
+                        /** @enum {string} */
+                        status: "CANCELLED" | "CANCEL_REQUESTED";
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cancellation terms changed; refresh the preview */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicMeController_cancellationPreviewEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientCancellationPreviewDto"];
                 };
             };
             /** @description Validation failed */

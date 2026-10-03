@@ -128,6 +128,20 @@ describe('payment resume state', () => {
     expect(clientBookingsService.getById).toHaveBeenCalledWith('booking-1');
   });
 
+  it('resumes the same deposit booking invoice for balance collection instead of marking payment complete', async () => {
+    storage.getItem.mockResolvedValue(null);
+    clientBookingsService.getById.mockResolvedValue({ ...booking, status: 'deposit_paid' });
+    await expect(resolvePendingBookingResume('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' }))
+      .resolves.toMatchObject({ kind: 'ready', checkout: { bookingId: 'booking-1', invoiceId: 'invoice-1' } });
+  });
+
+  it('recognizes an invoice-less deposit booking without inventing a payment', async () => {
+    storage.getItem.mockResolvedValue(null);
+    clientBookingsService.getById.mockResolvedValue({ ...booking, status: 'deposit_paid', invoiceId: null });
+    await expect(resolvePendingBookingResume('client-1', draft, { bookingId: 'booking-1', invoiceId: null }))
+      .resolves.toMatchObject({ kind: 'complete', checkout: { bookingId: 'booking-1', invoiceId: null } });
+  });
+
   it('clears a completed checkout record for the authenticated user', async () => {
     await clearPendingBookingCheckout('client-1');
     expect(storage.removeItem).toHaveBeenCalledWith(expect.stringContaining('client-1'));

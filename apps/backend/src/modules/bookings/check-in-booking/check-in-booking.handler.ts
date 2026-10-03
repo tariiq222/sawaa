@@ -11,7 +11,7 @@ export interface CheckInBookingCommand {
   changedBy: string;
 }
 
-/** Receptionist marks client as arrived — transitions CONFIRMED → CONFIRMED with checkedInAt timestamp. */
+/** Receptionist marks client as arrived — preserves confirmation state with a checkedInAt timestamp. */
 @Injectable()
 export class CheckInBookingHandler {
   constructor(
@@ -20,11 +20,11 @@ export class CheckInBookingHandler {
   ) {}
 
   async execute(cmd: CheckInBookingCommand) {
-    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'checked in');
+    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID], 'checked in');
     if (booking.checkedInAt) {
       throw new BadRequestException('Booking is already checked in');
     }
-    const nextStatus = assertTransition(booking.status, 'CHECK_IN'); // CONFIRMED → CONFIRMED self-loop
+    const nextStatus = assertTransition(booking.status, 'CHECK_IN'); // Preserve DEPOSIT_PAID when balance remains due
 
     const updated = await this.rlsTransaction.withTransaction(async (tx) => {
       if (booking.packageCreditId) {

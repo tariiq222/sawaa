@@ -18,6 +18,20 @@ const newHandler = (
   );
 
 describe('NoShowBookingHandler', () => {
+  it('accepts DEPOSIT_PAID without settling its outstanding balance', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue({ ...mockBooking, status: BookingStatus.DEPOSIT_PAID, checkedInAt: null });
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    const { where, data } = prisma.booking.updateMany.mock.calls[0][0];
+    expect(where.status).toBe(BookingStatus.DEPOSIT_PAID);
+    expect(data.status).toBe(BookingStatus.NO_SHOW);
+    expect(data).not.toHaveProperty('paidAmount');
+    expect(data).not.toHaveProperty('remainingAmount');
+    expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ fromStatus: BookingStatus.DEPOSIT_PAID, toStatus: BookingStatus.NO_SHOW }),
+    });
+  });
+
   it('marks CONFIRMED booking as NO_SHOW', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });

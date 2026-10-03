@@ -1,3 +1,6 @@
+import type { StaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
+import { centerCancellationBody, clientCancellationBody, refundOutcomeBody } from '../events/client-cancellation-copy';
+import type { ClientCancellationIntent } from '../../bookings/client/client-cancellation-policy';
 import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { Prisma, type UserRole } from '@prisma/client';
@@ -11,6 +14,7 @@ import {
 } from './notification-outbox.types';
 import {
   notificationEmailDefinition,
+  renderCenterCancellationEmail,
   renderFrozenNotificationEmail,
 } from './notification-email-renderer';
 import { isValidNotificationIntentPayload } from './notification-payload-validation';
@@ -148,7 +152,7 @@ export class MaterializeNotificationIntentHandler {
     const scheduledAt = new Date(payload.scheduledAt);
     return Boolean(
       booking &&
-      booking.status === 'CONFIRMED' &&
+      ['CONFIRMED', 'DEPOSIT_PAID'].includes(booking.status) &&
       booking.clientId === payload.clientId &&
       booking.scheduledAt.getTime() === scheduledAt.getTime() &&
       scheduledAt.getTime() > Date.now(),
@@ -213,10 +217,13 @@ export class MaterializeNotificationIntentHandler {
       return { type: 'BOOKING_CREATED', title: 'حجز جديد', body: `تم إنشاء حجز جديد ${value.bookingNumber ?? value.bookingId}`, metadata: { bookingId: String(value.bookingId) } };
     }
     if (consumerKey === NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_CANCELLED_STAFF) {
-      return { type: 'BOOKING_CANCELLED', title: 'تم إلغاء حجز', body: `تم إلغاء الحجز ${value.bookingNumber ?? value.bookingId} — ${value.reason ?? ''}`, metadata: { bookingId: String(value.bookingId) } };
+      return { type: 'BOOKING_CANCELLED', title: value.centerCancellation ? 'تم إلغاء البرنامج' : 'تم إلغاء حجز', body: value.centerCancellation ? centerCancellationBody(value.centerCancellation as StaffCancellationIntent) : `تم إلغاء الحجز ${value.bookingNumber ?? value.bookingId} — ${value.reason ?? ''}`, metadata: { bookingId: String(value.bookingId) } };
     }
     if (consumerKey === NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_CANCELLED_CLIENT) {
-      return { type: 'BOOKING_CANCELLED', title: 'تم إلغاء الموعد', body: 'نأسف، تم إلغاء موعدك.', metadata: { bookingId: String(value.bookingId) }, emailSlug: email?.templateSlug, emailVars: email?.variables };
+      return { type: 'BOOKING_CANCELLED', title: value.centerCancellation ? 'تم إلغاء البرنامج' : 'تم إلغاء الموعد', body: value.centerCancellation ? centerCancellationBody(value.centerCancellation as StaffCancellationIntent) : clientCancellationBody(value.clientCancellation as ClientCancellationIntent | undefined), metadata: { bookingId: String(value.bookingId) }, emailSlug: email?.templateSlug, emailVars: email?.variables };
+    }
+    if (consumerKey === NOTIFICATION_OUTBOX_CONSUMERS.REFUND_OUTCOME_CLIENT) {
+      return { type: 'GENERAL', title: 'تحديث الاسترداد', body: refundOutcomeBody(String(value.status), Number(value.amount), String(value.currency)), metadata: { bookingId: String(value.bookingId ?? ''), refundRequestId: String(value.refundRequestId), refundStatus: String(value.status) } };
     }
     if (consumerKey === NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_REMINDER_CLIENT) {
       return { type: 'BOOKING_REMINDER', title: 'تذكير بموعدك', body: 'تذكير بموعدك غداً. افتح التطبيق للتفاصيل.', metadata: { bookingId: String(value.bookingId) }, emailSlug: email?.templateSlug, emailVars: email?.variables };
@@ -257,7 +264,7 @@ export class MaterializeNotificationIntentHandler {
         ? { ...content, emailVars: { ...content.emailVars, client_name: target.name } }
         : content;
     const isReminder = content.type === 'BOOKING_REMINDER';
-    const supportsPush = isReminder || content.type === 'BOOKING_CANCELLED';
+    const supportsPush = isReminder || content.type === 'BOOKING_CANCELLED' || Boolean(content.metadata.refundRequestId);
     if (supportsPush) {
       if (target.pushEnabled && target.tokens.length > 0) {
         // FCM data values must be strings. Carry the booking routing key so a
@@ -295,8 +302,9 @@ export class MaterializeNotificationIntentHandler {
     address: string,
     content: Content,
   ): Promise<Delivery> {
-    const template = await tx.emailTemplate.findFirst({ where: { slug: content.emailSlug, isActive: true }, select: { subject: true, htmlBody: true } });
     const base = { intentId, recipientType: recipient.type, recipientId: recipient.id, channel: 'EMAIL' as const, targetKey: targetKey(address), targetAddress: address };
+    if (content.emailSlug === 'program-cancelled') return { ...base, channelPayload: renderCenterCancellationEmail(content.emailVars ?? {}) };
+    const template = await tx.emailTemplate.findFirst({ where: { slug: content.emailSlug, isActive: true }, select: { subject: true, htmlBody: true } });
     if (!template) {
       return { ...base, channelPayload: { channel: 'EMAIL', templateSlug: content.emailSlug ?? '', subject: '', html: '' }, status: 'DEAD', outcomeReason: NOTIFICATION_OUTBOX_OUTCOME_REASONS.TEMPLATE_UNAVAILABLE };
     }

@@ -39,7 +39,7 @@ export class BookingNoShowCron {
       // capacity recalculation and ProgramEnrollment cleanup.
       const targets = await this.prisma.booking.findMany({
         where: {
-          status: BookingStatus.CONFIRMED,
+          status: { in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
           isHistoricalImport: false,
           ...(afterEnd
             ? { endsAt: { lte: cutoff } }

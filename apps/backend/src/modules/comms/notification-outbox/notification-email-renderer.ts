@@ -1,3 +1,6 @@
+import type { StaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
+import { centerCancellationBody, clientCancellationBody } from '../events/client-cancellation-copy';
+import type { ClientCancellationIntent } from '../../bookings/client/client-cancellation-policy';
 import { escapeHtml } from '../../../common/security/escape-html';
 import { BUSINESS_TZ } from '../../../common/timezone';
 import {
@@ -37,11 +40,11 @@ export function notificationEmailDefinition(
   if (consumerKey === NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_CANCELLED_CLIENT) {
     if (value.kind !== 'booking-cancelled-client' || typeof value.bookingId !== 'string') return null;
     return {
-      templateSlug: 'booking-cancelled',
+      templateSlug: value.centerCancellation ? 'program-cancelled' : 'booking-cancelled',
       variables: {
         client_name: clientName,
         booking_id: value.bookingId,
-        reason: typeof value.reason === 'string' ? value.reason : '',
+        reason: value.centerCancellation ? centerCancellationBody(value.centerCancellation as StaffCancellationIntent) : value.clientCancellation ? clientCancellationBody(value.clientCancellation as ClientCancellationIntent) : typeof value.reason === 'string' ? value.reason : '',
       },
     };
   }
@@ -84,4 +87,10 @@ export function renderFrozenNotificationEmail(
       (_, key: string) => escapeHtml(definition.variables[key] ?? ''),
     ),
   };
+}
+
+/** Program cancellation must not inherit appointment-cancelled template claims. */
+export function renderCenterCancellationEmail(variables: Record<string, string>) {
+  return { channel: 'EMAIL' as const, templateSlug: 'program-cancelled', subject: 'تم إلغاء البرنامج',
+    html: `<div dir="rtl"><h1>تم إلغاء البرنامج</h1><p>${escapeHtml(variables.client_name ?? '')}</p><p>${escapeHtml(variables.reason ?? '')}</p></div>` };
 }

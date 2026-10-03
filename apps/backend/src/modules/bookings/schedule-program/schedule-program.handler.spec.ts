@@ -16,6 +16,7 @@ describe('ScheduleProgramHandler', () => {
 
   beforeEach(async () => {
     tx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       program: {
         findUnique: jest.fn().mockResolvedValue({
           id: 'prog-1',
@@ -41,6 +42,12 @@ describe('ScheduleProgramHandler', () => {
     }).compile();
 
     handler = module.get(ScheduleProgramHandler);
+  });
+
+  it('locks program before reading the transition so cancellation cannot be resurrected', async () => {
+    await handler.execute('prog-1', { startDate: futureIso });
+    expect(tx.$queryRaw).toHaveBeenCalled();
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.program.findUnique.mock.invocationCallOrder[0]);
   });
 
   it('rejects a past startDate', async () => {
@@ -69,7 +76,7 @@ describe('ScheduleProgramHandler', () => {
     // violating the Booking_endsAt_after_scheduledAt_chk CHECK constraint and
     // 500-ing every schedule against a real DB.
     const updateArg = tx.booking.updateMany.mock.calls[0][0];
-    expect(updateArg.where).toEqual({ programId: 'prog-1' });
+    expect(updateArg.where).toMatchObject({ programId: 'prog-1', isHistoricalImport: false });
     expect(updateArg.data.scheduledAt).toEqual(new Date(futureIso));
     expect(updateArg.data.endsAt.getTime()).toBeGreaterThan(
       updateArg.data.scheduledAt.getTime(),

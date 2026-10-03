@@ -20,6 +20,8 @@ vi.mock("@/lib/api/payments", () => ({
   refundPayment: refundPaymentMock,
 }))
 
+vi.mock("@/components/providers/auth-provider", () => ({ useAuth: () => ({ canDo: () => true }) }))
+
 vi.mock("@/lib/mutation-helpers", () => ({ showApiError: showApiErrorMock }))
 
 vi.mock("@/components/locale-provider", () => ({
@@ -156,4 +158,11 @@ describe("PaymentDetailDialog", () => {
     })
     expect(screen.getByRole("button", { name: "refund.submit" })).toBeInTheDocument()
   })
+  it("mounts pending refund requests in the selected payment detail", async () => {
+    fetchPaymentMock.mockResolvedValue(makePayment({ gatewayRef: null, refundRequests: [{ id: "req-1", amount: 2500, status: "PENDING_REVIEW", reason: "Cancellation", createdAt: "2026-10-03T00:00:00Z" }] }))
+    renderDialog()
+    expect(await screen.findByRole("region", { name: "refund.review.title" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "refund.review.recordReturn" })).toBeDisabled()
+  })
+
 })

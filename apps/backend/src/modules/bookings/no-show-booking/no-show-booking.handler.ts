@@ -24,7 +24,7 @@ export class NoShowBookingHandler {
   ) {}
 
   async execute(cmd: NoShowBookingCommand) {
-    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'marked as no-show');
+    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID], 'marked as no-show');
     const nextStatus = assertTransition(booking.status, 'NO_SHOW');
     const groupedV2 = booking.packageCreditId
       ? await isGroupedV2PackageCredit(this.prisma, booking.packageCreditId)

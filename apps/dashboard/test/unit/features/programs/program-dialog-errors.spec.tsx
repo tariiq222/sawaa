@@ -2,6 +2,7 @@ import React from "react"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+vi.mock("@/hooks/use-programs", () => ({ useProgramCancellationPreview: () => ({ data: { programId: "p-1", hasStarted: false, quoteToken: "q1", participants: [] }, isFetching: false, isError: false, refetch: vi.fn() }) }))
 vi.mock("@/components/locale-provider", () => ({ useLocale: () => ({ t: (k: string) => k }) }))
 vi.mock("@sawaa/ui", () => {
   const Box = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>
@@ -26,7 +27,7 @@ describe("program transition dialogs", () => {
   })
 
   it("shows a rejected cancellation request inside the dialog", async () => {
-    render(<CancelProgramDialog open onOpenChange={() => {}} onConfirm={vi.fn().mockRejectedValue(new Error("cancel failed"))} />)
+    render(<CancelProgramDialog open programId="p-1" onOpenChange={() => {}} onConfirm={vi.fn().mockRejectedValue(new Error("cancel failed"))} />)
     fireEvent.change(screen.getByLabelText("programs.dialog.cancel.reasonLabel"), { target: { value: "valid cancellation reason" } })
     fireEvent.click(screen.getByRole("button", { name: "programs.dialog.cancel.confirm" }))
     expect(await screen.findByRole("alert")).toHaveTextContent("common.errorLoading")

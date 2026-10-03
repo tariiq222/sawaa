@@ -10,8 +10,10 @@ jest.mock('@/services/client', () => ({
 import React from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Alert } from 'react-native';
 
 import { clientBookingsService } from '@/services/client';
+import { queryClient as appQueryClient } from '@/services/query-client';
 import { useClientBookings, clientBookingsKeys } from '../useClientBookings';
 import { useUpcomingBookings } from '../useUpcomingBookings';
 import { useBooking } from '../useBooking';
@@ -47,6 +49,7 @@ afterEach(() => {
     qc.clear();
   }
   queryClients.clear();
+  jest.restoreAllMocks();
 });
 
 describe('useClientBookings', () => {
@@ -122,10 +125,10 @@ describe('useCancelBooking', () => {
     const { result } = renderHook(() => useCancelBooking(), { wrapper: Wrapper });
 
     await act(async () => {
-      await result.current.mutateAsync({ id: 'b1', reason: 'changed plan' });
+      await result.current.mutateAsync({ id: 'b1', reason: 'changed plan', quoteToken: 'quote', sourceActionId: 'action' });
     });
 
-    expect(mockedCancel).toHaveBeenCalledWith('b1', 'changed plan');
+    expect(mockedCancel).toHaveBeenCalledWith('b1', 'changed plan', { quoteToken: 'quote', sourceActionId: 'action' });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: clientBookingsKeys.all });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: clientBookingsKeys.detail('b1') });
   });
@@ -141,6 +144,26 @@ describe('useCancelBooking', () => {
       ).rejects.toThrow(/409/);
     });
     expect(result.current.isError).toBe(true);
+  });
+
+  it.each([409, 500])('leaves cancellation error %s to the localized screen without a global alert or retry', async (status) => {
+    const error = Object.assign(new Error('Cancellation failed'), {
+      response: { status, data: { message: 'Cancellation terms changed. Reload the cancellation preview.' } },
+    });
+    mockedCancel.mockRejectedValueOnce(error);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    queryClients.add(appQueryClient);
+    const Wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: appQueryClient }, children);
+    const { result } = renderHook(() => useCancelBooking(), { wrapper: Wrapper });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({ id: 'b1', reason: 'changed plan', quoteToken: 'old-quote' })).rejects.toBe(error);
+    });
+
+    await waitFor(() => expect(result.current.error).toBe(error));
+    expect(mockedCancel).toHaveBeenCalledTimes(1);
+    expect(alert).not.toHaveBeenCalled();
   });
 });
 

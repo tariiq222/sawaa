@@ -69,17 +69,17 @@ export class PaymentCompletedEventHandler {
               role: 'system',
               isSuperAdmin: false,
             });
-            const zoomEvent = booking.deliveryType === DeliveryType.ONLINE
+            const zoomEvent = booking.deliveryType === DeliveryType.ONLINE && !booking.zoomMeetingId
               ? new BookingZoomCreateRequestedEvent({ organizationId: DEFAULT_ORG_ID, bookingId })
               : null;
-            await this.rlsTransaction.withTransaction((tx) => Promise.all([
-              updateBookingAtomically(tx, {
+            await this.rlsTransaction.withTransaction(async (tx) => {
+              await updateBookingAtomically(tx, {
                 bookingId,
                 currentStatus: booking.status,
                 actionLabel: 'confirmed after payment',
-                data: { status: nextStatus, confirmedAt: new Date() },
-              }),
-              tx.bookingStatusLog.create({
+                data: { status: nextStatus, confirmedAt: booking.confirmedAt ?? new Date() },
+              });
+              await tx.bookingStatusLog.create({
                 data: {
                   bookingId,
                   fromStatus: booking.status,
@@ -87,18 +87,24 @@ export class PaymentCompletedEventHandler {
                   changedBy: 'system',
                   reason: `payment:${paymentId}`,
                 },
-              }),
-              ...(zoomEvent ? [tx.outboxEvent.create({
-                data: {
-                  id: zoomEvent.eventId,
-                  aggregateId: bookingId,
-                  eventType: zoomEvent.eventName,
-                  status: 'PENDING_V2',
-                  deliveryLane: 'PENDING_V2',
-                  payload: zoomEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
-                },
-              })] : []),
-            ]));
+              });
+              if (zoomEvent) {
+                // Deposit confirmation may already have staged this stable
+                // request. Legacy deposits without a request still get one.
+                await tx.outboxEvent.upsert({
+                  where: { id: zoomEvent.eventId },
+                  update: {},
+                  create: {
+                    id: zoomEvent.eventId,
+                    aggregateId: bookingId,
+                    eventType: zoomEvent.eventName,
+                    status: 'PENDING_V2',
+                    deliveryLane: 'PENDING_V2',
+                    payload: zoomEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
+                  },
+                });
+              }
+            });
           });
         } catch (err) {
           this.logger.error(`Failed to confirm booking ${bookingId} after payment`, err);

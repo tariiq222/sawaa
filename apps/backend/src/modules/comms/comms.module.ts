@@ -1,3 +1,4 @@
+import { OnRefundOutcomeHandler } from './events/on-refund-outcome.handler';
 import { forwardRef, Module, OnModuleInit } from '@nestjs/common';
 import { DashboardCommsController } from '../../api/dashboard/comms.controller';
 import { DashboardConversationsController } from '../../api/dashboard/conversations.controller';
@@ -192,6 +193,7 @@ const handlers = [
 
 const eventHandlers = [
   OnBookingCancelledHandler,
+  OnRefundOutcomeHandler,
   OnBookingReminderHandler,
   OnPaymentFailedHandler,
   OnClientEnrolledHandler,
@@ -222,6 +224,7 @@ const eventHandlers = [
 export class CommsModule implements OnModuleInit {
   constructor(
     private readonly eventBus: EventBusService,
+    private readonly onRefundOutcome: OnRefundOutcomeHandler,
     private readonly onBookingCancelled: OnBookingCancelledHandler,
     private readonly onBookingReminder: OnBookingReminderHandler,
     private readonly onPaymentFailed: OnPaymentFailedHandler,
@@ -236,6 +239,7 @@ export class CommsModule implements OnModuleInit {
 
   onModuleInit(): void {
     this.onBookingCancelled.register(this.eventBus);
+    this.onRefundOutcome.register(this.eventBus);
     this.onBookingReminder.register(this.eventBus);
     this.onPaymentFailed.register(this.eventBus);
     this.onClientEnrolled.register(this.eventBus);

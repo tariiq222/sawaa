@@ -61,9 +61,9 @@ describe('OverviewTab balance', () => {
 });
 
 describe('OverviewTab bookings', () => {
-  it('asks the server for the next upcoming booking after older records', async () => {
+  it.each(['CONFIRMED', 'DEPOSIT_PAID'])('shows the next %s appointment with its join action', async (status) => {
     const next: ClientBookingItem = {
-      id: 'future-booking', status: 'CONFIRMED', scheduledAt: '2099-01-01T10:00:00Z',
+      id: 'future-booking', status: status as ClientBookingItem['status'], deliveryType: 'ONLINE', zoomJoinUrl: 'https://zoom.us/j/deposit', scheduledAt: '2099-01-01T10:00:00Z',
       endsAt: '2099-01-01T11:00:00Z', durationMins: 60, price: '10000', currency: 'SAR',
       serviceName: 'Future session', serviceNameAr: null, employeeName: 'Counselor',
       employeeNameAr: null, branchName: 'Branch', branchNameAr: null,
@@ -80,6 +80,7 @@ describe('OverviewTab bookings', () => {
 
     renderOverview();
     expect(await screen.findByText('Future session')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Join/ }).getAttribute('href')).toBe('https://zoom.us/j/deposit');
     expect(getMyBookingsApi).toHaveBeenCalledWith(1, 1, 'upcoming');
     expect(getMyBookingsApi).toHaveBeenCalledWith(1, 1);
   });

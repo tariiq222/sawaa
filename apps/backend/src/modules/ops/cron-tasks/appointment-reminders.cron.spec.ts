@@ -66,7 +66,7 @@ describe('AppointmentRemindersCron', () => {
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
-  it('selects CONFIRMED bookings inside the [lead, lead+window) slice', async () => {
+  it('selects confirmed and deposit-paid bookings inside the [lead, lead+window) slice', async () => {
     const lead = 60;
     const prisma = buildPrisma([], lead);
     const { service: redis } = buildRedis();
@@ -78,9 +78,9 @@ describe('AppointmentRemindersCron', () => {
 
     expect(prisma.booking.findMany).toHaveBeenCalledTimes(1);
     const arg = prisma.booking.findMany.mock.calls[0][0] as {
-      where: { status: BookingStatus; scheduledAt: { gte: Date; lt: Date } };
+      where: { status: { in: BookingStatus[] }; scheduledAt: { gte: Date; lt: Date } };
     };
-    expect(arg.where.status).toBe(BookingStatus.CONFIRMED);
+    expect(arg.where.status).toEqual({ in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] });
 
     const gte = arg.where.scheduledAt.gte.getTime();
     const lt = arg.where.scheduledAt.lt.getTime();

@@ -5,6 +5,7 @@ export type ExistingBookingCheckoutPhase =
   | 'ready'
   | 'pending'
   | 'success'
+  | 'deposit_confirmed'
   | 'failed'
   | 'cancelled'
   | 'expired'
@@ -33,8 +34,8 @@ function isFailedInvoice(invoice: ClientInvoice): boolean {
   return ['CANCELLED', 'VOID', 'REFUNDED'].includes(normalized(invoice.status));
 }
 
-function isConfirmedBooking(status: string): boolean {
-  return ['CONFIRMED', 'COMPLETED'].includes(normalized(status));
+function isOperationallyConfirmedBooking(status: string): boolean {
+  return ['CONFIRMED', 'COMPLETED', 'DEPOSIT_PAID'].includes(normalized(status));
 }
 
 function hasPaymentStatus(invoice: ClientInvoice, status: string): boolean {
@@ -61,7 +62,13 @@ export function resolveExistingBookingCheckout(input: ExistingBookingCheckoutInp
 
   if (input.booking.invoiceId && !input.invoice) return 'missing_invoice';
   if (!input.invoice) {
-    return isConfirmedBooking(input.booking.status) ? 'success' : 'missing_invoice';
+    return isOperationallyConfirmedBooking(input.booking.status) ? 'success' : 'missing_invoice';
+  }
+
+  // Appointment confirmation is independent of balance collection. Keep a
+  // distinct phase so the screen retains the invoice and payment controls.
+  if (bookingStatus === 'DEPOSIT_PAID' && !isPaidInvoice(input.invoice) && !isFailedInvoice(input.invoice)) {
+    return 'deposit_confirmed';
   }
 
   const latestPayment = input.invoice.payments?.[0];
@@ -70,7 +77,7 @@ export function resolveExistingBookingCheckout(input: ExistingBookingCheckoutInp
     return 'pending';
   }
   if (isPaidInvoice(input.invoice)) {
-    return isConfirmedBooking(input.booking.status) ? 'success' : 'pending';
+    return isOperationallyConfirmedBooking(input.booking.status) ? 'success' : 'pending';
   }
   if (isFailedInvoice(input.invoice)) return 'failed';
   if (normalized(input.invoice.status) === 'PARTIALLY_PAID') return 'pending';

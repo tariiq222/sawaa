@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, RefundType } from '@prisma/client';
@@ -13,13 +14,15 @@ import { assertTransition } from '../booking-state-machine';
 import { ProgramCapacityService } from '../program/program-capacity.service';
 import { assertBookingIsMutable, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { returnPackageCreditForBooking } from '../package-credit-return.helper';
+import { readCancellationPayments } from '../client/client-cancellation-preview.handler';
+import { buildStaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 
 export interface ApproveCancelBookingCommand {
   bookingId: string;
   approvedBy: string;
   approverNotes?: string;
-  /** Refund decision — determines whether a RefundRequest is created atomically with the cancellation. */
+  /** Refund decision — freezes the additional refund budget atomically with cancellation. */
   refundType?: RefundType;
   /** Refund amount in halalas — required iff refundType is PARTIAL. */
   refundAmount?: number;
@@ -33,7 +36,7 @@ export class ApproveCancelBookingHandler {
     _eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly groupSessionCapacity: ProgramCapacityService,
-    private readonly refundHandler: RefundPaymentHandler,
+    _refundHandler: RefundPaymentHandler,
   ) {}
 
   async execute(cmd: ApproveCancelBookingCommand) {
@@ -44,38 +47,43 @@ export class ApproveCancelBookingHandler {
       throw new BadRequestException('refundAmount is only allowed when refundType is PARTIAL');
     }
 
-    const booking = await this.prisma.booking.findFirst({
+    const initialBooking = await this.prisma.booking.findFirst({
       where: { id: cmd.bookingId },
     });
-    if (!booking) {
+    if (!initialBooking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
-    assertBookingIsMutable(booking);
-    const nextStatus = assertTransition(booking.status, 'APPROVE_CANCEL');
-
-    const settings = await this.settingsHandler.execute({
-      branchId: booking.branchId,
-    });
-
-    const autoRefund =
-      'autoRefundOnCancel' in settings
-        ? (settings as Record<string, unknown>).autoRefundOnCancel === true
-        : true;
-
-    // Read only after the booking CAS inside the transaction so a payment
-    // committed while approval was waiting is included in the refund.
-    let completedPayment: { id: string; amount: unknown } | null = null;
-
     const refundSummary = cmd.refundType
       ? ` — refund: ${cmd.refundType}${cmd.refundType === RefundType.PARTIAL ? ` ${cmd.refundAmount} halalas` : ''}`
       : '';
     const statusLogReason = `Cancel request approved${refundSummary}${cmd.approverNotes ? ` — ${cmd.approverNotes}` : ''}`;
 
-    let refundRequestId: string | null = null;
-    let idempotencyKey: string | null = null;
-    const cancellationEventId = stableEventId(`booking:${booking.id}:cancel-approved`);
+    const cancellationEventId = stableEventId(`booking:${cmd.bookingId}:cancel-approved`);
 
-    const updated = await this.rlsTransaction.withTransaction(async (tx) => {
+    return this.rlsTransaction.withTransaction(async (tx) => {
+      // Program operations serialize membership before individual bookings. Use
+      // NOWAIT for the booking to avoid deadlocking older Booking -> Program flows.
+      if (initialBooking.programId) {
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Program" WHERE "id" = ${initialBooking.programId} FOR UPDATE`);
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE NOWAIT`);
+      } else {
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`);
+      }
+      const booking = await tx.booking.findFirst({ where: { id: cmd.bookingId } });
+      if (!booking) throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
+      if (booking.programId !== initialBooking.programId) throw new ConflictException('Booking program changed concurrently');
+      assertBookingIsMutable(booking);
+      const nextStatus = assertTransition(booking.status, 'APPROVE_CANCEL');
+      const settings = await this.settingsHandler.execute({ branchId: booking.branchId, transaction: tx });
+      const autoRefund = 'autoRefundOnCancel' in settings ? settings.autoRefundOnCancel === true : true;
+      const effectiveRefundType = cmd.refundType ?? (autoRefund ? RefundType.FULL : RefundType.NONE);
+      const payments = await readCancellationPayments(tx, booking.id, true);
+      const staffCancellation = buildStaffCancellationIntent({
+        payments, currency: booking.currency,
+        refundAmount: effectiveRefundType === RefundType.NONE ? 0 : effectiveRefundType === RefundType.PARTIAL ? cmd.refundAmount : undefined,
+        initiatedBy: 'STAFF', performedBy: cmd.approvedBy,
+        reason: statusLogReason, automatic: autoRefund,
+      });
       const updatedBooking = await updateBookingAtomically(tx, {
           bookingId: cmd.bookingId,
           currentStatus: booking.status,
@@ -101,10 +109,6 @@ export class ApproveCancelBookingHandler {
             },
           } : {}),
         });
-      completedPayment = await tx.payment.findFirst({
-        where: { invoice: { bookingId: cmd.bookingId }, status: 'COMPLETED' },
-        select: { id: true, amount: true },
-      });
       await tx.bookingStatusLog.create({
         data: {
           bookingId: cmd.bookingId,
@@ -115,26 +119,8 @@ export class ApproveCancelBookingHandler {
         },
       });
 
-      // MONEY SAFETY: create the RefundRequest atomically with the status
-      // change so a crash between commit and publish cannot lose the refund.
-      // The same createRefundRequestInTx path used by cancel-booking.handler
-      // ensures FOR UPDATE lock, idempotency, and accounting are all correct.
-      if (completedPayment) {
-        const effectiveRefundType = cmd.refundType ?? (autoRefund ? RefundType.FULL : RefundType.NONE);
-        if (effectiveRefundType !== RefundType.NONE) {
-          const refundAmount =
-            effectiveRefundType === RefundType.PARTIAL ? cmd.refundAmount : undefined;
-          const created = await this.refundHandler.createRefundRequestInTx(tx, {
-            paymentId: completedPayment.id,
-            reason: `Booking ${cmd.bookingId} cancel-approval (${effectiveRefundType})`,
-            performedBy: cmd.approvedBy,
-            amount: refundAmount,
-            sourceEventId: cancellationEventId,
-          });
-          refundRequestId = created.refundRequestId;
-          idempotencyKey = created.idempotencyKey;
-        }
-      }
+      // The durable intent is committed with cancellation; settlement happens
+      // independently and never blocks appointment cancellation on provider failure.
 
       // Session-package credit bookings: return the credit to its bucket
       // on cancel-approval. Mirrors the cancel-booking behaviour so every
@@ -144,7 +130,7 @@ export class ApproveCancelBookingHandler {
         await returnPackageCreditForBooking(tx, cmd.bookingId);
       }
 
-      // Roll back sibling AWAITING_PAYMENT bookings for program enrollments.
+      // Return this participant seat for program enrollments.
       if (booking.programId) {
         // Remove the ProgramEnrollment row so the client can re-enroll after
         // their seat is freed.
@@ -160,9 +146,7 @@ export class ApproveCancelBookingHandler {
         approverNotes: cmd.approverNotes,
         refundType: cmd.refundType,
         refundAmount: cmd.refundAmount,
-        paymentId: completedPayment?.id ?? null,
-        refundRequestId,
-        idempotencyKey,
+        staffCancellation,
       }, cancellationEventId);
       await tx.outboxEvent.create({
         data: {
@@ -172,9 +156,7 @@ export class ApproveCancelBookingHandler {
           payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
         },
       });
-      return updatedBooking;
+      return { ...updatedBooking, autoRefund };
     });
-
-    return { ...updated, autoRefund };
   }
 }

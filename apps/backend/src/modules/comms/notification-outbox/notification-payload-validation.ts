@@ -15,6 +15,8 @@ export function isValidNotificationIntentPayload(
   if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return false;
   const value = payload as Record<string, unknown>;
   switch (consumerKey) {
+    case NOTIFICATION_OUTBOX_CONSUMERS.REFUND_OUTCOME_CLIENT:
+      return value.kind === 'refund-outcome-client' && nonEmptyString(value.clientId) && nonEmptyString(value.refundRequestId) && nonEmptyString(value.currency) && ['COMPLETED', 'FAILED', 'DENIED', 'PENDING_REVIEW', 'MANUAL_REVIEW'].includes(String(value.status)) && Number.isSafeInteger(value.amount) && Number(value.amount) >= 0;
     case NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_CREATED_STAFF:
       return value.kind === 'booking-created-staff' && nonEmptyString(value.bookingId);
     case NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_CANCELLED_CLIENT:

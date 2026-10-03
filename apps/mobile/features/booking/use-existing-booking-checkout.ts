@@ -79,8 +79,13 @@ export function useExistingBookingCheckout({ bookingId, invoiceId }: UseExisting
     void refresh();
   }, [refresh, refreshNonce]);
 
+  // Keep appointment confirmation separate from the balance payment lifecycle.
+  // An idle remaining balance must not start a polling loop.
+  const shouldPoll = phase === 'pending' || (phase === 'deposit_confirmed' &&
+    (snapshot.invoice?.payments ?? []).some((payment) =>
+      ['PENDING', 'PENDING_VERIFICATION'].includes(payment.status.trim().toUpperCase())));
   useEffect(() => {
-    if (phase !== 'pending') return undefined;
+    if (!shouldPoll) return undefined;
     let refreshes = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
@@ -97,10 +102,10 @@ export function useExistingBookingCheckout({ bookingId, invoiceId }: UseExisting
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [phase, refresh, refreshNonce]);
+  }, [shouldPoll, refresh, refreshNonce]);
 
   useEffect(() => {
-    if (!bookingId || !['success', 'failed', 'cancelled', 'expired'].includes(phase)) return;
+    if (!bookingId || !['success', 'deposit_confirmed', 'failed', 'cancelled', 'expired'].includes(phase)) return;
     void queryClient.invalidateQueries({ queryKey: clientBookingsKeys.all });
     void queryClient.invalidateQueries({ queryKey: clientBookingsKeys.detail(bookingId) });
   }, [bookingId, phase]);

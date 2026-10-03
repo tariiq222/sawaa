@@ -1,9 +1,10 @@
+import { ClientCancellationOutcomeHandler } from './client-cancellation-outcome.handler';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 
 @Injectable()
 export class GetClientBookingHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly cancellationOutcome: ClientCancellationOutcomeHandler) {}
 
   async execute(bookingId: string, clientId: string) {
     const booking = await this.prisma.booking.findFirst({
@@ -35,6 +36,7 @@ export class GetClientBookingHandler {
     const payment = invoice?.payments[0];
 
     return {
+      ...(booking.status === 'CANCELLED' ? { cancellationRefund: await this.cancellationOutcome.execute(booking.id, clientId) } : {}),
       id: booking.id,
       status: booking.status,
       scheduledAt: booking.scheduledAt.toISOString(),

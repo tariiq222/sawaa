@@ -6,7 +6,7 @@ const mockCheckAgain = jest.fn();
 const mockReplace = jest.fn();
 let mockBooking: { id: string; status: string } | undefined;
 let mockBookingError = false;
-let mockPhase: 'confirmed' | 'failed' = 'confirmed';
+let mockPhase: 'confirmed' | 'pending' | 'failed' = 'confirmed';
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ bookingId: 'booking-1', invoiceId: 'invoice-1' }),
@@ -105,6 +105,15 @@ describe('booking success verification', () => {
     });
     await act(async () => { fireEvent.press(screen.getByText('Check again')); });
     await waitFor(() => expect(screen.getByText('Appointment confirmed')).toBeTruthy());
+  });
+
+  it('confirms the deposit appointment and states that a balance remains due', () => {
+    mockBooking = { id: 'booking-1', status: 'DEPOSIT_PAID' };
+    mockPhase = 'pending';
+    const screen = render(<BookingSuccessScreen />);
+    expect(screen.getByText('Appointment confirmed')).toBeTruthy();
+    expect(screen.getByText('Deposit received. The remaining balance is still due.')).toBeTruthy();
+    expect(screen.queryByText('Confirming appointment')).toBeNull();
   });
 
   it('retries payment against the existing booking and invoice', () => {

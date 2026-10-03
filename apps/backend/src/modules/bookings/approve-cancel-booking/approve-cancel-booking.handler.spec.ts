@@ -1,7 +1,15 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, DeliveryType } from '@prisma/client';
 import { ApproveCancelBookingHandler } from './approve-cancel-booking.handler';
-import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma as buildBasePrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+
+const buildPrisma = () => {
+  const p = buildBasePrisma();
+  const raw = p.$queryRaw.getMockImplementation()!;
+  p.$queryRaw.mockImplementation((query: any, ...values: any[]) => Array.isArray(query) ? raw(query, ...values) : raw(query.strings, ...query.values));
+  Object.assign(p.payment, { findMany: jest.fn().mockResolvedValue([]) });
+  return p;
+};
 
 const buildGroupCapacity = () => ({ recalculateGroupStatus: jest.fn().mockResolvedValue(undefined) });
 
@@ -130,6 +138,7 @@ describe('ApproveCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
     prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
+    Object.assign(prisma.payment, { findMany: jest.fn().mockResolvedValue([{ id: 'pay-1', invoiceId: 'inv-1', amount: 10000, refundedAmount: 0, currency: 'SAR', status: 'COMPLETED', method: 'CASH', gatewayRef: null, refundRequests: [] }]) });
     const eb = buildEventBus();
     const handler = buildHandler(prisma, { eb });
 
@@ -237,145 +246,22 @@ describe('ApproveCancelBookingHandler', () => {
     expect(result.autoRefund).toBe(true);
   });
 
-  // ─── Refund execution tests (Fix #5) ─────────────────────────────────────
-
-  it('re-reads a payment after the approval CAS when it commits during approval', async () => {
+  it.each([true, false])('defaults refund budget from autoRefund=%s', async autoRefund => {
     const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    // The payment lookup occurs after the approval CAS inside the transaction.
-    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-late', amount: 10000 });
+    prisma.booking.findFirst.mockResolvedValue(cancelRequestedBooking);
+    Object.assign(prisma.payment, { findMany: jest.fn().mockResolvedValue([{
+      id: 'pay-1', invoiceId: 'inv-1', amount: 10000, refundedAmount: 0,
+      currency: 'SAR', status: 'COMPLETED', method: 'CASH', gatewayRef: null, refundRequests: [],
+    }]) });
     const refundHandler = buildRefundHandler();
-    const handler = buildHandler(prisma, { refundHandler });
-
-    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
-
-    expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ paymentId: 'pay-late' }),
-    );
-  });
-
-  it('creates refund request in transaction when booking is PAID and refundType is FULL', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    // Simulate a completed payment found before the transaction
-    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10000 });
-    const refundHandler = buildRefundHandler();
-    const handler = buildHandler(prisma, { refundHandler });
-
-    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
-
-    expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
-      expect.anything(), // tx
-      expect.objectContaining({
-        paymentId: 'pay-1',
-        amount: undefined, // FULL refund — amount left undefined so finance handler refunds the whole amount
-        performedBy: 'admin-1',
-      }),
-    );
-  });
-
-  it('creates partial refund request in transaction when refundType is PARTIAL', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10000 });
-    const refundHandler = buildRefundHandler();
-    const handler = buildHandler(prisma, { refundHandler });
-
-    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'PARTIAL', refundAmount: 5000 });
-
-    expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ paymentId: 'pay-1', amount: 5000, performedBy: 'admin-1' }),
-    );
-  });
-
-  it('does NOT create refund request when refundType is NONE', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10000 });
-    const refundHandler = buildRefundHandler();
-    const handler = buildHandler(prisma, { refundHandler });
-
-    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'NONE' });
-
-    expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
-  });
-
-  it('does NOT create refund request when booking was never paid', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    // No completed payment
-    prisma.payment.findFirst = jest.fn().mockResolvedValue(null);
-    const refundHandler = buildRefundHandler();
-    const handler = buildHandler(prisma, { refundHandler });
-
-    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
-
-    expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
-  });
-
-  it('auto-issues FULL refund when no refundType given and autoRefund is true and booking is PAID', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10000 });
-    const refundHandler = buildRefundHandler();
-    const settings = { execute: jest.fn().mockResolvedValue({ autoRefundOnCancel: true }) };
-    const handler = buildHandler(prisma, { refundHandler, settings });
-
-    // No refundType provided — handler defaults to FULL when autoRefund=true
+    const handler = buildHandler(prisma, { refundHandler, settings: { execute: jest.fn().mockResolvedValue({ autoRefundOnCancel: autoRefund }) } });
     await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
-
-    expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ paymentId: 'pay-1', amount: undefined }),
-    );
-  });
-
-  it('does NOT auto-issue refund when no refundType given and autoRefund is false', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10000 });
-    const refundHandler = buildRefundHandler();
-    const settings = { execute: jest.fn().mockResolvedValue({ autoRefundOnCancel: false }) };
-    const handler = buildHandler(prisma, { refundHandler, settings });
-
-    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
-
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      payload: expect.objectContaining({ payload: expect.objectContaining({
+        staffCancellation: expect.objectContaining({ refund: expect.objectContaining({ refundAmount: autoRefund ? 10000 : 0 }) }),
+      }) }),
+    }) });
     expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
-  });
-
-  it('includes refundRequestId and paymentId in the transactional outbox event', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10000 });
-    const refundHandler = buildRefundHandler();
-    const eb = buildEventBus();
-    const handler = buildHandler(prisma, { refundHandler, eb });
-
-    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', refundType: 'FULL' });
-
-    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        eventType: 'bookings.booking.cancel_approved',
-        payload: expect.objectContaining({
-          payload: expect.objectContaining({
-          paymentId: 'pay-1',
-          refundRequestId: 'rr-1',
-          idempotencyKey: 'ik-1',
-          }),
-        }),
-      }),
-    });
-    expect(eb.publish).not.toHaveBeenCalled();
   });
 
   // ─── Session-package credit return (P1-1 fix) ───────────────────────────

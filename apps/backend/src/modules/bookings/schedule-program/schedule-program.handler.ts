@@ -29,6 +29,8 @@ export class ScheduleProgramHandler {
     }
 
     return this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM "Booking" WHERE "programId" = ${programId} ORDER BY id FOR UPDATE NOWAIT`;
       const program = await tx.program.findUnique({
         where: { id: programId },
       });
@@ -49,7 +51,7 @@ export class ScheduleProgramHandler {
         startDate.getTime() + program.hoursPerDay * 60 * 60_000,
       );
       await tx.booking.updateMany({
-        where: { programId },
+        where: { programId, isHistoricalImport: false, status: { in: ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'DEPOSIT_PAID', 'PENDING_GROUP_FILL', 'CANCEL_REQUESTED'] } },
         data: { scheduledAt: startDate, endsAt: advisoryEnd },
       });
 

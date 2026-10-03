@@ -1,7 +1,14 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus, RefundType } from '@prisma/client';
 import { ExpireBookingHandler } from './expire-booking.handler';
-import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma as buildBasePrisma, buildRlsTransaction, buildEventBus, mockBooking as baseBooking } from '../testing/booking-test-helpers';
+
+const mockBooking = { ...baseBooking, isHistoricalImport: false, expiresAt: new Date('2020-01-01') };
+const buildPrisma = () => {
+  const prisma = buildBasePrisma();
+  prisma.booking.findUnique.mockResolvedValue(mockBooking);
+  return prisma;
+};
 
 const buildRefundHandler = () => ({
   createRefundRequestInTx: jest.fn(),
@@ -267,4 +274,44 @@ describe('ExpireBookingHandler — deposit refund (MONEY-SAFETY P1)', () => {
 
     expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
   });
+});
+
+describe('ExpireBookingHandler — explicit deadline safety', () => {
+  it.each([
+    ['old booking without deadline', { expiresAt: null, createdAt: new Date('2000-01-01') }],
+    ['future deadline', { expiresAt: new Date('2100-01-01') }],
+    ['historical record', { isHistoricalImport: true }],
+    ['deposit-confirmed booking', { status: BookingStatus.DEPOSIT_PAID }],
+  ])('leaves %s unchanged', async (_label, overrides) => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue({ ...mockBooking, ...overrides });
+    const eventBus = buildEventBus();
+    await expect(newHandler(prisma, eventBus).execute({ bookingId: 'book-1', changedBy: 'system' }))
+      .rejects.toThrow(BadRequestException);
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+  });
+
+  it.each(['deadline extended', 'deadline removed', 'status changed', 'marked historical'])(
+    'rejects stale selection when %s before mutation', async (change) => {
+      const prisma = buildPrisma();
+      const eventBus = buildEventBus();
+      const current = { ...mockBooking,
+        ...(change === 'deadline extended' ? { expiresAt: new Date('2100-01-01') } : {}),
+        ...(change === 'deadline removed' ? { expiresAt: null } : {}),
+        ...(change === 'status changed' ? { status: BookingStatus.DEPOSIT_PAID } : {}),
+        ...(change === 'marked historical' ? { isHistoricalImport: true } : {}),
+      };
+      prisma.booking.updateMany.mockImplementation(async ({ where }: any) => ({
+        count: current.status === where.status &&
+          (!where.expiresAt || (current.expiresAt !== null && current.expiresAt < where.expiresAt.lt)) &&
+          (where.isHistoricalImport === undefined || current.isHistoricalImport === where.isHistoricalImport)
+          ? 1 : 0,
+      }));
+      await expect(newHandler(prisma, eventBus).execute({ bookingId: 'book-1', changedBy: 'system' }))
+        .rejects.toThrow(BadRequestException);
+      expect(eventBus.publish).not.toHaveBeenCalled();
+      expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+    });
 });

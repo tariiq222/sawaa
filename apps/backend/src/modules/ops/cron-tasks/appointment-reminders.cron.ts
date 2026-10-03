@@ -29,7 +29,7 @@ export const REMINDER_WINDOW_MINUTES = 5;
 const REMINDER_DEDUP_TTL_SECONDS = 25 * 60 * 60;
 
 /**
- * Sends appointment reminders for CONFIRMED bookings whose start time falls in
+ * Sends appointment reminders for confirmed and deposit-paid bookings whose start time falls in
  * the next [lead, lead + window) slice. De-dup is enforced with a Redis key per
  * booking (no schema column) so a redelivered cron tick never double-sends.
  *
@@ -59,7 +59,7 @@ export class AppointmentRemindersCron {
 
       const bookings = await this.prisma.booking.findMany({
         where: {
-          status: BookingStatus.CONFIRMED,
+          status: { in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
           scheduledAt: { gte: windowStart, lt: windowEnd },
         },
         select: {

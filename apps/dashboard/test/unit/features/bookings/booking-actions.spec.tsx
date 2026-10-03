@@ -158,6 +158,15 @@ describe("BookingActions", () => {
     vi.useRealTimers()
   })
 
+  it('offers attendance and fulfillment actions for a deposit-confirmed booking', () => {
+    mockMutations()
+    render(<BookingActions booking={makeBooking("deposit_paid")} onAction={vi.fn()} />)
+    for (const action of ["checkin", "complete", "noshow"]) {
+      expect(findDropdownItem(`bookings.actions.action.${action}`)).toBeTruthy()
+    }
+    expect(findDropdownItem("bookings.actions.action.confirm")).toBeUndefined()
+  })
+
   // ─── Null when no actions available ─────────────────────────────────────────
 
   it.each([

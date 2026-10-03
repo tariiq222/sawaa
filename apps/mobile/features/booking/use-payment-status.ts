@@ -106,8 +106,8 @@ const CONFIRMED_BOOKING_STATUSES = new Set(['CONFIRMED', 'COMPLETED']);
 
 /**
  * A paid invoice is NOT enough to call an appointment confirmed: the booking
- * itself must have reached CONFIRMED/COMPLETED (settlement lag or a deposit can
- * leave it pending). Mirrors the existing-checkout flow.
+ * itself must have reached an operationally confirmed status. DEPOSIT_PAID
+ * confirms the appointment independently of the outstanding invoice balance.
  *
  * An invoiced appointment is not confirmed until its booking can be read and
  * has a confirmed status. A failed read must never become a success message.
@@ -118,10 +118,11 @@ export function resolveConfirmedPhase(
   bookingLoaded: boolean,
   bookingStatus: string | null | undefined,
 ): PaymentPhase {
+  const status = bookingStatus?.trim().toUpperCase() ?? '';
+  if (bookingLoaded && status === 'DEPOSIT_PAID') return 'confirmed';
   if (paymentPhase !== 'confirmed' || !hasInvoice) {
     return paymentPhase;
   }
-  const status = bookingStatus?.trim().toUpperCase() ?? '';
   return bookingLoaded && CONFIRMED_BOOKING_STATUSES.has(status) ? 'confirmed' : 'pending';
 }
 

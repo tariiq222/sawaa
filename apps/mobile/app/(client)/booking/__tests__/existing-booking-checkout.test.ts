@@ -46,6 +46,24 @@ describe('resolveExistingBookingCheckout', () => {
     }))).toBe('success');
   });
 
+  it('separates deposit confirmation from the collectible invoice balance', () => {
+    const invoice = { ...baseInvoice, status: 'PARTIALLY_PAID', payments: [{ id: 'deposit-1', status: 'COMPLETED', amount: 3000 }] };
+    expect(resolveExistingBookingCheckout(input({ booking: { ...baseBooking, status: 'deposit_paid' }, invoice }))).toBe('deposit_confirmed');
+    expect(canStartHostedPayment(invoice)).toBe(true);
+    expect(canResumeHostedPayment(invoice)).toBe(true);
+  });
+
+  it('keeps verification of a deposit booking balance pending without offering another payment', () => {
+    const invoice = { ...baseInvoice, status: 'PARTIALLY_PAID', payments: [{ id: 'balance-1', status: 'PENDING_VERIFICATION' }] };
+    expect(resolveExistingBookingCheckout(input({ booking: { ...baseBooking, status: 'deposit_paid' }, invoice }))).toBe('deposit_confirmed');
+    expect(canStartHostedPayment(invoice)).toBe(false);
+    expect(canResumeHostedPayment(invoice)).toBe(false);
+  });
+
+  it('recognizes a deposit booking after its balance invoice settles', () => {
+    expect(resolveExistingBookingCheckout(input({ booking: { ...baseBooking, status: 'deposit_paid' }, invoice: { ...baseInvoice, status: 'PAID' } }))).toBe('success');
+  });
+
   it('does not settle a partially paid invoice from one completed payment row', () => {
     expect(resolveExistingBookingCheckout(input({
       booking: { ...baseBooking, status: 'confirmed' },
