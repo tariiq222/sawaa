@@ -762,32 +762,55 @@ describe("Scenario 11 — Client requests cancel, staff approves, auto-refund", 
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("Scenario 12 — Late cancel request rejected by staff, booking back to CONFIRMED", () => {
-	it("REJECT_CANCEL transitions back to CONFIRMED", async () => {
+	it("REJECT_CANCEL restores reception confirmation without captured payment", async () => {
 		const {
 			RejectCancelBookingHandler,
 		} = require("../reject-cancel-booking/reject-cancel-booking.handler");
 		const prisma = buildPrisma();
 		const eventBus = buildEventBus();
 
-		// RejectCancelBookingHandler uses findFirst (delegates to findUnique)
-		// First call: fetchBookingOrFail needs CANCEL_REQUESTED
-		// Second call: updateBookingAtomically calls findUnique after updateMany
-		prisma.booking.findUnique
-			.mockResolvedValueOnce({
-				...mockBooking,
-				id: "book-12",
-				status: BookingStatus.CANCEL_REQUESTED,
-				clientId: "client-saad",
-				scheduledAt: futureDate(48),
-			} as any)
-			.mockResolvedValueOnce({
-				...mockBooking,
-				id: "book-12",
-				status: BookingStatus.CONFIRMED,
-				clientId: "client-saad",
-				scheduledAt: futureDate(48),
-			} as any);
-		prisma.booking.updateMany.mockResolvedValue({ count: 1 });
+		// Reject cancellation locks the booking and its invoices with Prisma.Sql.
+		prisma.$queryRaw.mockImplementation(async (query: Prisma.Sql) => {
+			expect(query.values).toEqual(["book-12"]);
+			if (query.sql === 'SELECT "id" FROM "Booking" WHERE "id" = ? FOR UPDATE') {
+				return [{ id: "book-12" }];
+			}
+			if (query.sql === 'SELECT "id" FROM "Invoice" WHERE "bookingId" = ? ORDER BY "id" FOR UPDATE') {
+				return [{ id: "inv-12" }];
+			}
+			throw new Error("Unexpected cancellation-rejection raw query");
+		});
+
+		// Reception confirmed this unpaid appointment before the cancellation request.
+		// The durable request log, not a capture or a fabricated post-update row,
+		// supplies the status to restore.
+		const confirmedAt = pastDate(24);
+		const booking = {
+			...mockBooking,
+			id: "book-12",
+			status: BookingStatus.CANCEL_REQUESTED,
+			clientId: "client-saad",
+			scheduledAt: futureDate(48),
+			confirmedAt,
+			expiresAt: null,
+		};
+		prisma.bookingStatusLog.findFirst.mockResolvedValue({
+			id: "cancel-request-12", bookingId: "book-12",
+			fromStatus: BookingStatus.CONFIRMED,
+			toStatus: BookingStatus.CANCEL_REQUESTED,
+			changedBy: "client-saad", createdAt: pastDate(),
+		});
+		prisma.invoice.findFirst.mockResolvedValue({
+			id: "inv-12", bookingId: "book-12", total: 20000, currency: "SAR",
+		});
+		const findCapturedPayments = jest.fn().mockResolvedValue([]);
+		Object.assign(prisma.payment, { findMany: findCapturedPayments });
+		prisma.booking.findUnique.mockImplementation(async () => ({ ...booking }));
+		prisma.booking.updateMany.mockImplementation(async ({ where, data }: any) => {
+			if (where.id !== booking.id || where.status !== booking.status) return { count: 0 };
+			Object.assign(booking, data);
+			return { count: 1 };
+		});
 
 		const handler = new RejectCancelBookingHandler(
 			prisma as never,
@@ -802,6 +825,29 @@ describe("Scenario 12 — Late cancel request rejected by staff, booking back to
 		});
 
 		expect(result.status).toBe(BookingStatus.CONFIRMED);
+		expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+		expect(prisma.$queryRaw.mock.calls[0][0].sql).toContain('FROM "Booking"');
+		expect(prisma.$queryRaw.mock.calls[1][0].sql).toContain('FROM "Invoice"');
+		expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+			prisma.booking.findUnique.mock.invocationCallOrder[0],
+		);
+		expect(prisma.$queryRaw.mock.invocationCallOrder[1]).toBeLessThan(
+			prisma.invoice.findFirst.mock.invocationCallOrder[0],
+		);
+		expect(prisma.invoice.findFirst.mock.invocationCallOrder[0]).toBeLessThan(
+			prisma.booking.updateMany.mock.invocationCallOrder[0],
+		);
+		expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+			where: { id: "book-12", status: BookingStatus.CANCEL_REQUESTED },
+			data: expect.objectContaining({ status: BookingStatus.CONFIRMED, confirmedAt, expiresAt: null }),
+		}));
+		expect(prisma.bookingStatusLog.findFirst).toHaveBeenCalledWith({
+			where: { bookingId: "book-12", toStatus: BookingStatus.CANCEL_REQUESTED },
+			orderBy: { createdAt: "desc" },
+		});
+		expect(findCapturedPayments).toHaveBeenCalledWith({
+			where: { invoiceId: "inv-12", status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] } },
+		});
 	});
 });
 
@@ -1603,16 +1649,18 @@ describe("Scenario 24 — Client cancels online session, Zoom meeting deleted (b
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 25. مطابقة عربون (حجز محجوز برصيد جزئي)
+// 25. دفع العربون يثبت الموعد ولا تنهيه مهلة سداد الرصيد
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("Scenario 25 — Deposit paid, balance unpaid, booking expires, deposit refunded", () => {
-	it("DEPOSIT_PAID → EXPIRED triggers full deposit refund", async () => {
+describe("Scenario 25 — Deposit paid, balance unpaid, appointment remains confirmed", () => {
+	it("rejects expiry of DEPOSIT_PAID without status, money or event changes", async () => {
 		const prisma = buildPrisma();
 		const eventBus = buildEventBus();
 		const refundHandler = buildRefundHandler();
+		const rlsTransaction = buildRlsTransaction(prisma);
+		const groupCapacity = buildGroupCapacity();
 
-		// ExpireBookingHandler uses findUnique directly
+		// Even a stale elapsed hold deadline cannot expire a deposit-confirmed appointment.
 		prisma.booking.findUnique.mockResolvedValue({
 			...mockBooking,
 			id: "book-25",
@@ -1628,28 +1676,30 @@ describe("Scenario 25 — Deposit paid, balance unpaid, booking expires, deposit
 
 		const expireHandler = new ExpireBookingHandler(
 			prisma as never,
-			buildRlsTransaction(prisma) as never,
+			rlsTransaction as never,
 			eventBus as never,
 			refundHandler as never,
-			buildGroupCapacity() as never,
+			groupCapacity as never,
 		);
 
-		await expireHandler.execute({ bookingId: "book-25", changedBy: "system" });
+		await expect(expireHandler.execute({
+			bookingId: "book-25", changedBy: "system",
+		})).rejects.toThrow(BadRequestException);
 
-		// guarded updateBookingAtomically uses updateMany filtered by current status
-		expect(prisma.booking.updateMany).toHaveBeenCalledWith(
-			expect.objectContaining({
-				where: expect.objectContaining({
-					id: "book-25",
-					status: BookingStatus.DEPOSIT_PAID,
-				}),
-				data: expect.objectContaining({ status: BookingStatus.EXPIRED }),
-			}),
-		);
-		expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({ paymentId: "pay-deposit" }),
-		);
+		expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
+		expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+		expect(prisma.booking.update).not.toHaveBeenCalled();
+		expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+		expect(prisma.payment.findFirst).not.toHaveBeenCalled();
+		expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
+		expect(refundHandler.callMoyasarAndFinalize).not.toHaveBeenCalled();
+		expect(refundHandler.finalizeRefund).not.toHaveBeenCalled();
+		expect(prisma.invoice.create).not.toHaveBeenCalled();
+		expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+		expect(prisma.programEnrollment.deleteMany).not.toHaveBeenCalled();
+		expect(groupCapacity.decrementEnrollment).not.toHaveBeenCalled();
+		expect(eventBus.publish).not.toHaveBeenCalled();
+		expect(eventBus.publishOptional).not.toHaveBeenCalled();
 	});
 });
 

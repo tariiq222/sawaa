@@ -57,3 +57,9 @@ Rollback must preserve the database and current financial events. Reverting to a
 ## Measurement boundary
 
 Policy astra-effort-v1; task class deployment, complexity high. Native Astra high reviewers/implementer; coordinator model/effort and worker session counters were not exposed. Baseline began after initial preflight, so whole-task tokens and savings remain unknown. The receipt stays partial. No paid model API was used.
+
+## CI follow-up: existing scenario fixtures
+
+The first PR149 Actions run passed all 308 critical real-SQL cases but failed two cases in the older unit scenario file. Its raw-query mock did not support `Prisma.Sql`, and it still expected deposit-confirmed appointments to expire. The updated rejection fixture now contains the durable prior CONFIRMED state and an unpaid invoice, asserts lock/read ordering and guarded writes, and returns the actual mutated fixture instead of a fabricated success row. The deposit case proves rejection without financial or event writes. The final focused scenario suite passed all 26 tests (`booking-scenarios-final.log`). The preceding broad local backend run passed 8292 cases and exposed that one fixture inconsistency; it is not recorded as a green full run. The database-dependent legacy-import spec remains outside the ordinary unit lane.
+
+Expanded local checks also passed dashboard 281 files / 2220 tests, website 103 files / 907 tests, and mobile 171 suites / 1143 tests with coverage thresholds. Mobile's old service-identity fixture gained the new cancellation-preview hook mock; all its original identity assertions remain. Mobile types and the changed test lint passed. These follow-up changes affect test fixtures only, not deployed application logic. Both Actions jobs must still pass on the new PR head before merge.
