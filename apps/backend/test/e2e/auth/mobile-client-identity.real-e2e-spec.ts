@@ -196,6 +196,85 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     await api().get('/api/v1/auth/me').set('Authorization', `Bearer ${access}`).expect(401);
   });
 
+  it('rejects a stale registration retry after HTTP OTP activation without changing identity or sending another OTP', async () => {
+    const p = phone('registration-activation-race');
+    createdIdentifiers.add(p);
+    const originalIdentity = {
+      firstName: 'Synthetic', lastName: 'Original', phone: p,
+      email: email('reg-race'),
+    };
+    const registration = await api().post('/api/v1/mobile/auth/register').send(originalIdentity).expect(200);
+    const userId = registration.body.userId as string;
+    createdUserIds.add(userId);
+    const code = sentCodes.get(codeKey(p, OtpPurpose.MOBILE_LOGIN));
+    expect(code).toMatch(/^\d{4}$/);
+
+    let snapshotRead!: () => void;
+    let releaseRetry!: () => void;
+    const readReached = new Promise<void>((resolve) => { snapshotRead = resolve; });
+    const released = new Promise<void>((resolve) => { releaseRetry = resolve; });
+    const originalFindMany = prisma.user.findMany.bind(prisma.user);
+    let heldSnapshot = false;
+    const interceptFindMany = async (args: Parameters<typeof originalFindMany>[0]) => {
+      // Run the actual DB read, then delay only this registration request's
+      // returned snapshot. OTP activation and all writes remain real.
+      const rows = await originalFindMany(args);
+      if (!heldSnapshot && args?.where?.OR?.some((condition) => condition.phone === p)) {
+        heldSnapshot = true;
+        snapshotRead();
+        await released;
+      }
+      return rows;
+    };
+    // This test interceptor awaits the real PrismaPromise before holding its
+    // result, so its ordinary Promise intentionally lacks Prisma's promise tag.
+    const readSpy = jest.spyOn(prisma.user, 'findMany')
+      .mockImplementation(interceptFindMany as unknown as typeof prisma.user.findMany);
+    const retryPromise = api().post('/api/v1/mobile/auth/register').send({
+      firstName: 'Replacement', lastName: 'Attempt', phone: p,
+      email: email('reg-race-retry'),
+    }).timeout({ deadline: 15_000 }).then((response) => response);
+    // Attach a rejection handler immediately while waiting for the barrier.
+    void retryPromise.catch(() => undefined);
+    let barrierTimeout: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      await Promise.race([
+        readReached,
+        new Promise<never>((_resolve, reject) => {
+          barrierTimeout = setTimeout(() => reject(new Error('Registration retry did not reach its pending read')), 10_000);
+        }),
+      ]);
+      clearTimeout(barrierTimeout);
+      const activated = await api().post('/api/v1/mobile/auth/verify-otp')
+        .send({ identifier: p, code, purpose: 'register' }).timeout({ deadline: 10_000 }).expect(200);
+      expect(activated.body.sessionKind).toBe('client');
+      const activeUser = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      expect(activeUser).toMatchObject({ ...originalIdentity, name: 'Synthetic Original', isActive: true });
+      expect(activeUser.phoneVerifiedAt).toBeInstanceOf(Date);
+      const activeClient = await prisma.client.findFirstOrThrow({ where: { userId } });
+      createdClientIds.add(activeClient.id);
+      const otpRows = await prisma.otpCode.findMany({ where: { identifier: p }, orderBy: { id: 'asc' } });
+      const smsSend = jest.mocked(app.get(SmsChannelAdapter).send);
+      const dispatchCount = smsSend.mock.calls.filter(([identifier]) => identifier === p).length;
+
+      releaseRetry();
+      const retried = await retryPromise;
+
+      expect(retried.status).toBe(409);
+      expect(retried.body.message).toBe('Account already exists');
+      expect(await prisma.user.findUniqueOrThrow({ where: { id: userId } })).toEqual(activeUser);
+      expect(await prisma.client.findMany({ where: { userId } })).toEqual([activeClient]);
+      expect(await prisma.otpCode.findMany({ where: { identifier: p }, orderBy: { id: 'asc' } })).toEqual(otpRows);
+      expect(smsSend.mock.calls.filter(([identifier]) => identifier === p)).toHaveLength(dispatchCount);
+    } finally {
+      clearTimeout(barrierTimeout);
+      releaseRetry();
+      await retryPromise.catch(() => undefined);
+      readSpy.mockRestore();
+    }
+  });
+
   it('lazily links a legacy User.CLIENT with no Client only after a phone OTP', async () => {
     const u = await seedUser({ label: 'legacy-unlinked' });
     const code = await requestLoginOtp(u.phone!);

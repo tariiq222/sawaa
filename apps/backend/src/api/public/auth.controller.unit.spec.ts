@@ -180,26 +180,30 @@ describe('AuthController (unit)', () => {
       const req = { cookies: { ck_refresh: 'raw-token' } } as any;
       const tokenHash = await bcrypt.hash('raw-token', 10);
       mockPrisma.refreshToken.findMany.mockResolvedValue([
-        { id: 'rt1', tokenHash, tokenSelector: 'raw-toke', userId: 'u1', revokedAt: null, expiresAt: new Date(Date.now() + 86400000) },
+        { id: 'rt1', tokenHash, tokenSelector: 'raw-toke', userId: 'u1', source: 'DASHBOARD', revokedAt: null, expiresAt: new Date(Date.now() + 86400000) },
       ]);
       mockPrisma.refreshToken.update.mockResolvedValue({});
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', isActive: false });
       mockConfig.get.mockReturnValue('15m');
 
-      await expect(controller.refreshEndpoint({ refreshToken: '' } as any, req, mockRes())).rejects.toThrow(UnauthorizedException);
+      await expect(controller.refreshEndpoint({ refreshToken: '' } as any, req, mockRes())).rejects.toThrow('User not found or inactive');
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'u1' } }));
+      expect(mockTokens.issueTokenPair).not.toHaveBeenCalled();
     });
 
     it('should throw when user not found', async () => {
       const req = { cookies: { ck_refresh: 'raw-token' } } as any;
       const tokenHash = await bcrypt.hash('raw-token', 10);
       mockPrisma.refreshToken.findMany.mockResolvedValue([
-        { id: 'rt1', tokenHash, tokenSelector: 'raw-toke', userId: 'u1', revokedAt: null, expiresAt: new Date(Date.now() + 86400000) },
+        { id: 'rt1', tokenHash, tokenSelector: 'raw-toke', userId: 'u1', source: 'DASHBOARD', revokedAt: null, expiresAt: new Date(Date.now() + 86400000) },
       ]);
       mockPrisma.refreshToken.update.mockResolvedValue({});
       mockPrisma.user.findUnique.mockResolvedValue(null);
       mockConfig.get.mockReturnValue('15m');
 
-      await expect(controller.refreshEndpoint({ refreshToken: '' } as any, req, mockRes())).rejects.toThrow(UnauthorizedException);
+      await expect(controller.refreshEndpoint({ refreshToken: '' } as any, req, mockRes())).rejects.toThrow('User not found or inactive');
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'u1' } }));
+      expect(mockTokens.issueTokenPair).not.toHaveBeenCalled();
     });
   });
 

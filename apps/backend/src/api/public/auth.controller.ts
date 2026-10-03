@@ -168,9 +168,9 @@ export class AuthController {
     if (!rawToken) throw new UnauthorizedException('No refresh token');
 
     const record = await this.findActiveToken(rawToken);
-    // Mobile sessions rotate only through /mobile/auth/refresh, which enforces
-    // practitioner eligibility; never upgrade them into a dashboard session.
-    if (record.source === RefreshTokenSource.MOBILE) {
+    // Only proven dashboard sessions may rotate here. Legacy unknown-source
+    // sessions require fresh sign-in; mobile sessions retain their own route.
+    if (record.source !== RefreshTokenSource.DASHBOARD) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
