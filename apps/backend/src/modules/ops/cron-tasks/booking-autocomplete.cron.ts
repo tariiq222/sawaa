@@ -36,7 +36,7 @@ export class BookingAutocompleteCron {
       // invoice creation for pay-at-clinic bookings.
       const targets = await this.prisma.booking.findMany({
         where: {
-          status: BookingStatus.CONFIRMED,
+          status: { in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
           isHistoricalImport: false,
           endsAt: { lte: cutoff },
           checkedInAt: { not: null },

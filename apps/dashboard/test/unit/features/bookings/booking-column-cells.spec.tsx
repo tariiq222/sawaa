@@ -133,6 +133,18 @@ test("confirmed with checkedInAt does not show the extra check-in button", () =>
   expect(screen.queryByRole("button", { name: CHECKIN_LABEL })).not.toBeInTheDocument()
 })
 
+test.each(["confirmed", "deposit_paid"] as const)("%s after attendance does not offer another check-in", (status) => {
+  render(
+    <StatusCell
+      booking={makeBooking({ status, checkedInAt: "2026-10-03T10:00:00.000Z" })}
+      onStatusAction={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  )
+  expect(screen.queryByText(CHECKIN_LABEL)).not.toBeInTheDocument()
+  expect(screen.getByText("bookings.actions.action.complete")).toBeInTheDocument()
+})
+
 test("no_show status does not show the extra check-in button", () => {
   render(
     <StatusCell
@@ -203,4 +215,24 @@ test("awaiting_payment row still shows its own status badge", () => {
     />,
   )
   expect(screen.getByText("status-badge")).toBeInTheDocument()
+})
+
+
+test("deposit-confirmed bookings expose check-in and reschedule actions", () => {
+  const booking = makeBooking({ status: "deposit_paid" })
+  const onStatusAction = vi.fn()
+  render(<StatusCell booking={booking} onStatusAction={onStatusAction} onDelete={vi.fn()} />)
+  fireEvent.click(screen.getByRole("button", { name: CHECKIN_LABEL }))
+  expect(onStatusAction).toHaveBeenCalledWith(booking, "checkin")
+  fireEvent.click(screen.getByText("bookings.col.edit"))
+  expect(onStatusAction).toHaveBeenCalledWith(booking, "reschedule")
+})
+
+
+test("deposit-confirmed bookings retain the existing direct-cancel action", () => {
+  const booking = makeBooking({ status: "deposit_paid" })
+  const onDelete = vi.fn()
+  render(<StatusCell booking={booking} onStatusAction={vi.fn()} onDelete={onDelete} />)
+  fireEvent.click(screen.getByText("bookings.col.quickAction.cancel"))
+  expect(onDelete).toHaveBeenCalledWith(booking)
 })

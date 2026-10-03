@@ -1,7 +1,7 @@
 import React from 'react';
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: false, language: 'en' }) }));
-import { fireEvent, render } from '@testing-library/react-native';
-import { Alert, ScrollView } from 'react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { ScrollView } from 'react-native';
 
 jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
@@ -14,12 +14,17 @@ const mockBack = jest.fn();
 const mockReplace = jest.fn();
 let mockCanGoBack = true;
 const mockCancel = jest.fn();
+const mockPreview = jest.fn();
+const mockPreviewRefetch = jest.fn();
+const refund = { status: 'PENDING_REVIEW', paidAmount: 10000, alreadyRefundedAmount: 0, pendingRefundAmount: 0, refundAmount: 5000, refundPercent: 50, currency: 'SAR', execution: 'REVIEW', window: 'LATE' };
+const preview = { policyEnabled: true, canCancel: true, reasonCode: 'ALLOWED', cutoffAt: '2099-01-01T00:00:00Z', quoteToken: 'quote-1', refund };
+jest.mock('expo-modules-core', () => ({ ...jest.requireActual('expo-modules-core'), uuid: { v4: () => 'action-uuid' } }));
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: 'a1' }), useRouter: () => ({ back: mockBack, push: mockPush, replace: mockReplace, canGoBack: () => mockCanGoBack }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
-jest.mock('@/hooks/queries', () => ({ useBooking: () => mockQuery(), useCancelBooking: () => ({ isPending: false, mutate: mockCancel }) }));
+jest.mock('@/hooks/queries', () => ({ useBooking: () => mockQuery(), useCancelBooking: () => ({ isPending: false, mutateAsync: mockCancel }), useBookingCancellationPreview: () => mockPreview() }));
 jest.mock('@/theme/sawaa', () => {
   const { View, Text, Pressable } = require('react-native');
   return { ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: View,
@@ -35,7 +40,7 @@ jest.mock('@/components/ui/EmptyState', () => {
 import AppointmentDetail from '../../app/(client)/appointment/[id]';
 const booking = { id: 'a1', status: 'cancelled', scheduledAt: '', durationMins: 60, employee: { nameEn: 'Nora' } };
 describe('appointment detail truthful states', () => {
-  beforeEach(() => { jest.clearAllMocks(); mockCanGoBack = true; mockQuery.mockReturnValue({ data: booking, isLoading: false, isError: false, refetch: mockRefetch }); });
+  beforeEach(() => { jest.clearAllMocks(); mockPreview.mockReturnValue({ data: { ...preview, policyEnabled: false }, refetch: mockPreviewRefetch }); mockCanGoBack = true; mockQuery.mockReturnValue({ data: booking, isLoading: false, isError: false, refetch: mockRefetch }); });
   it('returns to client appointments from a cold notification without history', () => {
     mockCanGoBack = false;
     const screen = render(<AppointmentDetail />);
@@ -150,35 +155,89 @@ describe('appointment detail truthful states', () => {
     expect(screen.queryByText('appointments.rate')).toBeNull();
   });
 
-  it('returns to appointments after immediate cancellation from a cold link', () => {
-    mockCanGoBack = false;
-    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
-    mockCancel.mockImplementation((_vars, callbacks) => callbacks.onSuccess({ status: 'cancelled' }));
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation((title, _message, buttons) => {
-      if (title === 'appointments.cancelAppointment') buttons?.[1]?.onPress?.();
-    });
+  it.each(['cancelled', 'cancel_requested'])('retains the %s outcome on the detail screen', async (status) => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, refetch: mockRefetch });
+    mockCancel.mockResolvedValue({ status });
     const screen = render(<AppointmentDetail />);
     fireEvent.press(screen.getByText('appointments.cancelAppointment'));
-    expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
+    expect(mockCancel).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByText('cancellation.confirm'));
+    expect(await screen.findByText(status === 'cancelled' ? 'cancellation.cancelled' : 'appointments.cancellationRequestedMessage')).toBeTruthy();
     expect(mockBack).not.toHaveBeenCalled();
-    alert.mockRestore();
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockCancel).toHaveBeenCalledWith({ id: 'a1', reason: 'appointments.cancelReason' });
   });
 
-  it('explains that a cancellation is awaiting approval and keeps the detail open', () => {
-    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
-    mockCancel.mockImplementation((_vars, callbacks) => callbacks.onSuccess({ status: 'cancel_requested' }));
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation((title, _message, buttons) => {
-      if (title === 'appointments.cancelAppointment') buttons?.[1]?.onPress?.();
-    });
-    render(<AppointmentDetail />);
-
-    fireEvent.press(require('@testing-library/react-native').screen.getByText('appointments.cancelAppointment'));
-
-    expect(alert).toHaveBeenCalledWith(
-      'appointments.cancellationRequestedTitle',
-      'appointments.cancellationRequestedMessage',
-    );
-    expect(mockBack).not.toHaveBeenCalled();
-    alert.mockRestore();
+  it('shows the quoted amount and sends the quote only after explicit confirmation', async () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'deposit_paid' }, refetch: mockRefetch });
+    mockPreview.mockReturnValue({ data: preview, refetch: mockPreviewRefetch });
+    mockCancel.mockResolvedValue({ status: 'cancelled', refund });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByText('appointments.cancelAppointment'));
+    expect(screen.getByText(/50.00 SAR/)).toBeTruthy();
+    expect(screen.getByText('cancellation.reviewPreview')).toBeTruthy();
+    expect(mockCancel).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByText('cancellation.confirm'));
+    expect(await screen.findByText('cancellation.PENDING_REVIEW')).toBeTruthy();
+    expect(mockCancel).toHaveBeenCalledWith({ id: 'a1', reason: 'appointments.cancelReason', quoteToken: 'quote-1', sourceActionId: 'action-uuid' });
   });
+
+  it.each(['CUTOFF_PASSED', 'ATTENDED', 'FINAL_STATE', 'HISTORICAL', 'GROUP_STAFF_ONLY'])('disables cancellation for server reason %s', (reasonCode) => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' } });
+    mockPreview.mockReturnValue({ data: { ...preview, canCancel: false, reasonCode } });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByText('appointments.cancelAppointment'));
+    expect(screen.getByText(`cancellation.${reasonCode}`)).toBeTruthy();
+    expect(screen.queryByText('cancellation.confirm')).toBeNull();
+  });
+
+  it('does not bypass a failed preview request', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' } });
+    mockPreview.mockReturnValue({ isError: true, refetch: mockPreviewRefetch });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByText('appointments.cancelAppointment'));
+    expect(screen.getByText('cancellation.loadError')).toBeTruthy();
+    expect(screen.queryByText('cancellation.confirm')).toBeNull();
+    fireEvent.press(screen.getByText('cancellation.retry'));
+    expect(mockPreviewRefetch).toHaveBeenCalledTimes(1);
+    expect(mockCancel).not.toHaveBeenCalled();
+  });
+
+  it('refreshes a stale quote and requires another confirmation', async () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' } });
+    mockPreview.mockReturnValue({ data: preview, refetch: mockPreviewRefetch });
+    mockCancel.mockRejectedValueOnce({ response: { status: 409 } }).mockResolvedValue({ status: 'cancelled', refund });
+    mockPreviewRefetch.mockResolvedValue({ data: { ...preview, quoteToken: 'quote-2' } });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByText('appointments.cancelAppointment'));
+    fireEvent.press(screen.getByText('cancellation.confirm'));
+    await waitFor(() => expect(mockPreviewRefetch).toHaveBeenCalledTimes(1));
+    expect(mockCancel).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('cancellation.changed')).toBeTruthy();
+    mockPreview.mockReturnValue({ data: { ...preview, quoteToken: 'quote-2', refund: { ...refund, refundAmount: 2500 } }, refetch: mockPreviewRefetch });
+    screen.rerender(<AppointmentDetail />);
+    expect(screen.getByText(/25.00 SAR/)).toBeTruthy();
+    fireEvent.press(screen.getByText('cancellation.confirm'));
+    await waitFor(() => expect(mockCancel).toHaveBeenCalledTimes(2));
+    expect(mockCancel.mock.calls[1][0].quoteToken).toBe('quote-2');
+  });
+
+  it.each(['NOT_APPLICABLE', 'NO_REFUND', 'PROCESSING', 'PENDING_REVIEW', 'CREDIT_RETURNED', 'COMPLETED', 'FAILED'])('retains persisted %s refund state after reopening', (status) => {
+    mockQuery.mockReturnValue({ data: { ...booking, cancellationRefund: { ...refund, status, completedAmount: status === 'COMPLETED' ? 5000 : 0, failedAmount: status === 'FAILED' ? 5000 : 0 } } });
+    const screen = render(<AppointmentDetail />);
+    expect(screen.getByText(`cancellation.${status}`)).toBeTruthy();
+    expect(screen.queryByText('cancellation.confirm')).toBeNull();
+  });
+  it.each([
+    ['NOT_APPLICABLE', 'NONE', 'NOT_APPLICABLE'], ['NO_REFUND', 'NONE', 'NO_REFUND'],
+    ['PROCESSING', 'AUTOMATIC', 'automaticPreview'], ['CREDIT_RETURNED', 'NONE', 'creditPreview'],
+  ])('shows %s terms before confirmation', (status, execution, message) => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' } });
+    mockPreview.mockReturnValue({ data: { ...preview, refund: { ...refund, status, execution, refundAmount: status === 'PROCESSING' ? 5000 : 0 } } });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByText('appointments.cancelAppointment'));
+    expect(screen.getByText(`cancellation.${message}`)).toBeTruthy();
+    expect(mockCancel).not.toHaveBeenCalled();
+  });
+
 });

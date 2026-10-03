@@ -1,3 +1,5 @@
+import type { StaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
+import type { ClientCancellationIntent } from '../../bookings/client/client-cancellation-policy';
 import type { Prisma } from '@prisma/client';
 
 export const NOTIFICATION_OUTBOX_PAYLOAD_VERSION = 1 as const;
@@ -18,6 +20,7 @@ export const NOTIFICATION_OUTBOX_OUTCOME_REASONS = {
 } as const;
 
 export const NOTIFICATION_OUTBOX_CONSUMERS = {
+  REFUND_OUTCOME_CLIENT: 'comms.refund-outcome-client.v1',
   BOOKING_CREATED_STAFF: 'comms.booking-created-staff.v2',
   BOOKING_CANCELLED_CLIENT: 'comms.booking-cancelled-client.v2',
   BOOKING_CANCELLED_STAFF: 'comms.booking-cancelled-staff.v2',
@@ -39,6 +42,8 @@ export type BookingCreatedStaffPayload = {
 
 export type BookingCancelledClientPayload = {
   kind: 'booking-cancelled-client';
+  centerCancellation?: StaffCancellationIntent;
+  clientCancellation?: ClientCancellationIntent;
   bookingId: string;
   clientId: string;
   reason: string;
@@ -49,6 +54,7 @@ export type BookingCancelledClientPayload = {
 
 export type BookingCancelledStaffPayload = {
   kind: 'booking-cancelled-staff';
+  centerCancellation?: StaffCancellationIntent;
   bookingId: string;
   bookingNumber?: number;
   employeeId?: string;
@@ -86,7 +92,12 @@ export type ContactMessageStaffPayload = {
   contactMessageId: string;
 };
 
+export type RefundOutcomeClientPayload = {
+  kind: 'refund-outcome-client'; clientId: string; bookingId: string | null; refundRequestId: string; status: 'COMPLETED' | 'FAILED' | 'DENIED' | 'PENDING_REVIEW' | 'MANUAL_REVIEW'; amount: number; currency: string;
+};
+
 export type NotificationIntentPayload =
+  | RefundOutcomeClientPayload
   | BookingCreatedStaffPayload
   | BookingCancelledClientPayload
   | BookingCancelledStaffPayload

@@ -48,13 +48,13 @@ interface BookingActionsProps {
  * Mirrors the backend booking-state-machine. Never advertise an action it
  * rejects: holds (awaiting_payment / pending_group_fill) are cancellable and
  * confirmed by recording the payment, but CONFIRM is PENDING-only and they are
- * not reschedulable; deposit_paid is cancellable but not confirmable.
+ * not reschedulable. Deposit bookings support attendance with a balance due.
  */
 const statusActions = {
   pending: ["confirm", "cancel"] as const,
   pending_group_fill: ["cancel"] as const,
   awaiting_payment: ["cancel"] as const,
-  deposit_paid: ["cancel"] as const,
+  deposit_paid: ["checkin", "complete", "noshow", "cancel"] as const,
   confirmed: ["checkin", "complete", "noshow", "cancel"] as const,
   cancel_requested: ["approve_cancel", "reject_cancel"] as const,
   completed: [] as const,
@@ -79,6 +79,7 @@ const getStatusLabels = (t: (k: string) => string): Record<string, string> => ({
   pending_group_fill:   t("bookings.actions.status.pending_group_fill"),
   awaiting_payment:     t("bookings.actions.status.awaiting_payment"),
   confirmed:            t("bookings.actions.status.confirmed"),
+  deposit_paid:         t("bookings.actions.status.deposit_paid"),
   completed:            t("bookings.actions.status.completed"),
   cancelled:            t("bookings.actions.status.cancelled"),
   cancel_requested:     t("bookings.actions.status.cancel_requested"),

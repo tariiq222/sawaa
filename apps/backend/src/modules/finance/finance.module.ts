@@ -1,3 +1,4 @@
+import { CancellationRefundIntentService } from './cancellation-refund/cancellation-refund-intent.service';
 import { Module, OnModuleInit } from '@nestjs/common';
 import { DashboardFinanceController } from '../../api/dashboard/finance.controller';
 import { RefundsController } from '../../api/dashboard/refunds.controller';
@@ -109,6 +110,7 @@ const handlers = [
     BookingConfirmedHandler,
     MoyasarApiClient,
     OnBookingCancelledRefundHandler,
+    CancellationRefundIntentService,
     OnBookingCancelApprovedRefundHandler,
     IssueInvoiceReceiptHandler,
     SendInvoiceReceiptHandler,

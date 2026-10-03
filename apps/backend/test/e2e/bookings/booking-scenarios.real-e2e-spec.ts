@@ -1105,7 +1105,7 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			expect(booking?.zoomMeetingStatus).toBe("CANCELLED");
 		});
 
-		it("Scenario 25 — Deposit paid, balance unpaid, booking expires, deposit refunded", async () => {
+		it("Scenario 25 — Deposit confirms the booking while unpaid balance cannot expire or refund it", async () => {
 			const scheduledAt = await getFirstAvailableSlot(
 				ctx.employeeId,
 				ctx.serviceId,
@@ -1116,10 +1116,10 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			});
 			const bookingId = createRes.body.id;
 
-			// Transition to DEPOSIT_PAID and update the existing invoice
+			// A stale hold deadline must not expire an already confirmed deposit.
 			await prisma.booking.update({
 				where: { id: bookingId },
-				data: { status: BookingStatus.DEPOSIT_PAID },
+				data: { status: BookingStatus.DEPOSIT_PAID, expiresAt: new Date(Date.now() - 60_000) },
 			});
 			const existingInvoice = await prisma.invoice.findFirst({
 				where: { bookingId },
@@ -1143,20 +1143,26 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			const { ExpireBookingHandler } = await import(
 				"../../../src/modules/bookings/expire-booking/expire-booking.handler"
 			);
-			await app
+			const before = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+			const invoiceBefore = await prisma.invoice.findUniqueOrThrow({
+				where: { id: invoice.id }, include: { payments: true },
+			});
+			expect(Number(invoiceBefore.total)).toBeGreaterThan(15000);
+			const statusLogsBefore = await prisma.bookingStatusLog.findMany({ where: { bookingId } });
+			const eventsBefore = await prisma.outboxEvent.findMany({ where: { aggregateId: bookingId } });
+
+			await expect(app
 				.get(ExpireBookingHandler)
-				.execute({ bookingId, changedBy: "system" });
+				.execute({ bookingId, changedBy: "system" }))
+				.rejects.toThrow("Booking cannot be expired (status: DEPOSIT_PAID)");
 
-			const booking = await prisma.booking.findUnique({
-				where: { id: bookingId },
-			});
-			expect(booking?.status).toBe(BookingStatus.EXPIRED);
-
-			// Refund request should exist
-			const refundReq = await prisma.refundRequest.findFirst({
-				where: { payment: { invoice: { bookingId } } },
-			});
-			expect(refundReq).toBeTruthy();
+			expect(await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } })).toEqual(before);
+			expect(await prisma.invoice.findUniqueOrThrow({
+				where: { id: invoice.id }, include: { payments: true },
+			})).toEqual(invoiceBefore);
+			expect(await prisma.bookingStatusLog.findMany({ where: { bookingId } })).toEqual(statusLogsBefore);
+			expect(await prisma.outboxEvent.findMany({ where: { aggregateId: bookingId } })).toEqual(eventsBefore);
+			expect(await prisma.refundRequest.count({ where: { invoiceId: invoice.id } })).toBe(0);
 		});
 
 		it("Scenario 26 — Staff cancels sessions, full refund + event published", async () => {

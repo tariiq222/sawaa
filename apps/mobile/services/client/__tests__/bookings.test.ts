@@ -343,3 +343,21 @@ describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => 
     await expect(clientBookingsService.getJoinUrl('b1')).rejects.toThrow(/400/);
   });
 });
+
+
+it('loads cancellation preview and preserves immediate and persisted refund summaries', async () => {
+  const refund = { status: 'PROCESSING', refundAmount: 5000 };
+  const preview = { policyEnabled: true, canCancel: true, quoteToken: 'quote-1', refund };
+  mockedApi.get.mockResolvedValueOnce({ data: preview });
+  expect(await clientBookingsService.cancellationPreview('b1')).toEqual(preview);
+  expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings/b1/cancellation-preview');
+  mockedApi.patch.mockResolvedValueOnce({ data: { status: 'CANCELLED', booking: { ...sampleRow, status: 'CANCELLED' }, requiresApproval: false, refund } });
+  expect(await clientBookingsService.cancel('b1', 'changed plan', { quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })).toMatchObject({ status: 'cancelled', refund });
+  expect(mockedApi.patch).toHaveBeenCalledWith('/mobile/client/bookings/b1/cancel', expect.objectContaining({ quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' }));
+});
+
+it('preserves settled cancellation refund evidence in a refreshed mapped detail', async () => {
+  const cancellationRefund = { status: 'COMPLETED', refundAmount: 5000, completedAmount: 5000, failedAmount: 0 };
+  mockedApi.get.mockResolvedValueOnce({ data: { id: 'b1', status: 'CANCELLED', service: { nameAr: 'جلسة' }, cancellationRefund } });
+  expect(await clientBookingsService.getById('b1')).toMatchObject({ cancellationRefund });
+});

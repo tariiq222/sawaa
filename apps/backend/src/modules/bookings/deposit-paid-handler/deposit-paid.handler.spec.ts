@@ -1,6 +1,6 @@
 import { DepositPaidEventHandler } from './deposit-paid.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 
 function buildCls() {
   return {
@@ -10,7 +10,7 @@ function buildCls() {
 }
 
 function buildHandler() {
-  const prisma = buildPrisma();
+  const prisma = { ...buildPrisma(), outboxEvent: { create: jest.fn(), upsert: jest.fn().mockResolvedValue({}) } };
   let subscriber:
     | ((envelope: { payload: { bookingId: string | null; paymentId: string; invoiceId: string } }) => Promise<void>)
     | null = null;
@@ -122,4 +122,73 @@ describe('DepositPaidEventHandler', () => {
 
     expect(prisma.booking.updateMany).not.toHaveBeenCalled();
   });
+});
+
+
+describe('durable operational confirmation', () => {
+  it('writes the online request once across a duplicate event and preserves money', async () => {
+    const { prisma, getSubscriber, eb } = buildHandler();
+    const booking = { ...mockBooking, status: BookingStatus.AWAITING_PAYMENT, deliveryType: DeliveryType.ONLINE };
+    prisma.booking.findFirst = jest.fn().mockResolvedValueOnce(booking).mockResolvedValueOnce({ ...booking, status: BookingStatus.DEPOSIT_PAID });
+    await getSubscriber()(makeEnvelope());
+    await getSubscriber()(makeEnvelope());
+    expect(prisma.outboxEvent.upsert).toHaveBeenCalledTimes(1);
+    expect(prisma.outboxEvent.upsert).toHaveBeenCalledWith({
+      where: { id: expect.any(String) }, update: {},
+      create: expect.objectContaining({ eventType: 'bookings.zoom.create_requested', aggregateId: 'book-1', status: 'PENDING_V2', deliveryLane: 'PENDING_V2' }),
+    });
+    expect(prisma.booking.updateMany.mock.calls[0][0].data).toEqual({ status: BookingStatus.DEPOSIT_PAID, confirmedAt: expect.any(Date) });
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+    expect(prisma.payment.findFirst).not.toHaveBeenCalled();
+    expect(eb.publish).not.toHaveBeenCalled();
+  });
+  it.each([BookingStatus.CANCELLED, BookingStatus.COMPLETED, BookingStatus.EXPIRED, BookingStatus.NO_SHOW])('does not provision after terminal %s', async (status) => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status, deliveryType: DeliveryType.ONLINE });
+    await getSubscriber()(makeEnvelope());
+    expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
+  });
+  it('does not provision an in-person appointment', async () => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, deliveryType: DeliveryType.IN_PERSON });
+    await getSubscriber()(makeEnvelope());
+    expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
+  });
+  it('does not write audit or provisioning after a failed status CAS', async () => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, deliveryType: DeliveryType.ONLINE });
+    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
+    await expect(getSubscriber()(makeEnvelope())).rejects.toThrow();
+    expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('deposit transaction boundaries', () => {
+  it('writes confirmation, audit and Zoom intent through the same transaction client', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, deliveryType: DeliveryType.ONLINE });
+    const tx = { ...buildPrisma(), outboxEvent: { upsert: jest.fn().mockResolvedValue({}) } };
+    let subscriber!: (event: ReturnType<typeof makeEnvelope>) => Promise<void>;
+    const eventBus = { subscribe: jest.fn((_event, _consumer, cb) => { subscriber = cb; }) };
+    const transaction = { withTransaction: jest.fn(async (cb: (client: typeof tx) => Promise<unknown>) => cb(tx)) };
+    new DepositPaidEventHandler(prisma as never, transaction as never, eventBus as never, buildCls() as never).register();
+    await subscriber(makeEnvelope());
+    expect(transaction.withTransaction).toHaveBeenCalledTimes(1);
+    expect(tx.booking.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.bookingStatusLog.create).toHaveBeenCalledTimes(1);
+    expect(tx.outboxEvent.upsert).toHaveBeenCalledTimes(1);
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
+});
+
+it('retains an existing confirmation timestamp and meeting without reprovisioning', async () => {
+  const { prisma, getSubscriber } = buildHandler();
+  const confirmedAt = new Date('2026-01-01');
+  prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, confirmedAt, zoomMeetingId: 'existing-meeting', deliveryType: DeliveryType.ONLINE });
+  await getSubscriber()(makeEnvelope());
+  expect(prisma.booking.updateMany.mock.calls[0][0].data.confirmedAt).toEqual(confirmedAt);
+  expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
 });

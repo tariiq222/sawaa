@@ -1,3 +1,7 @@
+import { ClientCancellationPreviewHandler } from '../../../modules/bookings/client/client-cancellation-preview.handler';
+import { ClientCancellationPreviewDto, PersistedCancellationRefundDto, CancellationRefundSummaryDto } from '../../../modules/bookings/client/client-cancellation-preview.dto';
+import { ClientCancelBookingHandler } from '../../../modules/bookings/client/client-cancel-booking.handler';
+import { ClientCancellationOutcomeHandler } from '../../../modules/bookings/client/client-cancellation-outcome.handler';
 import {
   Controller,
   Get,
@@ -11,7 +15,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation,
-  ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse,
+  ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { BookingStatus, CancellationReason, DeliveryType } from '@prisma/client';
 import { IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
@@ -84,6 +88,12 @@ export class MobileCancelBookingDto {
 
   @ApiPropertyOptional({ description: 'Free-text notes about the cancellation', example: 'Change of plans' })
   @IsOptional() @IsString() cancelNotes?: string;
+
+  @ApiPropertyOptional({ description: 'Cancellation preview fingerprint' })
+  @IsOptional() @IsString() @MaxLength(128) quoteToken?: string;
+
+  @ApiPropertyOptional({ description: 'Stable UUID for this cancellation attempt', format: 'uuid' })
+  @IsOptional() @IsUUID() sourceActionId?: string;
 }
 
 export class MobileListBookingsDto {
@@ -100,6 +110,7 @@ export class MobileListBookingsDto {
   @IsOptional() @IsEnum(BookingStatus) status?: BookingStatus;
 }
 
+@ApiExtraModels(PersistedCancellationRefundDto, CancellationRefundSummaryDto)
 @ApiTags('Mobile Client / Bookings')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -117,6 +128,9 @@ export class MobileClientBookingsController {
     private readonly rate: SubmitRatingHandler,
     private readonly bookingAction: GetClientBookingForActionHandler,
     private readonly zoom: CreateZoomMeetingHandler,
+    private readonly cancellationPreview: ClientCancellationPreviewHandler,
+    private readonly clientCancel: ClientCancelBookingHandler,
+    private readonly cancellationOutcome: ClientCancellationOutcomeHandler,
   ) {}
 
   @Post()
@@ -170,25 +184,40 @@ export class MobileClientBookingsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a booking by ID' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking detail', schema: { type: 'object' } })
+  @ApiOkResponse({ description: 'Booking detail', schema: { type: 'object', additionalProperties: true, properties: { cancellationRefund: { $ref: getSchemaPath(PersistedCancellationRefundDto) } } } })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  getBooking(
+  async getBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.get.execute({ bookingId: id, clientId: user.id });
+    const booking = await this.get.execute({ bookingId: id, clientId: user.id });
+    return { ...booking, ...(booking.status.toUpperCase() === 'CANCELLED' ? { cancellationRefund: await this.cancellationOutcome.execute(id, user.id) } : {}) };
+  }
+
+  @Get(':id/cancellation-preview')
+  @ApiOperation({ summary: 'Preview client cancellation eligibility and refund terms' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: ClientCancellationPreviewDto })
+  cancellationPreviewEndpoint(@ClientSession() user: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
+    return this.cancellationPreview.execute(id, user.id);
   }
 
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Cancel a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking cancelled', schema: { type: 'object' } })
+  @ApiOkResponse({ description: 'Booking cancelled; enabled policy includes refund and requiresApproval', schema: { type: 'object', additionalProperties: true, properties: { refund: { $ref: getSchemaPath(CancellationRefundSummaryDto) }, requiresApproval: { type: 'boolean' }, booking: { type: 'object' } } } })
+  @ApiResponse({ status: 409, description: 'Cancellation terms changed; refresh the preview' })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   async cancelBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: MobileCancelBookingDto,
   ) {
+    const preview = await this.cancellationPreview.execute(id, user.id);
+    if (preview.policyEnabled || body.quoteToken) {
+      const result = await this.clientCancel.execute({ bookingId: id, clientId: user.id, reason: body.cancelNotes, quoteToken: body.quoteToken, sourceActionId: body.sourceActionId });
+      return { ...result.booking, ...result };
+    }
     try {
       return await this.cancel.execute({
         bookingId: id,

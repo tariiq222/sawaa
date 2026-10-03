@@ -24,7 +24,7 @@ export class CompleteBookingHandler {
   ) {}
 
   async execute(cmd: CompleteBookingCommand) {
-    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'completed');
+    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID], 'completed');
     const nextStatus = assertTransition(booking.status, 'COMPLETE');
 
     return this.rlsTransaction.withTransaction(async (tx) => {

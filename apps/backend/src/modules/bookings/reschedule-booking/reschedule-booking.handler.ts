@@ -48,8 +48,8 @@ export class RescheduleBookingHandler {
   ) {}
 
   async execute(cmd: RescheduleBookingCommand) {
-    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING, BookingStatus.CONFIRMED], 'rescheduled');
-    // RESCHEDULE is a self-loop: status stays the same (PENDING or CONFIRMED)
+    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID], 'rescheduled');
+    // RESCHEDULE is a self-loop: status stays the same (PENDING, CONFIRMED or DEPOSIT_PAID)
     assertTransition(booking.status, 'RESCHEDULE');
     if (cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');

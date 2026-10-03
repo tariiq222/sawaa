@@ -1,10 +1,8 @@
+import { getClientCancellationPreview, cancelClientBooking } from './booking-cancellation';
+import type { CancellationQuoteInput, CancellationRefund, PersistedCancellationRefund } from '../../../../packages/api-client/src/types/cancellation';
+export type { CancellationPreview, CancellationQuoteInput, CancellationRefund, PersistedCancellationRefund } from '../../../../packages/api-client/src/types/cancellation';
 import api from '../api';
-import type {
-  BookingStatus,
-  BookingType,
-  DeliveryType,
-  LegacyBookingType,
-} from '@/types/booking-enums';
+import type { BookingStatus, BookingType, DeliveryType, LegacyBookingType } from '@/types/booking-enums';
 import { listLegacyTab, rejectsUnknownTab, type BookingListParams } from './booking-tab';
 
 export { bookingTabForStatus } from './booking-tab';
@@ -15,6 +13,7 @@ export interface ClientBookingRow {
   id: string;
   invoiceId: string | null;
   invoiceStatus?: string | null;
+  cancellationRefund?: PersistedCancellationRefund;
   paymentStatus?: string | null;
   price?: number | string;
   currency?: string;
@@ -160,6 +159,7 @@ export function normalizeClientBooking(raw: unknown): ClientBookingRow {
     id: stringValue(row.id) ?? '',
     invoiceId,
     invoiceStatus,
+    cancellationRefund: row.cancellationRefund as PersistedCancellationRefund | undefined,
     paymentStatus,
     price: price ?? undefined,
     currency: stringValue(row.currency) ?? 'SAR',
@@ -303,17 +303,16 @@ export const clientBookingsService = {
     return normalizeClientBooking(response.data);
   },
 
-  async cancel(id: string, cancelNotes?: string) {
-    const response = await api.patch<unknown>(
-      `/mobile/client/bookings/${id}/cancel`,
-      {
-        reason: 'CLIENT_REQUESTED',
-        ...(cancelNotes ? { cancelNotes } : {}),
-      },
-    );
-    return normalizeClientBooking(response.data);
+  cancellationPreview: getClientCancellationPreview,
+  async cancel(id: string, cancelNotes?: string, quote?: CancellationQuoteInput): Promise<ClientBookingRow & { refund?: CancellationRefund; requiresApproval?: boolean }> {
+    const result = asRecord(await cancelClientBooking(id, cancelNotes, quote)) ?? {};
+    return {
+      ...normalizeClientBooking(result.booking ?? result),
+      ...(typeof result.status === 'string' ? { status: normalizeStatus(result.status) } : {}),
+      ...(result.refund ? { refund: result.refund as CancellationRefund } : {}),
+      ...(typeof result.requiresApproval === 'boolean' ? { requiresApproval: result.requiresApproval } : {}),
+    };
   },
-
   async reschedule(id: string, newScheduledAt: string) {
     const response = await api.patch<unknown>(
       `/mobile/client/bookings/${id}/reschedule`,

@@ -208,7 +208,8 @@ export async function clearPendingBookingCheckout(userId: string, draft?: Bookin
 
 /**
  * The service mapper exposes AWAITING_PAYMENT as `pending`. A booking with an
- * invoice may only be resumed in that state; every other mismatch is unsafe.
+ * invoice may resume while pending or deposit-confirmed with a balance due.
+ * Identity and draft checks remain required before any payment attempt.
  */
 export function isPendingBookingResumable(
   booking: Pick<ClientBookingRow, 'id' | 'invoiceId' | 'status' | 'branchId' | 'employeeId' | 'serviceId' | 'scheduledAt' | 'deliveryType'>,
@@ -217,7 +218,7 @@ export function isPendingBookingResumable(
 ): boolean {
   if (booking.id !== identity.bookingId || booking.invoiceId !== identity.invoiceId) return false;
   if (identity.invoiceId === null) return false;
-  if (booking.status !== 'pending') return false;
+  if (!['pending', 'deposit_paid'].includes(booking.status)) return false;
   if (!draft) return true;
   const sameInstant = (left: string, right: string) => {
     const leftTime = Date.parse(left);
@@ -238,7 +239,7 @@ export function isInvoiceLessBookingComplete(
   return booking.id === identity.bookingId
     && booking.invoiceId === null
     && identity.invoiceId === null
-    && ['confirmed', 'completed'].includes(booking.status);
+    && ['confirmed', 'completed', 'deposit_paid'].includes(booking.status);
 }
 
 export async function resolvePendingBookingResume(

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@sawaa/ui';
 import { useLocale } from '@/components/locale-provider';
 import { useProgram, usePublishProgram, useScheduleProgram, useCancelProgram } from '@/hooks/use-programs';
@@ -14,7 +13,6 @@ import { halalasStringToSar } from '@/lib/schemas/program.schema';
 
 export function ProgramDetailPage({ id }: { id: string }) {
   const { t } = useLocale();
-  const router = useRouter();
   const { data: program, isLoading, isError } = useProgram(id);
   const publish = usePublishProgram();
   const schedule = useScheduleProgram();
@@ -144,13 +142,12 @@ export function ProgramDetailPage({ id }: { id: string }) {
         }}
       />
       <CancelProgramDialog
+        programId={program.id}
         open={cancelOpen}
         onOpenChange={setCancelOpen}
-        onConfirm={async (reason) => {
+        onConfirm={async (payload) => {
           setTransitionError(null);
-          await cancel.mutateAsync({ id: program.id, payload: { reason } });
-          setCancelOpen(false);
-          router.push('/programs');
+          return cancel.mutateAsync({ id: program.id, payload });
         }}
       />
       <EnrollClientDialog

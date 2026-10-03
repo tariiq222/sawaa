@@ -1,28 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { BookingCancelApprovedPayload } from '../../bookings/events/booking-cancel-approved.event';
+import { CancellationRefundIntentService } from '../cancellation-refund/cancellation-refund-intent.service';
 import { RefundPaymentHandler } from '../refund-payment/refund-payment.handler';
 
-/**
- * Subscribes to bookings.booking.cancel_approved (dashboard "approve cancel
- * request") and finalizes the refund that ApproveCancelBookingHandler created
- * atomically with the status flip.
- *
- * P0 fix: previously NOTHING listened to this event — the RefundRequest stayed
- * in PROCESSING forever, Moyasar was never called, and the money was never
- * returned. The cancelled-event path (OnBookingCancelledRefundHandler) only
- * fires on the DIRECT_CANCEL flow, so the approval flow was silently dropped.
- *
- * The handler mirrors the cancelled-event finalize step: it calls
- * finalizeRefundFromCancellation, which is idempotent (skips if the request is
- * already COMPLETED) and which, for off-gateway (cash/bank-transfer) refunds
- * settled in-tx, makes no external Moyasar call at all.
- */
+/** Settles frozen staff intents; old singular-refund events remain replayable. */
 @Injectable()
 export class OnBookingCancelApprovedRefundHandler {
   constructor(
     private readonly eventBus: EventBusService,
     private readonly refund: RefundPaymentHandler,
+    private readonly intents: CancellationRefundIntentService,
   ) {}
 
   register(): void {
@@ -34,6 +22,11 @@ export class OnBookingCancelApprovedRefundHandler {
   }
 
   async handle(envelope: DomainEventEnvelope<BookingCancelApprovedPayload>): Promise<void> {
+    const { staffCancellation, bookingId, clientId } = envelope.payload;
+    if (staffCancellation) {
+      await this.intents.execute(envelope.eventId, bookingId, clientId, staffCancellation);
+      return;
+    }
     const { refundRequestId, idempotencyKey } = envelope.payload;
 
     // The approval handler only sets refundRequestId/idempotencyKey when a

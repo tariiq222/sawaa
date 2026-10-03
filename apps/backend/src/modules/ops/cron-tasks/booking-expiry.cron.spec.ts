@@ -67,41 +67,11 @@ describe('BookingExpiryCron', () => {
           where: {
             isHistoricalImport: false,
             status: { in: ['PENDING', 'AWAITING_PAYMENT'] },
-            OR: [
-              { expiresAt: { lt: expect.any(Date) } },
-              { expiresAt: null, createdAt: { lt: expect.any(Date) } },
-            ],
+            expiresAt: { lt: expect.any(Date) },
           },
           select: { id: true },
           take: 100,
         }),
-      );
-    });
-
-    it('falls back to an age cutoff one hour back for rows with no expiresAt', async () => {
-      const prisma = buildPrisma();
-      const handler = buildHandler();
-      const cron = new BookingExpiryCron(prisma as never, handler as never);
-      await cron.execute();
-
-      const call = prisma.booking.findMany.mock.calls[0][0] as {
-        where: {
-          OR: Array<{
-            expiresAt: { lt: Date } | null;
-            createdAt?: { lt: Date };
-          }>;
-        };
-      };
-      const expiryBranch = call.where.OR.find((branch) => branch.expiresAt !== null);
-      const nullBranch = call.where.OR.find((branch) => branch.expiresAt === null);
-      expect(nullBranch).toBeDefined();
-      // NULL rows are only overdue once they are older than the fallback age —
-      // longer than every real window (15/30 min) so the normal path wins.
-      // Compared against the same tick clock the cron stamped on branch 1 so
-      // the assertion does not depend on the wall clock.
-      const tickNow = (expiryBranch!.expiresAt as { lt: Date }).lt;
-      expect(tickNow.getTime() - nullBranch!.createdAt!.lt.getTime()).toBe(
-        60 * 60 * 1000,
       );
     });
 

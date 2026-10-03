@@ -131,3 +131,11 @@ describe('ReconcileNotificationSourcesHandler', () => {
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 });
+
+it('preserves center cancellation money and origin for client and staff recovery', async () => {
+  const centerCancellation = { version: 1, initiatedBy: 'CENTER', reason: 'Program cancelled', refund: { refundAmount: 2500 }, allocations: [] };
+  const { handler, capture } = build([[{ id: 'physical-center', eventType: 'bookings.booking.cancelled', createdAt: new Date(), payload: envelope('center-1', { bookingId: 'b1', clientId: 'c1', reason: 'SYSTEM_EXPIRED', centerCancellation }) }]]);
+  await handler.execute();
+  expect(capture.execute).toHaveBeenCalledTimes(2);
+  for (const [command] of capture.execute.mock.calls) expect(command.payload.centerCancellation).toEqual(centerCancellation);
+});

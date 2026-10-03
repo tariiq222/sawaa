@@ -6,7 +6,13 @@ import { api } from "@/lib/api"
 
 export type RefundType = "FULL" | "PARTIAL" | "NONE"
 
+export type ClientCancelCutoffMode = "BEFORE_START" | "BEFORE_CHECK_IN"
+
 export interface BookingSettings {
+  clientCancellationPolicyEnabled: boolean
+  clientCancelCutoffMode: ClientCancelCutoffMode | null
+  clientCancelBeforeHours: number | null
+  earlyCancelRefundPercent: number | null
   id?: string
   organizationId?: string
   branchId?: string | null

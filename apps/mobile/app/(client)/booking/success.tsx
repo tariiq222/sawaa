@@ -82,7 +82,7 @@ export default function BookingSuccessScreen() {
   };
 
   // A paid invoice does not guarantee the booking itself has been confirmed yet
-  // (e.g. settlement lag or DEPOSIT_PAID). See resolveConfirmedPhase.
+  // (e.g. settlement lag). Deposit confirmation does not settle the balance.
   const effectivePhase = resolveConfirmedPhase(
     phase,
     Boolean(invoiceId),
@@ -122,7 +122,9 @@ export default function BookingSuccessScreen() {
     },
     confirmed: {
       title: dir.isRTL ? 'تم تأكيد موعدك' : 'Appointment confirmed',
-      subtitle: invoiceId
+      subtitle: booking?.status?.toUpperCase() === 'DEPOSIT_PAID'
+        ? (dir.isRTL ? 'تم استلام العربون. المبلغ المتبقي لا يزال مستحقًا.' : 'Deposit received. The remaining balance is still due.')
+        : invoiceId
         ? (dir.isRTL ? 'تم استلام الدفع' : 'Payment received')
         : (dir.isRTL
           ? 'سنتواصل معكِ قريباً لترتيب الدفع وإرسال تفاصيل الجلسة'

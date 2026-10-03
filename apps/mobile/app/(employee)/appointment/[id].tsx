@@ -202,8 +202,9 @@ export default function DoctorAppointmentDetailScreen() {
 
   const hasUpdate = hasBookingPermission(user, 'update');
   const isCheckedIn = !!booking.checkedInAt;
-  const canStartSession = hasUpdate && booking.status === 'confirmed' && !isCheckedIn;
-  const canComplete = hasUpdate && booking.status === 'confirmed' && isCheckedIn;
+  const isOperationallyConfirmed = booking.status === 'confirmed' || booking.status === 'deposit_paid';
+  const canStartSession = hasUpdate && isOperationallyConfirmed && !isCheckedIn;
+  const canComplete = hasUpdate && isOperationallyConfirmed && isCheckedIn;
   const canCancelStatus = booking.status === 'confirmed' || booking.status === 'pending';
   const cancellationMode = canCancelStatus ? resolveCancellationMode(user) : 'none';
   const hasBarActions = canStartSession || canComplete || cancellationMode !== 'none';

@@ -13,7 +13,11 @@ jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string, options?: { name?: string }) => options?.name ? `${key}: ${options.name}` : key }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 const mockQuery = jest.fn();
-jest.mock('@/hooks/queries', () => ({ useBooking: () => mockQuery(), useCancelBooking: () => ({ isPending: false, mutate: jest.fn() }) }));
+jest.mock('@/hooks/queries', () => ({
+  useBooking: () => mockQuery(),
+  useCancelBooking: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useBookingCancellationPreview: () => ({ data: undefined, isFetching: false }),
+}));
 jest.mock('@/theme/sawaa', () => ({ ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: require('react-native').View }));
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
 

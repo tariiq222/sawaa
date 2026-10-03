@@ -1,6 +1,8 @@
 import { api } from '@/lib/api';
 import type {
   CancelProgramPayload,
+  ProgramCancellationPreview,
+  ProgramCancellationResult,
   CreateProgramPayload,
   EnrollInProgramPayload,
   EnrollInProgramResult,
@@ -40,7 +42,11 @@ export async function scheduleProgram(id: string, payload: ScheduleProgramPayloa
   return api.patch(`/dashboard/programs/${id}/schedule`, payload);
 }
 
-export async function cancelProgram(id: string, payload: CancelProgramPayload) {
+export async function fetchProgramCancellationPreview(id: string): Promise<ProgramCancellationPreview> {
+  return api.get(`/dashboard/programs/${id}/cancellation-preview`);
+}
+
+export async function cancelProgram(id: string, payload: CancelProgramPayload): Promise<ProgramCancellationResult> {
   return api.patch(`/dashboard/programs/${id}/cancel`, payload);
 }
 

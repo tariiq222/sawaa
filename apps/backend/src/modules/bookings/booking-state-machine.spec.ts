@@ -59,8 +59,17 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'PAYMENT_CONFIRMED')).toBe(BookingStatus.CONFIRMED);
     });
 
-    it('EXPIRE: DEPOSIT_PAID → EXPIRED (balance never settled)', () => {
-      expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'EXPIRE')).toBe(BookingStatus.EXPIRED);
+    it('never expires an operationally confirmed deposit booking for an unpaid balance', () => {
+      expect(() => assertTransition(BookingStatus.DEPOSIT_PAID, 'EXPIRE')).toThrow(BadRequestException);
+    });
+
+    it.each([
+      ['CHECK_IN', BookingStatus.DEPOSIT_PAID],
+      ['RESCHEDULE', BookingStatus.DEPOSIT_PAID],
+      ['COMPLETE', BookingStatus.COMPLETED],
+      ['NO_SHOW', BookingStatus.NO_SHOW],
+    ] as const)('DEPOSIT_PAID supports %s without asserting full payment', (transition, expected) => {
+      expect(assertTransition(BookingStatus.DEPOSIT_PAID, transition)).toBe(expected);
     });
 
     it('DIRECT_CANCEL: DEPOSIT_PAID → CANCELLED', () => {

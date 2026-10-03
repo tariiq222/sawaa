@@ -9,6 +9,7 @@ jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({
 jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn().mockResolvedValue({ type: 'dismiss' }) }));
 jest.mock('@/constants/config', () => ({ APP_SCHEME: 'sawa' }));
 let mockRTL = false;
+let mockPhase = 'ready';
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, textAlign: mockRTL ? 'right' : 'left' }) }));
 jest.mock('@/hooks/queries', () => ({
   useGroupSession: () => ({ data: { title: 'Program' } }),
@@ -30,7 +31,7 @@ jest.mock('@/features/booking/use-existing-booking-checkout', () => {
     __mockCheckAgain: checkAgain,
     __mockInvoice: invoice,
     useExistingBookingCheckout: () => ({
-    phase: 'ready',
+    phase: mockPhase,
     invoice,
     booking: { id: 'booking-1', invoiceId: 'invoice-1', status: 'pending', scheduledAt: '' },
     isRefreshing: false,
@@ -74,6 +75,7 @@ describe('ExistingBookingCheckoutScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRTL = false;
+    mockPhase = 'ready';
     mockScheme = 'light';
     mockInvoice.total = 10000;
     mockInvoice.payments = [];
@@ -96,6 +98,20 @@ describe('ExistingBookingCheckoutScreen', () => {
     const screen = render(<ExistingBookingCheckoutScreen />);
     expect(screen.getByText('7000 SAR')).toBeTruthy();
     expect(screen.getByText('checkout.remainingAmount')).toBeTruthy();
+  });
+
+  it('keeps the balance and collection action visible for a deposit-confirmed appointment', async () => {
+    mockPhase = 'deposit_confirmed';
+    mockInvoice.total = 10000;
+    mockInvoice.payments = [{ id: 'deposit-1', status: 'COMPLETED', amount: 3000 }];
+    const screen = render(<ExistingBookingCheckoutScreen />);
+    expect(screen.getByText('checkout.depositConfirmed')).toBeTruthy();
+    expect(screen.getByText('checkout.depositConfirmedDescription')).toBeTruthy();
+    expect(screen.getByText('7000 SAR')).toBeTruthy();
+    const payButton = screen.getAllByTestId('primary').find((button) => button.props.children === 'checkout.continue');
+    expect(payButton).toBeDefined();
+    await act(async () => { payButton!.props.onPress(); });
+    expect(mockInitPayment).toHaveBeenCalledWith('invoice-1', 'ONLINE_CARD');
   });
 
   it('ignores pending, failed and refunded payments when calculating the balance', () => {

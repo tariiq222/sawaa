@@ -1,322 +1,128 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { ClsService } from 'nestjs-cls';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { EventBusService } from '../../../infrastructure/events';
+import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
+import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
 import { ZoomMeetingService } from '../zoom-meeting.service';
-import { RefundCompletedEventHandler } from './refund-completed.handler';
+import { RefundCompletedCompatibilityHandler } from './refund-completed.handler';
 
-/**
- * SECURITY (P0-15): A refund that doesn't tear down the booking leaves the
- * client with a live Zoom join URL after their money is back — straight
- * refund fraud. These tests pin the cascade contract:
- *
- *   1. Booking → CANCELLED
- *   2. Zoom meeting deleted
- *   3. zoomJoinUrl / zoomHostUrl / zoomStartUrl nulled
- *
- * The handler is event-driven (subscribes via `register()`), so the tests
- * capture the callback from `eventBus.subscribe` and invoke it directly to
- * keep the suite pure-unit (no BullMQ worker).
- */
-describe('RefundCompletedEventHandler', () => {
-  let handler: RefundCompletedEventHandler;
-  let prisma: {
-    booking: {
-      findFirst: jest.Mock;
-      update: jest.Mock;
-      updateMany: jest.Mock;
-    };
-    bookingStatusLog: {
-      create: jest.Mock;
-    };
-  };
-  let rls: { withTransaction: jest.Mock };
-  let eventBus: { subscribe: jest.Mock; publish: jest.Mock };
-  let zoomMeeting: { deleteMeeting: jest.Mock; deleteMeetingStrict: jest.Mock };
-  let cls: { run: jest.Mock; set: jest.Mock };
-  let registeredHandler: (envelope: { payload: Record<string, unknown> }) => Promise<void>;
+// Exercise the real subscription and event bus, replacing only database and
+// queue/provider IO. Reintroducing the refund cancellation cascade must fail
+// for both active and terminal appointments, including duplicate deliveries.
+describe('RefundCompletedCompatibilityHandler compatibility acknowledgement', () => {
+  let eventBus: EventBusService;
+  let prisma: ReturnType<typeof mockPrisma>;
+  let zoom: { deleteMeeting: jest.Mock; deleteMeetingStrict: jest.Mock };
+  let processors: Map<string, (job: unknown) => Promise<void>>;
+  let queued: { name: string; data: unknown; options: unknown }[];
+  let booking: Record<string, unknown>;
+  const queueName = 'domain-events--bookings.refund-completed.v1';
 
-  const baseEnvelope = (bookingId: string | null) => ({
-    payload: {
-      refundRequestId: 'rr-1',
-      organizationId: '00000000-0000-0000-0000-000000000001',
-      invoiceId: 'inv-1',
-      paymentId: 'pay-1',
-      bookingId,
-      amount: 100,
-      currency: 'SAR',
-    },
-  });
+  function mockPrisma() {
+    return {
+      booking: {
+        findFirst: jest.fn(async () => booking),
+        update: jest.fn(async ({ data }) => Object.assign(booking, data)),
+        updateMany: jest.fn(async ({ data }) => {
+          Object.assign(booking, data);
+          return { count: 1 };
+        }),
+      },
+      bookingStatusLog: { create: jest.fn() },
+      outboxEvent: { create: jest.fn() },
+      packageCreditUsage: { update: jest.fn() },
+      packageCredit: { update: jest.fn() },
+      programEnrollment: { deleteMany: jest.fn() },
+      program: { update: jest.fn() },
+    };
+  }
+
+  function envelope(amount = 10000, bookingId: string | null = 'book-1'): DomainEventEnvelope {
+    return {
+      eventId: 'refund-1', source: 'finance', version: 1,
+      occurredAt: '2026-10-03T00:00:00.000Z',
+      payload: {
+        refundRequestId: 'rr-1', organizationId: '00000000-0000-0000-0000-000000000001',
+        invoiceId: 'inv-1', paymentId: 'pay-1', bookingId, amount, currency: 'SAR',
+      },
+    };
+  }
 
   beforeEach(async () => {
-    prisma = {
-      booking: {
-        findFirst: jest.fn(),
-        update: jest.fn().mockResolvedValue({ id: 'book-1' }),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-      },
-      bookingStatusLog: {
-        create: jest.fn().mockResolvedValue({ id: 'log-1' }),
-      },
-    };
-    rls = { withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)) };
-    eventBus = {
-      subscribe: jest.fn((_name: string, _consumerId: string, cb: (e: { payload: Record<string, unknown> }) => Promise<void>) => {
-        registeredHandler = cb;
+    processors = new Map();
+    queued = [];
+    prisma = mockPrisma();
+    zoom = { deleteMeeting: jest.fn(), deleteMeetingStrict: jest.fn() };
+    const cls = { run: (fn: () => unknown) => fn(), set: jest.fn() };
+    eventBus = new EventBusService({
+      createWorker: jest.fn((name, processor) => {
+        processors.set(name, processor);
+        return {};
       }),
-      publish: jest.fn(),
-    };
-    zoomMeeting = {
-      deleteMeeting: jest.fn().mockResolvedValue(undefined),
-      deleteMeetingStrict: jest.fn().mockResolvedValue(undefined),
-    };
-    // cls.run invokes the callback synchronously so the handler's cls.run blocks
-    // execute and any cls.set side-effects happen.
-    cls = {
-      run: jest.fn(async (fn: () => Promise<unknown>) => fn()),
-      set: jest.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
+      getQueue: jest.fn(() => ({ add: jest.fn(async (name, data, options) => {
+        queued.push({ name, data, options });
+      }) })),
+    } as unknown as BullMqService, cls as unknown as ClsService);
+    const module = await Test.createTestingModule({
       providers: [
-        RefundCompletedEventHandler,
-        { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rls },
+        RefundCompletedCompatibilityHandler,
         { provide: EventBusService, useValue: eventBus },
-        { provide: ZoomMeetingService, useValue: zoomMeeting },
+        { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: (fn: (tx: unknown) => unknown) => fn(prisma) } },
+        { provide: ZoomMeetingService, useValue: zoom },
         { provide: ClsService, useValue: cls },
       ],
     }).compile();
-
-    handler = module.get<RefundCompletedEventHandler>(RefundCompletedEventHandler);
-    handler.register();
+    module.get(RefundCompletedCompatibilityHandler).register();
   });
 
-  it('subscribes to finance.refund.completed on register()', () => {
-    expect(eventBus.subscribe).toHaveBeenCalledWith(
-      'finance.refund.completed',
-      'bookings.refund-completed.v1',
-      expect.any(Function),
-    );
-  });
+  it.each(Object.values(BookingStatus).flatMap(status => [
+    { status, kind: 'partial', amount: 2500 },
+    { status, kind: 'full', amount: 10000 },
+  ]))('acknowledges a $kind refund for $status without appointment side effects', async ({ status, amount }) => {
+    booking = {
+      id: 'book-1', status, zoomMeetingId: 'zoom-1',
+      zoomJoinUrl: 'join-url', zoomHostUrl: 'host-url', zoomStartUrl: 'start-url',
+      packageCreditId: 'credit-1', programId: 'program-1',
+    };
+    const original = { ...booking };
+    const publish = jest.spyOn(eventBus, 'publish');
+    await eventBus.publish('finance.refund.completed', envelope(amount));
+    expect(queued).toHaveLength(1);
+    expect(queued[0].options).toEqual(expect.objectContaining({ jobId: 'refund-1' }));
+    const consume = processors.get(queueName)!;
+    await consume(queued[0]);
+    await consume(queued[0]);
 
-  it('skips the cascade when bookingId is null (package-purchase refund path)', async () => {
-    await registeredHandler(baseEnvelope(null));
-
+    expect(booking).toEqual(original);
     expect(prisma.booking.findFirst).not.toHaveBeenCalled();
     expect(prisma.booking.update).not.toHaveBeenCalled();
-    expect(zoomMeeting.deleteMeeting).not.toHaveBeenCalled();
-  });
-
-  it('skips silently when the booking row does not exist', async () => {
-    prisma.booking.findFirst.mockResolvedValue(null);
-
-    await registeredHandler(baseEnvelope('book-missing'));
-
-    expect(prisma.booking.update).not.toHaveBeenCalled();
-    expect(zoomMeeting.deleteMeeting).not.toHaveBeenCalled();
-  });
-
-  it('cascades a CONFIRMED booking to CANCELLED in a transaction with a status log', async () => {
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.CONFIRMED,
-      zoomMeetingId: null,
-    });
-
-    await registeredHandler(baseEnvelope('book-1'));
-
-    expect(rls.withTransaction).toHaveBeenCalledTimes(1);
-    // The transaction callback uses a conditional status update and logs only
-    // when this handler won the lifecycle race.
-    const txArg = rls.withTransaction.mock.calls[0][0] as (
-      tx: { booking: { updateMany: jest.Mock }; bookingStatusLog: { create: jest.Mock } },
-    ) => Promise<unknown>;
-    const txMock = {
-      booking: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-      bookingStatusLog: { create: jest.fn() },
-    };
-    await txArg(txMock);
-    expect(txMock.booking.updateMany).toHaveBeenCalledWith({
-      where: { id: 'book-1', status: BookingStatus.CONFIRMED },
-      data: {
-        status: BookingStatus.CANCELLED,
-        cancelledAt: expect.any(Date),
-        cancelReason: 'OTHER',
-      },
-    });
-    expect(txMock.bookingStatusLog.create).toHaveBeenCalledWith({
-      data: {
-        bookingId: 'book-1',
-        fromStatus: BookingStatus.CONFIRMED,
-        toStatus: BookingStatus.CANCELLED,
-        changedBy: 'system',
-        reason: 'refund:rr-1',
-      },
-    });
-  });
-
-  it('deletes the Zoom meeting and nulls all four zoom URL/id fields', async () => {
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.CONFIRMED,
-      zoomMeetingId: 'zm-1',
-    });
-
-    await registeredHandler(baseEnvelope('book-1'));
-
-    expect(zoomMeeting.deleteMeetingStrict).toHaveBeenCalledWith(
-      '00000000-0000-0000-0000-000000000001',
-      'zm-1',
-    );
-    expect(prisma.booking.update).toHaveBeenCalledWith({
-      where: { id: 'book-1' },
-      data: {
-        zoomMeetingId: null,
-        zoomJoinUrl: null,
-        zoomHostUrl: null,
-        zoomStartUrl: null,
-      },
-    });
-  });
-
-  it('rejects when deleteMeeting throws and preserves the cleanup identifier for retry', async () => {
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.CONFIRMED,
-      zoomMeetingId: 'zm-1',
-    });
-    zoomMeeting.deleteMeetingStrict.mockRejectedValue(new Error('zoom API down'));
-
-    await expect(registeredHandler(baseEnvelope('book-1'))).rejects.toThrow('zoom API down');
-    expect(prisma.booking.updateMany).toHaveBeenCalledTimes(1);
-    expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ status: BookingStatus.CONFIRMED }),
-      data: expect.objectContaining({ status: BookingStatus.CANCELLED }),
-    }));
-  });
-
-  it('does not overwrite a concurrent terminal transition or write a false status log', async () => {
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.CONFIRMED,
-      zoomMeetingId: null,
-    });
-    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
-
-    await registeredHandler(baseEnvelope('book-1'));
-
-    expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'book-1', status: BookingStatus.CONFIRMED },
-    }));
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
     expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+    expect(prisma.packageCreditUsage.update).not.toHaveBeenCalled();
+    expect(prisma.packageCredit.update).not.toHaveBeenCalled();
+    expect(prisma.programEnrollment.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.program.update).not.toHaveBeenCalled();
+    expect(zoom.deleteMeeting).not.toHaveBeenCalled();
+    expect(zoom.deleteMeetingStrict).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledTimes(1);
   });
 
-  it('retries a transient Zoom cleanup failure without losing the meeting id', async () => {
-    prisma.booking.findFirst
-      .mockResolvedValueOnce({ id: 'book-1', status: BookingStatus.CANCELLED, zoomMeetingId: 'zm-1' })
-      .mockResolvedValueOnce({ id: 'book-1', status: BookingStatus.CANCELLED, zoomMeetingId: 'zm-1' });
-    zoomMeeting.deleteMeetingStrict
-      .mockRejectedValueOnce(new Error('temporary Zoom outage'))
-      .mockResolvedValueOnce(undefined);
-
-    await expect(registeredHandler(baseEnvelope('book-1'))).rejects.toThrow('temporary Zoom outage');
-    expect(prisma.booking.update).not.toHaveBeenCalled();
-
-    await registeredHandler(baseEnvelope('book-1'));
-    expect(zoomMeeting.deleteMeetingStrict).toHaveBeenNthCalledWith(
-      2,
-      '00000000-0000-0000-0000-000000000001',
-      'zm-1',
-    );
-    expect(prisma.booking.update).toHaveBeenCalledWith({
-      where: { id: 'book-1' },
-      data: {
-        zoomMeetingId: null,
-        zoomJoinUrl: null,
-        zoomHostUrl: null,
-        zoomStartUrl: null,
-      },
+  it('acknowledges already queued legacy deliveries for the stable consumer', async () => {
+    booking = { id: 'book-1', status: BookingStatus.CONFIRMED, zoomMeetingId: 'zoom-1' };
+    await processors.get('domain-events')!({
+      name: 'finance.refund.completed',
+      data: { eventName: 'finance.refund.completed', event: envelope(), consumerId: 'bookings.refund-completed.v1' },
     });
+    expect(prisma.booking.findFirst).not.toHaveBeenCalled();
+    expect(zoom.deleteMeetingStrict).not.toHaveBeenCalled();
   });
 
-  it('does not re-issue a status update for an already-CANCELLED booking (idempotent)', async () => {
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.CANCELLED,
-      zoomMeetingId: 'zm-1',
-    });
-
-    await registeredHandler(baseEnvelope('book-1'));
-
-    expect(rls.withTransaction).not.toHaveBeenCalled();
-    // but still tears down zoom (receipts may outlive the cancel flow)
-    expect(zoomMeeting.deleteMeetingStrict).toHaveBeenCalledWith(
-      '00000000-0000-0000-0000-000000000001',
-      'zm-1',
-    );
-  });
-
-  it('does not re-issue a status update for an already-COMPLETED booking', async () => {
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.COMPLETED,
-      zoomMeetingId: null,
-    });
-
-    await registeredHandler(baseEnvelope('book-1'));
-
-    expect(rls.withTransaction).not.toHaveBeenCalled();
-  });
-
-  it('leaves the status alone (and still tears down zoom) when the transition is invalid', async () => {
-    // EXPIRED is terminal; assertTransition(EXPIRED, DIRECT_CANCEL) throws.
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.EXPIRED,
-      zoomMeetingId: 'zm-1',
-    });
-
-    await registeredHandler(baseEnvelope('book-1'));
-
-    // Status update inside rls.withTransaction is skipped because the
-    // assertTransition throws and is caught in the inner try/catch.
-    expect(prisma.booking.update).toHaveBeenCalledTimes(1); // only the zoom null update
-    expect(zoomMeeting.deleteMeetingStrict).toHaveBeenCalled();
-  });
-
-  it('does not call zoom delete when the booking has no zoomMeetingId', async () => {
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.CONFIRMED,
-      zoomMeetingId: null,
-    });
-
-    await registeredHandler(baseEnvelope('book-1'));
-
-    expect(zoomMeeting.deleteMeetingStrict).not.toHaveBeenCalled();
-  });
-
-  it('rejects unexpected database errors so BullMQ can retry the cascade', async () => {
-    prisma.booking.findFirst.mockRejectedValue(new Error('db down'));
-
-    await expect(registeredHandler(baseEnvelope('book-1'))).rejects.toThrow('db down');
-    expect(zoomMeeting.deleteMeetingStrict).not.toHaveBeenCalled();
-  });
-
-  it('stamps the CLS context as system before each prisma read/write', async () => {
-    prisma.booking.findFirst.mockResolvedValue({
-      id: 'book-1',
-      status: BookingStatus.CONFIRMED,
-      zoomMeetingId: null,
-    });
-
-    await registeredHandler(baseEnvelope('book-1'));
-
-    // cls.run is invoked at least twice (findFirst + the status-update tx) and
-    // cls.set(SYSTEM_CONTEXT_CLS_KEY, true) is set inside each.
-    expect(cls.run).toHaveBeenCalled();
-    expect(cls.set).toHaveBeenCalledWith('systemContext', true);
+  it('acknowledges package refunds without a booking', async () => {
+    await eventBus.publish('finance.refund.completed', envelope(10000, null));
+    await processors.get(queueName)!(queued[0]);
+    expect(prisma.booking.findFirst).not.toHaveBeenCalled();
   });
 });

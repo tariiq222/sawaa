@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { RefundPaymentDto } from './refund-payment.dto';
+import { RefundPaymentDto, ManualRefundPaymentDto } from './refund-payment.dto';
 
 async function validateDto(plain: Record<string, unknown>) {
   const dto = plainToInstance(RefundPaymentDto, plain);
@@ -51,5 +51,12 @@ describe('RefundPaymentDto', () => {
       const errors = await validateDto({ reason: 'Minimum refund', amount: 1 });
       expect(errors).toHaveLength(0);
     });
+  });
+});
+
+describe('ManualRefundPaymentDto', () => {
+  it('accepts an exact request identity and rejects invalid identities', async () => {
+    expect(await validate(plainToInstance(ManualRefundPaymentDto, { reason: 'Cash handed back', refundRequestId: '11111111-1111-4111-8111-111111111111' }))).toHaveLength(0);
+    expect(await validate(plainToInstance(ManualRefundPaymentDto, { reason: 'Cash handed back', refundRequestId: 'bad' }))).not.toHaveLength(0);
   });
 });

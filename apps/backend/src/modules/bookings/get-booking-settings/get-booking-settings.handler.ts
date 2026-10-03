@@ -11,7 +11,13 @@ export interface GetBookingSettingsQuery {
 }
 
 /** Hardcoded fallback used when no DB row exists at all. */
-export const DEFAULT_BOOKING_SETTINGS = {
+export type ResolvedBookingSettings = Omit<BookingSettings, 'id' | 'branchId' | 'createdAt' | 'updatedAt'>;
+
+export const DEFAULT_BOOKING_SETTINGS: ResolvedBookingSettings = {
+  clientCancellationPolicyEnabled: false,
+  clientCancelCutoffMode: null,
+  clientCancelBeforeHours: null,
+  earlyCancelRefundPercent: null,
   bufferMinutes: 0,
   freeCancelBeforeHours: 24,
   freeCancelRefundType: 'FULL' as const,
@@ -28,9 +34,7 @@ export const DEFAULT_BOOKING_SETTINGS = {
   requireCancelApproval: false,
   autoRefundOnCancel: true,
   clientRescheduleMinHoursBefore: 24,
-} as const;
-
-export type ResolvedBookingSettings = typeof DEFAULT_BOOKING_SETTINGS;
+};
 
 @Injectable()
 export class GetBookingSettingsHandler {

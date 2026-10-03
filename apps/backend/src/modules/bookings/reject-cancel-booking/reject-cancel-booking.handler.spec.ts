@@ -1,7 +1,13 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { RejectCancelBookingHandler } from './reject-cancel-booking.handler';
-import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma as buildBasePrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+
+const buildPrisma = () => {
+  const p = buildBasePrisma();
+  p.$queryRaw.mockResolvedValue([]);
+  return p;
+};
 
 const cancelRequestedBooking = { ...mockBooking, status: 'CANCEL_REQUESTED' as BookingStatus };
 
@@ -88,7 +94,7 @@ describe('RejectCancelBookingHandler', () => {
   it('re-arms the payment window when restoring an unconfirmed hold', async () => {
     const before = Date.now();
     const prisma = buildPrisma();
-    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, expiresAt: new Date(0) });
     prisma.bookingStatusLog.findFirst = jest
       .fn()
       .mockResolvedValue({ fromStatus: BookingStatus.AWAITING_PAYMENT });
@@ -127,6 +133,6 @@ describe('RejectCancelBookingHandler', () => {
     await handler.execute({ bookingId: 'book-1', rejectedBy: 'admin-1', rejectReason: 'No reason' });
 
     const data = (prisma.booking.updateMany as jest.Mock).mock.calls[0][0].data;
-    expect(data).not.toHaveProperty('expiresAt');
+    expect(data.expiresAt).toBeNull();
   });
 });

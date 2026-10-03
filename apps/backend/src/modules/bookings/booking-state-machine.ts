@@ -19,13 +19,13 @@
  *             │    │
  *         COMPLETED  NO_SHOW  (terminal)
  *
- *   Deposit flow (deposit feature — structural; payment wiring lands later):
+ *   Deposit flow:
  *     PENDING | AWAITING_PAYMENT  → DEPOSIT_CONFIRMED → DEPOSIT_PAID
- *       (client paid the full service deposit; time reserved, balance still due)
+ *       (appointment operationally confirmed; balance still due)
  *     DEPOSIT_PAID                → PAYMENT_CONFIRMED  → CONFIRMED
  *       (client settles the remaining balance)
- *     DEPOSIT_PAID                → EXPIRE             → EXPIRED
- *       (balance never settled; deposit refunded by expire-booking batch-1 logic)
+ *     DEPOSIT_PAID                → COMPLETE | NO_SHOW (attendance lifecycle)
+ *     Deposit bookings never expire for an outstanding balance.
  *     DEPOSIT_PAID is NOT terminal.
  *
  *   Any cancellable state:
@@ -51,6 +51,7 @@
  *     CONFIRMED → RESCHEDULE → CONFIRMED
  *     PENDING   → RESCHEDULE → PENDING
  *     CONFIRMED → CHECK_IN   → CONFIRMED
+ *     DEPOSIT_PAID → RESCHEDULE | CHECK_IN → DEPOSIT_PAID
  */
 
 import { BadRequestException } from '@nestjs/common';
@@ -113,7 +114,7 @@ export const VALID_TRANSITIONS: Record<
   /**
    * Payment gateway confirms payment → booking auto-confirmed.
    * From DEPOSIT_PAID this represents the client settling the remaining balance,
-   * which confirms the appointment.
+   * without changing its operational confirmation.
    * Handler: payment-completed-handler/payment-completed.handler.ts
    */
   PAYMENT_CONFIRMED: {
@@ -127,9 +128,8 @@ export const VALID_TRANSITIONS: Record<
 
   /**
    * Client pays the configured service deposit in full → the appointment time
-   * is reserved while a remaining balance stays due. Fired only when the full
+   * is confirmed while a remaining balance stays due. Fired only when the full
    * deposit amount is collected (not a partial deposit).
-   * Wired in a later deposit-feature batch — structural only for now.
    */
   DEPOSIT_CONFIRMED: {
     from: [BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT],
@@ -219,11 +219,11 @@ export const VALID_TRANSITIONS: Record<
 
   /**
    * Booking is rescheduled — status is unchanged (self-loop).
-   * Applies to both PENDING and CONFIRMED.
+   * Applies to PENDING, CONFIRMED and DEPOSIT_PAID.
    * Handlers: reschedule-booking.handler.ts, client/client-reschedule-booking.handler.ts
    */
   RESCHEDULE: {
-    from: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
+    from: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID],
     to: BookingStatus.CONFIRMED, // status preserved in practice — see assertTransition return logic
   },
 
@@ -232,7 +232,7 @@ export const VALID_TRANSITIONS: Record<
    * Handler: complete-booking/complete-booking.handler.ts
    */
   COMPLETE: {
-    from: [BookingStatus.CONFIRMED],
+    from: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID],
     to: BookingStatus.COMPLETED,
   },
 
@@ -241,7 +241,7 @@ export const VALID_TRANSITIONS: Record<
    * Handler: no-show-booking/no-show-booking.handler.ts
    */
   NO_SHOW: {
-    from: [BookingStatus.CONFIRMED],
+    from: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID],
     to: BookingStatus.NO_SHOW,
   },
 
@@ -268,27 +268,21 @@ export const VALID_TRANSITIONS: Record<
 
   /**
    * Cron/system expires a non-confirmed booking whose payment window elapsed.
-   * A DEPOSIT_PAID booking expires when the client never settles the remaining
-   * balance in time; the paid deposit is refunded by the existing expire-booking
-   * batch-1 logic.
+   * Deposit bookings are operationally confirmed and cannot expire.
    * Handler: expire-booking/expire-booking.handler.ts
    */
   EXPIRE: {
-    from: [
-      BookingStatus.PENDING,
-      BookingStatus.AWAITING_PAYMENT,
-      BookingStatus.DEPOSIT_PAID,
-    ],
+    from: [BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT],
     to: BookingStatus.EXPIRED,
   },
 
   /**
-   * Receptionist marks client as arrived — status stays CONFIRMED (self-loop),
+   * Receptionist marks client as arrived — status is preserved (self-loop),
    * only checkedInAt timestamp is set.
    * Handler: check-in-booking/check-in-booking.handler.ts
    */
   CHECK_IN: {
-    from: [BookingStatus.CONFIRMED],
+    from: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID],
     to: BookingStatus.CONFIRMED,
   },
 };
@@ -333,9 +327,8 @@ export const TERMINAL_STATUSES: ReadonlySet<BookingStatus> = new Set([
  * Validates that `from` is an allowed source for `transition` and returns
  * the resulting `BookingStatus`.
  *
- * Special case — RESCHEDULE is a self-loop: the `to` is the same as `from`
- * (either PENDING or CONFIRMED), not always CONFIRMED. The table stores
- * CONFIRMED as the canonical `to`; this function corrects that for PENDING.
+ * RESCHEDULE and CHECK_IN are self-loops: preserve the actual current status,
+ * including DEPOSIT_PAID so attendance never implies full payment.
  *
  * Special case — REJECT_CANCEL must restore the booking to the status it held
  * before the client requested cancellation. The caller passes that status via
@@ -367,8 +360,8 @@ export function assertTransition(
     );
   }
 
-  // RESCHEDULE self-loop: preserve the actual current status
-  if (transition === 'RESCHEDULE') {
+  // Attendance and rescheduling preserve the actual current status.
+  if (transition === 'RESCHEDULE' || transition === 'CHECK_IN') {
     return from;
   }
 

@@ -52,6 +52,26 @@ describe('RescheduleBookingHandler', () => {
     jest.clearAllMocks();
   });
 
+  it('reschedules DEPOSIT_PAID through the real eligibility guard without settling the balance', async () => {
+    const prisma = buildPrisma();
+    const booking = makeBooking({ status: BookingStatus.DEPOSIT_PAID });
+    prisma.booking.findUnique.mockResolvedValue(booking);
+    (fetchBookingOrFail as jest.Mock).mockImplementation(jest.requireActual('../booking-lifecycle.helper').fetchBookingOrFail);
+    const handler = new RescheduleBookingHandler(
+      prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never,
+      buildZoomService() as never, buildAvailabilityHandler() as never,
+    );
+    await handler.execute({ bookingId: 'book-1', newScheduledAt: futureDate, changedBy: 'user-1' });
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ status: BookingStatus.DEPOSIT_PAID }),
+      data: expect.objectContaining({ scheduledAt: futureDate }),
+    }));
+    expect(prisma.booking.updateMany.mock.calls[0][0].data).not.toHaveProperty('status');
+    expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      fromStatus: BookingStatus.DEPOSIT_PAID, toStatus: BookingStatus.DEPOSIT_PAID,
+    }) });
+  });
+
   it('1. throws BadRequestException when fetchBookingOrFail rejects due to wrong status', async () => {
     (fetchBookingOrFail as jest.Mock).mockRejectedValue(
       new BadRequestException('Booking cannot be rescheduled (status: COMPLETED)'),

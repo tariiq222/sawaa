@@ -59,7 +59,9 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     app = moduleFixture.createNestApplication();
     app.use(cookieParser());
     configureHttpContract(app, 'production');
-    await app.init();
+    // The suite owns the listener until afterAll; Supertest must not close it
+    // while another identity request is still in flight.
+    await app.listen(0, '127.0.0.1');
     prisma = app.get(PrismaService);
     clientTokens = app.get(ClientTokenService);
     await prisma.$queryRaw`SELECT 1`;
@@ -327,6 +329,17 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     const code = await requestLoginOtp(userEmail);
     const verified = await verify(userEmail, code);
 
+    // Expose transport/shape failures without logging session or OTP secrets.
+    if (verified.status !== 200 || verified.body.sessionKind !== 'client') {
+      throw new Error(`Unexpected email OTP response: ${JSON.stringify({
+        status: verified.status,
+        contentType: verified.headers['content-type'],
+        bodyKeys: Object.keys(verified.body ?? {}),
+        sessionKind: verified.body.sessionKind,
+        error: verified.body.error,
+        message: verified.body.message,
+      })}`);
+    }
     expect(verified.status).toBe(200);
     expect(verified.body.sessionKind).toBe('client');
     expect(verified.body.tokens).toEqual({ accessToken: expect.any(String), refreshToken: expect.any(String) });

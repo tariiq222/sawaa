@@ -1,3 +1,4 @@
+import { ClientCancellationPreviewHandler } from '../../modules/bookings/client/client-cancellation-preview.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -22,12 +23,14 @@ describe('PublicMeController (e2e)', () => {
   const mockCancel = { execute: jest.fn() };
   const mockReschedule = { execute: jest.fn() };
   const mockGetClientBooking = { execute: jest.fn() };
+  const mockPreview = { execute: jest.fn() };
   const mockGetInvoice = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicMeController],
       providers: [
+        { provide: ClientCancellationPreviewHandler, useValue: mockPreview },
         { provide: GetMeHandler, useValue: mockGetMe },
         { provide: UpdateClientProfileHandler, useValue: mockUpdateProfile },
         { provide: ListClientInvoicesHandler, useValue: mockListInvoices },
@@ -60,6 +63,13 @@ describe('PublicMeController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('passes authenticated ownership to the cancellation preview', async () => {
+    mockPreview.execute.mockResolvedValue({ policyEnabled: true, canCancel: true });
+    const id = '11111111-1111-4111-8111-111111111111';
+    await request(app.getHttpServer()).get(`/public/me/bookings/${id}/cancellation-preview`).expect(200);
+    expect(mockPreview.execute).toHaveBeenCalledWith(id, 'client-1');
   });
 
   describe('GET /public/me', () => {

@@ -26,6 +26,7 @@ export {
   getMyInvoices,
   getMyBookings,
   cancelMyBooking,
+  getMyCancellationPreview,
   rescheduleMyBooking,
 } from './modules/me'
 export type { UpdateMyProfileRequest } from './modules/me'

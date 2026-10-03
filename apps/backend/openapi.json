@@ -1240,15 +1240,103 @@
         ],
         "type": "string"
       },
-      "CancelProgramDto": {
+      "CancellationRefundSummaryDto": {
         "properties": {
-          "reason": {
-            "description": "Reason for cancelling the program",
+          "alreadyRefundedAmount": {
+            "description": "Already refunded amount in halalas",
+            "type": "integer"
+          },
+          "currency": {
+            "example": "SAR",
+            "type": "string"
+          },
+          "execution": {
+            "description": "Whether the refund needs no action, provider processing, or staff review",
+            "enum": [
+              "NONE",
+              "AUTOMATIC",
+              "REVIEW"
+            ],
+            "type": "string"
+          },
+          "paidAmount": {
+            "description": "Captured original amount in halalas",
+            "type": "integer"
+          },
+          "pendingRefundAmount": {
+            "description": "Reserved pending amount in halalas",
+            "type": "integer"
+          },
+          "refundAmount": {
+            "description": "New remaining refund entitlement in halalas",
+            "type": "integer"
+          },
+          "refundPercent": {
+            "description": "Policy percentage for the applicable cancellation window",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          },
+          "status": {
+            "description": "Expected financial outcome if the client confirms cancellation; pending states do not mean money has been returned",
+            "enum": [
+              "NOT_APPLICABLE",
+              "NO_REFUND",
+              "PENDING_REVIEW",
+              "PROCESSING",
+              "CREDIT_RETURNED"
+            ],
+            "type": "string"
+          },
+          "window": {
+            "description": "Refund policy window relative to the configured early cancellation threshold",
+            "enum": [
+              "EARLY",
+              "LATE"
+            ],
             "type": "string"
           }
         },
         "required": [
-          "reason"
+          "status",
+          "paidAmount",
+          "alreadyRefundedAmount",
+          "pendingRefundAmount",
+          "refundAmount",
+          "refundPercent",
+          "currency",
+          "execution",
+          "window"
+        ],
+        "type": "object"
+      },
+      "CancelProgramDto": {
+        "properties": {
+          "quoteToken": {
+            "description": "Token from the current cancellation preview",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Reason for cancelling the program",
+            "type": "string"
+          },
+          "refunds": {
+            "description": "After program start, additional refunds in integer halalas for every paid participant, including explicit zero amounts; each amount must not exceed its preview maximum. Omit or send an empty list before start, when the full available balance is selected automatically.",
+            "example": [
+              {
+                "amount": 20000,
+                "bookingId": "11111111-1111-4111-8111-111111111111"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ProgramParticipantRefundDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "reason",
+          "quoteToken"
         ],
         "type": "object"
       },
@@ -2045,11 +2133,80 @@
       },
       "ClientCancelBookingDto": {
         "properties": {
+          "quoteToken": {
+            "description": "Opaque cancellation preview token; refresh preview after conflict",
+            "type": "string"
+          },
           "reason": {
             "description": "Reason for cancellation",
             "type": "string"
+          },
+          "sourceActionId": {
+            "description": "Stable UUID for retrying the same cancellation",
+            "format": "uuid",
+            "type": "string"
           }
         },
+        "type": "object"
+      },
+      "ClientCancelCutoffMode": {
+        "description": "Client cancellation eligibility cutoff",
+        "enum": [
+          "BEFORE_START",
+          "BEFORE_CHECK_IN"
+        ],
+        "type": "string"
+      },
+      "ClientCancellationPreviewDto": {
+        "properties": {
+          "canCancel": {
+            "description": "Current eligibility to cancel this appointment directly",
+            "type": "boolean"
+          },
+          "cutoffAt": {
+            "description": "Effective cancellation deadline, or null when no valid deadline is configured",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "policyEnabled": {
+            "description": "Whether the new client cancellation policy is explicitly enabled",
+            "type": "boolean"
+          },
+          "quoteToken": {
+            "description": "Opaque effective terms fingerprint",
+            "type": "string"
+          },
+          "reasonCode": {
+            "description": "Eligibility decision or reason cancellation is unavailable",
+            "enum": [
+              "ALLOWED",
+              "POLICY_NOT_CONFIGURED",
+              "CUTOFF_PASSED",
+              "ATTENDED",
+              "FINAL_STATE",
+              "HISTORICAL",
+              "GROUP_STAFF_ONLY"
+            ],
+            "type": "string"
+          },
+          "refund": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CancellationRefundSummaryDto"
+              }
+            ],
+            "description": "Financial terms shown to the client before cancellation confirmation"
+          }
+        },
+        "required": [
+          "policyEnabled",
+          "canCancel",
+          "reasonCode",
+          "cutoffAt",
+          "quoteToken",
+          "refund"
+        ],
         "type": "object"
       },
       "ClientChatConversationCursorMetaDto": {
@@ -7191,6 +7348,29 @@
         ],
         "type": "object"
       },
+      "ManualRefundPaymentDto": {
+        "properties": {
+          "amount": {
+            "description": "Partial refund amount in integer halalas (1 SAR = 100); omit to refund the full amount",
+            "example": 5000,
+            "type": "number"
+          },
+          "reason": {
+            "description": "Reason for the refund",
+            "example": "Service not delivered",
+            "type": "string"
+          },
+          "refundRequestId": {
+            "description": "Existing pending cash/bank-transfer refund request to settle; retries return the existing completion",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "type": "object"
+      },
       "MarkConversationReadDto": {
         "properties": {
           "throughMessageId": {
@@ -7223,6 +7403,10 @@
             "example": "Change of plans",
             "type": "string"
           },
+          "quoteToken": {
+            "description": "Cancellation preview fingerprint",
+            "type": "string"
+          },
           "reason": {
             "allOf": [
               {
@@ -7231,6 +7415,11 @@
             ],
             "description": "Reason for cancellation",
             "example": "CLIENT_REQUESTED"
+          },
+          "sourceActionId": {
+            "description": "Stable UUID for this cancellation attempt",
+            "format": "uuid",
+            "type": "string"
           }
         },
         "required": [
@@ -8300,6 +8489,88 @@
         ],
         "type": "object"
       },
+      "PersistedCancellationRefundDto": {
+        "properties": {
+          "alreadyRefundedAmount": {
+            "description": "Already refunded amount in halalas",
+            "type": "integer"
+          },
+          "completedAmount": {
+            "description": "Ledger-confirmed refunded amount toward this cancellation, in halalas",
+            "type": "integer"
+          },
+          "currency": {
+            "example": "SAR",
+            "type": "string"
+          },
+          "execution": {
+            "description": "Whether the refund needs no action, provider processing, or staff review",
+            "enum": [
+              "NONE",
+              "AUTOMATIC",
+              "REVIEW"
+            ],
+            "type": "string"
+          },
+          "failedAmount": {
+            "description": "Failed or denied request amount, in halalas",
+            "type": "integer"
+          },
+          "paidAmount": {
+            "description": "Captured original amount in halalas",
+            "type": "integer"
+          },
+          "pendingRefundAmount": {
+            "description": "Reserved pending amount in halalas",
+            "type": "integer"
+          },
+          "refundAmount": {
+            "description": "New remaining refund entitlement in halalas",
+            "type": "integer"
+          },
+          "refundPercent": {
+            "description": "Policy percentage for the applicable cancellation window",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          },
+          "status": {
+            "description": "Persisted cancellation refund outcome derived from confirmed ledger entries and request states",
+            "enum": [
+              "NOT_APPLICABLE",
+              "NO_REFUND",
+              "PENDING_REVIEW",
+              "PROCESSING",
+              "CREDIT_RETURNED",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "window": {
+            "description": "Refund policy window relative to the configured early cancellation threshold",
+            "enum": [
+              "EARLY",
+              "LATE"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "paidAmount",
+          "alreadyRefundedAmount",
+          "pendingRefundAmount",
+          "refundAmount",
+          "refundPercent",
+          "currency",
+          "execution",
+          "window",
+          "status",
+          "completedAmount",
+          "failedAmount"
+        ],
+        "type": "object"
+      },
       "PreviewEmailTemplateDto": {
         "properties": {
           "context": {
@@ -8348,6 +8619,231 @@
           "invoiceId",
           "amount",
           "method"
+        ],
+        "type": "object"
+      },
+      "ProgramCancellationParticipantDto": {
+        "properties": {
+          "alreadyRefundedAmount": {
+            "description": "Amount already refunded in integer halalas",
+            "example": 5000,
+            "type": "number"
+          },
+          "bookingId": {
+            "description": "Booking identifier for this enrolled participant",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "type": "string"
+          },
+          "bookingNumber": {
+            "description": "Human-readable booking number for this participant",
+            "example": 1042,
+            "type": "number"
+          },
+          "clientId": {
+            "description": "Client identifier for this enrolled participant",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "type": "string"
+          },
+          "clientName": {
+            "description": "Display name of the enrolled client",
+            "example": "سارة محمد",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency shared by the booking and its captured payments",
+            "example": "SAR",
+            "type": "string"
+          },
+          "maxRefundAmount": {
+            "description": "Maximum additional refund in integer halalas after existing refunds and reservations; zero for historical imports",
+            "example": 20000,
+            "type": "number"
+          },
+          "paidAmount": {
+            "description": "Captured original amount in integer halalas, before refunds",
+            "example": 30000,
+            "type": "number"
+          },
+          "pendingRefundAmount": {
+            "description": "Amount reserved by pending refund requests in integer halalas",
+            "example": 5000,
+            "type": "number"
+          },
+          "refundAmount": {
+            "description": "Additional refund in integer halalas: the full available amount before program start, or null after start until staff select an amount",
+            "example": 20000,
+            "nullable": true,
+            "type": "number"
+          },
+          "status": {
+            "description": "Current booking status when the cancellation preview was generated",
+            "example": "CONFIRMED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "clientId",
+          "clientName",
+          "bookingNumber",
+          "status",
+          "currency",
+          "paidAmount",
+          "alreadyRefundedAmount",
+          "pendingRefundAmount",
+          "maxRefundAmount",
+          "refundAmount"
+        ],
+        "type": "object"
+      },
+      "ProgramCancellationParticipantResultDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking identifier for this participant cancellation outcome",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency of this participant refund amount",
+            "example": "SAR",
+            "type": "string"
+          },
+          "refundAmount": {
+            "description": "Additional refund amount recorded by this cancellation in integer halalas; does not mean the refund has completed",
+            "example": 20000,
+            "type": "number"
+          },
+          "refundStatus": {
+            "description": "Initial refund outcome: staff review required, automatic processing pending, or no additional refund",
+            "enum": [
+              "PENDING_REVIEW",
+              "PROCESSING",
+              "NO_REFUND"
+            ],
+            "example": "PENDING_REVIEW",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "refundAmount",
+          "currency",
+          "refundStatus"
+        ],
+        "type": "object"
+      },
+      "ProgramCancellationPreviewDto": {
+        "properties": {
+          "hasStarted": {
+            "description": "Whether the start date has elapsed or participant attendance, completion or historical-import evidence requires post-start refund selection",
+            "example": false,
+            "type": "boolean"
+          },
+          "participants": {
+            "description": "Current enrolled participants and their individual refundable balances, including bookings whose history must be retained",
+            "example": [
+              {
+                "alreadyRefundedAmount": 5000,
+                "bookingId": "11111111-1111-4111-8111-111111111111",
+                "bookingNumber": 1042,
+                "clientId": "22222222-2222-4222-8222-222222222222",
+                "clientName": "سارة محمد",
+                "currency": "SAR",
+                "maxRefundAmount": 20000,
+                "paidAmount": 30000,
+                "pendingRefundAmount": 5000,
+                "refundAmount": 20000,
+                "status": "CONFIRMED"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ProgramCancellationParticipantDto"
+            },
+            "type": "array"
+          },
+          "programId": {
+            "description": "Program identifier for this cancellation preview",
+            "example": "33333333-3333-4333-8333-333333333333",
+            "type": "string"
+          },
+          "quoteToken": {
+            "description": "Opaque token for these cancellation terms; submit it unchanged when cancelling and refresh the preview if the terms change",
+            "example": "a9b7c3d5e1f02468a9b7c3d5e1f02468a9b7c3d5e1f02468a9b7c3d5e1f02468",
+            "type": "string"
+          }
+        },
+        "required": [
+          "programId",
+          "hasStarted",
+          "quoteToken",
+          "participants"
+        ],
+        "type": "object"
+      },
+      "ProgramCancellationResultDto": {
+        "properties": {
+          "cancelledEnrollments": {
+            "description": "Number of participant bookings transitioned to CANCELLED by this operation",
+            "example": 1,
+            "type": "number"
+          },
+          "id": {
+            "description": "Identifier of the cancelled program",
+            "example": "33333333-3333-4333-8333-333333333333",
+            "type": "string"
+          },
+          "participants": {
+            "description": "Per-participant refund outcomes for non-historical bookings, including terminal bookings whose status was retained",
+            "example": [
+              {
+                "bookingId": "11111111-1111-4111-8111-111111111111",
+                "currency": "SAR",
+                "refundAmount": 20000,
+                "refundStatus": "PENDING_REVIEW"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ProgramCancellationParticipantResultDto"
+            },
+            "type": "array"
+          },
+          "skippedEnrollments": {
+            "description": "Number of participant bookings whose status was retained, including terminal bookings and historical imports",
+            "example": 0,
+            "type": "number"
+          },
+          "status": {
+            "description": "Program status after cancellation is committed",
+            "example": "CANCELLED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "cancelledEnrollments",
+          "skippedEnrollments",
+          "participants"
+        ],
+        "type": "object"
+      },
+      "ProgramParticipantRefundDto": {
+        "properties": {
+          "amount": {
+            "description": "Additional refund in integer halalas",
+            "minimum": 0,
+            "type": "number"
+          },
+          "bookingId": {
+            "description": "Participant booking identifier from the current program cancellation preview",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "amount"
         ],
         "type": "object"
       },
@@ -10966,9 +11462,35 @@
             "example": 15,
             "type": "number"
           },
+          "clientCancelBeforeHours": {
+            "description": "Minimum hours before start to allow client cancellation; 0 is valid",
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
+          },
+          "clientCancelCutoffMode": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientCancelCutoffMode"
+              }
+            ],
+            "description": "Client cancellation eligibility cutoff",
+            "nullable": true
+          },
+          "clientCancellationPolicyEnabled": {
+            "description": "Enable the explicitly configured immediate client cancellation policy",
+            "type": "boolean"
+          },
           "clientRescheduleMinHoursBefore": {
             "description": "Minimum hours before booking start that a client may reschedule",
             "example": 24,
+            "type": "number"
+          },
+          "earlyCancelRefundPercent": {
+            "description": "Independent early cancellation partial refund percentage",
+            "maximum": 100,
+            "minimum": 0,
+            "nullable": true,
             "type": "number"
           },
           "freeCancelBeforeHours": {
@@ -20785,7 +21307,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefundPaymentDto"
+                "$ref": "#/components/schemas/ManualRefundPaymentDto"
               }
             }
           },
@@ -33937,6 +34459,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramCancellationResultDto"
+                }
+              }
+            },
             "description": ""
           },
           "400": {
@@ -33985,7 +34514,84 @@
             "bearer": []
           }
         ],
-        "summary": "Cancel a program (cascades to enrollments, no automatic refund)",
+        "summary": "Cancel a program and queue participant refunds from the confirmed preview",
+        "tags": [
+          "Dashboard / Programs"
+        ]
+      }
+    },
+    "/api/v1/dashboard/programs/{id}/cancellation-preview": {
+      "get": {
+        "operationId": "DashboardProgramsController_cancellationPreview_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramCancellationPreviewDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview participant refunds for center cancellation",
         "tags": [
           "Dashboard / Programs"
         ]
@@ -35356,6 +35962,12 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "cancellationRefund": {
+                      "$ref": "#/components/schemas/PersistedCancellationRefundDto"
+                    }
+                  },
                   "type": "object"
                 }
               }
@@ -35454,11 +36066,23 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "booking": {
+                      "type": "object"
+                    },
+                    "refund": {
+                      "$ref": "#/components/schemas/CancellationRefundSummaryDto"
+                    },
+                    "requiresApproval": {
+                      "type": "boolean"
+                    }
+                  },
                   "type": "object"
                 }
               }
             },
-            "description": "Booking cancelled"
+            "description": "Booking cancelled; enabled policy includes refund and requiresApproval"
           },
           "400": {
             "content": {
@@ -35500,6 +36124,9 @@
             },
             "description": "Booking not found"
           },
+          "409": {
+            "description": "Cancellation terms changed; refresh the preview"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -35517,6 +36144,83 @@
           }
         ],
         "summary": "Cancel a booking",
+        "tags": [
+          "Mobile Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/bookings/{id}/cancellation-preview": {
+      "get": {
+        "operationId": "MobileClientBookingsController_cancellationPreviewEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCancellationPreviewDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview client cancellation eligibility and refund terms",
         "tags": [
           "Mobile Client / Bookings"
         ]
@@ -41120,7 +41824,13 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "description": "Booking detail",
+                  "properties": {
+                    "cancellationRefund": {
+                      "$ref": "#/components/schemas/PersistedCancellationRefundDto"
+                    }
+                  },
                   "type": "object"
                 }
               }
@@ -41211,8 +41921,113 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Updated booking",
+                  "properties": {
+                    "booking": {
+                      "type": "object"
+                    },
+                    "refund": {
+                      "$ref": "#/components/schemas/CancellationRefundSummaryDto"
+                    },
+                    "requiresApproval": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "enum": [
+                        "CANCELLED",
+                        "CANCEL_REQUESTED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "booking",
+                    "requiresApproval"
+                  ],
                   "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Booking not found"
+          },
+          "409": {
+            "description": "Cancellation terms changed; refresh the preview"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a client booking",
+        "tags": [
+          "Public / Me"
+        ]
+      }
+    },
+    "/api/v1/public/me/bookings/{id}/cancellation-preview": {
+      "get": {
+        "operationId": "PublicMeController_cancellationPreviewEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCancellationPreviewDto"
                 }
               }
             },
@@ -41267,7 +42082,7 @@
             "bearer": []
           }
         ],
-        "summary": "Cancel a client booking",
+        "summary": "Preview client cancellation eligibility and refund terms",
         "tags": [
           "Public / Me"
         ]

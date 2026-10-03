@@ -43,6 +43,7 @@ export function AppointmentCard({ booking, onPress }: AppointmentCardProps) {
   const statusLabels: Record<string, string> = {
     pending: t('appointments.pending'),
     confirmed: t('appointments.confirmed'),
+    deposit_paid: t('appointments.depositPaid'),
     completed: t('appointments.completed'),
     cancelled: t('appointments.cancelledStatus'),
     cancel_requested: t('appointments.pendingCancellation'),

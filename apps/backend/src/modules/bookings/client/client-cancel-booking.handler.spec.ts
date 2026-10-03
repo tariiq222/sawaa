@@ -315,3 +315,67 @@ describe('ClientCancelBookingHandler', () => {
     })).rejects.toThrow(ConflictException);
   });
 });
+
+describe('enabled client cancellation policy', () => {
+  const policy = { clientCancellationPolicyEnabled: true, clientCancelCutoffMode: 'BEFORE_START', clientCancelBeforeHours: 0, earlyCancelRefundPercent: 50, freeCancelBeforeHours: 24, freeCancelRefundType: 'PARTIAL', lateCancelRefundPercent: 25, autoRefundOnCancel: true, requireCancelApproval: true };
+  const payment = { id: 'p1', invoiceId: 'i1', amount: 10000, refundedAmount: 0, status: 'COMPLETED', method: 'ONLINE_CARD', gatewayRef: 'g1', currency: 'SAR', refundRequests: [] };
+  function setup(overrides = {}) {
+    const db = buildPrisma() as any;
+    const booking = { ...futureBooking, checkedInAt: null, isHistoricalImport: false, currency: 'SAR', ...overrides };
+    db.booking.findUnique.mockResolvedValue(booking);
+    db.payment.findMany = jest.fn().mockResolvedValue([payment]);
+    db.$queryRaw = jest.fn().mockResolvedValue([]);
+    db.outboxEvent.create.mockResolvedValue({});
+    const refunds = buildRefundHandler();
+    refunds.createRefundRequestInTx.mockRejectedValue(new Error('provider unavailable'));
+    const handler = new ClientCancelBookingHandler(db, buildRlsTransaction(db) as never, buildSettingsHandler(policy) as never, buildEventBus() as never, refunds as never, buildGroupCapacity() as never);
+    return { db, handler, refunds, booking };
+  }
+  it('cancels immediately despite old approval flag, persisting financial intent without calling finance', async () => {
+    const { handler, db, refunds } = setup({ status: BookingStatus.DEPOSIT_PAID });
+    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    expect(result).toMatchObject({ status: 'CANCELLED', requiresApproval: false, refund: { refundAmount: 5000, status: 'PROCESSING' } });
+    expect(refunds.createRefundRequestInTx).not.toHaveBeenCalled();
+    expect(db.outboxEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ payload: expect.objectContaining({ payload: expect.objectContaining({ clientCancellation: expect.objectContaining({ allocations: [expect.objectContaining({ paymentId: 'p1', amount: 5000 })] }) }) }) }) });
+  });
+  it('persists the original refund outcome for idempotent retries without another event', async () => {
+    const { handler, db, booking } = setup();
+    const action = '33333333-3333-4333-8333-333333333333';
+    const first = await handler.execute({ bookingId: 'book-1', clientId: 'client-1', sourceActionId: action });
+    const saved = db.bookingStatusLog.create.mock.calls[0][0].data;
+    db.booking.findUnique.mockResolvedValue({ ...booking, status: 'CANCELLED' });
+    db.bookingStatusLog.findUnique.mockResolvedValue(saved);
+    const second = await handler.execute({ bookingId: 'book-1', clientId: 'client-1', sourceActionId: action });
+    expect(second.refund).toEqual(first.refund);
+    expect(db.booking.updateMany).toHaveBeenCalledTimes(1);
+    expect(db.outboxEvent.create).toHaveBeenCalledTimes(1);
+  });
+  it('returns a reserved package credit once and never queues a cash refund', async () => {
+    const { handler, db } = setup({ packageCreditId: 'credit-1' });
+    db.payment.findMany.mockResolvedValue([]);
+    db.packageCreditUsage.findFirst.mockResolvedValue({ id: 'usage-1', creditId: 'credit-1', status: 'RESERVED' });
+    db.packageCredit.findUnique.mockResolvedValue({ purchaseId: 'purchase-1' });
+    db.$queryRaw.mockResolvedValue([{ id: 'purchase-1', status: 'ACTIVE' }]);
+    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    expect(result.refund).toMatchObject({ status: 'CREDIT_RETURNED', refundAmount: 0, execution: 'NONE' });
+    expect(db.packageCredit.update).toHaveBeenCalledWith({ where: { id: 'credit-1' }, data: { reservedQuantity: { decrement: 1 } } });
+    expect(db.outboxEvent.create.mock.calls[0][0].data.payload.payload.clientCancellation.allocations).toEqual([]);
+  });
+  it('rejects a changed preview token before mutating', async () => {
+    const { handler, db } = setup();
+    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1', quoteToken: 'old' } as never)).rejects.toThrow(ConflictException);
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+  });
+  it.each([{ checkedInAt: new Date() }, { status: BookingStatus.CANCEL_REQUESTED }])('rejects attendance and existing approval requests %p', async changes => {
+    const { handler, db } = setup(changes);
+    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow();
+    expect(db.outboxEvent.create).not.toHaveBeenCalled();
+  });
+  it('guards attendance and schedule at the actual mutation and loses a concurrent race', async () => {
+    const { handler, db, booking } = setup();
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow();
+    expect(db.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ checkedInAt: null, scheduledAt: booking.scheduledAt, endsAt: booking.endsAt }) }));
+    expect(db.outboxEvent.create).not.toHaveBeenCalled();
+  });
+});

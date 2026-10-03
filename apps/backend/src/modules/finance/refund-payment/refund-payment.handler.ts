@@ -14,6 +14,7 @@ import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { assertValidTransition } from '../payment-state-machine';
 import { computeRefundAccounting } from './refund-vat.helper';
 import { decimalToHalalas } from '../money.helper';
+import { captureCancellationRefundOutcome } from '../cancellation-refund/capture-cancellation-refund-outcome';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const REFUND_PROVIDER_LEASE_MS = 60_000;
@@ -529,10 +530,26 @@ export class RefundPaymentHandler {
       let providerPaymentId = refundReq.gatewayRef ?? payment.gatewayRef;
 
       if (phase === 'BEFORE_CALL') {
-        const providerPayment = await this.moyasar.getPaymentStatus(
-          DEFAULT_ORG_ID,
-          payment.gatewayRef,
-        );
+        let providerPayment: Awaited<ReturnType<MoyasarApiClient['getPaymentStatus']>>;
+        try {
+          providerPayment = await this.moyasar.getPaymentStatus(
+            DEFAULT_ORG_ID,
+            payment.gatewayRef,
+          );
+        } catch (error) {
+          // Only a provider 404 before any POST proves this refund cannot run.
+          // Transient failures and unknown-call reconciliation remain retryable.
+          if (error instanceof NotFoundException) {
+            await this.requireOwnedRefundUpdate(cmd.refundRequestId, leaseOwner, {
+              status: RefundStatus.FAILED,
+              providerState: 'FAILED',
+              providerLeaseOwner: null,
+              providerLeaseExpiresAt: null,
+              lastProviderError: 'Provider confirmed payment is unavailable before refund',
+            });
+          }
+          throw error;
+        }
         const localAmount = decimalToHalalas(payment.amount);
         const localRefunded = decimalToHalalas(payment.refundedAmount ?? 0);
         const providerBaseline = Math.round(providerPayment.refunded);
@@ -732,16 +749,20 @@ export class RefundPaymentHandler {
     leaseOwner: string,
     data: Prisma.RefundRequestUpdateManyMutationInput,
   ): Promise<void> {
-    const result = await this.prisma.refundRequest.updateMany({
-      where: {
-        id: refundRequestId,
-        status: RefundStatus.PROCESSING,
-        providerLeaseOwner: leaseOwner,
-      },
-      data,
-    });
-    if (result.count !== 1) {
-      throw new ConflictException('Refund provider lease was lost');
+    const update = async (tx: Pick<Prisma.TransactionClient, 'refundRequest'>) => {
+      const result = await tx.refundRequest.updateMany({
+        where: { id: refundRequestId, status: RefundStatus.PROCESSING, providerLeaseOwner: leaseOwner },
+        data,
+      });
+      if (result.count !== 1) throw new ConflictException('Refund provider lease was lost');
+    };
+    if (data.status === RefundStatus.FAILED || data.status === RefundStatus.MANUAL_REVIEW) {
+      await this.rlsTransaction.withTransaction(async tx => {
+        await update(tx);
+        await captureCancellationRefundOutcome(tx, refundRequestId);
+      });
+    } else {
+      await update(this.prisma);
     }
   }
 

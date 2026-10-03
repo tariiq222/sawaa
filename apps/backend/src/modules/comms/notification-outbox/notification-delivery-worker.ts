@@ -244,7 +244,7 @@ export class NotificationDeliveryWorker {
       const scheduledAt = new Date(payload.scheduledAt);
       if (
         !booking ||
-        booking.status !== 'CONFIRMED' ||
+        !['CONFIRMED', 'DEPOSIT_PAID'].includes(booking.status) ||
         booking.scheduledAt.getTime() !== scheduledAt.getTime() ||
         scheduledAt.getTime() <= now.getTime()
       ) {

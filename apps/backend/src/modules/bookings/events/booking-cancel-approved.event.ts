@@ -1,3 +1,4 @@
+import type { StaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
 import { RefundType } from '@prisma/client';
 import { BaseEvent } from '../../../common/events';
 
@@ -6,6 +7,8 @@ export interface BookingCancelApprovedPayload {
   clientId: string;
   employeeId: string;
   autoRefund: boolean;
+  /** Frozen staff refund budget; new events settle through the intent service. */
+  staffCancellation?: StaffCancellationIntent;
   approverNotes?: string;
   /** Refund decision recorded by the approver. */
   refundType?: RefundType;

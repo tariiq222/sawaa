@@ -1,3 +1,5 @@
+import type { StaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
+import type { ClientCancellationIntent } from '../client/client-cancellation-policy';
 import { BaseEvent } from '../../../common/events';
 import { CancellationReason } from '@prisma/client';
 
@@ -17,6 +19,8 @@ export interface BookingCancelledPayload {
   paymentId: string | null;
   refundRequestId?: string | null;
   idempotencyKey?: string | null;
+  clientCancellation?: ClientCancellationIntent;
+  centerCancellation?: StaffCancellationIntent;
 }
 
 /**

@@ -1,5 +1,7 @@
+import { ClientCancellationPreviewHandler } from '../../modules/bookings/client/client-cancellation-preview.handler';
+import { ClientCancellationPreviewDto, CancellationRefundSummaryDto, PersistedCancellationRefundDto } from '../../modules/bookings/client/client-cancellation-preview.dto';
 import { Controller, Get, Patch, Query, Param, Body, UseGuards, ParseUUIDPipe, ParseEnumPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiOkResponse, ApiResponse, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
@@ -16,6 +18,7 @@ import { GetClientBookingHandler } from '../../modules/bookings/client/get-clien
 import { GetBookingInvoiceHandler } from '../../modules/finance/get-invoice/get-booking-invoice.handler';
 import { Public } from '../../common/guards/jwt.guard';
 
+@ApiExtraModels(CancellationRefundSummaryDto, PersistedCancellationRefundDto)
 @ApiTags('Public / Me')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -32,6 +35,7 @@ export class PublicMeController {
     private readonly rescheduleBooking: ClientRescheduleBookingHandler,
     private readonly getClientBooking: GetClientBookingHandler,
     private readonly getBookingInvoice: GetBookingInvoiceHandler,
+    private readonly cancellationPreview: ClientCancellationPreviewHandler,
   ) {}
 
   @Get()
@@ -102,7 +106,7 @@ export class PublicMeController {
   @Get('bookings/:id')
   @ApiOperation({ summary: 'Get a single client booking by ID' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Booking detail' } })
+  @ApiOkResponse({ schema: { type: 'object', description: 'Booking detail', additionalProperties: true, properties: { cancellationRefund: { $ref: getSchemaPath(PersistedCancellationRefundDto) } } } })
   @ApiResponse({ status: 404, description: 'Booking not found' })
   async getBookingEndpoint(
     @ClientSession() session: { id: string },
@@ -111,10 +115,23 @@ export class PublicMeController {
     return this.getClientBooking.execute(id, session.id);
   }
 
+  @Get('bookings/:id/cancellation-preview')
+  @ApiOperation({ summary: 'Preview client cancellation eligibility and refund terms' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: ClientCancellationPreviewDto })
+  @ApiResponse({ status: 404, description: 'Booking not found' })
+  async cancellationPreviewEndpoint(
+    @ClientSession() session: { id: string },
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.cancellationPreview.execute(id, session.id);
+  }
+
   @Patch('bookings/:id/cancel')
   @ApiOperation({ summary: 'Cancel a client booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Updated booking' } })
+  @ApiOkResponse({ schema: { type: 'object', required: ['status', 'booking', 'requiresApproval'], properties: { status: { type: 'string', enum: ['CANCELLED', 'CANCEL_REQUESTED'] }, booking: { type: 'object' }, requiresApproval: { type: 'boolean' }, refund: { $ref: getSchemaPath(CancellationRefundSummaryDto) } } } })
+  @ApiResponse({ status: 409, description: 'Cancellation terms changed; refresh the preview' })
   @ApiResponse({ status: 404, description: 'Booking not found' })
   async cancelBookingEndpoint(
     @ClientSession() session: { id: string },

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PaymentStatus, Prisma, RefundStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -14,6 +14,8 @@ export interface ManualRefundPaymentCommand {
   reason: string;
   amount?: number;
   performedBy?: string;
+  /** Settle this reviewed off-gateway request in place, exactly once. */
+  refundRequestId?: string;
 }
 
 /**
@@ -42,6 +44,12 @@ export class ManualRefundPaymentHandler {
   async execute(cmd: ManualRefundPaymentCommand) {
     const { updatedPayment } =
       await this.rlsTransaction.withTransaction(async (tx) => {
+        if (cmd.refundRequestId) {
+          const identity = await tx.refundRequest.findUnique({ where: { id: cmd.refundRequestId }, select: { invoiceId: true, paymentId: true } });
+          if (!identity || identity.paymentId !== cmd.paymentId) throw new NotFoundException('Refund request not found for this payment');
+          // Match cancellation/provider follow-up lock order on the new path.
+          await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${identity.invoiceId} FOR UPDATE`);
+        }
         const rows = await tx.$queryRaw<
           Array<{
             id: string;
@@ -58,6 +66,16 @@ export class ManualRefundPaymentHandler {
 
         const row = rows[0];
         if (!row) throw new NotFoundException('Payment not found');
+        const reviewed = cmd.refundRequestId
+          ? await tx.refundRequest.findUnique({ where: { id: cmd.refundRequestId } })
+          : null;
+        if (cmd.refundRequestId) {
+          if (!reviewed || reviewed.paymentId !== row.id || reviewed.invoiceId !== row.invoiceId) throw new NotFoundException('Refund request not found for this payment');
+          if (row.gatewayRef) throw new BadRequestException('Payment was collected through the card gateway; use the gateway refund path');
+          if (cmd.amount !== undefined && cmd.amount !== decimalToHalalas(reviewed.amount)) throw new ConflictException('Amount must match the reviewed refund request');
+          if (reviewed.status === RefundStatus.COMPLETED) return { updatedPayment: await tx.payment.findUniqueOrThrow({ where: { id: row.id } }) };
+          if (reviewed.status !== RefundStatus.PENDING_REVIEW) throw new ConflictException('Refund request is not pending review');
+        }
         if (
           row.status !== PaymentStatus.COMPLETED &&
           row.status !== PaymentStatus.PARTIALLY_REFUNDED
@@ -91,14 +109,19 @@ export class ManualRefundPaymentHandler {
         // Omitting the amount means "refund whatever is still refundable" — the
         // outstanding balance, NOT the original total (which would over-refund a
         // payment that was already partially refunded).
-        const requestedAmount = cmd.amount === undefined ? outstanding : Math.round(cmd.amount);
+        const requestedAmount = reviewed ? decimalToHalalas(reviewed.amount) : cmd.amount === undefined ? outstanding : Math.round(cmd.amount);
         if (requestedAmount <= 0 || requestedAmount > outstanding) {
           throw new BadRequestException(
             `Refund amount ${requestedAmount} exceeds the refundable balance of ${outstanding} halalas`,
           );
         }
 
-        const refundRequestId = randomUUID();
+        if (reviewed) {
+          const otherReservations = await tx.refundRequest.findMany({ where: { paymentId: row.id, id: { not: reviewed.id }, status: { in: ['PENDING_REVIEW', 'APPROVED', 'PROCESSING', 'MANUAL_REVIEW'] } }, select: { amount: true } });
+          const reserved = otherReservations.reduce((sum, request) => sum + decimalToHalalas(request.amount), 0);
+          if (requestedAmount > outstanding - reserved) throw new ConflictException('Other refund requests reserve this payment balance');
+        }
+        const refundRequestId = reviewed?.id ?? randomUUID();
         const accounting = computeRefundAccounting({
           invoiceTotal: invoice.total,
           invoiceVatAmt: invoice.vatAmt,
@@ -109,7 +132,13 @@ export class ManualRefundPaymentHandler {
 
         // No gateway round-trip — the refund is settled the moment reception
         // hands the cash back, so the request is born COMPLETED with no gatewayRef.
-        await tx.refundRequest.create({
+        if (reviewed) {
+          const updated = await tx.refundRequest.updateMany({
+            where: { id: reviewed.id, paymentId: row.id, status: RefundStatus.PENDING_REVIEW },
+            data: { status: RefundStatus.COMPLETED, processedAt: new Date(), processedBy: cmd.performedBy ?? 'system', providerState: 'CONFIRMED', reason: cmd.reason },
+          });
+          if (updated.count !== 1) throw new ConflictException('Refund request changed concurrently');
+        } else await tx.refundRequest.create({
           data: {
             id: refundRequestId,
             invoiceId: invoice.id,

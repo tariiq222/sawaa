@@ -31,7 +31,7 @@ export async function verifyPayment(
  */
 export async function manualRefundPayment(
   id: string,
-  payload: { reason: string; amount?: number },
+  payload: { reason: string; amount?: number; refundRequestId?: string },
 ): Promise<Payment> {
   return api.patch<Payment>(`/dashboard/finance/payments/${id}/manual-refund`, payload)
 }

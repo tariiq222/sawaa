@@ -200,3 +200,5 @@ export type {
   GuestChatHandoffRequest,
   ClaimedChatConversation,
 } from './chat'
+
+export type { CancellationRefund, PersistedCancellationRefund, CancellationPreview, CancellationQuoteInput, ClientCancellationResult } from './cancellation'

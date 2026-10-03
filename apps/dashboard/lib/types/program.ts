@@ -135,6 +135,18 @@ export interface ScheduleProgramPayload {
 
 export interface CancelProgramPayload {
   reason: string;
+  quoteToken: string;
+  refunds?: { bookingId: string; amount: number }[];
+}
+export interface ProgramCancellationPreview {
+  programId: string;
+  hasStarted: boolean;
+  quoteToken: string;
+  participants: { bookingId: string; clientId: string; clientName: string; bookingNumber: number; status: string; currency: string; paidAmount: number; alreadyRefundedAmount: number; pendingRefundAmount: number; maxRefundAmount: number; refundAmount: number | null }[];
+}
+export interface ProgramCancellationResult {
+  id: string; status: string; cancelledEnrollments: number; skippedEnrollments: number;
+  participants: { bookingId: string; refundAmount: number; currency: string; refundStatus: 'PENDING_REVIEW' | 'PROCESSING' | 'NO_REFUND' }[];
 }
 
 export interface EnrollInProgramPayload {

@@ -37,6 +37,54 @@ describe('MaterializeNotificationIntentHandler', () => {
     return { handler: new MaterializeNotificationIntentHandler(prisma as unknown as PrismaService), prisma, tx };
   };
 
+  it.each(['CONFIRMED', 'DEPOSIT_PAID'])('materializes a current future reminder for %s', async status => {
+    const scheduledAt = new Date(Date.now() + 3600000);
+    const { handler, tx } = build({ ...baseIntent({ kind: 'booking-reminder-client', bookingId: 'booking-1', clientId: 'client-1', scheduledAt: scheduledAt.toISOString(), policyVersion: 1 }), consumerKey: 'comms.booking-reminder-client.v2' });
+    tx.booking.findUnique.mockResolvedValue({ status, clientId: 'client-1', scheduledAt });
+    tx.client.findUnique.mockResolvedValue({ id: 'client-1', isActive: true, deletedAt: null, pushEnabled: false });
+    await handler.execute('intent-1');
+    expect(tx.notification.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ type: 'BOOKING_REMINDER', recipientId: 'client-1' }) }));
+  });
+
+  it.each([
+    { status: 'CANCELLED', offset: 3600000, changed: false },
+    { status: 'DEPOSIT_PAID', offset: -1000, changed: false },
+    { status: 'DEPOSIT_PAID', offset: 3600000, changed: true },
+  ])('does not materialize an ineligible reminder %p', async ({ status, offset, changed }) => {
+    const scheduledAt = new Date(Date.now() + offset);
+    const { handler, tx } = build({ ...baseIntent({ kind: 'booking-reminder-client', bookingId: 'booking-1', clientId: 'client-1', scheduledAt: scheduledAt.toISOString(), policyVersion: 1 }), consumerKey: 'comms.booking-reminder-client.v2' });
+    tx.booking.findUnique.mockResolvedValue({ status, clientId: 'client-1', scheduledAt: changed ? new Date(scheduledAt.getTime() + 1000) : scheduledAt });
+    await handler.execute('intent-1');
+    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(tx.notificationIntent.update).toHaveBeenCalledWith({ where: { id: 'intent-1' }, data: { status: 'EXPIRED' } });
+  });
+
+  it('freezes client processing/refund details into cancellation notifications', async () => {
+    const { handler, tx } = build({ ...baseIntent({ kind: 'booking-cancelled-client', bookingId: 'booking-1', clientId: 'client-1', reason: 'CLIENT_REQUESTED', clientCancellation: { version: 1, initiatedBy: 'CLIENT', refund: { status: 'PROCESSING', refundAmount: 5000, pendingRefundAmount: 0, currency: 'SAR' } } }), consumerKey: 'comms.booking-cancelled-client.v2' });
+    tx.client.findUnique.mockResolvedValue({ id: 'client-1', isActive: true, deletedAt: null, pushEnabled: false });
+    await handler.execute('intent-1');
+    expect(tx.notification.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ body: 'تم إلغاء موعدك. استرداد 50.00 SAR قيد المعالجة.' }) }));
+  });
+
+  it('announces program cancellation for retained terminal participants without a false appointment cancellation claim', async () => {
+    const { handler, tx } = build({ ...baseIntent({ kind: 'booking-cancelled-client', bookingId: 'booking-1', clientId: 'client-1', reason: 'CENTER', centerCancellation: { version: 1, initiatedBy: 'CENTER', reason: 'إلغاء البرنامج أسرة: تعذر التنفيذ', refund: { refundAmount: 2500, pendingRefundAmount: 0, currency: 'SAR' } } }), consumerKey: 'comms.booking-cancelled-client.v2' });
+    tx.client.findUnique.mockResolvedValue({ id: 'client-1', isActive: true, deletedAt: null, pushEnabled: false });
+    await handler.execute('intent-1');
+    expect(tx.notification.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ title: 'تم إلغاء البرنامج', body: expect.stringContaining('25.00 SAR') }) }));
+    expect(tx.notification.create.mock.calls[0][0].data.body).not.toContain('إلغاء موعدك');
+  });
+
+  it('freezes truthful center email without using the appointment template and escapes reason text', async () => {
+    const { handler, tx } = build({ ...baseIntent({ kind: 'booking-cancelled-client', bookingId: 'booking-1', clientId: 'client-1', reason: 'CENTER', centerCancellation: { version: 1, initiatedBy: 'CENTER', reason: 'إلغاء البرنامج <script>bad</script>', refund: { refundAmount: 2500, pendingRefundAmount: 0, currency: 'SAR' } } }), consumerKey: 'comms.booking-cancelled-client.v2' });
+    tx.client.findUnique.mockResolvedValue({ id: 'client-1', name: 'Sara', email: 'sara@example.test', isActive: true, deletedAt: null, pushEnabled: false });
+    await handler.execute('intent-1');
+    const email = tx.notificationDelivery.createMany.mock.calls[0][0].data.find((row: any) => row.channel === 'EMAIL');
+    expect(email.channelPayload.subject).toBe('تم إلغاء البرنامج');
+    expect(email.channelPayload.html).toContain('&lt;script&gt;bad&lt;/script&gt;');
+    expect(email.channelPayload.html).not.toContain('<script>');
+    expect(tx.emailTemplate.findFirst).not.toHaveBeenCalled();
+  });
+
   it('marks an already materialized intent complete without creating duplicate rows', async () => {
     const { handler, prisma } = build({ ...baseIntent({ kind: 'booking-created-staff', bookingId: 'booking-1' }), status: 'MATERIALIZED' });
 

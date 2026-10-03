@@ -1,3 +1,5 @@
+import type { StaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
+import type { ClientCancellationIntent } from '../../bookings/client/client-cancellation-policy';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
@@ -177,6 +179,8 @@ export class ReconcileNotificationSourcesHandler {
           consumerKey: NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_CANCELLED_CLIENT,
           payload: {
             kind: 'booking-cancelled-client' as const,
+            centerCancellation: value.centerCancellation as StaffCancellationIntent | undefined,
+            clientCancellation: value.clientCancellation as ClientCancellationIntent | undefined,
             bookingId: value.bookingId as string,
             clientId: value.clientId as string,
             reason: value.reason as string,
@@ -191,6 +195,7 @@ export class ReconcileNotificationSourcesHandler {
           consumerKey: NOTIFICATION_OUTBOX_CONSUMERS.BOOKING_CANCELLED_STAFF,
           payload: {
             kind: 'booking-cancelled-staff' as const,
+            centerCancellation: value.centerCancellation as StaffCancellationIntent | undefined,
             bookingId: value.bookingId as string,
             bookingNumber: value.bookingNumber as number | undefined,
             employeeId: value.employeeId as string | undefined,

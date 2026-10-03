@@ -155,7 +155,7 @@ function NextBookingCard({ booking, locale }: { booking: ClientBookingItem; loca
     minute: '2-digit',
   });
   const canJoin =
-    booking.deliveryType === 'ONLINE' && !!booking.zoomJoinUrl && booking.status === 'CONFIRMED';
+    booking.deliveryType === 'ONLINE' && !!booking.zoomJoinUrl && ['CONFIRMED', 'DEPOSIT_PAID'].includes(booking.status);
 
   return (
     <div className="flex flex-col gap-3">

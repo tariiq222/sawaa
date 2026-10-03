@@ -25,6 +25,7 @@ import {
 function phaseCopy(phase: ExistingBookingCheckoutPhase, t: (key: string) => string) {
   switch (phase) {
     case 'loading': return { title: t('checkout.title'), body: t('checkout.loading') };
+    case 'deposit_confirmed': return { title: t('checkout.depositConfirmed'), body: t('checkout.depositConfirmedDescription') };
     case 'success': return { title: t('checkout.success'), body: t('checkout.successDescription') };
     case 'pending': return { title: t('checkout.pending'), body: t('checkout.pendingDescription') };
     case 'failed': return { title: t('checkout.failed'), body: t('checkout.failedDescription') };
@@ -88,7 +89,7 @@ export default function ExistingBookingCheckoutScreen() {
       })
     : t('checkout.amountUnavailable');
   const canPay = Boolean(checkout.invoice?.id) && canStartHostedPayment(checkout.invoice) && !submitting && (
-    ['ready', 'failed'].includes(checkout.phase) ||
+    ['ready', 'failed', 'deposit_confirmed'].includes(checkout.phase) ||
     (checkout.phase === 'pending' && canResumeHostedPayment(checkout.invoice))
   );
 
@@ -116,7 +117,7 @@ export default function ExistingBookingCheckoutScreen() {
   };
 
   const showPaymentChoice = canPay && checkout.invoice;
-  const showRetry = checkout.phase === 'pending' || checkout.phase === 'error';
+  const showRetry = ['pending', 'deposit_confirmed', 'error'].includes(checkout.phase);
   const showContact = Boolean(brandingQuery.data?.contactPhone) &&
     ['error', 'missing_invoice', 'invoice_mismatch', 'cancelled', 'expired'].includes(checkout.phase);
 
@@ -182,7 +183,7 @@ export default function ExistingBookingCheckoutScreen() {
             fontFamily={f700}
           />
         ) : null}
-        {checkout.phase === 'success' ? (
+        {['success', 'deposit_confirmed'].includes(checkout.phase) ? (
           <PrimaryButton
             label={t('checkout.appointments')}
             onPress={() => router.replace('/(client)/(tabs)/appointments')}

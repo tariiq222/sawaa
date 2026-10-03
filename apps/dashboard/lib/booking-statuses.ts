@@ -20,5 +20,6 @@ export const CANCELLABLE_BOOKING_STATUSES: ReadonlySet<string> = new Set([
   "pending_group_fill",
   "awaiting_payment",
   "confirmed",
+  "deposit_paid",
   "cancel_requested",
 ])

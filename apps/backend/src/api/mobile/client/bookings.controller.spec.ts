@@ -1,3 +1,6 @@
+import { ClientCancellationPreviewHandler } from '../../../modules/bookings/client/client-cancellation-preview.handler';
+import { ClientCancelBookingHandler } from '../../../modules/bookings/client/client-cancel-booking.handler';
+import { ClientCancellationOutcomeHandler } from '../../../modules/bookings/client/client-cancellation-outcome.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -17,6 +20,9 @@ import { ClientSessionGuard } from '../../../common/guards/client-session.guard'
 describe('MobileClientBookingsController (e2e)', () => {
   let app: INestApplication;
 
+  const mockPreview = { execute: jest.fn().mockResolvedValue({ policyEnabled: false }) };
+  const mockClientCancel = { execute: jest.fn() };
+  const mockOutcome = { execute: jest.fn() };
   const mockList = { execute: jest.fn() };
   const mockGet = { execute: jest.fn() };
   const mockCreate = { execute: jest.fn() };
@@ -31,6 +37,9 @@ describe('MobileClientBookingsController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [MobileClientBookingsController],
       providers: [
+        { provide: ClientCancellationPreviewHandler, useValue: mockPreview },
+        { provide: ClientCancelBookingHandler, useValue: mockClientCancel },
+        { provide: ClientCancellationOutcomeHandler, useValue: mockOutcome },
         { provide: ListBookingsHandler, useValue: mockList },
         { provide: GetBookingHandler, useValue: mockGet },
         { provide: CreateBookingHandler, useValue: mockCreate },
@@ -65,6 +74,25 @@ describe('MobileClientBookingsController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    mockPreview.execute.mockResolvedValue({ policyEnabled: false });
+  });
+
+  it('includes the persisted refund outcome on lower-case mapped cancelled detail', async () => {
+    mockGet.execute.mockResolvedValue({ id: bookingId, status: 'cancelled' });
+    mockOutcome.execute.mockResolvedValue({ status: 'COMPLETED', completedAmount: 5000 });
+    const response = await request(app.getHttpServer()).get(`/mobile/client/bookings/${bookingId}`).expect(200);
+    expect(response.body.cancellationRefund).toEqual({ status: 'COMPLETED', completedAmount: 5000 });
+    expect(mockOutcome.execute).toHaveBeenCalledWith(bookingId, 'client-1');
+  });
+
+  it('uses the enabled shared policy and preserves old top-level booking fields', async () => {
+    mockPreview.execute.mockResolvedValue({ policyEnabled: true });
+    mockClientCancel.execute.mockResolvedValue({ status: 'CANCELLED', booking: { id: bookingId, status: 'CANCELLED' }, requiresApproval: false, refund: { status: 'PROCESSING' } });
+    const action = '11111111-1111-4111-8111-111111111111';
+    const res = await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`).send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Changed plans', quoteToken: 'preview', sourceActionId: action }).expect(200);
+    expect(res.body).toMatchObject({ id: bookingId, status: 'CANCELLED', refund: { status: 'PROCESSING' } });
+    expect(mockClientCancel.execute).toHaveBeenCalledWith({ bookingId, clientId: 'client-1', reason: 'Changed plans', quoteToken: 'preview', sourceActionId: action });
+    expect(mockCancel.execute).not.toHaveBeenCalled();
   });
 
   const bookingId = '00000000-0000-4000-a000-000000000001';
