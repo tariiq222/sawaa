@@ -102,6 +102,9 @@ jobs:
         working-directory: apps/mobile
         run: pnpm install --frozen-lockfile
 
+      - name: Dependency security regression tests (root and mobile)
+        run: SAWAA_INCLUDE_MOBILE_DEPENDENCIES=1 node --test scripts/security/dependency-fixes.test.cjs scripts/security/refresh-dependency-fixes.test.cjs
+
       - name: Mobile — build shared package + typecheck
         working-directory: apps/mobile
         run: pnpm --filter=@sawaa/shared build && pnpm typecheck
@@ -149,6 +152,7 @@ jobs:
           limit-severities-for-sarif: true
           exit-code: '1'
           ignore-unfixed: false
+          trivyignores: '.trivyignore.yaml'
           skip-dirs: 'coverage,dist,node_modules,.next,**/coverage,**/dist,**/node_modules,**/.next'
           skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,**/coverage/**,**/dist/**,**/node_modules/**,**/.next/**,apps/*/coverage/**,apps/*/dist/**'
           vuln-type: 'os,library'

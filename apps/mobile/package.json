@@ -128,7 +128,8 @@
     "patchedDependencies": {
       "metro@0.83.7": "patches/metro@0.83.7.patch",
       "expo-router@55.0.18": "patches/expo-router@55.0.18.patch",
-      "decode-uri-component@0.2.2": "patches/decode-uri-component@0.2.2.patch"
+      "decode-uri-component@0.2.2": "patches/decode-uri-component@0.2.2.patch",
+      "braces@3.0.3": "patches/braces@3.0.3.patch"
     },
     "overrides": {
       "@grpc/grpc-js@<1.14.5": "1.14.5",

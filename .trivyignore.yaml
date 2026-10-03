@@ -1,0 +1,22 @@
+# Explicit YAML policy for CI; .trivyignore retains the prior legacy policy.
+vulnerabilities:
+  # Existing node-forge exception, unchanged; rationale is in .trivyignore.
+  - id: CVE-2026-85393
+    statement: Existing unreachable signature-verification exception documented in .trivyignore.
+
+  # Owner approved 2026-10-03, expires at 2026-10-17 UTC.
+  # pnpm installs the same backport in root and independent mobile installs.
+  # Patch SHA-256: 5ff64a80fb35bdbcf20ba29fc763f946a363cfc4c22bb7792209224f79956f57
+  # CI runs installed-dependency regressions before this scan; see PR #147.
+  - id: CVE-2026-93687
+    paths:
+      - pnpm-lock.yaml
+      - apps/mobile/pnpm-lock.yaml
+    purls:
+      - pkg:npm/braces@3.0.3
+    expired_at: 2026-10-17
+    statement: >-
+      braces 3.0.3 is locally patched with parser and AST-walker depth limits,
+      including remaining-depth fallback guards. Both independent installations
+      have mandatory security regression tests. Remove when a recognized fixed
+      release is installed; do not extend this exception without owner approval.
