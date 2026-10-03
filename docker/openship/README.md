@@ -84,6 +84,8 @@ does not participate in routine deploys.
 4. A cloned database can contain pending jobs or provider configuration;
    network policy must deny backend egress to payment, SMS, email, Authentica,
    Zoom, AI, and messaging providers.
+   An owner-authorized test-phone exception for Authentica may use the isolated
+   relay below; never attach the backend itself to an outbound bridge.
 5. Keep the existing migration-history and checksum review as a separate
    provenance report. Never reset or rewrite checksums, and do not represent
    that report as a repair. Routine updates use Prisma's `migrate deploy`; its
@@ -129,6 +131,39 @@ network, and does not accept a destination from the request. Keep the website
 origin in `CORS_ORIGINS` for other approved API clients.
 
 ## Side effects and OpenShip settings
+
+### Optional Authentica test-phone relay
+
+`compose.otp-relay.yml` runs a separate staging-only relay. The backend keeps its
+internal network, and the relay has its own outbound bridge. Its only upstream
+is `https://api.authentica.sa`: authenticated balance queries and SMS OTP requests
+to the exact Saudi E.164 numbers in `AUTHENTICA_TEST_PHONES`. Empty/invalid lists
+prevent startup. Other numbers, channels, fields, paths and redirects are
+rejected. The relay accepts template 1 and at most one send attempt per number
+per minute; provider failures fail closed. It logs no request bodies or secrets.
+
+Provision through a protected operator environment with `OTP_RELAY_IMAGE` pinned
+to the verified Node-capable backend image digest, `AUTHENTICA_API_KEY`, and
+`AUTHENTICA_TEST_PHONES`. Keep phone numbers and credentials outside Git. Deploy
+this file separately with a dedicated Compose project, for example
+`docker compose -p sawaa-staging-otp -f compose.otp-relay.yml up -d` from a protected
+directory containing the relay script. Do not add this service to production or
+the ordinary application Compose file. No host ports are published.
+
+After `Internal=true` is confirmed on `openship-sawaa-staging` and the relay's
+allow/deny checks pass, use OpenShip's backend **Environment** editor to set
+`AUTHENTICA_BASE_URL=http://authentica-otp-relay:8080`, retaining the backend-scoped
+key, then **Save** and **Apply environment changes**. Verify readiness and a
+normal registration/verification on an owner-controlled allowed phone. Recheck
+that a disallowed number is rejected and the backend cannot directly resolve or
+reach external providers. The relay persists across backend replacements via its
+stable internal DNS alias. Re-run these checks after updates.
+
+Rollback: restore the prior backend `AUTHENTICA_BASE_URL` through OpenShip and
+apply it, then stop only the dedicated relay Compose project. The original
+isolated backend will again be unable to send external OTPs. No databases or
+volumes need to be removed or restored. Local regression command:
+`node --test docker/openship/otp-relay.test.mjs`.
 
 There is no global cron disable switch in the current backend. The outbox flags
 are explicitly false in the example, but local cron workers still run booking

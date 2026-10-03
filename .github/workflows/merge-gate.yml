@@ -82,6 +82,9 @@ jobs:
       - name: Deploy-state regression tests
         run: node --test scripts/check-deploy-state.test.mjs
 
+      - name: Staging OTP relay recipient boundary
+        run: node --test docker/openship/otp-relay.test.mjs
+
       - name: Deploy-state consistency
         # Verifies that the candidate merge target is at-or-after the
         # latest tagged code release on main; does not verify deployment. Catches the

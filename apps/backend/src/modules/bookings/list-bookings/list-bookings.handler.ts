@@ -111,17 +111,21 @@ export class ListBookingsHandler {
     if (searchTerm) {
       const tokens = searchTerm.split(/\s+/).filter(Boolean);
       const orConditions: Prisma.ClientWhereInput[] = [
+        { name: { contains: searchTerm, mode: 'insensitive' } },
         { firstName: { contains: searchTerm, mode: 'insensitive' } },
+        { middleName: { contains: searchTerm, mode: 'insensitive' } },
         { lastName: { contains: searchTerm, mode: 'insensitive' } },
         { phone: { contains: searchTerm, mode: 'insensitive' } },
       ];
-      // Full name spanning firstName + lastName (e.g. "اختبار دفع 13855"):
-      // require every token to appear in either name field.
+      // Require every full-name token in a name component or the synchronized
+      // legacy name, including clients whose middle name contains several words.
       if (tokens.length > 1) {
         orConditions.push({
           AND: tokens.map((tok) => ({
             OR: [
+              { name: { contains: tok, mode: 'insensitive' } },
               { firstName: { contains: tok, mode: 'insensitive' } },
+              { middleName: { contains: tok, mode: 'insensitive' } },
               { lastName: { contains: tok, mode: 'insensitive' } },
             ],
           })),
