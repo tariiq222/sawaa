@@ -6005,6 +6005,15 @@ export interface components {
             quoteToken: string;
             /** @description Reason for cancelling the program */
             reason: string;
+            /**
+             * @description After program start, additional refunds in integer halalas for every paid participant, including explicit zero amounts; each amount must not exceed its preview maximum. Omit or send an empty list before start, when the full available balance is selected automatically.
+             * @example [
+             *       {
+             *         "amount": 20000,
+             *         "bookingId": "11111111-1111-4111-8111-111111111111"
+             *       }
+             *     ]
+             */
             refunds?: components["schemas"]["ProgramParticipantRefundDto"][];
         };
         CatalogCategoryDto: {
@@ -10457,43 +10466,163 @@ export interface components {
             method: components["schemas"]["PaymentMethod"];
         };
         ProgramCancellationParticipantDto: {
+            /**
+             * @description Amount already refunded in integer halalas
+             * @example 5000
+             */
             alreadyRefundedAmount: number;
+            /**
+             * @description Booking identifier for this enrolled participant
+             * @example 11111111-1111-4111-8111-111111111111
+             */
             bookingId: string;
+            /**
+             * @description Human-readable booking number for this participant
+             * @example 1042
+             */
             bookingNumber: number;
+            /**
+             * @description Client identifier for this enrolled participant
+             * @example 22222222-2222-4222-8222-222222222222
+             */
             clientId: string;
+            /**
+             * @description Display name of the enrolled client
+             * @example سارة محمد
+             */
             clientName: string;
+            /**
+             * @description Currency shared by the booking and its captured payments
+             * @example SAR
+             */
             currency: string;
+            /**
+             * @description Maximum additional refund in integer halalas after existing refunds and reservations; zero for historical imports
+             * @example 20000
+             */
             maxRefundAmount: number;
-            /** @description Captured amount in integer halalas */
+            /**
+             * @description Captured original amount in integer halalas, before refunds
+             * @example 30000
+             */
             paidAmount: number;
+            /**
+             * @description Amount reserved by pending refund requests in integer halalas
+             * @example 5000
+             */
             pendingRefundAmount: number;
+            /**
+             * @description Additional refund in integer halalas: the full available amount before program start, or null after start until staff select an amount
+             * @example 20000
+             */
             refundAmount: number | null;
+            /**
+             * @description Current booking status when the cancellation preview was generated
+             * @example CONFIRMED
+             */
             status: string;
         };
         ProgramCancellationParticipantResultDto: {
+            /**
+             * @description Booking identifier for this participant cancellation outcome
+             * @example 11111111-1111-4111-8111-111111111111
+             */
             bookingId: string;
+            /**
+             * @description Currency of this participant refund amount
+             * @example SAR
+             */
             currency: string;
+            /**
+             * @description Additional refund amount recorded by this cancellation in integer halalas; does not mean the refund has completed
+             * @example 20000
+             */
             refundAmount: number;
-            /** @enum {string} */
+            /**
+             * @description Initial refund outcome: staff review required, automatic processing pending, or no additional refund
+             * @example PENDING_REVIEW
+             * @enum {string}
+             */
             refundStatus: "PENDING_REVIEW" | "PROCESSING" | "NO_REFUND";
         };
         ProgramCancellationPreviewDto: {
+            /**
+             * @description Whether the start date has elapsed or participant attendance, completion or historical-import evidence requires post-start refund selection
+             * @example false
+             */
             hasStarted: boolean;
+            /**
+             * @description Current enrolled participants and their individual refundable balances, including bookings whose history must be retained
+             * @example [
+             *       {
+             *         "alreadyRefundedAmount": 5000,
+             *         "bookingId": "11111111-1111-4111-8111-111111111111",
+             *         "bookingNumber": 1042,
+             *         "clientId": "22222222-2222-4222-8222-222222222222",
+             *         "clientName": "سارة محمد",
+             *         "currency": "SAR",
+             *         "maxRefundAmount": 20000,
+             *         "paidAmount": 30000,
+             *         "pendingRefundAmount": 5000,
+             *         "refundAmount": 20000,
+             *         "status": "CONFIRMED"
+             *       }
+             *     ]
+             */
             participants: components["schemas"]["ProgramCancellationParticipantDto"][];
+            /**
+             * @description Program identifier for this cancellation preview
+             * @example 33333333-3333-4333-8333-333333333333
+             */
             programId: string;
+            /**
+             * @description Opaque token for these cancellation terms; submit it unchanged when cancelling and refresh the preview if the terms change
+             * @example a9b7c3d5e1f02468a9b7c3d5e1f02468a9b7c3d5e1f02468a9b7c3d5e1f02468
+             */
             quoteToken: string;
         };
         ProgramCancellationResultDto: {
+            /**
+             * @description Number of participant bookings transitioned to CANCELLED by this operation
+             * @example 1
+             */
             cancelledEnrollments: number;
+            /**
+             * @description Identifier of the cancelled program
+             * @example 33333333-3333-4333-8333-333333333333
+             */
             id: string;
+            /**
+             * @description Per-participant refund outcomes for non-historical bookings, including terminal bookings whose status was retained
+             * @example [
+             *       {
+             *         "bookingId": "11111111-1111-4111-8111-111111111111",
+             *         "currency": "SAR",
+             *         "refundAmount": 20000,
+             *         "refundStatus": "PENDING_REVIEW"
+             *       }
+             *     ]
+             */
             participants: components["schemas"]["ProgramCancellationParticipantResultDto"][];
+            /**
+             * @description Number of participant bookings whose status was retained, including terminal bookings and historical imports
+             * @example 0
+             */
             skippedEnrollments: number;
+            /**
+             * @description Program status after cancellation is committed
+             * @example CANCELLED
+             */
             status: string;
         };
         ProgramParticipantRefundDto: {
             /** @description Additional refund in integer halalas */
             amount: number;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Participant booking identifier from the current program cancellation preview
+             * @example 11111111-1111-4111-8111-111111111111
+             */
             bookingId: string;
         };
         PublicBrandingDto: {

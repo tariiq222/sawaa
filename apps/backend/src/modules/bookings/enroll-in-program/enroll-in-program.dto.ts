@@ -58,7 +58,7 @@ export class ScheduleProgramDto {
 }
 
 export class ProgramParticipantRefundDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ format: 'uuid', description: 'Participant booking identifier from the current program cancellation preview', example: '11111111-1111-4111-8111-111111111111' })
   @IsUUID()
   bookingId!: string;
 
@@ -79,7 +79,7 @@ export class CancelProgramDto {
   @MinLength(1)
   quoteToken!: string;
 
-  @ApiPropertyOptional({ type: [ProgramParticipantRefundDto] })
+  @ApiPropertyOptional({ type: [ProgramParticipantRefundDto], description: 'After program start, additional refunds in integer halalas for every paid participant, including explicit zero amounts; each amount must not exceed its preview maximum. Omit or send an empty list before start, when the full available balance is selected automatically.', example: [{ bookingId: '11111111-1111-4111-8111-111111111111', amount: 20000 }] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
