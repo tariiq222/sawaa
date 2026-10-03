@@ -1,0 +1,35 @@
+# Optional staging-only Authentica path. Deploy separately from the app stack.
+# The backend stays on its internal network; only this restricted relay has egress.
+services:
+  otp-relay:
+    image: ${OTP_RELAY_IMAGE:?Use the verified backend image digest for its Node runtime}
+    user: "1001:1001"
+    command: ["node", "/opt/otp-relay.mjs"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
+    environment:
+      AUTHENTICA_API_KEY: ${AUTHENTICA_API_KEY:?Backend-scoped Authentica credential required}
+      AUTHENTICA_TEST_PHONES: ${AUTHENTICA_TEST_PHONES:?Explicit test phone allowlist required}
+    volumes:
+      - ./otp-relay.mjs:/opt/otp-relay.mjs:ro
+    networks:
+      staging:
+        aliases: [authentica-otp-relay]
+      egress: {}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  staging:
+    external: true
+    name: openship-sawaa-staging
+  egress:
+    driver: bridge

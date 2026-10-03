@@ -4,6 +4,65 @@ import { BookingStatus, DeliveryType } from '@prisma/client';
 
 describe('ListBookingsHandler', () => {
   it.each([
+    ['middle name', 'Codex', 'middleName'],
+    ['legacy full name', 'اختبار حجز Codex 6b135e40', 'name'],
+    ['first name', 'اختبار', 'firstName'],
+    ['last name', '6b135e40', 'lastName'],
+    ['phone', '+966500000001', 'phone'],
+  ])('searches clients by %s before filtering bookings', async (_label, search, field) => {
+    const prisma = buildPrisma();
+    prisma.client.findMany = jest.fn().mockResolvedValue([{ id: 'client-match' }]);
+
+    await new ListBookingsHandler(prisma as never).execute({ search, page: 2, limit: 10, status: 'CONFIRMED' });
+
+    expect(prisma.client.findMany).toHaveBeenCalledWith({
+      where: { OR: expect.arrayContaining([{ [field]: { contains: search, mode: 'insensitive' } }]) },
+      select: { id: true },
+    });
+    const expectedWhere = {
+      status: 'CONFIRMED',
+      OR: [{ id: { contains: search, mode: 'insensitive' } }, { clientId: { in: ['client-match'] } }],
+    };
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expectedWhere, skip: 10, take: 10,
+    }));
+    expect(prisma.booking.count).toHaveBeenCalledWith({ where: expectedWhere });
+  });
+
+  it.each([
+    ['  اختبار   حجز Codex 6b135e40  ', ['اختبار', 'حجز', 'Codex', '6b135e40']],
+    ['اختبار 6b135e40', ['اختبار', '6b135e40']],
+  ])('requires every full-name token across all name fields for %s', async (search, tokens) => {
+    const prisma = buildPrisma();
+    await new ListBookingsHandler(prisma as never).execute({ search, page: 1, limit: 10 });
+
+    expect(prisma.client.findMany).toHaveBeenCalledWith({
+      where: {
+        OR: expect.arrayContaining([{
+          AND: tokens.map((token) => ({
+            OR: expect.arrayContaining([
+              { name: { contains: token, mode: 'insensitive' } },
+              { firstName: { contains: token, mode: 'insensitive' } },
+              { middleName: { contains: token, mode: 'insensitive' } },
+              { lastName: { contains: token, mode: 'insensitive' } },
+            ]),
+          })),
+        }]),
+      },
+      select: { id: true },
+    });
+  });
+
+  it('keeps numeric booking lookup when no client matches', async () => {
+    const prisma = buildPrisma();
+    prisma.client.findMany = jest.fn().mockResolvedValue([]);
+    await new ListBookingsHandler(prisma as never).execute({ search: ' 12345 ', page: 1, limit: 10 });
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { OR: [{ id: { contains: '12345', mode: 'insensitive' } }, { bookingNumber: 12345 }] },
+    }));
+  });
+
+  it.each([
     ['upcoming', { notIn: ['COMPLETED', 'NO_SHOW', 'CANCELLED', 'CANCEL_REQUESTED', 'EXPIRED'] }],
     ['past', { in: ['COMPLETED', 'NO_SHOW'] }],
     ['cancelled', { in: ['CANCELLED', 'CANCEL_REQUESTED', 'EXPIRED'] }],
