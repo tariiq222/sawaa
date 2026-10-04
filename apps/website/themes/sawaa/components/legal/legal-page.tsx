@@ -1,10 +1,7 @@
 'use client';
 
-// LEGAL CONTENT NOTICE (S2.5 / PDPL):
-// The Arabic prose below is placeholder-quality legal content authored to satisfy
-// the PDPL + app-store requirement that the public site disclose how sensitive
-// mental-health PII is handled. It MUST be reviewed and finalized by a licensed
-// Saudi (KSA) lawyer before launch. Do not treat this as final legal advice.
+// Privacy copy must match the Center's actual processing practices. Updating
+// this page does not implement consent, data erasure, or provider safeguards.
 
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import type { MessageKey } from '@/features/locale/dictionary';
@@ -18,7 +15,7 @@ interface LegalPageProps {
   titleKey: MessageKey;
   introKey: MessageKey;
   sections: LegalSection[];
-  reviewNoticeKey: MessageKey;
+  reviewNoticeKey?: MessageKey;
   updatedKey: MessageKey;
 }
 
@@ -80,17 +77,19 @@ export function LegalPage({
           ))}
         </div>
 
-        <p
-          className="mt-12 text-[0.8rem] leading-relaxed rounded-xl p-4 border"
-          style={{
-            color: 'var(--sw-neutral-500)',
-            background: 'var(--sw-neutral-50)',
-            borderColor: 'var(--sw-neutral-100)',
-            direction: locale === 'ar' ? 'rtl' : 'ltr',
-          }}
-        >
-          {t(reviewNoticeKey)}
-        </p>
+        {reviewNoticeKey && (
+          <p
+            className="mt-12 text-[0.8rem] leading-relaxed rounded-xl p-4 border"
+            style={{
+              color: 'var(--sw-neutral-500)',
+              background: 'var(--sw-neutral-50)',
+              borderColor: 'var(--sw-neutral-100)',
+              direction: locale === 'ar' ? 'rtl' : 'ltr',
+            }}
+          >
+            {t(reviewNoticeKey)}
+          </p>
+        )}
       </div>
     </section>
   );
@@ -99,6 +98,11 @@ export function LegalPage({
 const PRIVACY_SECTIONS: LegalSection[] = [
   { heading: 'legal.privacy.collect.title', body: 'legal.privacy.collect.body' },
   { heading: 'legal.privacy.purpose.title', body: 'legal.privacy.purpose.body' },
+  { heading: 'legal.privacy.consent.title', body: 'legal.privacy.consent.body' },
+  { heading: 'legal.privacy.sharing.title', body: 'legal.privacy.sharing.body' },
+  { heading: 'legal.privacy.payment.title', body: 'legal.privacy.payment.body' },
+  { heading: 'legal.privacy.permissions.title', body: 'legal.privacy.permissions.body' },
+  { heading: 'legal.privacy.ai.title', body: 'legal.privacy.ai.body' },
   { heading: 'legal.privacy.retention.title', body: 'legal.privacy.retention.body' },
   { heading: 'legal.privacy.rights.title', body: 'legal.privacy.rights.body' },
   { heading: 'legal.privacy.hosting.title', body: 'legal.privacy.hosting.body' },
@@ -123,8 +127,7 @@ export function PrivacyPage() {
       titleKey="legal.privacy.title"
       introKey="legal.privacy.intro"
       sections={PRIVACY_SECTIONS}
-      reviewNoticeKey="legal.reviewNotice"
-      updatedKey="legal.lastUpdated"
+      updatedKey="legal.privacy.lastUpdated"
     />
   );
 }
