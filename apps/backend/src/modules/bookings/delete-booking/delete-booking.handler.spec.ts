@@ -337,6 +337,23 @@ describe('DeleteBookingHandler', () => {
     expect(tx.booking.delete).not.toHaveBeenCalled();
   });
 
+  it.each(['preflight', 'transaction'])('retains partially refunded history at the %s guard', async (stage) => {
+    const { prisma, tx } = buildPrisma();
+    const matchPartialRefund = async ({ where }: any) =>
+      where.status.in.includes(PaymentStatus.PARTIALLY_REFUNDED) ? { id: 'partial-payment' } : null;
+    tx.invoice.findUnique.mockResolvedValue({ id: 'inv-1' });
+    if (stage === 'preflight') prisma.payment.findFirst.mockImplementation(matchPartialRefund);
+    else tx.payment.findFirst.mockImplementation(matchPartialRefund);
+
+    await expect(new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+      bookingId: 'book-1', changedBy: 'admin-1',
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.refundRequest.deleteMany).not.toHaveBeenCalled();
+    expect(tx.payment.deleteMany).not.toHaveBeenCalled();
+    expect(tx.invoice.delete).not.toHaveBeenCalled();
+    expect(tx.booking.delete).not.toHaveBeenCalled();
+  });
+
   it('rejects deletion of a non-terminal (active) booking', async () => {
     const { prisma, tx } = buildPrisma({
       booking: {

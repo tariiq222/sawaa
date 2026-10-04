@@ -179,7 +179,7 @@ describe('AuditInterceptor', () => {
     );
   });
 
-  it('extracts user from valid JWT header', async () => {
+  it('does not attribute an anonymous write to unsigned bearer claims', async () => {
     const payload = Buffer.from(JSON.stringify({ sub: 'u2', email: 'test@example.com' })).toString('base64url');
     const token = `header.${payload}.sig`;
     const req = {
@@ -194,8 +194,30 @@ describe('AuditInterceptor', () => {
 
     await lastValueFrom(interceptor.intercept(createContext(req, 'CreateBookingHandler', 'DashboardBookingsController'), next));
     expect(mockPrisma.activityLog.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ userId: 'u2', userEmail: 'test@example.com' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ userId: undefined, userEmail: undefined }) }),
     );
+  });
+
+  it.each([{ sub: 'staff-id', email: 'staff@example.test' }, { id: 'client-id', email: 'client@example.test' }])(
+    'uses the verified principal instead of conflicting bearer claims: %j', async (user) => {
+      const payload = Buffer.from(JSON.stringify({ sub: 'victim', email: 'victim@example.test' })).toString('base64url');
+      const req = { method: 'POST', url: '/public/action', headers: { authorization: `Bearer x.${payload}.x` }, user };
+      await lastValueFrom(interceptor.intercept(createContext(req, 'execute', 'PublicController'), { handle: () => of({ id: 'result' }) }));
+      expect(mockPrisma.activityLog.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ userId: 'sub' in user ? user.sub : user.id, userEmail: user.email }),
+      }));
+    },
+  );
+
+  it('keeps a failed anonymous write anonymous despite an unsigned bearer', async () => {
+    const payload = Buffer.from(JSON.stringify({ sub: 'victim', email: 'victim@example.test' })).toString('base64url');
+    const req = { method: 'POST', url: '/public/action', headers: { authorization: `Bearer x.${payload}.x` } };
+    await expect(lastValueFrom(interceptor.intercept(createContext(req, 'execute', 'PublicController'), {
+      handle: () => throwError(() => new Error('denied')),
+    }))).rejects.toThrow('denied');
+    expect(mockPrisma.activityLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ userId: undefined, userEmail: undefined }),
+    }));
   });
 
   it('handles malformed JWT header gracefully', async () => {
