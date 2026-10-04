@@ -6413,8 +6413,13 @@ export interface components {
             status: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
         };
         ClientCancelBookingDto: {
-            /** @description Opaque cancellation preview token; refresh preview after conflict */
-            quoteToken?: string;
+            /**
+             * @description Explicit acceptance of the displayed current cancellation and refund terms
+             * @enum {boolean}
+             */
+            acceptedRefundTerms: true;
+            /** @description Current cancellation preview fingerprint; refresh and reconfirm after conflict */
+            quoteToken: string;
             /** @description Reason for cancellation */
             reason?: string;
             /**
@@ -6444,9 +6449,16 @@ export interface components {
              * @description Eligibility decision or reason cancellation is unavailable
              * @enum {string}
              */
-            reasonCode: "ALLOWED" | "POLICY_NOT_CONFIGURED" | "CUTOFF_PASSED" | "ATTENDED" | "FINAL_STATE" | "HISTORICAL" | "GROUP_STAFF_ONLY";
+            reasonCode: "ALLOWED" | "POLICY_NOT_CONFIGURED" | "CUTOFF_PASSED" | "ATTENDED" | "FINAL_STATE" | "HISTORICAL" | "GROUP_STAFF_ONLY" | "REFUND_REVIEW_REQUIRED";
             /** @description Financial terms shown to the client before cancellation confirmation */
             refund: components["schemas"]["CancellationRefundSummaryDto"];
+            /**
+             * @description Approval requests have no guaranteed refund amount until staff decides
+             * @enum {string}
+             */
+            refundDecision: "QUOTED" | "AFTER_APPROVAL";
+            /** @description Whether this submits a request for staff approval instead of cancelling immediately */
+            requiresApproval: boolean;
         };
         ClientChatConversationCursorMetaDto: {
             hasMore: boolean;
@@ -9748,12 +9760,17 @@ export interface components {
         };
         MobileCancelBookingDto: {
             /**
+             * @description Explicit acceptance of the displayed current cancellation and refund terms
+             * @enum {boolean}
+             */
+            acceptedRefundTerms: true;
+            /**
              * @description Free-text notes about the cancellation
              * @example Change of plans
              */
             cancelNotes?: string;
-            /** @description Cancellation preview fingerprint */
-            quoteToken?: string;
+            /** @description Current cancellation preview fingerprint; refresh and reconfirm after conflict */
+            quoteToken: string;
             /**
              * @description Reason for cancellation
              * @example CLIENT_REQUESTED
@@ -9761,7 +9778,7 @@ export interface components {
             reason: components["schemas"]["CancellationReason"];
             /**
              * Format: uuid
-             * @description Stable UUID for this cancellation attempt
+             * @description Stable UUID for retrying the same cancellation
              */
             sourceActionId?: string;
         };

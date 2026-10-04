@@ -125,10 +125,10 @@ describe('useCancelBooking', () => {
     const { result } = renderHook(() => useCancelBooking(), { wrapper: Wrapper });
 
     await act(async () => {
-      await result.current.mutateAsync({ id: 'b1', reason: 'changed plan', quoteToken: 'quote', sourceActionId: 'action' });
+      await result.current.mutateAsync({ id: 'b1', reason: 'changed plan', acceptedRefundTerms: true, quoteToken: 'quote', sourceActionId: 'action' });
     });
 
-    expect(mockedCancel).toHaveBeenCalledWith('b1', 'changed plan', { quoteToken: 'quote', sourceActionId: 'action' });
+    expect(mockedCancel).toHaveBeenCalledWith('b1', 'changed plan', { acceptedRefundTerms: true, quoteToken: 'quote', sourceActionId: 'action' });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: clientBookingsKeys.all });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: clientBookingsKeys.detail('b1') });
   });
@@ -140,7 +140,7 @@ describe('useCancelBooking', () => {
 
     await act(async () => {
       await expect(
-        result.current.mutateAsync({ id: 'b1', reason: 'x' }),
+        result.current.mutateAsync({ id: 'b1', reason: 'x', acceptedRefundTerms: true, quoteToken: 'quote' }),
       ).rejects.toThrow(/409/);
     });
     expect(result.current.isError).toBe(true);
@@ -158,7 +158,7 @@ describe('useCancelBooking', () => {
     const { result } = renderHook(() => useCancelBooking(), { wrapper: Wrapper });
 
     await act(async () => {
-      await expect(result.current.mutateAsync({ id: 'b1', reason: 'changed plan', quoteToken: 'old-quote' })).rejects.toBe(error);
+      await expect(result.current.mutateAsync({ id: 'b1', reason: 'changed plan', acceptedRefundTerms: true, quoteToken: 'old-quote' })).rejects.toBe(error);
     });
 
     await waitFor(() => expect(result.current.error).toBe(error));

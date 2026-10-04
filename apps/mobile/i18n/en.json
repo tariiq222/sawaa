@@ -239,8 +239,10 @@
     "HISTORICAL": "Historical appointments cannot be changed.",
     "GROUP_STAFF_ONLY": "Contact the center to cancel a group enrollment.",
     "confirm": "Confirm cancellation",
-    "cancelled": "Appointment cancelled"
-},
+    "cancelled": "Appointment cancelled",
+    "approvalPreview": "This sends a cancellation request for staff approval. Any refund will be decided by the center after approval; no amount is guaranteed now.",
+    "REFUND_REVIEW_REQUIRED": "The center needs to review this appointment's payments before cancellation."
+  },
   "checkout": {
     "depositConfirmed": "Appointment confirmed with deposit",
     "depositConfirmedDescription": "Your deposit was received. The remaining balance is shown below and can still be paid.",

@@ -15,8 +15,10 @@ export class CancellationRefundSummaryDto implements CancellationRefundSummary {
 }
 export class ClientCancellationPreviewDto implements ClientCancellationPreview {
   @ApiProperty({ description: 'Whether the new client cancellation policy is explicitly enabled' }) policyEnabled!: boolean;
+  @ApiProperty({ description: 'Whether this submits a request for staff approval instead of cancelling immediately' }) requiresApproval!: boolean;
+  @ApiProperty({ enum: ['QUOTED', 'AFTER_APPROVAL'], description: 'Approval requests have no guaranteed refund amount until staff decides' }) refundDecision!: 'QUOTED' | 'AFTER_APPROVAL';
   @ApiProperty({ description: 'Current eligibility to cancel this appointment directly' }) canCancel!: boolean;
-  @ApiProperty({ description: 'Eligibility decision or reason cancellation is unavailable', enum: ['ALLOWED', 'POLICY_NOT_CONFIGURED', 'CUTOFF_PASSED', 'ATTENDED', 'FINAL_STATE', 'HISTORICAL', 'GROUP_STAFF_ONLY'] }) reasonCode!: ClientCancellationPreview['reasonCode'];
+  @ApiProperty({ description: 'Eligibility decision or reason cancellation is unavailable', enum: ['ALLOWED', 'POLICY_NOT_CONFIGURED', 'CUTOFF_PASSED', 'ATTENDED', 'FINAL_STATE', 'HISTORICAL', 'GROUP_STAFF_ONLY', 'REFUND_REVIEW_REQUIRED'] }) reasonCode!: ClientCancellationPreview['reasonCode'];
   @ApiProperty({ description: 'Effective cancellation deadline, or null when no valid deadline is configured', type: String, nullable: true, format: 'date-time' }) cutoffAt!: string | null;
   @ApiProperty({ description: 'Opaque effective terms fingerprint' }) quoteToken!: string;
   @ApiProperty({ description: 'Financial terms shown to the client before cancellation confirmation', type: CancellationRefundSummaryDto }) refund!: CancellationRefundSummaryDto;

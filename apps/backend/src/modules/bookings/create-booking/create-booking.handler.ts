@@ -86,17 +86,18 @@ export class CreateBookingHandler {
       throw new BadRequestException('Booking must be scheduled in the future');
     }
 
+    const resolvedSource = dto.source ?? 'RECEPTION';
     const bookingSettings = await this.settingsHandler.execute({
       branchId: dto.branchId,
-      transaction: dto.transaction,
+      // Client payment permission must bypass the five-minute settings cache.
+      transaction: resolvedSource === 'ONLINE' && dto.payAtClinic ? db : dto.transaction,
     });
-    const resolvedSource = dto.source ?? 'RECEPTION';
 
     if (dto.payAtClinic) {
       const orgSettings = await db.organizationSettings.findFirst({
         select: { paymentAtClinicEnabled: true },
       });
-      if (!orgSettings?.paymentAtClinicEnabled) {
+      if (!orgSettings?.paymentAtClinicEnabled || (resolvedSource === 'ONLINE' && bookingSettings.payAtClinicEnabled !== true)) {
         throw new BadRequestException('Pay at clinic is not enabled');
       }
     }

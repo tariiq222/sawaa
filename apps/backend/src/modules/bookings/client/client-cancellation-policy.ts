@@ -9,6 +9,7 @@ export interface ClientCancellationSettings {
   freeCancelRefundType: string;
   lateCancelRefundPercent?: number;
   autoRefundOnCancel?: boolean;
+  requireCancelApproval?: boolean;
 }
 export interface CancellationRefundSummary {
   status: 'NOT_APPLICABLE' | 'NO_REFUND' | 'PENDING_REVIEW' | 'PROCESSING' | 'CREDIT_RETURNED';
@@ -23,8 +24,10 @@ export interface CancellationRefundSummary {
 }
 export interface ClientCancellationPreview {
   policyEnabled: boolean;
+  requiresApproval: boolean;
+  refundDecision: 'QUOTED' | 'AFTER_APPROVAL';
   canCancel: boolean;
-  reasonCode: 'ALLOWED' | 'POLICY_NOT_CONFIGURED' | 'CUTOFF_PASSED' | 'ATTENDED' | 'FINAL_STATE' | 'HISTORICAL' | 'GROUP_STAFF_ONLY';
+  reasonCode: 'ALLOWED' | 'POLICY_NOT_CONFIGURED' | 'CUTOFF_PASSED' | 'ATTENDED' | 'FINAL_STATE' | 'HISTORICAL' | 'GROUP_STAFF_ONLY' | 'REFUND_REVIEW_REQUIRED';
   cutoffAt: string | null;
   quoteToken: string;
   refund: CancellationRefundSummary;
@@ -67,8 +70,10 @@ export function calculateClientCancellation(
   settings: ClientCancellationSettings,
   payments: CancellationPayment[],
   now = new Date(),
+  legacyChannel: 'PUBLIC' | 'MOBILE' = 'PUBLIC',
 ): ClientCancellationPreview & { allocations: CancellationRefundAllocation[] } {
   const policyEnabled = settings.clientCancellationPolicyEnabled === true;
+  if (!policyEnabled) return calculateLegacyCancellation(booking, settings, payments, now, legacyChannel);
   const configured = policyEnabled &&
     ['BEFORE_START', 'BEFORE_CHECK_IN'].includes(settings.clientCancelCutoffMode ?? '') &&
     (settings.clientCancelCutoffMode !== 'BEFORE_START' || (typeof settings.clientCancelBeforeHours === 'number' && Number.isFinite(settings.clientCancelBeforeHours) && settings.clientCancelBeforeHours >= 0)) &&
@@ -121,5 +126,47 @@ export function calculateClientCancellation(
     booking, settings, reasonCode, refund,
     payments: money.map(p => ({ ...p, refundRequests: [...p.refundRequests].sort((a, b) => a.id.localeCompare(b.id)) })),
   })).digest('hex');
-  return { policyEnabled, canCancel: reasonCode === 'ALLOWED', reasonCode, cutoffAt: cutoffAt?.toISOString() ?? null, quoteToken, refund, allocations };
+  return { policyEnabled, requiresApproval: false, refundDecision: 'QUOTED', canCancel: reasonCode === 'ALLOWED', reasonCode, cutoffAt: cutoffAt?.toISOString() ?? null, quoteToken, refund, allocations };
+}
+
+/** Preserve the existing legacy execution: one COMPLETED capture, with its legacy percentage. */
+function calculateLegacyCancellation(
+  booking: CancellationBooking, settings: ClientCancellationSettings, payments: CancellationPayment[],
+  now: Date, channel: 'PUBLIC' | 'MOBILE',
+): ClientCancellationPreview & { allocations: CancellationRefundAllocation[] } {
+  const early = booking.scheduledAt.getTime() - now.getTime() >= settings.freeCancelBeforeHours * 3600000;
+  const requiresApproval = settings.requireCancelApproval === true || (channel === 'PUBLIC' && !early);
+  const partialPercent = typeof settings.lateCancelRefundPercent === 'number' && Number.isFinite(settings.lateCancelRefundPercent)
+    ? Math.min(100, Math.max(0, Math.round(settings.lateCancelRefundPercent))) : 0;
+  const paymentHold = channel === 'MOBILE' && ['AWAITING_PAYMENT', 'PENDING_GROUP_FILL'].includes(booking.status);
+  const refundPercent = paymentHold ? 100 : early
+    ? settings.freeCancelRefundType === 'FULL' ? 100 : settings.freeCancelRefundType === 'PARTIAL' ? partialPercent : 0
+    : partialPercent;
+  const ordered = [...payments].sort((a, b) => a.id.localeCompare(b.id));
+  const selected = ordered.find(p => p.status === 'COMPLETED');
+  const paidAmount = ordered.reduce((n, p) => n + halalas(p.amount), 0);
+  const alreadyRefundedAmount = ordered.reduce((n, p) => n + halalas(p.refundedAmount ?? 0), 0);
+  const pendingRefundAmount = ordered.flatMap(p => p.refundRequests).filter(r => RESERVED_REFUND_STATUSES.includes(r.status)).reduce((n, r) => n + halalas(r.amount), 0);
+  // Approval does not promise a refund: staff may deny it or choose different terms.
+  const refundAmount = requiresApproval || !selected ? 0 : Math.round(halalas(selected.amount) * refundPercent / 100);
+  let reasonCode: ClientCancellationPreview['reasonCode'] = 'ALLOWED';
+  if (booking.isHistoricalImport) reasonCode = 'HISTORICAL';
+  else if (booking.bookingType === 'GROUP') reasonCode = 'GROUP_STAFF_ONLY';
+  else if (booking.checkedInAt) reasonCode = 'ATTENDED';
+  else if (!['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'DEPOSIT_PAID'].includes(booking.status)) reasonCode = 'FINAL_STATE';
+  else if (!requiresApproval && selected && refundAmount > 0 && (
+    selected.refundRequests.some(r => r.status === 'PROCESSING') ||
+    refundAmount > halalas(selected.amount) - halalas(selected.refundedAmount ?? 0) ||
+    (selected.method === 'ONLINE_CARD' && selected.gatewayRef && halalas(selected.refundedAmount ?? 0) > 0)
+  )) reasonCode = 'REFUND_REVIEW_REQUIRED';
+  const refund: CancellationRefundSummary = {
+    status: requiresApproval ? 'PENDING_REVIEW' : booking.packageCreditId ? 'CREDIT_RETURNED' : !paidAmount ? 'NOT_APPLICABLE' : refundAmount ? 'PROCESSING' : 'NO_REFUND',
+    paidAmount, alreadyRefundedAmount, pendingRefundAmount, refundAmount, refundPercent,
+    currency: booking.currency, execution: requiresApproval ? 'REVIEW' : refundAmount ? 'AUTOMATIC' : 'NONE', window: early ? 'EARLY' : 'LATE',
+  };
+  const refundDecision = requiresApproval ? 'AFTER_APPROVAL' as const : 'QUOTED' as const;
+  const quoteToken = createHash('sha256').update(JSON.stringify({ booking, settings, channel, requiresApproval, refundDecision, reasonCode, refund,
+    payments: ordered.map(p => ({ ...p, refundRequests: [...p.refundRequests].sort((a, b) => a.id.localeCompare(b.id)) })),
+  })).digest('hex');
+  return { policyEnabled: false, requiresApproval, refundDecision, canCancel: reasonCode === 'ALLOWED', reasonCode, cutoffAt: null, quoteToken, refund, allocations: [] };
 }

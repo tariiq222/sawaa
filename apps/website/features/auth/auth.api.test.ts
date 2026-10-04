@@ -204,23 +204,31 @@ describe('auth.api', () => {
   });
 
   describe('cancelMyBookingApi', () => {
+    const quote = { acceptedRefundTerms: true as const, quoteToken: 'a'.repeat(64) };
     it('forwards reason and returns the slimmed status/requiresApproval shape', async () => {
       cancelMyBookingMock.mockResolvedValue({
         status: 'CANCELLED',
         requiresApproval: false,
         extra: 'ignored',
       });
-      await expect(cancelMyBookingApi('b1', 'conflict')).resolves.toEqual({
+      await expect(cancelMyBookingApi('b1', 'conflict', quote)).resolves.toEqual({
         status: 'CANCELLED',
         requiresApproval: false,
       });
-      expect(cancelMyBookingMock).toHaveBeenCalledWith('b1', { reason: 'conflict' });
+      expect(cancelMyBookingMock).toHaveBeenCalledWith('b1', { reason: 'conflict', ...quote });
+    });
+
+    it('rejects missing quote consent without a cancellation request', async () => {
+      await expect(cancelMyBookingApi('b1', 'conflict')).rejects.toThrow('Cancellation preview consent is required');
+      expect(cancelMyBookingMock).not.toHaveBeenCalled();
+      expect(apiRequestMock).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('omits the reason key when not provided', async () => {
       cancelMyBookingMock.mockResolvedValue({ status: 'CANCEL_REQUESTED', requiresApproval: true });
-      await cancelMyBookingApi('b1');
-      expect(cancelMyBookingMock).toHaveBeenCalledWith('b1', { reason: undefined });
+      await cancelMyBookingApi('b1', undefined, quote);
+      expect(cancelMyBookingMock).toHaveBeenCalledWith('b1', { reason: undefined, ...quote });
     });
   });
 

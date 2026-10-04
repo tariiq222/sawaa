@@ -8,7 +8,7 @@ import { MobileClientBookingsController } from './bookings.controller';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
-import { CancelApprovalRequiredException, CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
 import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../../modules/bookings/client/client-reschedule-booking.handler';
 import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/submit-rating.handler';
@@ -89,9 +89,9 @@ describe('MobileClientBookingsController (e2e)', () => {
     mockPreview.execute.mockResolvedValue({ policyEnabled: true });
     mockClientCancel.execute.mockResolvedValue({ status: 'CANCELLED', booking: { id: bookingId, status: 'CANCELLED' }, requiresApproval: false, refund: { status: 'PROCESSING' } });
     const action = '11111111-1111-4111-8111-111111111111';
-    const res = await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`).send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Changed plans', quoteToken: 'preview', sourceActionId: action }).expect(200);
+    const res = await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`).send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Changed plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64), sourceActionId: action }).expect(200);
     expect(res.body).toMatchObject({ id: bookingId, status: 'CANCELLED', refund: { status: 'PROCESSING' } });
-    expect(mockClientCancel.execute).toHaveBeenCalledWith({ bookingId, clientId: 'client-1', reason: 'Changed plans', quoteToken: 'preview', sourceActionId: action });
+    expect(mockClientCancel.execute).toHaveBeenCalledWith({ bookingId, clientId: 'client-1', legacyChannel: 'MOBILE', cancellationReason: 'CLIENT_REQUESTED', reason: 'Changed plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64), sourceActionId: action });
     expect(mockCancel.execute).not.toHaveBeenCalled();
   });
 
@@ -220,49 +220,27 @@ describe('MobileClientBookingsController (e2e)', () => {
   });
 
   describe('PATCH /mobile/client/bookings/:id/cancel', () => {
-    it('returns 200 on cancel', async () => {
-      mockCancel.execute.mockResolvedValue({ id: bookingId, status: 'CANCELLED' });
-
-      const res = await request(app.getHttpServer())
-        .patch(`/mobile/client/bookings/${bookingId}/cancel`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ reason: 'CLIENT_REQUESTED' })
-        .expect(200);
-
-      expect(res.body.status).toBe('CANCELLED');
+    it.each([{}, { acceptedRefundTerms: false, quoteToken: 'a'.repeat(64) }, { acceptedRefundTerms: true }, { acceptedRefundTerms: true, quoteToken: '' }])('rejects missing consent without legacy fallback: %p', async consent => {
+      await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`).send({ reason: 'CLIENT_REQUESTED', ...consent }).expect(400);
+      expect(mockClientCancel.execute).not.toHaveBeenCalled();
+      expect(mockCancel.execute).not.toHaveBeenCalled();
+      expect(mockRequestCancel.execute).not.toHaveBeenCalled();
     });
 
-    it('turns the cancel into a cancellation request when the branch requires approval', async () => {
-      mockCancel.execute.mockRejectedValue(new CancelApprovalRequiredException());
-      mockBookingAction.executeForRate.mockResolvedValue({ id: bookingId, clientId: 'client-1', employeeId: 'emp-1' });
-      mockRequestCancel.execute.mockResolvedValue({ id: bookingId, status: 'CANCEL_REQUESTED' });
-
-      const res = await request(app.getHttpServer())
-        .patch(`/mobile/client/bookings/${bookingId}/cancel`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Change of plans' })
-        .expect(200);
-
+    it('routes legacy approval through the consent-enforcing handler with reason and notes', async () => {
+      mockClientCancel.execute.mockResolvedValue({ booking: { id: bookingId }, status: 'CANCEL_REQUESTED', requiresApproval: true });
+      const res = await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`)
+        .send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Change of plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) }).expect(200);
       expect(res.body.status).toBe('CANCEL_REQUESTED');
-      expect(mockBookingAction.executeForRate).toHaveBeenCalledWith(bookingId, 'client-1');
-      expect(mockRequestCancel.execute).toHaveBeenCalledWith({
-        bookingId,
-        reason: 'CLIENT_REQUESTED',
-        cancelNotes: 'Change of plans',
-        requestedBy: 'client-1',
-      });
+      expect(mockClientCancel.execute).toHaveBeenCalledWith(expect.objectContaining({ legacyChannel: 'MOBILE', cancellationReason: 'CLIENT_REQUESTED', reason: 'Change of plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) }));
+      expect(mockCancel.execute).not.toHaveBeenCalled();
+      expect(mockRequestCancel.execute).not.toHaveBeenCalled();
     });
 
-    it('does not request cancellation for a booking that belongs to another client', async () => {
-      mockCancel.execute.mockRejectedValue(new CancelApprovalRequiredException());
-      mockBookingAction.executeForRate.mockRejectedValue(new ForbiddenException('Not your booking'));
-
-      await request(app.getHttpServer())
-        .patch(`/mobile/client/bookings/${bookingId}/cancel`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ reason: 'CLIENT_REQUESTED' })
-        .expect(403);
-
+    it('retains ownership rejection through the shared handler', async () => {
+      mockClientCancel.execute.mockRejectedValue(new ForbiddenException('Not your booking'));
+      await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`)
+        .send({ reason: 'CLIENT_REQUESTED', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) }).expect(403);
       expect(mockRequestCancel.execute).not.toHaveBeenCalled();
     });
 

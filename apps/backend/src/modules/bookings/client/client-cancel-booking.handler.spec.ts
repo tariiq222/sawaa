@@ -1,8 +1,19 @@
+import * as cancellationPolicy from './client-cancellation-policy';
+import { calculateClientCancellation } from './client-cancellation-policy';
+import type { ClientCancelCommand } from './client-cancel-booking.handler';
 import { BadRequestException, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus, DeliveryType } from '@prisma/client';
 import { ClientCancelBookingHandler } from './client-cancel-booking.handler';
 import { stableEventId } from '../../../common/events';
-import { mockBooking, buildPrisma, buildRlsTransaction } from '../testing/booking-test-helpers';
+import { mockBooking, buildPrisma as basePrisma, buildRlsTransaction } from '../testing/booking-test-helpers';
+
+const buildPrisma = () => {
+  const db = basePrisma() as any;
+  db.payment.findMany = jest.fn().mockResolvedValue([]);
+  const raw = db.$queryRaw;
+  db.$queryRaw = jest.fn((query: any, ...args: any[]) => raw(Array.isArray(query) ? query : query.strings, ...args));
+  return db;
+};
 
 const buildGroupCapacity = () => ({ recalculateGroupStatus: jest.fn().mockResolvedValue(undefined) });
 
@@ -29,14 +40,48 @@ const buildRefundHandler = () => ({
 });
 const refundHandler = buildRefundHandler();
 
+// Prepare explicit consent from the real preview calculation over each test's fixture.
+const replayQuotes = new WeakMap<ClientCancelBookingHandler, Map<string, string>>();
+async function executeConsented(handler: ClientCancelBookingHandler, command: Omit<ClientCancelCommand, 'acceptedRefundTerms' | 'quoteToken'> & Partial<Pick<ClientCancelCommand, 'acceptedRefundTerms' | 'quoteToken'>>) {
+  const fixture = async (tx: any) => {
+    const booking = await tx.booking.findUnique({ where: { id: command.bookingId } });
+    if (!booking) return 'a'.repeat(64);
+    const settings = await handler['settingsHandler'].execute({ branchId: booking.branchId, transaction: tx });
+    const payments = await tx.payment.findMany();
+    return calculateClientCancellation(booking, settings, payments, new Date(), command.legacyChannel).quoteToken;
+  };
+  const prior = command.sourceActionId && replayQuotes.get(handler)?.get(command.sourceActionId);
+  const quoteToken = command.quoteToken ?? (prior || await (command.transaction ? fixture(command.transaction) : handler['rlsTransaction'].withTransaction(fixture)));
+  if (command.sourceActionId) {
+    if (!replayQuotes.has(handler)) replayQuotes.set(handler, new Map());
+    replayQuotes.get(handler)!.set(command.sourceActionId, quoteToken);
+  }
+  return handler.execute({ acceptedRefundTerms: true, ...command, quoteToken });
+}
+
 describe('ClientCancelBookingHandler', () => {
+  it.each([
+    {}, { acceptedRefundTerms: false, quoteToken: 'a'.repeat(64) },
+    { acceptedRefundTerms: null, quoteToken: 'a'.repeat(64) },
+    { acceptedRefundTerms: true }, { acceptedRefundTerms: true, quoteToken: '' },
+    { acceptedRefundTerms: true, quoteToken: 'malformed' },
+  ])('rejects missing or invalid explicit consent before any effect: %p', async consent => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue(futureBooking);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1', ...consent } as never)).rejects.toThrow(BadRequestException);
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
   it('cancels a PENDING booking with >24h notice → CANCELLED', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
     const settings = buildSettingsHandler();
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, settings as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
 
-    const result = await handler.execute({
+    const result = await executeConsented(handler, {
       bookingId: 'book-1',
       clientId: 'client-1',
       reason: 'Changed my mind',
@@ -77,7 +122,7 @@ describe('ClientCancelBookingHandler', () => {
     const settings = buildSettingsHandler({ freeCancelBeforeHours: 24 });
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, settings as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
 
-    const result = await handler.execute({
+    const result = await executeConsented(handler, {
       bookingId: 'book-1',
       clientId: 'client-1',
     });
@@ -95,7 +140,7 @@ describe('ClientCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, deliveryType: DeliveryType.ONLINE });
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
-    await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         AND: expect.arrayContaining([expect.objectContaining({
@@ -110,7 +155,7 @@ describe('ClientCancelBookingHandler', () => {
     prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, deliveryType: DeliveryType.ONLINE });
     prisma.booking.updateMany.mockResolvedValue({ count: 0 });
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
-    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow('status changed concurrently');
+    await expect(executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow('status changed concurrently');
     expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
@@ -120,7 +165,7 @@ describe('ClientCancelBookingHandler', () => {
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
 
     await expect(
-      handler.execute({ bookingId: 'bad-id', clientId: 'client-1' }),
+      executeConsented(handler, { bookingId: 'bad-id', clientId: 'client-1' }),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -130,7 +175,7 @@ describe('ClientCancelBookingHandler', () => {
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
 
     await expect(
-      handler.execute({ bookingId: 'book-1', clientId: 'other-client' }),
+      executeConsented(handler, { bookingId: 'book-1', clientId: 'other-client' }),
     ).rejects.toThrow(ForbiddenException);
   });
 
@@ -143,7 +188,7 @@ describe('ClientCancelBookingHandler', () => {
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
 
     await expect(
-      handler.execute({ bookingId: 'book-1', clientId: 'client-1' }),
+      executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -155,7 +200,7 @@ describe('ClientCancelBookingHandler', () => {
     });
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
 
-    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    const result = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
 
     expect(result.status).toBe('CANCELLED');
   });
@@ -168,7 +213,7 @@ describe('ClientCancelBookingHandler', () => {
     prisma.booking.findUnique.mockResolvedValue(creditBooking);
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
 
-    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    const result = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
 
     expect(result.status).toBe('CANCELLED');
     expect(prisma.packageCreditUsage.update).toHaveBeenCalledWith(
@@ -199,7 +244,7 @@ describe('ClientCancelBookingHandler', () => {
     prisma.booking.findUnique.mockResolvedValue(soonCreditBooking);
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
 
-    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    const result = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
 
     expect(result.status).toBe('CANCEL_REQUESTED');
     expect(prisma.packageCreditUsage.update).not.toHaveBeenCalled();
@@ -217,7 +262,7 @@ describe('ClientCancelBookingHandler', () => {
       eventBus as never, buildRefundHandler() as never, buildGroupCapacity() as never,
     );
 
-    const result = await handler.execute({
+    const result = await executeConsented(handler, {
       bookingId: 'book-1', clientId: 'client-1', reason: 'Changed',
       sourceActionId: '22222222-2222-4222-8222-222222222222', transaction: tx as never,
     });
@@ -250,13 +295,13 @@ describe('ClientCancelBookingHandler', () => {
       eventBus as never, buildRefundHandler() as never, buildGroupCapacity() as never,
     );
 
-    await handler.execute({ bookingId: 'book-1', clientId: 'client-1', sourceActionId, transaction: tx as never });
+    await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1', sourceActionId, transaction: tx as never });
     const created = tx.bookingStatusLog.create.mock.calls[0][0].data;
     tx.bookingStatusLog.findUnique.mockResolvedValue(created);
     tx.booking.updateMany.mockClear();
     tx.bookingStatusLog.create.mockClear();
 
-    const replay = await handler.execute({
+    const replay = await executeConsented(handler, {
       bookingId: 'book-1', clientId: 'client-1', sourceActionId, transaction: tx as never,
     });
 
@@ -277,7 +322,7 @@ describe('ClientCancelBookingHandler', () => {
       buildRefundHandler() as never, buildGroupCapacity() as never,
     );
 
-    await handler.execute({ bookingId: 'book-1', clientId: 'client-1', sourceActionId, transaction: tx as never });
+    await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1', sourceActionId, transaction: tx as never });
     const created = tx.bookingStatusLog.create.mock.calls[0][0].data;
     tx.bookingStatusLog.findUnique.mockResolvedValue(created);
     tx.booking.findUnique.mockResolvedValue({ ...futureBooking, status: BookingStatus.CANCELLED });
@@ -285,7 +330,7 @@ describe('ClientCancelBookingHandler', () => {
     tx.bookingStatusLog.create.mockClear();
     tx.outboxEvent.create.mockClear();
 
-    const replay = await handler.execute({
+    const replay = await executeConsented(handler, {
       bookingId: 'book-1', clientId: 'client-1', sourceActionId, transaction: tx as never,
     });
 
@@ -309,7 +354,7 @@ describe('ClientCancelBookingHandler', () => {
       buildRefundHandler() as never, buildGroupCapacity() as never,
     );
 
-    await expect(handler.execute({
+    await expect(executeConsented(handler, {
       bookingId: 'book-1', clientId: 'client-1', reason: 'other',
       sourceActionId: '22222222-2222-4222-8222-222222222222', transaction: tx as never,
     })).rejects.toThrow(ConflictException);
@@ -321,7 +366,7 @@ describe('enabled client cancellation policy', () => {
   const payment = { id: 'p1', invoiceId: 'i1', amount: 10000, refundedAmount: 0, status: 'COMPLETED', method: 'ONLINE_CARD', gatewayRef: 'g1', currency: 'SAR', refundRequests: [] };
   function setup(overrides = {}) {
     const db = buildPrisma() as any;
-    const booking = { ...futureBooking, checkedInAt: null, isHistoricalImport: false, currency: 'SAR', ...overrides };
+    const booking = { ...futureBooking, checkedInAt: null, isHistoricalImport: false, packageCreditId: null, currency: 'SAR', ...overrides };
     db.booking.findUnique.mockResolvedValue(booking);
     db.payment.findMany = jest.fn().mockResolvedValue([payment]);
     db.$queryRaw = jest.fn().mockResolvedValue([]);
@@ -331,9 +376,25 @@ describe('enabled client cancellation policy', () => {
     const handler = new ClientCancelBookingHandler(db, buildRlsTransaction(db) as never, buildSettingsHandler(policy) as never, buildEventBus() as never, refunds as never, buildGroupCapacity() as never);
     return { db, handler, refunds, booking };
   }
+  it.each([{}, { acceptedRefundTerms: false, quoteToken: 'a'.repeat(64) }, { acceptedRefundTerms: null, quoteToken: 'a'.repeat(64) }, { acceptedRefundTerms: true }, { acceptedRefundTerms: true, quoteToken: '' }])('fails closed on enabled-policy consent %p', async consent => {
+    const { handler, db } = setup();
+    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1', ...consent } as never)).rejects.toThrow(BadRequestException);
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(db.outboxEvent.create).not.toHaveBeenCalled();
+  });
+  it.each(['payment', 'policy'])('rejects a valid token after enabled-policy %s changes', async change => {
+    const { handler, db, booking } = setup();
+    const originalSettings = await handler['settingsHandler'].execute({ branchId: booking.branchId });
+    const quoteToken = calculateClientCancellation(booking, originalSettings, [payment]).quoteToken;
+    if (change === 'payment') db.payment.findMany.mockResolvedValue([{ ...payment, refundRequests: [{ id: 'r1', amount: 1000, status: 'PENDING_REVIEW' }] }]);
+    else (handler['settingsHandler'].execute as jest.Mock).mockResolvedValue({ ...originalSettings, earlyCancelRefundPercent: 20 });
+    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1', acceptedRefundTerms: true, quoteToken })).rejects.toThrow(ConflictException);
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(db.outboxEvent.create).not.toHaveBeenCalled();
+  });
   it('cancels immediately despite old approval flag, persisting financial intent without calling finance', async () => {
     const { handler, db, refunds } = setup({ status: BookingStatus.DEPOSIT_PAID });
-    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    const result = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
     expect(result).toMatchObject({ status: 'CANCELLED', requiresApproval: false, refund: { refundAmount: 5000, status: 'PROCESSING' } });
     expect(refunds.createRefundRequestInTx).not.toHaveBeenCalled();
     expect(db.outboxEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ payload: expect.objectContaining({ payload: expect.objectContaining({ clientCancellation: expect.objectContaining({ allocations: [expect.objectContaining({ paymentId: 'p1', amount: 5000 })] }) }) }) }) });
@@ -341,11 +402,11 @@ describe('enabled client cancellation policy', () => {
   it('persists the original refund outcome for idempotent retries without another event', async () => {
     const { handler, db, booking } = setup();
     const action = '33333333-3333-4333-8333-333333333333';
-    const first = await handler.execute({ bookingId: 'book-1', clientId: 'client-1', sourceActionId: action });
+    const first = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1', sourceActionId: action });
     const saved = db.bookingStatusLog.create.mock.calls[0][0].data;
     db.booking.findUnique.mockResolvedValue({ ...booking, status: 'CANCELLED' });
     db.bookingStatusLog.findUnique.mockResolvedValue(saved);
-    const second = await handler.execute({ bookingId: 'book-1', clientId: 'client-1', sourceActionId: action });
+    const second = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1', sourceActionId: action });
     expect(second.refund).toEqual(first.refund);
     expect(db.booking.updateMany).toHaveBeenCalledTimes(1);
     expect(db.outboxEvent.create).toHaveBeenCalledTimes(1);
@@ -356,26 +417,97 @@ describe('enabled client cancellation policy', () => {
     db.packageCreditUsage.findFirst.mockResolvedValue({ id: 'usage-1', creditId: 'credit-1', status: 'RESERVED' });
     db.packageCredit.findUnique.mockResolvedValue({ purchaseId: 'purchase-1' });
     db.$queryRaw.mockResolvedValue([{ id: 'purchase-1', status: 'ACTIVE' }]);
-    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+    const result = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
     expect(result.refund).toMatchObject({ status: 'CREDIT_RETURNED', refundAmount: 0, execution: 'NONE' });
     expect(db.packageCredit.update).toHaveBeenCalledWith({ where: { id: 'credit-1' }, data: { reservedQuantity: { decrement: 1 } } });
     expect(db.outboxEvent.create.mock.calls[0][0].data.payload.payload.clientCancellation.allocations).toEqual([]);
   });
   it('rejects a changed preview token before mutating', async () => {
     const { handler, db } = setup();
-    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1', quoteToken: 'old' } as never)).rejects.toThrow(ConflictException);
+    await expect(executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1', quoteToken: 'f'.repeat(64) } as never)).rejects.toThrow(ConflictException);
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
   it.each([{ checkedInAt: new Date() }, { status: BookingStatus.CANCEL_REQUESTED }])('rejects attendance and existing approval requests %p', async changes => {
     const { handler, db } = setup(changes);
-    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow();
+    await expect(executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow();
     expect(db.outboxEvent.create).not.toHaveBeenCalled();
   });
   it('guards attendance and schedule at the actual mutation and loses a concurrent race', async () => {
     const { handler, db, booking } = setup();
     db.booking.updateMany.mockResolvedValue({ count: 0 });
-    await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow();
+    await expect(executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow();
     expect(db.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ checkedInAt: null, scheduledAt: booking.scheduledAt, endsAt: booking.endsAt }) }));
     expect(db.outboxEvent.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('legacy consent and financial compatibility', () => {
+  const captured = { id: 'p1', invoiceId: 'i1', amount: 10000, refundedAmount: 0, status: 'COMPLETED', method: 'ONLINE_CARD', gatewayRef: 'g1', currency: 'SAR', refundRequests: [] };
+  function setup(channel: 'PUBLIC' | 'MOBILE', status = 'CONFIRMED') {
+    const db = buildPrisma();
+    const booking = { ...futureBooking, status, scheduledAt: new Date(Date.now() + 3600000), endsAt: new Date(Date.now() + 7200000) };
+    const settings = { clientCancellationPolicyEnabled: false, requireCancelApproval: false, freeCancelBeforeHours: 24, freeCancelRefundType: 'PARTIAL', lateCancelRefundPercent: 25 };
+    db.booking.findUnique.mockResolvedValue(booking);
+    db.payment.findMany.mockResolvedValue([captured]);
+    const settingsHandler = { execute: jest.fn().mockResolvedValue(settings) };
+    const refunds = buildRefundHandler();
+    refunds.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'r1', idempotencyKey: 'key' });
+    const handler = new ClientCancelBookingHandler(db as never, buildRlsTransaction(db) as never, settingsHandler as never, buildEventBus() as never, refunds as never, buildGroupCapacity() as never);
+    const command = { bookingId: 'book-1', clientId: 'client-1', legacyChannel: channel, acceptedRefundTerms: true as const, quoteToken: calculateClientCancellation(booking as never, settings, [captured], new Date(), channel).quoteToken };
+    return { handler, db, refunds, command, booking, settingsHandler, settings };
+  }
+  it.each(['PUBLIC', 'MOBILE'] as const)('executes the accepted full refund when the clock crosses the legacy boundary after %s quote validation', async channel => {
+    const beforeBoundary = new Date('2030-01-01T10:00:00.000Z');
+    jest.useFakeTimers().setSystemTime(beforeBoundary);
+    let calculateSpy: jest.SpyInstance | undefined;
+    try {
+      const { handler, db, refunds, command, booking, settings } = setup(channel);
+      booking.scheduledAt = new Date(beforeBoundary.getTime() + 24 * 3600000 + 1);
+      booking.endsAt = new Date(booking.scheduledAt.getTime() + 3600000);
+      settings.freeCancelRefundType = 'FULL';
+      const accepted = calculateClientCancellation(booking as never, settings, [captured], beforeBoundary, channel);
+      expect(accepted.refund).toMatchObject({ refundAmount: 10000, refundPercent: 100, window: 'EARLY' });
+      command.quoteToken = accepted.quoteToken;
+      const calculate = cancellationPolicy.calculateClientCancellation;
+      let validations = 0;
+      calculateSpy = jest.spyOn(cancellationPolicy, 'calculateClientCancellation').mockImplementation((...args) => {
+        const quote = calculate(...args);
+        // Advance only after both actual quote checks have evaluated EARLY.
+        if (++validations === 2) jest.setSystemTime(beforeBoundary.getTime() + 2);
+        return quote;
+      });
+      expect(await handler.execute(command)).toMatchObject({ status: 'CANCELLED' });
+      expect(refunds.createRefundRequestInTx).toHaveBeenCalledWith(db, expect.objectContaining({ paymentId: 'p1', amount: undefined }));
+      expect(db.outboxEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ payload: expect.objectContaining({ payload: expect.objectContaining({ refundType: 'FULL' }) }) }) });
+    } finally {
+      calculateSpy?.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+  it('preserves public late approval without starting a refund', async () => {
+    const { handler, refunds, command } = setup('PUBLIC');
+    expect(await handler.execute(command)).toMatchObject({ status: 'CANCEL_REQUESTED', requiresApproval: true });
+    expect(refunds.createRefundRequestInTx).not.toHaveBeenCalled();
+  });
+  it('preserves mobile late direct partial refund and reason/notes', async () => {
+    const { handler, db, refunds, command } = setup('MOBILE');
+    expect(await handler.execute({ ...command, cancellationReason: 'OTHER', reason: 'Plans changed' })).toMatchObject({ status: 'CANCELLED', requiresApproval: false });
+    expect(refunds.createRefundRequestInTx).toHaveBeenCalledWith(db, expect.objectContaining({ paymentId: 'p1', amount: 2500 }));
+    expect(db.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ cancelReason: 'OTHER', cancelNotes: 'Plans changed' }) }));
+  });
+  it('preserves mobile payment-hold FULL refund regardless of the late percentage', async () => {
+    const { handler, db, refunds, command } = setup('MOBILE', 'AWAITING_PAYMENT');
+    expect(await handler.execute(command)).toMatchObject({ status: 'CANCELLED' });
+    expect(refunds.createRefundRequestInTx).toHaveBeenCalledWith(db, expect.objectContaining({ paymentId: 'p1', amount: undefined }));
+  });
+  it.each(['payment', 'policy', 'channel'])('rejects changed %s terms before any mutation', async change => {
+    const { handler, db, refunds, command, settingsHandler, settings } = setup('MOBILE');
+    if (change === 'payment') db.payment.findMany.mockResolvedValue([{ ...captured, amount: 20000 }]);
+    if (change === 'policy') settingsHandler.execute.mockResolvedValue({ ...settings, requireCancelApproval: true });
+    if (change === 'channel') command.legacyChannel = 'PUBLIC';
+    await expect(handler.execute(command)).rejects.toThrow(ConflictException);
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(db.outboxEvent.create).not.toHaveBeenCalled();
+    expect(refunds.createRefundRequestInTx).not.toHaveBeenCalled();
   });
 });

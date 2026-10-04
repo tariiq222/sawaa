@@ -355,7 +355,6 @@ describe('ConfirmOperationHandler', () => {
 
   it.each([
     [ChatOperationType.RESCHEDULE_BOOKING, 'BOOKING_RESCHEDULED'],
-    [ChatOperationType.CANCEL_BOOKING, 'BOOKING_CANCELLED'],
   ] as const)('recovers durable %s mutation before revalidating a now-changed booking', async (type, outcome) => {
     const payload = type === ChatOperationType.RESCHEDULE_BOOKING
       ? {
@@ -401,7 +400,7 @@ describe('ConfirmOperationHandler', () => {
     expect(second).toMatchObject({ status: ChatOperationStatus.SUCCEEDED, bookingId: 'booking-1' });
   });
 
-  it('executes reschedule and cancellation from revalidated payloads with durable operation keys', async () => {
+  it('executes reschedule but blocks chat cancellation without displayed refund consent', async () => {
     const reschedulePayload = {
       bookingId: 'booking-1', branchId: 'branch-1', employeeId: 'employee-1', serviceId: 'service-1',
       oldScheduledAt: '2026-08-18T09:00:00.000Z', newScheduledAt: '2026-08-20T09:00:00.000Z',
@@ -429,9 +428,8 @@ describe('ConfirmOperationHandler', () => {
       booking: { id: 'booking-2' }, status: 'CANCEL_REQUESTED', requiresApproval: true,
     });
     await cancelHarness.handler.execute({ operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0 });
-    expect(cancelHarness.cancellation.execute).toHaveBeenCalledWith({
-      bookingId: 'booking-2', clientId: 'client-1', sourceActionId: baseOperation.id,
-      transaction: cancelHarness.tx,
-    });
+    expect(cancelHarness.cancellation.execute).not.toHaveBeenCalled();
+    expect(cancelHarness.getOperation()).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: 'CANCELLATION_CONSENT_REQUIRED' });
+    expect(cancelHarness.tx.commsChatMessage.create).toHaveBeenCalledWith({ data: expect.objectContaining({ body: 'لإلغاء الموعد، افتح تفاصيل الموعد وراجع شروط الإلغاء والاسترداد ثم أكّد موافقتك.' }) });
   });
 });
